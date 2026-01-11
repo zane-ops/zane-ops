@@ -1,7 +1,6 @@
 import json
 from typing import Any, cast
 from rest_framework import serializers
-import yaml
 from ..models import (
     ComposeStack,
     ComposeStackChange,
@@ -17,6 +16,7 @@ from ..dtos import ComposeStackServiceStatus
 from zane_api.utils import DockerSwarmTaskState, EnhancedJSONEncoder
 from django.db import transaction
 from zane_api.views.serializers import EnvRequestSerializer
+from django.utils.translation import gettext_lazy as _
 
 
 class ComposeStackChangeSerializer(serializers.ModelSerializer):
@@ -226,14 +226,12 @@ class ComposeStackArchiveRequestSerializer(serializers.Serializer):
 
 
 class BaseChangeItemSerializer(serializers.Serializer):
-    type = serializers.ChoiceField(
-        choices=[
-            "ADD",
-            "DELETE",
-            "UPDATE",
-        ],
-        required=True,
+    ITEM_CHANGE_TYPE_CHOICES = (
+        ("ADD", _("Add")),
+        ("DELETE", _("Delete")),
+        ("UPDATE", _("Update")),
     )
+    type = serializers.ChoiceField(choices=ITEM_CHANGE_TYPE_CHOICES, required=True)
     item_id = serializers.CharField(max_length=255, required=False)
     new_value = serializers.SerializerMethodField()
     field = serializers.SerializerMethodField()
@@ -312,7 +310,10 @@ class BaseChangeItemSerializer(serializers.Serializer):
 
 
 class BaseFieldChangeSerializer(serializers.Serializer):
-    type = serializers.ChoiceField(choices=["UPDATE"], required=False, default="UPDATE")
+    FIELD_CHANGE_TYPE_CHOICES = (("UPDATE", _("Update")),)
+    type = serializers.ChoiceField(
+        choices=FIELD_CHANGE_TYPE_CHOICES, required=False, default="UPDATE"
+    )
     new_value = serializers.SerializerMethodField()
     field = serializers.SerializerMethodField()
 

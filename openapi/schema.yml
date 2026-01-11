@@ -901,7 +901,7 @@ paths:
         '204':
           description: No response body
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/:
-    post:
+    put:
       operationId: deployComposeStack
       summary: Queue a new deployment for the compose stack
       parameters:
@@ -999,6 +999,106 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ComposeStackDeployment'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/request-changes/:
+    put:
+      operationId: requestComposeStackUpdate
+      summary: Request a new compose stack change
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComposeStackDeploymentChangeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ComposeStackDeploymentChangeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ComposeStackDeploymentChangeRequestRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestComposeStackUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStackChange'
           description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/create/:
     post:
@@ -10953,6 +11053,45 @@ components:
       description: |-
         * `ALL` - All services
         * `ONLY` - Only specific services
+    ComposeContentFieldChangeFieldEnum:
+      enum:
+      - compose_content
+      type: string
+      description: '* `compose_content` - compose_content'
+    ComposeContentFieldChangeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/FieldChangeTypeEnum'
+          default: UPDATE
+        new_value:
+          type: string
+          nullable: true
+          minLength: 1
+        field:
+          $ref: '#/components/schemas/ComposeContentFieldChangeFieldEnum'
+      required:
+      - field
+      - new_value
+    ComposeEnvOverrideItemChangeFieldEnum:
+      enum:
+      - env_overrides
+      type: string
+      description: '* `env_overrides` - env_overrides'
+    ComposeEnvOverrideItemChangeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/FieldChangeTypeEnum'
+          default: UPDATE
+        new_value:
+          $ref: '#/components/schemas/EnvRequestRequest'
+        field:
+          $ref: '#/components/schemas/ComposeEnvOverrideItemChangeFieldEnum'
+      required:
+      - field
     ComposeStack:
       type: object
       properties:
@@ -11129,6 +11268,14 @@ components:
       - started_at
       - status
       - status_reason
+    ComposeStackDeploymentChangeRequestRequest:
+      oneOf:
+      - $ref: '#/components/schemas/ComposeContentFieldChangeRequest'
+      - $ref: '#/components/schemas/ComposeEnvOverrideItemChangeRequest'
+      discriminator:
+        propertyName: field
+        mapping:
+          null: '#/components/schemas/ComposeEnvOverrideItemChangeRequest'
     ComposeStackDeploymentStatusEnum:
       enum:
       - QUEUED
@@ -19628,6 +19775,219 @@ components:
         * `GOOGLE_ARTIFACT` - Google Artifact Registry
         * `AWS_ECR` - AWS Elastic Container Registry
         * `GENERIC` - Generic Docker Registry (v2 API)
+    RequestComposeStackUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/RequestComposeStackUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateTypeErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateFieldErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueKeyErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueValueErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/RequestComposeStackUpdateNonFieldErrorsErrorComponent'
+          type: '#/components/schemas/RequestComposeStackUpdateTypeErrorComponent'
+          new_value: '#/components/schemas/RequestComposeStackUpdateNewValueErrorComponent'
+          field: '#/components/schemas/RequestComposeStackUpdateFieldErrorComponent'
+          new_value.non_field_errors: '#/components/schemas/RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent'
+          new_value.key: '#/components/schemas/RequestComposeStackUpdateNewValueKeyErrorComponent'
+          new_value.value: '#/components/schemas/RequestComposeStackUpdateNewValueValueErrorComponent'
+    RequestComposeStackUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/RequestComposeStackUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/RequestComposeStackUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RequestComposeStackUpdateFieldErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - field
+          type: string
+          description: '* `field` - field'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateNewValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value
+          type: string
+          description: '* `new_value` - new_value'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateNewValueKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.key
+          type: string
+          description: '* `new_value.key` - new_value.key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.non_field_errors
+          type: string
+          description: '* `new_value.non_field_errors` - new_value.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateNewValueValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.value
+          type: string
+          description: '* `new_value.value` - new_value.value'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - type
+          type: string
+          description: '* `type` - type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequestComposeStackUpdateError'
+      required:
+      - errors
+      - type
     RequestEnvChangesError:
       oneOf:
       - $ref: '#/components/schemas/RequestEnvChangesNonFieldErrorsErrorComponent'
