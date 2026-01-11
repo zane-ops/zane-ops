@@ -122,6 +122,22 @@ class ComposeStack(TimestampedModel):
     def unapplied_changes(self):
         return self.changes.filter(applied=False)
 
+    def add_change(self, change: "ComposeStackChange"):
+        change.stack = self
+        match change.field:
+            case ComposeStackChange.ChangeField.COMPOSE_CONTENT:
+                change_for_field = self.unapplied_changes.filter(
+                    field=change.field
+                ).first()
+                if change_for_field is not None:
+                    change_for_field.new_value = change.new_value
+                else:
+                    change_for_field = change
+                change_for_field.save()
+            case _:
+                change.save()
+        return change
+
     def apply_pending_changes(self, deployment: "ComposeStackDeployment"):
         for change in self.unapplied_changes:
             match change.field:

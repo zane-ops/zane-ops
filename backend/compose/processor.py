@@ -3,7 +3,13 @@ from yaml import SafeDumper
 import yaml
 from typing import Dict, Any, List, cast
 from django.core.exceptions import ValidationError
-from .dtos import ComposeStackSpec, ComposeServiceSpec
+from .dtos import (
+    ComposeStackSpec,
+    ComposeServiceSpec,
+    ComposeSpecDeploymentArtifacts,
+    ComposeStackUrlRouteDto,
+    ComposeStackEnvOverrideDto,
+)
 from temporal.helpers import get_env_network_resource_name
 import json
 from django.conf import settings
@@ -264,7 +270,7 @@ class ComposeSpecProcessor:
             return result.stderr.strip() if result.returncode != 0 else None
 
     @classmethod
-    def validate_compose_file(cls, user_content: str):
+    def validate_compose_file_syntax(cls, user_content: str):
         """
         Validate compose file using docker stack config.
 
@@ -740,7 +746,7 @@ class ComposeSpecProcessor:
     def extract_new_env_overrides(
         cls,
         spec: ComposeStackSpec,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[Dict[str, str]]:
         overrides = []
 
         for key, env in spec.envs.items():
@@ -900,3 +906,48 @@ class ComposeSpecProcessor:
                     )
 
         return service_urls
+
+    @classmethod
+    def compile_stack_for_deployment(
+        cls, user_content: str, stack: "ComposeStack"
+    ) -> ComposeSpecDeploymentArtifacts:
+        """
+        Process content, extract urls & env overrides
+        """
+        computed_spec = ComposeSpecProcessor.process_compose_spec(
+            user_content=user_content,
+            stack=stack,
+        )
+
+        computed_content = ComposeSpecProcessor.generate_deployable_yaml(
+            spec=computed_spec,
+            user_content=user_content,
+            stack_hash_prefix=stack.hash_prefix,
+        )
+
+        extracted_configs = ComposeSpecProcessor.extract_config_contents(
+            spec=computed_spec
+        )
+
+        extracted_service_routes = (
+            ComposeSpecProcessor.validate_and_extract_service_urls(
+                spec=computed_spec,
+                stack=stack,
+            )
+        )
+
+        extracted_envs = ComposeSpecProcessor.extract_new_env_overrides(
+            spec=computed_spec
+        )
+
+        return ComposeSpecDeploymentArtifacts(
+            computed_content=computed_content,
+            configs=extracted_configs,
+            urls={
+                service: [ComposeStackUrlRouteDto.from_dict(route) for route in routes]
+                for service, routes in extracted_service_routes.items()
+            },
+            env_overrides=[
+                ComposeStackEnvOverrideDto.from_dict(env) for env in extracted_envs
+            ],
+        )

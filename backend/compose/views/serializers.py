@@ -105,7 +105,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
         user_content = validated_data["user_content"]
 
         try:
-            ComposeSpecProcessor.validate_compose_file(user_content)
+            ComposeSpecProcessor.validate_compose_file_syntax(user_content)
         except ValidationError as e:
             raise serializers.ValidationError({"user_content": e.messages})
 
@@ -124,53 +124,33 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             network_alias_prefix=f"zn-{slug}",
         )
 
-        computed_spec = ComposeSpecProcessor.process_compose_spec(
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
             user_content=user_content,
             stack=stack,
         )
 
-        computed_content = ComposeSpecProcessor.generate_deployable_yaml(
-            spec=computed_spec,
-            user_content=user_content,
-            stack_hash_prefix=stack.hash_prefix,
-        )
+        changes = [
+            ComposeStackChange(
+                stack=stack,
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+                new_value=dict(user_content=user_content),
+            )
+        ]
 
-        extracted_configs = ComposeSpecProcessor.extract_config_contents(
-            spec=computed_spec
-        )
-
-        extracted_urls = ComposeSpecProcessor.validate_and_extract_service_urls(
-            spec=computed_spec,
-            stack=stack,
-        )
-
-        ComposeStackChange.objects.create(
-            stack=stack,
-            field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
-            type=ComposeStackChange.ChangeType.UPDATE,
-            new_value=dict(
-                user_content=user_content,
-                computed_content=computed_content,
-                computed_spec=yaml.safe_load(computed_content),
-                urls=extracted_urls,
-                configs=extracted_configs,
-            ),
-        )
-
-        env_overrides_data = ComposeSpecProcessor.extract_new_env_overrides(
-            spec=computed_spec
-        )
-        ComposeStackChange.objects.bulk_create(
+        changes.extend(
             [
                 ComposeStackChange(
                     stack=stack,
                     field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
                     type=ComposeStackChange.ChangeType.ADD,
-                    new_value=override_data,
+                    new_value=override_data.to_dict(),
                 )
-                for override_data in env_overrides_data
+                for override_data in artifacts.env_overrides
             ]
         )
+
+        ComposeStackChange.objects.bulk_create(changes)
 
         return stack
 
@@ -363,7 +343,7 @@ class ComposeContentFieldChangeSerializer(BaseFieldChangeSerializer):
         user_content = attrs["new_value"]
 
         try:
-            ComposeSpecProcessor.validate_compose_file(user_content)
+            ComposeSpecProcessor.validate_compose_file_syntax(user_content)
         except ValidationError as e:
             raise serializers.ValidationError({"user_content": e.messages})
 

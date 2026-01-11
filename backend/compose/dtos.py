@@ -391,6 +391,14 @@ class ComposeStackEnvOverrideDto:
 
 
 @dataclass
+class ComposeSpecDeploymentArtifacts:
+    computed_content: str
+    urls: Dict[str, List[ComposeStackUrlRouteDto]] = field(default_factory=dict)
+    configs: Dict[str, str] = field(default_factory=dict)
+    env_overrides: List[ComposeStackEnvOverrideDto] = field(default_factory=list)
+
+
+@dataclass
 class ComposeStackSnapshot:
     id: str
     hash_prefix: str

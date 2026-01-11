@@ -1389,3 +1389,18 @@ DELETE /api/projects/{project_slug}/environments/{env_slug}/compose-stacks/{stac
    - Generated values saved to database with `is_generated=True`
    - Values persist across deployments unless user checks "Regenerate values"
    - Change tracking ensures rollback restores old override values automatically
+
+## Update process
+
+1. Updating a compose content may need to generate env values, why ?
+   1. Because the file may contain placeholders
+2. Update an env variables may need to re-compute the compose content, why ?
+   1. Because we need to compute the compose dict with the env variable values to get the urls and configs
+
+3. So we don't need to generate the computed content yet in the first place, instead:
+   1. just validate that the content is valid for user-content check
+   2. same for env variables: check that new envs don't make the syntax or URLs invalid
+4. Important: 
+   1. Either we set the computed content, urls & configs as non values for the change... or make them optional (?)
+   2. if we make them non values, we need to update the tests, and maybe use unittests instead or add a new field to stack which is the computed value 
+   3. The compose content must be computed at the end and env overrides & url and such must be generated when applying the changes (during deployment)
