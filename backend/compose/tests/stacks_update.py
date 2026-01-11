@@ -2,14 +2,12 @@ from django.urls import reverse
 from rest_framework import status
 
 from zane_api.models import Environment
-from ..models import (
-    ComposeStack,
-    ComposeStackChange,
-)
+from ..models import ComposeStack, ComposeStackChange, ComposeStackEnvOverride
 from .fixtures import (
     DOCKER_COMPOSE_MINIMAL,
     DOCKER_COMPOSE_SIMPLE_DB,
     DOCKER_COMPOSE_WITH_X_ENV_IN_URLS,
+    DOCKER_COMPOSE_WITH_PLACEHOLDERS,
 )
 from typing import cast
 from zane_api.utils import jprint
@@ -194,3 +192,66 @@ class ComposeStackRequestUpdateViewTests(ComposeStackAPITestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertIsNotNone(self.get_error_from_response(response, "new_value.value"))
+
+    def test_remove_env_regenerate_env_placeholders(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_WITH_PLACEHOLDERS,
+            slug="placeholder-stack",
+        )
+
+        env = cast(
+            ComposeStackEnvOverride,
+            stack.env_overrides.filter(key="POSTGRES_USER").first(),
+        )
+        self.assertIsNotNone(env)
+
+        # delete placeholder env
+        payload = {
+            "field": ComposeStackChange.ChangeField.ENV_OVERRIDES,
+            "type": ComposeStackChange.ChangeType.DELETE,
+            "item_id": env.id,
+        }
+
+        response = self.client.put(
+            reverse(
+                "compose:stacks.request_changes",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+            data=payload,
+            content_type="application/json",
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # redeploy the stack
+        response = self.client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        stack.refresh_from_db()
+        print(
+            "========= new computed =========",
+            stack.computed_content,
+            "========= end new computed =========",
+            sep="\n",
+        )
+
+        # The env override should be re-created
+        env = cast(
+            ComposeStackEnvOverride,
+            stack.env_overrides.filter(key="POSTGRES_USER").first(),
+        )
+        self.assertIsNotNone(env)

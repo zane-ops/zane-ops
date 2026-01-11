@@ -141,43 +141,59 @@ class ComposeStack(TimestampedModel):
     def apply_pending_changes(self, deployment: "ComposeStackDeployment"):
         from .processor import ComposeSpecProcessor
 
-        for change in self.unapplied_changes:
-            match change.field:
-                case ComposeStackChange.ChangeField.COMPOSE_CONTENT:
-                    # format of this field:
-                    # new_value = { "user_content": "..." }
-                    new_value = cast(dict, change.new_value)
+        # handle env overrides changes first
+        for change in self.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.ENV_OVERRIDES
+        ):
+            if change.type == ComposeStackChange.ChangeType.ADD:
+                # new_value = { "key": "...", "value": "..." }
+                new_value = cast(dict, change.new_value)
+                self.env_overrides.create(
+                    key=new_value["key"],
+                    value=new_value["value"],
+                )
+            elif change.type == ComposeStackChange.ChangeType.UPDATE:
+                new_value = cast(dict, change.new_value)
+                item_id = cast(str, change.item_id)
+                self.env_overrides.filter(id=item_id).update(
+                    key=new_value["key"],
+                    value=new_value["value"],
+                )
+            elif change.type == ComposeStackChange.ChangeType.DELETE:
+                item_id = cast(str, change.item_id)
+                self.env_overrides.filter(id=item_id).delete()
 
-                    artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
-                        user_content=new_value["user_content"], stack=self
-                    )
+        change = self.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.COMPOSE_CONTENT
+        ).first()
 
-                    self.user_content = new_value["user_content"]
-                    self.computed_content = artifacts.computed_content
-                    self.urls = {
-                        service: [route.to_dict() for route in routes]
-                        for service, routes in artifacts.urls.items()
-                    }
-                    self.configs = artifacts.configs
+        new_value = cast(
+            str, change.new_value if change is not None else self.user_content
+        )
 
-                case ComposeStackChange.ChangeField.ENV_OVERRIDES:
-                    if change.type == ComposeStackChange.ChangeType.ADD:
-                        # new_value = { "key": "...", "value": "..." }
-                        new_value = cast(dict, change.new_value)
-                        self.env_overrides.create(
-                            key=new_value["key"],
-                            value=new_value["value"],
-                        )
-                    elif change.type == ComposeStackChange.ChangeType.UPDATE:
-                        new_value = cast(dict, change.new_value)
-                        item_id = cast(str, change.item_id)
-                        self.env_overrides.filter(id=item_id).update(
-                            key=new_value["key"],
-                            value=new_value["value"],
-                        )
-                    elif change.type == ComposeStackChange.ChangeType.DELETE:
-                        item_id = cast(str, change.item_id)
-                        self.env_overrides.filter(id=item_id).delete()
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=new_value,
+            stack=self,
+        )
+
+        self.user_content = new_value
+        self.computed_content = artifacts.computed_content
+        self.urls = {
+            service: [route.to_dict() for route in routes]
+            for service, routes in artifacts.urls.items()
+        }
+        self.configs = artifacts.configs
+
+        ComposeStackEnvOverride.objects.bulk_create(
+            [
+                ComposeStackEnvOverride(
+                    key=env.key,
+                    value=env.value,
+                    stack=self,
+                )
+                for env in artifacts.env_overrides
+            ]
+        )
 
         self.unapplied_changes.update(applied=True, deployment=deployment)
         self.save()

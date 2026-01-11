@@ -495,17 +495,20 @@ class ComposeSpecProcessor:
             field=ComposeStackChange.ChangeField.ENV_OVERRIDES
         ).all()
         for change in pending_overrides:
-            new_value = cast(dict[str, str], change.new_value)
             if change.type == ComposeStackChange.ChangeType.DELETE:
-                override_dict.pop(new_value["key"], None)
+                old_value = cast(dict[str, str], change.old_value)
+                override_dict.pop(old_value["key"], None)
             if change.type in [
                 ComposeStackChange.ChangeType.UPDATE,
                 ComposeStackChange.ChangeType.ADD,
             ]:
+                new_value = cast(dict[str, str], change.new_value)
                 override_dict[new_value["key"]] = new_value["value"]
                 override_dict[new_value["key"]] = new_value["value"]
         if extra_env is not None:
             override_dict.update(extra_env)
+
+        print(f"{override_dict=}")
 
         # generate temlate values
         for key, env in spec.envs.items():
@@ -745,14 +748,6 @@ class ComposeSpecProcessor:
             before,
             environ=spec.to_dict()["x-env"],
         )
-
-        print("=== BEFORE ===")
-        print(before)
-        print("=== END BEFORE ===")
-
-        print("=== EXPANDED ===")
-        print(expanded)
-        print("=== END EXPANDED ===")
 
         return expanded
 

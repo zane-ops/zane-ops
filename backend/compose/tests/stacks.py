@@ -113,7 +113,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
         self.assertEqual(
-            new_value.get("user_content"),
+            new_value,
             DOCKER_COMPOSE_MINIMAL.strip(),
         )
 
@@ -181,7 +181,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(
@@ -266,7 +266,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(
@@ -348,7 +348,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(
@@ -424,7 +424,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(
@@ -576,7 +576,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(
@@ -672,7 +672,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(
@@ -803,7 +803,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(
@@ -901,7 +901,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(
@@ -981,7 +981,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(
@@ -1054,7 +1054,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(
@@ -1123,7 +1123,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(
@@ -1211,7 +1211,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(
@@ -1641,7 +1641,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(
@@ -1742,7 +1742,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(
@@ -1916,7 +1916,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(
@@ -1998,7 +1998,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            new_value,
             sep="\n",
         )
         print(

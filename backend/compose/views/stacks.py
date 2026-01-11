@@ -372,7 +372,7 @@ class ComposeStackRequestChanges(APIView):
 
         data = cast(dict, form.data)
         field = data["field"]
-        new_value: dict | None = data.get("new_value")
+        new_value: dict | str | None = data.get("new_value")
         item_id = data.get("item_id")
         change_type = data.get("type")
         old_value: Any = None

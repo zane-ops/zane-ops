@@ -135,7 +135,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
                 stack=stack,
                 field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
                 type=ComposeStackChange.ChangeType.UPDATE,
-                new_value=dict(user_content=user_content),
+                new_value=user_content,
             )
         ]
 
