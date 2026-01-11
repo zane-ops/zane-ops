@@ -17,6 +17,7 @@ from zane_api.utils import DockerSwarmTaskState, EnhancedJSONEncoder
 from django.db import transaction
 from zane_api.views.serializers import EnvRequestSerializer
 from django.utils.translation import gettext_lazy as _
+from drf_standardized_errors.formatter import ExceptionFormatter
 
 
 class ComposeStackChangeSerializer(serializers.ModelSerializer):
@@ -364,7 +365,7 @@ class ComposeContentFieldChangeSerializer(BaseFieldChangeSerializer):
         return attrs
 
 
-class ComposeEnvOverrideItemChangeSerializer(BaseFieldChangeSerializer):
+class ComposeEnvOverrideItemChangeSerializer(BaseChangeItemSerializer):
     new_value = EnvRequestSerializer(required=False)
     field = serializers.ChoiceField(
         choices=[ComposeStackChange.ChangeField.ENV_OVERRIDES], required=True
@@ -414,6 +415,45 @@ class ComposeEnvOverrideItemChangeSerializer(BaseFieldChangeSerializer):
                     {
                         "new_value": {
                             "key": "Cannot specify two environment variables overrides with the same name for this stack"
+                        }
+                    }
+                )
+
+        if change_type in [
+            ComposeStackChange.ChangeType.ADD,
+            ComposeStackChange.ChangeType.UPDATE,
+        ]:
+            key = new_value["key"]
+            value = new_value["value"]
+            # process compose stack to validate URLs
+            existing_content_change = stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT
+            ).first()
+            computed_spec = ComposeSpecProcessor.process_compose_spec(
+                user_content=(
+                    cast(str, existing_content_change.new_value)
+                    if existing_content_change is not None
+                    else cast(str, stack.user_content)
+                ),
+                stack=stack,
+                extra_env={key: value},
+            )
+
+            try:
+                ComposeSpecProcessor.validate_and_extract_service_urls(
+                    spec=computed_spec,
+                    stack=stack,
+                )
+            except serializers.ValidationError as e:
+                formated: dict[str, Any] = ExceptionFormatter(e, self.context, e).run()  # type: ignore
+                raise serializers.ValidationError(
+                    {
+                        "new_value": {
+                            "value": [
+                                "Applying this change to the compose content causes the following error: "
+                                f"`{error['attr']}: {error['detail']}`"
+                                for error in formated["errors"]
+                            ]
                         }
                     }
                 )

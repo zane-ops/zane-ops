@@ -31,7 +31,6 @@ from temporal.shared import ComposeStackDeploymentDetails, ComposeStackArchiveDe
 from temporal.client import TemporalClient
 from ..dtos import ComposeStackSnapshot
 from rest_framework.serializers import Serializer
-from ..processor import ComposeSpecProcessor
 
 
 class ComposeStackListAPIView(ListAPIView):
@@ -379,7 +378,7 @@ class ComposeStackRequestChanges(APIView):
         old_value: Any = None
         match field:
             case ComposeStackChange.ChangeField.COMPOSE_CONTENT:
-                old_value = getattr(stack, field)
+                old_value = stack.user_content
             case ComposeStackChange.ChangeField.ENV_OVERRIDES:
                 if change_type in ["UPDATE", "DELETE"]:
                     old_value = ComposeStackEnvOverrideSerializer(

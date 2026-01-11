@@ -13,7 +13,7 @@ from .dtos import (
 from temporal.helpers import get_env_network_resource_name
 import json
 from django.conf import settings
-from .models import ComposeStack
+from .models import ComposeStack, ComposeStackChange
 import secrets
 from zane_api.utils import (
     generate_random_chars,
@@ -440,6 +440,7 @@ class ComposeSpecProcessor:
         cls,
         user_content: str,
         stack: "ComposeStack",
+        extra_env: Dict[str, str] | None = None,
     ) -> ComposeStackSpec:
         """
         Process user compose file into ZaneOps-compatible spec.
@@ -488,10 +489,23 @@ class ComposeSpecProcessor:
         spec.services = renamed_services
 
         # Handle global env & overrides
-        env_overrides = stack.env_overrides.all()
-        # TODO: apply env override changes and include in this dict
+        override_dict = {env.key: str(env.value) for env in stack.env_overrides.all()}
 
-        override_dict = {env.key: str(env.value) for env in env_overrides}
+        pending_overrides = stack.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.ENV_OVERRIDES
+        ).all()
+        for change in pending_overrides:
+            new_value = cast(dict[str, str], change.new_value)
+            if change.type == ComposeStackChange.ChangeType.DELETE:
+                override_dict.pop(new_value["key"], None)
+            if change.type in [
+                ComposeStackChange.ChangeType.UPDATE,
+                ComposeStackChange.ChangeType.ADD,
+            ]:
+                override_dict[new_value["key"]] = new_value["value"]
+                override_dict[new_value["key"]] = new_value["value"]
+        if extra_env is not None:
+            override_dict.update(extra_env)
 
         # generate temlate values
         for key, env in spec.envs.items():

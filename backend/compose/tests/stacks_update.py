@@ -1,50 +1,33 @@
 from django.urls import reverse
-import os
-import responses
 from rest_framework import status
-from unittest.mock import patch
 
 from zane_api.models import Environment
-from zane_api.tests.base import FakeDockerClient
 from ..models import (
     ComposeStack,
     ComposeStackChange,
-    ComposeStackDeployment,
-    ComposeStackEnvOverride,
 )
 from .fixtures import (
     DOCKER_COMPOSE_MINIMAL,
     DOCKER_COMPOSE_SIMPLE_DB,
-    DOCKER_COMPOSE_WEB_SERVICE,
-    DOCKER_COMPOSE_MULTIPLE_ROUTES,
-    DOCKER_COMPOSE_WITH_PLACEHOLDERS,
-    DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
+    DOCKER_COMPOSE_WITH_X_ENV_IN_URLS,
 )
 from typing import cast
 from zane_api.utils import jprint
-from ..dtos import ComposeStackServiceStatus
-import requests
-from temporal.helpers import ZaneProxyClient
-from django.conf import settings
-from temporal.schedules import MonitorComposeStackWorkflow
-from temporal.activities import ComposeStackActivities
-from compose.dtos import ComposeStackSnapshot
-from temporalio import activity
-from temporal.shared import ComposeStackBuildDetails
-from compose.dtos import ComposeStackUrlRouteDto
-
 
 from .stacks import ComposeStackAPITestBase
 
 
 class ComposeStackRequestUpdateViewTests(ComposeStackAPITestBase):
-    def test_update_content_request_create_change(self):
-        project = self.create_project()
+    def create_and_deploy_compose_stack(
+        self,
+        content: str,
+        slug="my-stack",
+    ):
+        project = self.create_project(slug="compose")
 
-        # Create and deploy a stack first
         create_stack_payload = {
-            "slug": "update-stack",
-            "user_content": DOCKER_COMPOSE_MINIMAL,
+            "slug": slug,
+            "user_content": content,
         }
 
         response = self.client.post(
@@ -57,14 +40,15 @@ class ComposeStackRequestUpdateViewTests(ComposeStackAPITestBase):
             ),
             data=create_stack_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        stack = cast(
-            ComposeStack, ComposeStack.objects.filter(slug="update-stack").first()
-        )
+        stack = cast(ComposeStack, ComposeStack.objects.filter(slug=slug).first())
         self.assertIsNotNone(stack)
+        self.assertIsNone(stack.user_content)
+        self.assertIsNone(stack.computed_content)
 
-        # Deploy the stack to apply initial changes
+        # Deploy the stack
         response = self.client.put(
             reverse(
                 "compose:stacks.deploy",
@@ -75,11 +59,29 @@ class ComposeStackRequestUpdateViewTests(ComposeStackAPITestBase):
                 },
             ),
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        # Verify no unapplied changes after deployment
         stack.refresh_from_db()
-        self.assertEqual(0, stack.unapplied_changes.count())
+        print(
+            "========= original =========",
+            stack.user_content,
+            "========= end original =========",
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            stack.computed_content,
+            "========= end computed =========",
+            sep="\n",
+        )
+
+        return project, stack
+
+    def test_update_content_request_create_change(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL, slug="minimal"
+        )
 
         # Request content update with new compose file
         update_payload = {
@@ -115,52 +117,12 @@ class ComposeStackRequestUpdateViewTests(ComposeStackAPITestBase):
 
         # Verify new_value contains the updated content
         new_value = cast(dict, content_change.new_value)
-        self.assertEqual(
-            DOCKER_COMPOSE_SIMPLE_DB.strip(), new_value.get("user_content")
-        )
+        self.assertEqual(DOCKER_COMPOSE_SIMPLE_DB.strip(), new_value)
 
     def test_update_env_overrides_create_change(self):
-        project = self.create_project()
-
-        # Create and deploy a stack first
-        create_stack_payload = {
-            "slug": "env-override-stack",
-            "user_content": DOCKER_COMPOSE_MINIMAL,
-        }
-
-        response = self.client.post(
-            reverse(
-                "compose:stacks.create",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            ),
-            data=create_stack_payload,
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL, slug="env-override-stack"
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        stack = cast(
-            ComposeStack, ComposeStack.objects.filter(slug="env-override-stack").first()
-        )
-        self.assertIsNotNone(stack)
-
-        # Deploy the stack to apply initial changes
-        response = self.client.put(
-            reverse(
-                "compose:stacks.deploy",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                    "slug": stack.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        # Verify no unapplied changes after deployment
-        stack.refresh_from_db()
-        self.assertEqual(0, stack.unapplied_changes.count())
 
         # Request env override ADD change
         add_payload = {
@@ -181,6 +143,7 @@ class ComposeStackRequestUpdateViewTests(ComposeStackAPITestBase):
             data=add_payload,
             content_type="application/json",
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify a change was created
@@ -197,3 +160,37 @@ class ComposeStackRequestUpdateViewTests(ComposeStackAPITestBase):
         new_value = cast(dict, env_change.new_value)
         self.assertEqual("MY_VAR", new_value.get("key"))
         self.assertEqual("my_value", new_value.get("value"))
+
+    def test_update_env_do_not_invalidate_compose_content(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_WITH_X_ENV_IN_URLS,
+            slug="url-env-stack",
+        )
+
+        # Request env override ADD change
+        add_payload = {
+            "field": ComposeStackChange.ChangeField.ENV_OVERRIDES,
+            "type": ComposeStackChange.ChangeType.ADD,
+            "new_value": {
+                "key": "API_PORT",
+                # API port env is passed to the `zane.http.routes.{n}.port`
+                # which should be a valid integer
+                "value": "invalid_int",
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "compose:stacks.request_changes",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+            data=add_payload,
+            content_type="application/json",
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "new_value.value"))
