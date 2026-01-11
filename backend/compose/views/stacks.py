@@ -1,5 +1,6 @@
 from typing import Any, cast
 from rest_framework.generics import CreateAPIView, RetrieveUpdateAPIView, ListAPIView
+
 from .serializers import (
     ComposeStackSerializer,
     ComposeStackUpdateSerializer,
@@ -10,6 +11,8 @@ from .serializers import (
     ComposeContentFieldChangeSerializer,
     ComposeEnvOverrideItemChangeSerializer,
     ComposeStackFieldChangeRequestSerializer,
+    ComposeStackChangeSerializer,
+    ComposeStackEnvOverrideSerializer,
 )
 from ..models import ComposeStack, ComposeStackDeployment, ComposeStackChange
 from django.db.models import QuerySet
@@ -28,6 +31,7 @@ from temporal.shared import ComposeStackDeploymentDetails, ComposeStackArchiveDe
 from temporal.client import TemporalClient
 from ..dtos import ComposeStackSnapshot
 from rest_framework.serializers import Serializer
+from ..processor import ComposeSpecProcessor
 
 
 class ComposeStackListAPIView(ListAPIView):
@@ -307,6 +311,8 @@ class ComposeStackDeployAPIView(APIView):
 
 
 class ComposeStackRequestChanges(APIView):
+    serializer_class = ComposeStackChangeSerializer
+
     @transaction.atomic()
     @extend_schema(
         request=PolymorphicProxySerializer(
@@ -357,22 +363,40 @@ class ComposeStackRequestChanges(APIView):
         }
 
         request_serializer = ComposeStackFieldChangeRequestSerializer(data=request.data)
-        if request_serializer.is_valid(raise_exception=True):
-            form_serializer_class: type[Serializer] = field_serializer_map[
-                cast(dict, request_serializer.data)["field"]
-            ]
-            form = form_serializer_class(data=request.data, context={"stack": stack})
-            if form.is_valid(raise_exception=True):
-                data = cast(dict, form.data)
-                field = data["field"]
-                new_value: dict | None = data.get("new_value")
-                item_id = data.get("item_id")
-                change_type = data.get("type")
-                old_value: Any = None
-                match field:
-                    case ComposeStackChange.ChangeField.COMPOSE_CONTENT:
-                        pass
-                    case ComposeStackChange.ChangeField.ENV_OVERRIDES:
-                        pass
+        request_serializer.is_valid(raise_exception=True)
 
-        return Response(data={})
+        form_serializer_class: type[Serializer] = field_serializer_map[
+            cast(dict, request_serializer.data)["field"]
+        ]
+        form = form_serializer_class(data=request.data, context={"stack": stack})
+        form.is_valid(raise_exception=True)
+
+        data = cast(dict, form.data)
+        field = data["field"]
+        new_value: dict | None = data.get("new_value")
+        item_id = data.get("item_id")
+        change_type = data.get("type")
+        old_value: Any = None
+        match field:
+            case ComposeStackChange.ChangeField.COMPOSE_CONTENT:
+                old_value = getattr(stack, field)
+            case ComposeStackChange.ChangeField.ENV_OVERRIDES:
+                if change_type in ["UPDATE", "DELETE"]:
+                    old_value = ComposeStackEnvOverrideSerializer(
+                        stack.env_overrides.get(id=item_id)
+                    ).data
+
+        change = ComposeStackChange(
+            type=change_type,
+            field=field,
+            old_value=old_value,
+            new_value=new_value,
+            stack=stack,
+            item_id=item_id,
+        )
+        if new_value != old_value:
+            change = stack.add_change(change)
+
+        serializer = ComposeStackChangeSerializer(change)
+
+        return Response(data=serializer.data)
