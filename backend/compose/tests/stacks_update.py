@@ -13,6 +13,7 @@ from typing import cast
 from zane_api.utils import jprint
 
 from .stacks import ComposeStackAPITestBase
+from ..dtos import ComposeStackUrlRouteDto
 
 
 class ComposeStackRequestUpdateViewTests(ComposeStackAPITestBase):
@@ -255,3 +256,78 @@ class ComposeStackRequestUpdateViewTests(ComposeStackAPITestBase):
             stack.env_overrides.filter(key="POSTGRES_USER").first(),
         )
         self.assertIsNotNone(env)
+
+    def test_update_env_overrides_recompute_content_on_deploy(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_WITH_X_ENV_IN_URLS,
+            slug="placeholder-stack",
+        )
+
+        initial_computed_content = stack.computed_content
+
+        # add new env
+        payload = {
+            "field": ComposeStackChange.ChangeField.ENV_OVERRIDES,
+            "type": ComposeStackChange.ChangeType.ADD,
+            "new_value": {
+                "key": "APP_DOMAIN",
+                "value": "op.zaneops.dev",
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "compose:stacks.request_changes",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+            data=payload,
+            content_type="application/json",
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # redeploy the stack
+        response = self.client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        stack.refresh_from_db()
+        new_computed_content = stack.computed_content
+        print(
+            "========= new computed =========",
+            new_computed_content,
+            "========= end new computed =========",
+            sep="\n",
+        )
+
+        # The env override should be created
+        env = cast(
+            ComposeStackEnvOverride,
+            stack.env_overrides.filter(key="APP_DOMAIN").first(),
+        )
+        self.assertIsNotNone(env)
+        self.assertEqual(env.value, "op.zaneops.dev")
+        self.assertEqual(env.key, "APP_DOMAIN")
+
+        self.assertNotEqual(initial_computed_content, new_computed_content)
+        urls = cast(dict[str, list[dict]], stack.urls)
+        self.assertIsNotNone(cast(dict, stack.urls).get("dashboard"))
+
+        dashboard_route = ComposeStackUrlRouteDto.from_dict(urls["dashboard"][0])
+        self.assertEqual("dashboard.op.zaneops.dev", dashboard_route.domain)
+
+        api_route = ComposeStackUrlRouteDto.from_dict(urls["api"][0])
+        self.assertEqual("api.op.zaneops.dev", api_route.domain)
