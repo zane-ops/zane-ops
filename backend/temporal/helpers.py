@@ -2,7 +2,7 @@ import asyncio
 import os
 import shutil
 
-from typing import Any, Dict, List, Literal, TypedDict
+from typing import Any, Coroutine, Dict, List, Literal, TypedDict
 
 from .shared import DeploymentDetails, DeploymentURLDto, ProxyURLRoute
 from zane_api.models import (
@@ -625,13 +625,7 @@ class ZaneProxyClient:
             ],
             "match": [
                 {
-                    "path": [
-                        (
-                            "/*"
-                            if url.base_path == "/"
-                            else f"{strip_slash_if_exists(url.base_path, strip_end=True, strip_start=False)}*"
-                        )
-                    ],
+                    "path": [cls._normalize_base_path(url.base_path)],
                     "host": [url.domain],
                 }
             ],
@@ -925,13 +919,10 @@ class ZaneProxyClient:
         )
 
     @classmethod
-    async def cleanup_stack_service_urls(
+    async def delete_all_stack_urls(
         cls,
         stack_id: str,
     ) -> List[ProxyURLRoute]:
-        """
-        Remove old URLs that are not attached to the service anymore
-        """
         response = requests.get(
             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes", timeout=5
         )
@@ -951,31 +942,42 @@ class ZaneProxyClient:
             if route["@id"].startswith(stack_id)
         ]
 
+    @staticmethod
+    def _normalize_base_path(base_path: str):
+        if base_path == "/":
+            return "/*"
+        return (
+            f"{strip_slash_if_exists(base_path, strip_end=True, strip_start=False)}*",
+        )
+
     @classmethod
     async def cleanup_old_compose_stack_service_urls(
         cls,
         stack_id: str,
         all_urls: List[ComposeStackUrlRouteDto],
     ):
-        """
-        Remove old URLs that are not attached to stack services anymore
-        """
         response = requests.get(
             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes", timeout=5
         )
-        service_url_routes = [(url.domain, url.base_path) for url in all_urls]
-        await asyncio.gather(
-            *[
-                cls._delete_route(route["@id"])
-                for route in response.json()
-                if (
-                    route["@id"].startswith(stack_id)
-                    and (route["match"][0]["host"][0], route["match"][0]["path"][0])
-                    not in service_url_routes
+        service_url_routes = [
+            (
+                url.domain,
+                cls._normalize_base_path(url.base_path),
+            )
+            for url in all_urls
+        ]
+
+        route_delete_requests: List[Coroutine[Any, Any, None]] = []
+        for route in response.json():
+            if route["@id"].startswith(stack_id):
+                route_pair = (
+                    route["match"][0]["host"][0],
+                    route["match"][0]["path"][0],
                 )
-            ]
-        )
-        raise NotImplementedError()
+                if route_pair not in service_url_routes:
+                    route_delete_requests.append(cls._delete_route(route["@id"]))
+
+        await asyncio.gather(*route_delete_requests)
 
     @classmethod
     def _get_request_for_compose_stack_service_url(
@@ -1062,13 +1064,7 @@ class ZaneProxyClient:
             ),
             "match": [
                 {
-                    "path": [
-                        (
-                            "/*"
-                            if url.base_path == "/"
-                            else f"{strip_slash_if_exists(url.base_path, strip_end=True, strip_start=False)}*"
-                        )
-                    ],
+                    "path": [cls._normalize_base_path(url.base_path)],
                     "host": [url.domain],
                 }
             ],

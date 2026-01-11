@@ -14,7 +14,7 @@ from temporalio.service import RPCError
 
 with workflow.unsafe.imports_passed_through():
     from compose.models import ComposeStackDeployment, ComposeStack
-    from compose.dtos import ComposeStackServiceStatus
+    from compose.dtos import ComposeStackServiceStatus, ComposeStackUrlRouteDto
     from django.utils import timezone
     from ..helpers import (
         deployment_log,
@@ -221,6 +221,18 @@ class ComposeStackActivities:
                     stack_hash_prefix=stack.hash_prefix,
                     url=url,
                 )
+
+    @activity.defn
+    async def cleanup_old_stack_urls(self, deployment: ComposeStackDeploymentDetails):
+        stack = deployment.stack
+        all_routes: List[ComposeStackUrlRouteDto] = []
+        for service_urls in stack.urls.values():
+            all_routes.extend(service_urls)
+
+        await ZaneProxyClient.cleanup_old_compose_stack_service_urls(
+            stack_id=stack.id,
+            all_urls=all_routes,
+        )
 
     async def _get_service_status(
         self,
@@ -480,9 +492,7 @@ class ComposeStackActivities:
         print(
             f"Deleting URLs for the stack {Colors.BLUE}{details.stack.slug}{Colors.ENDC} (id: {Colors.ORANGE}{details.stack.id}{Colors.ENDC})..."
         )
-        urls_deleted = await ZaneProxyClient.cleanup_stack_service_urls(
-            details.stack.id
-        )
+        urls_deleted = await ZaneProxyClient.delete_all_stack_urls(details.stack.id)
         print(
             f"Deleted {len(urls_deleted)} URLs for the stack {Colors.BLUE}{details.stack.slug}{Colors.ENDC} (id: {Colors.ORANGE}{details.stack.id}{Colors.ENDC}) ✅"
         )
