@@ -370,29 +370,32 @@ class ComposeStackUrlRouteDto:
 
 @dataclass
 class ComposeStackEnvOverrideDto:
-    id: str
     key: str
     value: str
+    id: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> Self:
         return cls(
-            id=data["id"],
+            id=data.get("id"),
             key=data["key"],
             value=data["value"],
         )
 
     def to_dict(self):
-        return {
-            "id": self.id,
+        result = {
             "key": self.key,
             "value": self.value,
         }
+        if self.id is not None:
+            result["id"] = self.id
+        return result
 
 
 @dataclass
 class ComposeSpecDeploymentArtifacts:
     computed_content: str
+    computed_spec: Dict[str, Any]
     urls: Dict[str, List[ComposeStackUrlRouteDto]] = field(default_factory=dict)
     configs: Dict[str, str] = field(default_factory=dict)
     env_overrides: List[ComposeStackEnvOverrideDto] = field(default_factory=list)

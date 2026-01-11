@@ -942,6 +942,7 @@ class ComposeSpecProcessor:
 
         return ComposeSpecDeploymentArtifacts(
             computed_content=computed_content,
+            computed_spec=yaml.safe_load(computed_content),
             configs=extracted_configs,
             urls={
                 service: [ComposeStackUrlRouteDto.from_dict(route) for route in routes]

@@ -10,6 +10,7 @@ from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import find_item_in_sequence, jprint
 
 from ..models import ComposeStack, ComposeStackChange
+from ..processor import ComposeSpecProcessor
 from .fixtures import (
     DOCKER_COMPOSE_EXTERNAL_VOLUME,
     DOCKER_COMPOSE_MINIMAL,
@@ -115,19 +116,22 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             new_value.get("user_content"),
             DOCKER_COMPOSE_MINIMAL.strip(),
         )
-        self.assertIsNotNone(new_value.get("computed_content"))
-        self.assertNotEqual(
-            new_value.get("computed_content"),
-            DOCKER_COMPOSE_MINIMAL.strip(),
+
+        # Verify that compile_stack_for_deployment generates correct computed values
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_MINIMAL,
+            stack=created_stack,
         )
+        self.assertIsNotNone(artifacts.computed_content)
+        self.assertNotEqual(artifacts.computed_content, DOCKER_COMPOSE_MINIMAL.strip())
         print(
             "========= original =========",
-            new_value.get("user_content"),
+            DOCKER_COMPOSE_MINIMAL.strip(),
             sep="\n",
         )
         print(
             "========= computed =========",
-            new_value.get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
 
@@ -168,6 +172,13 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        # Verify compile_stack_for_deployment generates correct volume config
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_SIMPLE_DB,
+            stack=created_stack,
+        )
+        computed_dict = artifacts.computed_spec
+
         print(
             "========= original =========",
             new_value.get("user_content"),
@@ -175,12 +186,9 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
-
-        computed_dict = cast(dict, new_value.get("computed_spec"))
-        self.assertIsNotNone(computed_dict)
 
         self.assertIn("volumes", computed_dict)
         _, initial_volume = next(iter(computed_dict["volumes"].items()))
@@ -249,6 +257,13 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        # Verify compile_stack_for_deployment generates correct host volume config
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WITH_HOST_VOLUME,
+            stack=created_stack,
+        )
+        computed_dict = artifacts.computed_spec
+
         print(
             "========= original =========",
             new_value.get("user_content"),
@@ -256,12 +271,9 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
-
-        computed_dict = cast(dict, new_value.get("computed_spec"))
-        self.assertIsNotNone(computed_dict)
 
         self.assertNotIn("volumes", computed_dict)
 
@@ -276,17 +288,17 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             list, portainer_service.get("volumes")
         )
         self.assertGreater(len(service_volumes), 0, "Service should have volume mounts")
-        db_volume = find_item_in_sequence(
+        bind_volume = find_item_in_sequence(
             lambda v: v["type"] == "bind", service_volumes
         )
-        db_volume = cast(dict[str, Any], db_volume)
-        self.assertIsNotNone(db_volume)
-        self.assertIsInstance(db_volume, dict)
-        self.assertIsNotNone(db_volume.get("source"))
+        bind_volume = cast(dict[str, Any], bind_volume)
+        self.assertIsNotNone(bind_volume)
+        self.assertIsInstance(bind_volume, dict)
+        self.assertIsNotNone(bind_volume.get("source"))
 
-        self.assertEqual("/var/run/docker.sock", db_volume["source"])
-        self.assertEqual("/var/run/docker.sock", db_volume["target"])
-        self.assertTrue(db_volume.get("read_only"))
+        self.assertEqual("/var/run/docker.sock", bind_volume["source"])
+        self.assertEqual("/var/run/docker.sock", bind_volume["target"])
+        self.assertTrue(bind_volume.get("read_only"))
 
     def test_create_compose_stack_with_external_volume_do_not_add_labels_and_prefix(
         self,
@@ -327,6 +339,13 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        # Verify compile_stack_for_deployment handles external volumes correctly
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_EXTERNAL_VOLUME,
+            stack=created_stack,
+        )
+        computed_dict = artifacts.computed_spec
+
         print(
             "========= original =========",
             new_value.get("user_content"),
@@ -334,12 +353,9 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
-
-        computed_dict = cast(dict, new_value.get("computed_spec"))
-        self.assertIsNotNone(computed_dict)
 
         self.assertIn("volumes", computed_dict)
 
@@ -399,17 +415,21 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(computed_change.new_value)
         new_value = cast(dict, computed_change.new_value)
 
-        computed_dict = cast(dict, new_value.get("computed_spec"))
-        self.assertIsNotNone(computed_dict)
+        # Verify compile_stack_for_deployment generates correct URL config
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WEB_SERVICE,
+            stack=created_stack,
+        )
+        computed_dict = artifacts.computed_spec
 
         print(
             "========= original =========",
-            cast(dict, new_value).get("user_content"),
+            new_value.get("user_content"),
             sep="\n",
         )
         print(
             "========= computed =========",
-            cast(dict, new_value).get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
 
@@ -436,18 +456,18 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("zane.http.routes.0.base_path", labels)
         self.assertEqual("/", labels["zane.http.routes.0.base_path"])
 
-        extracted_urls = cast(dict, new_value.get("urls"))
+        extracted_urls = artifacts.urls
         self.assertIsNotNone(extracted_urls)
         self.assertEqual(len(extracted_urls), 1)
 
-        routes = cast(list, extracted_urls["web"])
+        routes = extracted_urls["web"]
         self.assertEqual(len(routes), 1)
 
-        route = cast(dict, routes[0])
-        self.assertEqual(route["domain"], "hello.127-0-0-1.sslip.io")
-        self.assertEqual(route["base_path"], "/")
-        self.assertEqual(route["port"], 80)
-        self.assertTrue(route["strip_prefix"])
+        route = routes[0]
+        self.assertEqual(route.domain, "hello.127-0-0-1.sslip.io")
+        self.assertEqual(route.base_path, "/")
+        self.assertEqual(route.port, 80)
+        self.assertTrue(route.strip_prefix)
 
     def test_create_compose_stack_with_multiple_urls(self):
         project = self.create_project()
@@ -485,26 +505,30 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         self.assertIsNotNone(computed_change)
         self.assertIsNotNone(computed_change.new_value)
-        new_value = cast(dict, computed_change.new_value)
 
-        extracted_urls = cast(dict, new_value.get("urls"))
+        # Verify compile_stack_for_deployment generates correct multiple URLs
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_MULTIPLE_ROUTES,
+            stack=created_stack,
+        )
+        extracted_urls = artifacts.urls
         self.assertIsNotNone(extracted_urls)
         self.assertEqual(len(extracted_urls), 1)
 
-        routes = cast(list, extracted_urls["api"])
+        routes = extracted_urls["api"]
         self.assertEqual(len(routes), 2)
 
-        route_0 = cast(dict, routes[0])
-        self.assertEqual(route_0["domain"], "api.example.com")
-        self.assertEqual(route_0["base_path"], "/")
-        self.assertEqual(route_0["port"], 3000)
-        self.assertFalse(route_0["strip_prefix"])
+        route_0 = routes[0]
+        self.assertEqual(route_0.domain, "api.example.com")
+        self.assertEqual(route_0.base_path, "/")
+        self.assertEqual(route_0.port, 3000)
+        self.assertFalse(route_0.strip_prefix)
 
-        route_1 = cast(dict, routes[1])
-        self.assertEqual(route_1["domain"], "example.com")
-        self.assertEqual(route_1["base_path"], "/api")
-        self.assertEqual(route_1["port"], 3001)
-        self.assertTrue(route_1["strip_prefix"])
+        route_1 = routes[1]
+        self.assertEqual(route_1.domain, "example.com")
+        self.assertEqual(route_1.base_path, "/api")
+        self.assertEqual(route_1.port, 3001)
+        self.assertTrue(route_1.strip_prefix)
 
     def test_create_compose_stack_with_dependencies(self):
         project = self.create_project()
@@ -543,6 +567,13 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        # Verify compile_stack_for_deployment generates correct dependencies
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WITH_DEPENDS_ON,
+            stack=created_stack,
+        )
+        computed_dict = artifacts.computed_spec
+
         print(
             "========= original =========",
             new_value.get("user_content"),
@@ -550,12 +581,9 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
-
-        computed_dict = cast(dict, new_value.get("computed_spec"))
-        self.assertIsNotNone(computed_dict)
 
         services = cast(dict, computed_dict.get("services"))
         self.assertIsNotNone(services)
@@ -590,8 +618,8 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
     def test_create_compose_with_env_placeholders(self):
         """
-        Test that x-env placeholders are resolved and substituted into service environments.
-        Placeholders like {{ generate_username }} are only supported in x-env section.
+        Test that x-env placeholders are resolved by compile_stack_for_deployment.
+        At creation time, only user_content is stored. No env_override changes are created.
         """
         project = self.create_project()
 
@@ -628,6 +656,20 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        # Env override changes ARE created at creation time from compile_stack_for_deployment
+        env_changes = created_stack.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
+            type=ComposeStackChange.ChangeType.ADD,
+        )
+        self.assertEqual(5, env_changes.count())
+
+        # Verify compile_stack_for_deployment resolves placeholders
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WITH_PLACEHOLDERS,
+            stack=created_stack,
+        )
+        computed_dict = artifacts.computed_spec
+
         print(
             "========= original =========",
             new_value.get("user_content"),
@@ -635,11 +677,10 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
 
-        computed_dict = cast(dict, new_value.get("computed_spec"))
         services = cast(dict, computed_dict.get("services"))
 
         # Find db service and verify env vars are resolved
@@ -685,17 +726,9 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertNotEqual("{{ generate_password | 64 }}", app_env["SECRET_KEY"])
         self.assertNotEqual("${SECRET_KEY}", app_env["SECRET_KEY"])
 
-        # Verify env override changes were created for all x-env variables
-        env_changes = created_stack.unapplied_changes.filter(
-            field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
-            type=ComposeStackChange.ChangeType.ADD,
-        )
-        self.assertEqual(5, env_changes.count(), "Should have 5 env override changes")
-
-        # Verify each x-env variable has a corresponding env override change
-        env_change_keys = {
-            cast(dict, change.new_value).get("key") for change in env_changes
-        }
+        # Verify env_overrides are generated by compile_stack_for_deployment
+        self.assertEqual(5, len(artifacts.env_overrides))
+        env_override_keys = {override.key for override in artifacts.env_overrides}
         expected_keys = {
             "POSTGRES_USER",
             "POSTGRES_PASSWORD",
@@ -703,22 +736,21 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             "API_TOKEN",
             "SECRET_KEY",
         }
-        self.assertEqual(expected_keys, env_change_keys)
+        self.assertEqual(expected_keys, env_override_keys)
 
         # Verify all values are resolved (no templates or refs)
-        for change in env_changes:
-            change_value = cast(dict, change.new_value)
-            value = cast(str, change_value.get("value"))
-            self.assertIsNotNone(value)
-            self.assertGreater(len(value), 0)
-            self.assertNotEqual("{{ generate_username }}", value)
-            self.assertNotEqual("{{ generate_password_32 }}", value)
-            self.assertNotEqual("{{ generate_password_64 }}", value)
-            self.assertNotEqual("{{ generate_slug }}", value)
+        for override in artifacts.env_overrides:
+            self.assertIsNotNone(override.value)
+            self.assertGreater(len(override.value), 0)
+            self.assertNotEqual("{{ generate_username }}", override.value)
+            self.assertNotEqual("{{ generate_password_32 }}", override.value)
+            self.assertNotEqual("{{ generate_password_64 }}", override.value)
+            self.assertNotEqual("{{ generate_slug }}", override.value)
 
     def test_create_compose_with_generate_domain_placeholder(self):
         """
         Test that {{ generate_domain }} placeholder generates a valid domain.
+        At creation time, only user_content is stored. Placeholders resolved during deployment.
         """
         project = self.create_project()
 
@@ -755,6 +787,20 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        # Env override changes ARE created at creation time (for APP_DOMAIN)
+        env_changes = created_stack.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
+            type=ComposeStackChange.ChangeType.ADD,
+        )
+        self.assertEqual(1, env_changes.count())
+
+        # Verify compile_stack_for_deployment resolves generate_domain
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WITH_GENERATE_DOMAIN,
+            stack=created_stack,
+        )
+        computed_dict = artifacts.computed_spec
+
         print(
             "========= original =========",
             new_value.get("user_content"),
@@ -762,11 +808,10 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
 
-        computed_dict = cast(dict, new_value.get("computed_spec"))
         services = cast(dict, computed_dict.get("services"))
 
         # Find web service and verify APP_DOMAIN is resolved
@@ -795,26 +840,21 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("/api", api_url)
 
         # Verify URL routes were extracted with the generated domain
-        urls_data = cast(dict, new_value.get("urls"))
+        urls_data = artifacts.urls
         self.assertIsNotNone(urls_data)
         self.assertIn("web", urls_data)
         routes = urls_data["web"]
         self.assertEqual(1, len(routes))
-        self.assertEqual(app_domain, routes[0]["domain"])
+        self.assertEqual(app_domain, routes[0].domain)
 
-        # Verify env override was created for APP_DOMAIN
-        env_changes = created_stack.unapplied_changes.filter(
-            field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
-            type=ComposeStackChange.ChangeType.ADD,
-        )
-        env_change_keys = {
-            cast(dict, change.new_value).get("key") for change in env_changes
-        }
-        self.assertIn("APP_DOMAIN", env_change_keys)
+        # Verify env override was generated for APP_DOMAIN
+        env_override_keys = {override.key for override in artifacts.env_overrides}
+        self.assertIn("APP_DOMAIN", env_override_keys)
 
     def test_create_compose_with_generate_password_placeholder(self):
         """
-        Test that {{ generate_password | <length> }} generates a password of the provided length
+        Test that {{ generate_password | <length> }} generates a password of the provided length.
+        At creation time, only user_content is stored. Placeholders resolved during deployment.
         """
         project = self.create_project()
 
@@ -852,6 +892,13 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        # Verify compile_stack_for_deployment generates passwords of correct length
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WITH_CUSTOM_PASSWORD_LENGTH,
+            stack=created_stack,
+        )
+        computed_dict = artifacts.computed_spec
+
         print(
             "========= original =========",
             new_value.get("user_content"),
@@ -859,11 +906,10 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
 
-        computed_dict = cast(dict, new_value.get("computed_spec"))
         x_env = computed_dict.get("x-env", {})
 
         # Test generate_password_N
@@ -888,6 +934,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
     def test_create_compose_with_generate_base64_placeholder(self):
         """
         Test that {{ generate_base64 | "value" }} encodes the given value to base64.
+        At creation time, only user_content is stored. Placeholders resolved during deployment.
         """
         project = self.create_project()
 
@@ -925,6 +972,13 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        # Verify compile_stack_for_deployment generates base64 values
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WITH_BASE64_GENERATE,
+            stack=created_stack,
+        )
+        computed_dict = artifacts.computed_spec
+
         print(
             "========= original =========",
             new_value.get("user_content"),
@@ -932,11 +986,10 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
 
-        computed_dict = cast(dict, new_value.get("computed_spec"))
         x_env = computed_dict.get("x-env", {})
 
         # Verify BASE64_HELLO is base64 encoded "hello"
@@ -954,8 +1007,8 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
     def test_create_compose_with_generate_uuid_placeholder(self):
         """
         Test that {{ generate_uuid }} generates a valid UUID.
+        At creation time, only user_content is stored. Placeholders resolved during deployment.
         """
-
         project = self.create_project()
 
         create_stack_payload = {
@@ -992,6 +1045,13 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        # Verify compile_stack_for_deployment generates UUIDs
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WITH_UUID_GENERATE,
+            stack=created_stack,
+        )
+        computed_dict = artifacts.computed_spec
+
         print(
             "========= original =========",
             new_value.get("user_content"),
@@ -999,11 +1059,10 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
 
-        computed_dict = cast(dict, new_value.get("computed_spec"))
         x_env = computed_dict.get("x-env", {})
 
         # Verify LICENCE_ID is a valid UUID
@@ -1055,6 +1114,13 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        # Verify compile_stack_for_deployment handles external configs
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS,
+            stack=created_stack,
+        )
+        computed_dict = artifacts.computed_spec
+
         print(
             "========= original =========",
             new_value.get("user_content"),
@@ -1062,12 +1128,9 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
-
-        computed_dict = cast(dict, new_value.get("computed_spec"))
-        self.assertIsNotNone(computed_dict)
 
         self.assertIn("configs", computed_dict)
         configs = cast(dict, computed_dict["configs"])
@@ -1139,6 +1202,13 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(computed_change.new_value)
         new_value = cast(dict, computed_change.new_value)
 
+        # Verify compile_stack_for_deployment handles inline configs
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
+            stack=created_stack,
+        )
+        computed_dict = artifacts.computed_spec
+
         print(
             "========= original =========",
             new_value.get("user_content"),
@@ -1146,12 +1216,9 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
-
-        computed_dict = cast(dict, new_value.get("computed_spec"))
-        self.assertIsNotNone(computed_dict)
 
         self.assertIn("configs", computed_dict)
         configs = cast(dict, computed_dict["configs"])
@@ -1168,7 +1235,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("zane-stack", nginx_config_labels)
         self.assertIn("zane-project", nginx_config_labels)
 
-        configs_data = cast(dict, new_value.get("configs"))
+        configs_data = artifacts.configs
         self.assertIsNotNone(configs_data)
         self.assertIn("nginx_config", configs_data)
 
@@ -1177,7 +1244,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             "worker_processes auto;\n"
             "events {\n"
             "  worker_connections 1024;\n"
-            "}"
+            "}\n"
         )
         self.assertEqual(expected_content, configs_data["nginx_config"])
 
@@ -1466,9 +1533,13 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             ).first(),
         )
         self.assertIsNotNone(pending_change)
-        new_value = cast(dict, pending_change.new_value)
-        extracted_urls = new_value.get("urls")
-        self.assertEqual(extracted_urls, {})
+
+        # Verify compile_stack_for_deployment generates empty URLs when domain missing
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_ROUTE_MISSING_DOMAIN,
+            stack=stack,
+        )
+        self.assertEqual(artifacts.urls, {})
 
     def test_create_compose_stack_with_route_port_zero_fails(self):
         project = self.create_project()
@@ -1561,6 +1632,13 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        # Verify compile_stack_for_deployment generates network aliases
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_MINIMAL,
+            stack=created_stack,
+        )
+        computed_dict = artifacts.computed_spec
+
         print(
             "========= original =========",
             new_value.get("user_content"),
@@ -1568,11 +1646,10 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
 
-        computed_dict = cast(dict, new_value.get("computed_spec"))
         services = cast(dict, computed_dict.get("services"))
 
         # Find the redis service
@@ -1611,10 +1688,8 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
     def test_create_compose_with_x_env_overrides(self):
         """
         Test that x-env section in compose file:
-        1. Extracts env variables with placeholders and resolves them
-        2. Resolves computed variables that reference other variables (e.g., ${MAIN_DOMAIN})
-        3. Substitutes resolved values into service environment variables
-        4. Creates env override changes for all resolved variables
+        1. At creation time, only user_content is stored (no env_override changes)
+        2. compile_stack_for_deployment resolves placeholders and creates env_overrides
         """
         project = self.create_project()
 
@@ -1651,6 +1726,20 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        # Env override changes ARE created at creation time (for generated passwords)
+        env_changes = created_stack.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
+            type=ComposeStackChange.ChangeType.ADD,
+        )
+        self.assertEqual(2, env_changes.count())
+
+        # Verify compile_stack_for_deployment resolves x-env properly
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES,
+            stack=created_stack,
+        )
+        computed_dict = artifacts.computed_spec
+
         print(
             "========= original =========",
             new_value.get("user_content"),
@@ -1658,11 +1747,10 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
 
-        computed_dict = cast(dict, new_value.get("computed_spec"))
         services = cast(dict, computed_dict.get("services"))
 
         # Find db service and verify env vars are resolved
@@ -1708,32 +1796,24 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("@db:5432/openpanel-db", api_env["DATABASE_URL"])
         self.assertNotIn("${", api_env["DATABASE_URL"])  # No unresolved variables
 
-        # Verify env override changes were created only for generated variables
-        env_changes = created_stack.unapplied_changes.filter(
-            field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
-            type=ComposeStackChange.ChangeType.ADD,
-        )
-        # Should have exactly 2 env override changes (for generated variables only)
-        self.assertEqual(2, env_changes.count())
+        # Verify env_overrides are generated by compile_stack_for_deployment
+        # Should have exactly 2 env overrides (for generated variables only)
+        self.assertEqual(2, len(artifacts.env_overrides))
 
-        env_change_keys = {
-            cast(dict, change.new_value).get("key") for change in env_changes
-        }
+        env_override_keys = {override.key for override in artifacts.env_overrides}
         expected_keys = {
             "SERVICE_PASSWORD_POSTGRES",
             "SERVICE_PASSWORD_REDIS",
         }
-        self.assertEqual(expected_keys, env_change_keys)
+        self.assertEqual(expected_keys, env_override_keys)
 
         # Verify generated values are not templates
-        for change in env_changes:
-            change_value = cast(dict, change.new_value)
-            value = cast(str, change_value.get("value"))
-            self.assertNotEqual("{{ generate_password_64 }}", value)
-            self.assertIsNotNone(value)
-            self.assertGreater(len(value), 0)
+        for override in artifacts.env_overrides:
+            self.assertNotEqual("{{ generate_password_64 }}", override.value)
+            self.assertIsNotNone(override.value)
+            self.assertGreater(len(override.value), 0)
 
-        # Verify x-env values in computed_content change
+        # Verify x-env values in computed spec
         x_env = computed_dict.get("x-env", {})
 
         # Static values
@@ -1791,6 +1871,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         """
         Test that x-env variables are resolved in inline config content.
         Variables like ${APP_PORT} in config file content should be substituted.
+        At creation time, only user_content is stored. Placeholders resolved during deployment.
         """
         project = self.create_project()
 
@@ -1827,6 +1908,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        # Verify compile_stack_for_deployment resolves x-env in configs
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WITH_X_ENV_IN_CONFIGS,
+            stack=created_stack,
+        )
+
         print(
             "========= original =========",
             new_value.get("user_content"),
@@ -1834,12 +1921,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_content"),
+            artifacts.computed_content,
             sep="\n",
         )
 
-        # Get the resolved config content
-        configs_data = cast(dict, new_value.get("configs"))
+        # Get the resolved config content from artifacts
+        configs_data = artifacts.configs
         self.assertIsNotNone(configs_data)
         self.assertIn("app_config", configs_data)
 
@@ -1866,6 +1953,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         """
         Test that x-env variables are resolved in URL routing labels.
         Variables like ${API_DOMAIN} in deploy labels should be substituted.
+        At creation time, only user_content is stored. Placeholders resolved during deployment.
         """
         project = self.create_project()
 
@@ -1902,23 +1990,40 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
-        # Get the resolved URLs
-        urls_data = cast(dict, new_value.get("urls"))
+        # Verify compile_stack_for_deployment resolves x-env in URLs
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WITH_X_ENV_IN_URLS,
+            stack=created_stack,
+        )
+
+        print(
+            "========= original =========",
+            new_value.get("user_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            artifacts.computed_content,
+            sep="\n",
+        )
+
+        # Get the resolved URLs from artifacts
+        urls_data = artifacts.urls
         self.assertIsNotNone(urls_data)
 
         # Verify api service URL is resolved
         self.assertIn("api", urls_data)
         api_routes = urls_data["api"]
         self.assertEqual(1, len(api_routes))
-        self.assertEqual("api.myapp.com", api_routes[0]["domain"])
-        self.assertEqual(3000, api_routes[0]["port"])
+        self.assertEqual("api.myapp.com", api_routes[0].domain)
+        self.assertEqual(3000, api_routes[0].port)
 
         # Verify dashboard service URL is resolved
         self.assertIn("dashboard", urls_data)
         dashboard_routes = urls_data["dashboard"]
         self.assertEqual(1, len(dashboard_routes))
-        self.assertEqual("dashboard.myapp.com", dashboard_routes[0]["domain"])
-        self.assertEqual(8080, dashboard_routes[0]["port"])
+        self.assertEqual("dashboard.myapp.com", dashboard_routes[0].domain)
+        self.assertEqual(8080, dashboard_routes[0].port)
 
 
 class ComposeStackURLConflictTests(ComposeStackAPITestBase):
@@ -2009,7 +2114,7 @@ class ComposeStackURLConflictTests(ComposeStackAPITestBase):
 
         # Deploy the first stack so its URLs are applied
         first_stack = ComposeStack.objects.get(slug="first-stack")
-        response = self.client.post(
+        response = self.client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
