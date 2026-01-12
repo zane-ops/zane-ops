@@ -510,6 +510,25 @@ class ComposeStackActivities:
         return [service.name for service in services]
 
     @activity.defn
+    async def get_next_queued_deployment(
+        self, details: ComposeStackDeploymentDetails
+    ) -> ComposeStackDeploymentDetails | None:
+        next_deployment = (
+            await ComposeStackDeployment.objects.filter(
+                stack_id=details.stack.id,
+                status=ComposeStackDeployment.DeploymentStatus.QUEUED,
+            )
+            .order_by("queued_at")
+            .afirst()
+        )
+
+        if next_deployment is not None:
+            return ComposeStackDeploymentDetails.from_deployment(
+                deployment=next_deployment
+            )
+        return None
+
+    @activity.defn
     async def wait_for_stack_service_containers_to_be_deleted(self, service: str):
         print(f"waiting for containers for service {service=} to be removed...")
         container_list = self.docker_client.containers.list(filters={"name": service})

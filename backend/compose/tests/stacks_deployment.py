@@ -32,7 +32,7 @@ from compose.dtos import ComposeStackSnapshot
 from temporalio import activity
 from temporal.shared import ComposeStackBuildDetails
 from compose.dtos import ComposeStackUrlRouteDto
-
+from compose.views.serializers import ComposeStackSnapshotSerializer
 
 from .stacks import ComposeStackAPITestBase
 
@@ -613,6 +613,59 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             self.assertEqual(ComposeStackServiceStatus.HEALTHY, redis_service["status"])
             self.assertEqual(1, redis_service["running_replicas"])
             self.assertEqual(1, redis_service["desired_replicas"])
+
+    async def test_queue_multiple_deploys_are_all_deployed(self):
+        project, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL,
+            slug="monitor-stack",
+        )
+
+        # Verify first deployment exists
+        first_deployment = await stack.deployments.afirst()
+        self.assertIsNotNone(first_deployment)
+        first_deployment = cast(ComposeStackDeployment, first_deployment)
+        self.assertEqual(
+            ComposeStackDeployment.DeploymentStatus.FINISHED, first_deployment.status
+        )
+
+        # Manually queue additional deployments
+        await ComposeStackDeployment.objects.acreate(
+            commit_message="second deployment",
+            stack=stack,
+            stack_snapshot=first_deployment.stack_snapshot,
+        )
+        await ComposeStackDeployment.objects.acreate(
+            commit_message="third deployment",
+            stack=stack,
+            stack_snapshot=first_deployment.stack_snapshot,
+        )
+
+        # Deploy the stack
+        response = await self.async_client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(
+            await stack.deployments.filter(
+                status=ComposeStackDeployment.DeploymentStatus.QUEUED
+            ).acount(),
+            0,
+        )
+        self.assertEqual(
+            await stack.deployments.filter(
+                status=ComposeStackDeployment.DeploymentStatus.FINISHED
+            ).acount(),
+            4,
+        )
 
 
 class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):

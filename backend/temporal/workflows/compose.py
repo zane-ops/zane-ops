@@ -136,6 +136,16 @@ class DeployComposeStackWorkflow:
                 retry_policy=self.retry_policy,
             )
 
+            next_queued_deployment = await workflow.execute_activity_method(
+                ComposeStackActivities.get_next_queued_deployment,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
+            if next_queued_deployment is not None:
+                workflow.continue_as_new(next_queued_deployment)
+            return next_queued_deployment
+
 
 @workflow.defn(name="archive-compose-stack")
 class ArchiveComposeStackWorkflow:
