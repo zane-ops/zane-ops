@@ -538,88 +538,87 @@ mountPath = "/pocketbase"
 )
 
 
-DOKPLOY_N8N_WITH_POSTGRES_TEMPLATE = DokployTemplate(
+DOKPLOY_VALKEY_TEMPLATE = DokployTemplate(
     compose="""
-services:
-  postgres:
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      start_period: 30s
-      interval: 10s
-      timeout: 5s
-      retries: 5
+version: "3.8"
 
-  n8n:
-    image: n8nio/n8n:latest
+services:
+  valkey:
+    image: valkey/valkey:8.1.4
     restart: unless-stopped
-    environment:
-      # Configuration PostgreSQL
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
-      - DB_POSTGRESDB_USER=${POSTGRES_USER}
-      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
-      
-      # SÉCURITÉ - Encryption (IMPORTANT)
-      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
-      
-      # Configuration réseau
-      - N8N_HOST=${N8N_HOST}
-      - N8N_PORT=${N8N_PORT}
-      - N8N_PROTOCOL=http
-      - NODE_ENV=production
-      - WEBHOOK_URL=https://${N8N_HOST}/
-      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
-      - N8N_SECURE_COOKIE=false
-      
+    ports:
+      - 6379
     volumes:
-      - n8n_data:/home/node/.n8n
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - ../files/valkey.conf:/etc/valkey/valkey.conf
+      - valkey-data:/data
+    command: valkey-server /etc/valkey/valkey.conf
+    environment:
+      - VALKEY_PASSWORD=${VALKEY_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -a \"$$VALKEY_PASSWORD\" ping | grep PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
 volumes:
-  n8n_data:
-  postgres_data:
+  valkey-data: {}
 """,
-    config="""
+    config='''
 [variables]
-main_domain = "${domain}"
-# Variables PostgreSQL
-postgres_user = "${username}"
-postgres_password = "${password:24}"
-postgres_db = "n8n"
-# SÉCURITÉ - Clé d'encryption (IMPORTANT)
-n8n_encryption_key = "${base64:64}"
+valkey_password = "${password:32}"
 
 [config]
+env = [
+  "VALKEY_PASSWORD=${valkey_password}"
+]
 mounts = []
 
-[[config.domains]]
-serviceName = "n8n"
-port = 5_678
-host = "${main_domain}"
+[[config.mounts]]
+filePath = "valkey.conf"
+content = """
+# Valkey configuration file
+# For more information, see: https://github.com/valkey-io/valkey
 
-[config.env]
-N8N_HOST = "${main_domain}"
-N8N_PORT = "5678"
-GENERIC_TIMEZONE = "Europe/Berlin"
+# Network
+bind 0.0.0.0
+port 6379
+protected-mode yes
 
-# Variables PostgreSQL
-POSTGRES_USER = "${postgres_user}"
-POSTGRES_PASSWORD = "${postgres_password}"
-POSTGRES_DB = "${postgres_db}"
+# General
+daemonize no
+supervised no
+pidfile /data/valkey.pid
+loglevel notice
+logfile ""
 
-# SÉCURITÉ - Encryption (IMPORTANT)
-N8N_ENCRYPTION_KEY = "${n8n_encryption_key}"
-""",
+# Snapshotting
+save 900 1
+save 300 10
+save 60 10000
+stop-writes-on-bgsave-error yes
+rdbcompression yes
+rdbchecksum yes
+dbfilename dump.rdb
+dir /data
+
+# Replication
+replica-serve-stale-data yes
+replica-read-only yes
+
+# Security
+requirepass ${valkey_password}
+
+# Memory management
+maxmemory-policy noeviction
+
+# Append only file
+appendonly yes
+appendfilename "appendonly.aof"
+appendfsync everysec
+no-appendfsync-on-rewrite no
+auto-aof-rewrite-percentage 100
+auto-aof-rewrite-min-size 64mb
+"""
+''',
 )

@@ -1194,6 +1194,103 @@ paths:
               schema:
                 $ref: '#/components/schemas/ComposeStack'
           description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/create-from-dokploy/:
+    post:
+      operationId: createFromDokployTemplate
+      description: Use a dokploy template encoded as base64 and ZaneOps will automatically
+        convert it to its compose syntax
+      summary: Create compose stack from Dokploy template
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateComposeStackFromDokployTemplateRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateComposeStackFromDokployTemplateRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateComposeStackFromDokployTemplateRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateFromDokployTemplateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStack'
+          description: ''
   /api/connectors/{id}/:
     get:
       operationId: connectors_retrieve
@@ -11083,15 +11180,18 @@ components:
       type: object
       properties:
         type:
-          allOf:
-          - $ref: '#/components/schemas/FieldChangeTypeEnum'
-          default: UPDATE
+          $ref: '#/components/schemas/ItemChangeTypeEnum'
+        item_id:
+          type: string
+          minLength: 1
+          maxLength: 255
         new_value:
           $ref: '#/components/schemas/EnvRequestRequest'
         field:
           $ref: '#/components/schemas/ComposeEnvOverrideItemChangeFieldEnum'
       required:
       - field
+      - type
     ComposeStack:
       type: object
       properties:
@@ -12180,6 +12280,19 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    CreateComposeStackFromDokployTemplateRequestRequest:
+      type: object
+      properties:
+        user_content:
+          type: string
+          minLength: 1
+        slug:
+          type: string
+          minLength: 1
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - slug
+      - user_content
     CreateDockerServiceContainerRegistryCredentialsIdErrorComponent:
       type: object
       properties:
@@ -12331,6 +12444,117 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - name
+    CreateFromDokployTemplateError:
+      oneOf:
+      - $ref: '#/components/schemas/CreateFromDokployTemplateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateFromDokployTemplateUserContentErrorComponent'
+      - $ref: '#/components/schemas/CreateFromDokployTemplateSlugErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CreateFromDokployTemplateNonFieldErrorsErrorComponent'
+          user_content: '#/components/schemas/CreateFromDokployTemplateUserContentErrorComponent'
+          slug: '#/components/schemas/CreateFromDokployTemplateSlugErrorComponent'
+    CreateFromDokployTemplateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CreateFromDokployTemplateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CreateFromDokployTemplateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CreateFromDokployTemplateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateFromDokployTemplateSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateFromDokployTemplateUserContentErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - user_content
+          type: string
+          description: '* `user_content` - user_content'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateFromDokployTemplateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateFromDokployTemplateError'
+      required:
+      - errors
+      - type
     CreateGitServiceBranchNameErrorComponent:
       type: object
       properties:
@@ -19781,6 +20005,7 @@ components:
       - $ref: '#/components/schemas/RequestComposeStackUpdateTypeErrorComponent'
       - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueErrorComponent'
       - $ref: '#/components/schemas/RequestComposeStackUpdateFieldErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateItemIdErrorComponent'
       - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueKeyErrorComponent'
       - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueValueErrorComponent'
@@ -19791,6 +20016,7 @@ components:
           type: '#/components/schemas/RequestComposeStackUpdateTypeErrorComponent'
           new_value: '#/components/schemas/RequestComposeStackUpdateNewValueErrorComponent'
           field: '#/components/schemas/RequestComposeStackUpdateFieldErrorComponent'
+          item_id: '#/components/schemas/RequestComposeStackUpdateItemIdErrorComponent'
           new_value.non_field_errors: '#/components/schemas/RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent'
           new_value.key: '#/components/schemas/RequestComposeStackUpdateNewValueKeyErrorComponent'
           new_value.value: '#/components/schemas/RequestComposeStackUpdateNewValueValueErrorComponent'
@@ -19821,6 +20047,36 @@ components:
             * `invalid_choice` - invalid_choice
             * `null` - null
             * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateItemIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - item_id
+          type: string
+          description: '* `item_id` - item_id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
@@ -19966,10 +20222,12 @@ components:
           enum:
           - invalid_choice
           - 'null'
+          - required
           type: string
           description: |-
             * `invalid_choice` - invalid_choice
             * `null` - null
+            * `required` - required
         detail:
           type: string
       required:

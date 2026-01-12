@@ -7,7 +7,7 @@ from zane_api.models import Environment
 from zane_api.utils import jprint
 
 from ..models import ComposeStack, ComposeStackChange
-from .fixtures import DOKPLOY_POCKETBASE_TEMPLATE
+from .fixtures import DOKPLOY_POCKETBASE_TEMPLATE, DOKPLOY_VALKEY_TEMPLATE
 from .stacks import ComposeStackAPITestBase
 
 
@@ -142,3 +142,148 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
             "admin_password",
         }
         self.assertEqual(expected_keys, env_override_keys)
+
+    def test_create_compose_stack_from_dokploy_with_removes_exposed_ports(
+        self,
+    ):
+        project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "valkey-no-ports",
+            "user_content": DOKPLOY_VALKEY_TEMPLATE.base64,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create_from_dokploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="valkey-no-ports").first()
+        )
+        self.assertIsNotNone(created_stack)
+
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(str, pending_change.new_value)
+
+        # Parse the converted user_content
+        user_content_dict = yaml.safe_load(new_value)
+
+        # Verify services section exists
+        services = user_content_dict["services"]
+        self.assertIn("valkey", services)
+        valkey_service = services["valkey"]
+
+        # Verify that exposed ports are removed
+        # Original compose had: ports: - 6379
+        # This should be removed in the converted compose
+        self.assertNotIn("ports", valkey_service)
+
+    def test_create_compose_stack_from_dokploy_with_config_content_is_transformed_into_inline_content(
+        self,
+    ):
+        project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "vakey",
+            "user_content": DOKPLOY_VALKEY_TEMPLATE.base64,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create_from_dokploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="vakey").first()
+        )
+        self.assertIsNotNone(created_stack)
+
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(str, pending_change.new_value)
+        self.assertIsNotNone(new_value)
+
+        # Parse the converted user_content
+        user_content_dict = yaml.safe_load(new_value)
+
+        # Verify configs section exists with inline content
+        self.assertIn("configs", user_content_dict)
+        configs = user_content_dict["configs"]
+        self.assertIn("valkey.conf", configs)
+
+        valkey_config = configs["valkey.conf"]
+
+        # Verify it has content field (not file field)
+        self.assertIn("content", valkey_config)
+        self.assertNotIn("file", valkey_config)
+
+        # Verify the content includes the password placeholder reference
+        content = valkey_config["content"]
+        self.assertIsNotNone(content)
+        self.assertIn("requirepass ${valkey_password}", content)
+        self.assertIn("bind 0.0.0.0", content)
+        self.assertIn("port 6379", content)
+
+        # Verify the service uses the config
+        services = user_content_dict["services"]
+        self.assertIn("valkey", services)
+        valkey_service = services["valkey"]
+
+        # Verify the service removes the local env
+        services = user_content_dict["services"]
+        self.assertIn("valkey", services)
+        valkey_service = services["valkey"]
+
+        # Check that configs reference is present
+        self.assertIn("configs", valkey_service)
+        service_configs = valkey_service["configs"]
+        self.assertTrue(len(service_configs) > 0)
+
+        # Find the valkey.conf config reference
+        valkey_conf_ref = None
+        for config_ref in service_configs:
+            if (
+                isinstance(config_ref, dict)
+                and config_ref.get("source") == "valkey.conf"
+            ):
+                valkey_conf_ref = config_ref
+                break
+
+        self.assertIsNotNone(valkey_conf_ref)
+        valkey_conf_ref = cast(dict, valkey_conf_ref)
+        self.assertEqual("/etc/valkey/valkey.conf", valkey_conf_ref["target"])
+
+        # Check that the relative path volume is removed (in favor of the config)
+        service_volumes = valkey_service["volumes"]
+        self.assertEqual(1, len(service_volumes))
+        volume = service_volumes[0]
+        self.assertEqual("valkey-data:/data", volume)
