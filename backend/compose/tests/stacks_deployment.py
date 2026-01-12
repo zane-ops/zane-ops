@@ -32,7 +32,7 @@ from compose.dtos import ComposeStackSnapshot
 from temporalio import activity
 from temporal.shared import ComposeStackBuildDetails
 from compose.dtos import ComposeStackUrlRouteDto
-from compose.views.serializers import ComposeStackSnapshotSerializer
+
 
 from .stacks import ComposeStackAPITestBase
 
