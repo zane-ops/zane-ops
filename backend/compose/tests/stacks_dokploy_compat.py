@@ -179,6 +179,8 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
         )
         self.assertIsNotNone(pending_change)
         new_value = cast(str, pending_change.new_value)
+        print("========= converted user_content =========")
+        print(new_value)
 
         # Parse the converted user_content
         user_content_dict = yaml.safe_load(new_value)
@@ -231,6 +233,8 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(str, pending_change.new_value)
         self.assertIsNotNone(new_value)
+        print("========= converted user_content =========")
+        print(new_value)
 
         # Parse the converted user_content
         user_content_dict = yaml.safe_load(new_value)

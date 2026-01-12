@@ -6,8 +6,8 @@ import yaml
 from typing import Dict, Any
 
 
-from zane_api.utils import jprint
-from .dtos import DokployConfigObject
+from zane_api.utils import jprint, find_item_in_sequence
+from .dtos import DokployConfigObject, ComposeServiceSpec
 from abc import ABC, abstractmethod
 
 
@@ -90,6 +90,7 @@ class DokployComposeAdapter(BaseComposeAdapter):
         if x_env:
             compose_dict["x-env"] = x_env
 
+        # handle domains
         for service_name, domains in config.domains.items():
             compose_service = compose_dict["services"].get(service_name)
             if compose_service is not None:
@@ -103,6 +104,50 @@ class DokployComposeAdapter(BaseComposeAdapter):
                     )
                     deploy["labels"][f"zane.http.routes.{index}.port"] = domain.port
                 compose_service["deploy"] = deploy
+
+        # handle configs
+        configs: dict[str, dict] = {}
+        for mount in config.mounts:
+            configs[mount.filePath] = dict(content=mount.content)
+
+        # for service_dict in compose_dict["services"]:
+        #     service = ComposeServiceSpec.from_dict(service_dict)
+
+        #     # `../files` is prefix that dokploy uses for bind volumes
+        #     # but we don't use relative bind volumes, so we need to remove them
+        #     for v in service.volumes:
+        #         if (
+        #             v.type == "bind"
+        #             and v.source is not None
+        #             and v.source.startswith("../files")
+        #         ):
+        #             _, path = v.source.split("/", 1)
+        #             if path in configs:
+        #                 service_dict["configs"] = service_dict.get("configs", [])
+        #                 service_dict["configs"].append(
+        #                     dict(source=path, target=v.target)
+        #                 )
+        #             # TODO: should create a normal volume in the other case
+        #             # else:
+        #             #     service_dict["volumes"].append(f"{path}:")
+
+        #     # remove all relative volumes
+        #     volumes = []
+        #     for volume in enumerate(service_dict.get("volumes", [])):
+        #         if isinstance(volume, str) and volume.startswith("../files"):
+        #             continue
+        #         if (
+        #             isinstance(volume, dict)
+        #             and volume["type"] == "bind"  # type: ignore
+        #             and volume["source"].startswith("../files")  # type: ignore
+        #         ):
+        #             continue
+
+        #         volumes.append(volume)
+
+        #     service_dict["volumes"] = volumes
+
+        compose_dict["configs"] = configs
 
         # we need to reorder the compose file properties
         compose = {}

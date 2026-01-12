@@ -1,7 +1,11 @@
 import base64
 import json
+import subprocess
+import tempfile
+import tomllib
 from typing import Any, cast
 from rest_framework import serializers
+import yaml
 from ..models import (
     ComposeStack,
     ComposeStackChange,
@@ -476,6 +480,52 @@ class DokployTemplateObjectSerializer(serializers.Serializer):
     compose = serializers.CharField()
     config = serializers.CharField()
 
+    def validate_compose(self, content: str):
+        try:
+            parsed = yaml.safe_load(content)
+            if parsed is None:
+                raise ValidationError("Empty compose file")
+            if not isinstance(parsed, dict):
+                raise ValidationError("Compose file must be a YAML object/dictionary")
+        except yaml.YAMLError as e:
+            raise ValidationError(f"Invalid YAML syntax: {str(e)}")
+        else:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".yml", delete_on_close=False
+            ) as temp_file:
+                temp_file.write(content)
+                temp_file.flush()
+
+                # validate compose syntax
+                result = subprocess.run(
+                    [
+                        "docker",
+                        "compose",  # we use `docker compose config` here because dokploy use the compose syntax
+                        "-f",
+                        temp_file.name,
+                        "config",
+                    ],
+                    capture_output=True,
+                    text=True,
+                )
+
+                if result.returncode != 0:
+                    raise serializers.ValidationError(
+                        {"compose": result.stderr.strip()}
+                    )
+
+        return content
+
+    def validate_config(self, config: str):
+        try:
+            parsed = tomllib.loads(config)
+            if not isinstance(parsed, dict):
+                raise ValidationError("config.toml must be a TOML object/dictionary")
+        except tomllib.TOMLDecodeError as e:
+            raise ValidationError(f"Invalid TOML syntax: {str(e)}")
+
+        return config
+
 
 class CreateComposeStackFromDokployTemplateRequestSerializer(serializers.Serializer):
     user_content = serializers.CharField()
@@ -489,10 +539,10 @@ class CreateComposeStackFromDokployTemplateRequestSerializer(serializers.Seriali
                 data=json.loads(decoded_string)
             )
             serializer.is_valid(raise_exception=True)
-        except (serializers.ValidationError, ValueError):
+        except ValueError:
             raise serializers.ValidationError(
                 {
-                    "user_content": "Invalid cursor format, it should be a base64 encoded string of a JSON object."
+                    "user_content": "Invalid format, it should be a base64 encoded string of a JSON object."
                 }
             )
         return user_content

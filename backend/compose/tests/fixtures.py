@@ -555,7 +555,7 @@ services:
     environment:
       - VALKEY_PASSWORD=${VALKEY_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "valkey-cli -a \"$$VALKEY_PASSWORD\" ping | grep PONG"]
+      test: ["CMD-SHELL", 'valkey-cli -a "$$VALKEY_PASSWORD" ping | grep PONG']
       interval: 10s
       timeout: 3s
       retries: 5
@@ -572,7 +572,6 @@ valkey_password = "${password:32}"
 env = [
   "VALKEY_PASSWORD=${valkey_password}"
 ]
-mounts = []
 
 [[config.mounts]]
 filePath = "valkey.conf"
