@@ -151,6 +151,18 @@ class DockerSwarmTask:
     def state(self):
         return self.Status.State
 
+    @property
+    def message(self):
+        return self.Status.Err if self.Status.Err is not None else self.Status.Message
+
+    @property
+    def exit_code(self):
+        return (
+            self.Status.ContainerStatus.ExitCode
+            if self.Status.ContainerStatus
+            else None
+        )
+
     @classmethod
     def from_dict(
         cls,
