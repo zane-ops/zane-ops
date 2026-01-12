@@ -1,3 +1,4 @@
+import base64
 import json
 from typing import Any, cast
 from rest_framework import serializers
@@ -111,7 +112,11 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"user_content": e.messages})
 
         slug = validated_data["slug"]
-        if ComposeStack.objects.filter(slug=slug).exists():
+        if ComposeStack.objects.filter(
+            slug=slug,
+            project=project,
+            environment=environment,
+        ).exists():
             raise serializers.ValidationError(
                 {
                     "slug": f"A compose stack with the slug `{slug}` already exists in this environment."
@@ -465,3 +470,48 @@ class ComposeStackFieldChangeRequestSerializer(serializers.Serializer):
         required=True,
         choices=ComposeStackChange.ChangeField.choices,
     )
+
+
+class DokployTemplateObjectSerializer(serializers.Serializer):
+    compose = serializers.CharField()
+    config = serializers.CharField()
+
+
+class CreateComposeStackFromDokployTemplateRequestSerializer(serializers.Serializer):
+    user_content = serializers.CharField()
+    slug = serializers.SlugField()
+
+    def validate_user_content(self, user_content: str):
+        try:
+            decoded_data = base64.b64decode(user_content, validate=True)
+            decoded_string = decoded_data.decode("utf-8")
+            serializer = DokployTemplateObjectSerializer(
+                data=json.loads(decoded_string)
+            )
+            serializer.is_valid(raise_exception=True)
+        except (serializers.ValidationError, ValueError):
+            raise serializers.ValidationError(
+                {
+                    "user_content": "Invalid cursor format, it should be a base64 encoded string of a JSON object."
+                }
+            )
+        return user_content
+
+    def validate_slug(self, slug: str):
+        project = cast(Project, self.context["project"])
+        environment = cast(Environment, self.context["environment"])
+        if ComposeStack.objects.filter(
+            slug=slug,
+            project=project,
+            environment=environment,
+        ).exists():
+            raise serializers.ValidationError(
+                {
+                    "slug": f"A compose stack with the slug `{slug}` already exists in this environment."
+                }
+            )
+
+        return slug
+
+    # def validate(self, attrs: dict[str, str]):
+    #     return super().validate(attrs)

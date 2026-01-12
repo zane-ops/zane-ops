@@ -2,6 +2,10 @@
 Docker Compose test fixtures representing real-world use cases.
 """
 
+import base64
+from dataclasses import asdict, dataclass
+import json
+
 DOCKER_COMPOSE_SIMPLE_DB = """
 services:
   postgres:
@@ -457,3 +461,165 @@ services:
         zane.http.routes.0.base_path: "/"
 
 """
+
+
+##====================================##
+##   DOKPLOY COMPATIBILITY fixtures   ##
+##====================================##
+
+
+@dataclass
+class DokployTemplate:
+    compose: str
+    config: str
+
+    @property
+    def to_dict(self):
+        return asdict(self)
+
+    @property
+    def base64(self):
+        return base64.b64encode(json.dumps(asdict(self)).encode()).decode()
+
+
+DOKPLOY_POCKETBASE_TEMPLATE = DokployTemplate(
+    compose="""
+# IMPORTANT: Please update the admin credentials in your .env file
+# Access PocketBase Admin UI at: https://your-domain.com/_/ (replace with your configured domain)
+# Note: Admin UI may take up to 1 minute to load on first startup
+
+version: "3.8"
+
+services:
+  pocketbase:
+    image: adrianmusante/pocketbase:latest
+    restart: always
+    expose:
+      - 8090
+    volumes:
+      - pocketbase-data:/pocketbase
+    environment:
+      - POCKETBASE_ADMIN_EMAIL=${ADMIN_EMAIL}
+      - POCKETBASE_ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - POCKETBASE_ADMIN_UPSERT=true
+      - POCKETBASE_PORT_NUMBER=8090
+      # Optional: Encryption key for securing app settings (OAuth2 secrets, SMTP passwords, etc.)
+      # Uncomment and set a secure key in your .env file for production use
+      # - POCKETBASE_ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8090/_/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  pocketbase-data: {}
+""",
+    config="""
+[variables]
+main_domain = "${domain}"
+admin_email = "${email}"
+admin_password = "${password:32}"
+
+[config]
+[[config.domains]]
+serviceName = "pocketbase"
+port = 8090
+host = "${main_domain}"
+
+[config.env]
+ADMIN_EMAIL = "${admin_email}"
+ADMIN_PASSWORD = "${admin_password}"
+
+[[config.mounts]]
+name = "pocketbase-data"
+mountPath = "/pocketbase"
+""",
+)
+
+
+DOKPLOY_N8N_WITH_POSTGRES_TEMPLATE = DokployTemplate(
+    compose="""
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    environment:
+      # Configuration PostgreSQL
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      
+      # SÉCURITÉ - Encryption (IMPORTANT)
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      
+      # Configuration réseau
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PORT=${N8N_PORT}
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=https://${N8N_HOST}/
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - N8N_SECURE_COOKIE=false
+      
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  n8n_data:
+  postgres_data:
+""",
+    config="""
+[variables]
+main_domain = "${domain}"
+# Variables PostgreSQL
+postgres_user = "${username}"
+postgres_password = "${password:24}"
+postgres_db = "n8n"
+# SÉCURITÉ - Clé d'encryption (IMPORTANT)
+n8n_encryption_key = "${base64:64}"
+
+[config]
+mounts = []
+
+[[config.domains]]
+serviceName = "n8n"
+port = 5_678
+host = "${main_domain}"
+
+[config.env]
+N8N_HOST = "${main_domain}"
+N8N_PORT = "5678"
+GENERIC_TIMEZONE = "Europe/Berlin"
+
+# Variables PostgreSQL
+POSTGRES_USER = "${postgres_user}"
+POSTGRES_PASSWORD = "${postgres_password}"
+POSTGRES_DB = "${postgres_db}"
+
+# SÉCURITÉ - Encryption (IMPORTANT)
+N8N_ENCRYPTION_KEY = "${n8n_encryption_key}"
+""",
+)

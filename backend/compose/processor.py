@@ -240,6 +240,7 @@ class ComposeSpecProcessor:
         r"generate_domain",
         r"generate_username",
         r"generate_uuid",
+        r"generate_email",
         PASSWORD_REGEX,
         BASE64_REGEX,
     ]
@@ -398,6 +399,8 @@ class ComposeSpecProcessor:
                 return f"{stack.project.slug}-{stack.slug}-{generate_random_chars(10)}.{settings.ROOT_DOMAIN}".lower()
             case "generate_slug":
                 return fake.slug()
+            case "generate_email":
+                return fake.email()
             case "generate_uuid":
                 return str(uuid.uuid4())
             case "generate_username":

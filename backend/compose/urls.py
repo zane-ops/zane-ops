@@ -16,6 +16,11 @@ urlpatterns = [
         name="stacks.create",
     ),
     re_path(
+        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/create-from-dokploy/?$",
+        views.ComposeStackCreateFromDokployAPIView.as_view(),
+        name="stacks.create_from_dokploy",
+    ),
+    re_path(
         rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/?$",
         views.ComposeStackDetailsAPIView.as_view(),
         name="stacks.details",

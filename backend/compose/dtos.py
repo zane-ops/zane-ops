@@ -512,3 +512,129 @@ class ComposeStackServiceStatusDto:
             "mode": self.mode,
             "tasks": [task.to_dict() for task in self.tasks],
         }
+
+
+@dataclass
+class DokployConfigDomain:
+    port: int
+    host: str
+    path: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "port": self.port,
+            "host": self.host,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "DokployConfigDomain":
+        return cls(
+            port=data["port"],
+            host=data["host"].strip(),
+            path=data.get("path", "/").strip(),
+        )
+
+
+@dataclass
+class DokployConfigMount:
+    content: str
+    filePath: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "content": self.content,
+            "filePath": self.filePath,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "DokployConfigMount":
+        return cls(
+            content=data["content"],
+            filePath=data["filePath"],
+        )
+
+
+@dataclass
+class DokployConfigEnv:
+    key: str
+    value: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "key": self.key,
+            "value": self.value,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "DokployConfigEnv":
+        return cls(
+            key=data["key"],
+            value=data["value"],
+        )
+
+
+@dataclass
+class DokployConfigObject:
+    env: Dict[str, str] = field(default_factory=dict)
+    mounts: List[DokployConfigMount] = field(default_factory=list)
+    domains: Dict[str, List[DokployConfigDomain]] = field(default_factory=dict)
+    variables: Dict[str, str] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "env": self.env,
+            "mounts": [mount.to_dict() for mount in self.mounts],
+            "domains": {
+                service: [domain.to_dict() for domain in domains]
+                for service, domains in self.domains.items()
+            },
+            "variables": self.variables,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "DokployConfigObject":
+        # handle envs
+        envs: Dict[str, str] = {}
+        original_env: list[str] | dict[str, str] = data.get("config", {}).get("env", {})
+        if isinstance(original_env, list):
+            for env in original_env:
+                env_line = env.strip()
+                if len(env_line) > 0 and not env_line.startswith(
+                    "#"
+                ):  # `#` marks a comment, so it should be ignored, same as empty lines
+                    key, value = cast(str, env).split("=", 1)
+                    envs[key] = value.strip()
+        elif isinstance(original_env, dict):
+            for key, value in original_env.items():
+                envs[key] = value.strip()
+
+        # handle mounts
+        mounts: List[DokployConfigMount] = []
+        original_mounts = data.get("config", {}).get("mounts", [])
+        for mount_data in original_mounts:
+            # we ignore mounts of this format
+            # [[config.mounts]]
+            # name = "pocketbase-data"
+            # mountPath = "/pocketbase"
+            # they represent  volumes, but volumes are already
+            # referenced in the compose file
+            if mount_data.get("content") is not None:
+                mounts.append(DokployConfigMount.from_dict(mount_data))
+
+        # handle domains
+        domains: Dict[str, List[DokployConfigDomain]] = {}
+        original_domains = data.get("config", {}).get("domains", [])
+        for domain_data in original_domains:
+            service_name = domain_data["serviceName"]
+            domains[service_name] = domains.get(service_name, [])
+            domains[service_name].append(DokployConfigDomain.from_dict(domain_data))
+
+        # handle variables
+        variables: Dict[str, str] = data.get("variables", {})
+
+        return cls(
+            env=envs,
+            mounts=mounts,
+            domains=domains,
+            variables=variables,
+        )
