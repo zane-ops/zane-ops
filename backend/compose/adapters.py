@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 import re
 import tomllib
 import yaml
@@ -63,6 +64,13 @@ class DokployComposeAdapter(BaseComposeAdapter):
 
     @classmethod
     def to_zaneops(cls, template: str):
+        """
+        transform the syntax to zaneops compatible syntax
+
+        :param cls: Description
+        :param template: Description
+        :type template: str
+        """
         decoded_data = base64.b64decode(template)
         decoded_string = decoded_data.decode("utf-8")
         template_dict = json.loads(decoded_string)
@@ -108,46 +116,80 @@ class DokployComposeAdapter(BaseComposeAdapter):
         # handle configs
         configs: dict[str, dict] = {}
         for mount in config.mounts:
-            configs[mount.filePath] = dict(content=mount.content)
+            filename = os.path.basename(mount.filePath)
+            configs[filename] = dict(content=mount.content)
 
-        # for service_dict in compose_dict["services"]:
-        #     service = ComposeServiceSpec.from_dict(service_dict)
+        """
+        # we need reconcile these cases:
 
-        #     # `../files` is prefix that dokploy uses for bind volumes
-        #     # but we don't use relative bind volumes, so we need to remove them
-        #     for v in service.volumes:
-        #         if (
-        #             v.type == "bind"
-        #             and v.source is not None
-        #             and v.source.startswith("../files")
-        #         ):
-        #             _, path = v.source.split("/", 1)
-        #             if path in configs:
-        #                 service_dict["configs"] = service_dict.get("configs", [])
-        #                 service_dict["configs"].append(
-        #                     dict(source=path, target=v.target)
-        #                 )
-        #             # TODO: should create a normal volume in the other case
-        #             # else:
-        #             #     service_dict["volumes"].append(f"{path}:")
+        1st case:
+        mounts:
+            - "./clickhouse_config/logging_rules.xml"
+            - "./clickhouse_config/network.xml"
+            - "./clickhouse_config/user_logging.xml"
+        
+        volumes:
+            - ../files/clickhouse_config:/etc/clickhouse-server/config.d
+        
+        2nd case:
+        mounts:
+            - "clickhouse/clickhouse-config.xml"
+            - "clickhouse/clickhouse-user-config.xml"
+            - "clickhouse/init-db.sql"
 
-        #     # remove all relative volumes
-        #     volumes = []
-        #     for volume in enumerate(service_dict.get("volumes", [])):
-        #         if isinstance(volume, str) and volume.startswith("../files"):
-        #             continue
-        #         if (
-        #             isinstance(volume, dict)
-        #             and volume["type"] == "bind"  # type: ignore
-        #             and volume["source"].startswith("../files")  # type: ignore
-        #         ):
-        #             continue
+        volumes:
+            - ../files/clickhouse/clickhouse-config.xml:/etc/clickhouse-server/config.d/op-config.xml:ro
+            - ../files/clickhouse/clickhouse-user-config.xml:/etc/clickhouse-server/users.d/op-user-config.xml:ro
+            - ../files/clickhouse/init-db.sql:/docker-entrypoint-initdb.d/1_init-db.sql:ro
 
-        #         volumes.append(volume)
+        === Solution ===
+        1. create a temp dir
+        2. for each mount path, create a file at the selected path inside the temp dir
+        3. find the path of the volume: 
+            - if the volume path is a dir, we need to find all the 
 
-        #     service_dict["volumes"] = volumes
+        """
 
-        compose_dict["configs"] = configs
+        # remove all `../files` bind volumes
+
+        for service_dict in compose_dict["services"]:
+            service = ComposeServiceSpec.from_dict(service_dict)
+
+            # `../files` is prefix that dokploy uses for bind volumes
+            # but we don't use relative bind volumes, so we need to remove them
+            for v in service.volumes:
+                if (
+                    v.type == "bind"
+                    and v.source is not None
+                    and v.source.startswith("../files")
+                ):
+                    _, path = v.source.split("/", 1)
+                    if path in configs:
+                        service_dict["configs"] = service_dict.get("configs", [])
+                        service_dict["configs"].append(
+                            dict(source=path, target=v.target)
+                        )
+                    # TODO: should create a normal volume in the other case
+                    # else:
+                    #     service_dict["volumes"].append(f"{path}:")
+
+            # remove all relative volumes
+            volumes = []
+            for volume in enumerate(service_dict.get("volumes", [])):
+                if isinstance(volume, str) and volume.startswith("../files"):
+                    continue
+                if (
+                    isinstance(volume, dict)
+                    and volume["type"] == "bind"  # type: ignore
+                    and volume["source"].startswith("../files")  # type: ignore
+                ):
+                    continue
+
+                volumes.append(volume)
+
+            service_dict["volumes"] = volumes
+
+        # compose_dict["configs"] = configs
 
         # we need to reorder the compose file properties
         compose = {}
