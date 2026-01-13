@@ -80,6 +80,20 @@ export interface paths {
   "/api/compose/stacks/{project_slug}/{env_slug}/create/": {
     post: operations["compose_stacks_create_create"];
   };
+  "/api/compose/stacks/{project_slug}/{env_slug}/create-from-dokploy/base-64/": {
+    /**
+     * Create compose stack from Dokploy template
+     * @description Use a dokploy template encoded as base64 and ZaneOps will automatically convert it to its compose syntax
+     */
+    post: operations["createFromDokployTemplateBase64"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/create-from-dokploy/object/": {
+    /**
+     * Create compose stack from Dokploy template object (compose+config)
+     * @description Pass a dokploy object with content+config and ZaneOps will automatically convert it to its compose syntax
+     */
+    post: operations["createFromDokployTemplateObject"];
+  };
   "/api/connectors/{id}/": {
     get: operations["connectors_retrieve"];
     delete: operations["connectors_destroy"];
@@ -979,8 +993,8 @@ export interface components {
      */
     ComposeEnvOverrideItemChangeFieldEnum: "env_overrides";
     ComposeEnvOverrideItemChangeRequest: {
-      /** @default UPDATE */
-      type?: components["schemas"]["FieldChangeTypeEnum"];
+      type: components["schemas"]["ItemChangeTypeEnum"];
+      item_id?: string;
       new_value?: components["schemas"]["EnvRequestRequest"];
       field: components["schemas"]["ComposeEnvOverrideItemChangeFieldEnum"];
     };
@@ -1431,6 +1445,15 @@ export interface components {
       errors: components["schemas"]["ConnectorsGitlabUpdateUpdateError"][];
     };
     ConnectorsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    CreateComposeStackFromDokployTemplateObjectRequestRequest: {
+      compose: string;
+      config: string;
+      slug: string;
+    };
+    CreateComposeStackFromDokployTemplateRequestRequest: {
+      user_content: string;
+      slug: string;
+    };
     CreateDockerServiceContainerRegistryCredentialsIdErrorComponent: {
       /**
        * @description * `container_registry_credentials_id` - container_registry_credentials_id
@@ -1505,6 +1528,134 @@ export interface components {
     };
     CreateEnvironmentRequestRequest: {
       name: string;
+    };
+    CreateFromDokployTemplateBase64Error: components["schemas"]["CreateFromDokployTemplateBase64NonFieldErrorsErrorComponent"] | components["schemas"]["CreateFromDokployTemplateBase64UserContentErrorComponent"] | components["schemas"]["CreateFromDokployTemplateBase64SlugErrorComponent"];
+    CreateFromDokployTemplateBase64ErrorResponse400: components["schemas"]["CreateFromDokployTemplateBase64ValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CreateFromDokployTemplateBase64NonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    CreateFromDokployTemplateBase64SlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateFromDokployTemplateBase64UserContentErrorComponent: {
+      /**
+       * @description * `user_content` - user_content
+       * @enum {string}
+       */
+      attr: "user_content";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateFromDokployTemplateBase64ValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["CreateFromDokployTemplateBase64Error"][];
+    };
+    CreateFromDokployTemplateObjectComposeErrorComponent: {
+      /**
+       * @description * `compose` - compose
+       * @enum {string}
+       */
+      attr: "compose";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateFromDokployTemplateObjectConfigErrorComponent: {
+      /**
+       * @description * `config` - config
+       * @enum {string}
+       */
+      attr: "config";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateFromDokployTemplateObjectError: components["schemas"]["CreateFromDokployTemplateObjectNonFieldErrorsErrorComponent"] | components["schemas"]["CreateFromDokployTemplateObjectComposeErrorComponent"] | components["schemas"]["CreateFromDokployTemplateObjectConfigErrorComponent"] | components["schemas"]["CreateFromDokployTemplateObjectSlugErrorComponent"];
+    CreateFromDokployTemplateObjectErrorResponse400: components["schemas"]["CreateFromDokployTemplateObjectValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CreateFromDokployTemplateObjectNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    CreateFromDokployTemplateObjectSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateFromDokployTemplateObjectValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["CreateFromDokployTemplateObjectError"][];
     };
     CreateGitServiceBranchNameErrorComponent: {
       /**
@@ -4948,7 +5099,7 @@ export interface components {
      * @enum {string}
      */
     RegistryTypeEnum: "DOCKER_HUB" | "GITHUB" | "GITLAB" | "GOOGLE_ARTIFACT" | "AWS_ECR" | "GENERIC";
-    RequestComposeStackUpdateError: components["schemas"]["RequestComposeStackUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RequestComposeStackUpdateTypeErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueErrorComponent"] | components["schemas"]["RequestComposeStackUpdateFieldErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueKeyErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueValueErrorComponent"];
+    RequestComposeStackUpdateError: components["schemas"]["RequestComposeStackUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RequestComposeStackUpdateTypeErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueErrorComponent"] | components["schemas"]["RequestComposeStackUpdateFieldErrorComponent"] | components["schemas"]["RequestComposeStackUpdateItemIdErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueKeyErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueValueErrorComponent"];
     RequestComposeStackUpdateErrorResponse400: components["schemas"]["RequestComposeStackUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestComposeStackUpdateFieldErrorComponent: {
       /**
@@ -4963,6 +5114,24 @@ export interface components {
        * @enum {string}
        */
       code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    RequestComposeStackUpdateItemIdErrorComponent: {
+      /**
+       * @description * `item_id` - item_id
+       * @enum {string}
+       */
+      attr: "item_id";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestComposeStackUpdateNewValueErrorComponent: {
@@ -5053,9 +5222,10 @@ export interface components {
       /**
        * @description * `invalid_choice` - invalid_choice
        * * `null` - null
+       * * `required` - required
        * @enum {string}
        */
-      code: "invalid_choice" | "null";
+      code: "invalid_choice" | "null" | "required";
       detail: string;
     };
     RequestComposeStackUpdateValidationError: {
@@ -7750,6 +7920,98 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ComposeStacksCreateCreateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Create compose stack from Dokploy template
+   * @description Use a dokploy template encoded as base64 and ZaneOps will automatically convert it to its compose syntax
+   */
+  createFromDokployTemplateBase64: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateComposeStackFromDokployTemplateRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["CreateComposeStackFromDokployTemplateRequestRequest"];
+        "multipart/form-data": components["schemas"]["CreateComposeStackFromDokployTemplateRequestRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["ComposeStack"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CreateFromDokployTemplateBase64ErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Create compose stack from Dokploy template object (compose+config)
+   * @description Pass a dokploy object with content+config and ZaneOps will automatically convert it to its compose syntax
+   */
+  createFromDokployTemplateObject: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateComposeStackFromDokployTemplateObjectRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["CreateComposeStackFromDokployTemplateObjectRequestRequest"];
+        "multipart/form-data": components["schemas"]["CreateComposeStackFromDokployTemplateObjectRequestRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["ComposeStack"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CreateFromDokployTemplateObjectErrorResponse400"];
         };
       };
       401: {
