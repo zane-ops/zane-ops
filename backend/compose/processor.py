@@ -681,6 +681,10 @@ class ComposeSpecProcessor:
                 if key == "environment":
                     envs = cast(dict[str, str], computed_service[key])
                     for k, v in envs.items():
+                        if isinstance(v, bool):
+                            v = "false"
+                        if v is None:
+                            v = ""
                         envs[k] = quoted(v)  # always quote env variables
 
             reconciled_services[hashed_name] = computed_service
