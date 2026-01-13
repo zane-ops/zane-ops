@@ -96,7 +96,7 @@ class DokployComposeAdapter(BaseComposeAdapter):
 
         x_env.update(config.env)
         if x_env:
-            compose_dict["x-env"] = x_env
+            compose_dict["x-zane-env"] = x_env
 
         # handle domains
         for service_name, domains in config.domains.items():
@@ -195,8 +195,8 @@ class DokployComposeAdapter(BaseComposeAdapter):
         compose = {}
         if compose_dict.get("version"):
             compose["version"] = compose_dict.pop("version")
-        if compose_dict.get("x-env"):
-            compose["x-env"] = compose_dict.pop("x-env")
+        if compose_dict.get("x-zane-env"):
+            compose["x-zane-env"] = compose_dict.pop("x-zane-env")
         compose["services"] = compose_dict.pop("services")
         compose.update(compose_dict)
 

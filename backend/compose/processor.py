@@ -314,7 +314,7 @@ class ComposeSpecProcessor:
             )
 
         # Parse and validate `x-env` section
-        default_env = user_spec_dict.get("x-env", {})
+        default_env = user_spec_dict.get("x-zane-env", {})
         if default_env:
             user_spec_dict["x_env"] = default_env
 
@@ -749,7 +749,7 @@ class ComposeSpecProcessor:
         # always quote string characters to not confuse them with other value types
         expanded = expand(
             before,
-            environ=spec.to_dict()["x-env"],
+            environ=spec.to_dict()["x-zane-env"],
         )
 
         return expanded
@@ -775,7 +775,7 @@ class ComposeSpecProcessor:
     @classmethod
     def extract_config_contents(cls, spec: ComposeStackSpec) -> Dict[str, str]:
         configs = {
-            name: expand(config.content, environ=spec.to_dict()["x-env"])
+            name: expand(config.content, environ=spec.to_dict()["x-zane-env"])
             for name, config in spec.configs.items()
             if config.is_derived_from_content and config.content is not None
         }
@@ -818,7 +818,7 @@ class ComposeSpecProcessor:
 
         all_routes: List[dict[str, Any]] = []
 
-        environ = spec.to_dict()["x-env"]
+        environ = spec.to_dict()["x-zane-env"]
         stack_hash_prefix = stack.hash_prefix
 
         for service_name, service in spec.services.items():

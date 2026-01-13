@@ -57,8 +57,8 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
         user_content_dict = yaml.safe_load(new_value)
 
         # Verify x-env section was added with template placeholders
-        self.assertIn("x-env", user_content_dict)
-        x_env = user_content_dict["x-env"]
+        self.assertIn("x-zane-env", user_content_dict)
+        x_env = user_content_dict["x-zane-env"]
 
         # Check that the dokploy variables were converted to x-env with template expressions
         self.assertIn("main_domain", x_env)

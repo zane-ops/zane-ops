@@ -914,7 +914,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             sep="\n",
         )
 
-        x_env = computed_dict.get("x-env", {})
+        x_env = computed_dict.get("x-zane-env", {})
 
         # Test generate_password_N
         self.assertIn("CUSTOM_PASSWORD_16", x_env)
@@ -994,7 +994,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             sep="\n",
         )
 
-        x_env = computed_dict.get("x-env", {})
+        x_env = computed_dict.get("x-zane-env", {})
 
         # Verify BASE64_HELLO is base64 encoded "hello"
         self.assertIn("BASE64_HELLO", x_env)
@@ -1067,7 +1067,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             sep="\n",
         )
 
-        x_env = computed_dict.get("x-env", {})
+        x_env = computed_dict.get("x-zane-env", {})
 
         # Verify LICENCE_ID is a valid UUID
         self.assertIn("LICENCE_ID", x_env)
@@ -1819,7 +1819,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             self.assertGreater(len(value), 0)
 
         # Verify x-env values in computed spec
-        x_env = computed_dict.get("x-env", {})
+        x_env = computed_dict.get("x-zane-env", {})
 
         # Static values
         self.assertEqual("openpanel", x_env["SERVICE_USER_POSTGRES"])

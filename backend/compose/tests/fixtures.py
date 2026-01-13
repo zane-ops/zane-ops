@@ -85,7 +85,7 @@ services:
 
 
 DOCKER_COMPOSE_WITH_PLACEHOLDERS = """
-x-env:
+x-zane-env:
   POSTGRES_USER: "{{ generate_username }}"
   POSTGRES_DB: "{{ generate_slug }}"
   POSTGRES_PASSWORD: "{{ generate_password | 16 }}"
@@ -107,7 +107,7 @@ services:
 """
 
 DOCKER_COMPOSE_WITH_GENERATE_DOMAIN = """
-x-env:
+x-zane-env:
   APP_DOMAIN: "{{ generate_domain }}"
   API_URL: "http://${APP_DOMAIN}/api"
 
@@ -126,7 +126,7 @@ services:
 
 
 DOCKER_COMPOSE_WITH_CUSTOM_PASSWORD_LENGTH = """
-x-env:
+x-zane-env:
   CUSTOM_PASSWORD_16: "{{ generate_password | 16 }}"
   CUSTOM_PASSWORD_128: "{{ generate_password | 128 }}"
 
@@ -140,7 +140,7 @@ services:
 
 
 DOCKER_COMPOSE_WITH_BASE64_GENERATE = """
-x-env:
+x-zane-env:
   BASE64_HELLO: "{{ generate_base64 | 'hello' }}"
   BASE64_BYE: "{{ generate_base64 | 'bye' }}"
 
@@ -153,7 +153,7 @@ services:
 """
 
 DOCKER_COMPOSE_WITH_UUID_GENERATE = """
-x-env:
+x-zane-env:
   LICENCE_ID: "{{ generate_uuid }}"
 
 services:
@@ -319,7 +319,7 @@ services:
 """
 
 INVALID_COMPOSE_X_ENV_NOT_DICT = """
-x-env:
+x-zane-env:
   - SERVICE_PASSWORD_POSTGRES
   - SERVICE_USER_POSTGRES
 
@@ -329,7 +329,7 @@ services:
 """
 
 DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES = """
-x-env:
+x-zane-env:
   SERVICE_PASSWORD_POSTGRES: "{{ generate_password | 64 }}"
   SERVICE_PASSWORD_REDIS: "{{ generate_password | 64 }}"
   SERVICE_USER_POSTGRES: "openpanel"
@@ -357,7 +357,7 @@ services:
 """
 
 DOCKER_COMPOSE_WITH_X_ENV_IN_CONFIGS = """
-x-env:
+x-zane-env:
   APP_SECRET: "{{ generate_password | 64 }}"
   APP_NAME: "myapp"
   APP_PORT: "8080"
@@ -387,7 +387,7 @@ configs:
 """
 
 DOCKER_COMPOSE_WITH_X_ENV_IN_URLS = """
-x-env:
+x-zane-env:
   APP_DOMAIN: "myapp.com"
   API_DOMAIN: "api.${APP_DOMAIN}"
   API_PORT: "3000"

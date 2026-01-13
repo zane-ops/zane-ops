@@ -313,7 +313,7 @@ class ComposeStackSpec:
             },
             envs={
                 key: ComposeEnvVarSpec(key=key, value=value)
-                for key, value in data.get("x-env", {}).items()
+                for key, value in data.get("x-zane-env", {}).items()
             },
             volumes=volumes,
             networks=data.get("networks", {}),
@@ -329,7 +329,7 @@ class ComposeStackSpec:
             env_dict.update(env_spec.to_dict())
 
         return {
-            "x-env": env_dict,
+            "x-zane-env": env_dict,
             "services": {
                 name: service.to_dict() for name, service in self.services.items()
             },
