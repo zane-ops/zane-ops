@@ -11247,6 +11247,27 @@ components:
       description: |-
         * `ALL` - All services
         * `ONLY` - Only specific services
+    ComposeConfigVersion:
+      type: object
+      properties:
+        content:
+          type: string
+        version:
+          type: integer
+      required:
+      - content
+      - version
+    ComposeConfigVersionRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          minLength: 1
+        version:
+          type: integer
+      required:
+      - content
+      - version
     ComposeContentFieldChangeFieldEnum:
       enum:
       - compose_content
@@ -11325,7 +11346,7 @@ components:
         configs:
           type: object
           additionalProperties:
-            type: string
+            $ref: '#/components/schemas/ComposeConfigVersion'
           readOnly: true
         env_overrides:
           type: array
@@ -11706,7 +11727,7 @@ components:
         configs:
           type: object
           additionalProperties:
-            type: string
+            $ref: '#/components/schemas/ComposeConfigVersion'
           readOnly: true
         env_overrides:
           type: array
@@ -11762,7 +11783,7 @@ components:
         configs:
           type: object
           additionalProperties:
-            type: string
+            $ref: '#/components/schemas/ComposeConfigVersion'
           readOnly: true
         env_overrides:
           type: array
