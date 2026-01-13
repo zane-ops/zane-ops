@@ -1309,3 +1309,52 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
             filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
         )
         self.assertEqual(len(volumes_before), len(volumes_after))
+
+    def test_archive_stack_without_deployment_deletes_stack(self):
+        project = self.create_project()
+
+        # Create a stack but DO NOT deploy it
+        create_stack_payload = {
+            "slug": "undeployed-stack",
+            "user_content": DOCKER_COMPOSE_MINIMAL,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="undeployed-stack").first()
+        )
+        self.assertIsNotNone(stack)
+        stack_id = stack.id
+
+        # Archive the stack
+        response = self.client.delete(
+            reverse(
+                "compose:stacks.archive",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify stack is deleted
+        self.assertIsNone(ComposeStack.objects.filter(id=stack_id).first())
+
+        # Verify pending changes are deleted
+        self.assertEqual(
+            0, ComposeStackChange.objects.filter(stack_id=stack_id).count()
+        )

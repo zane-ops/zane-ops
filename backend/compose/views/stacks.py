@@ -379,22 +379,23 @@ class ComposeStackArchiveAPIView(APIView):
 
         data = cast(dict[str, bool], form.data)
 
-        snapshot_dict = cast(dict, ComposeStackSnapshotSerializer(stack).data)
-        payload = ComposeStackArchiveDetails(
-            stack=ComposeStackSnapshot.from_dict(snapshot_dict),
-            delete_configs=data["delete_configs"],
-            delete_volumes=data["delete_volumes"],
-        )
-        workflow_id = stack.archive_workflow_id
-
-        def commit_callback():
-            TemporalClient.start_workflow(
-                ArchiveComposeStackWorkflow.run,
-                arg=payload,
-                id=workflow_id,
+        if stack.deployments.count() > 0:
+            snapshot_dict = cast(dict, ComposeStackSnapshotSerializer(stack).data)
+            payload = ComposeStackArchiveDetails(
+                stack=ComposeStackSnapshot.from_dict(snapshot_dict),
+                delete_configs=data["delete_configs"],
+                delete_volumes=data["delete_volumes"],
             )
+            workflow_id = stack.archive_workflow_id
 
-        transaction.on_commit(commit_callback)
+            def commit_callback():
+                TemporalClient.start_workflow(
+                    ArchiveComposeStackWorkflow.run,
+                    arg=payload,
+                    id=workflow_id,
+                )
+
+            transaction.on_commit(commit_callback)
 
         stack.delete()
         stack.name
