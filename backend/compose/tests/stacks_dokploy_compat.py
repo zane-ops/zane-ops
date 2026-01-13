@@ -10,7 +10,8 @@ from ..models import ComposeStack, ComposeStackChange
 from .fixtures import (
     DOKPLOY_POCKETBASE_TEMPLATE,
     DOKPLOY_VALKEY_TEMPLATE,
-    DOKPLOY_ARANGO_DB,
+    DOKPLOY_ARANGO_DB_TEMPLATE,
+    DOKPLOY_RYBBIT_TEMPLATE,
 )
 from .stacks import ComposeStackAPITestBase
 from ..dtos import ComposeVolumeMountSpec, ComposeServicePortSpec
@@ -148,14 +149,14 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
         }
         self.assertEqual(expected_keys, env_override_keys)
 
-    def test_create_compose_stack_from_dokploy_with_removes_exposed_ports_to_http(
+    def test_create_compose_stack_from_dokploy_removes_exposed_ports_to_http(
         self,
     ):
         project = self.create_project(slug="compose")
 
         create_stack_payload = {
             "slug": "arango-no-ports",
-            "user_content": DOKPLOY_ARANGO_DB.base64,
+            "user_content": DOKPLOY_ARANGO_DB_TEMPLATE.base64,
         }
 
         response = self.client.post(
@@ -305,3 +306,71 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
         self.assertEqual("volume", volume.type)
         self.assertEqual("valkey-data", volume.source)
         self.assertEqual("/data", volume.target)
+
+    def test_create_compose_stack_from_dokploy_transform_depends_on_to_a_list(self):
+        project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "rybbit",
+            "user_content": DOKPLOY_RYBBIT_TEMPLATE.base64,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create_from_dokploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="rybbit").first()
+        )
+        self.assertIsNotNone(created_stack)
+
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(str, pending_change.new_value)
+        self.assertIsNotNone(new_value)
+        print("========= converted user_content =========")
+        print(new_value)
+
+        user_content_dict = yaml.safe_load(new_value)
+
+        # Verify services section exists
+        self.assertIn("services", user_content_dict)
+        services = user_content_dict["services"]
+
+        # Check rybbit_backend service - it has depends_on with conditions
+        self.assertIn("rybbit_backend", services)
+        backend_service = services["rybbit_backend"]
+        self.assertIn("depends_on", backend_service)
+
+        # Verify depends_on is transformed to a simple list (not dict with conditions)
+        depends_on = backend_service["depends_on"]
+        self.assertIsInstance(depends_on, list)
+        self.assertEqual(2, len(depends_on))
+        self.assertIn("rybbit_clickhouse", depends_on)
+        self.assertIn("rybbit_postgres", depends_on)
+
+        # Check rybbit_client service - it has simple depends_on already
+        self.assertIn("rybbit_client", services)
+        client_service = services["rybbit_client"]
+        self.assertIn("depends_on", client_service)
+
+        # Verify depends_on is a list
+        client_depends_on = client_service["depends_on"]
+        self.assertIsInstance(client_depends_on, list)
+        self.assertEqual(1, len(client_depends_on))
+        self.assertIn("rybbit_backend", client_depends_on)

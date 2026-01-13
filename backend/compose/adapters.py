@@ -2,7 +2,6 @@ import base64
 import json
 import os
 import re
-import subprocess
 import tomllib
 import yaml
 from typing import Dict, Any
@@ -73,11 +72,11 @@ class DokployComposeAdapter(BaseComposeAdapter):
         """
         Transform a dokploy template to ZaneOps compatible stack.
 
-        - Add all the config.mounts as docker configs
-        - replace all the variable placeholders to ZaneOps compatible expressions (ex: ${password} to {{ generate_password | 32 }})
-        - replace all the dokploy relative bind mounts (`..files/`) to configs or volumes whenever possible
+        * Add all the config.mounts as docker configs
+        * replace all the variable placeholders to ZaneOps compatible expressions (ex: ${password} to {{ generate_password | 32 }})
+        * replace all the dokploy relative bind mounts (`..files/`) to configs or volumes whenever possible
+        * Remove the exposed ports that are supposed to be domains, as well as remove `expose:` as it is useless
         - Make sure `depends_on` is a list
-        - Remove the exposed ports that are supposed to be domains, as well as remove `expose:` as it is useless
         """
 
         decoded_data = base64.b64decode(template)
@@ -293,6 +292,10 @@ class DokployComposeAdapter(BaseComposeAdapter):
 
                 ## Remove `expose` property as it is useless
                 service_dict.pop("expose", None)
+
+                ## handle depends_on
+                if service.depends_on:
+                    service_dict["depends_on"] = service.depends_on
 
             if configs:
                 compose_dict["configs"] = configs

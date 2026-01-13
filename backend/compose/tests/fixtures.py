@@ -622,7 +622,7 @@ auto-aof-rewrite-min-size 64mb
 ''',
 )
 
-DOKPLOY_ARANGO_DB = DokployTemplate(
+DOKPLOY_ARANGO_DB_TEMPLATE = DokployTemplate(
     compose="""
 version: "3.8"
 services:
@@ -656,4 +656,189 @@ host = "${main_domain}"
 [config.env]
 ARANGO_PASSWORD = "${arango_password}"
 """,
+)
+
+
+DOKPLOY_RYBBIT_TEMPLATE = DokployTemplate(
+    compose="""
+# https://www.rybbit.io/docs/self-hosting-advanced
+
+# NOTE: there are two sample HTTP traefik domain entries created:
+# - rybbit_backend (port 3001, path /api), 
+# - rybbit_client (port 3002, path /)
+#
+# You should treat these as placeholders - Rybbit only supports HTTPS.
+#
+# You should also update the `BASE_URL`, and `DOMAIN_NAME` environment
+# variable when updating the domain entries with your custom domain.
+
+services:
+  rybbit_clickhouse:
+    image: clickhouse/clickhouse-server:25.5
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ../files/clickhouse_config:/etc/clickhouse-server/config.d
+    environment:
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8123/ping",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  rybbit_postgres:
+    image: postgres:17.5
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  rybbit_backend:
+    image: ghcr.io/rybbit-io/rybbit-backend:v1.5.1
+    environment:
+      - NODE_ENV=production
+      - CLICKHOUSE_HOST=http://rybbit_clickhouse:8123
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - POSTGRES_HOST=rybbit_postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BASE_URL=${BASE_URL}
+      - DOMAIN_NAME=${DOMAIN_NAME}
+      - DISABLE_SIGNUP=${DISABLE_SIGNUP}
+    depends_on:
+      rybbit_clickhouse:
+        condition: service_healthy
+      rybbit_postgres:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  rybbit_client:
+    image: ghcr.io/rybbit-io/rybbit-client:v1.5.1
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_BACKEND_URL=${BASE_URL}
+      - DOMAIN_NAME=${DOMAIN_NAME}
+      - NEXT_PUBLIC_DISABLE_SIGNUP=${DISABLE_SIGNUP}
+    depends_on:
+      - rybbit_backend
+    restart: unless-stopped
+
+volumes:
+  clickhouse_data:
+  postgres_data:
+""",
+    config='''
+[variables]
+main_domain = "${domain}"
+better_auth_secret = "${password:32}"
+clickhouse_password = "${password:32}"
+postgres_password = "${password:32}"
+
+[[config.domains]]
+serviceName = "rybbit_backend"
+port = 3001
+host = "${main_domain}"
+path = "/api"
+
+[[config.domains]]
+serviceName = "rybbit_client"
+port = 3002
+host = "${main_domain}"
+
+[config.env]
+BASE_URL = "http://${main_domain}"
+DOMAIN_NAME= "${main_domain}"
+BETTER_AUTH_SECRET = "${better_auth_secret}"
+DISABLE_SIGNUP = "false"
+CLICKHOUSE_DB = "analytics"
+CLICKHOUSE_USER = "default"
+CLICKHOUSE_PASSWORD = "${clickhouse_password}"
+POSTGRES_DB = "analytics"
+POSTGRES_USER = "frog"
+POSTGRES_PASSWORD = "${postgres_password}"
+
+[[config.mounts]]
+filePath = "./clickhouse_config/enable_json.xml"
+content = """
+<clickhouse>
+    <settings>
+        <enable_json_type>1</enable_json_type>
+    </settings>
+</clickhouse>
+"""
+
+[[config.mounts]]
+filePath = "./clickhouse_config/logging_rules.xml"
+content = """
+<clickhouse>
+    <logger>
+        <level>warning</level>
+        <console>true</console>
+    </logger>
+    <query_thread_log remove="remove"/>
+    <query_log remove="remove"/>
+    <text_log remove="remove"/>
+    <trace_log remove="remove"/>
+    <metric_log remove="remove"/>
+    <asynchronous_metric_log remove="remove"/>
+    <session_log remove="remove"/>
+    <part_log remove="remove"/>
+    <latency_log remove="remove"/>
+    <processors_profile_log remove="remove"/>
+</clickhouse>
+"""
+
+[[config.mounts]]
+filePath = "./clickhouse_config/network.xml"
+content = """
+<clickhouse>
+    <listen_host>0.0.0.0</listen_host>
+</clickhouse>
+"""
+
+[[config.mounts]]
+filePath = "./clickhouse_config/user_logging.xml"
+content = """
+<clickhouse>
+    <profiles>
+        <default>
+            <log_queries>0</log_queries>
+            <log_query_threads>0</log_query_threads>
+            <log_processors_profiles>0</log_processors_profiles>
+        </default>
+    </profiles>
+</clickhouse>
+"""
+''',
 )
