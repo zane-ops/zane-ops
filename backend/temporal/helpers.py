@@ -418,6 +418,7 @@ class ZaneProxyClient:
                 )  # Least priority for routes with no match
 
             path = route["match"][0].get("path", [""])[0]
+
             # Removing trailing '*' for comparison and determining the "real" length
             normalized_path = path.rstrip("*")
             path_length = len(normalized_path)
@@ -946,9 +947,7 @@ class ZaneProxyClient:
     def _normalize_base_path(base_path: str):
         if base_path == "/":
             return "/*"
-        return (
-            f"{strip_slash_if_exists(base_path, strip_end=True, strip_start=False)}*",
-        )
+        return f"{strip_slash_if_exists(base_path, strip_end=True, strip_start=False)}*"
 
     @classmethod
     async def cleanup_old_compose_stack_service_urls(
