@@ -23,6 +23,7 @@ from django.db import transaction
 from zane_api.views.serializers import EnvRequestSerializer
 from django.utils.translation import gettext_lazy as _
 from drf_standardized_errors.formatter import ExceptionFormatter
+from zane_api.serializers import URLDomainField, URLPathField
 
 
 class ComposeStackChangeSerializer(serializers.ModelSerializer):
@@ -476,6 +477,37 @@ class ComposeStackFieldChangeRequestSerializer(serializers.Serializer):
     )
 
 
+class DokployDomainSerializer(serializers.Serializer):
+    path = URLPathField()
+    host = URLDomainField()
+    port = serializers.IntegerField(min_value=1)
+    serviceName = serializers.CharField()
+
+
+class DokployMountSerializer(serializers.Serializer):
+    filePath = serializers.CharField(required=False)
+    content = serializers.CharField(required=False)
+
+
+class DokployConfigSerializer(serializers.Serializer):
+    env = serializers.DictField(
+        child=serializers.CharField(),
+        required=False,
+    )
+    variables = serializers.DictField(
+        child=serializers.CharField(),
+        required=False,
+    )
+    domains = serializers.DictField(
+        child=DokployDomainSerializer(many=True),
+        required=False,
+    )
+    mounts = DokployMountSerializer(
+        many=True,
+        required=False,
+    )
+
+
 class DokployTemplateObjectSerializer(serializers.Serializer):
     compose = serializers.CharField()
     config = serializers.CharField()
@@ -523,6 +555,8 @@ class DokployTemplateObjectSerializer(serializers.Serializer):
                 raise ValidationError("config.toml must be a TOML object/dictionary")
         except tomllib.TOMLDecodeError as e:
             raise ValidationError(f"Invalid TOML syntax: {str(e)}")
+        serializer = DokployConfigSerializer(data=parsed)
+        serializer.is_valid(raise_exception=True)
 
         return config
 

@@ -7,9 +7,13 @@ from zane_api.models import Environment
 from zane_api.utils import jprint
 
 from ..models import ComposeStack, ComposeStackChange
-from .fixtures import DOKPLOY_POCKETBASE_TEMPLATE, DOKPLOY_VALKEY_TEMPLATE
+from .fixtures import (
+    DOKPLOY_POCKETBASE_TEMPLATE,
+    DOKPLOY_VALKEY_TEMPLATE,
+    DOKPLOY_ARANGO_DB,
+)
 from .stacks import ComposeStackAPITestBase
-from ..dtos import ComposeVolumeMountSpec
+from ..dtos import ComposeVolumeMountSpec, ComposeServicePortSpec
 
 
 class DokployCompatibilityViewTests(ComposeStackAPITestBase):
@@ -144,14 +148,14 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
         }
         self.assertEqual(expected_keys, env_override_keys)
 
-    def test_create_compose_stack_from_dokploy_with_removes_exposed_ports(
+    def test_create_compose_stack_from_dokploy_with_removes_exposed_ports_to_http(
         self,
     ):
         project = self.create_project(slug="compose")
 
         create_stack_payload = {
-            "slug": "valkey-no-ports",
-            "user_content": DOKPLOY_VALKEY_TEMPLATE.base64,
+            "slug": "arango-no-ports",
+            "user_content": DOKPLOY_ARANGO_DB.base64,
         }
 
         response = self.client.post(
@@ -164,10 +168,12 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
             ),
             data=create_stack_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         created_stack = cast(
-            ComposeStack, ComposeStack.objects.filter(slug="valkey-no-ports").first()
+            ComposeStack,
+            ComposeStack.objects.filter(slug="arango-no-ports").first(),
         )
         self.assertIsNotNone(created_stack)
 
@@ -183,18 +189,23 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
         print("========= converted user_content =========")
         print(new_value)
 
-        # Parse the converted user_content
         user_content_dict = yaml.safe_load(new_value)
 
-        # Verify services section exists
         services = user_content_dict["services"]
-        self.assertIn("valkey", services)
-        valkey_service = services["valkey"]
+        self.assertIn("arangodb", services)
+        arangodb_service = services["arangodb"]
+
+        self.assertNotIn("expose", arangodb_service)
 
         # Verify that exposed ports are removed
-        # Original compose had: ports: - 6379
-        # This should be removed in the converted compose
-        self.assertNotIn("ports", valkey_service)
+        # Original compose had: ports: [8529, 8530]
+        # Only `8529` is exposed, so it should be removed from the `ports` section
+        # while the other port is kept exposed as is
+        self.assertEqual(1, len(arangodb_service["ports"]))
+        port = ComposeServicePortSpec.from_docker_compose_port(
+            arangodb_service["ports"][0]
+        )[0]
+        self.assertEqual(8530, port.target)
 
     def test_create_compose_stack_from_dokploy_with_config_content_is_transformed_into_inline_content(
         self,

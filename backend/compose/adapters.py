@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import re
+import subprocess
 import tomllib
 import yaml
 from typing import Dict, Any
@@ -77,10 +78,6 @@ class DokployComposeAdapter(BaseComposeAdapter):
         - replace all the dokploy relative bind mounts (`..files/`) to configs or volumes whenever possible
         - Make sure `depends_on` is a list
         - Remove the exposed ports that are supposed to be domains, as well as remove `expose:` as it is useless
-
-        :param cls: Description
-        :param template: Description
-        :type template: str
         """
 
         decoded_data = base64.b64decode(template)
@@ -113,6 +110,10 @@ class DokployComposeAdapter(BaseComposeAdapter):
         # handle domains
         for service_name, domains in config.domains.items():
             compose_service = compose_dict["services"].get(service_name)
+            service = ComposeServiceSpec.from_dict(
+                {**compose_service, "name": service_name}
+            )
+
             if compose_service is not None:
                 deploy = compose_service.get("deploy", {})
                 deploy["labels"] = deploy.get("labels", {})
@@ -123,6 +124,13 @@ class DokployComposeAdapter(BaseComposeAdapter):
                         domain.path
                     )
                     deploy["labels"][f"zane.http.routes.{index}.port"] = domain.port
+
+                    compose_service["ports"] = [
+                        port.to_dict()
+                        for port in service.ports
+                        if port.target != domain.port
+                    ]
+
                 compose_service["deploy"] = deploy
 
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmpdir:
@@ -193,6 +201,7 @@ class DokployComposeAdapter(BaseComposeAdapter):
                     {**service_dict, "name": service_name}
                 )
 
+                ## Handle volumes and config mounts
                 volumes_to_keep = []
                 service_configs = service_dict.get("configs", [])
 
@@ -281,6 +290,9 @@ class DokployComposeAdapter(BaseComposeAdapter):
                 service_dict["volumes"] = volumes_to_keep
                 if service_configs:
                     service_dict["configs"] = service_configs
+
+                ## Remove `expose` property as it is useless
+                service_dict.pop("expose", None)
 
             if configs:
                 compose_dict["configs"] = configs

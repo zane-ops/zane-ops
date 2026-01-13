@@ -621,3 +621,39 @@ auto-aof-rewrite-min-size 64mb
 """
 ''',
 )
+
+DOKPLOY_ARANGO_DB = DokployTemplate(
+    compose="""
+version: "3.8"
+services:
+  arangodb:
+    image: arangodb:3.12.4
+    restart: unless-stopped
+    expose:
+      - 8529
+    ports:
+      - 8529
+      - 8530
+    environment:
+      - ARANGO_ROOT_PASSWORD=${ARANGO_PASSWORD}
+    volumes:
+      - data:/var/lib/arangodb3
+
+volumes:
+  data: {}
+""",
+    config="""
+[variables]
+main_domain = "${domain}"
+arango_password = "${password:16}"
+
+[config]
+[[config.domains]]
+serviceName = "arangodb"
+port = 8529
+host = "${main_domain}"
+
+[config.env]
+ARANGO_PASSWORD = "${arango_password}"
+""",
+)

@@ -546,8 +546,9 @@ class ComposeSpecProcessor:
                 "aliases": [f"{stack.network_alias_prefix}-{original_service_name}"]
             }
 
-            if "default" not in service.networks:
+            if service.networks.get("default") is None:
                 service.networks["default"] = {}
+
             default_network_data = cast(dict, service.networks["default"])
 
             aliases: list[str] = default_network_data.get("aliases", [])
