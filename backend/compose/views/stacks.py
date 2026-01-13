@@ -14,6 +14,7 @@ from .serializers import (
     ComposeStackChangeSerializer,
     ComposeStackEnvOverrideSerializer,
     CreateComposeStackFromDokployTemplateRequestSerializer,
+    CreateComposeStackFromDokployTemplateObjectRequestSerializer,
 )
 from ..models import ComposeStack, ComposeStackDeployment, ComposeStackChange
 from django.db.models import QuerySet
@@ -30,7 +31,7 @@ from rest_framework import status
 from temporal.workflows import DeployComposeStackWorkflow, ArchiveComposeStackWorkflow
 from temporal.shared import ComposeStackDeploymentDetails, ComposeStackArchiveDetails
 from temporal.client import TemporalClient
-from ..dtos import ComposeStackSnapshot
+from ..dtos import ComposeStackSnapshot, DokployTemplate
 from rest_framework.serializers import Serializer
 from ..adapters import DokployComposeAdapter
 from ..processor import ComposeSpecProcessor
@@ -72,10 +73,10 @@ class ComposeStackListAPIView(ListAPIView):
         )
 
 
-class ComposeStackCreateFromDokployAPIView(APIView):
+class ComposeStackCreateFromDokployBase64APIView(APIView):
     @transaction.atomic()
     @extend_schema(
-        operation_id="createFromDokployTemplate",
+        operation_id="createFromDokployTemplateBase64",
         request=CreateComposeStackFromDokployTemplateRequestSerializer,
         responses={201: ComposeStackSerializer},
         summary="Create compose stack from Dokploy template",
@@ -117,6 +118,86 @@ class ComposeStackCreateFromDokployAPIView(APIView):
         )
 
         user_content = DokployComposeAdapter.to_zaneops(template=data["user_content"])
+
+        changes = [
+            ComposeStackChange(
+                stack=stack,
+                type=ComposeStackChange.ChangeType.UPDATE,
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                new_value=user_content,
+            )
+        ]
+
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=user_content,
+            stack=stack,
+        )
+
+        changes.extend(
+            [
+                ComposeStackChange(
+                    stack=stack,
+                    field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
+                    type=ComposeStackChange.ChangeType.ADD,
+                    new_value=override_data.to_dict(),
+                )
+                for override_data in artifacts.env_overrides
+            ]
+        )
+
+        stack.changes.bulk_create(changes)
+
+        response = ComposeStackSerializer(stack)
+        return Response(data=response.data, status=status.HTTP_201_CREATED)
+
+
+class ComposeStackCreateFromDokployObjectAPIView(APIView):
+    @transaction.atomic()
+    @extend_schema(
+        operation_id="createFromDokployTemplateObject",
+        request=CreateComposeStackFromDokployTemplateObjectRequestSerializer,
+        responses={201: ComposeStackSerializer},
+        summary="Create compose stack from Dokploy template object (compose+config)",
+        description="Pass a dokploy object with content+config and ZaneOps will automatically convert it to its compose syntax",
+    )
+    def post(self, request: Request, project_slug: str, env_slug: str):
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=self.request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+
+        form = CreateComposeStackFromDokployTemplateObjectRequestSerializer(
+            data=request.data,
+            context=dict(
+                environment=environment,
+                project=project,
+            ),
+        )
+        form.is_valid(raise_exception=True)
+
+        data = cast(dict, form.data)
+        stack = ComposeStack.objects.create(
+            slug=data["slug"],
+            environment=environment,
+            project=project,
+            network_alias_prefix=f"zn-{data['slug']}",
+        )
+
+        template = DokployTemplate(**data)
+
+        user_content = DokployComposeAdapter.to_zaneops(template=template.base64)
 
         changes = [
             ComposeStackChange(

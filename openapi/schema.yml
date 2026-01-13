@@ -1194,9 +1194,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ComposeStack'
           description: ''
-  /api/compose/stacks/{project_slug}/{env_slug}/create-from-dokploy/:
+  /api/compose/stacks/{project_slug}/{env_slug}/create-from-dokploy/base-64/:
     post:
-      operationId: createFromDokployTemplate
+      operationId: createFromDokployTemplateBase64
       description: Use a dokploy template encoded as base64 and ZaneOps will automatically
         convert it to its compose syntax
       summary: Create compose stack from Dokploy template
@@ -1234,7 +1234,104 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreateFromDokployTemplateErrorResponse400'
+                $ref: '#/components/schemas/CreateFromDokployTemplateBase64ErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStack'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/create-from-dokploy/object/:
+    post:
+      operationId: createFromDokployTemplateObject
+      description: Pass a dokploy object with content+config and ZaneOps will automatically
+        convert it to its compose syntax
+      summary: Create compose stack from Dokploy template object (compose+config)
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateComposeStackFromDokployTemplateObjectRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateComposeStackFromDokployTemplateObjectRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateComposeStackFromDokployTemplateObjectRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateFromDokployTemplateObjectErrorResponse400'
           description: ''
         '401':
           content:
@@ -12280,6 +12377,23 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    CreateComposeStackFromDokployTemplateObjectRequestRequest:
+      type: object
+      properties:
+        compose:
+          type: string
+          minLength: 1
+        config:
+          type: string
+          minLength: 1
+        slug:
+          type: string
+          minLength: 1
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - compose
+      - config
+      - slug
     CreateComposeStackFromDokployTemplateRequestRequest:
       type: object
       properties:
@@ -12444,27 +12558,27 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - name
-    CreateFromDokployTemplateError:
+    CreateFromDokployTemplateBase64Error:
       oneOf:
-      - $ref: '#/components/schemas/CreateFromDokployTemplateNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/CreateFromDokployTemplateUserContentErrorComponent'
-      - $ref: '#/components/schemas/CreateFromDokployTemplateSlugErrorComponent'
+      - $ref: '#/components/schemas/CreateFromDokployTemplateBase64NonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateFromDokployTemplateBase64UserContentErrorComponent'
+      - $ref: '#/components/schemas/CreateFromDokployTemplateBase64SlugErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          non_field_errors: '#/components/schemas/CreateFromDokployTemplateNonFieldErrorsErrorComponent'
-          user_content: '#/components/schemas/CreateFromDokployTemplateUserContentErrorComponent'
-          slug: '#/components/schemas/CreateFromDokployTemplateSlugErrorComponent'
-    CreateFromDokployTemplateErrorResponse400:
+          non_field_errors: '#/components/schemas/CreateFromDokployTemplateBase64NonFieldErrorsErrorComponent'
+          user_content: '#/components/schemas/CreateFromDokployTemplateBase64UserContentErrorComponent'
+          slug: '#/components/schemas/CreateFromDokployTemplateBase64SlugErrorComponent'
+    CreateFromDokployTemplateBase64ErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/CreateFromDokployTemplateValidationError'
+      - $ref: '#/components/schemas/CreateFromDokployTemplateBase64ValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/CreateFromDokployTemplateValidationError'
+          validation_error: '#/components/schemas/CreateFromDokployTemplateBase64ValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    CreateFromDokployTemplateNonFieldErrorsErrorComponent:
+    CreateFromDokployTemplateBase64NonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -12483,7 +12597,7 @@ components:
       - attr
       - code
       - detail
-    CreateFromDokployTemplateSlugErrorComponent:
+    CreateFromDokployTemplateBase64SlugErrorComponent:
       type: object
       properties:
         attr:
@@ -12513,7 +12627,7 @@ components:
       - attr
       - code
       - detail
-    CreateFromDokployTemplateUserContentErrorComponent:
+    CreateFromDokployTemplateBase64UserContentErrorComponent:
       type: object
       properties:
         attr:
@@ -12543,7 +12657,7 @@ components:
       - attr
       - code
       - detail
-    CreateFromDokployTemplateValidationError:
+    CreateFromDokployTemplateBase64ValidationError:
       type: object
       properties:
         type:
@@ -12551,7 +12665,150 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/CreateFromDokployTemplateError'
+            $ref: '#/components/schemas/CreateFromDokployTemplateBase64Error'
+      required:
+      - errors
+      - type
+    CreateFromDokployTemplateObjectComposeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - compose
+          type: string
+          description: '* `compose` - compose'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateFromDokployTemplateObjectConfigErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - config
+          type: string
+          description: '* `config` - config'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateFromDokployTemplateObjectError:
+      oneOf:
+      - $ref: '#/components/schemas/CreateFromDokployTemplateObjectNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateFromDokployTemplateObjectComposeErrorComponent'
+      - $ref: '#/components/schemas/CreateFromDokployTemplateObjectConfigErrorComponent'
+      - $ref: '#/components/schemas/CreateFromDokployTemplateObjectSlugErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CreateFromDokployTemplateObjectNonFieldErrorsErrorComponent'
+          compose: '#/components/schemas/CreateFromDokployTemplateObjectComposeErrorComponent'
+          config: '#/components/schemas/CreateFromDokployTemplateObjectConfigErrorComponent'
+          slug: '#/components/schemas/CreateFromDokployTemplateObjectSlugErrorComponent'
+    CreateFromDokployTemplateObjectErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CreateFromDokployTemplateObjectValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CreateFromDokployTemplateObjectValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CreateFromDokployTemplateObjectNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateFromDokployTemplateObjectSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateFromDokployTemplateObjectValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateFromDokployTemplateObjectError'
       required:
       - errors
       - type

@@ -2,9 +2,7 @@
 Docker Compose test fixtures representing real-world use cases.
 """
 
-import base64
-from dataclasses import asdict, dataclass
-import json
+from compose.dtos import DokployTemplate
 
 DOCKER_COMPOSE_SIMPLE_DB = """
 services:
@@ -466,20 +464,6 @@ services:
 ##====================================##
 ##   DOKPLOY COMPATIBILITY fixtures   ##
 ##====================================##
-
-
-@dataclass
-class DokployTemplate:
-    compose: str
-    config: str
-
-    @property
-    def to_dict(self):
-        return asdict(self)
-
-    @property
-    def base64(self):
-        return base64.b64encode(json.dumps(asdict(self)).encode()).decode()
 
 
 DOKPLOY_POCKETBASE_TEMPLATE = DokployTemplate(

@@ -508,7 +508,7 @@ class DokployConfigSerializer(serializers.Serializer):
     )
 
 
-class DokployTemplateObjectSerializer(serializers.Serializer):
+class DokployTemplateObjectRequestSerializer(serializers.Serializer):
     compose = serializers.CharField()
     config = serializers.CharField()
 
@@ -569,7 +569,7 @@ class CreateComposeStackFromDokployTemplateRequestSerializer(serializers.Seriali
         try:
             decoded_data = base64.b64decode(user_content, validate=True)
             decoded_string = decoded_data.decode("utf-8")
-            serializer = DokployTemplateObjectSerializer(
+            serializer = DokployTemplateObjectRequestSerializer(
                 data=json.loads(decoded_string)
             )
             serializer.is_valid(raise_exception=True)
@@ -597,5 +597,24 @@ class CreateComposeStackFromDokployTemplateRequestSerializer(serializers.Seriali
 
         return slug
 
-    # def validate(self, attrs: dict[str, str]):
-    #     return super().validate(attrs)
+
+class CreateComposeStackFromDokployTemplateObjectRequestSerializer(
+    DokployTemplateObjectRequestSerializer
+):
+    slug = serializers.SlugField()
+
+    def validate_slug(self, slug: str):
+        project = cast(Project, self.context["project"])
+        environment = cast(Environment, self.context["environment"])
+        if ComposeStack.objects.filter(
+            slug=slug,
+            project=project,
+            environment=environment,
+        ).exists():
+            raise serializers.ValidationError(
+                {
+                    "slug": f"A compose stack with the slug `{slug}` already exists in this environment."
+                }
+            )
+
+        return slug

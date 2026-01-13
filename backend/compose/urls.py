@@ -16,9 +16,14 @@ urlpatterns = [
         name="stacks.create",
     ),
     re_path(
-        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/create-from-dokploy/?$",
-        views.ComposeStackCreateFromDokployAPIView.as_view(),
-        name="stacks.create_from_dokploy",
+        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/create-from-dokploy/base-64/?$",
+        views.ComposeStackCreateFromDokployBase64APIView.as_view(),
+        name="stacks.create_from_dokploy.base64",
+    ),
+    re_path(
+        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/create-from-dokploy/object/?$",
+        views.ComposeStackCreateFromDokployObjectAPIView.as_view(),
+        name="stacks.create_from_dokploy.object",
     ),
     re_path(
         rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/?$",

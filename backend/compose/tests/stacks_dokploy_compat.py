@@ -28,7 +28,7 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
 
         response = self.client.post(
             reverse(
-                "compose:stacks.create_from_dokploy",
+                "compose:stacks.create_from_dokploy.base64",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -114,7 +114,7 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
 
         response = self.client.post(
             reverse(
-                "compose:stacks.create_from_dokploy",
+                "compose:stacks.create_from_dokploy.base64",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -161,7 +161,7 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
 
         response = self.client.post(
             reverse(
-                "compose:stacks.create_from_dokploy",
+                "compose:stacks.create_from_dokploy.base64",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -220,7 +220,7 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
 
         response = self.client.post(
             reverse(
-                "compose:stacks.create_from_dokploy",
+                "compose:stacks.create_from_dokploy.base64",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -317,7 +317,7 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
 
         response = self.client.post(
             reverse(
-                "compose:stacks.create_from_dokploy",
+                "compose:stacks.create_from_dokploy.base64",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,

@@ -1,4 +1,6 @@
-from dataclasses import dataclass, field
+import base64
+from dataclasses import asdict, dataclass, field
+import json
 import re
 from typing import Dict, Literal, Optional, List, Any, Self, cast
 
@@ -132,7 +134,9 @@ class ComposeServicePortSpec:
     name: Optional[str] = None
 
     @classmethod
-    def from_docker_compose_port(cls, port: str | int | Dict) -> List["ComposeServicePortSpec"]:
+    def from_docker_compose_port(
+        cls, port: str | int | Dict
+    ) -> List["ComposeServicePortSpec"]:
         """
         Parse Docker Compose port syntax and return a list of port specs.
         Port ranges are expanded into individual port mappings.
@@ -204,7 +208,11 @@ class ComposeServicePortSpec:
             return [int(port_spec)]
 
         target_ports = parse_port_range(target_str)
-        published_ports = parse_port_range(published_str) if published_str else [None] * len(target_ports)
+        published_ports = (
+            parse_port_range(published_str)
+            if published_str
+            else [None] * len(target_ports)
+        )
 
         # Validate that ranges match in size
         if published_str and len(target_ports) != len(published_ports):
@@ -797,3 +805,17 @@ class DokployConfigObject:
             domains=domains,
             variables=variables,
         )
+
+
+@dataclass
+class DokployTemplate:
+    compose: str
+    config: str
+
+    @property
+    def to_dict(self):
+        return asdict(self)
+
+    @property
+    def base64(self):
+        return base64.b64encode(json.dumps(asdict(self)).encode()).decode()
