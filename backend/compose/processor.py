@@ -34,7 +34,9 @@ import base64
 
 
 class ComposeStackSpecSerializer(serializers.Serializer):
-    x_env = serializers.DictField(child=serializers.CharField(), required=False)
+    x_zane_env = serializers.DictField(
+        child=serializers.CharField(allow_blank=True), required=False
+    )
 
 
 class ComposeStackURLRouteSerializer(serializers.Serializer):
@@ -316,7 +318,7 @@ class ComposeSpecProcessor:
         # Parse and validate `x-env` section
         default_env = user_spec_dict.get("x-zane-env", {})
         if default_env:
-            user_spec_dict["x_env"] = default_env
+            user_spec_dict["x_zane_env"] = default_env
 
         form = ComposeStackSpecSerializer(data=user_spec_dict)
         form.is_valid(raise_exception=True)
