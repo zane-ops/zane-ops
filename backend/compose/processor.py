@@ -315,7 +315,7 @@ class ComposeSpecProcessor:
                 "Invalid compose file: at least one service must be defined"
             )
 
-        # Parse and validate `x-env` section
+        # Parse and validate `x-zane-env` section
         default_env = user_spec_dict.get("x-zane-env", {})
         if default_env:
             user_spec_dict["x_zane_env"] = default_env
@@ -343,7 +343,7 @@ class ComposeSpecProcessor:
         for name, config in user_spec_dict.get("configs", {}).items():
             if config.get("file") is not None:
                 raise ValidationError(
-                    f"Invalid compose file: configs.{name} Additional property content is not allowed, please use config.content instead"
+                    f"Invalid compose file: configs.{name} Additional property file is not allowed, please use config.content instead"
                 )
 
     @classmethod
@@ -627,6 +627,8 @@ class ComposeSpecProcessor:
                 )
 
         # Add labels to configs for tracking
+        # renamed_configs = {}
+        # all_configs: dict[str, str] = cast(dict, stack.configs) or {}
         for config_name, config in spec.configs.items():
             if not config.external:
                 config.labels.update(
@@ -637,10 +639,17 @@ class ComposeSpecProcessor:
                     }
                 )
 
+            # renamed_configs[config_name] = config
+
             # process config `content` to `file` reference
             if config.content is not None:
                 config.file = f"./{stack.hash_prefix}_{config_name}.conf"
                 config.is_derived_from_content = True
+
+                # existing_config = all_configs.get(config_name)
+                # if existing_config is not None and config.content != existing_config:
+                #     renamed_configs.pop(config_name)
+                #     renamed_configs[config_name] = config
 
         return spec
 

@@ -264,6 +264,22 @@ class ComposeServicePortSpec:
 
 
 @dataclass
+class ComposeServiceConfigSpec:
+    source: str
+    target: str
+
+    def to_dict(self):
+        return dict(
+            source=self.source,
+            target=self.target,
+        )
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(**data)
+
+
+@dataclass
 class ComposeServiceSpec:
     """
     Service in compose file
@@ -280,6 +296,7 @@ class ComposeServiceSpec:
     volumes: list[ComposeVolumeMountSpec] = field(default_factory=list)
     depends_on: list[str] = field(default_factory=list)
     ports: List[ComposeServicePortSpec] = field(default_factory=list)
+    configs: List[ComposeServiceConfigSpec] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ComposeServiceSpec":
@@ -332,6 +349,10 @@ class ComposeServiceSpec:
                 ComposeVolumeMountSpec.from_docker_compose_volume(volume)
                 for volume in data.get("volumes", [])
             ],
+            configs=[
+                ComposeServiceConfigSpec.from_dict(config)
+                for config in data.get("configs", [])
+            ],
             deploy=data.get("deploy", {}),
             depends_on=dependencies,
             ports=[
@@ -352,6 +373,9 @@ class ComposeServiceSpec:
 
         if len(self.volumes) > 0:
             spec_dict.update(volumes=[volume.to_dict() for volume in self.volumes])
+
+        if len(self.configs) > 0:
+            spec_dict.update(configs=[config.to_dict() for config in self.configs])
 
         if len(self.depends_on) > 0:
             spec_dict.update(depends_on=self.depends_on)
