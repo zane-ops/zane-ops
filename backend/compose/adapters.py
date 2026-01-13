@@ -123,6 +123,7 @@ class DokployComposeAdapter(BaseComposeAdapter):
                         domain.path
                     )
                     deploy["labels"][f"zane.http.routes.{index}.port"] = domain.port
+                    deploy["labels"][f"zane.http.routes.{index}.strip_prefix"] = "false"
 
                     compose_service["ports"] = [
                         port.to_dict()
