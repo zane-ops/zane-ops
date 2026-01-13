@@ -842,3 +842,246 @@ content = """
 """
 ''',
 )
+
+DOKPLOY_OPENPANEL_TEMPLATE = DokployTemplate(
+    compose="""x-database: &x-database
+  DATABASE_URL: postgres://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@op-db:5432/${OPENPANEL_POSTGRES_DB}?schema=public
+  DATABASE_URL_DIRECT: postgres://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@op-db:5432/${OPENPANEL_POSTGRES_DB}?schema=public
+  REDIS_URL: redis://default:${SERVICE_PASSWORD_REDIS}@op-kv:6379
+  CLICKHOUSE_URL: ${OPENPANEL_CLICKHOUSE_URL:-http://op-ch:8123/openpanel}
+
+services:
+  op-db:
+    image: postgres:14-alpine
+    restart: always
+    volumes:
+      - op-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ 'CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      - POSTGRES_DB=${OPENPANEL_POSTGRES_DB}
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+
+  op-kv:
+    image: redis:7.2.5-alpine
+    restart: always
+    volumes:
+      - op-kv-data:/data
+    command: redis-server --requirepass ${SERVICE_PASSWORD_REDIS} --maxmemory-policy noeviction
+    healthcheck:
+      test: [CMD, redis-cli, -a, "${SERVICE_PASSWORD_REDIS}", ping]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  op-ch:
+    image: clickhouse/clickhouse-server:24.3.2-alpine
+    restart: always
+    volumes:
+      - op-ch-data:/var/lib/clickhouse
+      - op-ch-logs:/var/log/clickhouse-server
+      - ../files/clickhouse/clickhouse-config.xml:/etc/clickhouse-server/config.d/op-config.xml:ro
+      - ../files/clickhouse/clickhouse-user-config.xml:/etc/clickhouse-server/users.d/op-user-config.xml:ro
+      - ../files/clickhouse/init-db.sql:/docker-entrypoint-initdb.d/1_init-db.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, 'clickhouse-client --query "SELECT 1" -d openpanel']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  op-api:
+    image: lindesvard/openpanel-api:${OP_API_VERSION:-latest}
+    restart: always
+    command: >
+      sh -c "
+        echo 'Waiting for PostgreSQL to be ready...'
+        while ! nc -z op-db 5432; do
+          sleep 1
+        done
+        echo 'PostgreSQL is ready'
+      
+        echo 'Waiting for ClickHouse to be ready...'
+        while ! nc -z op-ch 8123; do
+          sleep 1
+        done
+        echo 'ClickHouse is ready'
+      
+        echo 'Running migrations...'
+        
+        echo '$DATABASE_URL'
+      
+        CI=true pnpm -r run migrate:deploy
+      
+        pnpm start
+      "
+    environment:
+      # Common
+      NODE_ENV: production
+      NEXT_PUBLIC_SELF_HOSTED: true
+      # URLs
+      SERVICE_FQDN_OPAPI: /api
+      # Set coolify FQDN domain
+      NEXT_PUBLIC_API_URL: $SERVICE_FQDN_OPAPI
+      NEXT_PUBLIC_DASHBOARD_URL: $SERVICE_FQDN_OPDASHBOARD
+      # Others
+      COOKIE_SECRET: ${SERVICE_BASE64_COOKIESECRET}
+      ALLOW_REGISTRATION: ${OPENPANEL_ALLOW_REGISTRATION:-false}
+      ALLOW_INVITATION: ${OPENPANEL_ALLOW_INVITATION:-true}
+      EMAIL_SENDER: ${OPENPANEL_EMAIL_SENDER}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      <<: *x-database
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:3000/healthcheck || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      op-db:
+        condition: service_healthy
+      op-ch:
+        condition: service_healthy
+      op-kv:
+        condition: service_healthy
+
+  op-dashboard:
+    image: lindesvard/openpanel-dashboard:${OP_DASHBOARD_VERSION:-latest}
+    restart: always
+    depends_on:
+      op-api:
+        condition: service_healthy
+    environment:
+      # Common
+      NODE_ENV: production
+      NEXT_PUBLIC_SELF_HOSTED: true
+      # URLs
+      SERVICE_FQDN_OPDASHBOARD:
+      # Set coolify FQDN domain
+      NEXT_PUBLIC_API_URL: $SERVICE_FQDN_OPAPI
+      NEXT_PUBLIC_DASHBOARD_URL: $SERVICE_FQDN_OPDASHBOARD
+      <<: *x-database
+    healthcheck:
+      test: [ 'CMD-SHELL', 'curl -f http://localhost:3000/api/healthcheck || exit 1' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  op-worker:
+    image: lindesvard/openpanel-worker:${OP_WORKER_VERSION:-latest}
+    restart: always
+    depends_on:
+      op-api:
+        condition: service_healthy
+    environment:
+      # FQDN
+      SERVICE_FQDN_OPBULLBOARD:
+      # Common
+      NODE_ENV=production:
+      NEXT_PUBLIC_SELF_HOSTED: true
+      # Set coolify FQDN domain
+      NEXT_PUBLIC_API_URL: $SERVICE_FQDN_OPAPI
+      <<: *x-database
+    healthcheck:
+      test: [ 'CMD-SHELL', 'curl -f http://localhost:3000/healthcheck || exit 1' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      mode: replicated
+      replicas: 1
+
+volumes:
+  op-db-data:
+  op-kv-data:
+  op-ch-data:
+  op-ch-logs:
+  op-proxy-data:
+  op-proxy-config:
+""",
+    config='''[variables]
+main_domain = "${domain}"
+api_domain = "${domain}"
+db_password = "${password}"
+cookie_secret = "${base64:32}"
+redis_password = "${password}"
+
+[config]
+[[config.mounts]]
+filePath = "clickhouse/clickhouse-config.xml"
+content = """
+    <clickhouse>
+        <logger>
+            <level>warning</level>
+            <console>true</console>
+        </logger>
+        <keep_alive_timeout>10</keep_alive_timeout>
+        <!-- Stop all the unnecessary logging -->
+        <query_thread_log remove="remove"/>
+        <query_log remove="remove"/>
+        <text_log remove="remove"/>
+        <trace_log remove="remove"/>
+        <metric_log remove="remove"/>
+        <asynchronous_metric_log remove="remove"/>
+        <session_log remove="remove"/>
+        <part_log remove="remove"/>
+        <listen_host>0.0.0.0</listen_host>
+        <interserver_listen_host>0.0.0.0</interserver_listen_host>
+        <interserver_http_host>opch</interserver_http_host>
+        <!-- Disable cgroup memory observer -->
+        <cgroups_memory_usage_observer_wait_time>0</cgroups_memory_usage_observer_wait_time>
+        <!-- Not used anymore, but kept for backwards compatibility -->
+        <macros>
+            <shard>1</shard>
+            <replica>replica1</replica>
+            <cluster>openpanel_cluster</cluster>
+        </macros>
+    </clickhouse>
+"""
+
+[[config.mounts]]
+filePath = "clickhouse/clickhouse-user-config.xml"
+content = """
+    <clickhouse>
+        <profiles>
+        <default>
+            <log_queries>0</log_queries>
+            <log_query_threads>0</log_query_threads>
+        </default>
+    </profiles>
+    </clickhouse>
+"""
+
+[[config.mounts]]
+filePath = "clickhouse/init-db.sql"
+content = """
+CREATE DATABASE IF NOT EXISTS openpanel;
+"""
+
+[[config.domains]]
+serviceName = "op-dashboard"
+port = 3_000
+host = "${main_domain}"
+
+[[config.domains]]
+serviceName = "op-api"
+port = 3_000
+host = "${api_domain}"
+
+[config.env]
+SERVICE_FQDN_OPDASHBOARD = "http://${main_domain}"
+SERVICE_FQDN_OPAPI = "http://${api_domain}"
+OPENPANEL_POSTGRES_DB = "openpanel-db"
+SERVICE_USER_POSTGRES = "openpanel"
+SERVICE_PASSWORD_POSTGRES = "${db_password}"
+SERVICE_PASSWORD_REDIS = "${redis_password}"
+SERVICE_BASE64_COOKIESECRET = "${cookie_secret}"
+OP_WORKER_REPLICAS = "1"
+
+RESEND_API_KEY = ""
+OPENPANEL_ALLOW_REGISTRATION = "true"
+OPENPANEL_ALLOW_INVITATION = "true"
+''',
+)
