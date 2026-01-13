@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import re
 from typing import Dict, Literal, Optional, List, Any, Self, cast
 
 
@@ -35,6 +36,60 @@ class ComposeVolumeMountSpec:
     consistency: Optional[Dict] = None
     tmpfs: Optional[Dict] = None
     volume: Optional[Dict] = None
+
+    @classmethod
+    def from_docker_compose_volume(cls, compose_volume: List | Dict):
+        image = None
+        consistency = None
+        tmpfs = None
+        volume = None
+        bind = None
+        if isinstance(compose_volume, str):
+            # str format: "db-data:/var/lib/postgresql:rw"
+            parts = compose_volume.split(":")
+            source = parts[0]
+            target = parts[1]
+            volume_type = (
+                "bind"
+                if source.startswith("/")
+                or source.startswith("./")
+                or source.startswith("../")
+                else "volume"
+            )
+            read_only = False
+            if len(parts) > 2:
+                mode = parts[2]
+                if mode == "ro":
+                    read_only = True
+                if mode in ["z", "Z"]:
+                    # selinux mode
+                    # see: https://docs.docker.com/reference/compose-file/services/#short-syntax-5
+                    bind = {"selinux": mode}
+        else:
+            # Dict format: {"type": "bind", "source": "/var/run/docker.sock", "target": "/var/run/docker.sock"}
+            compose_volume = cast(dict, compose_volume)
+            volume_type = compose_volume.get("type", "volume")
+            target = compose_volume["target"]
+            source = compose_volume.get("source")
+            read_only = compose_volume.get("read_only", False)
+            bind = compose_volume.get("bind")
+
+            image = compose_volume.get("image")
+            consistency = compose_volume.get("consistency")
+            tmpfs = compose_volume.get("tmpfs")
+            volume = compose_volume.get("volume")
+
+        return cls(
+            source=source,
+            target=target,
+            type=volume_type,
+            read_only=read_only,
+            bind=bind,
+            image=image,
+            consistency=consistency,
+            tmpfs=tmpfs,
+            volume=volume,
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         spec_dict: Dict[str, Any] = {
@@ -107,73 +162,37 @@ class ComposeServiceSpec:
             # Dict format: {"zane": {aliases: [...]}, "custom": null}
             networks = original_networks
 
-        volumes: List[ComposeVolumeMountSpec] = []
         original_volumes = data.get("volumes", [])
 
-        # handle volumes convert to dict format
-        for v in original_volumes:
-            image = None
-            consistency = None
-            tmpfs = None
-            volume = None
-            bind = None
-            if isinstance(v, str):
-                # str format: "db-data:/var/lib/postgresql:rw"
-                parts = v.split(":")
-                source = parts[0]
-                target = parts[1]
-                volume_type = (
-                    "bind"
-                    if source.startswith("/")
-                    or source.startswith("./")
-                    or source.startswith("../")
-                    else "volume"
-                )
-                read_only = False
-                if len(parts) > 2:
-                    mode = parts[2]
-                    if mode == "ro":
-                        read_only = True
-                    if mode in ["z", "Z"]:
-                        # selinux mode
-                        # see: https://docs.docker.com/reference/compose-file/services/#short-syntax-5
-                        bind = {"selinux": mode}
-            else:
-                # Dict format: {"type": "bind", "source": "/var/run/docker.sock", "target": "/var/run/docker.sock"}
-                v = cast(dict, v)
-                volume_type = v.get("type", "volume")
-                target = v["target"]
-                source = v.get("source")
-                read_only = v.get("read_only", False)
-                bind = v.get("bind")
-
-                image = v.get("image")
-                consistency = v.get("consistency")
-                tmpfs = v.get("tmpfs")
-                volume = v.get("volume")
-
-            volumes.append(
-                ComposeVolumeMountSpec(
-                    source=source,
-                    target=target,
-                    type=volume_type,
-                    read_only=read_only,
-                    bind=bind,
-                    image=image,
-                    consistency=consistency,
-                    tmpfs=tmpfs,
-                    volume=volume,
-                )
-            )
+        # handle `depends_on`
+        depends_on = data.get("depends_on", [])
+        dependencies: List[str] = []
+        if isinstance(depends_on, list):
+            # format:
+            # depends_on:
+            #   - rybbit_clickhouse
+            #   - rybbit_postgres
+            dependencies = depends_on
+        elif isinstance(depends_on, dict):
+            # format:
+            # depends_on:
+            #   rybbit_clickhouse:
+            #     condition: service_healthy
+            #   rybbit_postgres:
+            #     condition: service_started
+            dependencies = [name for name in depends_on]
 
         return cls(
             name=data["name"],
             image=data["image"],
             environment=envs,
             networks=networks,
-            volumes=volumes,
+            volumes=[
+                ComposeVolumeMountSpec.from_docker_compose_volume(volume)
+                for volume in original_volumes
+            ],
             deploy=data.get("deploy", {}),
-            depends_on=data.get("depends_on", []),
+            depends_on=dependencies,
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -550,7 +569,9 @@ class DokployConfigMount:
     def from_dict(cls, data: Dict[str, Any]) -> "DokployConfigMount":
         return cls(
             content=data["content"],
-            filePath=data["filePath"],
+            filePath=re.sub(
+                r"(/)+", "/", data["filePath"]
+            ),  # replace all double slashes with a single slash
         )
 
 

@@ -9,6 +9,7 @@ from zane_api.utils import jprint
 from ..models import ComposeStack, ComposeStackChange
 from .fixtures import DOKPLOY_POCKETBASE_TEMPLATE, DOKPLOY_VALKEY_TEMPLATE
 from .stacks import ComposeStackAPITestBase
+from ..dtos import ComposeVolumeMountSpec
 
 
 class DokployCompatibilityViewTests(ComposeStackAPITestBase):
@@ -289,5 +290,7 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
         # Check that the relative path volume is removed (in favor of the config)
         service_volumes = valkey_service["volumes"]
         self.assertEqual(1, len(service_volumes))
-        volume = service_volumes[0]
-        self.assertEqual("valkey-data:/data", volume)
+        volume = ComposeVolumeMountSpec.from_docker_compose_volume(service_volumes[0])
+        self.assertEqual("volume", volume.type)
+        self.assertEqual("valkey-data", volume.source)
+        self.assertEqual("/data", volume.target)

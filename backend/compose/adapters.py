@@ -7,9 +7,10 @@ import yaml
 from typing import Dict, Any
 
 
-from zane_api.utils import jprint, find_item_in_sequence
-from .dtos import DokployConfigObject, ComposeServiceSpec
+from zane_api.utils import jprint
+from .dtos import DokployConfigMount, DokployConfigObject, ComposeServiceSpec
 from abc import ABC, abstractmethod
+import tempfile
 
 
 class BaseComposeAdapter(ABC):
@@ -19,6 +20,10 @@ class BaseComposeAdapter(ABC):
 
 
 class DokployComposeAdapter(BaseComposeAdapter):
+    """
+    Adapter to support templates from dokploy
+    """
+
     # Dokploy placeholder pattern for password-like values (password, base64, hash, jwt)
     # These all map to generate_password in ZaneOps
     DOKPLOY_PASSWORD_LIKE_PATTERN = re.compile(
@@ -65,12 +70,19 @@ class DokployComposeAdapter(BaseComposeAdapter):
     @classmethod
     def to_zaneops(cls, template: str):
         """
-        transform the syntax to zaneops compatible syntax
+        Transform a dokploy template to ZaneOps compatible stack.
+
+        - Add all the config.mounts as docker configs
+        - replace all the variable placeholders to ZaneOps compatible expressions (ex: ${password} to {{ generate_password | 32 }})
+        - replace all the dokploy relative bind mounts (`..files/`) to configs or volumes whenever possible
+        - Make sure `depends_on` is a list
+        - Remove the exposed ports that are supposed to be domains, as well as remove `expose:` as it is useless
 
         :param cls: Description
         :param template: Description
         :type template: str
         """
+
         decoded_data = base64.b64decode(template)
         decoded_string = decoded_data.decode("utf-8")
         template_dict = json.loads(decoded_string)
@@ -113,83 +125,165 @@ class DokployComposeAdapter(BaseComposeAdapter):
                     deploy["labels"][f"zane.http.routes.{index}.port"] = domain.port
                 compose_service["deploy"] = deploy
 
-        # handle configs
-        configs: dict[str, dict] = {}
-        for mount in config.mounts:
-            filename = os.path.basename(mount.filePath)
-            configs[filename] = dict(content=mount.content)
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmpdir:
+            """
+            # we need reconcile these cases:
 
-        """
-        # we need reconcile these cases:
+            1st case:
+            mounts:
+                - "./clickhouse_config/logging_rules.xml"
+                - "./clickhouse_config/network.xml"
+                - "./clickhouse_config/user_logging.xml"
 
-        1st case:
-        mounts:
-            - "./clickhouse_config/logging_rules.xml"
-            - "./clickhouse_config/network.xml"
-            - "./clickhouse_config/user_logging.xml"
-        
-        volumes:
-            - ../files/clickhouse_config:/etc/clickhouse-server/config.d
-        
-        2nd case:
-        mounts:
-            - "clickhouse/clickhouse-config.xml"
-            - "clickhouse/clickhouse-user-config.xml"
-            - "clickhouse/init-db.sql"
+            volumes:
+                - ../files/clickhouse_config:/etc/clickhouse-server/config.d
 
-        volumes:
-            - ../files/clickhouse/clickhouse-config.xml:/etc/clickhouse-server/config.d/op-config.xml:ro
-            - ../files/clickhouse/clickhouse-user-config.xml:/etc/clickhouse-server/users.d/op-user-config.xml:ro
-            - ../files/clickhouse/init-db.sql:/docker-entrypoint-initdb.d/1_init-db.sql:ro
+            2nd case:
+            mounts:
+                - "clickhouse/clickhouse-config.xml"
+                - "clickhouse/clickhouse-user-config.xml"
+                - "clickhouse/init-db.sql"
 
-        === Solution ===
-        1. create a temp dir
-        2. for each mount path, create a file at the selected path inside the temp dir
-        3. find the path of the volume: 
-            - if the volume path is a dir, we need to find all the 
+            volumes:
+                - ../files/clickhouse/clickhouse-config.xml:/etc/clickhouse-server/config.d/op-config.xml:ro
+                - ../files/clickhouse/clickhouse-user-config.xml:/etc/clickhouse-server/users.d/op-user-config.xml:ro
+                - ../files/clickhouse/init-db.sql:/docker-entrypoint-initdb.d/1_init-db.sql:ro
 
-        """
+            === Solution ===
+            1. create a temp dir
+            2. for each mount path, create a file at the selected path inside the temp dir, also create a config with the content
+            2.5. Do we also need to create a folder for bind mounts ? -> maybe not
+            3. find the path of the volume:
+                - if the volume path is a dir, we need to find all the files in that directory
+                    and create a config mapping from the filename (which is a config) to the volume target
+                - if the volume path is a file:
+                    replace with a config mapping directly
 
-        # remove all `../files` bind volumes
+                - if the volume path doesn't exist (?) and is relative path:
+                    replace with new volume (and create it in compose)
 
-        for service_dict in compose_dict["services"]:
-            service = ComposeServiceSpec.from_dict(service_dict)
+            """
 
-            # `../files` is prefix that dokploy uses for bind volumes
-            # but we don't use relative bind volumes, so we need to remove them
-            for v in service.volumes:
-                if (
-                    v.type == "bind"
-                    and v.source is not None
-                    and v.source.startswith("../files")
-                ):
-                    _, path = v.source.split("/", 1)
-                    if path in configs:
-                        service_dict["configs"] = service_dict.get("configs", [])
-                        service_dict["configs"].append(
-                            dict(source=path, target=v.target)
-                        )
-                    # TODO: should create a normal volume in the other case
-                    # else:
-                    #     service_dict["volumes"].append(f"{path}:")
+            # Step 1: Create temp dir (already done by context manager)
+            # Step 2: For each mount path, create a file at the selected path inside the temp dir
+            mount_path_to_config: dict[str, DokployConfigMount] = {}
+            for mount in config.mounts:
+                # Create file in temp directory
+                file_path = os.path.join(tmpdir, mount.filePath)
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-            # remove all relative volumes
-            volumes = []
-            for volume in enumerate(service_dict.get("volumes", [])):
-                if isinstance(volume, str) and volume.startswith("../files"):
-                    continue
-                if (
-                    isinstance(volume, dict)
-                    and volume["type"] == "bind"  # type: ignore
-                    and volume["source"].startswith("../files")  # type: ignore
-                ):
-                    continue
+                with open(file_path, "w") as f:
+                    f.write(mount.content)
 
-                volumes.append(volume)
+                # Track which mount paths exist
+                relative_path = os.path.relpath(file_path, tmpdir)
+                mount_path_to_config[relative_path] = mount
 
-            service_dict["volumes"] = volumes
+            print(f"{mount_path_to_config=}")
 
-        # compose_dict["configs"] = configs
+            # create configs
+            configs: dict[str, dict] = {}
+            for mount in config.mounts:
+                filename = os.path.basename(mount.filePath)
+                configs[filename] = dict(content=mount.content)
+
+            # Step 3: Find the path of the volume and handle it
+            for service_name, service_dict in compose_dict["services"].items():
+                service = ComposeServiceSpec.from_dict(
+                    {**service_dict, "name": service_name}
+                )
+
+                volumes_to_keep = []
+                service_configs = service_dict.get("configs", [])
+
+                for volume in service.volumes:
+                    print(f"{volume.to_dict()=}")
+                    if (
+                        volume.type == "bind"
+                        and volume.source is not None
+                        # ../files prefix are relative dokploy files, all of them should be replaced with configs/volumes
+                        and volume.source.startswith("../files")
+                    ):
+                        # Remove the ../files prefix
+                        _, relative_path = volume.source.split("../files/", 1)
+                        full_path = os.path.join(tmpdir, relative_path)
+
+                        print(f"{relative_path=}")
+                        print(f"{full_path=}")
+
+                        # Check if the volume path is a dir or file
+                        if os.path.isdir(full_path):
+                            print(f"os.path.isdir({full_path=})")
+                            # Case 1: Directory - find all files in that directory
+                            for root, dirs, files in os.walk(full_path):
+                                for file in files:
+                                    file_full_path = os.path.join(root, file)
+                                    # Get relative path from tmpdir
+                                    # so that `file_rel_path` which would be `/var/tmp/folder/file.txt` becomes `folder/file.txt`
+                                    file_rel_path = os.path.relpath(
+                                        file_full_path, tmpdir
+                                    )
+
+                                    # Find the matching mount
+                                    matching_mount = mount_path_to_config.get(
+                                        file_rel_path
+                                    )
+                                    if matching_mount:
+                                        config_name = os.path.basename(
+                                            matching_mount.filePath
+                                        )
+                                        # Target is volume target + filename
+                                        config_target = os.path.join(
+                                            volume.target, file
+                                        )
+
+                                        service_configs.append(
+                                            {
+                                                "source": config_name,
+                                                "target": config_target,
+                                            }
+                                        )
+                        elif os.path.isfile(full_path):
+                            print(f"os.path.isfile({full_path=})")
+                            # Case 2: File - replace with config mapping directly
+                            file_rel_path = os.path.relpath(full_path, tmpdir)
+
+                            # Find the matching mount
+                            matching_mount = mount_path_to_config.get(file_rel_path)
+
+                            if matching_mount:
+                                config_name = os.path.basename(matching_mount.filePath)
+                                service_configs.append(
+                                    {
+                                        "source": config_name,
+                                        "target": volume.target,
+                                    }
+                                )
+                        else:
+                            # Case 3: Path doesn't exist and is relative - create new volume
+                            # Extract volume name from relative path
+                            volume_name = relative_path.replace("/", "_").replace(
+                                ".", "_"
+                            )
+                            if volume_name not in compose_dict.get("volumes", {}):
+                                if "volumes" not in compose_dict:
+                                    compose_dict["volumes"] = {}
+                                compose_dict["volumes"][volume_name] = {}
+
+                            # transform into a volume mount
+                            volume.type = "volume"
+                            volume.source = volume_name
+                            volumes_to_keep.append(volume.to_dict())
+                    else:
+                        # Not a ../files bind mount, keep it
+                        volumes_to_keep.append(volume.to_dict())
+
+                service_dict["volumes"] = volumes_to_keep
+                if service_configs:
+                    service_dict["configs"] = service_configs
+
+            if configs:
+                compose_dict["configs"] = configs
 
         # we need to reorder the compose file properties
         compose = {}
