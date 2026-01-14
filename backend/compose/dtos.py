@@ -124,146 +124,6 @@ class ComposeVolumeMountSpec:
 
 
 @dataclass
-class ComposeServicePortSpec:
-    target: int
-    published: Optional[str] = None
-    host_ip: Optional[str] = None
-    protocol: Literal["tcp", "udp"] = "tcp"
-    app_protocol: Optional[str] = None
-    mode: Literal["ingress", "host"] = "ingress"
-    name: Optional[str] = None
-
-    @classmethod
-    def from_docker_compose_port(
-        cls, port: str | int | Dict
-    ) -> List["ComposeServicePortSpec"]:
-        """
-        Parse Docker Compose port syntax and return a list of port specs.
-        Port ranges are expanded into individual port mappings.
-        """
-        if isinstance(port, int):
-            return [cls.from_dict({"target": port})]
-        if isinstance(port, dict):
-            # Long syntax: dict format
-            return [cls.from_dict(port)]
-
-        # Parse protocol if present (e.g., "80/tcp")
-        protocol: Literal["tcp", "udp"] = "tcp"
-        if "/" in port:
-            port, proto_str = port.rsplit("/", 1)
-            protocol = cast(Literal["tcp", "udp"], proto_str)
-
-        # Handle IPv6 addresses in brackets: "[::1]:6001:6001"
-        # Extract bracketed IPv6 host if present
-        host_ip = None
-        if port.startswith("["):
-            bracket_end = port.index("]")
-            host_ip = port[1:bracket_end]
-            port = port[bracket_end + 2 :]  # Skip "]:"
-        else:
-            # Check if it starts with :: (IPv6 without brackets)
-            if port.startswith("::"):
-                # Format: "::1:6000:6000"
-                # Need to distinguish between IPv6 and ports
-                # If there are more than 2 colons after ::, it has host_ip
-                colon_count = port.count(":")
-                if colon_count > 2:
-                    # Has IPv6 host
-                    parts = port.split(":", 3)
-                    host_ip = "::1" if parts[1] == "1" else "::"
-                    port = f"{parts[2]}:{parts[3]}"
-
-        # Now parse the remaining port string
-        parts = port.split(":")
-
-        published_str = None
-        target_str = None
-
-        if len(parts) == 1:
-            # Format: "3000" or "3000-3005"
-            target_str = parts[0]
-        elif len(parts) == 2:
-            # Format: "8000:8000" or "9090-9091:8080-8081" or "127.0.0.1:8001"
-            # Check if first part looks like an IP address
-            first_part = parts[0]
-            if "." in first_part and "-" not in first_part:
-                # Likely IPv4: "127.0.0.1:8001"
-                host_ip = first_part
-                target_str = parts[1]
-            else:
-                # Format: "8000:8000" or "9090-9091:8080-8081"
-                published_str = parts[0]
-                target_str = parts[1]
-        else:
-            # Format: "127.0.0.1:5000-5010:5000-5010"
-            host_ip = parts[0]
-            published_str = parts[1]
-            target_str = parts[2]
-
-        # Expand ranges
-        def parse_port_range(port_spec: str) -> List[int]:
-            if "-" in port_spec:
-                start, end = port_spec.split("-")
-                return list(range(int(start), int(end) + 1))
-            return [int(port_spec)]
-
-        target_ports = parse_port_range(target_str)
-        published_ports = (
-            parse_port_range(published_str)
-            if published_str
-            else [None] * len(target_ports)
-        )
-
-        # Validate that ranges match in size
-        if published_str and len(target_ports) != len(published_ports):
-            raise ValueError(
-                f"Port range mismatch: published '{published_str}' and target '{target_str}' must have same size"
-            )
-
-        # Create individual port specs
-        result = []
-        for target, published in zip(target_ports, published_ports):
-            result.append(
-                cls(
-                    target=target,
-                    published=str(published) if published is not None else None,
-                    host_ip=host_ip,
-                    protocol=protocol,
-                )
-            )
-
-        return result
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
-        return cls(
-            target=int(data["target"]),
-            published=data.get("published"),
-            host_ip=data.get("host_ip"),
-            protocol=data.get("protocol", "tcp"),
-            app_protocol=data.get("app_protocol"),
-            mode=data.get("mode", "ingress"),
-            name=data.get("name"),
-        )
-
-    def to_dict(self) -> Dict[str, Any]:
-        result: Dict[str, Any] = {"target": self.target}
-        if self.published is not None:
-            result["published"] = self.published
-        if self.host_ip is not None:
-            result["host_ip"] = self.host_ip
-        if self.protocol != "tcp":
-            result["protocol"] = self.protocol
-        if self.app_protocol is not None:
-            result["app_protocol"] = self.app_protocol
-        if self.mode != "ingress":
-            result["mode"] = self.mode
-        if self.name is not None:
-            result["name"] = self.name
-        return result
-
-
-@dataclass
 class ComposeServiceConfigSpec:
     source: str
     target: str
@@ -295,7 +155,6 @@ class ComposeServiceSpec:
     logging: Optional[Dict[str, Any]] = None
     volumes: list[ComposeVolumeMountSpec] = field(default_factory=list)
     depends_on: list[str] = field(default_factory=list)
-    ports: List[ComposeServicePortSpec] = field(default_factory=list)
     configs: List[ComposeServiceConfigSpec] = field(default_factory=list)
 
     @classmethod
@@ -355,11 +214,6 @@ class ComposeServiceSpec:
             ],
             deploy=data.get("deploy", {}),
             depends_on=dependencies,
-            ports=[
-                port_spec
-                for port in data.get("ports", [])
-                for port_spec in ComposeServicePortSpec.from_docker_compose_port(port)
-            ],
         )
 
     def to_dict(self) -> Dict[str, Any]:

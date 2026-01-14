@@ -93,8 +93,6 @@ class DokployComposeAdapter(BaseComposeAdapter):
 
         config = DokployConfigObject.from_dict(config_dict)
 
-        print(config)
-
         # handle variables first
         x_env: dict[str, str] = {}
         for key, value in config.variables.items():
@@ -125,13 +123,13 @@ class DokployComposeAdapter(BaseComposeAdapter):
                     deploy["labels"][f"zane.http.routes.{index}.port"] = domain.port
                     deploy["labels"][f"zane.http.routes.{index}.strip_prefix"] = "false"
 
-                    compose_service["ports"] = [
-                        port.to_dict()
-                        for port in service.ports
-                        if port.target != domain.port
-                    ]
-
                 compose_service["deploy"] = deploy
+                # remove ports section for services
+                compose_service.pop("ports", None)
+                # Remove `expose` property as it is useless
+                compose_service.pop("expose", None)
+                # Remove `restart` property as it is also ignored
+                compose_service.pop("restart", None)
 
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmpdir:
             """
@@ -186,8 +184,6 @@ class DokployComposeAdapter(BaseComposeAdapter):
                 # Track which mount paths exist
                 relative_path = os.path.relpath(file_path, tmpdir)
                 mount_path_to_config[relative_path] = mount
-
-            print(f"{mount_path_to_config=}")
 
             # create configs
             configs: dict[str, dict] = {}
@@ -290,9 +286,6 @@ class DokployComposeAdapter(BaseComposeAdapter):
                 service_dict["volumes"] = volumes_to_keep
                 if service_configs:
                     service_dict["configs"] = service_configs
-
-                ## Remove `expose` property as it is useless
-                service_dict.pop("expose", None)
 
                 ## handle depends_on
                 if service.depends_on:

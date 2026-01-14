@@ -14,7 +14,7 @@ from .fixtures import (
     DOKPLOY_RYBBIT_TEMPLATE,
 )
 from .stacks import ComposeStackAPITestBase
-from ..dtos import ComposeVolumeMountSpec, ComposeServicePortSpec
+from ..dtos import ComposeVolumeMountSpec
 
 
 class DokployCompatibilityViewTests(ComposeStackAPITestBase):
@@ -149,7 +149,7 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
         }
         self.assertEqual(expected_keys, env_override_keys)
 
-    def test_create_compose_stack_from_dokploy_removes_exposed_ports_to_http(
+    def test_create_compose_stack_from_dokploy_removes_all_exposed_ports(
         self,
     ):
         project = self.create_project(slug="compose")
@@ -196,17 +196,9 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
         self.assertIn("arangodb", services)
         arangodb_service = services["arangodb"]
 
+        # Verify that all  ports are removed
         self.assertNotIn("expose", arangodb_service)
-
-        # Verify that exposed ports are removed
-        # Original compose had: ports: [8529, 8530]
-        # Only `8529` is exposed, so it should be removed from the `ports` section
-        # while the other port is kept exposed as is
-        self.assertEqual(1, len(arangodb_service["ports"]))
-        port = ComposeServicePortSpec.from_docker_compose_port(
-            arangodb_service["ports"][0]
-        )[0]
-        self.assertEqual(8530, port.target)
+        self.assertNotIn("ports", arangodb_service)
 
     def test_create_compose_stack_from_dokploy_with_config_content_is_transformed_into_inline_content(
         self,
