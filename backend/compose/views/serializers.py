@@ -82,6 +82,11 @@ class ComposeStackServiceStatusSerializer(serializers.Serializer):
     )
 
 
+class ComposeConfigVersionSerializer(serializers.Serializer):
+    content = serializers.CharField()
+    version = serializers.IntegerField()
+
+
 class ComposeStackSerializer(serializers.ModelSerializer):
     slug = serializers.SlugField(max_length=255, required=False)
     unapplied_changes = ComposeStackChangeSerializer(many=True, read_only=True)
@@ -90,7 +95,9 @@ class ComposeStackSerializer(serializers.ModelSerializer):
         child=serializers.ListField(child=ComposeStackUrlRouteSerializer()),
         read_only=True,
     )
-    configs = serializers.DictField(child=serializers.CharField(), read_only=True)
+    configs = serializers.DictField(
+        child=ComposeConfigVersionSerializer(), read_only=True
+    )
     service_statuses = serializers.DictField(
         child=ComposeStackServiceStatusSerializer(),
         read_only=True,

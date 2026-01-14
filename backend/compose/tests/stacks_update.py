@@ -330,7 +330,7 @@ class ComposeStackRequestUpdateViewTests(ComposeStackAPITestBase):
             slug="placeholder-stack",
         )
 
-        initial_computed_content = stack.computed_content
+        initial_computed_content = cast(str, stack.computed_content)
 
         # add new env
         payload = {
@@ -372,7 +372,7 @@ class ComposeStackRequestUpdateViewTests(ComposeStackAPITestBase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         stack.refresh_from_db()
-        new_computed_content = stack.computed_content
+        new_computed_content = cast(str, stack.computed_content)
         print(
             "========= new computed =========",
             new_computed_content,
@@ -509,3 +509,312 @@ services:
             )
         )
         self.assertEqual(200, new_proxy_response.status_code)
+
+    def test_update_config_content_triggers_version_increment(self):
+        """
+        When a config's content is modified between deployments,
+        the config should be versioned by appending _v{n} to its name.
+        This ensures Docker Stack recreates the config.
+        """
+        initial_content = """
+services:
+  web:
+    image: nginx:alpine
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf
+
+configs:
+  nginx_config:
+    content: |
+      user nginx;
+      worker_processes 1;
+"""
+
+        project, stack = self.create_and_deploy_compose_stack(
+            content=initial_content,
+            slug="config-version-stack",
+        )
+
+        # Verify initial config was stored
+        stack.refresh_from_db()
+        initial_configs = cast(dict, stack.configs)
+        self.assertIsNotNone(initial_configs.get("nginx_config"))
+        nginx_config = initial_configs["nginx_config"]
+        self.assertIn("worker_processes 1", nginx_config["content"])
+        self.assertEqual(1, nginx_config["version"])
+
+        # Verify initial computed content has config with version 1
+        initial_computed_content = cast(str, stack.computed_content)
+        self.assertIn("nginx_config_v1:", initial_computed_content)
+
+        # Update config content
+        updated_content = """
+services:
+  web:
+    image: nginx:alpine
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf
+
+configs:
+  nginx_config:
+    content: |
+      user nginx;
+      worker_processes 4;
+"""
+
+        update_payload = {
+            "field": ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+            "type": ComposeStackChange.ChangeType.UPDATE,
+            "new_value": updated_content,
+        }
+
+        response = self.client.put(
+            reverse(
+                "compose:stacks.request_changes",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+            data=update_payload,
+            content_type="application/json",
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Deploy the changes
+        response = self.client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        stack.refresh_from_db()
+        new_configs = cast(dict, stack.configs)
+        new_computed_content = cast(str, stack.computed_content)
+
+        print(
+            "========= new computed =========",
+            new_computed_content,
+            "========= end new computed =========",
+            sep="\n",
+        )
+
+        # Verify config content was updated
+        self.assertIsNotNone(new_configs.get("nginx_config"))
+        nginx_config = new_configs["nginx_config"]
+        self.assertIn("worker_processes 4", nginx_config["content"])
+        self.assertEqual(2, nginx_config["version"])
+
+        # Verify computed content has versioned config name (v2 now)
+        self.assertIn("nginx_config_v2:", new_computed_content)
+        self.assertNotIn("nginx_config_v1:", new_computed_content)
+
+    def test_unchanged_config_content_does_not_increment_version(self):
+        """
+        When a config's content is unchanged between deployments,
+        the config version should not increment.
+        """
+        initial_content = """
+services:
+  web:
+    image: nginx:alpine
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf
+
+configs:
+  nginx_config:
+    content: |
+      user nginx;
+      worker_processes 2;
+"""
+
+        project, stack = self.create_and_deploy_compose_stack(
+            content=initial_content,
+            slug="unchanged-config-stack",
+        )
+
+        # Verify initial config
+        stack.refresh_from_db()
+        initial_configs = cast(dict, stack.configs)
+
+        # Update compose file but keep config content the same
+        updated_content = """
+services:
+  web:
+    image: nginx:alpine
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf
+    deploy:
+      replicas: 2
+
+configs:
+  nginx_config:
+    content: |
+      user nginx;
+      worker_processes 2;
+"""
+
+        update_payload = {
+            "field": ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+            "type": ComposeStackChange.ChangeType.UPDATE,
+            "new_value": updated_content,
+        }
+
+        response = self.client.put(
+            reverse(
+                "compose:stacks.request_changes",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+            data=update_payload,
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Deploy the changes
+        response = self.client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        stack.refresh_from_db()
+        new_configs = cast(dict, stack.configs)
+        new_computed = cast(str, stack.computed_content)
+
+        # Config content should be identical
+        self.assertEqual(
+            initial_configs["nginx_config"]["content"],
+            new_configs["nginx_config"]["content"],
+        )
+        # Version should remain 1 since content didn't change
+        self.assertEqual(1, new_configs["nginx_config"]["version"])
+
+        # Config name should still be at v1 since content didn't change
+        self.assertIn("nginx_config_v1:", new_computed)
+        self.assertNotIn("nginx_config_v2:", new_computed)
+
+    def test_multiple_config_updates_increment_versions_independently(self):
+        """
+        When multiple configs exist and only some change,
+        only the changed configs should get version increments.
+        """
+        initial_content = """
+services:
+  web:
+    image: nginx:alpine
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf
+      - source: app_config
+        target: /etc/nginx/conf.d/app.conf
+
+configs:
+  nginx_config:
+    content: |
+      user nginx;
+      worker_processes 1;
+  app_config:
+    content: |
+      server {
+        listen 80;
+      }
+"""
+
+        project, stack = self.create_and_deploy_compose_stack(
+            content=initial_content,
+            slug="multi-config-stack",
+        )
+
+        # Update only nginx_config
+        updated_content = """
+services:
+  web:
+    image: nginx:alpine
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf
+      - source: app_config
+        target: /etc/nginx/conf.d/app.conf
+
+configs:
+  nginx_config:
+    content: |
+      user nginx;
+      worker_processes 4;
+  app_config:
+    content: |
+      server {
+        listen 80;
+      }
+"""
+
+        update_payload = {
+            "field": ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+            "type": ComposeStackChange.ChangeType.UPDATE,
+            "new_value": updated_content,
+        }
+
+        response = self.client.put(
+            reverse(
+                "compose:stacks.request_changes",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+            data=update_payload,
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        response = self.client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        stack.refresh_from_db()
+        new_computed = cast(str, stack.computed_content)
+
+        print(
+            "========= multi-config computed =========",
+            new_computed,
+            "========= end multi-config computed =========",
+            sep="\n",
+        )
+
+        # nginx_config should be at v2 (changed)
+        self.assertIn("nginx_config_v2:", new_computed)
+        # app_config should still be at v1 (didn't change)
+        self.assertIn("app_config_v1:", new_computed)
+        self.assertNotIn("app_config_v2:", new_computed)

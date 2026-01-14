@@ -71,9 +71,12 @@ class ComposeStack(TimestampedModel):
     #         }
     urls = models.JSONField(null=True)
 
-    # Dict mapping config names to their content (for inline configs with 'content'):
+    # Dict mapping config names to their content + version (for inline configs with 'content'):
     #         {
-    #             "nginx_config": "user nginx;\nworker_processes auto;\n..."
+    #             "nginx_config": {
+    #                 "content": "user nginx;\nworker_processes auto;\n...",
+    #                 "version": 1
+    #             }
     #         }
     configs = models.JSONField(null=True)
 
@@ -182,7 +185,9 @@ class ComposeStack(TimestampedModel):
             service: [route.to_dict() for route in routes]
             for service, routes in artifacts.urls.items()
         }
-        self.configs = artifacts.configs
+        self.configs = {
+            name: config.to_dict() for name, config in artifacts.configs.items()
+        }
 
         ComposeStackEnvOverride.objects.bulk_create(
             [

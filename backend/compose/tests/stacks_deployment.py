@@ -204,7 +204,9 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
             "  worker_connections 1024;\n"
             "}"
         )
-        self.assertEqual(expected_content, stack_configs["nginx_config"])
+        nginx_config = stack_configs["nginx_config"]
+        self.assertEqual(expected_content, nginx_config["content"])
+        self.assertEqual(1, nginx_config["version"])
 
     def test_deploy_compose_with_env_overrides_apply_changes(self):
         project = self.create_project()
@@ -424,10 +426,12 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             "  worker_connections 1024;\n"
             "}"
         )
-        self.assertEqual(expected_content, stack_configs["nginx_config"])
+        nginx_config = stack_configs["nginx_config"]
+        self.assertEqual(expected_content, nginx_config["content"])
+        self.assertEqual(1, nginx_config["version"])
 
-        # Verify config file was created with correct name format: {hash_prefix}_{config_name}.conf
-        expected_filename = f"{stack.hash_prefix}_nginx_config.conf"
+        # Verify config file was created with correct name format: {hash_prefix}_{config_name}_v1.conf
+        expected_filename = f"{stack.hash_prefix}_nginx_config_v1.conf"
         self.assertIn(
             expected_filename,
             captured_config_files,

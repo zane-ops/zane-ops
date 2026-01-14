@@ -131,9 +131,11 @@ class ComposeStackActivities:
         )
 
         # 3. create config files
-        for name, contents in stack.configs.items():
+        for name, config in stack.configs.items():
+            contents = config.content
             config_file_path = os.path.join(
-                details.tmp_build_dir, f"{stack.hash_prefix}_{name}.conf"
+                details.tmp_build_dir,
+                f"{stack.hash_prefix}_{name}_v{config.version}.conf",
             )
             with open(config_file_path, "w") as file:
                 file.write(contents)

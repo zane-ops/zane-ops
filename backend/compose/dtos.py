@@ -582,11 +582,30 @@ class ComposeStackEnvOverrideDto:
 
 
 @dataclass
+class ComposeVersionedConfig:
+    content: str
+    version: int = 1
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Self:
+        return cls(
+            content=data["content"],
+            version=data.get("version", 1),
+        )
+
+    def to_dict(self):
+        return {
+            "content": self.content,
+            "version": self.version,
+        }
+
+
+@dataclass
 class ComposeSpecDeploymentArtifacts:
     computed_content: str
     computed_spec: Dict[str, Any]
     urls: Dict[str, List[ComposeStackUrlRouteDto]] = field(default_factory=dict)
-    configs: Dict[str, str] = field(default_factory=dict)
+    configs: Dict[str, ComposeVersionedConfig] = field(default_factory=dict)
     env_overrides: List[ComposeStackEnvOverrideDto] = field(default_factory=list)
 
 
@@ -601,7 +620,7 @@ class ComposeStackSnapshot:
     user_content: str
     computed_content: str
     urls: Dict[str, List[ComposeStackUrlRouteDto]] = field(default_factory=dict)
-    configs: Dict[str, str] = field(default_factory=dict)
+    configs: Dict[str, ComposeVersionedConfig] = field(default_factory=dict)
     env_overrides: List[ComposeStackEnvOverrideDto] = field(default_factory=list)
 
     @classmethod
@@ -622,7 +641,10 @@ class ComposeStackSnapshot:
             user_content=data["user_content"],
             computed_content=data["computed_content"],
             urls=urls,
-            configs=data.get("configs", {}),
+            configs={
+                name: ComposeVersionedConfig.from_dict(config_data)
+                for name, config_data in data.get("configs", {}).items()
+            },
             env_overrides=[
                 ComposeStackEnvOverrideDto.from_dict(env)
                 for env in data.get("env_overrides", [])
@@ -640,7 +662,9 @@ class ComposeStackSnapshot:
                 service: [route.to_dict() for route in routes]
                 for service, routes in self.urls.items()
             },
-            "configs": self.configs,
+            "configs": {
+                name: config.to_dict() for name, config in self.configs.items()
+            },
             "env_overrides": [env.to_dict() for env in self.env_overrides],
         }
 

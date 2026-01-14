@@ -9,6 +9,8 @@ from .dtos import (
     ComposeSpecDeploymentArtifacts,
     ComposeStackUrlRouteDto,
     ComposeStackEnvOverrideDto,
+    ComposeVersionedConfig,
+    ComposeConfigSpec,
 )
 from temporal.helpers import get_env_network_resource_name
 import json
@@ -265,7 +267,13 @@ class ComposeSpecProcessor:
             temp_file.flush()
 
             result = subprocess.run(
-                ["docker", "stack", "config", "-c", temp_file.name],
+                [
+                    "docker",
+                    "compose",
+                    "-f",
+                    temp_file.name,
+                    "config",
+                ],
                 capture_output=True,
                 text=True,
             )
@@ -789,13 +797,41 @@ class ComposeSpecProcessor:
         return overrides
 
     @classmethod
-    def extract_config_contents(cls, spec: ComposeStackSpec) -> Dict[str, str]:
-        configs = {
-            name: expand(config.content, environ=spec.to_dict()["x-zane-env"])
-            for name, config in spec.configs.items()
-            if config.is_derived_from_content and config.content is not None
-        }
-        return configs
+    def extract_config_contents(
+        cls, spec: ComposeStackSpec, stack: "ComposeStack"
+    ) -> Dict[str, "ComposeVersionedConfig"]:
+        previous_configs = stack.configs or {}
+        new_configs = {}
+
+        for name, config in spec.configs.items():
+            if config.is_derived_from_content and config.content is not None:
+                expanded_content = expand(
+                    config.content, environ=spec.to_dict()["x-zane-env"]
+                )
+
+                # Get previous version info
+                previous_config = previous_configs.get(name)
+                if previous_config is None:
+                    # New config, start at version 1
+                    new_configs[name] = ComposeVersionedConfig(
+                        content=expanded_content, version=1
+                    )
+                else:
+                    # Compare with previous version
+                    prev_version_obj = ComposeVersionedConfig.from_dict(previous_config)
+                    if prev_version_obj.content != expanded_content:
+                        # Content changed, increment version
+                        new_configs[name] = ComposeVersionedConfig(
+                            content=expanded_content,
+                            version=prev_version_obj.version + 1,
+                        )
+                    else:
+                        # Content unchanged, keep same version
+                        new_configs[name] = ComposeVersionedConfig(
+                            content=expanded_content, version=prev_version_obj.version
+                        )
+
+        return new_configs
 
     @classmethod
     def validate_and_extract_service_urls(
@@ -938,6 +974,50 @@ class ComposeSpecProcessor:
         return service_urls
 
     @classmethod
+    def _apply_config_versioning_to_spec(
+        cls,
+        spec: ComposeStackSpec,
+        config_versions: Dict[str, "ComposeVersionedConfig"],
+        stack_hash_prefix: str,
+    ) -> ComposeStackSpec:
+        """
+        Apply versioning to config names in the spec.
+        All configs get renamed to {name}_v{version}.
+        """
+        # Create mapping of old names to new versioned names
+        config_name_mapping: Dict[str, str] = {}
+        renamed_configs: Dict[str, ComposeConfigSpec] = {}
+
+        for config_name, config in spec.configs.items():
+            version_info = config_versions.get(config_name)
+            if version_info is not None:
+                # Apply versioning (all configs are versioned starting from v1)
+                new_name = f"{config_name}_v{version_info.version}"
+                config_name_mapping[config_name] = new_name
+                renamed_configs[new_name] = config
+                # Update the file reference
+                if config.is_derived_from_content:
+                    config.file = f"./{stack_hash_prefix}_{new_name}.conf"
+            else:
+                # No version info (shouldn't happen), keep original name
+                renamed_configs[config_name] = config
+
+        spec.configs = renamed_configs
+
+        # Update service config references
+        for service in spec.services.values():
+            updated_service_configs = []
+            for service_config in service.configs:
+                new_name = config_name_mapping.get(
+                    service_config.source, service_config.source
+                )
+                service_config.source = new_name
+                updated_service_configs.append(service_config)
+            service.configs = updated_service_configs
+
+        return spec
+
+    @classmethod
     def compile_stack_for_deployment(
         cls, user_content: str, stack: "ComposeStack"
     ) -> ComposeSpecDeploymentArtifacts:
@@ -949,14 +1029,22 @@ class ComposeSpecProcessor:
             stack=stack,
         )
 
+        # Extract configs with version info
+        extracted_configs = ComposeSpecProcessor.extract_config_contents(
+            spec=computed_spec, stack=stack
+        )
+
+        # Apply versioning to spec (rename configs if versions changed)
+        computed_spec = ComposeSpecProcessor._apply_config_versioning_to_spec(
+            spec=computed_spec,
+            config_versions=extracted_configs,
+            stack_hash_prefix=stack.hash_prefix,
+        )
+
         computed_content = ComposeSpecProcessor.generate_deployable_yaml(
             spec=computed_spec,
             user_content=user_content,
             stack_hash_prefix=stack.hash_prefix,
-        )
-
-        extracted_configs = ComposeSpecProcessor.extract_config_contents(
-            spec=computed_spec
         )
 
         extracted_service_routes = (

@@ -1226,9 +1226,9 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         self.assertIn("configs", computed_dict)
         configs = cast(dict, computed_dict["configs"])
-        self.assertIn("nginx_config", configs)
+        self.assertIn("nginx_config_v1", configs)
 
-        nginx_config = cast(dict, configs["nginx_config"])
+        nginx_config = cast(dict, configs["nginx_config_v1"])
         self.assertIsNotNone(nginx_config.get("file"))
         self.assertIsNone(nginx_config.get("content"))
 
@@ -1250,7 +1250,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             "  worker_connections 1024;\n"
             "}\n"
         )
-        self.assertEqual(expected_content, configs_data["nginx_config"])
+        self.assertEqual(expected_content, configs_data["nginx_config"].content)
 
         services = cast(dict, computed_dict.get("services"))
         _, service_config = next(iter(services.items()))
@@ -1261,7 +1261,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertEqual(len(service_configs), 1)
 
         nginx_config_mount = find_item_in_sequence(
-            lambda c: c["source"] == "nginx_config", service_configs
+            lambda c: c["source"] == "nginx_config_v1", service_configs
         )
         self.assertIsNotNone(nginx_config_mount)
         self.assertEqual(
@@ -1870,7 +1870,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(self.get_error_from_response(response, "x_env"))
+        self.assertIsNotNone(self.get_error_from_response(response, "x_zane_env"))
 
     def test_create_compose_with_x_env_in_config_content(self):
         """
@@ -1935,24 +1935,24 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(configs_data)
         self.assertIn("app_config", configs_data)
 
-        config_content = configs_data["app_config"]
+        config = configs_data["app_config"]
 
         # Verify static values are substituted in config content
-        self.assertIn("listen 8080;", config_content)
-        self.assertIn("server_name app.example.com;", config_content)
-        self.assertIn("proxy_pass http://app.example.com:8080;", config_content)
-        self.assertIn('X-App-Name "myapp"', config_content)
+        self.assertIn("listen 8080;", config.content)
+        self.assertIn("server_name app.example.com;", config.content)
+        self.assertIn("proxy_pass http://app.example.com:8080;", config.content)
+        self.assertIn('X-App-Name "myapp"', config.content)
 
         # Verify generated password is substituted (not the template)
-        self.assertNotIn("{{ generate_password | 64 }}", config_content)
-        self.assertNotIn("${APP_SECRET}", config_content)
-        self.assertIn("X-App-Secret", config_content)
+        self.assertNotIn("{{ generate_password | 64 }}", config.content)
+        self.assertNotIn("${APP_SECRET}", config.content)
+        self.assertIn("X-App-Secret", config.content)
 
         # Verify no unresolved ${} placeholders remain
-        self.assertNotIn("${APP_PORT}", config_content)
-        self.assertNotIn("${APP_HOST}", config_content)
-        self.assertNotIn("${APP_URL}", config_content)
-        self.assertNotIn("${APP_NAME}", config_content)
+        self.assertNotIn("${APP_PORT}", config.content)
+        self.assertNotIn("${APP_HOST}", config.content)
+        self.assertNotIn("${APP_URL}", config.content)
+        self.assertNotIn("${APP_NAME}", config.content)
 
     def test_create_compose_with_x_env_in_urls(self):
         """
