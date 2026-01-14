@@ -13,6 +13,7 @@ from temporalio.client import ScheduleAlreadyRunningError
 from temporalio.service import RPCError
 import yaml
 
+
 with workflow.unsafe.imports_passed_through():
     from compose.models import ComposeStackDeployment, ComposeStack
     from compose.dtos import (
@@ -26,14 +27,13 @@ with workflow.unsafe.imports_passed_through():
         get_docker_client,
         empty_folder,
         ZaneProxyClient,
+        get_compose_stack_swarm_service_status,
     )
     from search.dtos import RuntimeLogSource
     from zane_api.utils import (
         Colors,
         multiline_command,
-        DockerSwarmTask,
         format_duration,
-        DockerSwarmTaskState,
     )
     from django.db.models import Case, F, Value, When
     from docker.models.services import Service as DockerService
@@ -260,113 +260,6 @@ class ComposeStackActivities:
             if service_name not in current_services_in_spec:
                 service.remove()
 
-    async def _get_service_status(
-        self,
-        service: DockerService,
-        stack_name: str,
-        stack_hash_prefix: str,
-    ) -> Dict[str, Any]:
-        service_mode = service.attrs["Spec"]["Mode"]
-        # Mode is a dict in the format:
-        # {
-        #   "Mode": {
-        #     "Replicated": {
-        #       "Replicas": 0
-        #     },
-        #     "Global": {},
-        #     "ReplicatedJob": {
-        #       "MaxConcurrent": 1,
-        #       "TotalCompletions": 0
-        #     },
-        #     "GlobalJob": {}
-        #   }
-        # }
-
-        service_status = service.attrs["ServiceStatus"]
-        # ServiceStatus is a dict in the format:
-        # {
-        #   "RunningTasks": 1,
-        #   "DesiredTasks": 1,
-        #   "CompletedTasks": 0
-        # }
-
-        # Determine mode type
-        if "Global" in service_mode:
-            mode_type = "global"
-        elif "ReplicatedJob" in service_mode:
-            mode_type = "replicated-job"
-        elif "GlobalJob" in service_mode:
-            mode_type = "global-job"
-        else:
-            # default is replicated
-            mode_type = "replicated"
-
-        # Get counts from ServiceStatus
-        running_replicas = service_status["RunningTasks"]
-        desired_replicas = service_status["DesiredTasks"]
-        completed_replicas = service_status.get("CompletedTasks", 0)
-
-        # Get all tasks for the tasks list
-        tasks = [DockerSwarmTask.from_dict(task) for task in service.tasks()]
-
-        # Determine status based on mode
-        is_job = mode_type in ["replicated-job", "global-job"]
-
-        if is_job:
-            # For jobs, healthy means completed >= desired
-            status = (
-                ComposeStackServiceStatus.HEALTHY
-                if completed_replicas >= desired_replicas
-                else ComposeStackServiceStatus.STARTING
-            )
-        else:
-            # For regular services, healthy means running >= desired
-            if running_replicas >= desired_replicas:
-                status = ComposeStackServiceStatus.HEALTHY
-            else:
-                # Check if any tasks are in failed states
-                unhealthy_states = [
-                    DockerSwarmTaskState.FAILED,
-                    DockerSwarmTaskState.REJECTED,
-                    DockerSwarmTaskState.ORPHANED,
-                ]
-
-                has_failed_tasks = any(t.state in unhealthy_states for t in tasks)
-
-                # Check for shutdown tasks with non-zero exit codes
-                has_errored_shutdown = any(
-                    t.state == DockerSwarmTaskState.SHUTDOWN
-                    and (t.exit_code is not None and t.exit_code != 0)
-                    for t in tasks
-                )
-
-                if has_failed_tasks or has_errored_shutdown:
-                    status = ComposeStackServiceStatus.UNHEALTHY
-                else:
-                    status = ComposeStackServiceStatus.STARTING
-
-        service_name = (
-            cast(str, service.name)
-            .removeprefix(f"{stack_name}_")
-            .removeprefix(f"{stack_hash_prefix}_")
-        )
-        return {
-            "name": service_name,
-            "mode": mode_type,
-            "status": status,
-            "desired_replicas": desired_replicas,
-            "running_replicas": running_replicas,
-            "updated_at": timezone.now().isoformat(),
-            "tasks": [
-                {
-                    "status": task.state.value,
-                    "message": task.message,
-                    "exit_code": task.exit_code,
-                }
-                for task in tasks
-            ],
-        }
-
     @activity.defn
     async def check_stack_health(self, deployment: ComposeStackDeploymentDetails):
         mononotic_time = timedelta(minutes=5)
@@ -399,10 +292,8 @@ class ComposeStackActivities:
 
             statuses = await asyncio.gather(
                 *[
-                    self._get_service_status(
-                        service=service,
-                        stack_name=deployment.stack.name,
-                        stack_hash_prefix=deployment.stack.hash_prefix,
+                    get_compose_stack_swarm_service_status(
+                        service=service, stack=deployment.stack
                     )
                     for service in services
                 ]

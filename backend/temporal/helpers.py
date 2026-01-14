@@ -2,7 +2,9 @@ import asyncio
 import os
 import shutil
 
-from typing import Any, Coroutine, Dict, List, Literal, TypedDict
+from typing import Any, Coroutine, Dict, List, Literal, TypedDict, cast
+from docker.models.services import Service as DockerService
+
 
 from .shared import DeploymentDetails, DeploymentURLDto, ProxyURLRoute
 from zane_api.models import (
@@ -28,7 +30,7 @@ from zane_api.dtos import (
     StaticDirectoryBuilderOptions,
     NixpacksBuilderOptions,
 )
-from zane_api.utils import replace_placeholders
+from zane_api.utils import replace_placeholders, DockerSwarmTask, DockerSwarmTaskState
 import requests
 from rest_framework import status
 from enum import Enum, auto
@@ -41,8 +43,11 @@ from .constants import (
 )
 from typing import Protocol, runtime_checkable
 from datetime import timedelta
-from compose.dtos import ComposeStackUrlRouteDto, ComposeStackSnapshot
-from compose.models import ComposeStack
+from compose.dtos import (
+    ComposeStackUrlRouteDto,
+    ComposeStackServiceStatus,
+    ComposeStackSnapshot,
+)
 
 
 docker_client: docker.DockerClient | None = None
@@ -1384,3 +1389,110 @@ def obfuscate_env_in_shell_command(cmd: str, build_envs: dict[str, str]) -> str:
         pattern = rf"(\s|^){re.escape(key)}=(\'[^\']*\'|\"[^\"]*\"|\S+)"
         result = re.sub(pattern, rf"\1{key}={OBFUSCATED_VALUE}", result)
     return result
+
+
+async def get_compose_stack_swarm_service_status(
+    service: DockerService, stack: ComposeStackSnapshot
+) -> Dict[str, Any]:
+    service_mode = service.attrs["Spec"]["Mode"]
+    # Mode is a dict in the format:
+    # {
+    #   "Mode": {
+    #     "Replicated": {
+    #       "Replicas": 0
+    #     },
+    #     "Global": {},
+    #     "ReplicatedJob": {
+    #       "MaxConcurrent": 1,
+    #       "TotalCompletions": 0
+    #     },
+    #     "GlobalJob": {}
+    #   }
+    # }
+
+    service_status = service.attrs["ServiceStatus"]
+    # ServiceStatus is a dict in the format:
+    # {
+    #   "RunningTasks": 1,
+    #   "DesiredTasks": 1,
+    #   "CompletedTasks": 0
+    # }
+
+    # Determine mode type
+    if "Global" in service_mode:
+        mode_type = "global"
+    elif "ReplicatedJob" in service_mode:
+        mode_type = "replicated-job"
+    elif "GlobalJob" in service_mode:
+        mode_type = "global-job"
+    else:
+        # default is replicated
+        mode_type = "replicated"
+
+    # Get counts from ServiceStatus
+    running_replicas = service_status["RunningTasks"]
+    desired_replicas = service_status["DesiredTasks"]
+    completed_replicas = service_status.get("CompletedTasks", 0)
+
+    # Get all tasks for the tasks list
+    tasks = [DockerSwarmTask.from_dict(task) for task in service.tasks()]
+
+    # Determine status based on mode
+    is_job = mode_type in ["replicated-job", "global-job"]
+
+    if is_job:
+        # For jobs, healthy means completed >= desired
+        status = (
+            ComposeStackServiceStatus.HEALTHY
+            if completed_replicas >= desired_replicas
+            else ComposeStackServiceStatus.STARTING
+        )
+    else:
+        # For regular services, healthy means running >= desired
+        if running_replicas == desired_replicas == 0:
+            status = ComposeStackServiceStatus.SLEEPING
+        elif running_replicas >= desired_replicas:
+            status = ComposeStackServiceStatus.HEALTHY
+        else:
+            # Check if any tasks are in failed states
+            unhealthy_states = [
+                DockerSwarmTaskState.FAILED,
+                DockerSwarmTaskState.REJECTED,
+                DockerSwarmTaskState.ORPHANED,
+            ]
+
+            has_failed_tasks = any(t.state in unhealthy_states for t in tasks)
+
+            # Check for shutdown tasks with non-zero exit codes
+            has_errored_shutdown = any(
+                t.state == DockerSwarmTaskState.SHUTDOWN
+                and (t.exit_code is not None and t.exit_code != 0)
+                for t in tasks
+            )
+
+            if has_failed_tasks or has_errored_shutdown:
+                status = ComposeStackServiceStatus.UNHEALTHY
+            else:
+                status = ComposeStackServiceStatus.STARTING
+
+    service_name = (
+        cast(str, service.name)
+        .removeprefix(f"{stack.name}_")
+        .removeprefix(f"{stack.hash_prefix}_")
+    )
+    return {
+        "name": service_name,
+        "mode": mode_type,
+        "status": status,
+        "desired_replicas": desired_replicas,
+        "running_replicas": running_replicas,
+        "updated_at": timezone.now().isoformat(),
+        "tasks": [
+            {
+                "status": task.state.value,
+                "message": task.message,
+                "exit_code": task.exit_code,
+            }
+            for task in tasks
+        ],
+    }

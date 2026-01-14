@@ -40,6 +40,7 @@ with workflow.unsafe.imports_passed_through():
     from compose.models import ComposeStack
     from compose.dtos import ComposeStackServiceStatus, ComposeStackServiceStatusDto
     from docker.models.services import Service as DockerService
+    from ..helpers import get_compose_stack_swarm_service_status
 
 docker_client: docker.DockerClient | None = None
 
@@ -555,11 +556,7 @@ class MonitorComposeStackActivites:
         )
         statuses = await asyncio.gather(
             *[
-                self._get_service_status(
-                    service=service,
-                    stack_name=stack.name,
-                    stack_hash_prefix=stack.hash_prefix,
-                )
+                get_compose_stack_swarm_service_status(service=service, stack=stack)
                 for service in services
             ]
         )

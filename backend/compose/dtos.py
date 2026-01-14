@@ -8,12 +8,13 @@ from typing import Dict, Literal, Optional, List, Any, Self, cast
 class ComposeStackServiceStatus:
     STARTING = "STARTING"
     HEALTHY = "HEALTHY"
+    SLEEPING = "SLEEPING"
     UNHEALTHY = "UNHEALTHY"
     COMPLETE = "COMPLETE"
 
     @classmethod
     def values(cls):
-        return [cls.STARTING, cls.HEALTHY, cls.UNHEALTHY, cls.COMPLETE]
+        return [cls.STARTING, cls.HEALTHY, cls.UNHEALTHY, cls.COMPLETE, cls.SLEEPING]
 
 
 @dataclass
