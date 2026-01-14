@@ -11717,12 +11717,14 @@ components:
       - HEALTHY
       - UNHEALTHY
       - COMPLETE
+      - SLEEPING
       type: string
       description: |-
         * `STARTING` - STARTING
         * `HEALTHY` - HEALTHY
         * `UNHEALTHY` - UNHEALTHY
         * `COMPLETE` - COMPLETE
+        * `SLEEPING` - SLEEPING
     ComposeStackServiceTask:
       type: object
       properties:
