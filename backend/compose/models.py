@@ -32,6 +32,7 @@ class ComposeStack(TimestampedModel):
     # where the stack is deployed into
     # Used to keep the DNS alias of services unique per env
     # & during PR preview envs, this will be copied over
+    # derived from from initial `slug` of the stack and immutable
     network_alias_prefix = models.SlugField(max_length=40)
 
     project = models.ForeignKey(
