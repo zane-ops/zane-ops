@@ -11,10 +11,15 @@ import os
 import os.path
 from temporalio.client import ScheduleAlreadyRunningError
 from temporalio.service import RPCError
+import yaml
 
 with workflow.unsafe.imports_passed_through():
     from compose.models import ComposeStackDeployment, ComposeStack
-    from compose.dtos import ComposeStackServiceStatus, ComposeStackUrlRouteDto
+    from compose.dtos import (
+        ComposeStackServiceStatus,
+        ComposeStackUrlRouteDto,
+        ComposeStackSpec,
+    )
     from django.utils import timezone
     from ..helpers import (
         deployment_log,
@@ -236,6 +241,24 @@ class ComposeStackActivities:
             stack_id=stack.id,
             all_urls=all_routes,
         )
+
+    @activity.defn
+    async def cleanup_old_stack_services(
+        self, deployment: ComposeStackDeploymentDetails
+    ):
+        stack = deployment.stack
+        spec = ComposeStackSpec.from_dict(yaml.safe_load(stack.computed_content))
+        current_services_in_spec = [service_name for service_name in spec.services]
+
+        all_stack_services: List[DockerService] = self.docker_client.services.list(
+            filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
+        )
+
+        for service in all_stack_services:
+            service_name = cast(str, service.name).removeprefix(f"{stack.name}_")
+
+            if service_name not in current_services_in_spec:
+                service.remove()
 
     async def _get_service_status(
         self,

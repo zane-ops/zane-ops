@@ -1196,3 +1196,44 @@ services:
 volumes:
   db-data:
 """
+
+DOCKER_COMPOSE_WEB_WITH_DB = """
+services:
+  web:
+    image: nginx:alpine
+    deploy:
+      labels:
+        zane.http.routes.0.port: "80"
+        zane.http.routes.0.domain: "app.127-0-0-1.sslip.io"
+        zane.http.routes.0.base_path: "/"
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: supersecret
+      POSTGRES_DB: appdb
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  cache:
+    image: redis:7-alpine
+    volumes:
+      - cache-data:/data
+
+volumes:
+  db-data:
+  cache-data:
+"""
+
+DOCKER_COMPOSE_WEB_ONLY = """
+services:
+  web:
+    image: nginx:alpine
+    deploy:
+      labels:
+        zane.http.routes.0.port: "80"
+        zane.http.routes.0.domain: "app.127-0-0-1.sslip.io"
+        zane.http.routes.0.base_path: "/"
+"""

@@ -193,6 +193,7 @@ def get_workflows_and_activities():
             stack_activites.delete_stack_healthcheck_schedule,
             stack_activites.cleanup_old_stack_urls,
             stack_activites.get_next_queued_deployment,
+            stack_activites.cleanup_old_stack_services,
             monitor_stack_activites.save_stack_health_check_status,
             monitor_stack_activites.run_stack_healthcheck,
             acquire_service_deploy_semaphore,

@@ -95,6 +95,12 @@ class DeployComposeStackWorkflow:
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
+            await workflow.execute_activity_method(
+                ComposeStackActivities.create_stack_healthcheck_schedule,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
             await workflow.execute_activity_method(
                 ComposeStackActivities.cleanup_old_stack_urls,
@@ -104,7 +110,7 @@ class DeployComposeStackWorkflow:
             )
 
             await workflow.execute_activity_method(
-                ComposeStackActivities.create_stack_healthcheck_schedule,
+                ComposeStackActivities.cleanup_old_stack_services,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
