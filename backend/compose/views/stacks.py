@@ -1,5 +1,10 @@
 from typing import Any, cast
-from rest_framework.generics import CreateAPIView, RetrieveUpdateAPIView, ListAPIView
+from rest_framework.generics import (
+    CreateAPIView,
+    RetrieveUpdateAPIView,
+    ListAPIView,
+    RetrieveAPIView,
+)
 
 from .serializers import (
     ComposeStackSerializer,
@@ -296,6 +301,14 @@ class ComposeStackDetailsAPIView(RetrieveUpdateAPIView):
     serializer_class = ComposeStackUpdateSerializer
     lookup_field = "slug"
     http_method_names = ["get", "put"]
+    queryset = ComposeStack.objects.all()
+
+    @extend_schema(
+        operation_id="getComposeStackDetails",
+        summary="Get a compose stack details",
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
     def get_object(self) -> ComposeStack:  # type: ignore
         project_slug = self.kwargs["project_slug"]
@@ -401,6 +414,62 @@ class ComposeStackArchiveAPIView(APIView):
         stack.name
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ComposeStackDeploymentDetailsAPIView(RetrieveAPIView):
+    serializer_class = ComposeStackDeploymentSerializer
+    lookup_field = "hash"
+    queryset = ComposeStackDeployment.objects.all()
+
+    @extend_schema(
+        operation_id="getComposeStackDeploymentDetails",
+        summary="Get a compose stack deployment details",
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_object(self) -> ComposeStackDeployment:  # type: ignore
+        project_slug = self.kwargs["project_slug"]
+        env_slug = self.kwargs["env_slug"]
+        slug = self.kwargs["slug"]
+        hash = self.kwargs["hash"]
+
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=self.request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = ComposeStack.objects.filter(
+                environment=environment,
+                project=project,
+                slug=slug,
+            ).get()
+            deployment = (
+                ComposeStackDeployment.objects.filter(stack=stack, hash=hash)
+                .prefetch_related("changes")
+                .get()
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+        except ComposeStackDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack deployment with the hash `{hash}` does not exist in this stack"
+            )
+
+        return deployment
 
 
 class ComposeStackDeployAPIView(APIView):

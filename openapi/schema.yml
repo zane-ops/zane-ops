@@ -631,7 +631,8 @@ paths:
           description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/:
     get:
-      operationId: compose_stacks_retrieve
+      operationId: getComposeStackDetails
+      summary: Get a compose stack details
       parameters:
       - in: path
         name: env_slug
@@ -660,7 +661,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ComposeStacksRetrieveErrorResponse400'
+                $ref: '#/components/schemas/GetComposeStackDetailsErrorResponse400'
           description: ''
         '401':
           content:
@@ -814,6 +815,101 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ComposeStackUpdate'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/{hash}/:
+    get:
+      operationId: getComposeStackDeploymentDetails
+      summary: Get a compose stack deployment details
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetComposeStackDeploymentDetailsErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStackDeployment'
           description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/archive/:
     delete:
@@ -11966,13 +12062,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ComposeStacksRetrieveErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     ComposeStacksUpdateError:
       oneOf:
       - $ref: '#/components/schemas/ComposeStacksUpdateNonFieldErrorsErrorComponent'
@@ -15040,6 +15129,20 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     GetCSRFErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetComposeStackDeploymentDetailsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetComposeStackDetailsErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
