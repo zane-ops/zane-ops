@@ -17,7 +17,7 @@ We use a **test-first approach**. When implementing features:
 2. Tests will be validated and run by the human
 3. If asked to "write tests", write ONLY tests - no implementation
 4. Only implement the feature when explicitly asked to continue or implement
-4. Do not import packages in functions directly, import them at the top of the file
+4. Never, EVER Import files at the top of functions & methods, always import them at the top of the file
 5. look for built-in or installed libraries before doing something by hand
 
 ## About ZaneOps
