@@ -12,6 +12,7 @@ from .fixtures import (
     DOKPLOY_VALKEY_TEMPLATE,
     DOKPLOY_ARANGO_DB_TEMPLATE,
     DOKPLOY_RYBBIT_TEMPLATE,
+    DOKPLOY_KENER_TEMPLATE,
 )
 from .stacks import ComposeStackAPITestBase
 from ..dtos import ComposeVolumeMountSpec
@@ -366,3 +367,74 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
         self.assertIsInstance(client_depends_on, list)
         self.assertEqual(1, len(client_depends_on))
         self.assertIn("rybbit_backend", client_depends_on)
+
+    def test_create_compose_stack_from_dokploy_config_env_with_self_references_do_not_overwrite_variables(
+        self,
+    ):
+        """
+        Test that config.env entries that reference themselves (e.g., KENER_SECRET_KEY = "${KENER_SECRET_KEY}")
+        do not overwrite the variable definitions from config.variables.
+
+        Key point: When config.variables defines a template placeholder and config.env references it with
+        the same key name, the template should be preserved, not replaced with a circular reference.
+        """
+        project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "kener-no-circular-refs",
+            "user_content": DOKPLOY_KENER_TEMPLATE.base64,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create_from_dokploy.base64",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="kener-no-circular-refs").first(),
+        )
+        self.assertIsNotNone(created_stack)
+
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(str, pending_change.new_value)
+        print("========= converted user_content =========")
+        print(new_value)
+
+        user_content_dict = yaml.safe_load(new_value)
+
+        # Verify x-env section exists
+        self.assertIn("x-zane-env", user_content_dict)
+        x_env = user_content_dict["x-zane-env"]
+
+        # These variables should keep their template expressions (not be overwritten by self-references)
+        self.assertEqual("{{ generate_domain }}", x_env["main_domain"])
+        self.assertEqual("{{ generate_password | 64 }}", x_env["KENER_SECRET_KEY"])
+        self.assertEqual("{{ generate_password | 32 }}", x_env["MYSQL_PASSWORD"])
+        self.assertEqual("{{ generate_password | 32 }}", x_env["DB_PASSWORD"])
+
+        # These are additional env vars from config.env that don't exist in variables
+        self.assertEqual("Etc/UTC", x_env["TZ"])
+        self.assertEqual("sqlite://./database/kener.sqlite.db", x_env["DATABASE_URL"])
+        self.assertEqual("", x_env["KENER_BASE_PATH"])
+        self.assertEqual("http://localhost:3000", x_env["ORIGIN"])
+        self.assertEqual("user", x_env["POSTGRES_USER"])
+        self.assertEqual("kener_db", x_env["POSTGRES_DB"])
+
+        # This is a cross-reference (not a self-reference), so it should be kept
+        self.assertEqual("${DB_PASSWORD}", x_env["POSTGRES_PASSWORD"])

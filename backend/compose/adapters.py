@@ -100,7 +100,37 @@ class DokployComposeAdapter(BaseComposeAdapter):
             converted_value = cls._convert_dokploy_placeholder_to_zaneops(value)
             x_env[key] = converted_value
 
-        x_env.update(config.env)
+        # Process config.env
+        for key, value in config.env.items():
+            # Check if this is a self-reference to a definition in
+            # like this:
+
+            # [variables]
+            # KENER_SECRET_KEY = "${password:64}" -> replaced with "{{ generate_password | 64 }}"
+            #
+            # [[config.env]]
+            # KENER_SECRET_KEY = "KENER_SECRET_KEY"
+
+            # expected result:
+            #   -> { "KENER_SECRET_KEY": "{{ generate_password | 64 }}" }
+
+            if value == f"${{{key}}}" and key in x_env:
+                # Self-reference: skip it, keep the variable definition
+                continue
+            else:
+                # Not a self-reference: override the variable
+                # [variables]
+                # DB_PASSWORD = "${password:32}" -> replaced with "{{ generate_password | 32 }}"
+                #
+                # [[config.env]]
+                # MYSQL_PASSWORD = "password"
+                # DB_PASSWORD = "whatever"
+
+                # expected result:
+                #   -> { "MYSQL_PASSWORD": "password", "DB_PASSWORD": "whatever" }
+
+                x_env[key] = value
+
         if x_env:
             compose_dict["x-zane-env"] = x_env
 
@@ -135,7 +165,7 @@ class DokployComposeAdapter(BaseComposeAdapter):
             """
             # we need reconcile these cases:
 
-            1st case:
+           ** 1st case: 
             mounts:
                 - "./clickhouse_config/logging_rules.xml"
                 - "./clickhouse_config/network.xml"
@@ -144,7 +174,16 @@ class DokployComposeAdapter(BaseComposeAdapter):
             volumes:
                 - ../files/clickhouse_config:/etc/clickhouse-server/config.d
 
-            2nd case:
+            === Expected result ===
+            configs:
+                - source: logging_rules.xml
+                  target: /etc/clickhouse-server/config.d/logging_rules.xml
+                - source: network.xml
+                  target: /etc/clickhouse-server/config.d/network.xml
+                - source: user_logging.xml
+                  target: /etc/clickhouse-server/config.d/user_logging.xml
+
+            ** 2nd case: 
             mounts:
                 - "clickhouse/clickhouse-config.xml"
                 - "clickhouse/clickhouse-user-config.xml"
@@ -154,6 +193,15 @@ class DokployComposeAdapter(BaseComposeAdapter):
                 - ../files/clickhouse/clickhouse-config.xml:/etc/clickhouse-server/config.d/op-config.xml:ro
                 - ../files/clickhouse/clickhouse-user-config.xml:/etc/clickhouse-server/users.d/op-user-config.xml:ro
                 - ../files/clickhouse/init-db.sql:/docker-entrypoint-initdb.d/1_init-db.sql:ro
+
+            === Expected result ===
+            configs:
+                - source: clickhouse-config.xml
+                  target: /etc/clickhouse-server/config.d/op-config.xml
+                - source: clickhouse-user-config.xml
+                  target: /etc/clickhouse-server/users.d/op-user-config.xml
+                - source: init-db.sql
+                  target: /docker-entrypoint-initdb.d/1_init-db.sql
 
             === Solution ===
             1. create a temp dir
@@ -202,7 +250,6 @@ class DokployComposeAdapter(BaseComposeAdapter):
                 service_configs = service_dict.get("configs", [])
 
                 for volume in service.volumes:
-                    print(f"{volume.to_dict()=}")
                     if (
                         volume.type == "bind"
                         and volume.source is not None
@@ -302,5 +349,8 @@ class DokployComposeAdapter(BaseComposeAdapter):
             compose["x-zane-env"] = compose_dict.pop("x-zane-env")
         compose["services"] = compose_dict.pop("services")
         compose.update(compose_dict)
+
+        print("=== translated compose ===")
+        jprint(compose)
 
         return yaml.safe_dump(compose, sort_keys=False)

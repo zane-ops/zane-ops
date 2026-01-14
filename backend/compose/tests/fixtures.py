@@ -1082,3 +1082,88 @@ OPENPANEL_ALLOW_REGISTRATION = "true"
 OPENPANEL_ALLOW_INVITATION = "true"
 ''',
 )
+
+
+DOKPLOY_KENER_TEMPLATE = DokployTemplate(
+    compose="""
+version: "3.8"
+
+services:
+  kener:
+    image: rajnandan1/kener:latest
+    environment:
+      - TZ=${TZ}
+      - KENER_SECRET_KEY=${KENER_SECRET_KEY} # 🔐 API key / secret
+      - DATABASE_URL=${DATABASE_URL}
+      - KENER_BASE_PATH=${KENER_BASE_PATH}
+      - ORIGIN=${ORIGIN}
+      - RESEND_API_KEY=${RESEND_API_KEY} # 🔐 API key
+      - RESEND_SENDER_EMAIL=${RESEND_SENDER_EMAIL}
+    ports:
+      - 3000
+    volumes:
+      - kener_db:/app/database
+      - ../files/uploads:/app/uploads
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD} # 🔐 DB password
+      - POSTGRES_DB=${POSTGRES_DB}
+    restart: unless-stopped
+
+  mysql:
+    image: mariadb:11
+    environment:
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD} # 🔐 DB password
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_RANDOM_ROOT_PASSWORD=true
+    restart: unless-stopped
+
+volumes:
+  kener_db: {}
+""",
+    config="""
+[variables]
+main_domain = "${domain}"
+KENER_SECRET_KEY = "${password:64}"
+DB_PASSWORD = "${password:32}"
+MYSQL_PASSWORD = "${password:32}"
+
+[config]
+[[config.domains]]
+serviceName = "kener"
+port = 3000
+host = "${main_domain}"
+
+[config.env]
+TZ = "Etc/UTC"
+KENER_SECRET_KEY = "${KENER_SECRET_KEY}" # 🔐 API key / secret
+DATABASE_URL = "sqlite://./database/kener.sqlite.db"
+KENER_BASE_PATH = ""
+ORIGIN = "http://localhost:3000"
+RESEND_API_KEY = ""
+RESEND_SENDER_EMAIL = "Accounts <accounts@resend.dev>"
+POSTGRES_USER = "user"
+POSTGRES_DB = "kener_db"
+MYSQL_USER = "user"
+MYSQL_DATABASE = "kener_db"
+MYSQL_RANDOM_ROOT_PASSWORD = "true"
+MYSQL_PASSWORD = "${MYSQL_PASSWORD}" # 🔐 DB password
+POSTGRES_PASSWORD = "${DB_PASSWORD}" # 🔐 DB password
+main_domain = "${main_domain}" # 🔐 DB password 2
+
+[[config.mounts]]
+type = "volume"
+source = "kener_db"
+target = "/app/database"
+
+[[config.mounts]]
+type = "bind"
+source = "../files/uploads"
+target = "/app/uploads"
+""",
+)
