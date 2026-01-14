@@ -431,7 +431,7 @@ class ComposeStackRequestUpdateViewTests(ComposeStackAPITestBase):
 
         # Update content to have completely different services/URLs
         new_content = """
-x-env:
+x-zane-env:
   NEW_DOMAIN: "newservice.example.com"
 
 services:
