@@ -164,7 +164,14 @@ class ComposeServiceSpec:
         original_env = data.get("environment", [])
         if isinstance(original_env, list):
             for env in original_env:
-                key, value = cast(str, env).split("=", 1)
+                if "=" in env:
+                    # format: ENV=VALUE
+                    key, value = cast(str, env).split("=", 1)
+                else:
+                    # format: ENV (value is empty)
+                    key = env
+                    value = ""
+
                 envs[key] = ComposeEnvVarSpec(key=key, value=value)
         elif isinstance(original_env, dict):
             for key, value in original_env.items():
