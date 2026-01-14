@@ -12,6 +12,7 @@ from zane_api.utils import find_item_in_sequence, jprint
 from ..models import ComposeStack, ComposeStackChange
 from ..processor import ComposeSpecProcessor
 from .fixtures import (
+    DOCKER_COMPOSE_EMPTY_ENV_VARIABLES,
     DOCKER_COMPOSE_EXTERNAL_VOLUME,
     DOCKER_COMPOSE_MINIMAL,
     DOCKER_COMPOSE_MULTIPLE_ROUTES,
@@ -2029,6 +2030,85 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertEqual(1, len(dashboard_routes))
         self.assertEqual("dashboard.myapp.com", dashboard_routes[0].domain)
         self.assertEqual(8080, dashboard_routes[0].port)
+
+    def test_create_compose_stack_with_empty_env_variables_removes_null_values(self):
+        """
+        Test that empty environment variables (which resolve to null in YAML)
+        are removed from services in the computed content.
+        """
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "empty-env-stack",
+            "user_content": DOCKER_COMPOSE_EMPTY_ENV_VARIABLES,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="empty-env-stack").first()
+        )
+        self.assertIsNotNone(created_stack)
+
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(dict, pending_change.new_value)
+
+        # Verify compile_stack_for_deployment removes null environment variables
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_EMPTY_ENV_VARIABLES,
+            stack=created_stack,
+        )
+        computed_dict = cast(dict, artifacts.computed_spec)
+
+        print(
+            "========= original =========",
+            new_value,
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            artifacts.computed_content,
+            sep="\n",
+        )
+
+        services = cast(dict, computed_dict.get("services"))
+        self.assertIsNotNone(services)
+
+        # Find backend service
+        _, backend_service = next(iter(services.items()))
+
+        backend_service = cast(dict, backend_service)
+        self.assertIn("environment", backend_service)
+        env = cast(dict, backend_service.get("environment"))
+
+        # Verify null environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) are removed
+        self.assertNotIn("AWS_ACCESS_KEY_ID", env)
+        self.assertNotIn("AWS_SECRET_ACCESS_KEY", env)
+
+        # Verify non-null environment variable is preserved
+        self.assertIn("CONVEX_CLOUD_ORIGIN", env)
+        self.assertEqual("http://127.0.0.1", env["CONVEX_CLOUD_ORIGIN"])
+        self.assertIn("AWS_REGION", env)
+        self.assertEqual("", env["AWS_REGION"])
 
 
 class ComposeStackURLConflictTests(ComposeStackAPITestBase):

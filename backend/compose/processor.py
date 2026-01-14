@@ -521,8 +521,6 @@ class ComposeSpecProcessor:
         if extra_env is not None:
             override_dict.update(extra_env)
 
-        print(f"{override_dict=}")
-
         # generate temlate values
         for key, env in spec.envs.items():
             template_func = cls._extract_template_expression(env.value)
@@ -688,12 +686,12 @@ class ComposeSpecProcessor:
                     computed_service[key] = value
                 if key == "environment":
                     envs = cast(dict[str, str], computed_service[key])
+                    new_envs: dict[str, str] = {}
                     for k, v in envs.items():
                         if isinstance(v, bool):
                             v = "false"
-                        if v is None:
-                            v = ""
-                        envs[k] = quoted(v)  # always quote env variables
+                        new_envs[k] = quoted(v)  # always quote env variables
+                    computed_service["environment"] = new_envs
 
             reconciled_services[hashed_name] = computed_service
 

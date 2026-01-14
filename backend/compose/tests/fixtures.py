@@ -461,6 +461,19 @@ services:
 """
 
 
+DOCKER_COMPOSE_EMPTY_ENV_VARIABLES = """
+services:
+  backend:
+    image: ghcr.io/get-convex/convex-backend:latest
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    environment:
+      - AWS_REGION=
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - CONVEX_CLOUD_ORIGIN=http://127.0.0.1
+"""
+
 ##====================================##
 ##   DOKPLOY COMPATIBILITY fixtures   ##
 ##====================================##
