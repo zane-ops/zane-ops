@@ -156,6 +156,7 @@ class ComposeServiceSpec:
     volumes: list[ComposeVolumeMountSpec] = field(default_factory=list)
     depends_on: list[str] = field(default_factory=list)
     configs: List[ComposeServiceConfigSpec] = field(default_factory=list)
+    healthcheck: Optional[Dict[str, Any]] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ComposeServiceSpec":
@@ -221,6 +222,7 @@ class ComposeServiceSpec:
             ],
             deploy=data.get("deploy", {}),
             depends_on=dependencies,
+            healthcheck=data.get("healthcheck"),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -240,6 +242,9 @@ class ComposeServiceSpec:
 
         if len(self.depends_on) > 0:
             spec_dict.update(depends_on=self.depends_on)
+
+        if self.healthcheck is not None:
+            spec_dict.update(healthcheck=self.healthcheck)
 
         env_dict = {}
         for env_spec in self.environment.values():

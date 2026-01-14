@@ -1167,3 +1167,32 @@ source = "../files/uploads"
 target = "/app/uploads"
 """,
 )
+
+
+DOCKER_COMPOSE_MIXED_HEALTHCHECKS = """
+services:
+  web:
+    image: nginx:alpine
+    deploy:
+      labels:
+        zane.http.routes.0.port: "80"
+        zane.http.routes.0.domain: "app.127-0-0-1.sslip.io"
+        zane.http.routes.0.base_path: "/"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: supersecret
+      POSTGRES_DB: appdb
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:
+"""

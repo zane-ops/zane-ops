@@ -621,6 +621,10 @@ class ComposeSpecProcessor:
                 service_dependencies.append(dependency)
             service.depends_on = service_dependencies
 
+            # Disable healthcheck for services that don't have one
+            if service.healthcheck is None:
+                service.healthcheck = {"disable": True}
+
         # Add labels to volumes for tracking
         for _, volume_spec in spec.volumes.items():
             if not volume_spec.external:
@@ -651,11 +655,6 @@ class ComposeSpecProcessor:
             if config.content is not None:
                 config.file = f"./{stack.hash_prefix}_{config_name}.conf"
                 config.is_derived_from_content = True
-
-                # existing_config = all_configs.get(config_name)
-                # if existing_config is not None and config.content != existing_config:
-                #     renamed_configs.pop(config_name)
-                #     renamed_configs[config_name] = config
 
         return spec
 

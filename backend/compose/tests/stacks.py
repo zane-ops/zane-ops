@@ -15,6 +15,7 @@ from .fixtures import (
     DOCKER_COMPOSE_EMPTY_ENV_VARIABLES,
     DOCKER_COMPOSE_EXTERNAL_VOLUME,
     DOCKER_COMPOSE_MINIMAL,
+    DOCKER_COMPOSE_MIXED_HEALTHCHECKS,
     DOCKER_COMPOSE_MULTIPLE_ROUTES,
     DOCKER_COMPOSE_ROUTE_MISSING_DOMAIN,
     DOCKER_COMPOSE_SIMPLE_DB,
@@ -2109,6 +2110,95 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertEqual("http://127.0.0.1", env["CONVEX_CLOUD_ORIGIN"])
         self.assertIn("AWS_REGION", env)
         self.assertEqual("", env["AWS_REGION"])
+
+    def test_create_compose_stack_with_mixed_healthchecks(self):
+        """
+        Stack with one service having healthcheck and another without.
+        Services without healthcheck should have it disabled in output.
+        """
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "web-app",
+            "user_content": DOCKER_COMPOSE_MIXED_HEALTHCHECKS,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="web-app").first()
+        )
+        self.assertIsNotNone(created_stack)
+
+        # Compile stack and check healthcheck handling
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_MIXED_HEALTHCHECKS,
+            stack=created_stack,
+        )
+
+        print(
+            "========= original =========",
+            DOCKER_COMPOSE_MIXED_HEALTHCHECKS.strip(),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            artifacts.computed_content,
+            sep="\n",
+        )
+
+        computed_dict = artifacts.computed_spec
+
+        services = cast(dict, computed_dict.get("services"))
+        self.assertIsNotNone(services)
+
+        # Find service names
+        web_service_name = None
+        db_service_name = None
+        for service_name in services.keys():
+            if service_name.endswith("_web"):
+                web_service_name = service_name
+            elif service_name.endswith("_db"):
+                db_service_name = service_name
+
+        self.assertIsNotNone(web_service_name, "Web service should exist")
+        self.assertIsNotNone(db_service_name, "DB service should exist")
+
+        web_service = cast(dict, services[web_service_name])
+        db_service = cast(dict, services[db_service_name])
+
+        # Web service should keep its healthcheck
+        self.assertIn("healthcheck", web_service, "Web service should have healthcheck")
+        web_healthcheck = web_service["healthcheck"]
+        self.assertIsInstance(web_healthcheck, dict)
+        self.assertEqual(
+            web_healthcheck["test"],
+            ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"],
+        )
+        self.assertEqual(web_healthcheck["interval"], "30s")
+
+        # DB service should have healthcheck disabled
+        self.assertIn(
+            "healthcheck", db_service, "DB service should have healthcheck disabled"
+        )
+        db_healthcheck = db_service["healthcheck"]
+        self.assertIsInstance(db_healthcheck, dict)
+        self.assertTrue(
+            db_healthcheck.get("disable") is True,
+            "DB healthcheck should be disabled",
+        )
 
 
 class ComposeStackURLConflictTests(ComposeStackAPITestBase):
