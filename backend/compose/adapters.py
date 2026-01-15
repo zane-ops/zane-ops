@@ -128,8 +128,8 @@ class DokployComposeAdapter(BaseComposeAdapter):
 
                 # expected result:
                 #   -> { "MYSQL_PASSWORD": "password", "DB_PASSWORD": "whatever" }
-
-                x_env[key] = value
+                converted_value = cls._convert_dokploy_placeholder_to_zaneops(value)
+                x_env[key] = converted_value
 
         if x_env:
             compose_dict["x-zane-env"] = x_env

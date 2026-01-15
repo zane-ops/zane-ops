@@ -13,6 +13,7 @@ from .fixtures import (
     DOKPLOY_ARANGO_DB_TEMPLATE,
     DOKPLOY_RYBBIT_TEMPLATE,
     DOKPLOY_KENER_TEMPLATE,
+    DOKPLOY_POSTGRES_TEMPLATE,
 )
 from .stacks import ComposeStackAPITestBase
 from ..dtos import ComposeVolumeMountSpec
@@ -438,3 +439,73 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
 
         # This is a cross-reference (not a self-reference), so it should be kept
         self.assertEqual("${DB_PASSWORD}", x_env["POSTGRES_PASSWORD"])
+
+    def test_create_compose_stack_from_dokploy_postgres_template_preserves_placeholder_expressions(
+        self,
+    ):
+        """
+        Test that variables with placeholders defined in config.env are still replaced
+        by placeholder expressions from ZaneOps (not literal values from config.variables).
+
+        The DOKPLOY_POSTGRES_TEMPLATE has:
+        - config.variables: pg_user = "authentik", pg_db = "authentik"
+        - config.env: PG_USER = "${pg_user}", PG_DB = "${pg_db}", PG_PASS = "${password:32}"
+
+        Expected: PG_PASS should be "{{ generate_password | 32 }}" (placeholder expression)
+        """
+        project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "postgres-template",
+            "user_content": DOKPLOY_POSTGRES_TEMPLATE.base64,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create_from_dokploy.base64",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="postgres-template").first(),
+        )
+        self.assertIsNotNone(created_stack)
+
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(str, pending_change.new_value)
+        print("========= converted user_content =========")
+        print(new_value)
+
+        user_content_dict = yaml.safe_load(new_value)
+
+        # Verify x-env section exists
+        self.assertIn("x-zane-env", user_content_dict)
+        x_env = user_content_dict["x-zane-env"]
+
+        # Verify that static variables from config.variables are preserved
+        self.assertEqual("authentik", x_env["pg_user"])
+        self.assertEqual("authentik", x_env["pg_db"])
+
+        # Cross-references to static variables should be kept
+        self.assertEqual("${pg_user}", x_env["PG_USER"])
+        self.assertEqual("${pg_db}", x_env["PG_DB"])
+
+        # Key assertion: PG_PASS should have the placeholder expression, not a literal value
+        # This verifies that variables with placeholders defined in config.env
+        # are still replaced by ZaneOps placeholder expressions
+        self.assertEqual("{{ generate_password | 32 }}", x_env["PG_PASS"])

@@ -1237,3 +1237,41 @@ services:
         zane.http.routes.0.domain: "app.127-0-0-1.sslip.io"
         zane.http.routes.0.base_path: "/"
 """
+
+DOKPLOY_POSTGRES_TEMPLATE = DokployTemplate(
+    compose="""
+version: "3.8"
+services:
+  postgresql:
+    image: docker.io/library/postgres:16-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      - database:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: ${PG_PASS}
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_DB: ${PG_DB}
+    expose:
+      - 5432
+volumes:
+  database:
+    driver: local
+""",
+    config="""
+[variables]
+pg_user = "authentik"
+pg_db = "authentik"
+
+[config]
+[config.env]
+PG_USER = "${pg_user}"
+PG_DB = "${pg_db}"
+PG_PASS = "${password:32}" # Password for PostgreSQL authentication
+""",
+)
