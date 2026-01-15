@@ -1,81 +1,109 @@
-# Docker Compose Stack Support - Backend Implementation Plan
+# Docker Compose Stack Support - Backend Implementation
 
 ## Overview
 
-Implement backend support for deploying docker-compose stacks in ZaneOps. Stacks are file-based configurations managed by Docker Swarm with minimal ZaneOps intervention. Docker Swarm handles rolling updates, service orchestration, and production promotion automatically.
+Backend implementation for deploying docker-compose stacks in ZaneOps. Stacks are file-based configurations managed by Docker Swarm. Docker Swarm handles rolling updates, service orchestration, and production promotion automatically.
 
+## Implementation Status
+
+✅ **IMPLEMENTED** - All core features working
+
+This document reflects the **actual implemented behavior**, not a plan.
 
 ## Key Design Principles
 
-1. **Minimal Control** - Docker Swarm handles orchestration, rolling updates, and production promotion
-2. **File-Based** - ComposeStack represents a compose file, NOT a container/service
-3. **No Manual Promotion** - Docker Swarm automatically updates services when `docker stack deploy` is run
-4. **Resource Cleanup on Stack Deletion** - Volumes and configs deleted when stack is removed, not between deployments
-5. **Label-Based URL Configuration** - Users configure routing via Docker labels in compose file
-6. **Per-Service Status** - Each service in stack has individual health status
-7. **Direct Editing** - Users can PATCH compose content; changes applied on next deployment
+1. **Change Tracking** - Changes are tracked in `ComposeStackChange` and applied during deployment
+2. **Lazy Computation** - Computed content, URLs, and configs are generated only during deployment
+3. **File-Based** - ComposeStack represents a compose file, NOT a container/service
+4. **Minimal Control** - Docker Swarm handles orchestration, rolling updates
+5. **Per-Service Status** - Each service in stack has individual health status tracked in stack model
+6. **Resource Cleanup on Stack Deletion** - Volumes and configs deleted when stack is removed, not between deployments
 
-## Critical Insights from Exploration
+## Critical Implementation Details
 
-### Docker Swarm Behavior
-- **Rolling updates are automatic** - When you run `docker stack deploy` with updated compose, Swarm handles the rollout
-- **No manual blue-green needed** - Swarm manages task creation/removal based on `update_config` in compose
-- **Volumes/configs persist** - Docker Swarm does NOT auto-cleanup unused volumes or configs
-- **Cleanup strategy**: Delete volumes/configs only when stack is deleted, not between deployments
+### Change Tracking & Lazy Computation
+- **Changes are tracked**: All updates (compose content, env overrides) create `ComposeStackChange` records
+- **No immediate computation**: When creating/updating a stack, `user_content`, `computed_content`, `urls`, and `configs` remain NULL
+- **Applied on deployment**: Changes are applied via `apply_pending_changes()` during deployment
+- **Why?** Avoids recomputing on every edit; computation happens once per deployment
 
 ### DNS Name Collision Prevention ⚠️
-- **Problem**: Docker Swarm creates service names as `{stack_name}_{service_name}` for swarm management, BUT DNS aliases within networks use the original service names from the compose file
-- **Impact**: Multiple stacks with `app` service will collide on DNS resolution within the shared `zane` network
-- **Solution**: Hash service and volume names with stack ID prefix (e.g., `app` → `abc123_app`) to ensure unique DNS names
-- **Implementation**: Applied in `ComposeSpecProcessor.process_compose_spec()` and reconciled in `generate_deployable_yaml()`
+- **Problem**: Multiple stacks sharing the `zane` network with services named `app` would collide on DNS
+- **Solution**: Prefix all service names with `{stack.hash_prefix}_` (e.g., `app` → `abc123_app`)
+- **Implementation**: Applied in `ComposeSpecProcessor.process_compose_spec()`
+- **Network aliases**:
+  - `zane` network: `{hash_prefix}_{service}.{ZANE_INTERNAL_DOMAIN}` (globally unique)
+  - Environment network: `{network_alias_prefix}-{service}` (stable across PR previews)
+  - Default network: `{original_service_name}` (for inter-service communication)
 
-### URL Configuration via Caddy
-- Uses Caddy Admin API (`http://zane.proxy:2019`) for dynamic route management
-- Routes configured via HTTP/REST with JSON payloads
-- Current services use `URL` model with `domain`, `base_path`, `strip_prefix`, `associated_port`
-- For compose stacks: Users configure routing via **Docker labels** in their compose file
+### URL Configuration
+- Users configure routing via **Docker labels** in deploy section:
+  ```yaml
+  deploy:
+    labels:
+      zane.http.routes.0.port: "80"
+      zane.http.routes.0.domain: "example.com"
+      zane.http.routes.0.base_path: "/"
+      zane.http.routes.0.strip_prefix: "false"
+  ```
+- URLs stored as JSON in `ComposeStack.urls` field (computed during deployment)
+- Supports template expressions via `x-zane-env` variables
 
 ## Data Models
 
 ### 1. ComposeStack
 
-**File**: `backend/zane_api/models/main.py`
+**File**: `backend/compose/models.py`
 
 ```python
 class ComposeStack(TimestampedModel):
     """Represents a docker-compose stack (file-based, NOT container-based)"""
 
-    # Managers
-    deployments: Manager["ComposeStackDeployment"]
-    changes: Manager["ComposeStackChange"]
-    env_overrides: Manager["ComposeStackEnvOverride"]
-    urls: Manager[URL]  # M2M for stack-level URLs (optional)
+    ID_PREFIX = "compose_stk_"
+    id = ShortUUIDField(length=8, max_length=255, primary_key=True, prefix=ID_PREFIX)
+    slug = models.SlugField(max_length=40)
+    network_alias_prefix = models.SlugField(max_length=40)  # Immutable, derived from slug
 
-    # Fields
-    ID_PREFIX = "srv_cmp_"
-    id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)
-    slug = models.SlugField(max_length=38)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="compose_stacks")
     environment = models.ForeignKey(Environment, on_delete=models.CASCADE, related_name="compose_stacks")
     deploy_token = models.CharField(max_length=35, null=True, unique=True)
 
-    # Compose content
-    user_compose_content = models.TextField(help_text="Original YAML from user")
-    computed_compose_spec = models.JSONField(help_text="Processed spec as JSON")
+    # Compose content (NULL until first deployment)
+    user_content = models.TextField(null=True, help_text="Original YAML from user")
+    computed_content = models.TextField(null=True, help_text="Processed YAML for deployment")
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["slug", "project", "environment"],
-                name="unique_compose_stack_per_env_and_project",
-            ),
-        ]
+    # Extracted artifacts (NULL until first deployment)
+    urls = models.JSONField(null=True)  # Dict[str, List[RouteConfig]]
+    configs = models.JSONField(null=True)  # Dict[str, {content: str, version: int}]
+
+    # Per-service status
+    service_statuses = models.JSONField(default=dict)
+
+    # Helpers
+    @property
+    def hash_prefix(self) -> str:
+        return self.id.replace(self.ID_PREFIX, "").lower()
+
+    @property
+    def name(self) -> str:
+        return f"zn-{self.id}"
+
+    @property
+    def unapplied_changes(self):
+        return self.changes.filter(applied=False)
+
+    def apply_pending_changes(self, deployment: "ComposeStackDeployment"):
+        # Apply env override changes first
+        # Then compile stack content
+        # Update user_content, computed_content, urls, configs
+        # Mark changes as applied
 ```
 
-**Key points**:
-- NOT inherited from BaseService - no `resource_limits`, `healthcheck`, `network_alias`, `ports`, `configs`
-- Two representations: `user_compose_content` (YAML text) and `computed_compose_spec` (JSON for querying)
-- `urls` field is optional - users primarily configure routing via Docker labels
+**Key implementation details**:
+- **Lazy computation**: `user_content`, `computed_content`, `urls`, `configs` are NULL until first deployment
+- **`network_alias_prefix`**: Immutable prefix for stable DNS aliases in environment network (used for PR preview envs)
+- **`service_statuses`**: Tracks per-service health (updated by monitoring workflow)
+- **`hash_prefix`**: 8-character prefix derived from ID, used for global DNS uniqueness
 
 ### 2. ComposeStackDeployment
 
@@ -83,34 +111,20 @@ class ComposeStack(TimestampedModel):
 class ComposeStackDeployment(TimestampedModel):
     """Tracks deployments of compose stacks"""
 
-    HASH_PREFIX = "dpl_cmp_"
+    HASH_PREFIX = "stk_dpl_"
     hash = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=HASH_PREFIX)
     stack = models.ForeignKey(ComposeStack, on_delete=models.CASCADE, related_name="deployments")
 
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED"
         CANCELLED = "CANCELLED"
-        FAILED = "FAILED"
         DEPLOYING = "DEPLOYING"
-        HEALTHY = "HEALTHY"
-        UNHEALTHY = "UNHEALTHY"
+        FINISHED = "FINISHED"
+        FAILED = "FAILED"
         REMOVED = "REMOVED"
 
     status = models.CharField(max_length=10, choices=DeploymentStatus.choices, default=DeploymentStatus.QUEUED)
     status_reason = models.TextField(null=True, blank=True)
-
-    # Per-service status (JSON)
-    service_statuses = models.JSONField(default=dict)
-    # Example:
-    # {
-    #     "web": {
-    #         "status": "running",
-    #         "desired_replicas": 2,
-    #         "running_replicas": 2,
-    #         "updated_at": "2025-12-26T10:30:00Z"
-    #     },
-    #     "db": {...}
-    # }
 
     # Snapshot and metadata
     stack_snapshot = models.JSONField(null=True)
@@ -123,40 +137,32 @@ class ComposeStackDeployment(TimestampedModel):
 
     @property
     def workflow_id(self):
-        return f"deploy-compose-{self.stack.id}-{self.hash}"
+        return f"deploy-compose-{self.stack.id}"
 ```
 
-**Key changes from original plan**:
-- **Removed `is_current_production`** - Docker Swarm handles this automatically
-- **Removed `slot` field** - No manual blue-green deployment needed
-- Simpler status choices - no PREPARING, BUILDING, STARTING (Docker Swarm handles these)
+**Key implementation details**:
+- **No `service_statuses`**: Status tracked on `ComposeStack` model, not per deployment
+- **Simpler statuses**: FINISHED instead of HEALTHY/UNHEALTHY (health tracked on stack)
+- **workflow_id**: Uses stack ID only (one deployment workflow per stack)
 
 ### 3. ComposeStackEnvOverride
 
 ```python
 class ComposeStackEnvOverride(BaseEnvVariable):
-    """
-    Environment variable overrides at stack level.
+    """Stack-level environment variable overrides"""
 
-    Stores both:
-    - User-defined overrides (set via UI)
-    - Auto-generated values from template expressions ({{ generate_* }})
-    """
-
-    ID_PREFIX = "env_cmp_"
+    ID_PREFIX = "stk_env_"
     id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)
     stack = models.ForeignKey(ComposeStack, on_delete=models.CASCADE, related_name="env_overrides")
 
-    # Service name this override applies to (e.g., "db", "web")
-    # NULL means stack-level override (applies to all services)
-    service_name = models.CharField(max_length=255, null=True)
-
-    # Whether this was auto-generated from a template expression
-    is_generated = models.BooleanField(default=False)
-
     class Meta:
-        unique_together = ["stack", "service_name", "key"]
+        unique_together = ("key", "stack")
 ```
+
+**Key implementation details**:
+- **No `service_name` field**: Overrides are stack-level only
+- **No `is_generated` field**: All overrides treated equally; generated values tracked in `x-zane-env`
+- Inherits `key` and `value` from `BaseEnvVariable`
 
 ### 4. ComposeStackChange
 
@@ -164,13 +170,12 @@ class ComposeStackEnvOverride(BaseEnvVariable):
 class ComposeStackChange(TimestampedModel):
     """Tracks unapplied changes to compose stacks"""
 
-    ID_PREFIX = "chg_cmp_"
+    ID_PREFIX = "stk_chg_"
     id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)
 
     class ChangeField(models.TextChoices):
         COMPOSE_CONTENT = "compose_content"
         ENV_OVERRIDES = "env_overrides"
-        URLS = "urls"  # Optional stack-level URLs
 
     class ChangeType(models.TextChoices):
         ADD = "ADD"
@@ -187,6 +192,12 @@ class ComposeStackChange(TimestampedModel):
     applied = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 ```
+
+**Key implementation details**:
+- **No URLS field**: URLs extracted from labels during deployment, not tracked as changes
+- **`item_id`**: For env overrides, stores override ID; null for compose content changes
+- **`deployment`**: Set when change is applied; links change to specific deployment
+- **Deduplication**: For COMPOSE_CONTENT changes, `add_change()` updates existing pending change instead of creating duplicate
 
 ## Dataclasses (DTOs)
 
@@ -239,47 +250,74 @@ class ComposeStackSpec:
 
 ## Compose File Processing
 
-**File**: `backend/compose/procressor.py`
+**File**: `backend/compose/processor.py`
 
-### Service and Volume Name Hashing
+### Core Processor Class: `ComposeSpecProcessor`
 
-**IMPORTANT**: While Docker Swarm prefixes service names with the stack name for the swarm service itself (e.g., `zane-stack-id_app`), the DNS aliases within Docker networks use the original service names from the compose file. This causes collisions when multiple stacks share the `zane` network.
+The processor handles all compose file transformations:
 
-**Solution**: We hash service and volume names with the stack ID to ensure unique DNS names:
-- Original service: `app`
-- Hashed service: `abc123_app` (where `abc123` is derived from the stack ID)
-- DNS resolution in the `zane` network: `abc123_app` instead of `app`
+**Key Methods**:
+1. `validate_compose_file_syntax(user_content)` - Validates using `docker compose config`
+2. `process_compose_spec(user_content, stack, extra_env)` - Transforms user content to deployable spec
+3. `generate_deployable_yaml(spec, user_content, hash_prefix)` - Converts spec back to YAML
+4. `compile_stack_for_deployment(user_content, stack)` - End-to-end compilation
+5. `validate_and_extract_service_urls(spec, stack)` - Extracts & validates routes from labels
+6. `extract_config_contents(spec, stack)` - Extracts inline configs with versioning
 
-This prevents collisions where `curl http://app` from any service in the `zane` network would route to a random `app` service instead of the intended one.
+### Service Name Hashing for DNS Uniqueness
 
-### Template Expression Support
+**Problem**: Multiple stacks sharing the `zane` network with services named `app` would collide on DNS resolution.
 
-Users can use template expressions in environment variables for auto-generated values:
+**Solution**: Prefix all service names with `{stack.hash_prefix}_`:
+- Original: `app` → Hashed: `abc123_app`
+- DNS in `zane` network: `abc123_app.zane-internal.localhost`
+
+This prevents collisions where `curl http://app` would route to a random service.
+
+### Template Expression Support (`x-zane-env`)
+
+Users define stack-wide environment variables in the `x-zane-env` section with template expressions:
 
 ```yaml
+x-zane-env:
+  POSTGRES_USER: "{{ generate_username }}"
+  POSTGRES_PASSWORD: "{{ generate_password | 32 }}"
+  POSTGRES_DB: "{{ generate_slug }}"
+  APP_DOMAIN: "{{ generate_domain }}"
+  LICENSE_ID: "{{ generate_uuid }}"
+  EMAIL: "{{ generate_email }}"
+
+  # Network aliases for service communication
+  DB_HOST: "{{ network_alias | 'postgres' }}"  # Env-scoped alias
+  DB_HOST_GLOBAL: "{{ global_alias | 'postgres' }}"  # Global alias
+
+  # Variable interpolation
+  DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:5432/${POSTGRES_DB}"
+
 services:
-  db:
+  postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: {{ generate_user }}              # Random username slug
-      POSTGRES_PASSWORD: {{ generate_secure_password }} # 64-char hex token
-      POSTGRES_DB: {{ generate_random_slug }}          # Random database name
-      API_TOKEN: {{ generate_random_chars_32 }}        # 32 alphanumeric chars
-      SECRET_KEY: {{ generate_random_chars_64 }}       # 64 alphanumeric chars
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
 ```
 
-**Template Functions**:
-- `{{ generate_user }}` - Generates slug like "quiet_forest_42" (valid username)
-- `{{ generate_secure_password }}` - Generates 64-char hex via `secrets.token_hex(32)`
-- `{{ generate_random_slug }}` - Generates slug like "happy_tree_91"
-- `{{ generate_random_chars_32 }}` - Generates 32 random alphanumeric chars
-- `{{ generate_random_chars_64 }}` - Generates 64 random alphanumeric chars
+**Supported Template Functions**:
+- `{{ generate_username }}` - Random username like "reddog65"
+- `{{ generate_password | N }}` - N-character hex password (N must be even, ≥8)
+- `{{ generate_slug }}` - Random slug like "happy-tree-91"
+- `{{ generate_domain }}` - Generates `{project}-{stack}-{random}.{ROOT_DOMAIN}`
+- `{{ generate_uuid }}` - UUID v4
+- `{{ generate_email }}` - Fake email address
+- `{{ network_alias | 'service' }}` - Env-scoped alias: `{network_alias_prefix}-service`
+- `{{ global_alias | 'service' }}` - Global alias: `{hash_prefix}_service`
 
 **How Generated Values Work**:
-1. **First encounter**: Template expression found → generate random value → save as `ComposeStackEnvOverride` with `is_generated=True`
-2. **Subsequent deployments**: Override exists → use saved value (no regeneration)
-3. **User regenerates**: Delete generated overrides with `is_generated=True` → new values generated and saved
-4. **Rollback**: No special handling needed - overrides are versioned with deployments via change tracking
+1. **First deployment**: Template expressions found → values generated → saved as `ComposeStackEnvOverride` records
+2. **Subsequent deployments**: Overrides exist → reuse saved values (no regeneration)
+3. **Variable expansion**: All env vars support `${VAR}` interpolation from `x-zane-env`
+4. **Config expansion**: Config file contents also support `${VAR}` expansion
 
 ```python
 import yaml
@@ -1323,84 +1361,243 @@ DELETE /api/projects/{project_slug}/environments/{env_slug}/compose-stacks/{stac
        Delete environment override
 ```
 
-## Implementation Sequence
+## Dokploy Template Adapter
 
-1. **Data Models** (1-2 days)
-   - Create 4 models + migrations
-   - Add to Django admin
+**File**: `backend/compose/adapters.py`
 
-2. **Dataclasses & DTOs** (1 day)
-   - ComposeStackSpec and related dataclasses
-   - Volume hashing utility
+ZaneOps supports importing Dokploy templates via `DokployComposeAdapter`.
 
-3. **Compose Processor** (2 days)
-   - YAML parsing and validation
-   - Volume hashing, network injection, env merging
-   - Label parsing for URL configuration
+### Dokploy Template Format
 
-4. **Temporal Workflow & Activities** (2-3 days)
-   - DeployComposeStackWorkflow (simplified)
-   - ComposeStackActivities (deploy, monitor, cleanup)
-   - Stack resource cleanup on deletion
+Dokploy templates consist of:
+- **compose**: Docker Compose YAML with placeholders
+- **config**: TOML with variables, domains, env, and file mounts
 
-5. **Caddy Integration** (2 days)
-   - Parse Docker labels from deployed services
-   - Configure Caddy routes via Admin API
-   - Handle service discovery and health checks
+Example:
+```toml
+[variables]
+main_domain = "${domain}"
+db_password = "${password:32}"
 
-6. **API Endpoints** (2-3 days)
-   - CRUD for stacks
-   - Deployment trigger
-   - Status endpoints
-   - Serializers
+[[config.domains]]
+serviceName = "web"
+port = 8080
+host = "${main_domain}"
 
-7. **Testing** (2-3 days)
-   - Unit tests for processor
-   - Integration tests for workflow
-   - API endpoint tests
+[config.env]
+DB_PASSWORD = "${db_password}"
 
-**Total estimate**: 12-16 days
+[[config.mounts]]
+filePath = "./nginx.conf"
+content = "..."
+```
 
-## Critical Files
+### Transformation Process
 
-### New Files
-- `backend/zane_api/compose_processor.py` - Compose processing
-- `backend/temporal/workflows/compose_stacks.py` - Workflow
-- `backend/temporal/activities/compose_activities.py` - Activities
-- `backend/zane_api/views/compose_stacks.py` - API views
+`DokployComposeAdapter.to_zaneops(base64_template)`:
 
-### Modified Files
-- `backend/zane_api/models/main.py` - Add 4 models
-- `backend/zane_api/dtos.py` - Add dataclasses
-- `backend/zane_api/serializers.py` - Add serializers
-- `backend/zane_api/urls.py` - Add routing
-- `backend/temporal/helpers.py` - Add Caddy route generation for compose services
+1. **Decode & parse**: Base64 → JSON → {compose, config}
+2. **Convert placeholders**:
+   - `${domain}` → `{{ generate_domain }}`
+   - `${password:N}` → `{{ generate_password | N }}`
+   - `${username}` → `{{ generate_username }}`
+   - `${uuid}` → `{{ generate_uuid }}`
+   - `${email}` → `{{ generate_email }}`
+3. **Process variables**: Convert to `x-zane-env` section
+4. **Process domains**: Convert to `zane.http.routes.*` labels
+5. **Process mounts**: Convert `../files/*` bind mounts to Docker configs
+6. **Clean up**: Remove `ports`, `expose`, `restart` fields
+7. **Output**: ZaneOps-compatible compose YAML
+
+### Mount Processing Details
+
+Dokploy uses `../files/` for file mounts. Adapter converts these to configs:
+
+**Case 1: Directory mount**
+```yaml
+# Dokploy
+volumes:
+  - ../files/clickhouse_config:/etc/clickhouse-server/config.d
+```
+→ Creates individual configs for each file in directory
+
+**Case 2: File mount**
+```yaml
+# Dokploy
+volumes:
+  - ../files/nginx.conf:/etc/nginx/nginx.conf:ro
+```
+→ Creates single config mapping
+
+**Result**: All Dokploy mounts become Docker configs with proper targets
+
+## Testing
+
+**File**: `backend/compose/tests/`
+
+### Test Structure
+
+- **`fixtures.py`**: Compose file fixtures for testing
+  - Valid compose examples (simple DB, web service, multiple routes, etc.)
+  - Invalid compose examples (no image, invalid syntax, etc.)
+  - Dokploy template fixtures
+  - URL conflict scenarios
+
+- **`stacks.py`**: Stack CRUD and compilation tests
+  - Create stack with various compose files
+  - Update stack content
+  - Test lazy computation
+  - Validate service name hashing
+  - Test volume handling (named, bind, external)
+  - Test URL extraction from labels
+  - Test config extraction and versioning
+  - Test env variable expansion
+  - Test template expression generation
+
+- **`stacks_deployment.py`**: Deployment workflow tests
+  - Deploy stack with pending changes
+  - Test `apply_pending_changes()` behavior
+  - Test deployment status tracking
+  - Test service status updates
+
+- **`stacks_update.py`**: Update and change tracking tests
+  - Update compose content with deduplication
+  - Add/update/delete env overrides
+  - Test change tracking
+  - Test change application during deployment
+
+- **`stacks_cancel.py`**: Deployment cancellation tests
+
+- **`stacks_dokploy_compat.py`**: Dokploy adapter tests
+  - Test template transformation
+  - Test placeholder conversion
+  - Test mount processing
+  - Test domain/route conversion
+
+### Key Test Patterns
+
+```python
+# Test lazy computation
+stack = ComposeStack.objects.create(slug="test")
+self.assertIsNone(stack.user_content)
+self.assertIsNone(stack.computed_content)
+
+# Deployment applies changes
+artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+    user_content=DOCKER_COMPOSE_MINIMAL,
+    stack=stack,
+)
+self.assertIsNotNone(artifacts.computed_content)
+self.assertNotEqual(artifacts.computed_content, user_content)
+
+# Test service name hashing
+services = artifacts.computed_spec["services"]
+service_name = next(iter(services.keys()))
+self.assertTrue(service_name.startswith(stack.hash_prefix))
+```
+
+## Implementation Files
+
+### Core Implementation
+- `backend/compose/models.py` - 4 models (Stack, Deployment, EnvOverride, Change)
+- `backend/compose/dtos.py` - Dataclasses for specs, configs, URLs, snapshots
+- `backend/compose/processor.py` - ComposeSpecProcessor (validation, transformation, compilation)
+- `backend/compose/adapters.py` - DokployComposeAdapter for template imports
+- `backend/compose/views/stacks.py` - API endpoints for CRUD and deployment
+- `backend/compose/views/serializers.py` - Request/response serializers
+- `backend/compose/urls.py` - URL routing
+
+### Test Files
+- `backend/compose/tests/fixtures.py` - Test fixtures
+- `backend/compose/tests/stacks.py` - CRUD tests
+- `backend/compose/tests/stacks_deployment.py` - Deployment tests
+- `backend/compose/tests/stacks_update.py` - Update tests
+- `backend/compose/tests/stacks_cancel.py` - Cancellation tests
+- `backend/compose/tests/stacks_dokploy_compat.py` - Dokploy tests
 
 ## Key Technical Points
 
-1. **No manual production promotion** - Docker Swarm handles this via `docker stack deploy`
-2. **Resource cleanup on deletion** - Not between deployments
-3. **Label-based routing** - Users configure via Docker labels, ZaneOps parses and configures Caddy
-4. **Volume name hashing** - Deterministic collision prevention
-5. **Per-service status** - Tracked in `service_statuses` JSON field
-6. **Simplified workflow** - Docker Swarm does the heavy lifting
-7. **Template expressions for env vars** - Auto-generate values, stored as `ComposeStackEnvOverride`
-   - `{{ generate_user }}`, `{{ generate_secure_password }}`, `{{ generate_random_slug }}`, etc.
-   - Generated values saved to database with `is_generated=True`
-   - Values persist across deployments unless user checks "Regenerate values"
-   - Change tracking ensures rollback restores old override values automatically
+### Architecture
+1. **Change tracking with lazy computation** - Changes tracked via `ComposeStackChange`, computation deferred until deployment
+2. **Service name hashing** - Prevents DNS collisions in shared `zane` network by prefixing with `{hash_prefix}_`
+3. **Three-tier networking** - Services get aliases in `zane`, environment, and default networks
+4. **Config versioning** - Inline configs versioned as `name_vN`, version increments on content change
 
-## Update process
+### Template System
+5. **`x-zane-env` section** - Stack-wide env vars with template expressions
+6. **Template functions** - `generate_username`, `generate_password | N`, `generate_slug`, `generate_domain`, `generate_uuid`, `generate_email`, `network_alias | 'svc'`, `global_alias | 'svc'`
+7. **Variable expansion** - All env vars and configs support `${VAR}` interpolation
+8. **Persistent generation** - Generated values saved as `ComposeStackEnvOverride`, reused across deployments
 
-1. Updating a compose content may need to generate env values, why ?
-   1. Because the file may contain placeholders
-2. Update an env variables may need to re-compute the compose content, why ?
-   1. Because we need to compute the compose dict with the env variable values to get the urls and configs
+### Deployment
+9. **Label-based routing** - URLs configured via `zane.http.routes.*` labels in deploy section
+10. **Docker Swarm orchestration** - Swarm handles rolling updates, no manual promotion needed
+11. **Resource cleanup** - Volumes/configs deleted on stack deletion, not between deployments
+12. **Per-service status tracking** - Health status tracked in `ComposeStack.service_statuses`
 
-3. So we don't need to generate the computed content yet in the first place, instead:
-   1. just validate that the content is valid for user-content check
-   2. same for env variables: check that new envs don't make the syntax or URLs invalid
-4. Important: 
-   1. Either we set the computed content, urls & configs as non values for the change... or make them optional (?)
-   2. if we make them non values, we need to update the tests, and maybe use unittests instead or add a new field to stack which is the computed value 
-   3. The compose content must be computed at the end and env overrides & url and such must be generated when applying the changes (during deployment)
+### Compatibility
+13. **Dokploy adapter** - Converts Dokploy templates to ZaneOps format
+14. **Docker validation** - Uses `docker compose config` for syntax validation
+15. **Inline config support** - Transforms `content:` to file references for Docker Swarm compatibility
+
+## Implementation Flow
+
+### Stack Creation
+
+1. **POST /compose-stacks/** with `user_content` and `slug`
+2. Validate compose file syntax using `docker compose config`
+3. Create `ComposeStack` with NULL `user_content`, `computed_content`, `urls`, `configs`
+4. Create `ComposeStackChange` with `field=COMPOSE_CONTENT`, `type=UPDATE`, `new_value=user_content`
+5. Return stack with `unapplied_changes` showing pending compose content change
+
+### Stack Update (Compose Content)
+
+1. **PATCH /compose-stacks/{slug}/** with new `user_content`
+2. Validate new compose file syntax
+3. Find existing COMPOSE_CONTENT change or create new one
+4. Update `new_value` to new `user_content` (deduplication)
+5. Return stack with updated `unapplied_changes`
+
+### Deployment
+
+1. **POST /compose-stacks/{slug}/deploy/**
+2. Create `ComposeStackDeployment` with `status=QUEUED`
+3. Call `stack.apply_pending_changes(deployment)`:
+   - Apply env override changes (ADD/UPDATE/DELETE)
+   - Get pending compose content change
+   - Call `ComposeSpecProcessor.compile_stack_for_deployment()`:
+     - Process compose spec (hash names, inject networks, generate template values)
+     - Extract configs with versioning
+     - Extract URLs from labels
+     - Generate deployable YAML
+   - Update stack: `user_content`, `computed_content`, `urls`, `configs`
+   - Create new `ComposeStackEnvOverride` records for newly generated template values
+   - Mark all changes as `applied=True` and link to deployment
+4. Start Temporal workflow with stack snapshot
+
+### Key Insights
+
+**Why Lazy Computation?**
+- Avoids recomputing on every edit
+- Computed content, URLs, configs are generated once per deployment
+- Allows validation without full processing
+
+**Why Change Tracking?**
+- Provides audit trail of what changed
+- Allows showing "pending changes" in UI
+- Enables rollback to previous deployments
+- Links changes to specific deployments
+
+**Config Versioning**:
+- Inline configs (with `content:`) are versioned: `nginx_config_v1`, `nginx_config_v2`, etc.
+- Version increments only if content changes
+- Docker Swarm creates new config when name changes
+- Old configs are automatically removed by cleanup job
+
+**Environment Variable Processing**:
+1. Parse `x-zane-env` section
+2. Check existing `ComposeStackEnvOverride` records
+3. For template expressions not in overrides: generate value and create override
+4. Apply all overrides to env dict
+5. Expand all `${VAR}` references using `expandvars.expand()`
+6. Use expanded values in services and configs
