@@ -163,6 +163,14 @@ class DockerSwarmTask:
             else None
         )
 
+    @property
+    def image(self):
+        image = self.Spec.ContainerSpec.Image
+        # Remove the digest suffix if present (e.g., "nginx:latest@sha256:...")
+        if "@" in image:
+            image = image.split("@")[0]
+        return image
+
     @classmethod
     def from_dict(
         cls,

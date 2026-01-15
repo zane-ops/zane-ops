@@ -60,6 +60,7 @@ class ComposeStackServiceTask(serializers.Serializer):
     status = serializers.ChoiceField(
         choices=[state.value for state in DockerSwarmTaskState]
     )
+    image = serializers.CharField()
     message = serializers.CharField()
     exit_code = serializers.IntegerField(required=False, allow_null=True)
 
@@ -72,6 +73,7 @@ class ComposeStackServiceStatusSerializer(serializers.Serializer):
     desired_replicas = serializers.IntegerField()
     updated_at = serializers.DateTimeField()
     tasks = ComposeStackServiceTask(many=True)
+    image = serializers.CharField()
     mode = serializers.ChoiceField(
         choices=[
             "replicated",

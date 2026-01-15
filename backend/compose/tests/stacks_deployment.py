@@ -355,9 +355,11 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         name, redis_service = next(iter(stack.service_statuses.items()))
         self.assertEqual("redis", name)
         self.assertEqual(ComposeStackServiceStatus.HEALTHY, redis_service["status"])
+        self.assertEqual("valkey/valkey:alpine", redis_service["image"])
         self.assertEqual(1, redis_service["running_replicas"])
         self.assertEqual(1, redis_service["desired_replicas"])
         self.assertEqual(1, len(redis_service["tasks"]))
+        self.assertEqual("valkey/valkey:alpine", redis_service["tasks"][0]["image"])
 
         # service should be created
         services: list[FakeDockerClient.FakeService] = []
@@ -615,8 +617,10 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             name, redis_service = next(iter(statuses.items()))
             self.assertEqual("redis", name)
             self.assertEqual(ComposeStackServiceStatus.HEALTHY, redis_service["status"])
+            self.assertEqual("valkey/valkey:alpine", redis_service["image"])
             self.assertEqual(1, redis_service["running_replicas"])
             self.assertEqual(1, redis_service["desired_replicas"])
+            self.assertEqual("valkey/valkey:alpine", redis_service["tasks"][0]["image"])
 
     async def test_queue_multiple_deploys_are_all_deployed(self):
         project, stack = await self.acreate_and_deploy_compose_stack(

@@ -539,6 +539,7 @@ class ComposeStackSnapshot:
 @dataclass
 class ComposeStackServiceTaskDto:
     status: str  # DockerSwarmTaskState value
+    image: str
     message: str
     exit_code: Optional[int] = None
 
@@ -546,6 +547,7 @@ class ComposeStackServiceTaskDto:
     def from_dict(cls, data: Dict[str, Any]) -> Self:
         return cls(
             status=data["status"],
+            image=data["image"],
             message=data["message"],
             exit_code=data.get("exit_code"),
         )
@@ -553,6 +555,7 @@ class ComposeStackServiceTaskDto:
     def to_dict(self) -> Dict[str, Any]:
         result: Dict[str, Any] = {
             "status": self.status,
+            "image": self.image,
             "message": self.message,
         }
         if self.exit_code is not None:
@@ -563,6 +566,7 @@ class ComposeStackServiceTaskDto:
 @dataclass
 class ComposeStackServiceStatusDto:
     status: str
+    image: str
     running_replicas: int
     desired_replicas: int
     updated_at: str
@@ -573,6 +577,7 @@ class ComposeStackServiceStatusDto:
     def from_dict(cls, data: Dict[str, Any]) -> Self:
         return cls(
             status=data["status"],
+            image=data["image"],
             running_replicas=data["running_replicas"],
             desired_replicas=data["desired_replicas"],
             updated_at=data["updated_at"],
@@ -586,6 +591,7 @@ class ComposeStackServiceStatusDto:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "status": self.status,
+            "image": self.image,
             "running_replicas": self.running_replicas,
             "desired_replicas": self.desired_replicas,
             "updated_at": self.updated_at,

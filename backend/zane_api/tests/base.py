@@ -1539,6 +1539,9 @@ class FakeDockerClient:
                 "Spec": {
                     "TaskTemplate": {
                         "Networks": [],
+                        "ContainerSpec": {
+                            "Image": image,
+                        },
                     },
                     "Mode": {"Replicated": {"Replicas": 1}},
                 },

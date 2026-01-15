@@ -1480,8 +1480,16 @@ async def get_compose_stack_swarm_service_status(
         .removeprefix(f"{stack.name}_")
         .removeprefix(f"{stack.hash_prefix}_")
     )
+
+    # Get image from service spec
+    image = service.attrs["Spec"]["TaskTemplate"]["ContainerSpec"]["Image"]
+    # Remove the digest suffix if present (e.g., "nginx:latest@sha256:...")
+    if "@" in image:
+        image = image.split("@")[0]
+
     return {
         "name": service_name,
+        "image": image,
         "mode": mode_type,
         "status": status,
         "desired_replicas": desired_replicas,
@@ -1490,6 +1498,7 @@ async def get_compose_stack_swarm_service_status(
         "tasks": [
             {
                 "status": task.state.value,
+                "image": task.image,
                 "message": task.message,
                 "exit_code": task.exit_code,
             }
