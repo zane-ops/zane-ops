@@ -32,7 +32,6 @@ from zane_api.models import URL, DeploymentURL
 from container_registry.models import BuildRegistry
 from django.db.models import Q
 import uuid
-import base64
 
 
 class ComposeStackSpecSerializer(serializers.Serializer):
@@ -237,7 +236,8 @@ class ComposeSpecProcessor:
     PASSWORD_REGEX = (
         r"generate_password[ \t]*\|[ \t]*(\d+)"  # format: generate_password | <number>
     )
-    BASE64_REGEX = r"generate_base64[ \t]*\|[ \t]*(\".*\"|\'.*\')"  # format: generate_base64 | 'string'
+    NETWORK_ALIAS_REGEX = r"network_alias[ \t]*\|[ \t]*(\".*\"|\'.*\')"  # format: network_alias | 'service_name'
+    GLOBAL_ALIAS_REGEX = r"global_alias[ \t]*\|[ \t]*(\".*\"|\'.*\')"  # format: global_alias | 'service_name'
 
     SUPPORTED_TEMPLATE_FUNCTIONS = [
         r"generate_slug",
@@ -246,7 +246,8 @@ class ComposeSpecProcessor:
         r"generate_uuid",
         r"generate_email",
         PASSWORD_REGEX,
-        BASE64_REGEX,
+        NETWORK_ALIAS_REGEX,
+        GLOBAL_ALIAS_REGEX,
     ]
 
     @classmethod
@@ -437,12 +438,19 @@ class ComposeSpecProcessor:
                     issues.append(f"must be an even number (got {count})")
 
                 raise ValidationError(f"Invalid `{template_func}`: {', '.join(issues)}")
-            case template_func if template_func.startswith("generate_base64"):
-                regex = re.compile(cls.BASE64_REGEX)
-                matched = cast(re.Match[str], regex.match(template_func))
-                value = matched.group(1)
 
-                return base64.b64encode(value[1:-1].encode()).decode()
+            case template_func if template_func.startswith("network_alias"):
+                regex = re.compile(cls.NETWORK_ALIAS_REGEX)
+                matched = cast(re.Match[str], regex.match(template_func))
+                service_name = matched.group(1)[1:-1]  # Remove quotes
+
+                return f"{stack.network_alias_prefix}-{service_name}"
+            case template_func if template_func.startswith("global_alias"):
+                regex = re.compile(cls.GLOBAL_ALIAS_REGEX)
+                matched = cast(re.Match[str], regex.match(template_func))
+                service_name = matched.group(1)[1:-1]  # Remove quotes
+
+                return f"{stack.hash_prefix}_{service_name}"
             case _:
                 raise ValidationError(
                     f"Unsupported template function `{template_func}`"

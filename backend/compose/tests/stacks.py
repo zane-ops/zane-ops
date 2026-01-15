@@ -1,4 +1,3 @@
-import base64
 import uuid
 from typing import Any, cast
 
@@ -20,7 +19,6 @@ from .fixtures import (
     DOCKER_COMPOSE_ROUTE_MISSING_DOMAIN,
     DOCKER_COMPOSE_SIMPLE_DB,
     DOCKER_COMPOSE_WEB_SERVICE,
-    DOCKER_COMPOSE_WITH_BASE64_GENERATE,
     DOCKER_COMPOSE_WITH_CUSTOM_PASSWORD_LENGTH,
     DOCKER_COMPOSE_WITH_DEPENDS_ON,
     DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS,
@@ -28,6 +26,7 @@ from .fixtures import (
     DOCKER_COMPOSE_WITH_HOST_VOLUME,
     DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
     DOCKER_COMPOSE_WITH_PLACEHOLDERS,
+    DOCKER_COMPOSE_WITH_SERVICE_NAME_PLACEHOLDERS,
     DOCKER_COMPOSE_WITH_UUID_GENERATE,
     DOCKER_COMPOSE_WITH_X_ENV_IN_CONFIGS,
     DOCKER_COMPOSE_WITH_X_ENV_IN_URLS,
@@ -937,79 +936,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             f"Password should be alphanumeric: {password_128}",
         )
 
-    def test_create_compose_with_generate_base64_placeholder(self):
-        """
-        Test that {{ generate_base64 | "value" }} encodes the given value to base64.
-        At creation time, only user_content is stored. Placeholders resolved during deployment.
-        """
-        project = self.create_project()
-
-        create_stack_payload = {
-            "slug": "base64-stack",
-            "user_content": DOCKER_COMPOSE_WITH_BASE64_GENERATE,
-        }
-
-        response = self.client.post(
-            reverse(
-                "compose:stacks.create",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            ),
-            data=create_stack_payload,
-        )
-
-        jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        created_stack = cast(
-            ComposeStack,
-            ComposeStack.objects.filter(slug="base64-stack").first(),
-        )
-        self.assertIsNotNone(created_stack)
-
-        pending_change = cast(
-            ComposeStackChange,
-            created_stack.unapplied_changes.filter(
-                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
-            ).first(),
-        )
-        self.assertIsNotNone(pending_change)
-        new_value = cast(dict, pending_change.new_value)
-
-        # Verify compile_stack_for_deployment generates base64 values
-        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
-            user_content=DOCKER_COMPOSE_WITH_BASE64_GENERATE,
-            stack=created_stack,
-        )
-        computed_dict = artifacts.computed_spec
-
-        print(
-            "========= original =========",
-            new_value,
-            sep="\n",
-        )
-        print(
-            "========= computed =========",
-            artifacts.computed_content,
-            sep="\n",
-        )
-
-        x_env = computed_dict.get("x-zane-env", {})
-
-        # Verify BASE64_HELLO is base64 encoded "hello"
-        self.assertIn("BASE64_HELLO", x_env)
-        base64_hello = x_env["BASE64_HELLO"]
-        self.assertNotEqual("{{ generate_base64 | 'hello' }}", base64_hello)
-        self.assertEqual(base64.b64encode(b"hello").decode(), base64_hello)
-
-        # Verify BASE64_BYE is base64 encoded "bye"
-        self.assertIn("BASE64_BYE", x_env)
-        base64_bye = x_env["BASE64_BYE"]
-        self.assertNotEqual("{{ generate_base64 | 'bye' }}", base64_bye)
-        self.assertEqual(base64.b64encode(b"bye").decode(), base64_bye)
-
     def test_create_compose_with_generate_uuid_placeholder(self):
         """
         Test that {{ generate_uuid }} generates a valid UUID.
@@ -1081,6 +1007,76 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             uuid.UUID(licence_id)
         except ValueError:
             self.fail(f"LICENCE_ID should be a valid UUID, got: {licence_id}")
+
+    def test_create_compose_with_service_name_placeholders(self):
+        """
+        Test that {{ network_alias | 'service_name' }} and {{ global_alias | 'service_name' }}
+        generate the correct DNS aliases for services in environment and global networks.
+
+        - network_alias should generate: {stack.network_alias_prefix}-{service_name}
+        - global_alias should generate: {stack.hash_prefix}_{service_name}
+        """
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "service-names-stack",
+            "user_content": DOCKER_COMPOSE_WITH_SERVICE_NAME_PLACEHOLDERS,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="service-names-stack").first(),
+        )
+        self.assertIsNotNone(created_stack)
+
+        # Verify compile_stack_for_deployment generates service name aliases
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WITH_SERVICE_NAME_PLACEHOLDERS,
+            stack=created_stack,
+        )
+        computed_dict = artifacts.computed_spec
+
+        print(
+            "========= computed =========",
+            artifacts.computed_content,
+            sep="\n",
+        )
+
+        x_env = computed_dict.get("x-zane-env", {})
+
+        # Verify SERVICE_POSTGRES_ENV_NAME is {network_alias_prefix}-{service_name}
+        expected_env_name = f"{created_stack.network_alias_prefix}-postgres"
+        self.assertIn("SERVICE_POSTGRES_ENV_NAME", x_env)
+        self.assertEqual(expected_env_name, x_env["SERVICE_POSTGRES_ENV_NAME"])
+
+        # Verify SERVICE_POSTGRES_GLOBAL_NAME is {hash_prefix}_{service_name}
+        expected_global_name = f"{created_stack.hash_prefix}_postgres"
+        self.assertIn("SERVICE_POSTGRES_GLOBAL_NAME", x_env)
+        self.assertEqual(expected_global_name, x_env["SERVICE_POSTGRES_GLOBAL_NAME"])
+
+        # Verify DATABASE_URL contains the env network alias
+        self.assertIn("DATABASE_URL", x_env)
+        database_url = x_env["DATABASE_URL"]
+        self.assertIn(f"@{expected_env_name}:5432/", database_url)
+
+        # Verify DATABASE_URL_GLOBAL contains the global network alias
+        self.assertIn("DATABASE_URL_GLOBAL", x_env)
+        database_url_global = x_env["DATABASE_URL_GLOBAL"]
+        self.assertIn(f"@{expected_global_name}:5432/", database_url_global)
 
     def test_create_compose_stack_with_external_configs(self):
         project = self.create_project()

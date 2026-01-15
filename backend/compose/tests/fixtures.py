@@ -137,19 +137,6 @@ services:
 """
 
 
-DOCKER_COMPOSE_WITH_BASE64_GENERATE = """
-x-zane-env:
-  BASE64_HELLO: "{{ generate_base64 | 'hello' }}"
-  BASE64_BYE: "{{ generate_base64 | 'bye' }}"
-
-services:
-  app:
-    image: myapp:latest
-    environment:
-      BASE64_HELLO: ${BASE64_HELLO}
-      BASE64_BYE: ${BASE64_BYE}
-"""
-
 DOCKER_COMPOSE_WITH_UUID_GENERATE = """
 x-zane-env:
   LICENCE_ID: "{{ generate_uuid }}"
@@ -159,6 +146,38 @@ services:
     image: myapp:latest
     environment:
       LICENCE_ID: ${LICENCE_ID}
+"""
+
+DOCKER_COMPOSE_WITH_SERVICE_NAME_PLACEHOLDERS = """
+x-zane-env:
+  SERVICE_POSTGRES_ENV_NAME: "{{ network_alias | 'postgres' }}"
+  SERVICE_POSTGRES_GLOBAL_NAME: "{{ global_alias | 'postgres' }}"
+  DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${SERVICE_POSTGRES_ENV_NAME}:5432/${POSTGRES_DB}?schema=public"
+  DATABASE_URL_GLOBAL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${SERVICE_POSTGRES_GLOBAL_NAME}:5432/${POSTGRES_DB}?schema=public"
+  POSTGRES_USER: "myuser"
+  POSTGRES_PASSWORD: "{{ generate_password | 32 }}"
+  POSTGRES_DB: "mydb"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  app:
+    image: myapp:latest
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL_GLOBAL: ${DATABASE_URL_GLOBAL}
+    depends_on:
+      - postgres
+
+volumes:
+  db-data:
 """
 
 DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS = """
