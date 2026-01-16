@@ -1443,7 +1443,7 @@ async def get_compose_stack_swarm_service_status(
     if is_job:
         # For jobs, healthy means completed >= desired
         status = (
-            ComposeStackServiceStatus.HEALTHY
+            ComposeStackServiceStatus.COMPLETE
             if completed_replicas >= desired_replicas
             else ComposeStackServiceStatus.STARTING
         )
