@@ -77,7 +77,7 @@ class DeployComposeStackWorkflow:
             await workflow.execute_activity_method(
                 ComposeStackActivities.deploy_stack_with_cli,
                 build_details,
-                start_to_close_timeout=timedelta(seconds=30),
+                start_to_close_timeout=timedelta(minutes=2, seconds=30),
                 retry_policy=self.retry_policy,
             )
 
@@ -200,7 +200,7 @@ class ArchiveComposeStackWorkflow:
         await workflow.execute_activity_method(
             ComposeStackActivities.remove_stack_with_cli,
             details,
-            start_to_close_timeout=timedelta(seconds=30),
+            start_to_close_timeout=timedelta(minutes=2, seconds=30),
             retry_policy=self.retry_policy,
         )
 
