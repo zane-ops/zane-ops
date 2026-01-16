@@ -292,7 +292,6 @@ class ComposeStackActivities:
 
         services: List[DockerService] = self.docker_client.services.list(
             filters={"label": [f"com.docker.stack.namespace={deployment.stack.name}"]},
-            status=True,
         )
         start_time = monotonic()
 
@@ -320,6 +319,13 @@ class ComposeStackActivities:
                     f"Health check for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
                     f" | {Colors.BLUE}ATTEMPT #{check_attempts}{Colors.ENDC}"
                     f" | time_left={Colors.ORANGE}{format_duration(time_left)}{Colors.ENDC} 💓",
+                )
+
+                services: List[DockerService] = self.docker_client.services.list(
+                    filters={
+                        "label": [f"com.docker.stack.namespace={deployment.stack.name}"]
+                    },
+                    status=True,
                 )
 
                 statuses = await asyncio.gather(
