@@ -595,7 +595,11 @@ class ComposeSpecProcessor:
             }
 
             # Inject safe update_config for rolling updates
-            if "update_config" not in service.deploy:
+            # only on non jobs
+            if (
+                service.deploy.get("mode", "replicated") in ["replicated", "global"]
+                and "update_config" not in service.deploy
+            ):
                 service.deploy["update_config"] = {
                     "parallelism": 1,
                     "delay": "5s",
