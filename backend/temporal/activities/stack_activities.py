@@ -35,6 +35,7 @@ with workflow.unsafe.imports_passed_through():
         multiline_command,
         format_duration,
     )
+    from zane_api.process import AyncSubProcessRunner
     from django.db.models import Case, F, Value, When
     from docker.models.services import Service as DockerService
     from django.conf import settings
@@ -147,74 +148,103 @@ class ComposeStackActivities:
 
     @activity.defn
     async def deploy_stack_with_cli(self, details: ComposeStackBuildDetails):
-        stack_file_path = os.path.join(details.tmp_build_dir, "docker-stack.yml")
+        cancel_event = asyncio.Event()
+        heartbeat_task = None
 
-        deployment = details.deployment
+        async def send_heartbeat():
+            """
+            We want this activity to be cancellable,
+            for activities to be cancellable, they need to send regular heartbeats:
+            https://docs.temporal.io/develop/python/cancellation#cancel-activity
+            """
+            while True:
+                activity.heartbeat("Heartbeat from `deploy_stack_with_cli()`...")
+                await asyncio.sleep(0.1)
 
-        await deployment_log(
-            deployment=deployment,
-            message="Deploying the compose stack...",
-            source=RuntimeLogSource.BUILD,
-        )
+        try:
+            heartbeat_task = asyncio.create_task(send_heartbeat())
+            stack_file_path = os.path.join(details.tmp_build_dir, "docker-stack.yml")
 
-        cmd_args = [
-            DOCKER_BINARY_PATH,
-            "stack",
-            "deploy",
-            "--detach",
-            "--compose-file",
-            stack_file_path,
-            "--with-registry-auth",
-            deployment.stack.name,
-        ]
-        cmd_string = multiline_command(shlex.join(cmd_args))
-        log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
-        for index, msg in enumerate(log_message.splitlines()):
+            deployment = details.deployment
+
             await deployment_log(
                 deployment=deployment,
-                message=f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg,
+                message="Deploying the compose stack...",
                 source=RuntimeLogSource.BUILD,
             )
 
-        process = await asyncio.create_subprocess_shell(
-            shlex.join(cmd_args),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            stdin=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await process.communicate()
-        info_lines = stdout.decode().splitlines()
-        error_lines = stderr.decode().splitlines()
-        if len(info_lines) > 0:
-            await deployment_log(
-                deployment=deployment,
-                message=info_lines,
-                source=RuntimeLogSource.BUILD,
-            )
-        if len(error_lines) > 0:
-            await deployment_log(
-                deployment=deployment,
-                message=error_lines,
-                source=RuntimeLogSource.BUILD,
-                error=True,
-            )
-        if process.returncode != 0:
-            await deployment_log(
-                deployment=deployment,
-                message=f"Error when deploying docker-compose stack {Colors.BLUE}{deployment.stack.name}{Colors.ENDC}",
-                source=RuntimeLogSource.BUILD,
-                error=True,
-            )
-            raise ApplicationError(
-                "Error when deploying docker-compose stack to registry",
-                non_retryable=True,
+            cmd_args = [
+                DOCKER_BINARY_PATH,
+                "stack",
+                "deploy",
+                "--detach",
+                "--compose-file",
+                stack_file_path,
+                "--with-registry-auth",
+                deployment.stack.name,
+            ]
+            cmd_string = multiline_command(shlex.join(cmd_args))
+            log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
+            for index, msg in enumerate(log_message.splitlines()):
+                await deployment_log(
+                    deployment=deployment,
+                    message=f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg,
+                    source=RuntimeLogSource.BUILD,
+                )
+
+            async def message_handler(message: str):
+                is_error_message = message.startswith("failed")
+                await deployment_log(
+                    deployment=deployment,
+                    message=message,
+                    source=RuntimeLogSource.BUILD,
+                    error=is_error_message,
+                )
+
+            docker_stack_process = AyncSubProcessRunner(
+                command=shlex.join(cmd_args),
+                cancel_event=cancel_event,
+                operation_name="docker stack deploy",
+                output_handler=message_handler,
             )
 
-        await deployment_log(
-            deployment=deployment,
-            message=f"Successfully deployed docker-compose stack {Colors.BLUE}{deployment.stack.name}{Colors.ENDC} ✅",
-            source=RuntimeLogSource.BUILD,
-        )
+            deploy_task = asyncio.create_task(docker_stack_process.run())
+
+            done_first, _ = await asyncio.wait(
+                [deploy_task, heartbeat_task], return_when=asyncio.FIRST_COMPLETED
+            )
+
+            if deploy_task in done_first:
+                exit_code, _ = deploy_task.result()
+            else:
+                print("cancelling `deploy_task()`")
+                deploy_task.cancel()
+                await deploy_task
+                return
+
+            if exit_code != 0:
+                await deployment_log(
+                    deployment=deployment,
+                    message=f"Error when deploying docker-compose stack {Colors.BLUE}{deployment.stack.name}{Colors.ENDC}",
+                    source=RuntimeLogSource.BUILD,
+                    error=True,
+                )
+                raise ApplicationError(
+                    "Error when deploying docker-compose stack to registry",
+                    non_retryable=True,
+                )
+
+            await deployment_log(
+                deployment=deployment,
+                message=f"Successfully deployed docker-compose stack {Colors.BLUE}{deployment.stack.name}{Colors.ENDC} ✅",
+                source=RuntimeLogSource.BUILD,
+            )
+        except asyncio.CancelledError:
+            cancel_event.set()
+            raise
+        finally:
+            if heartbeat_task:
+                heartbeat_task.cancel()
 
     @activity.defn
     async def expose_stack_services_to_http(

@@ -345,6 +345,10 @@ class APITestCase(TestCase):
             side_effect=create_fake_process,
         ).start()
         patch(
+            "temporal.activities.stack_activities.asyncio.create_subprocess_exec",
+            side_effect=create_fake_process,
+        ).start()
+        patch(
             "zane_api.git_client.asyncio.create_subprocess_shell",
             side_effect=create_fake_process,
         ).start()

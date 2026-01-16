@@ -78,6 +78,7 @@ class DeployComposeStackWorkflow:
                 ComposeStackActivities.deploy_stack_with_cli,
                 build_details,
                 start_to_close_timeout=timedelta(minutes=2, seconds=30),
+                heartbeat_timeout=timedelta(seconds=3),
                 retry_policy=self.retry_policy,
             )
 
