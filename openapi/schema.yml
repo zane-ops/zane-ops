@@ -11665,10 +11665,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ComposeStackServiceTask'
+        image:
+          type: string
         mode:
           $ref: '#/components/schemas/ComposeStackServiceStatusModeEnum'
       required:
       - desired_replicas
+      - image
       - mode
       - running_replicas
       - status
@@ -11702,10 +11705,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ComposeStackServiceTaskRequest'
+        image:
+          type: string
+          minLength: 1
         mode:
           $ref: '#/components/schemas/ComposeStackServiceStatusModeEnum'
       required:
       - desired_replicas
+      - image
       - mode
       - running_replicas
       - status
@@ -11730,6 +11737,8 @@ components:
       properties:
         status:
           $ref: '#/components/schemas/ComposeStackServiceTaskStatusEnum'
+        image:
+          type: string
         message:
           type: string
         exit_code:
@@ -11737,6 +11746,7 @@ components:
           nullable: true
       required:
       - exit_code
+      - image
       - message
       - status
     ComposeStackServiceTaskRequest:
@@ -11744,6 +11754,9 @@ components:
       properties:
         status:
           $ref: '#/components/schemas/ComposeStackServiceTaskStatusEnum'
+        image:
+          type: string
+          minLength: 1
         message:
           type: string
           minLength: 1
@@ -11751,6 +11764,7 @@ components:
           type: integer
           nullable: true
       required:
+      - image
       - message
       - status
     ComposeStackServiceTaskStatusEnum:
