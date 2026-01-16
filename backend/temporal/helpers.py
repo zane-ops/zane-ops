@@ -48,7 +48,7 @@ from compose.dtos import (
     ComposeStackServiceStatus,
     ComposeStackSnapshot,
 )
-
+from temporalio import activity
 
 docker_client: docker.DockerClient | None = None
 
@@ -1505,3 +1505,14 @@ async def get_compose_stack_swarm_service_status(
             for task in tasks
         ],
     }
+
+
+async def send_regular_heartbeat(name: str):
+    """
+    We want this activity to be cancellable,
+    for activities to be cancellable, they need to send regular heartbeats:
+    https://docs.temporal.io/develop/python/cancellation#cancel-activity
+    """
+    while True:
+        activity.heartbeat(f"Heartbeat from `{name}()`...")
+        await asyncio.sleep(0.1)

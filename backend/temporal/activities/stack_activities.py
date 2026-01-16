@@ -3,7 +3,7 @@ from datetime import timedelta
 import shlex
 import shutil
 from time import monotonic
-from typing import Any, Dict, List, cast
+from typing import List, cast
 from temporalio import activity, workflow
 import tempfile
 from temporalio.exceptions import ApplicationError
@@ -28,6 +28,7 @@ with workflow.unsafe.imports_passed_through():
         empty_folder,
         ZaneProxyClient,
         get_compose_stack_swarm_service_status,
+        send_regular_heartbeat,
     )
     from search.dtos import RuntimeLogSource
     from zane_api.utils import (
@@ -151,18 +152,10 @@ class ComposeStackActivities:
         cancel_event = asyncio.Event()
         heartbeat_task = None
 
-        async def send_heartbeat():
-            """
-            We want this activity to be cancellable,
-            for activities to be cancellable, they need to send regular heartbeats:
-            https://docs.temporal.io/develop/python/cancellation#cancel-activity
-            """
-            while True:
-                activity.heartbeat("Heartbeat from `deploy_stack_with_cli()`...")
-                await asyncio.sleep(0.1)
-
         try:
-            heartbeat_task = asyncio.create_task(send_heartbeat())
+            heartbeat_task = asyncio.create_task(
+                send_regular_heartbeat("deploy_stack_with_cli")
+            )
             stack_file_path = os.path.join(details.tmp_build_dir, "docker-stack.yml")
 
             deployment = details.deployment
@@ -292,7 +285,10 @@ class ComposeStackActivities:
 
     @activity.defn
     async def check_stack_health(self, deployment: ComposeStackDeploymentDetails):
-        mononotic_time = timedelta(minutes=5)
+        cancel_event = asyncio.Event()
+        heartbeat_task = None
+
+        total_time = timedelta(minutes=1, seconds=30)
 
         services: List[DockerService] = self.docker_client.services.list(
             filters={"label": [f"com.docker.stack.namespace={deployment.stack.name}"]},
@@ -307,69 +303,83 @@ class ComposeStackActivities:
             f"Checking health for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
         )
         check_attempts = 0
-        while monotonic() - start_time < mononotic_time.total_seconds():
-            activity.heartbeat("Heartbeat from `check_stack_health()`...")
 
-            check_attempts += 1
-            time_left = mononotic_time.total_seconds() - (monotonic() - start_time)
-
-            await deployment_log(
-                deployment,
-                f"Health check for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
-                f" | {Colors.BLUE}ATTEMPT #{check_attempts}{Colors.ENDC}"
-                f" | time_left={Colors.ORANGE}{format_duration(time_left)}{Colors.ENDC} 💓",
+        try:
+            heartbeat_task = asyncio.create_task(
+                send_regular_heartbeat("check_stack_health")
             )
+            while monotonic() - start_time < total_time.total_seconds():
+                if cancel_event.is_set():
+                    break
 
-            statuses = await asyncio.gather(
-                *[
-                    get_compose_stack_swarm_service_status(
-                        service=service, stack=deployment.stack
-                    )
-                    for service in services
-                ]
-            )
+                check_attempts += 1
+                time_left = total_time.total_seconds() - (monotonic() - start_time)
 
-            service_statuses = {}
-            for status in statuses:
-                name = status.pop("name")
-                service_statuses[name] = status
+                await deployment_log(
+                    deployment,
+                    f"Health check for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
+                    f" | {Colors.BLUE}ATTEMPT #{check_attempts}{Colors.ENDC}"
+                    f" | time_left={Colors.ORANGE}{format_duration(time_left)}{Colors.ENDC} 💓",
+                )
 
-            await ComposeStack.objects.filter(id=deployment.stack.id).aupdate(
-                service_statuses=service_statuses,
-                updated_at=timezone.now(),
-            )
+                statuses = await asyncio.gather(
+                    *[
+                        get_compose_stack_swarm_service_status(
+                            service=service, stack=deployment.stack
+                        )
+                        for service in services
+                    ]
+                )
 
-            total_healthy = len(
-                [
-                    status["status"] == ComposeStackServiceStatus.HEALTHY
-                    or status["status"] == ComposeStackServiceStatus.COMPLETE
-                    for status in statuses
-                ]
-            )
-            status_message = f"{total_healthy}/{len(services)} of services healthy"
-            all_healthy = total_healthy == len(services)
+                service_statuses = {}
+                for status in statuses:
+                    name = status.pop("name")
+                    service_statuses[name] = status
 
-            status_color = Colors.GREEN if all_healthy else Colors.RED
+                await ComposeStack.objects.filter(id=deployment.stack.id).aupdate(
+                    service_statuses=service_statuses,
+                    updated_at=timezone.now(),
+                )
 
-            await deployment_log(
-                deployment,
-                f"Health check for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
-                f" | {Colors.BLUE}ATTEMPT #{check_attempts}{Colors.ENDC} "
-                f"| result: {status_color}{status_message}{Colors.ENDC}",
-            )
+                total_healthy = len(
+                    [
+                        status
+                        for status in statuses
+                        if status["status"] == ComposeStackServiceStatus.HEALTHY
+                        or status["status"] == ComposeStackServiceStatus.COMPLETE
+                    ]
+                )
+                status_message = f"{total_healthy}/{len(services)} of services healthy"
+                all_healthy = total_healthy == len(services)
 
-            if all_healthy:
-                break
-            await deployment_log(
-                deployment,
-                f"Health check for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
-                f" | {Colors.BLUE}ATTEMPT #{check_attempts}{Colors.ENDC} | {Colors.GREY}some services still starting or unhealthy{Colors.ENDC}"
-                f"| Retrying in {Colors.ORANGE}{format_duration(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)}{Colors.ENDC} 🔄",
-                error=True,
-            )
-            await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                status_color = Colors.GREEN if all_healthy else Colors.RED
 
-        return ComposeStackDeployment.DeploymentStatus.FINISHED, status_message
+                await deployment_log(
+                    deployment,
+                    f"Health check for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
+                    f" | {Colors.BLUE}ATTEMPT #{check_attempts}{Colors.ENDC} "
+                    f"| result: {status_color}{status_message}{Colors.ENDC}",
+                )
+
+                if all_healthy:
+                    break
+                await deployment_log(
+                    deployment,
+                    f"Health check for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
+                    f" | {Colors.BLUE}ATTEMPT #{check_attempts}{Colors.ENDC} | {Colors.GREY}some services still starting or unhealthy{Colors.ENDC}"
+                    f"| Retrying in {Colors.ORANGE}{format_duration(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)}{Colors.ENDC} 🔄",
+                    error=True,
+                )
+                await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+
+            return ComposeStackDeployment.DeploymentStatus.FINISHED, status_message
+        except asyncio.CancelledError:
+            cancel_event.set()
+            raise
+        finally:
+            if heartbeat_task:
+                heartbeat_task.cancel()
+            return ComposeStackDeployment.DeploymentStatus.FINISHED, status_message
 
     @activity.defn
     async def create_stack_healthcheck_schedule(
