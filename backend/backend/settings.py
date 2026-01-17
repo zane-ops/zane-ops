@@ -132,6 +132,7 @@ INSTALLED_APPS = [
     "git_connectors.apps.GitConnectorsConfig",
     "s3_targets.apps.S3TargetsConfig",
     "container_registry.apps.ContainerRegistryConfig",
+    "compose.apps.ComposeConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
@@ -283,7 +284,7 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "60/minute" if DEBUG and not TESTING else "5/minute",
+        "anon": "60/minute" if DEBUG and ENVIRONMENT != PRODUCTION_ENV else "5/minute",
         "tls_certificates": "60/minute",
         "deploy_webhook": "60/minute",
         "gitapp_webhook": "120/minute",
@@ -387,7 +388,7 @@ TEST_RUNNER = "redgreenunittest.django.runner.RedGreenDiscoverRunner"
 # Zane proxy config
 CADDY_PROXY_ADMIN_HOST = os.environ.get(
     "CADDY_PROXY_ADMIN_HOST",
-    "http://127.0.0.1:2020" if TESTING else "http://127.0.0.1:2019",
+    "http://127.0.0.1:2019",
 )
 
 ZANE_FRONT_SERVICE_INTERNAL_DOMAIN = (
@@ -410,9 +411,7 @@ DEFAULT_HEALTHCHECK_INTERVAL = 30  # seconds
 DEFAULT_HEALTHCHECK_WAIT_INTERVAL = 5.0  # seconds
 
 # temporalio config
-TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT = (
-    timedelta(minutes=30) if not TESTING else timedelta(seconds=7)
-)
+TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT = timedelta(minutes=30)
 TEMPORALIO_SERVER_URL = os.environ.get("TEMPORALIO_SERVER_URL", "127.0.0.1:7233")
 TEMPORALIO_MAIN_TASK_QUEUE = "main-task-queue"
 TEMPORALIO_SCHEDULE_TASK_QUEUE = "schedule-task-queue"
@@ -425,7 +424,7 @@ try:
 except Exception:
     TEMPORALIO_MAX_CONCURRENT_DEPLOYS = 5
 
-if BACKEND_COMPONENT == "API":
+if BACKEND_COMPONENT == "API" and not TESTING:
     register_zaneops_app_on_proxy(
         proxy_url=CADDY_PROXY_ADMIN_HOST,
         zane_app_domain=ZANE_APP_DOMAIN,

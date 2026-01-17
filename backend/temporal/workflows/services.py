@@ -812,7 +812,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                         default_env_variables=env_variables,
                     ),
                     start_to_close_timeout=timedelta(minutes=20),
-                    heartbeat_timeout=timedelta(seconds=3),
+                    heartbeat_timeout=timedelta(seconds=5),
                     retry_policy=RetryPolicy(
                         maximum_attempts=1
                     ),  # We do not want to retry the build multiple times

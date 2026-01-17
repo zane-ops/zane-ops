@@ -1,4 +1,3 @@
-import Editor from "@monaco-editor/react";
 import { useQuery } from "@tanstack/react-query";
 import {
   CheckIcon,
@@ -28,6 +27,7 @@ import {
   AccordionTrigger
 } from "~/components/ui/accordion";
 import { Button, SubmitButton } from "~/components/ui/button";
+import { CodeEditor } from "~/components/ui/code-editor";
 import {
   Dialog,
   DialogContent,
@@ -1036,25 +1036,11 @@ function DotEnvFileFormDialog() {
             aria-labelledby="variable-error"
           />
 
-          <div
-            className={cn(
-              "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full"
-              // "w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[855px]"
-            )}
-          >
-            <Editor
-              className="w-full h-full max-w-full"
-              language="shell"
-              value={contents}
-              theme="vs-dark"
-              options={{
-                minimap: {
-                  enabled: false
-                }
-              }}
-              onChange={(value) => setContents(value ?? "")}
-            />
-          </div>
+          <CodeEditor
+            language="shell"
+            value={contents}
+            onChange={(value) => setContents(value ?? "")}
+          />
 
           {errors.new_value && (
             <ul

@@ -39,6 +39,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
+import yaml
 from temporal.shared import DeploymentDetails
 
 from search.loki_client import LokiSearchClient
@@ -68,6 +69,8 @@ from temporal.workflows import (
     GitDeploymentStep,
 )
 from ..serializers import ServiceSerializer
+
+from compose.dtos import ComposeStackSpec
 
 from temporal.activities import (
     get_swarm_service_name_for_deployment,
@@ -321,6 +324,10 @@ class APITestCase(TestCase):
             "temporal.activities.main_activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
+        patch(
+            "temporal.activities.stack_activities.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
 
         def create_fake_process(*args, **kwargs):
             return FakeProcess(*args, docker_client=self.fake_docker_client)
@@ -331,6 +338,14 @@ class APITestCase(TestCase):
         ).start()
         patch(
             "temporal.activities.git_activities.asyncio.create_subprocess_exec",
+            side_effect=create_fake_process,
+        ).start()
+        patch(
+            "temporal.activities.stack_activities.asyncio.create_subprocess_shell",
+            side_effect=create_fake_process,
+        ).start()
+        patch(
+            "temporal.activities.stack_activities.asyncio.create_subprocess_exec",
             side_effect=create_fake_process,
         ).start()
         patch(
@@ -1224,6 +1239,10 @@ class FakeProcess:
             self._create_nixpacks_json_plan()
         if "nixpacks build" in self.command:
             self._create_nixpacks_dockerfile()
+        if "docker stack deploy" in self.command:
+            self._deploy_stack_with_cli()
+        if "docker stack rm" in self.command:
+            self._remove_stack_with_cli()
         if "git clone" in self.command:
             self._create_repo_folder()
 
@@ -1232,6 +1251,57 @@ class FakeProcess:
         self.stderr.feed_eof()
 
     def terminate(self): ...
+
+    def _remove_stack_with_cli(self):
+        all_args = self.command.split(" ")
+        stack_name = all_args[-1]
+
+        service_list = self.docker_client.services_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        for service in service_list:
+            message = f"Removing service {service.name}"
+            self.stdout.feed_data(message.encode())
+            service.remove()
+
+    def _deploy_stack_with_cli(self):
+        all_args = self.command.split(" ")
+        stack_name = all_args[-1]
+
+        compose_file_regex = r"--compose-file\s+(\S+)"
+        compose_file_path: str = re.findall(compose_file_regex, self.command)[0]
+
+        with open(compose_file_path, "r") as file:
+            content = file.read()
+
+        spec = ComposeStackSpec.from_dict(yaml.safe_load(content))
+        for name, service in spec.services.items():
+            service_name = f"{stack_name}_{name}"
+            message = f"Creating service {service_name} (id: {random_word(25)})\n"
+            self.docker_client.images_pull(service.image)
+            self.docker_client.services_create(
+                name=service_name,
+                labels={"com.docker.stack.namespace": stack_name},
+                image=service.image,
+            )
+            self.stdout.feed_data(message.encode())
+        for name, config in spec.configs.items():
+            volume_name = f"{stack_name}_{name}"
+            message = f"Creating config {volume_name} (id: {random_word(25)})\n"
+            self.docker_client.config_create(
+                name=volume_name,
+                labels={"com.docker.stack.namespace": stack_name},
+                data=(config.content or "").encode(),
+            )
+            self.stdout.feed_data(message.encode())
+        for name, _ in spec.volumes.items():
+            volume_name = f"{stack_name}_{name}"
+            message = f"Creating volume {volume_name} (id: {random_word(25)})\n"
+            self.docker_client.volumes_create(
+                name=volume_name,
+                labels={"com.docker.stack.namespace": stack_name},
+            )
+            self.stdout.feed_data(message.encode())
 
     def _push_image_to_registry(self):
         all_args = self.command.split(" ")
@@ -1324,40 +1394,9 @@ class FakeProcess:
                 for line in cast(str, log["stream"]).splitlines():
                     self.stdout.feed_data((line + "\n").encode())
 
-    def parse_docker_output(self, output_string: str) -> dict:
-        """
-        Parse Docker build output string into a dictionary.
-
-        Examples:
-            "type=docker,name=6avypsnbvs3:5bc82af9183b93b5279235699df29b5d64908961"
-            => {'type': 'docker', 'name': '6avypsnbvs3:5bc82af9183b93b5279235699df29b5d64908961'}
-
-            "type=image,name=whatever,push=true"
-            => {'type': 'image', 'name': 'whatever', 'push': True}
-        """
-        result = {}
-
-        # Split by comma and process each key=value pair
-        pairs = output_string.strip().split(",")
-
-        for pair in pairs:
-            key, value = pair.split(
-                "=", 1
-            )  # Split only on first '=' to handle values with '='
-
-            # Convert string booleans to actual booleans
-            if value.lower() == "true":
-                value = True
-            elif value.lower() == "false":
-                value = False
-
-            result[key] = value
-
-        return result
-
-    async def communicate(self, *args, **kwargs):
-        stdout = ""
-        stderr = ""
+    async def communicate(self, *args, **kwargs) -> tuple[bytes, bytes]:
+        stdout = "".encode()
+        stderr = "".encode()
         if "nixpacks build" in self.command:
             stdout = (
                 "\n"
@@ -1373,8 +1412,13 @@ class FakeProcess:
                 "\n"
                 "Saved output to:\n"
                 "  /tmp/tmphl2tamud/repo\n"
+            ).encode()
+        else:
+            stdout, stderr = await asyncio.gather(
+                self.stdout.read(),
+                self.stderr.read(),
             )
-        return stdout.encode(), stderr.encode()
+        return stdout, stderr
 
 
 @dataclass
@@ -1499,8 +1543,17 @@ class FakeDockerClient:
                 "Spec": {
                     "TaskTemplate": {
                         "Networks": [],
+                        "ContainerSpec": {
+                            "Image": image,
+                        },
                     },
-                }
+                    "Mode": {"Replicated": {"Replicas": 1}},
+                },
+                "ServiceStatus": {
+                    "RunningTasks": 1,
+                    "DesiredTasks": 1,
+                    "CompletedTasks": 1,
+                },
             }
             self.name = name
             self.parent = parent
@@ -2050,6 +2103,7 @@ class FakeDockerClient:
         )
 
     def config_create(self, name: str, labels: dict, data: bytes, **kwargs):
+        print(f"{name=} {labels=}")
         self.config_map[name] = FakeDockerClient.FakeConfig(
             parent=self,
             name=name,
@@ -2062,7 +2116,7 @@ class FakeDockerClient:
             raise docker.errors.NotFound("Config Not found")
         return self.config_map[name]
 
-    def config_list(self, filters: dict):
+    def config_list(self, filters: dict[str, list[str]]):
         label_in_filters: list[str] = filters.get("label", [])
         labels = {}
         for label in label_in_filters:

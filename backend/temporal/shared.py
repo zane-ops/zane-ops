@@ -1,12 +1,13 @@
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from enum import Enum
-from typing import List, Literal, Optional, TYPE_CHECKING
+from typing import Dict, List, Literal, Optional, TYPE_CHECKING, cast
 import yaml
 
 
 if TYPE_CHECKING:
     from zane_api.models import Deployment
+    from compose.models import ComposeStackDeployment
 
 from zane_api.dtos import (
     URLDto,
@@ -19,6 +20,10 @@ from zane_api.dtos import (
     NixpacksBuilderOptions,
     DockerfileBuilderOptions,
     EnvVariableDto,
+)
+from compose.dtos import (
+    ComposeStackServiceStatusDto,
+    ComposeStackSnapshot,
 )
 
 from .constants import (
@@ -591,3 +596,74 @@ class RegistryHealthCheckResult:
     id: str
     status: str
     reason: Optional[str] = None
+
+
+@dataclass
+class ComposeStackArchiveDetails:
+    stack: ComposeStackSnapshot
+    delete_configs: bool = True
+    delete_volumes: bool = True
+
+
+@dataclass
+class ProxyURLRoute:
+    domain: str
+    base_path: str
+
+
+@dataclass
+class ComposeStackArchiveResult:
+    services_deleted: List[str] = field(default_factory=list)
+    volumes_deleted: List[str] = field(default_factory=list)
+    config_deleted: List[str] = field(default_factory=list)
+    routes_removed: List[ProxyURLRoute] = field(default_factory=list)
+
+
+@dataclass
+class ComposeStackDeploymentDetails:
+    hash: str
+    stack: ComposeStackSnapshot
+
+    @classmethod
+    def from_deployment(
+        cls,
+        deployment: "ComposeStackDeployment",
+    ):
+        snapshot = ComposeStackSnapshot.from_dict(cast(dict, deployment.stack_snapshot))
+        return cls(
+            hash=deployment.hash,
+            stack=snapshot,
+        )
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            hash=data["hash"],
+            stack=ComposeStackSnapshot.from_dict(data["stack"]),
+        )
+
+
+@dataclass
+class ComposeStackBuildDetails:
+    tmp_build_dir: str
+    deployment: ComposeStackDeploymentDetails
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            tmp_build_dir=data["tmp_build_dir"],
+            deployment=ComposeStackDeploymentDetails.from_dict(data["deployment"]),
+        )
+
+
+@dataclass
+class ComposeStackHealthcheckResult:
+    id: str
+    services: Dict[str, ComposeStackServiceStatusDto]
+
+
+@dataclass
+class ComposeStackMonitorPayload:
+    status: str
+    status_message: str
+    deployment: ComposeStackDeploymentDetails

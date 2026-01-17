@@ -1,0 +1,742 @@
+import base64
+from dataclasses import asdict, dataclass, field
+import json
+import re
+from typing import Dict, Literal, Optional, List, Any, Self, cast
+
+
+class ComposeStackServiceStatus:
+    STARTING = "STARTING"
+    HEALTHY = "HEALTHY"
+    SLEEPING = "SLEEPING"
+    UNHEALTHY = "UNHEALTHY"
+    COMPLETE = "COMPLETE"
+
+    @classmethod
+    def values(cls):
+        return [cls.STARTING, cls.HEALTHY, cls.UNHEALTHY, cls.COMPLETE, cls.SLEEPING]
+
+
+@dataclass
+class ComposeEnvVarSpec:
+    key: str
+    value: str
+
+    is_newly_generated: bool = False
+
+    def to_dict(self) -> Dict[str, str]:
+        return {self.key: self.value}
+
+
+@dataclass
+class ComposeVolumeMountSpec:
+    target: str
+    source: Optional[str] = None
+    type: Literal["volume", "bind", "tmpfs"] = "volume"
+    read_only: bool = False
+    bind: Optional[Dict] = None
+    image: Optional[Dict] = None
+    consistency: Optional[Dict] = None
+    tmpfs: Optional[Dict] = None
+    volume: Optional[Dict] = None
+
+    @classmethod
+    def from_docker_compose_volume(cls, compose_volume: List | Dict):
+        image = None
+        consistency = None
+        tmpfs = None
+        volume = None
+        bind = None
+        if isinstance(compose_volume, str):
+            # str format: "db-data:/var/lib/postgresql:rw"
+            parts = compose_volume.split(":")
+            source = parts[0]
+            target = parts[1]
+            volume_type = (
+                "bind"
+                if source.startswith("/")
+                or source.startswith("./")
+                or source.startswith("../")
+                else "volume"
+            )
+            read_only = False
+            if len(parts) > 2:
+                mode = parts[2]
+                if mode == "ro":
+                    read_only = True
+                if mode in ["z", "Z"]:
+                    # selinux mode
+                    # see: https://docs.docker.com/reference/compose-file/services/#short-syntax-5
+                    bind = {"selinux": mode}
+        else:
+            # Dict format: {"type": "bind", "source": "/var/run/docker.sock", "target": "/var/run/docker.sock"}
+            compose_volume = cast(dict, compose_volume)
+            volume_type = compose_volume.get("type", "volume")
+            target = compose_volume["target"]
+            source = compose_volume.get("source")
+            read_only = compose_volume.get("read_only", False)
+            bind = compose_volume.get("bind")
+
+            image = compose_volume.get("image")
+            consistency = compose_volume.get("consistency")
+            tmpfs = compose_volume.get("tmpfs")
+            volume = compose_volume.get("volume")
+
+        return cls(
+            source=source,
+            target=target,
+            type=volume_type,
+            read_only=read_only,
+            bind=bind,
+            image=image,
+            consistency=consistency,
+            tmpfs=tmpfs,
+            volume=volume,
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        spec_dict: Dict[str, Any] = {
+            "type": self.type,
+            "target": self.target,
+        }
+
+        if self.source is not None:
+            spec_dict.update(source=self.source)
+
+        if self.read_only:
+            spec_dict.update(read_only=True)
+
+        if self.bind is not None:
+            spec_dict.update(bind=self.bind)
+
+        if self.image is not None:
+            spec_dict.update(image=self.image)
+
+        if self.consistency is not None:
+            spec_dict.update(consistency=self.consistency)
+
+        if self.tmpfs is not None:
+            spec_dict.update(tmpfs=self.tmpfs)
+
+        if self.volume is not None:
+            spec_dict.update(volume=self.volume)
+
+        return spec_dict
+
+
+@dataclass
+class ComposeServiceConfigSpec:
+    source: str
+    target: str
+
+    def to_dict(self):
+        return dict(
+            source=self.source,
+            target=self.target,
+        )
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(**data)
+
+
+@dataclass
+class ComposeServiceSpec:
+    """
+    Service in compose file
+    We only included values that we want to override,
+    the rest will be reconcilied from the original compose content
+    """
+
+    name: str
+    image: str
+    environment: Dict[str, ComposeEnvVarSpec] = field(default_factory=dict)
+    networks: Dict[str, Dict[str, Any] | None] = field(default_factory=dict)
+    deploy: Dict[str, Any] = field(default_factory=dict)
+    logging: Optional[Dict[str, Any]] = None
+    volumes: list[ComposeVolumeMountSpec] = field(default_factory=list)
+    depends_on: list[str] = field(default_factory=list)
+    configs: List[ComposeServiceConfigSpec] = field(default_factory=list)
+    healthcheck: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ComposeServiceSpec":
+        # handle envs
+        envs: Dict[str, ComposeEnvVarSpec] = {}
+        original_env = data.get("environment", [])
+        if isinstance(original_env, list):
+            for env in original_env:
+                if "=" not in env:
+                    # format: ENV (value is null)
+                    # this should be ignored and not passed to env variables
+                    continue
+                else:
+                    # format: ENV=VALUE
+                    key, value = cast(str, env).split("=", 1)
+
+                envs[key] = ComposeEnvVarSpec(key=key, value=value)
+        elif isinstance(original_env, dict):
+            for key, value in original_env.items():
+                envs[key] = ComposeEnvVarSpec(key=key, value=value)
+
+        # handle networks - convert to dict format
+        networks: Dict[str, Any] = {}
+        original_networks = data.get("networks", [])
+        if isinstance(original_networks, list):
+            # List format: ["zane", "custom_network"]
+            for network_name in original_networks:
+                networks[network_name] = None
+        elif isinstance(original_networks, dict):
+            # Dict format: {"zane": {aliases: [...]}, "custom": null}
+            networks = original_networks
+
+        # handle `depends_on`
+        depends_on = data.get("depends_on", [])
+        dependencies: List[str] = []
+        if isinstance(depends_on, list):
+            # format:
+            # depends_on:
+            #   - rybbit_clickhouse
+            #   - rybbit_postgres
+            dependencies = depends_on
+        elif isinstance(depends_on, dict):
+            # format:
+            # depends_on:
+            #   rybbit_clickhouse:
+            #     condition: service_healthy
+            #   rybbit_postgres:
+            #     condition: service_started
+            dependencies = [name for name in depends_on]
+
+        return cls(
+            name=data["name"],
+            image=data["image"],
+            environment=envs,
+            networks=networks,
+            volumes=[
+                ComposeVolumeMountSpec.from_docker_compose_volume(volume)
+                for volume in data.get("volumes", [])
+            ],
+            configs=[
+                ComposeServiceConfigSpec.from_dict(config)
+                for config in data.get("configs", [])
+            ],
+            deploy=data.get("deploy", {}),
+            depends_on=dependencies,
+            healthcheck=data.get("healthcheck"),
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        # Convert environment from Dict[str, ComposeEnvVarSpec] to Dict[str, str]
+        spec_dict = {
+            "image": self.image,
+            "networks": self.networks,
+            "deploy": self.deploy,
+            "logging": self.logging,
+        }
+
+        if len(self.volumes) > 0:
+            spec_dict.update(volumes=[volume.to_dict() for volume in self.volumes])
+
+        if len(self.configs) > 0:
+            spec_dict.update(configs=[config.to_dict() for config in self.configs])
+
+        if len(self.depends_on) > 0:
+            spec_dict.update(depends_on=self.depends_on)
+
+        if self.healthcheck is not None:
+            spec_dict.update(healthcheck=self.healthcheck)
+
+        env_dict = {}
+        for env_spec in self.environment.values():
+            env_dict.update(env_spec.to_dict())
+
+        if env_dict:
+            spec_dict.update(environment=env_dict)
+
+        return spec_dict
+
+
+@dataclass
+class ComposeVolumeSpec:
+    """Volume in compose file"""
+
+    name: str
+    driver: str = "local"
+    external: bool = False
+    driver_opts: Optional[Dict] = None
+    labels: Dict[str, str] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ComposeVolumeSpec":
+        return cls(
+            name=data["name"],
+            driver=data.get("driver", "local"),
+            driver_opts=data.get("driver_opts", None),
+            external=data.get("external", False),
+            labels=data.get("labels", {}),
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        spec_dict: Dict[str, Any] = {
+            "driver": self.driver,
+        }
+        if self.labels:
+            spec_dict.update(labels=self.labels)
+        if self.external:
+            spec_dict.update(external=True)
+            spec_dict.pop("driver")
+        if self.driver_opts is not None:
+            spec_dict.update(driver_opts=self.driver_opts)
+
+        return spec_dict
+
+
+@dataclass
+class ComposeConfigSpec:
+    file: Optional[str] = None
+    content: Optional[str] = None
+    name: Optional[str] = None
+    external: bool = False
+    labels: Dict[str, str] = field(default_factory=dict)
+
+    # technically there is an `environment: Optional[str]` field, but it's ignored since it's not
+    # supported by docker stack yet
+    # `content` is also not supported, but ZaneOps handles them by transforming them into `file` references
+
+    is_derived_from_content: bool = False
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Self:
+        return cls(
+            file=data.get("file"),
+            content=data.get("content"),
+            name=data.get("name"),
+            external=data.get("external", False),
+            labels=data.get("labels", {}),
+        )
+
+    def to_dict(self):
+        spec_dict: Dict[str, Any] = {}
+
+        if self.file:
+            spec_dict.update(file=self.file)
+
+        if self.content and not self.is_derived_from_content:
+            spec_dict.update(content=self.content)
+
+        if self.external:
+            spec_dict.update(external=True)
+
+        if self.name:
+            spec_dict.update(name=self.name)
+        if self.labels:
+            spec_dict.update(labels=self.labels)
+
+        return spec_dict
+
+
+@dataclass
+class ComposeStackSpec:
+    """
+    Simple compose specification
+    We only included values that we want to override,
+    the rest will be reconcilied from the original compose content
+    """
+
+    services: Dict[str, ComposeServiceSpec] = field(default_factory=dict)
+    volumes: Dict[str, ComposeVolumeSpec] = field(default_factory=dict)
+    networks: Dict[str, Any] = field(default_factory=dict)
+    configs: Dict[str, ComposeConfigSpec] = field(default_factory=dict)
+
+    envs: Dict[str, ComposeEnvVarSpec] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ComposeStackSpec":
+        volumes: Dict[str, ComposeVolumeSpec] = {}
+        for name, volume in data.get("volumes", {}).items():
+            # dict format: { "db-data": {driver: "local"}, ...}
+            if isinstance(volume, dict):
+                volumes[name] = ComposeVolumeSpec.from_dict({**volume, "name": name})
+            else:
+                # str format: just the name
+                volumes[name] = ComposeVolumeSpec.from_dict({"name": name})
+
+        return cls(
+            services={
+                name: ComposeServiceSpec.from_dict({**service, "name": name})
+                for name, service in data.get("services", {}).items()
+            },
+            envs={
+                key: ComposeEnvVarSpec(key=key, value=value)
+                for key, value in data.get("x-zane-env", {}).items()
+            },
+            volumes=volumes,
+            networks=data.get("networks", {}),
+            configs={
+                name: ComposeConfigSpec.from_dict(config)
+                for name, config in data.get("configs", {}).items()
+            },
+        )
+
+    def to_dict(self) -> Dict[str, Dict[str, Any]]:
+        env_dict = {}
+        for env_spec in self.envs.values():
+            env_dict.update(env_spec.to_dict())
+
+        return {
+            "x-zane-env": env_dict,
+            "services": {
+                name: service.to_dict() for name, service in self.services.items()
+            },
+            "volumes": {
+                name: volume.to_dict() for name, volume in self.volumes.items()
+            },
+            "networks": self.networks,
+            "configs": {
+                name: config.to_dict() for name, config in self.configs.items()
+            },
+        }
+
+
+@dataclass
+class ComposeStackUrlRouteDto:
+    domain: str
+    base_path: str
+    strip_prefix: bool
+    port: int
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Self:
+        return cls(
+            domain=data["domain"],
+            base_path=data["base_path"],
+            strip_prefix=data["strip_prefix"],
+            port=data["port"],
+        )
+
+    def to_dict(self):
+        return {
+            "domain": self.domain,
+            "base_path": self.base_path,
+            "strip_prefix": self.strip_prefix,
+            "port": self.port,
+        }
+
+
+@dataclass
+class ComposeStackEnvOverrideDto:
+    key: str
+    value: str
+    id: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Self:
+        return cls(
+            id=data.get("id"),
+            key=data["key"],
+            value=data["value"],
+        )
+
+    def to_dict(self):
+        result = {
+            "key": self.key,
+            "value": self.value,
+        }
+        if self.id is not None:
+            result["id"] = self.id
+        return result
+
+
+@dataclass
+class ComposeVersionedConfig:
+    content: str
+    version: int = 1
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Self:
+        return cls(
+            content=data["content"],
+            version=data.get("version", 1),
+        )
+
+    def to_dict(self):
+        return {
+            "content": self.content,
+            "version": self.version,
+        }
+
+
+@dataclass
+class ComposeSpecDeploymentArtifacts:
+    computed_content: str
+    computed_spec: Dict[str, Any]
+    urls: Dict[str, List[ComposeStackUrlRouteDto]] = field(default_factory=dict)
+    configs: Dict[str, ComposeVersionedConfig] = field(default_factory=dict)
+    env_overrides: List[ComposeStackEnvOverrideDto] = field(default_factory=list)
+
+
+@dataclass
+class ComposeStackSnapshot:
+    id: str
+    hash_prefix: str
+    name: str
+    slug: str
+    monitor_schedule_id: str
+    network_alias_prefix: str
+    user_content: str
+    computed_content: str
+    urls: Dict[str, List[ComposeStackUrlRouteDto]] = field(default_factory=dict)
+    configs: Dict[str, ComposeVersionedConfig] = field(default_factory=dict)
+    env_overrides: List[ComposeStackEnvOverrideDto] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Self:
+        urls: Dict[str, List[ComposeStackUrlRouteDto]] = {}
+        for service_name, routes in data.get("urls", {}).items():
+            urls[service_name] = [
+                ComposeStackUrlRouteDto.from_dict(route) for route in routes
+            ]
+
+        return cls(
+            id=data["id"],
+            name=data["name"],
+            monitor_schedule_id=data["monitor_schedule_id"],
+            hash_prefix=data["hash_prefix"],
+            slug=data["slug"],
+            network_alias_prefix=data["network_alias_prefix"],
+            user_content=data["user_content"],
+            computed_content=data["computed_content"],
+            urls=urls,
+            configs={
+                name: ComposeVersionedConfig.from_dict(config_data)
+                for name, config_data in data.get("configs", {}).items()
+            },
+            env_overrides=[
+                ComposeStackEnvOverrideDto.from_dict(env)
+                for env in data.get("env_overrides", [])
+            ],
+        )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "slug": self.slug,
+            "network_alias_prefix": self.network_alias_prefix,
+            "user_content": self.user_content,
+            "computed_content": self.computed_content,
+            "urls": {
+                service: [route.to_dict() for route in routes]
+                for service, routes in self.urls.items()
+            },
+            "configs": {
+                name: config.to_dict() for name, config in self.configs.items()
+            },
+            "env_overrides": [env.to_dict() for env in self.env_overrides],
+        }
+
+
+@dataclass
+class ComposeStackServiceTaskDto:
+    status: str  # DockerSwarmTaskState value
+    image: str
+    message: str
+    exit_code: Optional[int] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Self:
+        return cls(
+            status=data["status"],
+            image=data["image"],
+            message=data["message"],
+            exit_code=data.get("exit_code"),
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        result: Dict[str, Any] = {
+            "status": self.status,
+            "image": self.image,
+            "message": self.message,
+        }
+        if self.exit_code is not None:
+            result["exit_code"] = self.exit_code
+        return result
+
+
+@dataclass
+class ComposeStackServiceStatusDto:
+    status: str
+    image: str
+    running_replicas: int
+    desired_replicas: int
+    updated_at: str
+    mode: Literal["replicated", "global", "replicated-job", "global-job"]
+    tasks: List[ComposeStackServiceTaskDto] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Self:
+        return cls(
+            status=data["status"],
+            image=data["image"],
+            running_replicas=data["running_replicas"],
+            desired_replicas=data["desired_replicas"],
+            updated_at=data["updated_at"],
+            mode=data["mode"],
+            tasks=[
+                ComposeStackServiceTaskDto.from_dict(task)
+                for task in data.get("tasks", [])
+            ],
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "status": self.status,
+            "image": self.image,
+            "running_replicas": self.running_replicas,
+            "desired_replicas": self.desired_replicas,
+            "updated_at": self.updated_at,
+            "mode": self.mode,
+            "tasks": [task.to_dict() for task in self.tasks],
+        }
+
+
+@dataclass
+class DokployConfigDomain:
+    port: int
+    host: str
+    path: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "port": self.port,
+            "host": self.host,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "DokployConfigDomain":
+        return cls(
+            port=data["port"],
+            host=data["host"].strip(),
+            path=data.get("path", "/").strip(),
+        )
+
+
+@dataclass
+class DokployConfigMount:
+    content: str
+    filePath: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "content": self.content,
+            "filePath": self.filePath,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "DokployConfigMount":
+        return cls(
+            content=data["content"],
+            filePath=re.sub(
+                r"(/)+", "/", data["filePath"]
+            ),  # replace all double slashes with a single slash
+        )
+
+
+@dataclass
+class DokployConfigEnv:
+    key: str
+    value: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "key": self.key,
+            "value": self.value,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "DokployConfigEnv":
+        return cls(
+            key=data["key"],
+            value=data["value"],
+        )
+
+
+@dataclass
+class DokployConfigObject:
+    env: Dict[str, str] = field(default_factory=dict)
+    mounts: List[DokployConfigMount] = field(default_factory=list)
+    domains: Dict[str, List[DokployConfigDomain]] = field(default_factory=dict)
+    variables: Dict[str, str] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "env": self.env,
+            "mounts": [mount.to_dict() for mount in self.mounts],
+            "domains": {
+                service: [domain.to_dict() for domain in domains]
+                for service, domains in self.domains.items()
+            },
+            "variables": self.variables,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "DokployConfigObject":
+        # handle envs
+        envs: Dict[str, str] = {}
+        original_env: list[str] | dict[str, str] = data.get("config", {}).get("env", {})
+        if isinstance(original_env, list):
+            for env in original_env:
+                env_line = env.strip()
+                if len(env_line) > 0 and not env_line.startswith(
+                    "#"
+                ):  # `#` marks a comment, so it should be ignored, same as empty lines
+                    key, value = cast(str, env).split("=", 1)
+                    envs[key] = value.strip()
+        elif isinstance(original_env, dict):
+            for key, value in original_env.items():
+                envs[key] = value.strip()
+
+        # handle mounts
+        mounts: List[DokployConfigMount] = []
+        original_mounts = data.get("config", {}).get("mounts", [])
+        for mount_data in original_mounts:
+            # we ignore mounts of this format
+            # [[config.mounts]]
+            # name = "pocketbase-data"
+            # mountPath = "/pocketbase"
+            # they represent  volumes, but volumes are already
+            # referenced in the compose file
+            if mount_data.get("content") is not None:
+                mounts.append(DokployConfigMount.from_dict(mount_data))
+
+        # handle domains
+        domains: Dict[str, List[DokployConfigDomain]] = {}
+        original_domains = data.get("config", {}).get("domains", [])
+        for domain_data in original_domains:
+            service_name = domain_data["serviceName"]
+            domains[service_name] = domains.get(service_name, [])
+            domains[service_name].append(DokployConfigDomain.from_dict(domain_data))
+
+        # handle variables
+        variables: Dict[str, str] = data.get("variables", {})
+
+        return cls(
+            env=envs,
+            mounts=mounts,
+            domains=domains,
+            variables=variables,
+        )
+
+
+@dataclass
+class DokployTemplate:
+    compose: str
+    config: str
+
+    @property
+    def to_dict(self):
+        return asdict(self)
+
+    @property
+    def base64(self):
+        return base64.b64encode(json.dumps(asdict(self)).encode()).decode()

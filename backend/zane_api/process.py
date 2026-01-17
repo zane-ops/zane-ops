@@ -35,7 +35,6 @@ class OutputHandlerFunction(Protocol):
 
 
 class AyncSubProcessRunner:
-
     def __init__(
         self,
         command: str,
@@ -53,6 +52,9 @@ class AyncSubProcessRunner:
         self._cancellation_requested = False
 
     async def run(self) -> Tuple[int | None, Optional[Any]]:
+        print(
+            f"[{Colors.YELLOW}{self.operation_name}{Colors.ENDC}]: Running shell command {Colors.YELLOW}{self.command}{Colors.ENDC}"
+        )
         process = await asyncio.create_subprocess_shell(
             self.command,
             stdout=asyncio.subprocess.PIPE,

@@ -9,6 +9,7 @@ from .activities import (
     CleanupActivities,
     close_faulty_db_connections,
     MonitorRegistryDeploymentActivites,
+    MonitorComposeStackActivites,
 )
 from ..shared import (
     HealthcheckDeploymentDetails,
@@ -16,7 +17,8 @@ from ..shared import (
     CleanupResult,
     SimpleDeploymentDetails,
     RegistrySnaphot,
-    RegistryHealthCheckResult,
+    ComposeStackSnapshot,
+    ComposeStackHealthcheckResult,
 )
 
 with workflow.unsafe.imports_passed_through():
@@ -99,6 +101,37 @@ class MonitorRegistrySwarmServiceWorkflow:
 
         await workflow.execute_activity_method(
             MonitorRegistryDeploymentActivites.save_registry_health_check_status,
+            healthcheck,
+            retry_policy=retry_policy,
+            start_to_close_timeout=timedelta(seconds=10),
+        )
+
+        return healthcheck
+
+
+@workflow.defn(name="monitor-compose-stack")
+class MonitorComposeStackWorkflow:
+    @workflow.run
+    async def run(self, payload: ComposeStackSnapshot) -> ComposeStackHealthcheckResult:
+        print(f"running MonitorComposeStackWorkflow({payload=})")
+        retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+        await workflow.execute_activity(
+            close_faulty_db_connections,
+            retry_policy=retry_policy,
+            start_to_close_timeout=timedelta(seconds=10),
+        )
+
+        healthcheck = await workflow.execute_activity_method(
+            MonitorComposeStackActivites.run_stack_healthcheck,
+            payload,
+            retry_policy=retry_policy,
+            start_to_close_timeout=timedelta(seconds=10),
+        )
+
+        await workflow.execute_activity_method(
+            MonitorComposeStackActivites.save_stack_health_check_status,
             healthcheck,
             retry_policy=retry_policy,
             start_to_close_timeout=timedelta(seconds=10),

@@ -90,7 +90,7 @@ export function ServiceURLsForm({
   return (
     <div className="w-full max-w-4xl flex flex-col gap-5">
       <div className="flex flex-col gap-3">
-        <h3 className="text-lg">URLs</h3>
+        <h3 className="text-lg">URL Routes</h3>
         <p className="text-gray-400">
           The domains and base path which are associated to this service. Use{" "}
           <Code>*.example.com</Code> for wildcard support.

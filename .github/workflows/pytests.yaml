@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        apps: [zane_api, container_registry, git_connectors] # Split into 5 parallel jobs
+        apps: [zane_api, container_registry, git_connectors, compose] # Split into 5 parallel jobs
 
     services:
       loki:

@@ -5,8 +5,7 @@
   "description": "Backend for ZaneOps",
   "scripts": {
     "dev:api": ". .venv/bin/activate && python manage.py runserver 0.0.0.0:8000",
-    "test": ". .venv/bin/activate && python manage.py test --settings=backend.settings_test --parallel",
-    "test:filter": ". .venv/bin/activate && python manage.py test --settings=backend.settings_test --parallel -k",
+    "test": ". .venv/bin/activate && python manage.py test --settings=backend.settings_test --parallel auto",
     "makemigration": ". .venv/bin/activate && python manage.py makemigrations",
     "migrate": ". .venv/bin/activate && python manage.py migrate",
     "openapi": ". .venv/bin/activate && python manage.py spectacular --color --file ../openapi/schema.yml",

@@ -1,4 +1,4 @@
-import Editor, { useMonaco } from "@monaco-editor/react";
+import { useMonaco } from "@monaco-editor/react";
 import {
   AlertCircleIcon,
   FileSlidersIcon,
@@ -17,6 +17,7 @@ import {
 } from "~/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
+import { CodeEditor } from "~/components/ui/code-editor";
 import {
   FieldSet,
   FieldSetInput,
@@ -396,26 +397,13 @@ function ServiceConfigItem({
                   readOnly
                 />
 
-                <div
-                  className={cn(
-                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                    "w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[855px]"
-                  )}
-                >
-                  <Editor
-                    className="w-full h-full max-w-full"
-                    language={changedConfigLanguage}
-                    value={changedContents}
-                    theme="vs-dark"
-                    options={{
-                      readOnly: !!change_id,
-                      minimap: {
-                        enabled: false
-                      }
-                    }}
-                    onChange={(value) => setChangedContents(value ?? "")}
-                  />
-                </div>
+                <CodeEditor
+                  containerClassName="w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[855px]"
+                  language={changedConfigLanguage}
+                  value={changedContents}
+                  readOnly={!!change_id}
+                  onChange={(value) => setChangedContents(value ?? "")}
+                />
               </FieldSet>
 
               <hr className="-mx-4 border-border" />
@@ -599,25 +587,12 @@ function NewServiceConfigForm() {
         <FieldSetLabel>contents</FieldSetLabel>
         <FieldSetTextarea className="sr-only" value={contents} readOnly />
 
-        <div
-          className={cn(
-            "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-            "w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[855px]"
-          )}
-        >
-          <Editor
-            className="w-full h-full max-w-full"
-            language={language}
-            value={contents}
-            theme="vs-dark"
-            options={{
-              minimap: {
-                enabled: false
-              }
-            }}
-            onChange={(value) => setContents(value ?? "")}
-          />
-        </div>
+        <CodeEditor
+          containerClassName="w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[855px]"
+          language={language}
+          value={contents}
+          onChange={(value) => setContents(value ?? "")}
+        />
       </FieldSet>
 
       <hr className="-mx-4 border-border" />

@@ -32,6 +32,8 @@ with workflow.unsafe.imports_passed_through():
         get_swarm_service_aliases_ips_on_network,
         get_swarm_service_name_for_deployment,
         empty_folder,
+        obfuscate_env_in_command,
+        obfuscate_env_in_shell_command,
     )
     from search.dtos import RuntimeLogSource
     from zane_api.utils import (
@@ -831,8 +833,9 @@ class GitActivities:
                     source=RuntimeLogSource.BUILD,
                 )
 
-                docker_build_command = shlex.join(docker_build_command)
-                cmd_string = multiline_command(docker_build_command)
+                # Obfuscate env values for logging
+                obfuscated_cmd = obfuscate_env_in_command(docker_build_command)
+                cmd_string = multiline_command(obfuscated_cmd)
                 log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
                 for index, msg in enumerate(log_message.splitlines()):
                     await deployment_log(
@@ -842,6 +845,8 @@ class GitActivities:
                         ),
                         source=RuntimeLogSource.BUILD,
                     )
+
+                docker_build_command = shlex.join(docker_build_command)
 
                 # ====== DOCKER BUILD COMMAND ====
                 async def message_handler(message: str):
@@ -1084,8 +1089,9 @@ class GitActivities:
         # Include build directory
         nixpacks_plan_command_args.append(build_directory)
 
-        # Log executed command with all args
-        cmd_string = multiline_command(shlex.join(nixpacks_plan_command_args))
+        # Log executed command with all args (obfuscated)
+        obfuscated_cmd = obfuscate_env_in_command(nixpacks_plan_command_args)
+        cmd_string = multiline_command(obfuscated_cmd)
         log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
         for index, msg in enumerate(log_message.splitlines()):
             await deployment_log(
@@ -1408,8 +1414,9 @@ class GitActivities:
         # Include build directory
         railpack_prepare_command_args.append(build_directory)
 
-        # Log executed command with all args
-        cmd_string = multiline_command(shlex.join(railpack_prepare_command_args))
+        # Log executed command with all args (obfuscated)
+        obfuscated_cmd = obfuscate_env_in_command(railpack_prepare_command_args)
+        cmd_string = multiline_command(obfuscated_cmd)
         log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
         for index, msg in enumerate(log_message.splitlines()):
             await deployment_log(
@@ -1662,8 +1669,12 @@ class GitActivities:
                 ]
                 docker_build_command = " ".join([*env_args, docker_build_command])
 
+                # Obfuscate env values for logging
+                obfuscated_cmd = obfuscate_env_in_shell_command(
+                    docker_build_command, build_envs
+                )
                 cmd_string = multiline_command(
-                    docker_build_command, ignore_contains="BUILDKIT_SYNTAX="
+                    obfuscated_cmd, ignore_contains="BUILDKIT_SYNTAX="
                 )
                 log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
                 for index, msg in enumerate(log_message.splitlines()):

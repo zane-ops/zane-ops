@@ -4,6 +4,7 @@ from .environments import *
 from .services import *
 from .projects import *
 from .registries import *
+from .compose import *
 
 with workflow.unsafe.imports_passed_through():
     from ..activities import (
@@ -29,6 +30,7 @@ with workflow.unsafe.imports_passed_through():
         release_registry_deploy_semaphore,
         create_registry_health_check_schedule,
         delete_registry_health_check_schedule,
+        ComposeStackActivities,
     )
     from ..activities.service_auto_update import (
         schedule_update_docker_service,
@@ -52,6 +54,8 @@ with workflow.unsafe.imports_passed_through():
         DeployBuildRegistryWorkflow,
         DestroyBuildRegistryWorkflow,
         UpdateBuildRegistryWorkflow,
+        DeployComposeStackWorkflow,
+        ArchiveComposeStackWorkflow,
     )
     from ..schedules import (
         MonitorDockerDeploymentWorkflow,
@@ -63,6 +67,8 @@ with workflow.unsafe.imports_passed_through():
         DockerDeploymentStatsActivities,
         GetDockerDeploymentStatsWorkflow,
         close_faulty_db_connections,
+        MonitorComposeStackActivites,
+        MonitorComposeStackWorkflow,
     )
 
 
@@ -74,6 +80,8 @@ def get_workflows_and_activities():
     metrics_activities = DockerDeploymentStatsActivities()
     git_activities = GitActivities()
     monitor_registry_activites = MonitorRegistryDeploymentActivites()
+    monitor_stack_activites = MonitorComposeStackActivites()
+    stack_activites = ComposeStackActivities()
 
     return dict(
         workflows=[
@@ -96,6 +104,9 @@ def get_workflows_and_activities():
             DestroyBuildRegistryWorkflow,
             UpdateBuildRegistryWorkflow,
             MonitorRegistrySwarmServiceWorkflow,
+            DeployComposeStackWorkflow,
+            MonitorComposeStackWorkflow,
+            ArchiveComposeStackWorkflow,
         ],
         activities=[
             git_activities.get_default_build_registry,
@@ -162,6 +173,29 @@ def get_workflows_and_activities():
             system_cleanup_activities.cleanup_networks,
             monitor_registry_activites.run_registry_swarm_healthcheck,
             monitor_registry_activites.save_registry_health_check_status,
+            stack_activites.prepare_stack_deployment,
+            stack_activites.create_temporary_directory_for_stack_deployment,
+            stack_activites.create_files_in_docker_stack_folder,
+            stack_activites.deploy_stack_with_cli,
+            stack_activites.check_stack_health,
+            stack_activites.create_stack_healthcheck_schedule,
+            stack_activites.expose_stack_services_to_http,
+            stack_activites.finalize_deployment,
+            stack_activites.cleanup_temporary_directory_for_stack_deployment,
+            stack_activites.unexpose_stack_services_from_http,
+            stack_activites.get_services_in_stack,
+            stack_activites.wait_for_stack_service_containers_to_be_deleted,
+            stack_activites.remove_stack_with_cli,
+            stack_activites.delete_stack_configs,
+            stack_activites.delete_stack_volumes,
+            stack_activites.lock_stack_deploy_semaphore,
+            stack_activites.reset_stack_deploy_semaphore,
+            stack_activites.delete_stack_healthcheck_schedule,
+            stack_activites.cleanup_old_stack_urls,
+            stack_activites.get_next_queued_deployment,
+            stack_activites.cleanup_old_stack_services,
+            monitor_stack_activites.save_stack_health_check_status,
+            monitor_stack_activites.run_stack_healthcheck,
             acquire_service_deploy_semaphore,
             lock_deploy_semaphore,
             release_service_deploy_semaphore,

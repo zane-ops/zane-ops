@@ -2,6 +2,24 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## AI Chatbot Answer style
+
+I DO NOT WANT YOU TO SAY : "AH ! I KNOW THE ISSUE !" OR "YOU ARE ABSOLUTELY RIGHT" OR SOMETHING SIMILAR. we try to debug the things together and I don't
+want you to act as all knowing, please respond simply and unless you are
+100% sure, don't respond like you figured it out, even if you are sure, be humble.
+
+Be EXTREMELY concise. Short responses only. No blabbering.
+
+## Code style
+
+We use a **test-first approach**. When implementing features:
+1. Write tests FIRST - nothing else
+2. Tests will be validated and run by the human
+3. If asked to "write tests", write ONLY tests - no implementation
+4. Only implement the feature when explicitly asked to continue or implement
+4. Never, EVER Import files at the top of functions & methods, always import them at the top of the file
+5. look for built-in or installed libraries before doing something by hand
+
 ## About ZaneOps
 
 ZaneOps is a self-hosted, open-source PaaS (Platform as a Service) for deploying web apps, static sites, databases, and services. It's an alternative to Heroku, Railway, and Render, built with Docker Swarm for scalability and Caddy for HTTP routing.
@@ -149,11 +167,16 @@ The Django backend is organized into several key apps:
    - `schedules/` - Scheduled tasks (cleanup, monitoring)
    - `worker.py` - Temporal worker process
 
-3. **`backend/git_connectors/`** - GitHub/GitLab integration
-4. **`backend/container_registry/`** - Docker registry integration
-5. **`backend/s3_targets/`** - S3 storage integration
-6. **`backend/webshell/`** - Web-based shell access
-7. **`backend/search/`** - Search functionality
+3. **`backend/compose/`** - Docker Compose stack management (file-based multi-service deployments)
+   - `models.py` - ComposeStack, ComposeStackDeployment, ComposeStackEnvOverride, ComposeStackChange
+   - `procressor.py` - Parses and processes user compose files, injects ZaneOps config
+   - `dtos.py` - Dataclasses for compose specifications
+   - `views/` - API endpoints for compose stack CRUD and deployment
+4. **`backend/git_connectors/`** - GitHub/GitLab integration
+5. **`backend/container_registry/`** - Docker registry integration
+6. **`backend/s3_targets/`** - S3 storage integration
+7. **`backend/webshell/`** - Web-based shell access
+8. **`backend/search/`** - Search functionality
 
 ### Frontend Architecture
 

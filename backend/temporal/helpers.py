@@ -1,12 +1,12 @@
+import asyncio
 import os
 import shutil
 
-from typing import Any, Dict, List, Literal, TypedDict
+from typing import Any, Coroutine, Dict, List, Literal, TypedDict, cast
+from docker.models.services import Service as DockerService
 
-from .shared import (
-    DeploymentDetails,
-    DeploymentURLDto,
-)
+
+from .shared import DeploymentDetails, DeploymentURLDto, ProxyURLRoute
 from zane_api.models import (
     Deployment,
     URL,
@@ -30,7 +30,7 @@ from zane_api.dtos import (
     StaticDirectoryBuilderOptions,
     NixpacksBuilderOptions,
 )
-from zane_api.utils import replace_placeholders
+from zane_api.utils import replace_placeholders, DockerSwarmTask, DockerSwarmTaskState
 import requests
 from rest_framework import status
 from enum import Enum, auto
@@ -43,7 +43,12 @@ from .constants import (
 )
 from typing import Protocol, runtime_checkable
 from datetime import timedelta
-
+from compose.dtos import (
+    ComposeStackUrlRouteDto,
+    ComposeStackServiceStatus,
+    ComposeStackSnapshot,
+)
+from temporalio import activity
 
 docker_client: docker.DockerClient | None = None
 
@@ -193,6 +198,30 @@ class DeploymentLike(Protocol):
 
 
 @runtime_checkable
+class StackLike(Protocol):
+    @property
+    def id(self) -> str: ...
+
+
+@runtime_checkable
+class StackDeploymentLike(Protocol):
+    @property
+    def hash(self) -> str: ...
+
+    @property
+    def stack(self) -> StackLike: ...
+
+
+@runtime_checkable
+class StackServiceLike(Protocol):
+    @property
+    def stack_id(self) -> str: ...
+
+    @property
+    def service_id(self) -> str: ...
+
+
+@runtime_checkable
 class DeploymentResultLike(Protocol):
     @property
     def deployment_hash(self) -> str: ...
@@ -202,11 +231,17 @@ class DeploymentResultLike(Protocol):
 
 
 async def deployment_log(
-    deployment: DeploymentLike | DeploymentResultLike,
+    deployment: DeploymentLike
+    | DeploymentResultLike
+    | StackDeploymentLike
+    | StackServiceLike,
     message: str | List[str],
     source: Literal["SYSTEM", "SERVICE", "BUILD"] = RuntimeLogSource.SYSTEM,
     error=False,
 ):
+    stack_id = None
+    deployment_id = None
+    service_id = None
     match deployment:
         case DeploymentLike():
             deployment_id = deployment.hash
@@ -214,9 +249,15 @@ async def deployment_log(
         case DeploymentResultLike():
             deployment_id = deployment.deployment_hash
             service_id = deployment.service_id
+        case StackDeploymentLike():
+            deployment_id = deployment.hash
+            stack_id = deployment.stack.id
+        case StackServiceLike():
+            stack_id = deployment.stack_id
+            service_id = deployment.service_id
         case _:
             raise TypeError(
-                f"type {type(deployment)} doesn't match {DeploymentLike} or {DeploymentResultLike}"
+                f"type {type(deployment)} doesn't match one of {[DeploymentLike, DeploymentResultLike, StackDeploymentLike, StackServiceLike]}"
             )
     search_client = LokiSearchClient(host=settings.LOKI_HOST)
 
@@ -241,6 +282,7 @@ async def deployment_log(
                 created_at=current_time,
                 deployment_id=deployment_id,
                 service_id=service_id,
+                stack_id=stack_id,
             )
         )
 
@@ -381,6 +423,7 @@ class ZaneProxyClient:
                 )  # Least priority for routes with no match
 
             path = route["match"][0].get("path", [""])[0]
+
             # Removing trailing '*' for comparison and determining the "real" length
             normalized_path = path.rstrip("*")
             path_length = len(normalized_path)
@@ -588,13 +631,7 @@ class ZaneProxyClient:
             ],
             "match": [
                 {
-                    "path": [
-                        (
-                            "/*"
-                            if url.base_path == "/"
-                            else f"{strip_slash_if_exists(url.base_path, strip_end=True, strip_start=False)}*"
-                        )
-                    ],
+                    "path": [cls._normalize_base_path(url.base_path)],
                     "host": [url.domain],
                 }
             ],
@@ -856,6 +893,244 @@ class ZaneProxyClient:
             timeout=5,
         )
 
+    @classmethod
+    def _get_id_for_compose_stack_service_url(
+        cls,
+        stack_id: str,
+        service_name: str,
+        url: ComposeStackUrlRouteDto,
+    ):
+        normalized_path = strip_slash_if_exists(
+            url.base_path, strip_end=True, strip_start=True
+        ).replace("/", "-")
+
+        if len(normalized_path) == 0:
+            normalized_path = "*"
+        return f"{stack_id}-{service_name}-{url.domain}-{normalized_path}"
+
+    @classmethod
+    def get_uri_for_compose_stack_service(
+        cls,
+        stack_id: str,
+        service_name: str,
+        url: ComposeStackUrlRouteDto,
+    ):
+        return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{cls._get_id_for_compose_stack_service_url(stack_id, service_name, url)}"
+
+    @staticmethod
+    async def _delete_route(route_id: str):
+        requests.delete(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{route_id}",
+            timeout=5,
+        )
+
+    @classmethod
+    async def delete_all_stack_urls(
+        cls,
+        stack_id: str,
+    ) -> List[ProxyURLRoute]:
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes", timeout=5
+        )
+        await asyncio.gather(
+            *[
+                cls._delete_route(route["@id"])
+                for route in response.json()
+                if route["@id"].startswith(stack_id)
+            ]
+        )
+        return [
+            ProxyURLRoute(
+                domain=route["match"][0]["host"][0],
+                base_path=route["match"][0]["path"][0],
+            )
+            for route in response.json()
+            if route["@id"].startswith(stack_id)
+        ]
+
+    @staticmethod
+    def _normalize_base_path(base_path: str):
+        if base_path == "/":
+            return "/*"
+        return f"{strip_slash_if_exists(base_path, strip_end=True, strip_start=False)}*"
+
+    @classmethod
+    async def cleanup_old_compose_stack_service_urls(
+        cls,
+        stack_id: str,
+        all_urls: List[ComposeStackUrlRouteDto],
+    ):
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes", timeout=5
+        )
+        service_url_routes = [
+            (
+                url.domain,
+                cls._normalize_base_path(url.base_path),
+            )
+            for url in all_urls
+        ]
+
+        route_delete_requests: List[Coroutine[Any, Any, None]] = []
+        for route in response.json():
+            if route["@id"].startswith(stack_id):
+                route_pair = (
+                    route["match"][0]["host"][0],
+                    route["match"][0]["path"][0],
+                )
+                if route_pair not in service_url_routes:
+                    route_delete_requests.append(cls._delete_route(route["@id"]))
+
+        await asyncio.gather(*route_delete_requests)
+
+    @classmethod
+    def _get_request_for_compose_stack_service_url(
+        cls,
+        stack_id: str,
+        stack_hash_prefix: str,
+        service_name: str,
+        url: ComposeStackUrlRouteDto,
+    ):
+        proxy_handlers = [
+            {
+                "handler": "log_append",
+                "key": "zane_service_type",
+                "value": "compose_stack_service",
+            },
+            {
+                "handler": "log_append",
+                "key": "zane_service_name",
+                "value": service_name,
+            },
+            {
+                "handler": "log_append",
+                "key": "zane_stack_id",
+                "value": stack_id,
+            },
+            {
+                "handler": "log_append",
+                "key": "zane_request_id",
+                "value": "{http.request.uuid}",
+            },
+            {
+                "handler": "headers",
+                "response": {
+                    "add": {
+                        "x-zane-request-id": ["{http.request.uuid}"],
+                    },
+                },
+                "request": {
+                    "add": {
+                        "x-request-id": ["{http.request.uuid}"],
+                    },
+                },
+            },
+            {
+                "handler": "encode",
+                "encodings": {"gzip": {}},
+                "prefer": ["gzip"],
+            },
+        ]
+
+        if url.strip_prefix:
+            proxy_handlers.append(
+                {
+                    "handler": "rewrite",
+                    "strip_path_prefix": strip_slash_if_exists(
+                        url.base_path,
+                        strip_end=True,
+                        strip_start=False,
+                    ),
+                }
+            )
+
+        # Add final reverse proxy mapping
+        proxy_handlers.append(
+            {
+                "handler": "reverse_proxy",
+                "flush_interval": -1,
+                "load_balancing": {
+                    "retries": 2,
+                },
+                "upstreams": [
+                    {
+                        "dial": f"{stack_hash_prefix}_{service_name}.{settings.ZANE_INTERNAL_DOMAIN}:{url.port}"
+                    },
+                ],
+            }
+        )
+
+        return {
+            "@id": cls._get_id_for_compose_stack_service_url(
+                stack_id,
+                service_name,
+                url,
+            ),
+            "match": [
+                {
+                    "path": [cls._normalize_base_path(url.base_path)],
+                    "host": [url.domain],
+                }
+            ],
+            "handle": [
+                {
+                    "handler": "subroute",
+                    "routes": [{"handle": proxy_handlers}],
+                }
+            ],
+        }
+
+    @classmethod
+    def upsert_compose_stack_service_url(
+        cls,
+        stack_id: str,
+        stack_hash_prefix: str,
+        service_name: str,
+        url: ComposeStackUrlRouteDto,
+    ) -> bool:
+        attempts = 0
+
+        while attempts < cls.MAX_ETAG_ATTEMPTS:
+            attempts += 1
+            # now we create or modify the config for the URL
+            response = requests.get(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes", timeout=5
+            )
+            etag = response.headers.get("etag")
+
+            routes: list[dict[str, dict]] = [
+                route
+                for route in response.json()
+                if route["@id"]
+                != cls._get_id_for_compose_stack_service_url(
+                    stack_id=stack_id,
+                    service_name=service_name,
+                    url=url,
+                )
+            ]
+            new_url = cls._get_request_for_compose_stack_service_url(
+                stack_id=stack_id,
+                service_name=service_name,
+                stack_hash_prefix=stack_hash_prefix,
+                url=url,
+            )
+            routes.append(new_url)
+            routes = cls._sort_routes(routes)  # type: ignore
+
+            response = requests.patch(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes",
+                headers={"content-type": "application/json", "If-Match": etag},
+                json=routes,
+                timeout=5,
+            )
+            if response.status_code == status.HTTP_412_PRECONDITION_FAILED:
+                continue
+            return True
+
+        raise ZaneProxyEtagError(
+            f"Failed inserting the url {url} in the proxy because `Etag` precondition failed"
+        )
+
 
 class GitDeploymentStep(Enum):
     INITIALIZED = auto()
@@ -1037,3 +1312,207 @@ def empty_folder(folder_path: str):
 
 def get_service_open_port_key(deployment_id: str):
     return f"{SERVICE_DETECTED_PORTS_CACHE_KEY}_{deployment_id}"
+
+
+OBFUSCATED_VALUE = "**********"
+# Keys that should not be obfuscated in logs
+NON_SECRET_BUILD_ARGS = {
+    "BUILDKIT_SYNTAX",
+    "secrets-hash",
+    "cache-key",
+    "FORCE_COLOR",
+    "ZANE",
+}
+# Prefixes for env keys that should not be obfuscated
+NON_SECRET_ENV_PREFIXES = ("ZANE_", "NIXPACKS_", "RAILPACK_")
+
+
+def _should_obfuscate_key(key: str) -> bool:
+    if key in NON_SECRET_BUILD_ARGS:
+        return False
+    if key.startswith(NON_SECRET_ENV_PREFIXES):
+        return False
+    return True
+
+
+def obfuscate_env_in_command(
+    cmd_args: list[str], env_flags: list[str] = ["--build-arg", "--env", "--secret"]
+) -> str:
+    """
+    Returns the command as a string with env values obfuscated for logging.
+    Detects patterns like: --build-arg KEY=value, --env KEY=value, --secret id=KEY,env=KEY
+    """
+    import shlex
+
+    result = []
+    i = 0
+    while i < len(cmd_args):
+        arg = cmd_args[i]
+        if arg in env_flags and i + 1 < len(cmd_args):
+            next_arg = cmd_args[i + 1]
+            if "=" in next_arg:
+                # Handle --secret id=KEY,env=KEY (don't obfuscate, no value exposed)
+                if arg == "--secret":
+                    result.append(arg)
+                    result.append(next_arg)
+                else:
+                    # Handle --build-arg KEY=value or --env KEY=value
+                    key = next_arg.split("=", 1)[0]
+                    if _should_obfuscate_key(key):
+                        result.append(arg)
+                        result.append(f"{key}={OBFUSCATED_VALUE}")
+                    else:
+                        result.append(arg)
+                        result.append(next_arg)
+            else:
+                result.append(arg)
+                result.append(shlex.quote(next_arg))
+            i += 2
+        else:
+            result.append(shlex.quote(arg) if " " in arg else arg)
+            i += 1
+    return " ".join(result)
+
+
+def obfuscate_env_in_shell_command(cmd: str, build_envs: dict[str, str]) -> str:
+    """
+    Returns a copy of the shell command with env values obfuscated for logging.
+    Replaces KEY='value' or KEY=value prefixes with KEY=**********
+    """
+    import re
+
+    result = cmd
+    for key in build_envs:
+        if not _should_obfuscate_key(key):
+            continue
+        # Match KEY='...' or KEY="..." or KEY=unquoted patterns
+        pattern = rf"(\s|^){re.escape(key)}=(\'[^\']*\'|\"[^\"]*\"|\S+)"
+        result = re.sub(pattern, rf"\1{key}={OBFUSCATED_VALUE}", result)
+    return result
+
+
+async def get_compose_stack_swarm_service_status(
+    service: DockerService, stack: ComposeStackSnapshot
+) -> Dict[str, Any]:
+    service_mode = service.attrs["Spec"]["Mode"]
+    # Mode is a dict in the format:
+    # {
+    #   "Mode": {
+    #     "Replicated": {
+    #       "Replicas": 0
+    #     },
+    #     "Global": {},
+    #     "ReplicatedJob": {
+    #       "MaxConcurrent": 1,
+    #       "TotalCompletions": 0
+    #     },
+    #     "GlobalJob": {}
+    #   }
+    # }
+
+    service_status = service.attrs["ServiceStatus"]
+    # ServiceStatus is a dict in the format:
+    # {
+    #   "RunningTasks": 1,
+    #   "DesiredTasks": 1,
+    #   "CompletedTasks": 0
+    # }
+
+    # Determine mode type
+    if "Global" in service_mode:
+        mode_type = "global"
+    elif "ReplicatedJob" in service_mode:
+        mode_type = "replicated-job"
+    elif "GlobalJob" in service_mode:
+        mode_type = "global-job"
+    else:
+        # default is replicated
+        mode_type = "replicated"
+
+    # Get counts from ServiceStatus
+    running_replicas = service_status["RunningTasks"]
+    desired_replicas = service_status["DesiredTasks"]
+    completed_replicas = service_status.get("CompletedTasks", 0)
+
+    # Get all tasks for the tasks list
+    tasks = [DockerSwarmTask.from_dict(task) for task in service.tasks()]
+
+    # Determine status based on mode
+    is_job = mode_type in ["replicated-job", "global-job"]
+
+    if is_job:
+        # For jobs, healthy means completed >= desired
+        status = (
+            ComposeStackServiceStatus.COMPLETE
+            if completed_replicas >= desired_replicas
+            else ComposeStackServiceStatus.STARTING
+        )
+    else:
+        # For regular services, healthy means running >= desired
+        if running_replicas == desired_replicas == 0:
+            status = ComposeStackServiceStatus.SLEEPING
+        elif running_replicas >= desired_replicas:
+            status = ComposeStackServiceStatus.HEALTHY
+        else:
+            # Check if any tasks are in failed states
+            unhealthy_states = [
+                DockerSwarmTaskState.FAILED,
+                DockerSwarmTaskState.REJECTED,
+                DockerSwarmTaskState.ORPHANED,
+            ]
+
+            has_failed_tasks = any(t.state in unhealthy_states for t in tasks)
+
+            # Check for shutdown tasks with non-zero exit codes
+            has_errored_shutdown = any(
+                t.state == DockerSwarmTaskState.SHUTDOWN
+                and (t.exit_code is not None and t.exit_code != 0)
+                for t in tasks
+            )
+
+            if has_failed_tasks or has_errored_shutdown:
+                status = ComposeStackServiceStatus.UNHEALTHY
+            else:
+                status = ComposeStackServiceStatus.STARTING
+
+    service_name = (
+        cast(str, service.name)
+        .removeprefix(f"{stack.name}_")
+        .removeprefix(f"{stack.hash_prefix}_")
+    )
+
+    # Get image from service spec
+    image = service.attrs["Spec"]["TaskTemplate"]["ContainerSpec"]["Image"]
+    # Remove the digest suffix if present (e.g., "nginx:latest@sha256:...")
+    if "@" in image:
+        image = image.split("@")[0]
+
+    return {
+        "name": service_name,
+        "image": image,
+        "mode": mode_type,
+        "status": status,
+        "desired_replicas": desired_replicas,
+        "running_replicas": running_replicas,
+        "updated_at": timezone.now().isoformat(),
+        "tasks": [
+            {
+                "status": task.state.value,
+                "image": task.image,
+                "message": task.message,
+                "exit_code": task.exit_code,
+            }
+            for task in tasks
+        ],
+    }
+
+
+async def send_regular_heartbeat(name: str):
+    """
+    We want this activity to be cancellable,
+    for activities to be cancellable, they need to send regular heartbeats:
+    https://docs.temporal.io/develop/python/cancellation#cancel-activity
+    """
+    while True:
+        activity.heartbeat(f"Heartbeat from `{name}()`...")
+        await asyncio.sleep(0.1)

@@ -151,6 +151,22 @@ class DockerSwarmTask:
     def state(self):
         return self.Status.State
 
+    @property
+    def message(self):
+        return self.Status.Err if self.Status.Err is not None else self.Status.Message
+
+    @property
+    def exit_code(self):
+        return (
+            self.Status.ContainerStatus.ExitCode
+            if self.Status.ContainerStatus
+            else None
+        )
+
+    @property
+    def image(self):
+        return self.Spec.ContainerSpec.Image
+
     @classmethod
     def from_dict(
         cls,
@@ -210,7 +226,7 @@ def format_duration(seconds: float):
     if hours > 0:
         parts.append(f"{hours}h")
     if minutes > 0:
-        parts.append(f"{minutes}m")
+        parts.append(f"{minutes}min")
     if remaining_seconds > 0 or not parts:  # always show seconds if nothing else
         parts.append(f"{remaining_seconds}s")
 
@@ -435,7 +451,14 @@ def multiline_command(command: str, ignore_contains: Optional[str] = None) -> st
             and not tokens[i + 1].startswith("-")
         ):
             next_token = tokens[i + 1]
-            if ignore_contains is None or ignore_contains not in next_token:
+            # For obfuscated env values (KEY=**********), only quote the value part
+            obfuscated_match = re.match(
+                r"^([A-Za-z_][A-Za-z0-9_]*)=(\*{10})$", next_token
+            )
+            if obfuscated_match:
+                key, value = obfuscated_match.groups()
+                next_token = f"{key}={shlex.quote(value)}"
+            elif ignore_contains is None or ignore_contains not in next_token:
                 next_token = shlex.quote(next_token)
             line = f"\t{token} {next_token} \\"
             i += 2
@@ -454,18 +477,23 @@ def dict_sha256sum(d: dict) -> str:
     return hashlib.sha256(serialized.encode()).hexdigest()
 
 
-def replace_placeholders(text: str, replacements: dict[str, dict[str, Any]]) -> str:
+def replace_placeholders(text: str, replacements: dict[str, Any]) -> str:
     """
-    Replaces placeholders in the format {{key.subkey}} with values from nested dictionaries.
+    Replaces placeholders in the format {{key.subkey}} with values from nested dictionaries
+    And in the format {{key}} with values from top-level dictionaries.
     Example:
-        replace_placeholders("{{k.v}} {{a.b}}", dict(k={"v": "hello"}, a={"b": world}))
+        replace_placeholders("{{k.v}} {{ a.b }}", dict(k={"v": "hello"}, a={"b": "world"}))
+        -> "hello world"
+        replace_placeholders("{{generate_value}} {{ a.b }}", dict(generate_value="hello", a={"b": "world"}))
         -> "hello world"
     """
-    pattern = r"\{\{([A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*)\}\}"
+    # Pattern matches both {{key}} and {{key.subkey}} formats
+    pattern = r"\{\{[ \t]*(\w+(?:\.\w+)?)[ \t]*\}\}"
 
     def replacer(match: re.Match[str]):
-        keys = match.group(1).split(".")
-        value = replacements
+        key_path = match.group(1)
+        keys = key_path.split(".")
+        value: Any = replacements
         for k in keys:
             if not isinstance(value, dict) or k not in value:
                 return match.group(0)  # keep original if not found
@@ -473,6 +501,11 @@ def replace_placeholders(text: str, replacements: dict[str, dict[str, Any]]) -> 
         return str(value)
 
     return re.sub(pattern, replacer, text)
+
+
+def contains_env_variable(text: str) -> bool:
+    # Matches ${VAR}, {VAR}, or $VAR
+    return bool(re.search(r"\$\{[^}]+\}|\{[^}]+\}|\$[A-Za-z_][A-Za-z0-9_]*", text))
 
 
 def obfuscate_git_token(url: str):

@@ -30,8 +30,7 @@ class TelemetryMiddleware:
 
     def __call__(self, request: HttpRequest):
         if (
-            not settings.DEBUG
-            and not settings.TESTING
+            settings.ENVIRONMENT == settings.PRODUCTION_ENV
             and not isinstance(request.user, AnonymousUser)
             and settings.TELEMETRY_ENABLED
         ):

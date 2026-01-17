@@ -1,4 +1,3 @@
-import Editor from "@monaco-editor/react";
 import {
   CheckIcon,
   ChevronRightIcon,
@@ -16,6 +15,7 @@ import {
 } from "~/components/ui/accordion";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
+import { CodeEditor } from "~/components/ui/code-editor";
 import {
   FieldSet,
   FieldSetCheckbox,
@@ -686,25 +686,12 @@ export function ServiceBuilderForm({
                 </Tooltip>
               </TooltipProvider>
             </span>
-            <div
-              className={cn(
-                "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                "w-[85dvw] sm:w-[90dvw] md:w-[87dvw] lg:w-[75dvw] xl:w-[855px]"
-              )}
-            >
-              <Editor
-                className="w-full h-full max-w-full"
-                value={static_generated_caddyfile}
-                theme="vs-dark"
-                language="ini"
-                options={{
-                  readOnly: true,
-                  minimap: {
-                    enabled: false
-                  }
-                }}
-              />
-            </div>
+            <CodeEditor
+              containerClassName="w-[85dvw] sm:w-[90dvw] md:w-[87dvw] lg:w-[75dvw] xl:w-[855px]"
+              value={static_generated_caddyfile}
+              language="ini"
+              readOnly
+            />
           </>
         )}
 
@@ -1020,25 +1007,12 @@ export function ServiceBuilderForm({
                     </Tooltip>
                   </TooltipProvider>
                 </span>
-                <div
-                  className={cn(
-                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                    "w-[85dvw] sm:w-[90dvw] md:w-[87dvw] lg:w-[75dvw] xl:w-[855px]"
-                  )}
-                >
-                  <Editor
-                    className="w-full h-full max-w-full"
-                    value={nixpacks_generated_caddyfile}
-                    theme="vs-dark"
-                    language="ini"
-                    options={{
-                      readOnly: true,
-                      minimap: {
-                        enabled: false
-                      }
-                    }}
-                  />
-                </div>
+                <CodeEditor
+                  containerClassName="w-[85dvw] sm:w-[90dvw] md:w-[87dvw] lg:w-[75dvw] xl:w-[855px]"
+                  value={nixpacks_generated_caddyfile}
+                  language="ini"
+                  readOnly
+                />
               </>
             )}
           </>
@@ -1334,25 +1308,12 @@ export function ServiceBuilderForm({
                     </Tooltip>
                   </TooltipProvider>
                 </span>
-                <div
-                  className={cn(
-                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                    "w-[85dvw] sm:w-[90dvw] md:w-[87dvw] lg:w-[75dvw] xl:w-[855px]"
-                  )}
-                >
-                  <Editor
-                    className="w-full h-full max-w-full"
-                    value={railpack_generated_caddyfile}
-                    theme="vs-dark"
-                    language="ini"
-                    options={{
-                      readOnly: true,
-                      minimap: {
-                        enabled: false
-                      }
-                    }}
-                  />
-                </div>
+                <CodeEditor
+                  containerClassName="w-[85dvw] sm:w-[90dvw] md:w-[87dvw] lg:w-[75dvw] xl:w-[855px]"
+                  value={railpack_generated_caddyfile}
+                  language="ini"
+                  readOnly
+                />
               </>
             )}
           </>

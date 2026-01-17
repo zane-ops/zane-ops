@@ -545,6 +545,945 @@ paths:
               schema:
                 $ref: '#/components/schemas/OngoingUpdateResponse'
           description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/:
+    get:
+      operationId: compose_stacks_list
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStacksListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ComposeStack'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/:
+    get:
+      operationId: getComposeStackDetails
+      summary: Get a compose stack details
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetComposeStackDetailsErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStackUpdate'
+          description: ''
+    put:
+      operationId: compose_stacks_update
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComposeStackUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ComposeStackUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ComposeStackUpdateRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStacksUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStackUpdate'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/{hash}/:
+    get:
+      operationId: getComposeStackDeploymentDetails
+      summary: Get a compose stack deployment details
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetComposeStackDeploymentDetailsErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStackDeployment'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/archive/:
+    delete:
+      operationId: archiveComposeStack
+      summary: Archive a compose stack
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArchiveComposeStackErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/:
+    put:
+      operationId: deployComposeStack
+      summary: Queue a new deployment for the compose stack
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComposeStackDeployRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ComposeStackDeployRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ComposeStackDeployRequestRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeployComposeStackErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStackDeployment'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/request-changes/:
+    put:
+      operationId: requestComposeStackUpdate
+      summary: Request a new compose stack change
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComposeStackDeploymentChangeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ComposeStackDeploymentChangeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ComposeStackDeploymentChangeRequestRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestComposeStackUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStackChange'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/create/:
+    post:
+      operationId: compose_stacks_create_create
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComposeStackRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ComposeStackRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ComposeStackRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStacksCreateCreateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStack'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/create-from-dokploy/base-64/:
+    post:
+      operationId: createFromDokployTemplateBase64
+      description: Use a dokploy template encoded as base64 and ZaneOps will automatically
+        convert it to its compose syntax
+      summary: Create compose stack from Dokploy template
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateComposeStackFromDokployTemplateRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateComposeStackFromDokployTemplateRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateComposeStackFromDokployTemplateRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateFromDokployTemplateBase64ErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStack'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/create-from-dokploy/object/:
+    post:
+      operationId: createFromDokployTemplateObject
+      description: Pass a dokploy object with content+config and ZaneOps will automatically
+        convert it to its compose syntax
+      summary: Create compose stack from Dokploy template object (compose+config)
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateComposeStackFromDokployTemplateObjectRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateComposeStackFromDokployTemplateObjectRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateComposeStackFromDokployTemplateObjectRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateFromDokployTemplateObjectErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStack'
+          description: ''
   /api/connectors/{id}/:
     get:
       operationId: connectors_retrieve
@@ -9362,6 +10301,13 @@ paths:
           description: ''
 components:
   schemas:
+    ArchiveComposeStackErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ArchiveEnvironmentErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -10397,6 +11343,820 @@ components:
       description: |-
         * `ALL` - All services
         * `ONLY` - Only specific services
+    ComposeConfigVersion:
+      type: object
+      properties:
+        content:
+          type: string
+        version:
+          type: integer
+      required:
+      - content
+      - version
+    ComposeConfigVersionRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          minLength: 1
+        version:
+          type: integer
+      required:
+      - content
+      - version
+    ComposeContentFieldChangeFieldEnum:
+      enum:
+      - compose_content
+      type: string
+      description: '* `compose_content` - compose_content'
+    ComposeContentFieldChangeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/FieldChangeTypeEnum'
+          default: UPDATE
+        new_value:
+          type: string
+          nullable: true
+          minLength: 1
+        field:
+          $ref: '#/components/schemas/ComposeContentFieldChangeFieldEnum'
+      required:
+      - field
+      - new_value
+    ComposeEnvOverrideItemChangeFieldEnum:
+      enum:
+      - env_overrides
+      type: string
+      description: '* `env_overrides` - env_overrides'
+    ComposeEnvOverrideItemChangeRequest:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ItemChangeTypeEnum'
+        item_id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        new_value:
+          $ref: '#/components/schemas/EnvRequestRequest'
+        field:
+          $ref: '#/components/schemas/ComposeEnvOverrideItemChangeFieldEnum'
+      required:
+      - field
+      - type
+    ComposeStack:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        network_alias_prefix:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        user_content:
+          type: string
+        computed_content:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Processed YAML
+        unapplied_changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackChange'
+          readOnly: true
+        urls:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/ComposeStackUrlRoute'
+          readOnly: true
+        configs:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ComposeConfigVersion'
+          readOnly: true
+        env_overrides:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackEnvOverride'
+          readOnly: true
+        service_statuses:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ComposeStackServiceStatus'
+          readOnly: true
+      required:
+      - computed_content
+      - configs
+      - env_overrides
+      - id
+      - network_alias_prefix
+      - service_statuses
+      - slug
+      - unapplied_changes
+      - urls
+      - user_content
+    ComposeStackChange:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        type:
+          $ref: '#/components/schemas/ComposeStackChangeTypeEnum'
+        field:
+          $ref: '#/components/schemas/ComposeStackChangeFieldEnum'
+        new_value:
+          nullable: true
+        old_value:
+          nullable: true
+        item_id:
+          type: string
+          nullable: true
+          maxLength: 255
+      required:
+      - field
+      - id
+      - item_id
+      - new_value
+      - old_value
+      - type
+    ComposeStackChangeFieldEnum:
+      enum:
+      - compose_content
+      - env_overrides
+      type: string
+      description: |-
+        * `compose_content` - Compose Content
+        * `env_overrides` - Env Overrides
+    ComposeStackChangeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        type:
+          $ref: '#/components/schemas/ComposeStackChangeTypeEnum'
+        field:
+          $ref: '#/components/schemas/ComposeStackChangeFieldEnum'
+        new_value:
+          nullable: true
+        old_value:
+          nullable: true
+        item_id:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 255
+      required:
+      - field
+      - type
+    ComposeStackChangeTypeEnum:
+      enum:
+      - ADD
+      - UPDATE
+      - DELETE
+      type: string
+      description: |-
+        * `ADD` - Add
+        * `UPDATE` - Update
+        * `DELETE` - Delete
+    ComposeStackDeployRequestRequest:
+      type: object
+      properties:
+        commit_message:
+          type: string
+          minLength: 1
+          default: Update stack
+    ComposeStackDeployment:
+      type: object
+      properties:
+        hash:
+          type: string
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/ComposeStackDeploymentStatusEnum'
+        status_reason:
+          type: string
+          nullable: true
+        stack_snapshot:
+          allOf:
+          - $ref: '#/components/schemas/ComposeStackSnapshot'
+          readOnly: true
+        commit_message:
+          type: string
+        queued_at:
+          type: string
+          format: date-time
+          readOnly: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackChange'
+          readOnly: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - changes
+      - commit_message
+      - finished_at
+      - hash
+      - queued_at
+      - stack_snapshot
+      - started_at
+      - status
+      - status_reason
+    ComposeStackDeploymentChangeRequestRequest:
+      oneOf:
+      - $ref: '#/components/schemas/ComposeContentFieldChangeRequest'
+      - $ref: '#/components/schemas/ComposeEnvOverrideItemChangeRequest'
+      discriminator:
+        propertyName: field
+        mapping:
+          null: '#/components/schemas/ComposeEnvOverrideItemChangeRequest'
+    ComposeStackDeploymentStatusEnum:
+      enum:
+      - QUEUED
+      - CANCELLED
+      - DEPLOYING
+      - FINISHED
+      - FAILED
+      - REMOVED
+      type: string
+      description: |-
+        * `QUEUED` - Queued
+        * `CANCELLED` - Cancelled
+        * `DEPLOYING` - Deploying
+        * `FINISHED` - Finished
+        * `FAILED` - Failed
+        * `REMOVED` - Removed
+    ComposeStackEnvOverride:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        key:
+          type: string
+          maxLength: 255
+        value:
+          type: string
+      required:
+      - id
+      - key
+      - value
+    ComposeStackEnvOverrideRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        key:
+          type: string
+          minLength: 1
+          maxLength: 255
+        value:
+          type: string
+      required:
+      - key
+    ComposeStackRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        user_content:
+          type: string
+          minLength: 1
+      required:
+      - user_content
+    ComposeStackServiceStatus:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ComposeStackServiceStatusStatusEnum'
+        running_replicas:
+          type: integer
+        desired_replicas:
+          type: integer
+        updated_at:
+          type: string
+          format: date-time
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackServiceTask'
+        image:
+          type: string
+        mode:
+          $ref: '#/components/schemas/ComposeStackServiceStatusModeEnum'
+      required:
+      - desired_replicas
+      - image
+      - mode
+      - running_replicas
+      - status
+      - tasks
+      - updated_at
+    ComposeStackServiceStatusModeEnum:
+      enum:
+      - replicated
+      - global
+      - replicated-job
+      - global-job
+      type: string
+      description: |-
+        * `replicated` - replicated
+        * `global` - global
+        * `replicated-job` - replicated-job
+        * `global-job` - global-job
+    ComposeStackServiceStatusRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ComposeStackServiceStatusStatusEnum'
+        running_replicas:
+          type: integer
+        desired_replicas:
+          type: integer
+        updated_at:
+          type: string
+          format: date-time
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackServiceTaskRequest'
+        image:
+          type: string
+          minLength: 1
+        mode:
+          $ref: '#/components/schemas/ComposeStackServiceStatusModeEnum'
+      required:
+      - desired_replicas
+      - image
+      - mode
+      - running_replicas
+      - status
+      - tasks
+      - updated_at
+    ComposeStackServiceStatusStatusEnum:
+      enum:
+      - STARTING
+      - HEALTHY
+      - UNHEALTHY
+      - COMPLETE
+      - SLEEPING
+      type: string
+      description: |-
+        * `STARTING` - STARTING
+        * `HEALTHY` - HEALTHY
+        * `UNHEALTHY` - UNHEALTHY
+        * `COMPLETE` - COMPLETE
+        * `SLEEPING` - SLEEPING
+    ComposeStackServiceTask:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ComposeStackServiceTaskStatusEnum'
+        image:
+          type: string
+        message:
+          type: string
+        exit_code:
+          type: integer
+          nullable: true
+      required:
+      - exit_code
+      - image
+      - message
+      - status
+    ComposeStackServiceTaskRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ComposeStackServiceTaskStatusEnum'
+        image:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+        exit_code:
+          type: integer
+          nullable: true
+      required:
+      - image
+      - message
+      - status
+    ComposeStackServiceTaskStatusEnum:
+      enum:
+      - new
+      - pending
+      - assigned
+      - accepted
+      - ready
+      - preparing
+      - starting
+      - running
+      - complete
+      - failed
+      - shutdown
+      - rejected
+      - orphaned
+      - remove
+      type: string
+      description: |-
+        * `new` - new
+        * `pending` - pending
+        * `assigned` - assigned
+        * `accepted` - accepted
+        * `ready` - ready
+        * `preparing` - preparing
+        * `starting` - starting
+        * `running` - running
+        * `complete` - complete
+        * `failed` - failed
+        * `shutdown` - shutdown
+        * `rejected` - rejected
+        * `orphaned` - orphaned
+        * `remove` - remove
+    ComposeStackSnapshot:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        hash_prefix:
+          type: string
+          readOnly: true
+        monitor_schedule_id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        network_alias_prefix:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        user_content:
+          type: string
+        computed_content:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Processed YAML
+        urls:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/ComposeStackUrlRoute'
+          readOnly: true
+        configs:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ComposeConfigVersion'
+          readOnly: true
+        env_overrides:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackEnvOverride'
+          readOnly: true
+      required:
+      - computed_content
+      - configs
+      - env_overrides
+      - hash_prefix
+      - id
+      - monitor_schedule_id
+      - name
+      - network_alias_prefix
+      - slug
+      - urls
+      - user_content
+    ComposeStackUpdate:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        network_alias_prefix:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        user_content:
+          type: string
+          readOnly: true
+        computed_content:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Processed YAML
+        unapplied_changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackChange'
+          readOnly: true
+        urls:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/ComposeStackUrlRoute'
+          readOnly: true
+        configs:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ComposeConfigVersion'
+          readOnly: true
+        env_overrides:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackEnvOverride'
+          readOnly: true
+        service_statuses:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ComposeStackServiceStatus'
+          readOnly: true
+      required:
+      - computed_content
+      - configs
+      - env_overrides
+      - id
+      - network_alias_prefix
+      - service_statuses
+      - slug
+      - unapplied_changes
+      - urls
+      - user_content
+    ComposeStackUpdateRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+    ComposeStackUrlRoute:
+      type: object
+      properties:
+        domain:
+          type: string
+        base_path:
+          type: string
+        strip_prefix:
+          type: boolean
+        port:
+          type: integer
+      required:
+      - base_path
+      - domain
+      - port
+      - strip_prefix
+    ComposeStackUrlRouteRequest:
+      type: object
+      properties:
+        domain:
+          type: string
+          minLength: 1
+        base_path:
+          type: string
+          minLength: 1
+        strip_prefix:
+          type: boolean
+        port:
+          type: integer
+      required:
+      - base_path
+      - domain
+      - port
+      - strip_prefix
+    ComposeStacksCreateCreateError:
+      oneOf:
+      - $ref: '#/components/schemas/ComposeStacksCreateCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ComposeStacksCreateCreateSlugErrorComponent'
+      - $ref: '#/components/schemas/ComposeStacksCreateCreateUserContentErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ComposeStacksCreateCreateNonFieldErrorsErrorComponent'
+          slug: '#/components/schemas/ComposeStacksCreateCreateSlugErrorComponent'
+          user_content: '#/components/schemas/ComposeStacksCreateCreateUserContentErrorComponent'
+    ComposeStacksCreateCreateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ComposeStacksCreateCreateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ComposeStacksCreateCreateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ComposeStacksCreateCreateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ComposeStacksCreateCreateSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ComposeStacksCreateCreateUserContentErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - user_content
+          type: string
+          description: '* `user_content` - user_content'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ComposeStacksCreateCreateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStacksCreateCreateError'
+      required:
+      - errors
+      - type
+    ComposeStacksListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ComposeStacksUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ComposeStacksUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ComposeStacksUpdateSlugErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ComposeStacksUpdateNonFieldErrorsErrorComponent'
+          slug: '#/components/schemas/ComposeStacksUpdateSlugErrorComponent'
+    ComposeStacksUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ComposeStacksUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ComposeStacksUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ComposeStacksUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ComposeStacksUpdateSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ComposeStacksUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStacksUpdateError'
+      required:
+      - errors
+      - type
     Config:
       type: object
       properties:
@@ -10743,6 +12503,36 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    CreateComposeStackFromDokployTemplateObjectRequestRequest:
+      type: object
+      properties:
+        compose:
+          type: string
+          minLength: 1
+        config:
+          type: string
+          minLength: 1
+        slug:
+          type: string
+          minLength: 1
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - compose
+      - config
+      - slug
+    CreateComposeStackFromDokployTemplateRequestRequest:
+      type: object
+      properties:
+        user_content:
+          type: string
+          minLength: 1
+        slug:
+          type: string
+          minLength: 1
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - slug
+      - user_content
     CreateDockerServiceContainerRegistryCredentialsIdErrorComponent:
       type: object
       properties:
@@ -10894,6 +12684,260 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - name
+    CreateFromDokployTemplateBase64Error:
+      oneOf:
+      - $ref: '#/components/schemas/CreateFromDokployTemplateBase64NonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateFromDokployTemplateBase64UserContentErrorComponent'
+      - $ref: '#/components/schemas/CreateFromDokployTemplateBase64SlugErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CreateFromDokployTemplateBase64NonFieldErrorsErrorComponent'
+          user_content: '#/components/schemas/CreateFromDokployTemplateBase64UserContentErrorComponent'
+          slug: '#/components/schemas/CreateFromDokployTemplateBase64SlugErrorComponent'
+    CreateFromDokployTemplateBase64ErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CreateFromDokployTemplateBase64ValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CreateFromDokployTemplateBase64ValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CreateFromDokployTemplateBase64NonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateFromDokployTemplateBase64SlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateFromDokployTemplateBase64UserContentErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - user_content
+          type: string
+          description: '* `user_content` - user_content'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateFromDokployTemplateBase64ValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateFromDokployTemplateBase64Error'
+      required:
+      - errors
+      - type
+    CreateFromDokployTemplateObjectComposeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - compose
+          type: string
+          description: '* `compose` - compose'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateFromDokployTemplateObjectConfigErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - config
+          type: string
+          description: '* `config` - config'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateFromDokployTemplateObjectError:
+      oneOf:
+      - $ref: '#/components/schemas/CreateFromDokployTemplateObjectNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateFromDokployTemplateObjectComposeErrorComponent'
+      - $ref: '#/components/schemas/CreateFromDokployTemplateObjectConfigErrorComponent'
+      - $ref: '#/components/schemas/CreateFromDokployTemplateObjectSlugErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CreateFromDokployTemplateObjectNonFieldErrorsErrorComponent'
+          compose: '#/components/schemas/CreateFromDokployTemplateObjectComposeErrorComponent'
+          config: '#/components/schemas/CreateFromDokployTemplateObjectConfigErrorComponent'
+          slug: '#/components/schemas/CreateFromDokployTemplateObjectSlugErrorComponent'
+    CreateFromDokployTemplateObjectErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CreateFromDokployTemplateObjectValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CreateFromDokployTemplateObjectValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CreateFromDokployTemplateObjectNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateFromDokployTemplateObjectSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateFromDokployTemplateObjectValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateFromDokployTemplateObjectError'
+      required:
+      - errors
+      - type
     CreateGitServiceBranchNameErrorComponent:
       type: object
       properties:
@@ -11929,6 +13973,83 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    DeployComposeStackCommitMessageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_message
+          type: string
+          description: '* `commit_message` - commit_message'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    DeployComposeStackError:
+      oneOf:
+      - $ref: '#/components/schemas/DeployComposeStackNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/DeployComposeStackCommitMessageErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/DeployComposeStackNonFieldErrorsErrorComponent'
+          commit_message: '#/components/schemas/DeployComposeStackCommitMessageErrorComponent'
+    DeployComposeStackErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/DeployComposeStackValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/DeployComposeStackValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    DeployComposeStackNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    DeployComposeStackValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeployComposeStackError'
+      required:
+      - errors
+      - type
     DeployDockerServiceCleanupQueueErrorComponent:
       type: object
       properties:
@@ -12171,11 +14292,19 @@ components:
       - resource_limits
       - configs
       type: string
-      description: "* `source` - source\n* `git_source` - git source\n* `builder`\
-        \ - builder\n* `command` - command\n* `healthcheck` - healthcheck\n* `volumes`\
-        \ - volumes\n* `shared_volumes` - shared volumes \n* `env_variables` - env\
-        \ variables\n* `urls` - urls\n* `ports` - ports\n* `resource_limits` - resource\
-        \ limits\n* `configs` - configs"
+      description: |-
+        * `source` - source
+        * `git_source` - git source
+        * `builder` - builder
+        * `command` - command
+        * `healthcheck` - healthcheck
+        * `volumes` - volumes
+        * `shared_volumes` - shared volumes
+        * `env_variables` - env variables
+        * `urls` - urls
+        * `ports` - ports
+        * `resource_limits` - resource limits
+        * `configs` - configs
     DeploymentChangeRequest:
       type: object
       properties:
@@ -13016,6 +15145,20 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     GetCSRFErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetComposeStackDeploymentDetailsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetComposeStackDetailsErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -18253,6 +20396,253 @@ components:
         * `GOOGLE_ARTIFACT` - Google Artifact Registry
         * `AWS_ECR` - AWS Elastic Container Registry
         * `GENERIC` - Generic Docker Registry (v2 API)
+    RequestComposeStackUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/RequestComposeStackUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateTypeErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateFieldErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateItemIdErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueKeyErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueValueErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/RequestComposeStackUpdateNonFieldErrorsErrorComponent'
+          type: '#/components/schemas/RequestComposeStackUpdateTypeErrorComponent'
+          new_value: '#/components/schemas/RequestComposeStackUpdateNewValueErrorComponent'
+          field: '#/components/schemas/RequestComposeStackUpdateFieldErrorComponent'
+          item_id: '#/components/schemas/RequestComposeStackUpdateItemIdErrorComponent'
+          new_value.non_field_errors: '#/components/schemas/RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent'
+          new_value.key: '#/components/schemas/RequestComposeStackUpdateNewValueKeyErrorComponent'
+          new_value.value: '#/components/schemas/RequestComposeStackUpdateNewValueValueErrorComponent'
+    RequestComposeStackUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/RequestComposeStackUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/RequestComposeStackUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RequestComposeStackUpdateFieldErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - field
+          type: string
+          description: '* `field` - field'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateItemIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - item_id
+          type: string
+          description: '* `item_id` - item_id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateNewValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value
+          type: string
+          description: '* `new_value` - new_value'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateNewValueKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.key
+          type: string
+          description: '* `new_value.key` - new_value.key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.non_field_errors
+          type: string
+          description: '* `new_value.non_field_errors` - new_value.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateNewValueValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.value
+          type: string
+          description: '* `new_value.value` - new_value.value'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - type
+          type: string
+          description: '* `type` - type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequestComposeStackUpdateError'
+      required:
+      - errors
+      - type
     RequestEnvChangesError:
       oneOf:
       - $ref: '#/components/schemas/RequestEnvChangesNonFieldErrorsErrorComponent'

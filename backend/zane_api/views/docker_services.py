@@ -595,7 +595,7 @@ class RequestServiceChangesAPIView(APIView):
                     case DeploymentChange.ChangeField.ENV_VARIABLES:
                         if change_type in ["UPDATE", "DELETE"]:
                             old_value = EnvVariableSerializer(
-                                service.env_variables.get(id=item_id)  # type: ignore
+                                service.env_variables.get(id=item_id)
                             ).data
 
                 if new_value != old_value:

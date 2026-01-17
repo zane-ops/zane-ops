@@ -58,6 +58,47 @@ export interface paths {
      */
     get: operations["check_ongoing_update_status_retrieve"];
   };
+  "/api/compose/stacks/{project_slug}/{env_slug}/": {
+    get: operations["compose_stacks_list"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/": {
+    /** Get a compose stack details */
+    get: operations["getComposeStackDetails"];
+    put: operations["compose_stacks_update"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/{hash}/": {
+    /** Get a compose stack deployment details */
+    get: operations["getComposeStackDeploymentDetails"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/archive/": {
+    /** Archive a compose stack */
+    delete: operations["archiveComposeStack"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/": {
+    /** Queue a new deployment for the compose stack */
+    put: operations["deployComposeStack"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/request-changes/": {
+    /** Request a new compose stack change */
+    put: operations["requestComposeStackUpdate"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/create/": {
+    post: operations["compose_stacks_create_create"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/create-from-dokploy/base-64/": {
+    /**
+     * Create compose stack from Dokploy template
+     * @description Use a dokploy template encoded as base64 and ZaneOps will automatically convert it to its compose syntax
+     */
+    post: operations["createFromDokployTemplateBase64"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/create-from-dokploy/object/": {
+    /**
+     * Create compose stack from Dokploy template object (compose+config)
+     * @description Pass a dokploy object with content+config and ZaneOps will automatically convert it to its compose syntax
+     */
+    post: operations["createFromDokployTemplateObject"];
+  };
   "/api/connectors/{id}/": {
     get: operations["connectors_retrieve"];
     delete: operations["connectors_destroy"];
@@ -485,6 +526,7 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    ArchiveComposeStackErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveGitServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -939,6 +981,339 @@ export interface components {
      * @enum {string}
      */
     CloneStrategyEnum: "ALL" | "ONLY";
+    ComposeConfigVersion: {
+      content: string;
+      version: number;
+    };
+    ComposeConfigVersionRequest: {
+      content: string;
+      version: number;
+    };
+    /**
+     * @description * `compose_content` - compose_content
+     * @enum {string}
+     */
+    ComposeContentFieldChangeFieldEnum: "compose_content";
+    ComposeContentFieldChangeRequest: {
+      /** @default UPDATE */
+      type?: components["schemas"]["FieldChangeTypeEnum"];
+      new_value: string | null;
+      field: components["schemas"]["ComposeContentFieldChangeFieldEnum"];
+    };
+    /**
+     * @description * `env_overrides` - env_overrides
+     * @enum {string}
+     */
+    ComposeEnvOverrideItemChangeFieldEnum: "env_overrides";
+    ComposeEnvOverrideItemChangeRequest: {
+      type: components["schemas"]["ItemChangeTypeEnum"];
+      item_id?: string;
+      new_value?: components["schemas"]["EnvRequestRequest"];
+      field: components["schemas"]["ComposeEnvOverrideItemChangeFieldEnum"];
+    };
+    ComposeStack: {
+      id: string;
+      slug: string;
+      network_alias_prefix: string;
+      user_content: string;
+      /** @description Processed YAML */
+      computed_content: string | null;
+      unapplied_changes: readonly components["schemas"]["ComposeStackChange"][];
+      urls: {
+        [key: string]: components["schemas"]["ComposeStackUrlRoute"][];
+      };
+      configs: {
+        [key: string]: components["schemas"]["ComposeConfigVersion"];
+      };
+      env_overrides: readonly components["schemas"]["ComposeStackEnvOverride"][];
+      service_statuses: {
+        [key: string]: components["schemas"]["ComposeStackServiceStatus"];
+      };
+    };
+    ComposeStackChange: {
+      id: string;
+      type: components["schemas"]["ComposeStackChangeTypeEnum"];
+      field: components["schemas"]["ComposeStackChangeFieldEnum"];
+      new_value: unknown;
+      old_value: unknown;
+      item_id: string | null;
+    };
+    /**
+     * @description * `compose_content` - Compose Content
+     * * `env_overrides` - Env Overrides
+     * @enum {string}
+     */
+    ComposeStackChangeFieldEnum: "compose_content" | "env_overrides";
+    ComposeStackChangeRequest: {
+      id?: string;
+      type: components["schemas"]["ComposeStackChangeTypeEnum"];
+      field: components["schemas"]["ComposeStackChangeFieldEnum"];
+      new_value?: unknown;
+      old_value?: unknown;
+      item_id?: string | null;
+    };
+    /**
+     * @description * `ADD` - Add
+     * * `UPDATE` - Update
+     * * `DELETE` - Delete
+     * @enum {string}
+     */
+    ComposeStackChangeTypeEnum: "ADD" | "UPDATE" | "DELETE";
+    ComposeStackDeployRequestRequest: {
+      /** @default Update stack */
+      commit_message?: string;
+    };
+    ComposeStackDeployment: {
+      hash: string;
+      status: components["schemas"]["ComposeStackDeploymentStatusEnum"];
+      status_reason: string | null;
+      stack_snapshot: components["schemas"]["ComposeStackSnapshot"];
+      commit_message: string;
+      /** Format: date-time */
+      queued_at: string;
+      /** Format: date-time */
+      started_at: string | null;
+      changes: readonly components["schemas"]["ComposeStackChange"][];
+      /** Format: date-time */
+      finished_at: string | null;
+    };
+    ComposeStackDeploymentChangeRequestRequest: components["schemas"]["ComposeContentFieldChangeRequest"] | components["schemas"]["ComposeEnvOverrideItemChangeRequest"];
+    /**
+     * @description * `QUEUED` - Queued
+     * * `CANCELLED` - Cancelled
+     * * `DEPLOYING` - Deploying
+     * * `FINISHED` - Finished
+     * * `FAILED` - Failed
+     * * `REMOVED` - Removed
+     * @enum {string}
+     */
+    ComposeStackDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "DEPLOYING" | "FINISHED" | "FAILED" | "REMOVED";
+    ComposeStackEnvOverride: {
+      id: string;
+      key: string;
+      value: string;
+    };
+    ComposeStackEnvOverrideRequest: {
+      id?: string;
+      key: string;
+      value?: string;
+    };
+    ComposeStackRequest: {
+      slug?: string;
+      user_content: string;
+    };
+    ComposeStackServiceStatus: {
+      status: components["schemas"]["ComposeStackServiceStatusStatusEnum"];
+      running_replicas: number;
+      desired_replicas: number;
+      /** Format: date-time */
+      updated_at: string;
+      tasks: components["schemas"]["ComposeStackServiceTask"][];
+      image: string;
+      mode: components["schemas"]["ComposeStackServiceStatusModeEnum"];
+    };
+    /**
+     * @description * `replicated` - replicated
+     * * `global` - global
+     * * `replicated-job` - replicated-job
+     * * `global-job` - global-job
+     * @enum {string}
+     */
+    ComposeStackServiceStatusModeEnum: "replicated" | "global" | "replicated-job" | "global-job";
+    ComposeStackServiceStatusRequest: {
+      status: components["schemas"]["ComposeStackServiceStatusStatusEnum"];
+      running_replicas: number;
+      desired_replicas: number;
+      /** Format: date-time */
+      updated_at: string;
+      tasks: components["schemas"]["ComposeStackServiceTaskRequest"][];
+      image: string;
+      mode: components["schemas"]["ComposeStackServiceStatusModeEnum"];
+    };
+    /**
+     * @description * `STARTING` - STARTING
+     * * `HEALTHY` - HEALTHY
+     * * `UNHEALTHY` - UNHEALTHY
+     * * `COMPLETE` - COMPLETE
+     * * `SLEEPING` - SLEEPING
+     * @enum {string}
+     */
+    ComposeStackServiceStatusStatusEnum: "STARTING" | "HEALTHY" | "UNHEALTHY" | "COMPLETE" | "SLEEPING";
+    ComposeStackServiceTask: {
+      status: components["schemas"]["ComposeStackServiceTaskStatusEnum"];
+      image: string;
+      message: string;
+      exit_code: number | null;
+    };
+    ComposeStackServiceTaskRequest: {
+      status: components["schemas"]["ComposeStackServiceTaskStatusEnum"];
+      image: string;
+      message: string;
+      exit_code?: number | null;
+    };
+    /**
+     * @description * `new` - new
+     * * `pending` - pending
+     * * `assigned` - assigned
+     * * `accepted` - accepted
+     * * `ready` - ready
+     * * `preparing` - preparing
+     * * `starting` - starting
+     * * `running` - running
+     * * `complete` - complete
+     * * `failed` - failed
+     * * `shutdown` - shutdown
+     * * `rejected` - rejected
+     * * `orphaned` - orphaned
+     * * `remove` - remove
+     * @enum {string}
+     */
+    ComposeStackServiceTaskStatusEnum: "new" | "pending" | "assigned" | "accepted" | "ready" | "preparing" | "starting" | "running" | "complete" | "failed" | "shutdown" | "rejected" | "orphaned" | "remove";
+    ComposeStackSnapshot: {
+      id: string;
+      hash_prefix: string;
+      monitor_schedule_id: string;
+      name: string;
+      slug: string;
+      network_alias_prefix: string;
+      user_content: string;
+      /** @description Processed YAML */
+      computed_content: string | null;
+      urls: {
+        [key: string]: components["schemas"]["ComposeStackUrlRoute"][];
+      };
+      configs: {
+        [key: string]: components["schemas"]["ComposeConfigVersion"];
+      };
+      env_overrides: readonly components["schemas"]["ComposeStackEnvOverride"][];
+    };
+    ComposeStackUpdate: {
+      id: string;
+      slug: string;
+      network_alias_prefix: string;
+      user_content: string;
+      /** @description Processed YAML */
+      computed_content: string | null;
+      unapplied_changes: readonly components["schemas"]["ComposeStackChange"][];
+      urls: {
+        [key: string]: components["schemas"]["ComposeStackUrlRoute"][];
+      };
+      configs: {
+        [key: string]: components["schemas"]["ComposeConfigVersion"];
+      };
+      env_overrides: readonly components["schemas"]["ComposeStackEnvOverride"][];
+      service_statuses: {
+        [key: string]: components["schemas"]["ComposeStackServiceStatus"];
+      };
+    };
+    ComposeStackUpdateRequest: {
+      slug?: string;
+    };
+    ComposeStackUrlRoute: {
+      domain: string;
+      base_path: string;
+      strip_prefix: boolean;
+      port: number;
+    };
+    ComposeStackUrlRouteRequest: {
+      domain: string;
+      base_path: string;
+      strip_prefix: boolean;
+      port: number;
+    };
+    ComposeStacksCreateCreateError: components["schemas"]["ComposeStacksCreateCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ComposeStacksCreateCreateSlugErrorComponent"] | components["schemas"]["ComposeStacksCreateCreateUserContentErrorComponent"];
+    ComposeStacksCreateCreateErrorResponse400: components["schemas"]["ComposeStacksCreateCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ComposeStacksCreateCreateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ComposeStacksCreateCreateSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ComposeStacksCreateCreateUserContentErrorComponent: {
+      /**
+       * @description * `user_content` - user_content
+       * @enum {string}
+       */
+      attr: "user_content";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ComposeStacksCreateCreateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ComposeStacksCreateCreateError"][];
+    };
+    ComposeStacksListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ComposeStacksUpdateError: components["schemas"]["ComposeStacksUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ComposeStacksUpdateSlugErrorComponent"];
+    ComposeStacksUpdateErrorResponse400: components["schemas"]["ComposeStacksUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ComposeStacksUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ComposeStacksUpdateSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ComposeStacksUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ComposeStacksUpdateError"][];
+    };
     Config: {
       id: string;
       name: string;
@@ -1087,6 +1462,15 @@ export interface components {
       errors: components["schemas"]["ConnectorsGitlabUpdateUpdateError"][];
     };
     ConnectorsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    CreateComposeStackFromDokployTemplateObjectRequestRequest: {
+      compose: string;
+      config: string;
+      slug: string;
+    };
+    CreateComposeStackFromDokployTemplateRequestRequest: {
+      user_content: string;
+      slug: string;
+    };
     CreateDockerServiceContainerRegistryCredentialsIdErrorComponent: {
       /**
        * @description * `container_registry_credentials_id` - container_registry_credentials_id
@@ -1161,6 +1545,134 @@ export interface components {
     };
     CreateEnvironmentRequestRequest: {
       name: string;
+    };
+    CreateFromDokployTemplateBase64Error: components["schemas"]["CreateFromDokployTemplateBase64NonFieldErrorsErrorComponent"] | components["schemas"]["CreateFromDokployTemplateBase64UserContentErrorComponent"] | components["schemas"]["CreateFromDokployTemplateBase64SlugErrorComponent"];
+    CreateFromDokployTemplateBase64ErrorResponse400: components["schemas"]["CreateFromDokployTemplateBase64ValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CreateFromDokployTemplateBase64NonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    CreateFromDokployTemplateBase64SlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateFromDokployTemplateBase64UserContentErrorComponent: {
+      /**
+       * @description * `user_content` - user_content
+       * @enum {string}
+       */
+      attr: "user_content";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateFromDokployTemplateBase64ValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["CreateFromDokployTemplateBase64Error"][];
+    };
+    CreateFromDokployTemplateObjectComposeErrorComponent: {
+      /**
+       * @description * `compose` - compose
+       * @enum {string}
+       */
+      attr: "compose";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateFromDokployTemplateObjectConfigErrorComponent: {
+      /**
+       * @description * `config` - config
+       * @enum {string}
+       */
+      attr: "config";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateFromDokployTemplateObjectError: components["schemas"]["CreateFromDokployTemplateObjectNonFieldErrorsErrorComponent"] | components["schemas"]["CreateFromDokployTemplateObjectComposeErrorComponent"] | components["schemas"]["CreateFromDokployTemplateObjectConfigErrorComponent"] | components["schemas"]["CreateFromDokployTemplateObjectSlugErrorComponent"];
+    CreateFromDokployTemplateObjectErrorResponse400: components["schemas"]["CreateFromDokployTemplateObjectValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CreateFromDokployTemplateObjectNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    CreateFromDokployTemplateObjectSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateFromDokployTemplateObjectValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["CreateFromDokployTemplateObjectError"][];
     };
     CreateGitServiceBranchNameErrorComponent: {
       /**
@@ -1694,6 +2206,42 @@ export interface components {
     DecisionEnum: "APPROVE" | "DECLINE";
     DeleteBuildRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     DeleteRegistryCredentialsErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    DeployComposeStackCommitMessageErrorComponent: {
+      /**
+       * @description * `commit_message` - commit_message
+       * @enum {string}
+       */
+      attr: "commit_message";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    DeployComposeStackError: components["schemas"]["DeployComposeStackNonFieldErrorsErrorComponent"] | components["schemas"]["DeployComposeStackCommitMessageErrorComponent"];
+    DeployComposeStackErrorResponse400: components["schemas"]["DeployComposeStackValidationError"] | components["schemas"]["ParseErrorResponse"];
+    DeployComposeStackNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    DeployComposeStackValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["DeployComposeStackError"][];
+    };
     DeployDockerServiceCleanupQueueErrorComponent: {
       /**
        * @description * `cleanup_queue` - cleanup_queue
@@ -2121,6 +2669,8 @@ export interface components {
     GetAuthedUserErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetBuildRegistriesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetCSRFErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetComposeStackDeploymentDetailsErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetComposeStackDetailsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetPreviewEnvToReviewErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetProjectListError: components["schemas"]["GetProjectListSlugErrorComponent"] | components["schemas"]["GetProjectListSortByErrorComponent"];
@@ -4568,6 +5118,139 @@ export interface components {
      * @enum {string}
      */
     RegistryTypeEnum: "DOCKER_HUB" | "GITHUB" | "GITLAB" | "GOOGLE_ARTIFACT" | "AWS_ECR" | "GENERIC";
+    RequestComposeStackUpdateError: components["schemas"]["RequestComposeStackUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RequestComposeStackUpdateTypeErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueErrorComponent"] | components["schemas"]["RequestComposeStackUpdateFieldErrorComponent"] | components["schemas"]["RequestComposeStackUpdateItemIdErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueKeyErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueValueErrorComponent"];
+    RequestComposeStackUpdateErrorResponse400: components["schemas"]["RequestComposeStackUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RequestComposeStackUpdateFieldErrorComponent: {
+      /**
+       * @description * `field` - field
+       * @enum {string}
+       */
+      attr: "field";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    RequestComposeStackUpdateItemIdErrorComponent: {
+      /**
+       * @description * `item_id` - item_id
+       * @enum {string}
+       */
+      attr: "item_id";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestComposeStackUpdateNewValueErrorComponent: {
+      /**
+       * @description * `new_value` - new_value
+       * @enum {string}
+       */
+      attr: "new_value";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestComposeStackUpdateNewValueKeyErrorComponent: {
+      /**
+       * @description * `new_value.key` - new_value.key
+       * @enum {string}
+       */
+      attr: "new_value.key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `new_value.non_field_errors` - new_value.non_field_errors
+       * @enum {string}
+       */
+      attr: "new_value.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RequestComposeStackUpdateNewValueValueErrorComponent: {
+      /**
+       * @description * `new_value.value` - new_value.value
+       * @enum {string}
+       */
+      attr: "new_value.value";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestComposeStackUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    RequestComposeStackUpdateTypeErrorComponent: {
+      /**
+       * @description * `type` - type
+       * @enum {string}
+       */
+      attr: "type";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    RequestComposeStackUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["RequestComposeStackUpdateError"][];
+    };
     RequestEnvChangesError: components["schemas"]["RequestEnvChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestEnvChangesNewValueErrorComponent"];
     RequestEnvChangesErrorResponse400: components["schemas"]["RequestEnvChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestEnvChangesNewValueErrorComponent: {
@@ -6986,6 +7669,417 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  compose_stacks_list: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ComposeStack"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ComposeStacksListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get a compose stack details */
+  getComposeStackDetails: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ComposeStackUpdate"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetComposeStackDetailsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  compose_stacks_update: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["ComposeStackUpdateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ComposeStackUpdateRequest"];
+        "multipart/form-data": components["schemas"]["ComposeStackUpdateRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ComposeStackUpdate"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ComposeStacksUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get a compose stack deployment details */
+  getComposeStackDeploymentDetails: {
+    parameters: {
+      path: {
+        env_slug: string;
+        hash: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ComposeStackDeployment"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetComposeStackDeploymentDetailsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Archive a compose stack */
+  archiveComposeStack: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ArchiveComposeStackErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Queue a new deployment for the compose stack */
+  deployComposeStack: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["ComposeStackDeployRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ComposeStackDeployRequestRequest"];
+        "multipart/form-data": components["schemas"]["ComposeStackDeployRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ComposeStackDeployment"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["DeployComposeStackErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Request a new compose stack change */
+  requestComposeStackUpdate: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["ComposeStackDeploymentChangeRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ComposeStackDeploymentChangeRequestRequest"];
+        "multipart/form-data": components["schemas"]["ComposeStackDeploymentChangeRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ComposeStackChange"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["RequestComposeStackUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  compose_stacks_create_create: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ComposeStackRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ComposeStackRequest"];
+        "multipart/form-data": components["schemas"]["ComposeStackRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["ComposeStack"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ComposeStacksCreateCreateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Create compose stack from Dokploy template
+   * @description Use a dokploy template encoded as base64 and ZaneOps will automatically convert it to its compose syntax
+   */
+  createFromDokployTemplateBase64: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateComposeStackFromDokployTemplateRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["CreateComposeStackFromDokployTemplateRequestRequest"];
+        "multipart/form-data": components["schemas"]["CreateComposeStackFromDokployTemplateRequestRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["ComposeStack"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CreateFromDokployTemplateBase64ErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Create compose stack from Dokploy template object (compose+config)
+   * @description Pass a dokploy object with content+config and ZaneOps will automatically convert it to its compose syntax
+   */
+  createFromDokployTemplateObject: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateComposeStackFromDokployTemplateObjectRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["CreateComposeStackFromDokployTemplateObjectRequestRequest"];
+        "multipart/form-data": components["schemas"]["CreateComposeStackFromDokployTemplateObjectRequestRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["ComposeStack"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CreateFromDokployTemplateObjectErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

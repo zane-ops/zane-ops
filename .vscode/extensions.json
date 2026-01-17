@@ -1,3 +1,11 @@
 {
-  "recommendations": ["biomejs.biome", "ms-python.python", "charliermarsh.ruff"]
+  "recommendations": [
+    "biomejs.biome",
+    "ms-python.python",
+    "charliermarsh.ruff",
+    "seatonjiang.gitmoji-vscode",
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+    "GitHub.vscode-pull-request-github"
+  ]
 }
