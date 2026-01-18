@@ -621,6 +621,7 @@ class ComposeSpecProcessor:
                     "zane-managed": "true",
                     "zane-project": stack.project_id,
                     "zane-environment": stack.environment_id,
+                    "status": "active",  # so that `make deploy` restart this service
                 }
             )
 
