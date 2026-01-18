@@ -242,33 +242,35 @@ class ComposeStackActivities:
     @activity.defn
     async def expose_stack_services_to_http(
         self, deployment: ComposeStackDeploymentDetails
-    ):
+    ) -> dict[str, ComposeStackUrlRouteDto]:
         stack = deployment.stack
+        routes_added: dict[str, ComposeStackUrlRouteDto] = {}
         for service_name, service_urls in stack.urls.items():
             for url in service_urls:
-                ZaneProxyClient.upsert_compose_stack_service_url(
+                route_id = ZaneProxyClient.upsert_compose_stack_service_url(
                     stack_id=deployment.stack.id,
                     service_name=service_name,
                     stack_hash_prefix=stack.hash_prefix,
                     url=url,
                 )
+                routes_added[route_id] = url
+        return routes_added
 
     @activity.defn
-    async def cleanup_old_stack_urls(self, deployment: ComposeStackDeploymentDetails):
+    async def cleanup_old_stack_urls(
+        self, deployment: ComposeStackDeploymentDetails
+    ) -> List[tuple[str, str, str]]:
         stack = deployment.stack
-        all_routes: List[ComposeStackUrlRouteDto] = []
-        for service_urls in stack.urls.values():
-            all_routes.extend(service_urls)
 
-        await ZaneProxyClient.cleanup_old_compose_stack_service_urls(
+        return await ZaneProxyClient.cleanup_old_compose_stack_service_urls(
             stack_id=stack.id,
-            all_urls=all_routes,
+            all_urls=stack.urls,
         )
 
     @activity.defn
     async def cleanup_old_stack_services(
         self, deployment: ComposeStackDeploymentDetails
-    ):
+    ) -> List[str]:
         stack = deployment.stack
         spec = ComposeStackSpec.from_dict(yaml.safe_load(stack.computed_content))
         current_services_in_spec = [service_name for service_name in spec.services]
@@ -277,11 +279,15 @@ class ComposeStackActivities:
             filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
         )
 
+        stack_services_deleted = []
+
         for service in all_stack_services:
             service_name = cast(str, service.name).removeprefix(f"{stack.name}_")
 
             if service_name not in current_services_in_spec:
                 service.remove()
+                stack_services_deleted.append(service_name)
+        return stack_services_deleted
 
     @activity.defn
     async def check_stack_health(self, deployment: ComposeStackDeploymentDetails):
