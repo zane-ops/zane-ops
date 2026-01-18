@@ -1,5 +1,6 @@
 import asyncio
 from datetime import timedelta
+from typing import Optional
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
@@ -31,6 +32,50 @@ class DeployComposeStackWorkflow:
         self.cancellation_requested.add(input.deployment_hash)
         print(f"Received signal {input=} {self.cancellation_requested=}")
 
+    async def check_for_cancellation(
+        self, deployment: ComposeStackDeploymentDetails
+    ) -> bool:
+        return deployment.hash in self.cancellation_requested
+
+    async def handle_cancellation(
+        self,
+        deployment: ComposeStackDeploymentDetails,
+        build_details: Optional[ComposeStackBuildDetails],
+    ) -> Optional[ComposeStackDeploymentDetails]:
+        print(f"Handling cancellation for deployment {deployment.hash}")
+
+        if build_details is not None:
+            await workflow.execute_activity_method(
+                ComposeStackActivities.cleanup_temporary_directory_for_stack_deployment,
+                build_details,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+        await workflow.execute_activity_method(
+            ComposeStackActivities.save_cancelled_stack_deployment,
+            deployment,
+            start_to_close_timeout=timedelta(seconds=5),
+            retry_policy=self.retry_policy,
+        )
+
+        await workflow.execute_activity_method(
+            ComposeStackActivities.reset_stack_deploy_semaphore,
+            deployment.stack.id,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+        next_queued_deployment = await workflow.execute_activity_method(
+            ComposeStackActivities.get_next_queued_deployment,
+            deployment,
+            start_to_close_timeout=timedelta(seconds=5),
+            retry_policy=self.retry_policy,
+        )
+        if next_queued_deployment is not None:
+            workflow.continue_as_new(next_queued_deployment)
+        return next_queued_deployment
+
     @workflow.run
     async def run(self, deployment: ComposeStackDeploymentDetails):
         print(f"Running workflow DeployComposeStackWorkflow.run({deployment=})")
@@ -48,6 +93,9 @@ class DeployComposeStackWorkflow:
             retry_policy=self.retry_policy,
         )
 
+        if await self.check_for_cancellation(deployment):
+            return await self.handle_cancellation(deployment, build_details)
+
         try:
             await workflow.execute_activity_method(
                 ComposeStackActivities.prepare_stack_deployment,
@@ -55,6 +103,9 @@ class DeployComposeStackWorkflow:
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
+
+            if await self.check_for_cancellation(deployment):
+                return await self.handle_cancellation(deployment, build_details)
 
             tmp_dir = await workflow.execute_activity_method(
                 ComposeStackActivities.create_temporary_directory_for_stack_deployment,
@@ -67,12 +118,18 @@ class DeployComposeStackWorkflow:
                 tmp_build_dir=tmp_dir, deployment=deployment
             )
 
+            if await self.check_for_cancellation(deployment):
+                return await self.handle_cancellation(deployment, build_details)
+
             await workflow.execute_activity_method(
                 ComposeStackActivities.create_files_in_docker_stack_folder,
                 build_details,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
+
+            if await self.check_for_cancellation(deployment):
+                return await self.handle_cancellation(deployment, build_details)
 
             await workflow.execute_activity_method(
                 ComposeStackActivities.deploy_stack_with_cli,
@@ -82,6 +139,9 @@ class DeployComposeStackWorkflow:
                 retry_policy=self.retry_policy,
             )
 
+            if await self.check_for_cancellation(deployment):
+                return await self.handle_cancellation(deployment, build_details)
+
             status, status_reason = await workflow.execute_activity_method(
                 ComposeStackActivities.check_stack_health,
                 deployment,
@@ -89,6 +149,9 @@ class DeployComposeStackWorkflow:
                 heartbeat_timeout=timedelta(seconds=3),
                 retry_policy=self.retry_policy,
             )
+
+            if await self.check_for_cancellation(deployment):
+                return await self.handle_cancellation(deployment, build_details)
 
             await workflow.execute_activity_method(
                 ComposeStackActivities.expose_stack_services_to_http,

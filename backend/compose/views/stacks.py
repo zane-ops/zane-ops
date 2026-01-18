@@ -34,8 +34,14 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, PolymorphicProxySerializer
 from rest_framework import status
 from temporal.workflows import DeployComposeStackWorkflow, ArchiveComposeStackWorkflow
-from temporal.shared import ComposeStackDeploymentDetails, ComposeStackArchiveDetails
+from temporal.shared import (
+    ComposeStackDeploymentDetails,
+    ComposeStackArchiveDetails,
+    CancelDeploymentSignalInput,
+)
 from temporal.client import TemporalClient
+from zane_api.views.base import ResourceConflict
+from zane_api.serializers import ErrorResponse409Serializer
 from ..dtos import ComposeStackSnapshot, DokployTemplate
 from rest_framework.serializers import Serializer
 from ..adapters import DokployComposeAdapter
@@ -631,3 +637,86 @@ class ComposeStackRequestChanges(APIView):
         serializer = ComposeStackChangeSerializer(change)
 
         return Response(data=serializer.data)
+
+
+class CancelComposeStackDeploymentAPIView(APIView):
+    serializer_class = ComposeStackDeploymentSerializer
+
+    @transaction.atomic()
+    @extend_schema(
+        request=None,
+        responses={409: ErrorResponse409Serializer, 200: ComposeStackDeploymentSerializer},
+        operation_id="cancelComposeStackDeployment",
+        summary="Cancel compose stack deployment",
+        description="Cancel a compose stack deployment in progress.",
+    )
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        env_slug: str,
+        slug: str,
+        hash: str,
+    ):
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = ComposeStack.objects.filter(
+                environment=environment,
+                project=project,
+                slug=slug,
+            ).get()
+            deployment = ComposeStackDeployment.objects.filter(
+                stack=stack, hash=hash
+            ).get()
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+        except ComposeStackDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{hash}` does not exist for this stack."
+            )
+
+        if deployment.finished_at is not None or deployment.status not in [
+            ComposeStackDeployment.DeploymentStatus.QUEUED,
+            ComposeStackDeployment.DeploymentStatus.DEPLOYING,
+        ]:
+            raise ResourceConflict(
+                detail="This deployment cannot be cancelled as it has already finished "
+                "or is in the process of cancelling."
+            )
+
+        if deployment.started_at is None:
+            deployment.status = ComposeStackDeployment.DeploymentStatus.CANCELLED
+            deployment.status_reason = "Deployment cancelled."
+            deployment.save()
+
+        # Capture values before lambda to avoid lazy loading issues after commit
+        deployment_hash = deployment.hash
+        workflow_id = deployment.workflow_id
+
+        transaction.on_commit(
+            lambda: TemporalClient.workflow_signal(
+                workflow=DeployComposeStackWorkflow.run,
+                input=CancelDeploymentSignalInput(deployment_hash=deployment_hash),
+                signal=DeployComposeStackWorkflow.cancel,
+                workflow_id=workflow_id,
+            )
+        )
+
+        serializer = ComposeStackDeploymentSerializer(deployment)
+        return Response(data=serializer.data, status=status.HTTP_200_OK)

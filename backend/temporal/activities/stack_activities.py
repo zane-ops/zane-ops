@@ -628,3 +628,23 @@ class ComposeStackActivities:
             )
             await semaphore.reset()
         print(f"Semaphore for stack {Colors.ORANGE}{stack_id}{Colors.ENDC} reset ✅")
+
+    @activity.defn
+    async def save_cancelled_stack_deployment(
+        self, deployment: ComposeStackDeploymentDetails
+    ):
+        try:
+            stack_deployment = await ComposeStackDeployment.objects.filter(
+                hash=deployment.hash
+            ).aget()
+        except ComposeStackDeployment.DoesNotExist:
+            raise ApplicationError(
+                "Cannot cancel a non existent deployment.",
+            )
+
+        stack_deployment.status = ComposeStackDeployment.DeploymentStatus.CANCELLED
+        stack_deployment.status_reason = "Deployment cancelled."
+        stack_deployment.finished_at = timezone.now()
+        await stack_deployment.asave(
+            update_fields=["updated_at", "status", "status_reason", "finished_at"]
+        )

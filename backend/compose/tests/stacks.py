@@ -73,6 +73,59 @@ class ComposeStackAPITestBase(AuthAPITestCase):
         )
         return await Project.objects.aget(slug=slug)
 
+    async def acreate_and_deploy_compose_stack(
+        self,
+        content: str,
+        slug="my-stack",
+    ):
+        from typing import cast
+        from zane_api.utils import jprint
+
+        project = await self.acreate_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": slug,
+            "user_content": content,
+        }
+
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack, await ComposeStack.objects.filter(slug=slug).afirst()
+        )
+        self.assertIsNotNone(stack)
+        self.assertIsNone(stack.user_content)
+        self.assertIsNone(stack.computed_content)
+
+        # Deploy the stack
+        response = await self.async_client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        await stack.arefresh_from_db()
+
+        return project, stack
+
 
 class CreateComposeStackViewTests(ComposeStackAPITestBase):
     def test_create_simple_compose_stack(self):
