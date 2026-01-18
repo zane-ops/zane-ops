@@ -89,7 +89,6 @@ class ComposeStackCancelViewTests(ComposeStackAPITestBase):
         return project, stack
 
     async def test_cancel_running_deployment(self):
-        return  # FIXME: we need to remove
         project, stack = await self.acreate_and_deploy_compose_stack(
             DOCKER_COMPOSE_MINIMAL
         )
