@@ -768,24 +768,27 @@ class ComposeSpecProcessor:
             ),
         )
 
-        before = yaml.safe_dump(
-            ComposeSpecProcessor._reconcile_computed_spec_with_user_content(
-                spec,
-                user_content,
-                stack_hash_prefix,
-            ),
+        reconcilied = ComposeSpecProcessor._reconcile_computed_spec_with_user_content(
+            spec,
+            user_content,
+            stack_hash_prefix,
+        )
+
+        # to prevent syntax errors when expanding env variables, we
+        json_spec = json.dumps(reconcilied, indent=2)
+
+        x_envs = spec.to_dict()["x-zane-env"]
+        expanded = expand(
+            json_spec,
+            environ=x_envs,
+        )
+
+        return yaml.safe_dump(
+            json.loads(expanded),
             default_flow_style=False,
             sort_keys=False,  # Preserve order
             allow_unicode=True,
         )
-
-        # always quote string characters to not confuse them with other value types
-        expanded = expand(
-            before,
-            environ=spec.to_dict()["x-zane-env"],
-        )
-
-        return expanded
 
     @classmethod
     def extract_new_env_overrides(
