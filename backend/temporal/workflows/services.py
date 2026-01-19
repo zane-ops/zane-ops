@@ -109,6 +109,40 @@ class BaseDeploymentWorklow:
             )
         return deployment.hash in self.cancellation_requested
 
+    async def monitor_cancellation(
+        self,
+        activity_handle: ActivityHandle,
+        deployment: DeploymentDetails,
+        pause_at_step: Optional[DockerDeploymentStep | GitDeploymentStep],
+        step_to_pause: DockerDeploymentStep | GitDeploymentStep | None = None,
+        timeout: timedelta = timedelta(seconds=30),
+    ):
+        """
+        Monitors an activity for cancellation requests. If a cancellation is requested,
+        cancels the activity handle.
+
+        Args:
+            activity_handle: The activity handle to monitor and potentially cancel
+            deployment: The deployment details containing the hash to check
+            pause_at_step: The step at which to pause (for testing)
+            step_to_pause: The step this monitor is associated with
+            timeout: How long to wait for a cancellation signal
+        """
+        try:
+            if pause_at_step is not None:
+                if pause_at_step != step_to_pause:
+                    return
+            print(f"await monitor_cancellation({activity_handle.get_name()})")
+            await workflow.wait_condition(
+                lambda: deployment.hash in self.cancellation_requested,
+                timeout=timeout,
+            )
+            print(f"cancelling activity {activity_handle.get_name()}")
+        except (asyncio.CancelledError, TimeoutError):
+            pass  # do nothing
+        else:
+            activity_handle.cancel()
+
 
 @workflow.defn(name="deploy-docker-service-workflow")
 class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
@@ -565,26 +599,6 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             else None
         )
 
-        async def monitor_cancellation(
-            activity_handle: ActivityHandle,
-            timeout: timedelta = timedelta(seconds=30),
-            step_to_pause: GitDeploymentStep | None = None,
-        ):
-            try:
-                if pause_at_step is not None:
-                    if pause_at_step != step_to_pause:
-                        return
-                print(f"await monitor_cancellation({activity_handle.get_name()})")
-                await workflow.wait_condition(
-                    lambda: deployment.hash in self.cancellation_requested,
-                    timeout=timeout,
-                )
-                print(f"cancelling activity {activity_handle.get_name()}")
-            except (asyncio.CancelledError, TimeoutError):
-                pass  # do nothing
-            else:
-                activity_handle.cancel()
-
         try:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.prepare_deployment,
@@ -646,8 +660,10 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             )
 
             monitor_task = asyncio.create_task(
-                monitor_cancellation(
+                self.monitor_cancellation(
                     clone_repository_activity_handle,
+                    deployment=deployment,
+                    pause_at_step=pause_at_step,
                     step_to_pause=GitDeploymentStep.CLONING_REPOSITORY,
                     timeout=timedelta(minutes=2, seconds=30),
                 )
@@ -835,8 +851,10 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 )
 
             monitor_task = asyncio.create_task(
-                monitor_cancellation(
+                self.monitor_cancellation(
                     build_image_activity_task,
+                    deployment=deployment,
+                    pause_at_step=pause_at_step,
                     step_to_pause=GitDeploymentStep.BUILDING_IMAGE,
                     timeout=timedelta(minutes=20),
                 )
@@ -890,8 +908,10 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 ),  # We do not want to retry the push
             )
             monitor_task = asyncio.create_task(
-                monitor_cancellation(
+                self.monitor_cancellation(
                     push_image_activity_task,
+                    deployment=deployment,
+                    pause_at_step=pause_at_step,
                     step_to_pause=GitDeploymentStep.BUILDING_IMAGE,
                     timeout=timedelta(minutes=2),
                 )
