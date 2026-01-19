@@ -97,8 +97,6 @@ class BaseDeploymentWorklow:
             print(
                 f"await check_for_cancellation({pause_at_step=}, {last_completed_step=})"
             )
-            start_time = workflow.time()
-            print(f"{workflow.time()=}, {start_time=}")
             try:
                 await workflow.wait_condition(
                     lambda: deployment.hash in self.cancellation_requested,
