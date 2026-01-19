@@ -1,6 +1,6 @@
 import asyncio
 from datetime import timedelta
-from typing import Coroutine, Literal, Optional, List, cast
+from typing import Literal, Optional, List, cast
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy

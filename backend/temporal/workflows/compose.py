@@ -6,6 +6,9 @@ from temporalio import workflow
 from temporalio.common import RetryPolicy
 
 
+from temporalio.exceptions import ActivityError, is_cancelled_exception
+from temporalio.workflow import ActivityHandle
+
 with workflow.unsafe.imports_passed_through():
     from ..activities import ComposeStackActivities
     from ..shared import (
@@ -32,15 +35,33 @@ class DeployComposeStackWorkflow:
         self.cancellation_requested.add(input.deployment_hash)
         print(f"Received signal {input=} {self.cancellation_requested=}")
 
-    async def check_for_cancellation(
-        self, deployment: ComposeStackDeploymentDetails
-    ) -> bool:
+    def check_for_cancellation(self, deployment: ComposeStackDeploymentDetails) -> bool:
         return deployment.hash in self.cancellation_requested
+
+    async def monitor_cancellation(
+        self,
+        activity_handle: ActivityHandle,
+        deployment: ComposeStackDeploymentDetails,
+        timeout: timedelta = timedelta(seconds=30),
+    ):
+        """
+        Monitor for cancellation requests during long-running activities.
+        If cancellation is requested, cancel the activity.
+        """
+        try:
+            await workflow.wait_condition(
+                lambda: deployment.hash in self.cancellation_requested,
+                timeout=timeout,
+            )
+        except (asyncio.CancelledError, TimeoutError):
+            pass  # do nothing
+        else:
+            activity_handle.cancel()
 
     async def handle_cancellation(
         self,
         deployment: ComposeStackDeploymentDetails,
-        build_details: Optional[ComposeStackBuildDetails],
+        build_details: Optional[ComposeStackBuildDetails] = None,
     ) -> Optional[ComposeStackDeploymentDetails]:
         print(f"Handling cancellation for deployment {deployment.hash}")
 
@@ -93,7 +114,7 @@ class DeployComposeStackWorkflow:
             retry_policy=self.retry_policy,
         )
 
-        if await self.check_for_cancellation(deployment):
+        if self.check_for_cancellation(deployment):
             return await self.handle_cancellation(deployment, build_details)
 
         try:
@@ -104,7 +125,7 @@ class DeployComposeStackWorkflow:
                 retry_policy=self.retry_policy,
             )
 
-            if await self.check_for_cancellation(deployment):
+            if self.check_for_cancellation(deployment):
                 return await self.handle_cancellation(deployment, build_details)
 
             tmp_dir = await workflow.execute_activity_method(
@@ -118,7 +139,7 @@ class DeployComposeStackWorkflow:
                 tmp_build_dir=tmp_dir, deployment=deployment
             )
 
-            if await self.check_for_cancellation(deployment):
+            if self.check_for_cancellation(deployment):
                 return await self.handle_cancellation(deployment, build_details)
 
             await workflow.execute_activity_method(
@@ -128,30 +149,67 @@ class DeployComposeStackWorkflow:
                 retry_policy=self.retry_policy,
             )
 
-            if await self.check_for_cancellation(deployment):
+            if self.check_for_cancellation(deployment):
                 return await self.handle_cancellation(deployment, build_details)
 
-            await workflow.execute_activity_method(
+            deploy_activity_handle = workflow.start_activity_method(
                 ComposeStackActivities.deploy_stack_with_cli,
                 build_details,
                 start_to_close_timeout=timedelta(minutes=2, seconds=30),
                 heartbeat_timeout=timedelta(seconds=3),
                 retry_policy=self.retry_policy,
             )
+            monitor_task = asyncio.create_task(
+                self.monitor_cancellation(
+                    deploy_activity_handle,
+                    deployment,
+                    timeout=timedelta(minutes=2, seconds=30),
+                )
+            )
 
-            if await self.check_for_cancellation(deployment):
+            try:
+                await deploy_activity_handle
+                monitor_task.cancel()
+            except ActivityError as e:
+                deploy_activity_handle.cancel()
+                monitor_task.cancel()
+                if (
+                    is_cancelled_exception(e)
+                    and deployment.hash in self.cancellation_requested
+                ):
+                    return await self.handle_cancellation(deployment, build_details)
+                raise
+
+            if self.check_for_cancellation(deployment):
                 return await self.handle_cancellation(deployment, build_details)
 
-            status, status_reason = await workflow.execute_activity_method(
+            healthcheck_activity_handle = workflow.start_activity_method(
                 ComposeStackActivities.check_stack_health,
                 deployment,
                 start_to_close_timeout=timedelta(minutes=2),
                 heartbeat_timeout=timedelta(seconds=3),
                 retry_policy=self.retry_policy,
             )
+            monitor_task = asyncio.create_task(
+                self.monitor_cancellation(
+                    healthcheck_activity_handle,
+                    deployment,
+                    timeout=timedelta(minutes=2),
+                )
+            )
 
-            if await self.check_for_cancellation(deployment):
-                return await self.handle_cancellation(deployment, build_details)
+            try:
+                status, status_reason = await healthcheck_activity_handle
+                monitor_task.cancel()
+            except ActivityError as e:
+                healthcheck_activity_handle.cancel()
+                monitor_task.cancel()
+                if (
+                    is_cancelled_exception(e)
+                    and deployment.hash in self.cancellation_requested
+                ):
+                    return await self.handle_cancellation(deployment, build_details)
+                raise
 
             await workflow.execute_activity_method(
                 ComposeStackActivities.expose_stack_services_to_http,
