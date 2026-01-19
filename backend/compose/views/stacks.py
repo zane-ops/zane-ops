@@ -645,7 +645,10 @@ class CancelComposeStackDeploymentAPIView(APIView):
     @transaction.atomic()
     @extend_schema(
         request=None,
-        responses={409: ErrorResponse409Serializer, 200: ComposeStackDeploymentSerializer},
+        responses={
+            409: ErrorResponse409Serializer,
+            200: ComposeStackDeploymentSerializer,
+        },
         operation_id="cancelComposeStackDeployment",
         summary="Cancel compose stack deployment",
         description="Cancel a compose stack deployment in progress.",
@@ -671,9 +674,11 @@ class CancelComposeStackDeploymentAPIView(APIView):
                 project=project,
                 slug=slug,
             ).get()
-            deployment = ComposeStackDeployment.objects.filter(
-                stack=stack, hash=hash
-            ).get()
+            deployment = (
+                ComposeStackDeployment.objects.filter(stack=stack, hash=hash)
+                .select_related("stack")
+                .get()
+            )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
