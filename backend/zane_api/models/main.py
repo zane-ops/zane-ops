@@ -825,7 +825,8 @@ class Service(BaseService):
         domains = ",".join(
             [url.domain for url in self.urls.filter(associated_port__isnull=False)]
         )
-        return [
+
+        default_variables = [
             {
                 "key": "ZANE",
                 "value": "true",
@@ -886,6 +887,17 @@ class Service(BaseService):
                 "comment": "The hash of each deployment, this is also sent as a header `x-zane-dpl-hash`",
             },
         ]
+
+        if self.type == Service.ServiceType.GIT_REPOSITORY:
+            default_variables.append(
+                {
+                    "key": "GIT_COMMIT_SHA",
+                    "value": "{{deployment.commit_sha}}",
+                    "comment": "The Git commit SHA associated to each deployment",
+                }
+            )
+
+        return default_variables
 
     @property
     def latest_production_deployment(self):

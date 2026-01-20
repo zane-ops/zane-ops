@@ -1262,6 +1262,7 @@ def get_build_environment_variables_for_deployment(
                     deployment={
                         "slot": deployment.slot,
                         "hash": deployment.hash,
+                        "commit_sha": deployment.commit_sha,
                     }
                 ),
             )
