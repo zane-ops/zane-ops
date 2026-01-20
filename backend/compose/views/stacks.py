@@ -792,16 +792,8 @@ class ToggleComposeStackAPIView(APIView):
                 detail="This stack has not been succesfully deployed yet, and thus its state cannot be toggled."
             )
 
-        snapshot = ComposeStackSnapshot(
-            id=stack.id,
-            name=stack.name,
-            slug=stack.slug,
-            hash_prefix=stack.hash_prefix,
-            monitor_schedule_id=stack.monitor_schedule_id,
-            network_alias_prefix=stack.network_alias_prefix,
-            user_content=stack.user_content or "",
-            computed_content=stack.computed_content or "",
-        )
+        snapshot_dict = cast(dict, ComposeStackSnapshotSerializer(stack).data)
+        snapshot = ComposeStackSnapshot.from_dict(snapshot_dict)
 
         payload = ToggleComposeStackDetails(
             stack=snapshot,
