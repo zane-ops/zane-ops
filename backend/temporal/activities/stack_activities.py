@@ -345,33 +345,52 @@ class ComposeStackActivities:
                 )
 
                 service_statuses = {}
-                for status in statuses:
-                    name = status.pop("name")
-                    service_statuses[name] = status
+                for service_status in statuses:
+                    name = service_status.pop("name")
+                    service_statuses[name] = service_status
 
                 await ComposeStack.objects.filter(id=deployment.stack.id).aupdate(
                     service_statuses=service_statuses,
                     updated_at=timezone.now(),
                 )
 
+                status_message = ""
+                for service_name, service_status in service_statuses.items():
+                    running_replicas = service_status["running_replicas"]
+                    desired_replicas = service_status["desired_replicas"]
+                    status = service_status["status"]
+
+                    match status:
+                        case ComposeStackServiceStatus.HEALTHY:
+                            status_color = Colors.GREEN
+                        case ComposeStackServiceStatus.COMPLETE:
+                            status_color = Colors.BLUE
+                        case ComposeStackServiceStatus.SLEEPING:
+                            status_color = Colors.YELLOW
+                        case _:
+                            status_color = Colors.RED
+
+                    status_message += f"{Colors.ORANGE}{service_name}{Colors.ENDC}: {running_replicas}/{desired_replicas} ({status_color}{status}{Colors.ENDC}) \n"
+
                 total_healthy = len(
                     [
                         status
                         for status in statuses
-                        if status["status"] == ComposeStackServiceStatus.HEALTHY
-                        or status["status"] == ComposeStackServiceStatus.COMPLETE
+                        if (
+                            status["status"] == ComposeStackServiceStatus.HEALTHY
+                            or status["status"] == ComposeStackServiceStatus.COMPLETE
+                            or status["status"] == ComposeStackServiceStatus.SLEEPING
+                        )
                     ]
                 )
-                status_message = f"{total_healthy}/{len(services)} of services healthy"
                 all_healthy = total_healthy == len(services)
 
-                status_color = Colors.GREEN if all_healthy else Colors.RED
-
+                # status_message = f"{total_healthy}/{len(services)} of services healthy"
                 await deployment_log(
                     deployment,
                     f"Health check for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
                     f" | {Colors.BLUE}ATTEMPT #{check_attempts}{Colors.ENDC} "
-                    f"| result: {status_color}{status_message}{Colors.ENDC}",
+                    f"\n === result: === \n{status_message}",
                 )
 
                 if all_healthy:

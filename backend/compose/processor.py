@@ -618,6 +618,7 @@ class ComposeSpecProcessor:
             service.deploy["labels"] = service.deploy.get("labels", {})
             service.deploy["labels"].update(
                 {
+                    "zane-stack": stack.id,
                     "zane-managed": "true",
                     "zane-project": stack.project_id,
                     "zane-environment": stack.environment_id,
@@ -645,6 +646,7 @@ class ComposeSpecProcessor:
                     {
                         "zane-managed": "true",
                         "zane-stack": stack.id,
+                        "zane-environment": stack.environment_id,
                         "zane-project": stack.project_id,
                     }
                 )
@@ -658,6 +660,7 @@ class ComposeSpecProcessor:
                     {
                         "zane-managed": "true",
                         "zane-stack": stack.id,
+                        "zane-environment": stack.environment_id,
                         "zane-project": stack.project_id,
                     }
                 )
@@ -776,13 +779,28 @@ class ComposeSpecProcessor:
         )
 
         # to prevent syntax errors when expanding env variables, we
+        # use the json format of the compose file
         json_spec = json.dumps(reconcilied, indent=2)
 
+        print("=== json_spec ===")
+        print(json_spec)
+
         x_envs = spec.to_dict()["x-zane-env"]
-        expanded = expand(
-            json_spec,
-            environ=x_envs,
+        expanded = expand(json_spec, environ=x_envs, surrounded_vars_only=True)
+
+        print("=== expanded ===")
+        print(expanded)
+
+        # in case there is a single slash that isn't correctly formatted after var expansion:
+        # ex: "echo \$date" , it should be reformatted correctly
+        non_escaped_single_slash = re.compile(
+            r"(?<!\\)(\\)(?!\\)([^rnt\"])", re.MULTILINE
         )
+
+        expanded = re.sub(non_escaped_single_slash, r"\\\\\2", expanded)
+
+        print("=== expanded reformatted ===")
+        print(expanded)
 
         return yaml.safe_dump(
             json.loads(expanded),
