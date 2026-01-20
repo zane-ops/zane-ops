@@ -1335,6 +1335,7 @@ NON_SECRET_BUILD_ARGS = {
     "cache-key",
     "FORCE_COLOR",
     "ZANE",
+    "GIT_COMMIT_SHA",
 }
 # Prefixes for env keys that should not be obfuscated
 NON_SECRET_ENV_PREFIXES = ("ZANE_", "NIXPACKS_", "RAILPACK_")
