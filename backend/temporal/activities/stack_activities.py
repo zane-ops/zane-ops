@@ -673,8 +673,9 @@ class ComposeStackActivities:
         for service in services:
             service_mode: str = service.attrs["Spec"]["Mode"]
 
-            if "ReplicatedJob" in service_mode or "GlobalJob" in service_mode:
-                continue  # ignore `job` services, they should not be running already
+            # Only replicated services are considered
+            if "Replicated" not in service_mode:
+                continue
 
             desired_replicas = service.attrs["ServiceStatus"]["DesiredTasks"]
             if desired_replicas == 0:
@@ -710,8 +711,9 @@ class ComposeStackActivities:
         for service in services:
             service_mode: str = service.attrs["Spec"]["Mode"]
 
-            if "ReplicatedJob" in service_mode or "GlobalJob" in service_mode:
-                continue  # ignore `job` services, they should not be running already
+            # Only replicated services are considered
+            if "Replicated" not in service_mode:
+                continue
 
             service_labels: dict[str, str] = service.attrs["Spec"].get("Labels", {})
             service_labels["status"] = "active"
