@@ -249,7 +249,7 @@ class DeployComposeStackWorkflow:
                 )
 
             await workflow.execute_activity_method(
-                ComposeStackActivities.finalize_deployment,
+                ComposeStackActivities.finalize_stack_deployment,
                 ComposeStackMonitorPayload(
                     status,
                     status_reason,

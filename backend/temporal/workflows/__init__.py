@@ -182,7 +182,7 @@ def get_workflows_and_activities():
             stack_activites.check_stack_health,
             stack_activites.create_stack_healthcheck_schedule,
             stack_activites.expose_stack_services_to_http,
-            stack_activites.finalize_deployment,
+            stack_activites.finalize_stack_deployment,
             stack_activites.cleanup_temporary_directory_for_stack_deployment,
             stack_activites.unexpose_stack_services_from_http,
             stack_activites.get_services_in_stack,

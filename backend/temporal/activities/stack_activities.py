@@ -297,12 +297,9 @@ class ComposeStackActivities:
 
         total_time = timedelta(minutes=1, seconds=30)
 
-        services: List[DockerService] = self.docker_client.services.list(
-            filters={"label": [f"com.docker.stack.namespace={deployment.stack.name}"]},
-        )
         start_time = monotonic()
 
-        status_message = f"0/{len(services)} of services healthy"
+        status_message = f"{Colors.GREY}No service started yet{Colors.ENDC}"
         total_healthy = 0
         await deployment_log(
             deployment,
@@ -385,13 +382,12 @@ class ComposeStackActivities:
                 )
                 all_healthy = total_healthy == len(services)
 
-                # status_message = f"{total_healthy}/{len(services)} of services healthy"
                 await deployment_log(
                     deployment,
                     f"Health check for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
-                    f" | {Colors.BLUE}ATTEMPT #{check_attempts}{Colors.ENDC} "
-                    f"\n === result: === \n{status_message}",
+                    f" | {Colors.BLUE}ATTEMPT #{check_attempts}{Colors.ENDC} |  {Colors.BLUE}result: {Colors.ENDC}",
                 )
+                await deployment_log(deployment, status_message.splitlines())
 
                 if all_healthy:
                     break
@@ -442,7 +438,7 @@ class ComposeStackActivities:
             pass
 
     @activity.defn
-    async def finalize_deployment(self, result: ComposeStackMonitorPayload):
+    async def finalize_stack_deployment(self, result: ComposeStackMonitorPayload):
         deployment = result.deployment
 
         status_color = (
@@ -458,7 +454,11 @@ class ComposeStackActivities:
 
         await deployment_log(
             deployment,
-            f"Compose stack deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC} finished with reason {Colors.GREY}{result.status_message}{Colors.ENDC}",
+            f"Compose stack deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC} finished with result:",
+        )
+        await deployment_log(
+            deployment,
+            result.status_message.splitlines(),
         )
 
         await ComposeStackDeployment.objects.filter(
