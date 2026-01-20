@@ -20,6 +20,7 @@ from .serializers import (
     ComposeStackEnvOverrideSerializer,
     CreateComposeStackFromDokployTemplateRequestSerializer,
     CreateComposeStackFromDokployTemplateObjectRequestSerializer,
+    ComposeStackToggleRequestSerializer,
 )
 from ..models import ComposeStack, ComposeStackDeployment, ComposeStackChange
 from django.db.models import QuerySet
@@ -33,11 +34,16 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, PolymorphicProxySerializer
 from rest_framework import status
-from temporal.workflows import DeployComposeStackWorkflow, ArchiveComposeStackWorkflow
+from temporal.workflows import (
+    DeployComposeStackWorkflow,
+    ArchiveComposeStackWorkflow,
+    ToggleComposeStackWorkflow,
+)
 from temporal.shared import (
     ComposeStackDeploymentDetails,
     ComposeStackArchiveDetails,
     CancelDeploymentSignalInput,
+    ToggleComposeStackDetails,
 )
 from temporal.client import TemporalClient
 from zane_api.views.base import ResourceConflict
@@ -725,3 +731,92 @@ class CancelComposeStackDeploymentAPIView(APIView):
 
         serializer = ComposeStackDeploymentSerializer(deployment)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+class ToggleComposeStackAPIView(APIView):
+    @transaction.atomic()
+    @extend_schema(
+        request=ComposeStackToggleRequestSerializer,
+        responses={
+            409: ErrorResponse409Serializer,
+            202: None,
+        },
+        operation_id="toggleComposeStack",
+        summary="Stop/Start a compose stack",
+        description="Stops all services in a compose stack (scales to 0) or starts them back up.",
+    )
+    def put(self, request: Request, project_slug: str, env_slug: str, slug: str):
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = (
+                ComposeStack.objects.filter(
+                    environment=environment,
+                    project=project,
+                    slug=slug,
+                )
+                .prefetch_related("deployments")
+                .get()
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+
+        form = ComposeStackToggleRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+
+        data = cast(dict[str, str], form.data)
+
+        # Check if stack has at least one deployment
+        if (
+            stack.deployments.exclude(
+                status=ComposeStackDeployment.DeploymentStatus.FAILED
+            ).count()
+            == 0
+        ):
+            raise ResourceConflict(
+                detail="This stack has not been succesfully deployed yet, and thus its state cannot be toggled."
+            )
+
+        snapshot = ComposeStackSnapshot(
+            id=stack.id,
+            name=stack.name,
+            slug=stack.slug,
+            hash_prefix=stack.hash_prefix,
+            monitor_schedule_id=stack.monitor_schedule_id,
+            network_alias_prefix=stack.network_alias_prefix,
+            user_content=stack.user_content or "",
+            computed_content=stack.computed_content or "",
+        )
+
+        payload = ToggleComposeStackDetails(
+            stack=snapshot,
+            desired_state=data["desired_state"],  # type: ignore
+        )
+
+        # Capture id before lambda
+        workflow_id = stack.toggle_workflow_id
+
+        transaction.on_commit(
+            lambda: TemporalClient.start_workflow(
+                workflow=ToggleComposeStackWorkflow.run,
+                arg=payload,
+                id=workflow_id,
+            )
+        )
+
+        return Response(None, status=status.HTTP_202_ACCEPTED)

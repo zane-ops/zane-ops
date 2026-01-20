@@ -667,3 +667,16 @@ class ComposeStackMonitorPayload:
     status: str
     status_message: str
     deployment: ComposeStackDeploymentDetails
+
+
+@dataclass
+class ToggleComposeStackDetails:
+    stack: ComposeStackSnapshot
+    desired_state: Literal["start", "stop"]
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            stack=ComposeStackSnapshot.from_dict(data["stack"]),
+            desired_state=data["desired_state"],
+        )

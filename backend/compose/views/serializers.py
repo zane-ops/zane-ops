@@ -245,6 +245,10 @@ class ComposeStackArchiveRequestSerializer(serializers.Serializer):
     delete_volumes = serializers.BooleanField(default=True)
 
 
+class ComposeStackToggleRequestSerializer(serializers.Serializer):
+    desired_state = serializers.ChoiceField(choices=["start", "stop"])
+
+
 class BaseChangeItemSerializer(serializers.Serializer):
     ITEM_CHANGE_TYPE_CHOICES = (
         ("ADD", _("Add")),

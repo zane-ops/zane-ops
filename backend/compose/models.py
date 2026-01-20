@@ -123,6 +123,10 @@ class ComposeStack(TimestampedModel):
         return f"monitor-{self.id}"
 
     @property
+    def toggle_workflow_id(self) -> str:
+        return f"toggle-compose-{self.id}"
+
+    @property
     def unapplied_changes(self):
         return self.changes.filter(applied=False)
 

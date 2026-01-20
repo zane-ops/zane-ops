@@ -937,6 +937,10 @@ class Service(BaseService):
         return self.changes.filter(applied=False)
 
     @property
+    def toggle_workflow_id(self):
+        return f"toggle-{self.id}-{self.project.id}"
+
+    @property
     def applied_changes(self):
         return self.changes.filter(applied=True)
 

@@ -18,6 +18,7 @@ with workflow.unsafe.imports_passed_through():
         ComposeStackArchiveDetails,
         ComposeStackArchiveResult,
         CancelDeploymentSignalInput,
+        ToggleComposeStackDetails,
     )
     from compose.models import ComposeStackDeployment
 
@@ -360,3 +361,31 @@ class ArchiveComposeStackWorkflow:
             retry_policy=self.retry_policy,
         )
         return result
+
+
+@workflow.defn(name="toggle-compose-stack-state")
+class ToggleComposeStackWorkflow:
+    def __init__(self):
+        self.retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+
+    @workflow.run
+    async def run(self, details: ToggleComposeStackDetails):
+        print(f"Running workflow ToggleComposeStackWorkflow.run({details=})")
+
+        if details.desired_state == "stop":
+            await workflow.execute_activity_method(
+                ComposeStackActivities.scale_down_stack_services,
+                details,
+                start_to_close_timeout=timedelta(seconds=60),
+                retry_policy=self.retry_policy,
+            )
+
+        else:
+            await workflow.execute_activity_method(
+                ComposeStackActivities.scale_up_stack_services,
+                details,
+                start_to_close_timeout=timedelta(seconds=60),
+                retry_policy=self.retry_policy,
+            )

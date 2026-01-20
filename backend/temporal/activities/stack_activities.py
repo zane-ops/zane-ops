@@ -53,6 +53,7 @@ from ..shared import (
     ComposeStackMonitorPayload,
     ComposeStackArchiveDetails,
     ProxyURLRoute,
+    ToggleComposeStackDetails,
 )
 
 
@@ -333,6 +334,8 @@ class ComposeStackActivities:
                     },
                     status=True,
                 )
+
+                print(f"[check_stack_health]: {services=}")
 
                 statuses = await asyncio.gather(
                     *[
@@ -653,4 +656,74 @@ class ComposeStackActivities:
         stack_deployment.finished_at = timezone.now()
         await stack_deployment.asave(
             update_fields=["updated_at", "status", "status_reason", "finished_at"]
+        )
+
+    @activity.defn
+    async def scale_down_stack_services(self, details: ToggleComposeStackDetails):
+        """Scale all services in the stack to 0 replicas (sleep)."""
+        stack = details.stack
+        print(
+            f"Scaling down all services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC}..."
+        )
+
+        services: List[DockerService] = self.docker_client.services.list(
+            filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
+            status=True,
+        )
+        print(f"[scale_down_stack_services]: {services=}")
+
+        for service in services:
+            service_mode: str = service.attrs["Spec"]["Mode"]
+
+            if "ReplicatedJob" in service_mode or "GlobalJob" in service_mode:
+                continue  # ignore `job` services, they should not be running already
+
+            desired_replicas = service.attrs["ServiceStatus"]["DesiredTasks"]
+
+            service_labels: dict[str, str] = service.attrs["Spec"].get("Labels", {})
+            service_labels["status"] = "sleeping"
+            service_labels["desired_replicas"] = desired_replicas
+            service.update(mode={"Replicated": {"Replicas": 0}}, labels=service_labels)
+            print(
+                f"Scaled down service {Colors.ORANGE}{service.name}{Colors.ENDC} to 0 replicas"
+            )
+
+        print(
+            f"All services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC} scaled down to 0 replicas ✅"
+        )
+
+    @activity.defn
+    async def scale_up_stack_services(self, details: ToggleComposeStackDetails):
+        """Scale all services in the stack back to their desired replicas (wake)."""
+        stack = details.stack
+        print(
+            f"Scaling up all services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC}..."
+        )
+
+        services: List[DockerService] = self.docker_client.services.list(
+            filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
+            status=True,
+        )
+
+        for service in services:
+            service_mode: str = service.attrs["Spec"]["Mode"]
+
+            if "ReplicatedJob" in service_mode or "GlobalJob" in service_mode:
+                continue  # ignore `job` services, they should not be running already
+
+            service_labels: dict[str, str] = service.attrs["Spec"].get("Labels", {})
+            service_labels["status"] = "active"
+
+            try:
+                desired_replicas = int(service_labels.get("desired_replicas", 1))
+            except ValueError:
+                desired_replicas = 1
+
+            service.update(mode={"Replicated": {"Replicas": desired_replicas}})
+            print(
+                f"Scaled up service {Colors.ORANGE}{service.name}{Colors.ENDC} to {desired_replicas} replica"
+            )
+
+        print(
+            f"All services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC} scaled up ✅"
         )
