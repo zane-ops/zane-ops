@@ -546,7 +546,13 @@ class ComposeSpecProcessor:
 
         # expand all envs that are related to each-other
         for key, env in spec.envs.items():
-            env.value = str(expand(str(env.value), environ=override_dict))
+            env.value = str(
+                expand(
+                    str(env.value),
+                    environ=override_dict,
+                    surrounded_vars_only=True,
+                )
+            )
 
         # Process each service
         for service_name, service in spec.services.items():
@@ -837,7 +843,9 @@ class ComposeSpecProcessor:
         for name, config in spec.configs.items():
             if config.is_derived_from_content and config.content is not None:
                 expanded_content = expand(
-                    config.content, environ=spec.to_dict()["x-zane-env"]
+                    config.content,
+                    environ=spec.to_dict()["x-zane-env"],
+                    surrounded_vars_only=True,
                 )
 
                 # Get previous version info
@@ -926,6 +934,7 @@ class ComposeSpecProcessor:
                 http_port = expand(
                     str(labels.get(f"zane.http.routes.{route_index}.port", "None")),
                     environ=environ,
+                    surrounded_vars_only=True,
                 )
 
                 domain = str(labels.get(f"zane.http.routes.{route_index}.domain"))
@@ -937,9 +946,22 @@ class ComposeSpecProcessor:
                 ).lower()
 
                 route: dict[str, Any] = {
-                    "domain": expand(domain, environ=environ),
-                    "base_path": expand(base_path, environ=environ),
-                    "strip_prefix": expand(strip_prefix, environ=environ) == "true",
+                    "domain": expand(
+                        domain,
+                        environ=environ,
+                        surrounded_vars_only=True,
+                    ),
+                    "base_path": expand(
+                        base_path,
+                        environ=environ,
+                        surrounded_vars_only=True,
+                    ),
+                    "strip_prefix": expand(
+                        strip_prefix,
+                        environ=environ,
+                        surrounded_vars_only=True,
+                    )
+                    == "true",
                     "port": http_port,
                 }
                 name = service_name.removeprefix(f"{stack_hash_prefix}_")
