@@ -335,8 +335,6 @@ class ComposeStackActivities:
                     status=True,
                 )
 
-                print(f"[check_stack_health]: {services=}")
-
                 statuses = await asyncio.gather(
                     *[
                         get_compose_stack_swarm_service_status(
@@ -660,17 +658,17 @@ class ComposeStackActivities:
 
     @activity.defn
     async def scale_down_stack_services(self, details: ToggleComposeStackDetails):
-        """Scale all services in the stack to 0 replicas (sleep)."""
         stack = details.stack
         print(
-            f"Scaling down all services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC}..."
+            f"Scaling down all services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC} (name: {Colors.YELLOW}{stack.name}{Colors.ENDC})..."
         )
+
+        services_scaled_down = {}
 
         services: List[DockerService] = self.docker_client.services.list(
             filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
             status=True,
         )
-        print(f"[scale_down_stack_services]: {services=}")
 
         for service in services:
             service_mode: str = service.attrs["Spec"]["Mode"]
@@ -679,27 +677,31 @@ class ComposeStackActivities:
                 continue  # ignore `job` services, they should not be running already
 
             desired_replicas = service.attrs["ServiceStatus"]["DesiredTasks"]
+            if desired_replicas == 0:
+                continue  # do not shut down already scale down services that were already scaled down
 
             service_labels: dict[str, str] = service.attrs["Spec"].get("Labels", {})
             service_labels["status"] = "sleeping"
-            service_labels["desired_replicas"] = desired_replicas
+            service_labels["desired_replicas"] = str(desired_replicas)
             service.update(mode={"Replicated": {"Replicas": 0}}, labels=service_labels)
+            services_scaled_down[service.name] = 0
             print(
-                f"Scaled down service {Colors.ORANGE}{service.name}{Colors.ENDC} to 0 replicas"
+                f"Scaled down service {Colors.YELLOW}{service.name}{Colors.ENDC} to 0 replicas"
             )
 
         print(
-            f"All services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC} scaled down to 0 replicas ✅"
+            f"All services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC} (name: {Colors.YELLOW}{stack.name}{Colors.ENDC}) scaled down to 0 replicas ✅"
         )
+        return services_scaled_down
 
     @activity.defn
     async def scale_up_stack_services(self, details: ToggleComposeStackDetails):
-        """Scale all services in the stack back to their desired replicas (wake)."""
         stack = details.stack
         print(
-            f"Scaling up all services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC}..."
+            f"Scaling up all services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC} (name: {Colors.YELLOW}{stack.name}{Colors.ENDC})..."
         )
 
+        services_scaled_up = {}
         services: List[DockerService] = self.docker_client.services.list(
             filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
             status=True,
@@ -714,16 +716,26 @@ class ComposeStackActivities:
             service_labels: dict[str, str] = service.attrs["Spec"].get("Labels", {})
             service_labels["status"] = "active"
 
+            current_replicas = service.attrs["ServiceStatus"]["DesiredTasks"]
+            default_replicas = current_replicas if current_replicas > 0 else 1
+
             try:
-                desired_replicas = int(service_labels.get("desired_replicas", 1))
+                desired_replicas = int(
+                    service_labels.pop("desired_replicas", default_replicas)
+                )
             except ValueError:
                 desired_replicas = 1
 
-            service.update(mode={"Replicated": {"Replicas": desired_replicas}})
+            service.update(
+                mode={"Replicated": {"Replicas": desired_replicas}},
+                labels=service_labels,
+            )
+            services_scaled_up[service.name] = desired_replicas
             print(
-                f"Scaled up service {Colors.ORANGE}{service.name}{Colors.ENDC} to {desired_replicas} replica"
+                f"Scaled up service {Colors.YELLOW}{service.name}{Colors.ENDC} to {desired_replicas} replica"
             )
 
         print(
-            f"All services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC} scaled up ✅"
+            f"All services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC} (name: {Colors.YELLOW}{stack.name}{Colors.ENDC}) scaled up ✅"
         )
+        return services_scaled_up
