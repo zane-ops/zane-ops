@@ -194,7 +194,6 @@ class CloneEnviromentAPIView(APIView):
 
 
 class ReviewPreviewEnvDeployAPIView(APIView):
-
     @extend_schema(
         responses={200: EnvironmentWithVariablesSerializer},
         operation_id="getPreviewEnvToReview",
@@ -523,9 +522,7 @@ class EnvironmentDetailsAPIView(APIView):
 class SharedEnvVariablesViewSet(viewsets.ModelViewSet):
     serializer_class = SharedEnvVariableSerializer
     pagination_class = None
-    queryset = (
-        SharedEnvVariable.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = SharedEnvVariable.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
     def get_queryset(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
@@ -743,8 +740,8 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                 is_fork = pull_request["head"]["repo"]["fork"]
                 should_deploy = not is_fork
 
-                base_repository_url = f"https://github.com/{pull_request["base"]['repo']["full_name"]}.git"
-                head_repository_url = f"https://github.com/{pull_request["head"]['repo']["full_name"]}.git"
+                base_repository_url = f"https://github.com/{pull_request['base']['repo']['full_name']}.git"
+                head_repository_url = f"https://github.com/{pull_request['head']['repo']['full_name']}.git"
 
                 env_name = f"preview-pr-{pull_request['number']}-{current_service.slug}-{fake.slug()}".lower()
                 preview_meta = PreviewEnvMetadata.objects.create(
@@ -903,9 +900,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
 class PreviewEnvTemplateListAPIView(ListCreateAPIView):
     serializer_class = PreviewEnvTemplateSerializer
     pagination_class = None
-    queryset = (
-        PreviewEnvTemplate.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = PreviewEnvTemplate.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
     def get_queryset(self):  # type: ignore
         project_slug = self.kwargs["slug"]
@@ -939,9 +934,7 @@ class PreviewEnvTemplateDetailsAPIView(RetrieveUpdateDestroyAPIView):
     lookup_url_kwarg = (
         "template_slug"  # This corresponds to the param in the URL configuration
     )
-    queryset = (
-        PreviewEnvTemplate.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
+    queryset = PreviewEnvTemplate.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
     http_method_names = ["patch", "get", "delete"]
 
     def get_serializer(self, *args, **kwargs):

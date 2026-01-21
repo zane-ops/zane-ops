@@ -2088,8 +2088,8 @@ class Environment(TimestampedModel):
         else:
             match preview_data.template.clone_strategy:
                 case PreviewEnvTemplate.PreviewCloneStrategy.ALL:
-                    services_to_clone = [
-                        *self.services.select_related(
+                    services_to_clone = list(
+                        self.services.select_related(
                             "healthcheck",
                             "project",
                             "environment",
@@ -2103,11 +2103,11 @@ class Environment(TimestampedModel):
                             "configs",
                         )
                         .all()
-                    ]
+                    )
 
                 case PreviewEnvTemplate.PreviewCloneStrategy.ONLY:
-                    services_to_clone = [
-                        *self.services.filter(
+                    services_to_clone = list(
+                        self.services.filter(
                             id__in=preview_data.template.services_to_clone.values_list(
                                 "id", flat=True
                             )
@@ -2126,7 +2126,7 @@ class Environment(TimestampedModel):
                             "configs",
                         )
                         .all()
-                    ]
+                    )
 
             if preview_data.metadata.service.id not in [
                 service.id for service in services_to_clone
