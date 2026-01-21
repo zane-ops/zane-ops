@@ -128,3 +128,8 @@ class ToggleStackSleepViewTests(ComposeStackAPITestBase):
             data={"desired_state": "stop"},
         )
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+
+class RollBackStackViewTests(ComposeStackAPITestBase):
+    def test_rollback_to_a_previous_deployment(self):
+        pass  # TODO
