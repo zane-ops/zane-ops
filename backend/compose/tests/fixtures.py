@@ -415,8 +415,8 @@ services:
     image: myapi:latest
     deploy:
       labels:
-        zane.http.routes.0.port: $API_PORT
-        zane.http.routes.0.domain: $API_DOMAIN
+        zane.http.routes.0.port: ${API_PORT}
+        zane.http.routes.0.domain: ${API_DOMAIN}
 
   dashboard:
     image: mydashboard:latest

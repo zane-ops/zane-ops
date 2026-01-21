@@ -12,53 +12,10 @@ from .stacks import ComposeStackAPITestBase
 
 
 class ToggleStackSleepViewTests(ComposeStackAPITestBase):
-    async def acreate_and_deploy_compose_stack(
-        self,
-        content: str = DOCKER_COMPOSE_MINIMAL,
-        slug: str = "my-stack",
-    ):
-        project = await self.acreate_project(slug="compose")
-
-        create_stack_payload = {
-            "slug": slug,
-            "user_content": content,
-        }
-
-        response = await self.async_client.post(
-            reverse(
-                "compose:stacks.create",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            ),
-            data=create_stack_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        stack = cast(
-            ComposeStack, await ComposeStack.objects.filter(slug=slug).afirst()
-        )
-        self.assertIsNotNone(stack)
-
-        # Deploy the stack
-        response = await self.async_client.put(
-            reverse(
-                "compose:stacks.deploy",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                    "slug": stack.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        await stack.arefresh_from_db()
-        return project, stack
-
     async def test_stop_stack_scales_all_services_to_zero(self):
-        project, stack = await self.acreate_and_deploy_compose_stack()
+        project, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL
+        )
 
         # Verify stack is deployed and has service statuses
         self.assertIsNotNone(stack.service_statuses)
@@ -87,7 +44,9 @@ class ToggleStackSleepViewTests(ComposeStackAPITestBase):
             self.assertEqual(0, service.replicas)
 
     async def test_start_stack_scales_all_services_back(self):
-        project, stack = await self.acreate_and_deploy_compose_stack()
+        project, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL
+        )
 
         # First stop the stack
         response = await self.async_client.put(
