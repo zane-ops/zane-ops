@@ -358,12 +358,12 @@ class ComposeStackActivities:
                     status = service_status["status"]
 
                     match status:
-                        case ComposeStackServiceStatus.HEALTHY:
-                            status_color = Colors.GREEN
                         case (
                             ComposeStackServiceStatus.COMPLETE
-                            | ComposeStackServiceStatus.STARTING
+                            | ComposeStackServiceStatus.HEALTHY
                         ):
+                            status_color = Colors.GREEN
+                        case ComposeStackServiceStatus.STARTING:
                             status_color = Colors.BLUE
                         case ComposeStackServiceStatus.SLEEPING:
                             status_color = Colors.YELLOW
