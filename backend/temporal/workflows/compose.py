@@ -375,18 +375,33 @@ class ToggleComposeStackWorkflow:
     async def run(self, details: ToggleComposeStackDetails):
         print(f"Running workflow ToggleComposeStackWorkflow.run({details=})")
 
-        if details.desired_state == "stop":
-            await workflow.execute_activity_method(
-                ComposeStackActivities.scale_down_stack_services,
-                details,
-                start_to_close_timeout=timedelta(seconds=60),
-                retry_policy=self.retry_policy,
-            )
+        await workflow.execute_activity_method(
+            ComposeStackActivities.lock_stack_deploy_semaphore,
+            details.stack.id,
+            start_to_close_timeout=timedelta(minutes=7),
+            retry_policy=self.retry_policy,
+        )
 
-        else:
+        try:
+            if details.desired_state == "stop":
+                await workflow.execute_activity_method(
+                    ComposeStackActivities.scale_down_stack_services,
+                    details,
+                    start_to_close_timeout=timedelta(seconds=60),
+                    retry_policy=self.retry_policy,
+                )
+
+            else:
+                await workflow.execute_activity_method(
+                    ComposeStackActivities.scale_up_stack_services,
+                    details,
+                    start_to_close_timeout=timedelta(seconds=60),
+                    retry_policy=self.retry_policy,
+                )
+        finally:
             await workflow.execute_activity_method(
-                ComposeStackActivities.scale_up_stack_services,
-                details,
-                start_to_close_timeout=timedelta(seconds=60),
+                ComposeStackActivities.reset_stack_deploy_semaphore,
+                details.stack.id,
+                start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
