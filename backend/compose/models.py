@@ -241,6 +241,7 @@ class ComposeStackDeployment(TimestampedModel):
         on_delete=models.CASCADE,
         related_name="deployments",
     )
+    is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
 
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED"

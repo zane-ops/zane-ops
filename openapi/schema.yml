@@ -1198,6 +1198,101 @@ paths:
               schema:
                 $ref: '#/components/schemas/ComposeStackDeployment'
           description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/{hash}/:
+    put:
+      operationId: reDeployComposeStack
+      summary: Rollback to a previous version of the compose stack
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReDeployComposeStackErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStackDeployment'
+          description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/request-changes/:
     put:
       operationId: requestComposeStackUpdate
@@ -11786,12 +11881,17 @@ components:
           type: string
           format: date-time
           nullable: true
+        redeploy_hash:
+          type: string
+          readOnly: true
+          nullable: true
       required:
       - changes
       - commit_message
       - finished_at
       - hash
       - queued_at
+      - redeploy_hash
       - stack_snapshot
       - started_at
       - status
@@ -19011,6 +19111,13 @@ components:
       - is_static
       - not_found_page
       - publish_directory
+    ReDeployComposeStackErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ReDeployGitServiceError:
       oneOf:
       - $ref: '#/components/schemas/ReDeployGitServiceNonFieldErrorsErrorComponent'

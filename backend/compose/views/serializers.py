@@ -17,13 +17,15 @@ import time
 from ..processor import ComposeSpecProcessor
 from zane_api.models import Project, Environment
 from django.core.exceptions import ValidationError
-from ..dtos import ComposeStackServiceStatus
+from ..dtos import ComposeStackServiceStatus, ComposeStackEnvOverrideDto
 from zane_api.utils import DockerSwarmTaskState, EnhancedJSONEncoder
 from django.db import transaction
 from zane_api.views.serializers import EnvRequestSerializer
 from django.utils.translation import gettext_lazy as _
 from drf_standardized_errors.formatter import ExceptionFormatter
 from zane_api.serializers import URLDomainField, URLPathField
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 
 
 class ComposeStackChangeSerializer(serializers.ModelSerializer):
@@ -220,6 +222,11 @@ class ComposeStackSnapshotSerializer(ComposeStackSerializer):
 class ComposeStackDeploymentSerializer(serializers.ModelSerializer):
     stack_snapshot = ComposeStackSnapshotSerializer(read_only=True)
     changes = ComposeStackChangeSerializer(many=True, read_only=True)
+    redeploy_hash = serializers.SerializerMethodField(allow_null=True)
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_redeploy_hash(self, obj: ComposeStackDeployment):
+        return obj.is_redeploy_of.hash if obj.is_redeploy_of is not None else None
 
     class Meta:
         model = ComposeStackDeployment
@@ -233,6 +240,7 @@ class ComposeStackDeploymentSerializer(serializers.ModelSerializer):
             "started_at",
             "changes",
             "finished_at",
+            "redeploy_hash",
         ]
 
 
@@ -414,30 +422,64 @@ class ComposeEnvOverrideItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
+        # Handle global env & overrides
+        override_list: list[ComposeStackEnvOverrideDto] = [
+            ComposeStackEnvOverrideDto(
+                id=env.id,
+                key=env.key,
+                value=str(env.value),
+            )
+            for env in stack.env_overrides.all()
+        ]
+
+        pending_overrides = stack.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.ENV_OVERRIDES
+        ).all()
+
+        for change in pending_overrides:
+            match change.type:
+                case ComposeStackChange.ChangeType.DELETE:
+                    old_value = cast(dict[str, str], change.old_value)
+
+                    override = ComposeStackEnvOverrideDto(
+                        id=change.item_id,
+                        key=old_value["key"],
+                        value=old_value["value"],
+                    )
+                    override_list.remove(override)
+                case ComposeStackChange.ChangeType.ADD:
+                    new_value = cast(dict[str, str], change.new_value)
+                    override = ComposeStackEnvOverrideDto(
+                        key=new_value["key"],
+                        value=new_value["value"],
+                    )
+                    override_list.append(override)
+                case ComposeStackChange.ChangeType.UPDATE:
+                    new_value = cast(dict[str, str], change.new_value)
+                    old_value = cast(dict[str, str], change.old_value)
+                    override = ComposeStackEnvOverrideDto(
+                        id=change.item_id,
+                        key=old_value["key"],
+                        value=old_value["value"],
+                    )
+                    item_index = override_list.index(override)
+                    override_list[item_index] = ComposeStackEnvOverrideDto(
+                        id=change.item_id,
+                        key=new_value["key"],
+                        value=new_value["value"],
+                    )
+
         # validate double `key`
         if new_value is not None:
-            envs_with_same_key = stack.env_overrides.filter(
-                key=new_value.get("key")
-            ).count()
-            envs_changes_with_same_key = stack.unapplied_changes.filter(
-                field=field,
-                new_value__key=new_value.get("key"),
+            total_envs_with_same_length = len(
+                [env for env in override_list if env.key == new_value["key"]]
             )
-            total_envs_with_same_length = envs_with_same_key
-            for env in envs_changes_with_same_key.all():
-                if env.type in [
-                    ComposeStackChange.ChangeType.UPDATE,
-                    ComposeStackChange.ChangeType.DELETE,
-                ]:
-                    total_envs_with_same_length -= 1
-                else:
-                    total_envs_with_same_length += 1
 
-            if total_envs_with_same_length >= 1:
+            if total_envs_with_same_length >= 2:
                 raise serializers.ValidationError(
                     {
                         "new_value": {
-                            "key": "Cannot specify two environment variables overrides with the same name for this stack"
+                            "key": "Cannot specify two environment variables overrides with the same key for this stack"
                         }
                     }
                 )
