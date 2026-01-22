@@ -41,11 +41,6 @@ urlpatterns = [
         name="stacks.deploy",
     ),
     re_path(
-        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/deploy/(?P<hash>[a-zA-Z0-9-_]+)/?$",
-        views.ComposeStackReDeployAPIView.as_view(),
-        name="stacks.redeploy",
-    ),
-    re_path(
         rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/archive/?$",
         views.ComposeStackArchiveAPIView.as_view(),
         name="stacks.archive",
@@ -54,6 +49,11 @@ urlpatterns = [
         rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/toggle/?$",
         views.ToggleComposeStackAPIView.as_view(),
         name="stacks.toggle",
+    ),
+    re_path(
+        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/deploy/(?P<hash>[a-zA-Z0-9-_]+)/?$",
+        views.ComposeStackReDeployAPIView.as_view(),
+        name="stacks.redeploy",
     ),
     re_path(
         rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/(?P<hash>[a-zA-Z0-9-_]+)/?$",
