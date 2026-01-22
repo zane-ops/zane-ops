@@ -484,6 +484,26 @@ class ComposeStackDeploymentDetailsAPIView(RetrieveAPIView):
         return deployment
 
 
+class ComposeStackReDeployAPIView(APIView):
+    serializer_class = ComposeStackDeploymentSerializer
+
+    @transaction.atomic()
+    @extend_schema(
+        request=ComposeStackDeployRequestSerializer,
+        operation_id="reDeployComposeStack",
+        summary="Rollback to a previous version of the compose stack",
+    )
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        env_slug: str,
+        slug: str,
+        hash: str,
+    ):
+        return Response(data={})
+
+
 class ComposeStackDeployAPIView(APIView):
     serializer_class = ComposeStackDeploymentSerializer
 
