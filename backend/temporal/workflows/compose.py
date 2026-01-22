@@ -240,40 +240,41 @@ class DeployComposeStackWorkflow:
             )
 
         finally:
-            if build_details is not None:
+            if not self.check_for_cancellation(deployment):
+                if build_details is not None:
+                    await workflow.execute_activity_method(
+                        ComposeStackActivities.cleanup_temporary_directory_for_stack_deployment,
+                        build_details,
+                        start_to_close_timeout=timedelta(seconds=30),
+                        retry_policy=self.retry_policy,
+                    )
+
                 await workflow.execute_activity_method(
-                    ComposeStackActivities.cleanup_temporary_directory_for_stack_deployment,
-                    build_details,
+                    ComposeStackActivities.finalize_stack_deployment,
+                    ComposeStackMonitorPayload(
+                        status,
+                        status_reason,
+                        deployment=deployment,
+                    ),
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
+                await workflow.execute_activity_method(
+                    ComposeStackActivities.reset_stack_deploy_semaphore,
+                    deployment.stack.id,
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
                 )
 
-            await workflow.execute_activity_method(
-                ComposeStackActivities.finalize_stack_deployment,
-                ComposeStackMonitorPayload(
-                    status,
-                    status_reason,
-                    deployment=deployment,
-                ),
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-            await workflow.execute_activity_method(
-                ComposeStackActivities.reset_stack_deploy_semaphore,
-                deployment.stack.id,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-
-            next_queued_deployment = await workflow.execute_activity_method(
-                ComposeStackActivities.get_next_queued_deployment,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=5),
-                retry_policy=self.retry_policy,
-            )
-            if next_queued_deployment is not None:
-                workflow.continue_as_new(next_queued_deployment)
-            return next_queued_deployment
+                next_queued_deployment = await workflow.execute_activity_method(
+                    ComposeStackActivities.get_next_queued_deployment,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=5),
+                    retry_policy=self.retry_policy,
+                )
+                if next_queued_deployment is not None:
+                    workflow.continue_as_new(next_queued_deployment)
+                return next_queued_deployment
 
 
 @workflow.defn(name="archive-compose-stack")
