@@ -421,7 +421,7 @@ class ComposeEnvOverrideItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
-        # Handle global env & overrides
+        # Handle double `key`
         override_list: list[ComposeStackEnvOverrideDto] = [
             ComposeStackEnvOverrideDto(
                 id=env.id,
