@@ -490,7 +490,7 @@ class ComposeSpecProcessor:
 
         # Inject zane network & environment network to networks section
         spec.networks.update(
-            dict(env_network_name={"external": True}, zane={"external": True})
+            {env_network_name: {"external": True}, "zane": {"external": True}}
         )
 
         # Rename services to prevent DNS name collisions in the shared `zane` network
