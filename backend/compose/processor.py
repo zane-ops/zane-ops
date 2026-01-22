@@ -489,15 +489,9 @@ class ComposeSpecProcessor:
         )
 
         # Inject zane network & environment network to networks section
-        if env_network_name not in spec.networks:
-            spec.networks[env_network_name] = {
-                "external": True,
-            }
-
-        if "zane" not in spec.networks:
-            spec.networks["zane"] = {
-                "external": True,
-            }
+        spec.networks.update(
+            dict(env_network_name={"external": True}, zane={"external": True})
+        )
 
         # Rename services to prevent DNS name collisions in the shared `zane` network
         # Since all stacks share the `zane` network, service names like `app` would collide
@@ -577,7 +571,7 @@ class ComposeSpecProcessor:
 
             if original_service_name not in aliases:
                 aliases.append(original_service_name)
-            service.networks["default"].update({"aliases": aliases})  # type: ignore
+            service.networks["default"].update({"aliases": aliases})
 
             # Add logging configuration (for Fluentd log collection)
             service.logging = {
@@ -601,21 +595,22 @@ class ComposeSpecProcessor:
             }
 
             # Inject safe update_config for rolling updates
+            # And restart_policy
             # only on non jobs
-            if (
-                service.deploy.get("mode", "replicated") in ["replicated", "global"]
-                and "update_config" not in service.deploy
-            ):
-                service.deploy["update_config"] = {
-                    "parallelism": 1,
-                    "delay": "5s",
-                    "order": "start-first",
-                    "failure_action": "rollback",
-                }
-
             # mode can be `replicated` | `global` or `replicated-job` | `global-job`
             if service.deploy.get("mode", "replicated") in ["replicated", "global"]:
-                # 5. Set restart policy to "any" (unless user explicitly specified one)
+                # Set update_config (unless user explicitly specified one)
+                service.deploy["update_config"] = service.deploy.get(
+                    "update_config",
+                    {
+                        "parallelism": 1,
+                        "delay": "5s",
+                        "order": "start-first",
+                        "failure_action": "rollback",
+                    },
+                )
+
+                # Set restart policy to "any" (unless user explicitly specified one)
                 service.deploy["restart_policy"] = service.deploy.get(
                     "restart_policy", {"condition": "any"}
                 )
@@ -658,8 +653,6 @@ class ComposeSpecProcessor:
                 )
 
         # Add labels to configs for tracking
-        # renamed_configs = {}
-        # all_configs: dict[str, str] = cast(dict, stack.configs) or {}
         for config_name, config in spec.configs.items():
             if not config.external:
                 config.labels.update(
@@ -670,8 +663,6 @@ class ComposeSpecProcessor:
                         "zane-project": stack.project_id,
                     }
                 )
-
-            # renamed_configs[config_name] = config
 
             # process config `content` to `file` reference
             if config.content is not None:
@@ -1069,10 +1060,9 @@ class ComposeSpecProcessor:
         for service in spec.services.values():
             updated_service_configs = []
             for service_config in service.configs:
-                new_name = config_name_mapping.get(
-                    service_config.source, service_config.source
-                )
-                service_config.source = new_name
+                new_name = config_name_mapping.get(service_config.source)
+                if new_name is not None:
+                    service_config.source = new_name
                 updated_service_configs.append(service_config)
             service.configs = updated_service_configs
 

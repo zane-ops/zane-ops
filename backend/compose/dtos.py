@@ -151,7 +151,7 @@ class ComposeServiceSpec:
     name: str
     image: str
     environment: Dict[str, ComposeEnvVarSpec] = field(default_factory=dict)
-    networks: Dict[str, Dict[str, Any] | None] = field(default_factory=dict)
+    networks: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     deploy: Dict[str, Any] = field(default_factory=dict)
     logging: Optional[Dict[str, Any]] = None
     volumes: list[ComposeVolumeMountSpec] = field(default_factory=list)
