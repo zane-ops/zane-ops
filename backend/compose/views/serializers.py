@@ -403,11 +403,10 @@ class ComposeEnvOverrideItemChangeSerializer(BaseChangeItemSerializer):
     )
 
     def validate(self, attrs: dict):
-        super().validate(attrs)
+        attrs = super().validate(attrs)
         stack = self.get_stack()
         change_type = attrs["type"]
-        new_value = attrs.get("new_value") or {}
-        field = attrs["field"]
+        new_value = attrs.get("new_value")
         if change_type in ["DELETE", "UPDATE"]:
             item_id = attrs["item_id"]
 
@@ -488,6 +487,7 @@ class ComposeEnvOverrideItemChangeSerializer(BaseChangeItemSerializer):
             ComposeStackChange.ChangeType.ADD,
             ComposeStackChange.ChangeType.UPDATE,
         ]:
+            new_value = cast(dict, new_value)
             key = new_value["key"]
             value = new_value["value"]
             # process compose stack to validate URLs
