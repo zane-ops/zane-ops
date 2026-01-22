@@ -710,7 +710,7 @@ class ComposeSpecProcessor:
                     new_envs: dict[str, str] = {}
                     for k, v in envs.items():
                         if isinstance(v, bool):
-                            v = "false"
+                            v = str(v).lower()
                         new_envs[k] = quoted(v)  # always quote env variables
                     computed_service["environment"] = new_envs
 
@@ -798,12 +798,18 @@ class ComposeSpecProcessor:
         print(expanded)
 
         # in case there is a single slash that isn't correctly formatted after var expansion:
-        # ex: "echo \$date" , it should be reformatted correctly
+        # ex: "echo \$date" , it should be reformatted correctly to `"echo \\$date"`
+        # (?<!\\): Negative Lookbehind
+        # (?<\\): Positive Lookbehind
+        # (?!\\): Negative Lookahead
+        # (?\\): Positive Lookahead
         non_escaped_single_slash = re.compile(
             r"(?<!\\)(\\)(?!\\)([^rnt\"])", re.MULTILINE
         )
 
-        expanded = re.sub(non_escaped_single_slash, r"\\\\\2", expanded)
+        expanded = re.sub(
+            non_escaped_single_slash, r"\\\\\2", expanded
+        )  # `\\` is one slash and \2 is the character after the single slash
 
         print("=== expanded reformatted ===")
         print(expanded)
@@ -835,7 +841,9 @@ class ComposeSpecProcessor:
 
     @classmethod
     def extract_config_contents(
-        cls, spec: ComposeStackSpec, stack: "ComposeStack"
+        cls,
+        spec: ComposeStackSpec,
+        stack: "ComposeStack",
     ) -> Dict[str, "ComposeVersionedConfig"]:
         previous_configs = stack.configs or {}
         new_configs = {}
