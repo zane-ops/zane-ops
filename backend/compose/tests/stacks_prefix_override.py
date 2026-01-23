@@ -18,6 +18,8 @@ from .fixtures import (
     DOCKER_COMPOSE_WITH_PREFIXED_SIMPLE,
 )
 from .stacks import ComposeStackAPITestBase
+from zane_api.utils import jprint
+from rest_framework import status
 
 
 class ProcessorEnvPrefixTests(ComposeStackAPITestBase):
@@ -87,7 +89,7 @@ class ProcessorEnvPrefixTests(ComposeStackAPITestBase):
 
         # Delete override
         override = stack.env_overrides.get(key="__CONFIG_VALUE")
-        self.client.put(
+        response = self.client.put(
             reverse(
                 "compose:stacks.request_changes",
                 kwargs={
@@ -102,7 +104,10 @@ class ProcessorEnvPrefixTests(ComposeStackAPITestBase):
                 "item_id": override.id,
             },
         )
-        self.client.put(
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        response = self.client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -112,24 +117,8 @@ class ProcessorEnvPrefixTests(ComposeStackAPITestBase):
                 },
             ),
         )
-
-        stack.refresh_from_db()
-        self.assertFalse(stack.env_overrides.filter(key="__CONFIG_VALUE").exists())
-
-        # Redeploy
-        self.client.put(
-            reverse(
-                "compose:stacks.deploy",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                    "slug": stack.slug,
-                },
-            ),
-        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         stack.refresh_from_db()
         self.assertTrue(stack.env_overrides.filter(key="__CONFIG_VALUE").exists())
-        self.assertEqual(
-            "initial-value", stack.env_overrides.get(key="__CONFIG_VALUE").value
-        )

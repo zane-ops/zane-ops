@@ -535,6 +535,8 @@ class ComposeSpecProcessor:
                     stack=stack,
                 )
                 env.is_exposed = True
+            elif key.startswith("__"):
+                env.is_exposed = True
 
             override_dict[key] = str(env.value)
 
