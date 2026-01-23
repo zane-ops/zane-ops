@@ -22,7 +22,7 @@ class ComposeEnvVarSpec:
     key: str
     value: str
 
-    is_newly_generated: bool = False
+    is_exposed: bool = False
 
     def to_dict(self) -> Dict[str, str]:
         return {self.key: self.value}

@@ -534,7 +534,7 @@ class ComposeSpecProcessor:
                     template_func=template_func,
                     stack=stack,
                 )
-                env.is_newly_generated = True
+                env.is_exposed = True
 
             override_dict[key] = str(env.value)
 
@@ -820,7 +820,7 @@ class ComposeSpecProcessor:
         overrides = []
 
         for key, env in spec.envs.items():
-            if env.is_newly_generated:
+            if env.is_exposed:
                 overrides.append(
                     {
                         "key": key,
