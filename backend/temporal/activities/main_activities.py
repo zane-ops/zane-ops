@@ -1156,6 +1156,7 @@ class DockerSwarmActivities:
                         deployment={
                             "slot": deployment.slot,
                             "hash": deployment.hash,
+                            "commit_sha": deployment.commit_sha,
                         }
                     ),
                 )

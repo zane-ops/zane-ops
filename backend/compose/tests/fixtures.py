@@ -415,8 +415,8 @@ services:
     image: myapi:latest
     deploy:
       labels:
-        zane.http.routes.0.port: $API_PORT
-        zane.http.routes.0.domain: $API_DOMAIN
+        zane.http.routes.0.port: ${API_PORT}
+        zane.http.routes.0.domain: ${API_DOMAIN}
 
   dashboard:
     image: mydashboard:latest
@@ -1294,3 +1294,69 @@ PG_DB = "${pg_db}"
 PG_PASS = "${password:32}" # Password for PostgreSQL authentication
 """,
 )
+
+# Prefixed vars create overrides on deployment (key keeps double underscore)
+DOCKER_COMPOSE_WITH_PREFIXED_ENV_OVERRIDE = """
+x-zane-env:
+  __DATABASE_PASSWORD: "my-secret-password"
+  __API_KEY: "api-key-12345"
+  REGULAR_VAR: "plain-value"
+
+services:
+  app:
+    image: myapp:latest
+    environment:
+      DB_PASSWORD: ${__DATABASE_PASSWORD}
+      API_KEY: ${__API_KEY}
+      CONFIG: ${REGULAR_VAR}
+"""
+
+# Variable expansion with prefixed vars
+DOCKER_COMPOSE_WITH_PREFIXED_ENV_EXPANSION = """
+x-zane-env:
+  HOST: "localhost"
+  PORT: "5432"
+  DB_NAME: "mydb"
+  __DATABASE_URL: "postgres://user@${HOST}:${PORT}/${DB_NAME}"
+
+services:
+  app:
+    image: myapp:latest
+    environment:
+      DATABASE_URL: ${__DATABASE_URL}
+"""
+
+# Mixed usage: template + prefix + plain values together
+DOCKER_COMPOSE_WITH_MIXED_ENV_TYPES = """
+x-zane-env:
+  DB_PASSWORD: "{{ generate_password | 32 }}"
+  __DB_NAME: "my-database"
+  DB_USER: "admin"
+  __API_SECRET: "super-secret-key"
+  API_URL: "http://api.example.com"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${__DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+  app:
+    image: myapp:latest
+    environment:
+      API_SECRET: ${__API_SECRET}
+      API_URL: ${API_URL}
+"""
+
+# For redeployment tests - simple prefixed env
+DOCKER_COMPOSE_WITH_PREFIXED_SIMPLE = """
+x-zane-env:
+  __CONFIG_VALUE: "initial-value"
+
+services:
+  app:
+    image: myapp:latest
+    environment:
+      CONFIG: ${__CONFIG_VALUE}
+"""

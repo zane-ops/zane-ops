@@ -1,3 +1,4 @@
+from typing import cast
 from django.urls import reverse
 from rest_framework import status
 from django.conf import settings
@@ -7,7 +8,6 @@ from temporalio.common import RetryPolicy
 
 from zane_api.models import Environment
 from ..models import (
-    ComposeStack,
     ComposeStackChange,
     ComposeStackDeployment,
 )
@@ -15,7 +15,6 @@ from .fixtures import (
     DOCKER_COMPOSE_MINIMAL,
     DOCKER_COMPOSE_SIMPLE_DB,
 )
-from typing import cast
 from zane_api.utils import jprint
 from temporal.workflows import DeployComposeStackWorkflow
 from temporal.shared import ComposeStackDeploymentDetails, CancelDeploymentSignalInput
@@ -26,70 +25,7 @@ from asgiref.sync import sync_to_async
 
 
 class ComposeStackCancelViewTests(ComposeStackAPITestBase):
-    async def acreate_and_deploy_compose_stack(
-        self,
-        content: str,
-        slug="my-stack",
-    ):
-        project = await self.acreate_project(slug="compose")
-
-        create_stack_payload = {
-            "slug": slug,
-            "user_content": content,
-        }
-
-        response = await self.async_client.post(
-            reverse(
-                "compose:stacks.create",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            ),
-            data=create_stack_payload,
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        stack = cast(
-            ComposeStack, await ComposeStack.objects.filter(slug=slug).afirst()
-        )
-        self.assertIsNotNone(stack)
-        self.assertIsNone(stack.user_content)
-        self.assertIsNone(stack.computed_content)
-
-        # Deploy the stack
-        response = await self.async_client.put(
-            reverse(
-                "compose:stacks.deploy",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                    "slug": stack.slug,
-                },
-            ),
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        await stack.arefresh_from_db()
-        print(
-            "========= original =========",
-            stack.user_content,
-            "========= end original =========",
-            sep="\n",
-        )
-        print(
-            "========= computed =========",
-            stack.computed_content,
-            "========= end computed =========",
-            sep="\n",
-        )
-
-        return project, stack
-
     async def test_cancel_running_deployment(self):
-        return  # FIXME: we need to remove
         project, stack = await self.acreate_and_deploy_compose_stack(
             DOCKER_COMPOSE_MINIMAL
         )
@@ -111,7 +47,7 @@ class ComposeStackCancelViewTests(ComposeStackAPITestBase):
                 )
 
                 # Apply changes to get stack snapshot
-                await stack.arefresh_from_db()
+                await sync_to_async(stack.apply_pending_changes)(new_deployment)
 
                 def get_data():
                     return ComposeStackSnapshotSerializer(stack).data
@@ -154,3 +90,84 @@ class ComposeStackCancelViewTests(ComposeStackAPITestBase):
                     new_deployment.status,
                 )
                 self.assertIsNotNone(new_deployment.status_reason)
+                self.assertIsNotNone(new_deployment.finished_at)
+
+
+class ComposeStackCancelEndpointTests(ComposeStackAPITestBase):
+    async def test_cancel_queued_deployment_sets_status_to_cancelled(self):
+        """Cancelling a queued (not started) deployment should set status directly."""
+        project, stack = await self.acreate_and_deploy_compose_stack(
+            DOCKER_COMPOSE_MINIMAL
+        )
+
+        # Create a new queued deployment
+        new_deployment = await ComposeStackDeployment.objects.acreate(
+            stack=stack,
+            commit_message="Update stack",
+        )
+
+        response = await self.async_client.put(
+            reverse(
+                "compose:stacks.deployments.cancel",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                    "hash": new_deployment.hash,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        await new_deployment.arefresh_from_db()
+        self.assertEqual(
+            ComposeStackDeployment.DeploymentStatus.CANCELLED,
+            new_deployment.status,
+        )
+        self.assertIsNotNone(new_deployment.status_reason)
+
+    async def test_cannot_cancel_already_finished_deployment(self):
+        """Cannot cancel a deployment that has already finished."""
+        project, stack = await self.acreate_and_deploy_compose_stack(
+            DOCKER_COMPOSE_MINIMAL
+        )
+
+        # Get the first deployment which is already finished
+        first_deployment = cast(
+            ComposeStackDeployment, await stack.deployments.afirst()
+        )
+        self.assertIsNotNone(first_deployment.finished_at)
+
+        response = await self.async_client.put(
+            reverse(
+                "compose:stacks.deployments.cancel",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                    "hash": first_deployment.hash,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    async def test_cancel_deployment_not_found(self):
+        """Cancelling a non-existent deployment should return 404."""
+        project, stack = await self.acreate_and_deploy_compose_stack(
+            DOCKER_COMPOSE_MINIMAL
+        )
+
+        response = await self.async_client.put(
+            reverse(
+                "compose:stacks.deployments.cancel",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                    "hash": "nonexistent_hash",
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)

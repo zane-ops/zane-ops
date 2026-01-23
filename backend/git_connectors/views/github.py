@@ -51,7 +51,6 @@ from ..dtos import GitCommitInfo
 
 
 class SetupGithubAppAPIView(APIView):
-
     @transaction.atomic()
     @extend_schema(
         responses={status.HTTP_303_SEE_OTHER: None},
@@ -246,7 +245,7 @@ class GithubWebhookAPIView(APIView):
                 def map_repository(repository: dict[str, str]):
                     return GitRepository(
                         path=repository["full_name"],
-                        url=f"https://github.com/{repository["full_name"]}.git",
+                        url=f"https://github.com/{repository['full_name']}.git",
                         private=repository["private"],
                     )
 
@@ -277,7 +276,7 @@ class GithubWebhookAPIView(APIView):
                     def map_repository(repository: dict[str, str]):
                         return GitRepository(
                             path=repository["full_name"],
-                            url=f"https://github.com/{repository["full_name"]}.git",
+                            url=f"https://github.com/{repository['full_name']}.git",
                             private=repository["private"],
                         )
 
@@ -286,7 +285,7 @@ class GithubWebhookAPIView(APIView):
                 if len(repositories_removed) > 0:
                     repos_to_delete = github.repositories.filter(
                         url__in=[
-                            f"https://github.com/{repo["full_name"]}.git"
+                            f"https://github.com/{repo['full_name']}.git"
                             for repo in repositories_removed
                         ]
                     )
@@ -322,7 +321,7 @@ class GithubWebhookAPIView(APIView):
                 if ref.startswith("refs/heads/"):
                     branch_name = ref.replace("refs/heads/", "")
                     repository_url = (
-                        f"https://github.com/{data["repository"]["full_name"]}.git"
+                        f"https://github.com/{data['repository']['full_name']}.git"
                     )
                     if branch_deleted:
                         environment_delete_payload: list[
@@ -449,8 +448,8 @@ class GithubWebhookAPIView(APIView):
                 branch_name = pull_request["head"]["ref"]
                 is_fork = pull_request["head"]["repo"]["fork"]
 
-                base_repository_url = f"https://github.com/{pull_request["base"]['repo']["full_name"]}.git"
-                head_repository_url = f"https://github.com/{pull_request["head"]['repo']["full_name"]}.git"
+                base_repository_url = f"https://github.com/{pull_request['base']['repo']['full_name']}.git"
+                head_repository_url = f"https://github.com/{pull_request['head']['repo']['full_name']}.git"
                 workflows_to_run: List[StartWorkflowArg] = []
                 workflows_signals: List[SignalWorkflowArg] = []
 

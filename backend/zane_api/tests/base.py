@@ -1526,6 +1526,10 @@ class FakeDockerClient:
             self.parent.config_map.pop(self.name)
 
     class FakeService:
+        @property
+        def replicas(self):
+            return self.attrs["Spec"]["Mode"]["Replicated"]["Replicas"]
+
         def __init__(
             self,
             parent: "FakeDockerClient",
@@ -1539,22 +1543,6 @@ class FakeDockerClient:
             resources: Resources | None = None,
             networks: List[NetworkAttachmentConfig] | None = None,
         ):
-            self.attrs = {
-                "Spec": {
-                    "TaskTemplate": {
-                        "Networks": [],
-                        "ContainerSpec": {
-                            "Image": image,
-                        },
-                    },
-                    "Mode": {"Replicated": {"Replicas": 1}},
-                },
-                "ServiceStatus": {
-                    "RunningTasks": 1,
-                    "DesiredTasks": 1,
-                    "CompletedTasks": 1,
-                },
-            }
             self.name = name
             self.parent = parent
             self.image = image
@@ -1566,6 +1554,23 @@ class FakeDockerClient:
             self.resources = resources
             self.id = name
             self.networks = networks or []
+            self.attrs = {
+                "Spec": {
+                    "TaskTemplate": {
+                        "Networks": [],
+                        "ContainerSpec": {
+                            "Image": image,
+                        },
+                    },
+                    "Labels": self.labels,
+                    "Mode": {"Replicated": {"Replicas": 1}},
+                },
+                "ServiceStatus": {
+                    "RunningTasks": 1,
+                    "DesiredTasks": 1,
+                    "CompletedTasks": 1,
+                },
+            }
             self.swarm_tasks = [
                 {
                     "ID": "8qx04v72iovlv7xzjvsj2ngdk",
@@ -1588,7 +1593,7 @@ class FakeDockerClient:
                             "Env": [
                                 f"{key}={value}" for key, value in self.env.items()
                             ],
-                        }
+                        },
                     },
                     "DesiredState": "running",
                     "NetworksAttachments": [{"Network": {"Spec": {"Name": "zane"}}}],
@@ -1599,6 +1604,7 @@ class FakeDockerClient:
             self.parent.services_remove(self.name)
 
         def update(self, **kwargs):
+            print(f"{self.labels=} {kwargs=}")
             if "networks" in kwargs:
                 self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
                     {"Target": network} for network in kwargs["networks"]
@@ -1610,7 +1616,7 @@ class FakeDockerClient:
             endpoint_spec = kwargs.get("endpoint_spec", self.endpoint)
             resources = kwargs.get("resources", self.resources)
             name = kwargs.get("name", self.name)
-            labels = kwargs.get("name", self.labels)
+            labels = kwargs.get("labels", self.labels)
 
             if mounts is not None:
                 self.attached_volumes = {}
@@ -1642,12 +1648,19 @@ class FakeDockerClient:
             self.image = image
             self.name = name
             self.labels = labels
+            self.attrs["Spec"]["Labels"] = labels
             self.endpoint = endpoint_spec
             self.resources = resources
             self.networks = kwargs.get("networks", self.networks)
             self.configs = kwargs.get("configs", self.configs)
 
-            if kwargs.get("mode") == {"Replicated": {"Replicas": 0}}:
+            mode = kwargs.get("mode")
+            if mode is not None:
+                self.attrs["Spec"]["Mode"]["Replicated"]["Replicas"] = mode.get(
+                    "Replicated", {}
+                ).get("Replicas", 1)
+
+            if mode == {"Replicated": {"Replicas": 0}}:
                 self.swarm_tasks = []
             else:
                 self.swarm_tasks.append(

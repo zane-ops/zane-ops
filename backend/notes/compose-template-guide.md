@@ -164,6 +164,8 @@ x-zane-env:
   ANOTHER_VAR: "{{ template_function | argument }}"
 ```
 
+**Important**: Variables defined in `x-zane-env` must be referenced using `${VAR_NAME}` syntax (with curly braces) to be interpolated in services, configs, and other parts of the compose file. Without the braces, the variable will not be expanded.
+
 ### Available Template Functions
 
 #### 1. `generate_username`
@@ -186,7 +188,6 @@ Generates a cryptographically secure random password as a hexadecimal string.
 **Requirements**:
 - Length must be even (divisible by 2)
 - Minimum length: 8
-- Maximum length: 256
 
 ```yaml
 x-zane-env:
@@ -276,11 +277,11 @@ x-zane-env:
 
 #### 7. `network_alias | 'service_name'`
 
-Generates an environment-scoped network alias for inter-service communication.
+Generates an environment-scoped network alias for inter-service communication within the same environment.
 
 **Format**: `{network_alias_prefix}-{service_name}`
 
-**Use case**: Services communicating within the same environment, stable across PR preview environments.
+**Use case**: Services communicating within the same environment (e.g., all services in "production" or all services in "staging").
 
 ```yaml
 x-zane-env:
@@ -295,18 +296,18 @@ x-zane-env:
 
 **Why use this?**
 - Stable across deployments (doesn't change when stack is redeployed)
-- Consistent in PR preview environments
-- Preferred for service-to-service communication
+- Scoped to the environment - services in the same environment can communicate
+- Preferred for most service-to-service communication
 
 ---
 
 #### 8. `global_alias | 'service_name'`
 
-Generates a globally unique network alias using the stack's hash prefix.
+Generates a globally unique network alias that is accessible across all of ZaneOps - across all projects and environments.
 
 **Format**: `{hash_prefix}_{service_name}`
 
-**Use case**: Cross-stack communication (advanced), debugging.
+**Use case**: Cross-project or cross-environment communication.
 
 ```yaml
 x-zane-env:
@@ -318,9 +319,10 @@ x-zane-env:
   - `abc123_postgres`
 
 **When to use**:
-- Cross-stack references (rare)
+- Cross-project service references
+- Cross-environment communication (e.g., staging service connecting to production database)
 - Debugging and troubleshooting
-- Most cases should use `network_alias` instead
+- Most cases should use `network_alias` instead for environment isolation
 
 ---
 
@@ -543,7 +545,9 @@ services:
 #### Optional Properties
 
 - **`zane.http.routes.{N}.base_path`**: Path prefix (default: `/`)
-- **`zane.http.routes.{N}.strip_prefix`**: Whether to strip base_path before proxying (default: `false`)
+- **`zane.http.routes.{N}.strip_prefix`**: Whether to strip base_path before proxying (default: `true`).
+  Setting it to `true` means if your `base_path` is `/api` and you receive a request to `/api/auth/login`, your 
+  service will receive a request to `/auth/login`.
 
 ---
 
@@ -665,7 +669,7 @@ zane.http.routes.0.strip_prefix: "yes"  # Must be "true" or "false"
 
 ## Volumes
 
-ZaneOps supports three types of volume mounts: **named volumes**, **bind mounts**, and **external volumes**.
+ZaneOps supports **named volumes**, **absolute path bind mounts**, and **external volumes**. Relative path bind mounts are **not supported** and will be rejected during validation.
 
 ### Named Volumes
 
@@ -706,23 +710,70 @@ volumes:
 
 ---
 
-### Bind Mounts (Relative Paths)
+### Absolute Path Bind Mounts
 
-Bind mounts map host directories into containers. ZaneOps handles relative paths specially.
+Bind mounts with absolute paths are supported for mapping host directories into containers.
 
 ```yaml
 services:
   web:
     image: nginx:alpine
     volumes:
-      - ./html:/usr/share/nginx/html:ro
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /data/html:/usr/share/nginx/html:ro
+      - /etc/myapp/nginx.conf:/etc/nginx/nginx.conf:ro
 ```
 
-**Important notes**:
-- **Dokploy compatibility**: Paths starting with `../files/` are converted to configs (see [Dokploy Migration](#dokploy-template-migration))
-- **Read-only**: Use `:ro` suffix for read-only mounts
-- **Host paths**: Relative to stack deployment directory (managed by ZaneOps)
+**Properties**:
+- Must use absolute paths (starting with `/`)
+- Useful for accessing host system files or shared storage
+- Use `:ro` suffix for read-only mounts
+
+---
+
+### Relative Paths Not Supported
+
+**Important**: ZaneOps does **not** support relative path bind mounts and will actively validate against them.
+
+```yaml
+# ❌ NOT SUPPORTED - will fail validation
+services:
+  web:
+    image: nginx:alpine
+    volumes:
+      - ./html:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../data:/app/data
+```
+
+**Use inline configs instead** for configuration files:
+```yaml
+# ✅ Correct approach for config files
+services:
+  web:
+    image: nginx:alpine
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf
+
+configs:
+  nginx_config:
+    content: |
+      server {
+        listen 80;
+      }
+```
+
+**Or use absolute paths**:
+```yaml
+# ✅ Correct approach for host directories/files
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+```
+
+**Note**: The `../files/` path pattern is only handled by the [Dokploy Migration Adapter](#dokploy-template-migration) when converting Dokploy templates to ZaneOps format. It is not valid syntax for native ZaneOps templates.
 
 ---
 
@@ -759,11 +810,11 @@ services:
       # Named volume (read-only)
       - volume_name:/container/path:ro
 
-      # Bind mount
-      - ./host/path:/container/path
+      # Absolute path bind mount
+      - /host/path:/container/path
 
-      # Bind mount (read-only)
-      - ./host/path:/container/path:ro
+      # Absolute path bind mount (read-only)
+      - /host/path:/container/path:ro
 
       # Long syntax
       - type: volume
@@ -771,6 +822,8 @@ services:
         target: /container/path
         read_only: false
 ```
+
+**Note**: Relative path bind mounts (`./path:/container/path`) are not supported. Use absolute paths, named volumes, or inline configs instead.
 
 ---
 
@@ -959,8 +1012,8 @@ services:
 **DNS Resolution**:
 
 In the **`zane` network**:
-- `abc123_app.zane-internal.localhost`
-- `abc123_postgres.zane-internal.localhost`
+- `abc123_app.zaneops.internal`
+- `abc123_postgres.zaneops.internal`
 
 In the **environment network**:
 - `{network_alias_prefix}-app` (e.g., `my-stack-app`)
@@ -1132,47 +1185,6 @@ services:
 
 ---
 
-### Environment Variable Overrides
-
-ZaneOps allows overriding any variable via the API using `ComposeStackEnvOverride`:
-
-**API endpoint**:
-```http
-POST /api/projects/{project_slug}/environments/{env_slug}/compose-stacks/{stack_slug}/env-overrides/
-Content-Type: application/json
-
-{
-  "key": "DB_PASSWORD",
-  "value": "my-custom-password"
-}
-```
-
-**Effect**:
-- Next deployment uses `my-custom-password` instead of generated value
-- Template expression no longer evaluated for this variable
-- Override persists across deployments
-
-**Listing overrides**:
-```http
-GET /api/projects/{project_slug}/environments/{env_slug}/compose-stacks/{stack_slug}/env-overrides/
-```
-
-**Updating override**:
-```http
-PATCH /api/projects/{project_slug}/environments/{env_slug}/compose-stacks/{stack_slug}/env-overrides/{id}/
-Content-Type: application/json
-
-{
-  "value": "new-password"
-}
-```
-
-**Deleting override**:
-```http
-DELETE /api/projects/{project_slug}/environments/{env_slug}/compose-stacks/{stack_slug}/env-overrides/{id}/
-```
-
----
 
 ## Service Dependencies
 
@@ -1487,20 +1499,20 @@ Example Dokploy template structure (decoded):
 
 Dokploy placeholders are automatically converted to ZaneOps template expressions:
 
-| Dokploy Placeholder | ZaneOps Expression |
-|---------------------|-------------------|
-| `${domain}` | `{{ generate_domain }}` |
-| `${email}` | `{{ generate_email }}` |
-| `${username}` | `{{ generate_username }}` |
-| `${uuid}` | `{{ generate_uuid }}` |
-| `${password}` | `{{ generate_password \| 32 }}` |
-| `${password:16}` | `{{ generate_password \| 16 }}` |
-| `${base64}` | `{{ generate_password \| 32 }}` |
-| `${base64:64}` | `{{ generate_password \| 64 }}` |
-| `${hash}` | `{{ generate_password \| 32 }}` |
-| `${hash:16}` | `{{ generate_password \| 16 }}` |
-| `${jwt}` | `{{ generate_password \| 32 }}` |
-| `${jwt:64}` | `{{ generate_password \| 64 }}` |
+| Dokploy Placeholder | ZaneOps Expression              |
+| ------------------- | ------------------------------- |
+| `${domain}`         | `{{ generate_domain }}`         |
+| `${email}`          | `{{ generate_email }}`          |
+| `${username}`       | `{{ generate_username }}`       |
+| `${uuid}`           | `{{ generate_uuid }}`           |
+| `${password}`       | `{{ generate_password \| 32 }}` |
+| `${password:16}`    | `{{ generate_password \| 16 }}` |
+| `${base64}`         | `{{ generate_password \| 32 }}` |
+| `${base64:64}`      | `{{ generate_password \| 64 }}` |
+| `${hash}`           | `{{ generate_password \| 32 }}` |
+| `${hash:16}`        | `{{ generate_password \| 16 }}` |
+| `${jwt}`            | `{{ generate_password \| 32 }}` |
+| `${jwt:64}`         | `{{ generate_password \| 64 }}` |
 
 ---
 
@@ -1520,6 +1532,20 @@ The `DokployComposeAdapter.to_zaneops(base64_template)` method:
 
 ### Example Migration
 
+**Dokploy compose.yaml**:
+```yaml
+services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    environment:
+      DB_PASSWORD: ${DB_PASSWORD}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+    volumes:
+      - ../files/nginx.conf:/etc/nginx/nginx.conf
+```
+
 **Dokploy config.toml**:
 ```toml
 [variables]
@@ -1537,7 +1563,7 @@ DB_PASSWORD = "${db_password}"
 ADMIN_EMAIL = "${admin_email}"
 
 [[config.mounts]]
-filePath = "./nginx.conf"
+filePath = "nginx.conf"
 content = """
 server {
   listen 80;
@@ -1551,13 +1577,15 @@ x-zane-env:
   main_domain: "{{ generate_domain }}"
   db_password: "{{ generate_password | 32 }}"
   admin_email: "{{ generate_email }}"
+  DB_PASSWORD: ${db_password}
+  ADMIN_EMAIL: ${admin_email}
 
 services:
   web:
     image: nginx:alpine
     environment:
-      DB_PASSWORD: ${db_password}
-      ADMIN_EMAIL: ${admin_email}
+      DB_PASSWORD: ${DB_PASSWORD}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
     configs:
       - source: nginx.conf
         target: /etc/nginx/nginx.conf
@@ -1929,17 +1957,17 @@ deploy:
 
 **Symptom**: Data in volume disappears after redeployment.
 
-**Cause**: Using bind mount without persistent host path, or volume not properly defined.
+**Cause**: Volume not properly defined in the `volumes` section.
 
-**Solution**: Use named volumes for persistent data
+**Solution**: Always define named volumes in the top-level `volumes` section
 ```yaml
-# ❌ Wrong - ephemeral bind mount
+# ❌ Wrong - volume not defined
 services:
   db:
     volumes:
-      - ./data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
 
-# ✅ Correct - named volume
+# ✅ Correct - named volume properly defined
 services:
   db:
     volumes:
@@ -1972,7 +2000,7 @@ x-zane-env:
   PASSWORD: "{{ generate_password | 32 }}"
 ```
 
-**Valid lengths**: 8, 10, 12, 14, 16, 18, 20, ..., 256 (any even number from 8 to 256)
+**Valid lengths**: 8, 10, 12, 14, 16, 18, 20, ... (any even number 8 or greater)
 
 ---
 
@@ -2059,16 +2087,37 @@ services:
 
 ## Best Practices
 
-### 1. Always Use `network_alias` for Service Communication
+### 1. Use the Right Hostname for Service Communication
+
+**Within the same stack**: Use the service name directly (simpler and works via the stack's default network).
 
 ```yaml
-# ✅ Recommended
+# ✅ Recommended for same-stack communication
+services:
+  app:
+    environment:
+      DB_HOST: postgres
+      REDIS_HOST: redis
+```
+
+**Across different stacks in the same environment**: Use `network_alias` for stable, environment-scoped DNS.
+
+```yaml
+# ✅ Recommended for cross-stack communication (same environment)
 x-zane-env:
   DB_HOST: "{{ network_alias | 'postgres' }}"
   REDIS_HOST: "{{ network_alias | 'redis' }}"
 ```
 
-**Why**: Stable across deployments and PR preview environments.
+**Across different environments or globally in ZaneOps**: Use `global_alias` for globally unique DNS.
+
+```yaml
+# ✅ Recommended for cross-environment communication
+x-zane-env:
+  SHARED_DB: "{{ global_alias | 'postgres' }}"
+```
+
+**Why**: Service names are simplest for intra-stack communication. `network_alias` provides stable DNS for cross-stack scenarios within the same environment. `global_alias` is needed when communicating across environments or projects.
 
 ---
 
@@ -2180,8 +2229,3 @@ ZaneOps extends Docker Compose with powerful template expressions and automatic 
 9. **Value persistence** - generated secrets reused across deployments
 10. **Dokploy compatibility** - easy migration from existing templates
 
-For more details, refer to:
-- Implementation notes: `/Users/fredkiss3/Developer/zane-ops/backend/notes/docker-compose.md`
-- Processor code: `/Users/fredkiss3/Developer/zane-ops/backend/compose/processor.py`
-- Adapter code: `/Users/fredkiss3/Developer/zane-ops/backend/compose/adapters.py`
-- Test fixtures: `/Users/fredkiss3/Developer/zane-ops/backend/compose/tests/fixtures.py`

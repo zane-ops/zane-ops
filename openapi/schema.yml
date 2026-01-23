@@ -911,6 +911,108 @@ paths:
               schema:
                 $ref: '#/components/schemas/ComposeStackDeployment'
           description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/{hash}/cancel/:
+    put:
+      operationId: cancelComposeStackDeployment
+      description: Cancel a compose stack deployment in progress.
+      summary: Cancel compose stack deployment
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelComposeStackDeploymentErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStackDeployment'
+          description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/archive/:
     delete:
       operationId: archiveComposeStack
@@ -1096,6 +1198,101 @@ paths:
               schema:
                 $ref: '#/components/schemas/ComposeStackDeployment'
           description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/{hash}/:
+    put:
+      operationId: reDeployComposeStack
+      summary: Rollback to a previous version of the compose stack
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReDeployComposeStackErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStackDeployment'
+          description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/request-changes/:
     put:
       operationId: requestComposeStackUpdate
@@ -1196,6 +1393,111 @@ paths:
               schema:
                 $ref: '#/components/schemas/ComposeStackChange'
           description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/toggle/:
+    put:
+      operationId: toggleComposeStack
+      description: Stops all services in a compose stack (scales to 0) or starts them
+        back up.
+      summary: Stop/Start a compose stack
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComposeStackToggleRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ComposeStackToggleRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ComposeStackToggleRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToggleComposeStackErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
+        '202':
+          description: No response body
   /api/compose/stacks/{project_slug}/{env_slug}/create/:
     post:
       operationId: compose_stacks_create_create
@@ -10948,6 +11250,13 @@ components:
       required:
       - errors
       - type
+    CancelComposeStackDeploymentErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     CancelServiceChangesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -11572,12 +11881,17 @@ components:
           type: string
           format: date-time
           nullable: true
+        redeploy_hash:
+          type: string
+          readOnly: true
+          nullable: true
       required:
       - changes
       - commit_message
       - finished_at
       - hash
       - queued_at
+      - redeploy_hash
       - stack_snapshot
       - started_at
       - status
@@ -11593,19 +11907,17 @@ components:
     ComposeStackDeploymentStatusEnum:
       enum:
       - QUEUED
-      - CANCELLED
       - DEPLOYING
       - FINISHED
       - FAILED
-      - REMOVED
+      - CANCELLED
       type: string
       description: |-
         * `QUEUED` - Queued
-        * `CANCELLED` - Cancelled
         * `DEPLOYING` - Deploying
         * `FINISHED` - Finished
         * `FAILED` - Failed
-        * `REMOVED` - Removed
+        * `CANCELLED` - Cancelled
     ComposeStackEnvOverride:
       type: object
       properties:
@@ -11858,6 +12170,13 @@ components:
       - slug
       - urls
       - user_content
+    ComposeStackToggleRequestRequest:
+      type: object
+      properties:
+        desired_state:
+          $ref: '#/components/schemas/DesiredStateEnum'
+      required:
+      - desired_state
     ComposeStackUpdate:
       type: object
       properties:
@@ -18792,6 +19111,13 @@ components:
       - is_static
       - not_found_page
       - publish_directory
+    ReDeployComposeStackErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ReDeployGitServiceError:
       oneOf:
       - $ref: '#/components/schemas/ReDeployGitServiceNonFieldErrorsErrorComponent'
@@ -23623,6 +23949,79 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ToggleComposeStackDesiredStateErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - desired_state
+          type: string
+          description: '* `desired_state` - desired_state'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ToggleComposeStackError:
+      oneOf:
+      - $ref: '#/components/schemas/ToggleComposeStackNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ToggleComposeStackDesiredStateErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ToggleComposeStackNonFieldErrorsErrorComponent'
+          desired_state: '#/components/schemas/ToggleComposeStackDesiredStateErrorComponent'
+    ToggleComposeStackErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ToggleComposeStackValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ToggleComposeStackValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ToggleComposeStackNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ToggleComposeStackValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToggleComposeStackError'
+      required:
+      - errors
+      - type
     ToggleServiceDesiredStateErrorComponent:
       type: object
       properties:

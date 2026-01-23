@@ -958,30 +958,38 @@ class ZaneProxyClient:
     async def cleanup_old_compose_stack_service_urls(
         cls,
         stack_id: str,
-        all_urls: List[ComposeStackUrlRouteDto],
-    ):
+        all_urls: Dict[str, List[ComposeStackUrlRouteDto]],
+    ) -> List[tuple[str, str, str]]:
         response = requests.get(
             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes", timeout=5
         )
-        service_url_routes = [
-            (
-                url.domain,
-                cls._normalize_base_path(url.base_path),
-            )
-            for url in all_urls
-        ]
 
-        route_delete_requests: List[Coroutine[Any, Any, None]] = []
+        service_url_routes = [
+            cls._get_id_for_compose_stack_service_url(
+                stack_id=stack_id,
+                url=url,
+                service_name=service,
+            )
+            for service, urls in all_urls.items()
+            for url in urls
+        ]
+        delete_url_routes: List[tuple[str, str, str]] = []
+
         for route in response.json():
             if route["@id"].startswith(stack_id):
-                route_pair = (
-                    route["match"][0]["host"][0],
-                    route["match"][0]["path"][0],
-                )
-                if route_pair not in service_url_routes:
-                    route_delete_requests.append(cls._delete_route(route["@id"]))
+                host = route["match"][0]["host"][0]
+                path = route["match"][0]["path"][0]
 
-        await asyncio.gather(*route_delete_requests)
+                if route["@id"] not in service_url_routes:
+                    delete_url_routes.append((route["@id"], host, path))
+
+        await asyncio.gather(
+            *[
+                cls._delete_route(route_id)
+                for route_id, _host, _path in delete_url_routes
+            ]
+        )
+        return delete_url_routes
 
     @classmethod
     def _get_request_for_compose_stack_service_url(
@@ -1087,7 +1095,7 @@ class ZaneProxyClient:
         stack_hash_prefix: str,
         service_name: str,
         url: ComposeStackUrlRouteDto,
-    ) -> bool:
+    ) -> str:
         attempts = 0
 
         while attempts < cls.MAX_ETAG_ATTEMPTS:
@@ -1125,7 +1133,11 @@ class ZaneProxyClient:
             )
             if response.status_code == status.HTTP_412_PRECONDITION_FAILED:
                 continue
-            return True
+            return cls._get_id_for_compose_stack_service_url(
+                stack_id=stack_id,
+                service_name=service_name,
+                url=url,
+            )
 
         raise ZaneProxyEtagError(
             f"Failed inserting the url {url} in the proxy because `Etag` precondition failed"
@@ -1250,6 +1262,7 @@ def get_build_environment_variables_for_deployment(
                     deployment={
                         "slot": deployment.slot,
                         "hash": deployment.hash,
+                        "commit_sha": deployment.commit_sha,
                     }
                 ),
             )
@@ -1322,6 +1335,7 @@ NON_SECRET_BUILD_ARGS = {
     "cache-key",
     "FORCE_COLOR",
     "ZANE",
+    "GIT_COMMIT_SHA",
 }
 # Prefixes for env keys that should not be obfuscated
 NON_SECRET_ENV_PREFIXES = ("ZANE_", "NIXPACKS_", "RAILPACK_")

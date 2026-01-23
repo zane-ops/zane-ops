@@ -825,7 +825,8 @@ class Service(BaseService):
         domains = ",".join(
             [url.domain for url in self.urls.filter(associated_port__isnull=False)]
         )
-        return [
+
+        default_variables = [
             {
                 "key": "ZANE",
                 "value": "true",
@@ -887,6 +888,17 @@ class Service(BaseService):
             },
         ]
 
+        if self.type == Service.ServiceType.GIT_REPOSITORY:
+            default_variables.append(
+                {
+                    "key": "GIT_COMMIT_SHA",
+                    "value": "{{deployment.commit_sha}}",
+                    "comment": "The Git commit SHA associated to each deployment",
+                }
+            )
+
+        return default_variables
+
     @property
     def latest_production_deployment(self):
         return (
@@ -935,6 +947,10 @@ class Service(BaseService):
     @property
     def unapplied_changes(self):
         return self.changes.filter(applied=False)
+
+    @property
+    def toggle_workflow_id(self):
+        return f"toggle-{self.id}-{self.project.id}"
 
     @property
     def applied_changes(self):
@@ -2072,8 +2088,8 @@ class Environment(TimestampedModel):
         else:
             match preview_data.template.clone_strategy:
                 case PreviewEnvTemplate.PreviewCloneStrategy.ALL:
-                    services_to_clone = [
-                        *self.services.select_related(
+                    services_to_clone = list(
+                        self.services.select_related(
                             "healthcheck",
                             "project",
                             "environment",
@@ -2087,11 +2103,11 @@ class Environment(TimestampedModel):
                             "configs",
                         )
                         .all()
-                    ]
+                    )
 
                 case PreviewEnvTemplate.PreviewCloneStrategy.ONLY:
-                    services_to_clone = [
-                        *self.services.filter(
+                    services_to_clone = list(
+                        self.services.filter(
                             id__in=preview_data.template.services_to_clone.values_list(
                                 "id", flat=True
                             )
@@ -2110,7 +2126,7 @@ class Environment(TimestampedModel):
                             "configs",
                         )
                         .all()
-                    ]
+                    )
 
             if preview_data.metadata.service.id not in [
                 service.id for service in services_to_clone

@@ -20,6 +20,7 @@ from .serializers import (
     ComposeStackEnvOverrideSerializer,
     CreateComposeStackFromDokployTemplateRequestSerializer,
     CreateComposeStackFromDokployTemplateObjectRequestSerializer,
+    ComposeStackToggleRequestSerializer,
 )
 from ..models import ComposeStack, ComposeStackDeployment, ComposeStackChange
 from django.db.models import QuerySet
@@ -33,10 +34,21 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, PolymorphicProxySerializer
 from rest_framework import status
-from temporal.workflows import DeployComposeStackWorkflow, ArchiveComposeStackWorkflow
-from temporal.shared import ComposeStackDeploymentDetails, ComposeStackArchiveDetails
+from temporal.workflows import (
+    DeployComposeStackWorkflow,
+    ArchiveComposeStackWorkflow,
+    ToggleComposeStackWorkflow,
+)
+from temporal.shared import (
+    ComposeStackDeploymentDetails,
+    ComposeStackArchiveDetails,
+    CancelDeploymentSignalInput,
+    ToggleComposeStackDetails,
+)
 from temporal.client import TemporalClient
-from ..dtos import ComposeStackSnapshot, DokployTemplate
+from zane_api.views.base import ResourceConflict
+from zane_api.serializers import ErrorResponse409Serializer
+from ..dtos import ComposeStackSnapshot, DokployTemplate, ComposeStackEnvOverrideDto
 from rest_framework.serializers import Serializer
 from ..adapters import DokployComposeAdapter
 from ..processor import ComposeSpecProcessor
@@ -472,6 +484,144 @@ class ComposeStackDeploymentDetailsAPIView(RetrieveAPIView):
         return deployment
 
 
+class ComposeStackReDeployAPIView(APIView):
+    serializer_class = ComposeStackDeploymentSerializer
+
+    @transaction.atomic()
+    @extend_schema(
+        request=None,
+        operation_id="reDeployComposeStack",
+        summary="Rollback to a previous version of the compose stack",
+    )
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        env_slug: str,
+        slug: str,
+        hash: str,
+    ):
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = ComposeStack.objects.filter(
+                environment=environment,
+                project=project,
+                slug=slug,
+            ).get()
+            deployment = (
+                ComposeStackDeployment.objects.filter(stack=stack, hash=hash)
+                .select_related("stack")
+                .get()
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+        except ComposeStackDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{hash}` does not exist for this stack."
+            )
+
+        current_snapshot = ComposeStackSnapshot.from_dict(
+            cast(dict, ComposeStackSnapshotSerializer(stack).data)
+        )
+        target_snapshot = ComposeStackSnapshot.from_dict(
+            cast(dict, deployment.stack_snapshot)
+        )
+        new_changes: list[ComposeStackChange] = []
+        if current_snapshot.user_content != target_snapshot.user_content:
+            new_changes.append(
+                ComposeStackChange(
+                    field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                    type=ComposeStackChange.ChangeType.UPDATE,
+                    new_value=target_snapshot.user_content,
+                    old_value=current_snapshot.user_content,
+                    stack=stack,
+                )
+            )
+
+        current_envs: dict[str, ComposeStackEnvOverrideDto] = {
+            cast(str, item.id): item for item in current_snapshot.env_overrides
+        }
+        target_envs: dict[str, ComposeStackEnvOverrideDto] = {
+            cast(str, item.id): item for item in target_snapshot.env_overrides
+        }
+        for item_id in current_envs:
+            if item_id not in target_envs:
+                new_changes.append(
+                    ComposeStackChange(
+                        type=ComposeStackChange.ChangeType.DELETE,
+                        field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
+                        item_id=item_id,
+                        old_value=current_envs[item_id].to_dict(),
+                        stack=stack,
+                    )
+                )
+            elif current_envs[item_id] != target_envs[item_id]:
+                new_changes.append(
+                    ComposeStackChange(
+                        type=ComposeStackChange.ChangeType.UPDATE,
+                        field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
+                        item_id=item_id,
+                        old_value=current_envs[item_id].to_dict(),
+                        new_value=target_envs[item_id].to_dict(),
+                        stack=stack,
+                    )
+                )
+        for item_id in target_envs:
+            if item_id not in current_envs:
+                new_changes.append(
+                    ComposeStackChange(
+                        type=ComposeStackChange.ChangeType.ADD,
+                        field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
+                        new_value=target_envs[item_id].to_dict(),
+                        stack=stack,
+                    )
+                )
+
+        if len(new_changes) > 0:
+            stack.changes.bulk_create(new_changes)
+
+        new_deployment = ComposeStackDeployment.objects.create(
+            commit_message=f"Restore state to  #{deployment.hash}: '{deployment.commit_message}'",
+            stack=stack,
+            is_redeploy_of=deployment,
+        )
+
+        stack.apply_pending_changes(deployment=new_deployment)
+
+        new_deployment.stack_snapshot = ComposeStackSnapshotSerializer(stack).data  # type: ignore
+        new_deployment.save()
+
+        payload = ComposeStackDeploymentDetails.from_deployment(deployment=deployment)
+
+        def commit_callback():
+            TemporalClient.start_workflow(
+                DeployComposeStackWorkflow.run,
+                arg=payload,
+                id=deployment.workflow_id,
+            )
+
+        transaction.on_commit(commit_callback)
+
+        serializer = ComposeStackDeploymentSerializer(new_deployment)
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
 class ComposeStackDeployAPIView(APIView):
     serializer_class = ComposeStackDeploymentSerializer
 
@@ -541,7 +691,7 @@ class ComposeStackDeployAPIView(APIView):
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 
-class ComposeStackRequestChanges(APIView):
+class ComposeStackRequestChangesAPIView(APIView):
     serializer_class = ComposeStackChangeSerializer
 
     @transaction.atomic()
@@ -631,3 +781,172 @@ class ComposeStackRequestChanges(APIView):
         serializer = ComposeStackChangeSerializer(change)
 
         return Response(data=serializer.data)
+
+
+class CancelComposeStackDeploymentAPIView(APIView):
+    serializer_class = ComposeStackDeploymentSerializer
+
+    @transaction.atomic()
+    @extend_schema(
+        request=None,
+        responses={
+            409: ErrorResponse409Serializer,
+            200: ComposeStackDeploymentSerializer,
+        },
+        operation_id="cancelComposeStackDeployment",
+        summary="Cancel compose stack deployment",
+        description="Cancel a compose stack deployment in progress.",
+    )
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        env_slug: str,
+        slug: str,
+        hash: str,
+    ):
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = ComposeStack.objects.filter(
+                environment=environment,
+                project=project,
+                slug=slug,
+            ).get()
+            deployment = (
+                ComposeStackDeployment.objects.filter(stack=stack, hash=hash)
+                .select_related("stack")
+                .get()
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+        except ComposeStackDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{hash}` does not exist for this stack."
+            )
+
+        if deployment.finished_at is not None or deployment.status not in [
+            ComposeStackDeployment.DeploymentStatus.QUEUED,
+            ComposeStackDeployment.DeploymentStatus.DEPLOYING,
+        ]:
+            raise ResourceConflict(
+                detail="This deployment cannot be cancelled as it has already finished "
+                "or is in the process of cancelling."
+            )
+
+        if deployment.started_at is None:
+            deployment.status = ComposeStackDeployment.DeploymentStatus.CANCELLED
+            deployment.status_reason = "Deployment cancelled."
+            deployment.save()
+
+        # Capture values before lambda to avoid lazy loading issues after commit
+        deployment_hash = deployment.hash
+        workflow_id = deployment.workflow_id
+
+        transaction.on_commit(
+            lambda: TemporalClient.workflow_signal(
+                workflow=DeployComposeStackWorkflow.run,
+                input=CancelDeploymentSignalInput(deployment_hash=deployment_hash),
+                signal=DeployComposeStackWorkflow.cancel,
+                workflow_id=workflow_id,
+            )
+        )
+
+        serializer = ComposeStackDeploymentSerializer(deployment)
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+class ToggleComposeStackAPIView(APIView):
+    @transaction.atomic()
+    @extend_schema(
+        request=ComposeStackToggleRequestSerializer,
+        responses={
+            409: ErrorResponse409Serializer,
+            202: None,
+        },
+        operation_id="toggleComposeStack",
+        summary="Stop/Start a compose stack",
+        description="Stops all services in a compose stack (scales to 0) or starts them back up.",
+    )
+    def put(self, request: Request, project_slug: str, env_slug: str, slug: str):
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = (
+                ComposeStack.objects.filter(
+                    environment=environment,
+                    project=project,
+                    slug=slug,
+                )
+                .prefetch_related("deployments")
+                .get()
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+
+        form = ComposeStackToggleRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+
+        data = cast(dict[str, str], form.data)
+
+        # Check if stack has at least one deployment
+        if (
+            stack.deployments.exclude(
+                status=ComposeStackDeployment.DeploymentStatus.FAILED
+            ).count()
+            == 0
+        ):
+            raise ResourceConflict(
+                detail="This stack has not been succesfully deployed yet, and thus its state cannot be toggled."
+            )
+
+        snapshot_dict = cast(dict, ComposeStackSnapshotSerializer(stack).data)
+        snapshot = ComposeStackSnapshot.from_dict(snapshot_dict)
+
+        payload = ToggleComposeStackDetails(
+            stack=snapshot,
+            desired_state=data["desired_state"],  # type: ignore
+        )
+
+        # Capture id before lambda
+        workflow_id = stack.toggle_workflow_id
+
+        transaction.on_commit(
+            lambda: TemporalClient.start_workflow(
+                workflow=ToggleComposeStackWorkflow.run,
+                arg=payload,
+                id=workflow_id,
+            )
+        )
+
+        return Response(None, status=status.HTTP_202_ACCEPTED)

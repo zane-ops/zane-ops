@@ -667,3 +667,9 @@ class ComposeStackMonitorPayload:
     status: str
     status_message: str
     deployment: ComposeStackDeploymentDetails
+
+
+@dataclass
+class ToggleComposeStackDetails:
+    stack: ComposeStackSnapshot
+    desired_state: Literal["start", "stop"]

@@ -1316,10 +1316,21 @@ class ToggleServiceAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
-            environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=request.user,
             )
+            environment = Environment.objects.get(
+                name=env_slug.lower(),
+                project=project,
+            )
+            service = (
+                Service.objects.filter(
+                    slug=service_slug,
+                    project=project,
+                    environment=environment,
+                ).select_related("project")
+            ).get()
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -1328,14 +1339,7 @@ class ToggleServiceAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-
-        service = (
-            Service.objects.filter(
-                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
-            ).select_related("project")
-        ).first()
-
-        if service is None:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}`"
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
@@ -1370,11 +1374,12 @@ class ToggleServiceAPIView(APIView):
                 service_snapshot=production_deployment.service_snapshot,
             ),
         )
+        workflow_id = service.toggle_workflow_id
         transaction.on_commit(
             lambda: TemporalClient.start_workflow(
                 workflow=ToggleDockerServiceWorkflow.run,
                 arg=payload,
-                id=f"toggle-{service.id}-{project.id}",
+                id=workflow_id,
             )
         )
 

@@ -123,6 +123,10 @@ class ComposeStack(TimestampedModel):
         return f"monitor-{self.id}"
 
     @property
+    def toggle_workflow_id(self) -> str:
+        return f"toggle-compose-{self.id}"
+
+    @property
     def unapplied_changes(self):
         return self.changes.filter(applied=False)
 
@@ -190,6 +194,20 @@ class ComposeStack(TimestampedModel):
             name: config.to_dict() for name, config in artifacts.configs.items()
         }
 
+        # Add changes for newly created env overrides
+        ComposeStackChange.objects.bulk_create(
+            [
+                ComposeStackChange(
+                    stack=self,
+                    field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
+                    type=ComposeStackChange.ChangeType.ADD,
+                    new_value=override_data.to_dict(),
+                )
+                for override_data in artifacts.env_overrides
+            ]
+        )
+
+        # Add those new envs in the DB
         ComposeStackEnvOverride.objects.bulk_create(
             [
                 ComposeStackEnvOverride(
@@ -223,14 +241,14 @@ class ComposeStackDeployment(TimestampedModel):
         on_delete=models.CASCADE,
         related_name="deployments",
     )
+    is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
 
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED"
-        CANCELLED = "CANCELLED"
         DEPLOYING = "DEPLOYING"
         FINISHED = "FINISHED"
         FAILED = "FAILED"
-        REMOVED = "REMOVED"
+        CANCELLED = "CANCELLED"
 
     status = models.CharField(
         max_length=10, choices=DeploymentStatus.choices, default=DeploymentStatus.QUEUED

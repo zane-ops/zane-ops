@@ -53,6 +53,7 @@ from ..shared import (
     ComposeStackMonitorPayload,
     ComposeStackArchiveDetails,
     ProxyURLRoute,
+    ToggleComposeStackDetails,
 )
 
 
@@ -242,33 +243,35 @@ class ComposeStackActivities:
     @activity.defn
     async def expose_stack_services_to_http(
         self, deployment: ComposeStackDeploymentDetails
-    ):
+    ) -> dict[str, ComposeStackUrlRouteDto]:
         stack = deployment.stack
+        routes_added: dict[str, ComposeStackUrlRouteDto] = {}
         for service_name, service_urls in stack.urls.items():
             for url in service_urls:
-                ZaneProxyClient.upsert_compose_stack_service_url(
+                route_id = ZaneProxyClient.upsert_compose_stack_service_url(
                     stack_id=deployment.stack.id,
                     service_name=service_name,
                     stack_hash_prefix=stack.hash_prefix,
                     url=url,
                 )
+                routes_added[route_id] = url
+        return routes_added
 
     @activity.defn
-    async def cleanup_old_stack_urls(self, deployment: ComposeStackDeploymentDetails):
+    async def cleanup_old_stack_urls(
+        self, deployment: ComposeStackDeploymentDetails
+    ) -> List[tuple[str, str, str]]:
         stack = deployment.stack
-        all_routes: List[ComposeStackUrlRouteDto] = []
-        for service_urls in stack.urls.values():
-            all_routes.extend(service_urls)
 
-        await ZaneProxyClient.cleanup_old_compose_stack_service_urls(
+        return await ZaneProxyClient.cleanup_old_compose_stack_service_urls(
             stack_id=stack.id,
-            all_urls=all_routes,
+            all_urls=stack.urls,
         )
 
     @activity.defn
     async def cleanup_old_stack_services(
         self, deployment: ComposeStackDeploymentDetails
-    ):
+    ) -> List[str]:
         stack = deployment.stack
         spec = ComposeStackSpec.from_dict(yaml.safe_load(stack.computed_content))
         current_services_in_spec = [service_name for service_name in spec.services]
@@ -277,11 +280,15 @@ class ComposeStackActivities:
             filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
         )
 
+        stack_services_deleted = []
+
         for service in all_stack_services:
             service_name = cast(str, service.name).removeprefix(f"{stack.name}_")
 
             if service_name not in current_services_in_spec:
                 service.remove()
+                stack_services_deleted.append(service_name)
+        return stack_services_deleted
 
     @activity.defn
     async def check_stack_health(self, deployment: ComposeStackDeploymentDetails):
@@ -290,12 +297,9 @@ class ComposeStackActivities:
 
         total_time = timedelta(minutes=1, seconds=30)
 
-        services: List[DockerService] = self.docker_client.services.list(
-            filters={"label": [f"com.docker.stack.namespace={deployment.stack.name}"]},
-        )
         start_time = monotonic()
 
-        status_message = f"0/{len(services)} of services healthy"
+        status_message = f"{Colors.GREY}No service started yet{Colors.ENDC}"
         total_healthy = 0
         await deployment_log(
             deployment,
@@ -338,34 +342,55 @@ class ComposeStackActivities:
                 )
 
                 service_statuses = {}
-                for status in statuses:
-                    name = status.pop("name")
-                    service_statuses[name] = status
+                for service_status in statuses:
+                    name = service_status.pop("name")
+                    service_statuses[name] = service_status
 
                 await ComposeStack.objects.filter(id=deployment.stack.id).aupdate(
                     service_statuses=service_statuses,
                     updated_at=timezone.now(),
                 )
 
+                status_message = ""
+                for service_name, service_status in service_statuses.items():
+                    running_replicas = service_status["running_replicas"]
+                    desired_replicas = service_status["desired_replicas"]
+                    status = service_status["status"]
+
+                    match status:
+                        case (
+                            ComposeStackServiceStatus.COMPLETE
+                            | ComposeStackServiceStatus.HEALTHY
+                        ):
+                            status_color = Colors.GREEN
+                        case ComposeStackServiceStatus.STARTING:
+                            status_color = Colors.BLUE
+                        case ComposeStackServiceStatus.SLEEPING:
+                            status_color = Colors.YELLOW
+                        case _:
+                            status_color = Colors.RED
+
+                    status_message += f"{Colors.ORANGE}{service_name}{Colors.ENDC}: {running_replicas}/{desired_replicas} ({status_color}{status}{Colors.ENDC}) \n"
+
                 total_healthy = len(
                     [
                         status
                         for status in statuses
-                        if status["status"] == ComposeStackServiceStatus.HEALTHY
-                        or status["status"] == ComposeStackServiceStatus.COMPLETE
+                        if (
+                            status["status"] == ComposeStackServiceStatus.HEALTHY
+                            or status["status"] == ComposeStackServiceStatus.COMPLETE
+                            or status["status"] == ComposeStackServiceStatus.SLEEPING
+                        )
                     ]
                 )
-                status_message = f"{total_healthy}/{len(services)} of services healthy"
                 all_healthy = total_healthy == len(services)
-
-                status_color = Colors.GREEN if all_healthy else Colors.RED
 
                 await deployment_log(
                     deployment,
                     f"Health check for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
-                    f" | {Colors.BLUE}ATTEMPT #{check_attempts}{Colors.ENDC} "
-                    f"| result: {status_color}{status_message}{Colors.ENDC}",
+                    f" | {Colors.BLUE}ATTEMPT #{check_attempts}{Colors.ENDC} |  {Colors.BLUE}result: {Colors.ENDC}",
                 )
+                await deployment_log(deployment, status_message.splitlines())
 
                 if all_healthy:
                     break
@@ -416,7 +441,7 @@ class ComposeStackActivities:
             pass
 
     @activity.defn
-    async def finalize_deployment(self, result: ComposeStackMonitorPayload):
+    async def finalize_stack_deployment(self, result: ComposeStackMonitorPayload):
         deployment = result.deployment
 
         status_color = (
@@ -432,7 +457,11 @@ class ComposeStackActivities:
 
         await deployment_log(
             deployment,
-            f"Compose stack deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC} finished with reason {Colors.GREY}{result.status_message}{Colors.ENDC}",
+            f"Compose stack deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC} finished with result:",
+        )
+        await deployment_log(
+            deployment,
+            result.status_message.splitlines(),
         )
 
         await ComposeStackDeployment.objects.filter(
@@ -628,3 +657,109 @@ class ComposeStackActivities:
             )
             await semaphore.reset()
         print(f"Semaphore for stack {Colors.ORANGE}{stack_id}{Colors.ENDC} reset ✅")
+
+    @activity.defn
+    async def save_cancelled_stack_deployment(
+        self, deployment: ComposeStackDeploymentDetails
+    ):
+        try:
+            stack_deployment = await ComposeStackDeployment.objects.filter(
+                hash=deployment.hash
+            ).aget()
+        except ComposeStackDeployment.DoesNotExist:
+            raise ApplicationError(
+                "Cannot cancel a non existent deployment.",
+            )
+
+        stack_deployment.status = ComposeStackDeployment.DeploymentStatus.CANCELLED
+        stack_deployment.status_reason = "Deployment cancelled."
+        stack_deployment.finished_at = timezone.now()
+        await stack_deployment.asave(
+            update_fields=["updated_at", "status", "status_reason", "finished_at"]
+        )
+
+    @activity.defn
+    async def scale_down_stack_services(self, details: ToggleComposeStackDetails):
+        stack = details.stack
+        print(
+            f"Scaling down all services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC} (name: {Colors.YELLOW}{stack.name}{Colors.ENDC})..."
+        )
+
+        services_scaled_down = {}
+
+        services: List[DockerService] = self.docker_client.services.list(
+            filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
+            status=True,
+        )
+
+        for service in services:
+            service_mode: str = service.attrs["Spec"]["Mode"]
+
+            # Only replicated services are considered
+            if "Replicated" not in service_mode:
+                continue
+
+            desired_replicas = service.attrs["ServiceStatus"]["DesiredTasks"]
+            if desired_replicas == 0:
+                continue  # do not shut down already scale down services that were already scaled down
+
+            service_labels: dict[str, str] = service.attrs["Spec"].get("Labels", {})
+            service_labels["status"] = "sleeping"
+            service_labels["desired_replicas"] = str(desired_replicas)
+            service.update(mode={"Replicated": {"Replicas": 0}}, labels=service_labels)
+            services_scaled_down[service.name] = 0
+            print(
+                f"Scaled down service {Colors.YELLOW}{service.name}{Colors.ENDC} to 0 replicas"
+            )
+
+        print(
+            f"All services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC} (name: {Colors.YELLOW}{stack.name}{Colors.ENDC}) scaled down to 0 replicas ✅"
+        )
+        return services_scaled_down
+
+    @activity.defn
+    async def scale_up_stack_services(self, details: ToggleComposeStackDetails):
+        stack = details.stack
+        print(
+            f"Scaling up all services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC} (name: {Colors.YELLOW}{stack.name}{Colors.ENDC})..."
+        )
+
+        services_scaled_up = {}
+        services: List[DockerService] = self.docker_client.services.list(
+            filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
+            status=True,
+        )
+
+        for service in services:
+            service_mode: str = service.attrs["Spec"]["Mode"]
+
+            # Only replicated services are considered
+            if "Replicated" not in service_mode:
+                continue
+
+            service_labels: dict[str, str] = service.attrs["Spec"].get("Labels", {})
+            service_labels["status"] = "active"
+
+            current_replicas = service.attrs["ServiceStatus"]["DesiredTasks"]
+            default_replicas = current_replicas if current_replicas > 0 else 1
+
+            try:
+                desired_replicas = int(
+                    service_labels.pop("desired_replicas", default_replicas)
+                )
+            except ValueError:
+                desired_replicas = 1
+
+            service.update(
+                mode={"Replicated": {"Replicas": desired_replicas}},
+                labels=service_labels,
+            )
+            services_scaled_up[service.name] = desired_replicas
+            print(
+                f"Scaled up service {Colors.YELLOW}{service.name}{Colors.ENDC} to {desired_replicas} replica"
+            )
+
+        print(
+            f"All services in stack {Colors.BLUE}{stack.slug}{Colors.ENDC} (name: {Colors.YELLOW}{stack.name}{Colors.ENDC}) scaled up ✅"
+        )
+        return services_scaled_up
