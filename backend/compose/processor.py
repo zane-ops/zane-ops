@@ -696,16 +696,17 @@ class ComposeSpecProcessor:
 
             # Copy over user-specified fields that we didn't process
             for key, value in user_service.items():
-                if computed_service.get(key) is None:
-                    computed_service[key] = value
                 if key == "environment":
-                    envs = cast(dict[str, str], computed_service[key])
-                    new_envs: dict[str, str] = {}
-                    for k, v in envs.items():
-                        if isinstance(v, bool):
-                            v = str(v).lower()
-                        new_envs[k] = quoted(v)  # always quote env variables
-                    computed_service["environment"] = new_envs
+                    envs = cast(dict[str, str] | None, computed_service.get(key))
+                    if envs is not None:
+                        new_envs: dict[str, str] = {}
+                        for k, v in envs.items():
+                            if isinstance(v, bool):
+                                v = str(v).lower()
+                            new_envs[k] = quoted(v)  # always quote env variables
+                        computed_service["environment"] = new_envs
+                elif computed_service.get(key) is None:
+                    computed_service[key] = value
 
             reconciled_services[hashed_name] = computed_service
 
