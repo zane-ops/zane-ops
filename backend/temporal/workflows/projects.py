@@ -108,16 +108,6 @@ class RemoveProjectResourcesWorkflow:
             for stack_service in service_list
         ]
 
-        coroutines = [
-            workflow.execute_activity_method(
-                DockerSwarmActivities.cleanup_docker_service_resources,
-                service,
-                start_to_close_timeout=timedelta(seconds=60),
-                retry_policy=retry_policy,
-            )
-            for service in services
-        ]
-
         await asyncio.gather(
             *[
                 workflow.execute_activity_method(

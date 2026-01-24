@@ -340,20 +340,19 @@ class ArchiveComposeStackWorkflow:
             ]
         )
 
-        if details.delete_configs:
-            result.config_deleted = await workflow.execute_activity_method(
-                ComposeStackActivities.delete_stack_configs,
-                details,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-        if details.delete_volumes:
-            result.volumes_deleted = await workflow.execute_activity_method(
-                ComposeStackActivities.delete_stack_volumes,
-                details,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
+        result.config_deleted = await workflow.execute_activity_method(
+            ComposeStackActivities.delete_stack_configs,
+            details,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+        result.volumes_deleted = await workflow.execute_activity_method(
+            ComposeStackActivities.delete_stack_volumes,
+            details,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
 
         await workflow.execute_activity_method(
             ComposeStackActivities.reset_stack_deploy_semaphore,

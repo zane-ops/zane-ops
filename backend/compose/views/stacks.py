@@ -12,7 +12,6 @@ from .serializers import (
     ComposeStackDeployRequestSerializer,
     ComposeStackDeploymentSerializer,
     ComposeStackSnapshotSerializer,
-    ComposeStackArchiveRequestSerializer,
     ComposeContentFieldChangeSerializer,
     ComposeEnvOverrideItemChangeSerializer,
     ComposeStackFieldChangeRequestSerializer,
@@ -364,7 +363,7 @@ class ComposeStackArchiveAPIView(APIView):
     @transaction.atomic()
     @extend_schema(
         responses={204: None},
-        request=ComposeStackArchiveRequestSerializer,
+        request=None,
         operation_id="archiveComposeStack",
         summary="Archive a compose stack",
     )
@@ -399,17 +398,8 @@ class ComposeStackArchiveAPIView(APIView):
                 detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
             )
 
-        form = ComposeStackArchiveRequestSerializer(data=request.data or {})
-        form.is_valid(raise_exception=True)
-
-        data = cast(dict[str, bool], form.data)
-
         if stack.deployments.count() > 0:
-            payload = ComposeStackArchiveDetails(
-                stack=stack.snapshot,
-                delete_configs=data["delete_configs"],
-                delete_volumes=data["delete_volumes"],
-            )
+            payload = ComposeStackArchiveDetails(stack=stack.snapshot)
             workflow_id = stack.archive_workflow_id
 
             def commit_callback():

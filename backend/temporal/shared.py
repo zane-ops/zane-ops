@@ -602,8 +602,6 @@ class RegistryHealthCheckResult:
 @dataclass
 class ComposeStackArchiveDetails:
     stack: ComposeStackSnapshot
-    delete_configs: bool = True
-    delete_volumes: bool = True
 
 
 @dataclass
