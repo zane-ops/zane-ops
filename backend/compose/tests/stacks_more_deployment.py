@@ -12,7 +12,12 @@ from ..models import (
     ComposeStackDeployment,
     ComposeStackEnvOverride,
 )
-from .fixtures import DOCKER_COMPOSE_MINIMAL, DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES
+from .fixtures import (
+    DOCKER_COMPOSE_MINIMAL,
+    DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES,
+    DOCKER_COMPOSE_SIMPLE_DB,
+    DOCKER_COMPOSE_WEB_SERVICE,
+)
 from .stacks import ComposeStackAPITestBase
 
 
@@ -621,3 +626,34 @@ services:
         # Verify service names match the initial deployment
         rollback_service_names = {s.name for s in services_after_rollback}
         self.assertEqual(initial_service_names, rollback_service_names)
+
+
+class TestArchiveProjectViewTests(ComposeStackAPITestBase):
+    def test_delete_project_should_delete_included_stacks(self):
+        p, stack = self.create_and_deploy_compose_stack(content=DOCKER_COMPOSE_MINIMAL)
+
+        response = self.client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": p.slug})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(0, ComposeStack.objects.filter(pk=stack.id).count())
+
+    async def test_delete_project_should_delete_included_stacks_resources(self):
+        p, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL
+        )
+
+        stack_name = stack.name
+
+        response = await self.async_client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": p.slug})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(0, await ComposeStack.objects.filter(project_id=p.id).acount())
+
+        service_list = self.fake_docker_client.services_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(0, len(service_list))
