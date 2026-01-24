@@ -70,6 +70,13 @@ export interface paths {
     /** Get a compose stack deployment details */
     get: operations["getComposeStackDeploymentDetails"];
   };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/{hash}/cancel/": {
+    /**
+     * Cancel compose stack deployment
+     * @description Cancel a compose stack deployment in progress.
+     */
+    put: operations["cancelComposeStackDeployment"];
+  };
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/archive/": {
     /** Archive a compose stack */
     delete: operations["archiveComposeStack"];
@@ -78,9 +85,20 @@ export interface paths {
     /** Queue a new deployment for the compose stack */
     put: operations["deployComposeStack"];
   };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/{hash}/": {
+    /** Rollback to a previous version of the compose stack */
+    put: operations["reDeployComposeStack"];
+  };
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/request-changes/": {
     /** Request a new compose stack change */
     put: operations["requestComposeStackUpdate"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/toggle/": {
+    /**
+     * Stop/Start a compose stack
+     * @description Stops all services in a compose stack (scales to 0) or starts them back up.
+     */
+    put: operations["toggleComposeStack"];
   };
   "/api/compose/stacks/{project_slug}/{env_slug}/create/": {
     post: operations["compose_stacks_create_create"];
@@ -793,6 +811,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["BulkToggleServicesError"][];
     };
+    CancelComposeStackDeploymentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CancelServiceChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CancelServiceDeploymentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ChangePasswordConfirmPasswordErrorComponent: {
@@ -1076,18 +1095,18 @@ export interface components {
       changes: readonly components["schemas"]["ComposeStackChange"][];
       /** Format: date-time */
       finished_at: string | null;
+      redeploy_hash: string | null;
     };
     ComposeStackDeploymentChangeRequestRequest: components["schemas"]["ComposeContentFieldChangeRequest"] | components["schemas"]["ComposeEnvOverrideItemChangeRequest"];
     /**
      * @description * `QUEUED` - Queued
-     * * `CANCELLED` - Cancelled
      * * `DEPLOYING` - Deploying
      * * `FINISHED` - Finished
      * * `FAILED` - Failed
-     * * `REMOVED` - Removed
+     * * `CANCELLED` - Cancelled
      * @enum {string}
      */
-    ComposeStackDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "DEPLOYING" | "FINISHED" | "FAILED" | "REMOVED";
+    ComposeStackDeploymentStatusEnum: "QUEUED" | "DEPLOYING" | "FINISHED" | "FAILED" | "CANCELLED";
     ComposeStackEnvOverride: {
       id: string;
       key: string;
@@ -1186,6 +1205,9 @@ export interface components {
         [key: string]: components["schemas"]["ComposeConfigVersion"];
       };
       env_overrides: readonly components["schemas"]["ComposeStackEnvOverride"][];
+    };
+    ComposeStackToggleRequestRequest: {
+      desired_state: components["schemas"]["DesiredStateEnum"];
     };
     ComposeStackUpdate: {
       id: string;
@@ -4262,6 +4284,7 @@ export interface components {
       custom_start_command: string | null;
       is_static: boolean;
     };
+    ReDeployComposeStackErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ReDeployGitServiceError: components["schemas"]["ReDeployGitServiceNonFieldErrorsErrorComponent"] | components["schemas"]["ReDeployGitServiceIgnoreBuildCacheErrorComponent"];
     ReDeployGitServiceErrorResponse400: components["schemas"]["ReDeployGitServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     ReDeployGitServiceIgnoreBuildCacheErrorComponent: {
@@ -6613,6 +6636,40 @@ export interface components {
       repositories_count: number;
     };
     TestRegistryCredentialsErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ToggleComposeStackDesiredStateErrorComponent: {
+      /**
+       * @description * `desired_state` - desired_state
+       * @enum {string}
+       */
+      attr: "desired_state";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    ToggleComposeStackError: components["schemas"]["ToggleComposeStackNonFieldErrorsErrorComponent"] | components["schemas"]["ToggleComposeStackDesiredStateErrorComponent"];
+    ToggleComposeStackErrorResponse400: components["schemas"]["ToggleComposeStackValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ToggleComposeStackNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ToggleComposeStackValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ToggleComposeStackError"][];
+    };
     ToggleServiceDesiredStateErrorComponent: {
       /**
        * @description * `desired_state` - desired_state
@@ -7831,6 +7888,52 @@ export interface operations {
       };
     };
   };
+  /**
+   * Cancel compose stack deployment
+   * @description Cancel a compose stack deployment in progress.
+   */
+  cancelComposeStackDeployment: {
+    parameters: {
+      path: {
+        env_slug: string;
+        hash: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ComposeStackDeployment"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CancelComposeStackDeploymentErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /** Archive a compose stack */
   archiveComposeStack: {
     parameters: {
@@ -7911,6 +8014,44 @@ export interface operations {
       };
     };
   };
+  /** Rollback to a previous version of the compose stack */
+  reDeployComposeStack: {
+    parameters: {
+      path: {
+        env_slug: string;
+        hash: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ComposeStackDeployment"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ReDeployComposeStackErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /** Request a new compose stack change */
   requestComposeStackUpdate: {
     parameters: {
@@ -7946,6 +8087,57 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Stop/Start a compose stack
+   * @description Stops all services in a compose stack (scales to 0) or starts them back up.
+   */
+  toggleComposeStack: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ComposeStackToggleRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ComposeStackToggleRequestRequest"];
+        "multipart/form-data": components["schemas"]["ComposeStackToggleRequestRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ToggleComposeStackErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
         };
       };
       429: {
