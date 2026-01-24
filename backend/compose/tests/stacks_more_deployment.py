@@ -17,9 +17,14 @@ from .fixtures import (
     DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES,
     DOCKER_COMPOSE_SIMPLE_DB,
     DOCKER_COMPOSE_WEB_SERVICE,
+    DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
 )
 from .stacks import ComposeStackAPITestBase
 import responses
+from django.conf import settings
+import requests
+from temporal.helpers import ZaneProxyClient
+from compose.dtos import ComposeStackUrlRouteDto
 
 
 class ToggleStackSleepViewTests(ComposeStackAPITestBase):
@@ -660,13 +665,102 @@ class TestArchiveProjectViewTests(ComposeStackAPITestBase):
         self.assertEqual(0, len(service_list))
 
     @responses.activate()
-    async def test_archive_project_delete_stack_configs(self):
-        self.assertFalse(True)
-
-    @responses.activate()
     async def test_archive_project_delete_stack_urls_in_proxy(self):
-        self.assertFalse(True)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        p, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_WEB_SERVICE
+        )
+
+        stack_id = stack.id
+        # Get route info before archiving
+        routes = stack.urls["web"]  # type: ignore
+        route = cast(dict, routes[0])
+
+        # Verify route is registered in Caddy
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_compose_stack_service(
+                stack_id=stack.id,
+                service_name="web",
+                url=ComposeStackUrlRouteDto.from_dict(route),
+            )
+        )
+        self.assertEqual(200, response.status_code)
+
+        # delete project
+        response = await self.async_client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": p.slug})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # delete project
+        self.assertEqual(0, await ComposeStack.objects.filter(project_id=p.id).acount())
+
+        # Verify route is removed from Caddy
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_compose_stack_service(
+                stack_id=stack_id,
+                service_name="web",
+                url=ComposeStackUrlRouteDto.from_dict(route),
+            )
+        )
+        self.assertEqual(404, response.status_code)
 
     @responses.activate()
-    async def test_archive_project_delete_volume_configs(self):
-        self.assertFalse(True)
+    async def test_archive_project_delete_stack_configs(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        p, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_WITH_INLINE_CONFIGS
+        )
+
+        stack_name = stack.name
+
+        # Verify config stack exists
+        config_list = self.fake_docker_client.config_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(1, len(config_list))
+
+        # delete project
+        response = await self.async_client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": p.slug})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify config stack is deleted
+        config_list = self.fake_docker_client.config_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(0, len(config_list))
+
+    @responses.activate()
+    async def test_archive_project_delete_stack_volumes(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        p, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+
+        stack_name = stack.name
+
+        # Verify Docker volumes exist
+        volumes = self.fake_docker_client.volumes_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(1, len(volumes))
+
+        # delete project
+        response = await self.async_client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": p.slug})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify Docker volumes are removed
+        volumes = self.fake_docker_client.volumes_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(0, len(volumes))

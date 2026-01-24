@@ -295,72 +295,76 @@ class ArchiveComposeStackWorkflow:
             retry_policy=self.retry_policy,
         )
 
-        deleted_routes = await workflow.execute_activity_method(
-            ComposeStackActivities.unexpose_stack_services_from_http,
-            details,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+        try:
+            deleted_routes = await workflow.execute_activity_method(
+                ComposeStackActivities.unexpose_stack_services_from_http,
+                details,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
-        await workflow.execute_activity_method(
-            ComposeStackActivities.delete_stack_healthcheck_schedule,
-            details,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+            await workflow.execute_activity_method(
+                ComposeStackActivities.delete_stack_healthcheck_schedule,
+                details,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
-        services = await workflow.execute_activity_method(
-            ComposeStackActivities.get_services_in_stack,
-            details,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+            services = await workflow.execute_activity_method(
+                ComposeStackActivities.get_services_in_stack,
+                details,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
-        result = ComposeStackArchiveResult(
-            services_deleted=services,
-            routes_removed=deleted_routes,
-        )
+            result = ComposeStackArchiveResult(
+                services_deleted=services,
+                routes_removed=deleted_routes,
+            )
 
-        await workflow.execute_activity_method(
-            ComposeStackActivities.remove_stack_with_cli,
-            details,
-            start_to_close_timeout=timedelta(minutes=2, seconds=30),
-            retry_policy=self.retry_policy,
-        )
+            await workflow.execute_activity_method(
+                ComposeStackActivities.remove_stack_with_cli,
+                details,
+                start_to_close_timeout=timedelta(minutes=2, seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
-        await asyncio.gather(
-            *[
-                workflow.execute_activity_method(
-                    ComposeStackActivities.wait_for_stack_service_containers_to_be_deleted,
-                    service,
-                    start_to_close_timeout=timedelta(minutes=5),
-                    retry_policy=self.retry_policy,
-                )
-                for service in services
-            ]
-        )
+            await asyncio.gather(
+                *[
+                    workflow.execute_activity_method(
+                        ComposeStackActivities.wait_for_stack_service_containers_to_be_deleted,
+                        service,
+                        start_to_close_timeout=timedelta(minutes=5),
+                        retry_policy=self.retry_policy,
+                    )
+                    for service in services
+                ]
+            )
 
-        result.config_deleted = await workflow.execute_activity_method(
-            ComposeStackActivities.delete_stack_configs,
-            details,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+            result.config_deleted = await workflow.execute_activity_method(
+                ComposeStackActivities.delete_stack_configs,
+                details,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
-        result.volumes_deleted = await workflow.execute_activity_method(
-            ComposeStackActivities.delete_stack_volumes,
-            details,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
-
-        await workflow.execute_activity_method(
-            ComposeStackActivities.reset_stack_deploy_semaphore,
-            details.stack.id,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
-        return result
+            result.volumes_deleted = await workflow.execute_activity_method(
+                ComposeStackActivities.delete_stack_volumes,
+                details,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+        except Exception:
+            pass  # do nothing
+        else:
+            return result
+        finally:
+            await workflow.execute_activity_method(
+                ComposeStackActivities.reset_stack_deploy_semaphore,
+                details.stack.id,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
 
 @workflow.defn(name="toggle-compose-stack-state")
