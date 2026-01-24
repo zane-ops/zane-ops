@@ -405,9 +405,8 @@ class ComposeStackArchiveAPIView(APIView):
         data = cast(dict[str, bool], form.data)
 
         if stack.deployments.count() > 0:
-            snapshot_dict = cast(dict, ComposeStackSnapshotSerializer(stack).data)
             payload = ComposeStackArchiveDetails(
-                stack=ComposeStackSnapshot.from_dict(snapshot_dict),
+                stack=stack.snapshot,
                 delete_configs=data["delete_configs"],
                 delete_volumes=data["delete_volumes"],
             )
@@ -536,9 +535,7 @@ class ComposeStackReDeployAPIView(APIView):
                 detail=f"A deployment with the hash `{hash}` does not exist for this stack."
             )
 
-        current_snapshot = ComposeStackSnapshot.from_dict(
-            cast(dict, ComposeStackSnapshotSerializer(stack).data)
-        )
+        current_snapshot = stack.snapshot
         target_snapshot = ComposeStackSnapshot.from_dict(
             cast(dict, deployment.stack_snapshot)
         )
@@ -673,7 +670,7 @@ class ComposeStackDeployAPIView(APIView):
 
         stack.apply_pending_changes(deployment=deployment)
 
-        deployment.stack_snapshot = ComposeStackSnapshotSerializer(stack).data  # type: ignore
+        deployment.stack_snapshot = stack.snapshot.to_dict()  # type: ignore
         deployment.save()
 
         payload = ComposeStackDeploymentDetails.from_deployment(deployment=deployment)

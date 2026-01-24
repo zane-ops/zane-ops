@@ -53,9 +53,13 @@ from asgiref.sync import sync_to_async
 
 if TYPE_CHECKING:
     from container_registry.models import SharedRegistryCredentials  # noqa: F401
+    from compose.models import ComposeStack
+    from django.db.models.manager import RelatedManager
 
 
 class Project(TimestampedModel):
+    if TYPE_CHECKING:
+        compose_stacks: RelatedManager["ComposeStack"]
     environments: Manager["Environment"]
     preview_templates: Manager["PreviewEnvTemplate"]
     services: Manager["Service"]

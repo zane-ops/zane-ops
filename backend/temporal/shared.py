@@ -44,6 +44,7 @@ class ArchivedProjectDetails:
     id: int
     original_id: str
     environments: List["EnvironmentDetails"]
+    compose_stacks: List["ComposeStackArchiveDetails"] = field(default_factory=list)
 
 
 @dataclass

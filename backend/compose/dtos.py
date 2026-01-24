@@ -521,8 +521,11 @@ class ComposeStackSnapshot:
     def to_dict(self):
         return {
             "id": self.id,
+            "name": self.name,
             "slug": self.slug,
+            "monitor_schedule_id": self.monitor_schedule_id,
             "network_alias_prefix": self.network_alias_prefix,
+            "hash_prefix": self.hash_prefix,
             "user_content": self.user_content,
             "computed_content": self.computed_content,
             "urls": {

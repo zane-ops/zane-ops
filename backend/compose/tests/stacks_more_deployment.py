@@ -19,6 +19,7 @@ from .fixtures import (
     DOCKER_COMPOSE_WEB_SERVICE,
 )
 from .stacks import ComposeStackAPITestBase
+import responses
 
 
 class ToggleStackSleepViewTests(ComposeStackAPITestBase):
@@ -639,7 +640,7 @@ class TestArchiveProjectViewTests(ComposeStackAPITestBase):
 
         self.assertEqual(0, ComposeStack.objects.filter(pk=stack.id).count())
 
-    async def test_delete_project_should_delete_included_stacks_resources(self):
+    async def test_delete_project_should_delete_included_stack_resources(self):
         p, stack = await self.acreate_and_deploy_compose_stack(
             content=DOCKER_COMPOSE_MINIMAL
         )
@@ -657,3 +658,15 @@ class TestArchiveProjectViewTests(ComposeStackAPITestBase):
             filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
         )
         self.assertEqual(0, len(service_list))
+
+    @responses.activate()
+    async def test_archive_project_delete_stack_configs(self):
+        self.assertFalse(True)
+
+    @responses.activate()
+    async def test_archive_project_delete_stack_urls_in_proxy(self):
+        self.assertFalse(True)
+
+    @responses.activate()
+    async def test_archive_project_delete_volume_configs(self):
+        self.assertFalse(True)

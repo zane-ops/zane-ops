@@ -61,7 +61,9 @@ from temporal.shared import (
     ProjectDetails,
     ArchivedProjectDetails,
     EnvironmentDetails,
+    ComposeStackArchiveDetails,
 )
+from compose.dtos import ComposeStackSnapshot
 from temporal.workflows import (
     CreateProjectResourcesWorkflow,
     RemoveProjectResourcesWorkflow,
@@ -73,9 +75,7 @@ class ProjectsListAPIView(ListCreateAPIView):
     pagination_class = None
     filter_backends = [DjangoFilterBackend]
     filterset_class = ProjectListFilterSet
-    queryset = (
-        Project.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = Project.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
     def get_queryset(self) -> QuerySet[Project]:  # type: ignore
         queryset = (
@@ -182,7 +182,6 @@ class ProjectsListAPIView(ListCreateAPIView):
                     f" please use another one for this project."
                 )
             else:
-
                 transaction.on_commit(
                     lambda: TemporalClient.start_workflow(
                         CreateProjectResourcesWorkflow.run,
@@ -249,13 +248,13 @@ class ProjectDetailsView(APIView):
     )
     @transaction.atomic()
     def delete(self, request: Request, slug: str) -> Response:
-        project = (
-            Project.objects.filter(slug=slug).select_related("archived_version")
-        ).first()
-
-        if project is None:
+        try:
+            project = (
+                Project.objects.filter(slug=slug).select_related("archived_version")
+            ).get()
+        except Project.DoesNotExist:
             raise exceptions.NotFound(
-                detail=f"A project with the slug `{slug}` does not exist or has already been archived"
+                detail=f"A project with the slug `{slug}` does not exist"
             )
 
         archived_version = ArchivedProject.get_or_create_from_project(project)
@@ -301,6 +300,12 @@ class ProjectDetailsView(APIView):
                 )
                 for env in archived_version.environments.all()
             ],
+            compose_stacks=[
+                ComposeStackArchiveDetails(stack=stack.snapshot)
+                for stack in project.compose_stacks.filter(user_content__isnull=False)
+                .prefetch_related("env_overrides")
+                .all()
+            ],
         )
         transaction.on_commit(
             lambda: TemporalClient.start_workflow(
@@ -314,7 +319,6 @@ class ProjectDetailsView(APIView):
 
 
 class ProjectServiceListAPIView(APIView):
-
     @extend_schema(
         parameters=[ServiceListParamSerializer],
         responses={
@@ -435,7 +439,9 @@ class ProjectServiceListAPIView(APIView):
 
             if service.type == Service.ServiceType.DOCKER_REGISTRY:
                 service_image = service.image
-                source_change: DeploymentChange | None = service.sources[0] if len(service.sources) > 0 else None  # type: ignore
+                source_change: DeploymentChange | None = (
+                    service.sources[0] if len(service.sources) > 0 else None  # type: ignore
+                )
 
                 if service_image is None:
                     service_image = source_change.new_value["image"]  # type: ignore
@@ -455,7 +461,9 @@ class ProjectServiceListAPIView(APIView):
                             id=service.id,
                             image=image,
                             tag=tag,
-                            updated_at=service.last_updated if service.last_updated is not None else service.created_at,  # type: ignore
+                            updated_at=service.last_updated  # type: ignore
+                            if service.last_updated is not None  # type: ignore
+                            else service.created_at,  # type: ignore
                             slug=service.slug,
                             volume_number=service.volume_number,  # type: ignore
                             url=str(url) if url is not None else None,
@@ -471,7 +479,9 @@ class ProjectServiceListAPIView(APIView):
                 service_repo = service.repository_url
                 branch_name = service.branch_name
 
-                source_change: DeploymentChange | None = service.git_sources[0] if len(service.git_sources) > 0 else None  # type: ignore
+                source_change: DeploymentChange | None = (
+                    service.git_sources[0] if len(service.git_sources) > 0 else None  # type: ignore
+                )
                 source_git_provider = None
                 if service_repo is None or branch_name is None:
                     git_app: dict = source_change.new_value.get("git_app")  # type: ignore
@@ -490,7 +500,9 @@ class ProjectServiceListAPIView(APIView):
                             repository=service_repo,
                             last_commit_message=service.latest_commit_message,  # type: ignore
                             branch=branch_name,
-                            updated_at=service.last_updated if service.last_updated is not None else service.created_at,  # type: ignore
+                            updated_at=service.last_updated  # type: ignore
+                            if service.last_updated is not None  # type: ignore
+                            else service.created_at,  # type: ignore
                             slug=service.slug,
                             git_provider=service.git_provider or source_git_provider,  # type: ignore
                             volume_number=service.volume_number,  # type: ignore

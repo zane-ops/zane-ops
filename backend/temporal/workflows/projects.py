@@ -9,6 +9,7 @@ with workflow.unsafe.imports_passed_through():
     from ..activities import (
         DockerSwarmActivities,
         GitActivities,
+        ComposeStackActivities,
     )
     from ..shared import (
         ProjectDetails,
@@ -45,7 +46,6 @@ class RemoveProjectResourcesWorkflow:
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
 
-        print(f"Running activity `get_archived_project_services({payload=})`")
         services = await workflow.execute_activity_method(
             DockerSwarmActivities.get_archived_project_services,
             payload,
@@ -53,7 +53,18 @@ class RemoveProjectResourcesWorkflow:
             retry_policy=retry_policy,
         )
 
-        print(f"Running activities `unexpose_docker_service_from_http({services=})`")
+        await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.unexpose_stack_services_from_http,
+                    stack,
+                    start_to_close_timeout=timedelta(seconds=10),
+                    retry_policy=retry_policy,
+                )
+                for stack in payload.compose_stacks
+            ]
+        )
+
         await asyncio.gather(
             *[
                 workflow.execute_activity_method(
@@ -66,7 +77,47 @@ class RemoveProjectResourcesWorkflow:
             ]
         )
 
-        print(f"Running activities `cleanup_docker_service_resources({services=})`")
+        await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.delete_stack_healthcheck_schedule,
+                    stack,
+                    start_to_close_timeout=timedelta(seconds=10),
+                    retry_policy=retry_policy,
+                )
+                for stack in payload.compose_stacks
+            ]
+        )
+
+        all_stack_services = await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.get_services_in_stack,
+                    stack,
+                    start_to_close_timeout=timedelta(seconds=10),
+                    retry_policy=retry_policy,
+                )
+                for stack in payload.compose_stacks
+            ]
+        )
+
+        # flatten the list of services
+        all_stack_services = [
+            stack_service
+            for service_list in all_stack_services
+            for stack_service in service_list
+        ]
+
+        coroutines = [
+            workflow.execute_activity_method(
+                DockerSwarmActivities.cleanup_docker_service_resources,
+                service,
+                start_to_close_timeout=timedelta(seconds=60),
+                retry_policy=retry_policy,
+            )
+            for service in services
+        ]
+
         await asyncio.gather(
             *[
                 workflow.execute_activity_method(
@@ -76,12 +127,18 @@ class RemoveProjectResourcesWorkflow:
                     retry_policy=retry_policy,
                 )
                 for service in services
-            ]
+            ],
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.remove_stack_with_cli,
+                    stack,
+                    start_to_close_timeout=timedelta(minutes=2, seconds=30),
+                    retry_policy=retry_policy,
+                )
+                for stack in payload.compose_stacks
+            ],
         )
 
-        print(
-            f"Running activities `delete_buildkit_builder_for_env({payload.environments=})`"
-        )
         await asyncio.gather(
             *[
                 workflow.execute_activity_method(
@@ -93,7 +150,40 @@ class RemoveProjectResourcesWorkflow:
                 for env in payload.environments
             ]
         )
-        print(f"Running activity `remove_project_networks({payload=})`")
+
+        await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.wait_for_stack_service_containers_to_be_deleted,
+                    service,
+                    start_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=retry_policy,
+                )
+                for service in all_stack_services
+            ]
+        )
+
+        await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.delete_stack_configs,
+                    stack,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=retry_policy,
+                )
+                for stack in payload.compose_stacks
+            ],
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.delete_stack_volumes,
+                    stack,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=retry_policy,
+                )
+                for stack in payload.compose_stacks
+            ],
+        )
+
         await workflow.execute_activity_method(
             DockerSwarmActivities.remove_project_networks,
             payload,

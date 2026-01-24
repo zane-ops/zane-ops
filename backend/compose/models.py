@@ -3,6 +3,12 @@ from django.db import models
 
 from zane_api.models import TimestampedModel, Project, Environment, BaseEnvVariable
 from shortuuid.django_fields import ShortUUIDField
+from .dtos import (
+    ComposeStackSnapshot,
+    ComposeVersionedConfig,
+    ComposeStackUrlRouteDto,
+    ComposeStackEnvOverrideDto,
+)
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -113,6 +119,35 @@ class ComposeStack(TimestampedModel):
     @property
     def name(self) -> str:
         return f"zn-{self.id}"
+
+    @property
+    def snapshot(self) -> ComposeStackSnapshot:
+        return ComposeStackSnapshot(
+            id=self.pk,
+            hash_prefix=self.hash_prefix,
+            name=self.name,
+            slug=self.slug,
+            monitor_schedule_id=self.monitor_schedule_id,
+            network_alias_prefix=self.network_alias_prefix,
+            user_content=cast(str, self.user_content),
+            computed_content=cast(str, self.computed_content),
+            urls={
+                service: [ComposeStackUrlRouteDto.from_dict(url) for url in urls]
+                for service, urls in cast(dict[str, list[dict]], self.urls).items()
+            },
+            configs={
+                name: ComposeVersionedConfig.from_dict(config)
+                for name, config in cast(dict[str, dict], self.configs).items()
+            },
+            env_overrides=[
+                ComposeStackEnvOverrideDto(
+                    id=env.id,
+                    key=env.key,
+                    value=env.value,
+                )
+                for env in self.env_overrides.all()
+            ],
+        )
 
     @property
     def archive_workflow_id(self) -> str:
