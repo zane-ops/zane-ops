@@ -1838,6 +1838,7 @@ class HttpLog(models.Model):
     service_id = models.CharField(null=True)
     deployment_id = models.CharField(null=True)
     stack_id = models.CharField(null=True)
+    registry_id = models.CharField(null=True)
     stack_service_name = models.CharField(null=True)
     time = models.DateTimeField()
 
@@ -1884,6 +1885,9 @@ class HttpLog(models.Model):
         indexes = [
             models.Index(fields=["deployment_id"]),
             models.Index(fields=["service_id"]),
+            models.Index(fields=["registry_id"]),
+            models.Index(fields=["stack_id"]),
+            models.Index(fields=["stack_service_name"]),
             models.Index(fields=["request_method"]),
             models.Index(fields=["status"]),
             models.Index(fields=["request_host"]),

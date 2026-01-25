@@ -90,7 +90,8 @@ class LogIngestAPIView(APIView):
                             else:
                                 service_id = content.get("zane_service_id")
                                 stack_id = content.get("zane_stack_id")
-                                if service_id or stack_id:
+                                registry_id = content.get("zane_registry_id")
+                                if service_id or stack_id or registry_id:
                                     log_serializer = HTTPServiceLogSerializer(
                                         data=content
                                     )
@@ -101,6 +102,70 @@ class LogIngestAPIView(APIView):
                                             "zane_service_type"
                                         )
                                         match service_type:
+                                            case ZaneProxyClient.ServiceType.BUILD_REGISTRY:
+                                                if registry_id:
+                                                    req = log_content["request"]
+                                                    duration_in_seconds = log_content[
+                                                        "duration"
+                                                    ]
+
+                                                    full_url = urlparse(
+                                                        f"https://{req['host']}{req['uri']}"
+                                                    )
+                                                    client_ip = req["headers"].get(
+                                                        "X-Forwarded-For",
+                                                        req["remote_ip"],
+                                                    )
+                                                    user_agent = req["headers"].get(
+                                                        "User-Agent"
+                                                    )
+                                                    http_logs.append(
+                                                        HttpLog(
+                                                            time=log["time"],
+                                                            registry_id=registry_id,
+                                                            request_duration_ns=(
+                                                                duration_in_seconds
+                                                                * 1_000_000_000
+                                                            ),
+                                                            request_path=full_url.path,
+                                                            request_query=full_url.query,
+                                                            request_protocol=req[
+                                                                "proto"
+                                                            ],
+                                                            request_host=req["host"],
+                                                            status=log_content[
+                                                                "status"
+                                                            ],
+                                                            request_headers=req[
+                                                                "headers"
+                                                            ],
+                                                            response_headers=log_content[
+                                                                "resp_headers"
+                                                            ],
+                                                            request_user_agent=(
+                                                                user_agent[0]
+                                                                if isinstance(
+                                                                    user_agent, list
+                                                                )
+                                                                else None
+                                                            ),
+                                                            request_ip=(
+                                                                client_ip[0].split(",")[
+                                                                    0
+                                                                ]
+                                                                if isinstance(
+                                                                    client_ip, list
+                                                                )
+                                                                else client_ip
+                                                            ),
+                                                            request_uuid=log_content.get(
+                                                                "uuid"
+                                                            ),
+                                                            request_method=req[
+                                                                "method"
+                                                            ],
+                                                        )
+                                                    )
                                             case ZaneProxyClient.ServiceType.COMPOSE_STACK_SERVICE:
                                                 stack_service_name = content.get(
                                                     "zane_stack_service_name"
