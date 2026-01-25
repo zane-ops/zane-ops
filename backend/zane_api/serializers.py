@@ -529,7 +529,7 @@ class HttpLogSerializer(serializers.ModelSerializer):
             "time",
             "deployment_id",
             "service_id",
-            "request_id",
+            "request_uuid",
             "request_ip",
             "request_path",
             "request_query",

@@ -3300,10 +3300,6 @@ paths:
         explode: false
         style: form
       - in: query
-        name: request_id
-        schema:
-          type: string
-      - in: query
         name: request_ip
         schema:
           type: array
@@ -3551,6 +3547,101 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HttpLog'
+          description: ''
+  /api/http-logs/fields/:
+    get:
+      operationId: http_logs_fields_list
+      summary: Get http logs fields values
+      parameters:
+      - in: query
+        name: deployment_hash
+        schema:
+          type: string
+          minLength: 1
+      - in: query
+        name: field
+        schema:
+          enum:
+          - request_host
+          - request_path
+          - request_user_agent
+          - request_ip
+          type: string
+          minLength: 1
+        description: |-
+          * `request_host` - request_host
+          * `request_path` - request_path
+          * `request_user_agent` - request_user_agent
+          * `request_ip` - request_ip
+        required: true
+      - in: query
+        name: service_id
+        schema:
+          type: string
+          minLength: 1
+      - in: query
+        name: stack_id
+        schema:
+          type: string
+          minLength: 1
+      - in: query
+        name: value
+        schema:
+          type: string
+        required: true
+      tags:
+      - http-logs
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpLogsFieldsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
           description: ''
   /api/ping/:
     get:
@@ -5671,225 +5762,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RuntimeLogsSearch'
           description: ''
-  ? /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/
-  : get:
-      operationId: projects_service_details_deployments_http_logs_retrieve
-      summary: Get single deployment http log
-      parameters:
-      - in: path
-        name: deployment_hash
-        schema:
-          type: string
-          pattern: ^[a-zA-Z0-9-_]+$
-        required: true
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: request_uuid
-        schema:
-          type: string
-          pattern: ^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$
-        required: true
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsRetrieveErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HttpLog'
-          description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/fields/:
-    get:
-      operationId: projects_service_details_deployments_http_logs_fields_list
-      summary: Get deployment http logs fields values
-      parameters:
-      - in: path
-        name: deployment_hash
-        schema:
-          type: string
-          pattern: ^[a-zA-Z0-9-_]+$
-        required: true
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: field
-        schema:
-          enum:
-          - request_host
-          - request_path
-          - request_user_agent
-          - request_ip
-          type: string
-          minLength: 1
-        description: |-
-          * `request_host` - request_host
-          * `request_path` - request_path
-          * `request_user_agent` - request_user_agent
-          * `request_ip` - request_ip
-        required: true
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: value
-        schema:
-          type: string
-        required: true
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsFieldsListErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: string
-          description: ''
   /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/metrics/:
     get:
       operationId: projects_service_details_deployments_metrics_list
@@ -6228,213 +6100,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ServiceDetectedPort'
-          description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/{request_uuid}/:
-    get:
-      operationId: projects_service_details_http_logs_retrieve
-      summary: Get single service http log
-      parameters:
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: request_uuid
-        schema:
-          type: string
-          pattern: ^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$
-        required: true
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsRetrieveErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HttpLog'
-          description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/fields/:
-    get:
-      operationId: projects_service_details_http_logs_fields_list
-      summary: Get service http logs fields values
-      parameters:
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: field
-        schema:
-          enum:
-          - request_host
-          - request_path
-          - request_user_agent
-          - request_ip
-          type: string
-          minLength: 1
-        description: |-
-          * `request_host` - request_host
-          * `request_path` - request_path
-          * `request_user_agent` - request_user_agent
-          * `request_ip` - request_ip
-        required: true
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: value
-        schema:
-          type: string
-        required: true
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsFieldsListErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: string
           description: ''
   /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/metrics/:
     get:
@@ -16125,7 +15790,7 @@ components:
         service_id:
           type: string
           nullable: true
-        request_id:
+        request_uuid:
           type: string
           nullable: true
           maxLength: 255
@@ -16178,19 +15843,26 @@ components:
       - request_duration_ns
       - request_headers
       - request_host
-      - request_id
       - request_ip
       - request_method
       - request_path
       - request_protocol
       - request_query
       - request_user_agent
+      - request_uuid
       - response_headers
       - service_id
       - stack_id
       - stack_service_name
       - status
       - time
+    HttpLogsFieldsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     HttpLogsListDeploymentIdErrorComponent:
       type: object
       properties:
@@ -16215,7 +15887,6 @@ components:
       - $ref: '#/components/schemas/HttpLogsListTimeErrorComponent'
       - $ref: '#/components/schemas/HttpLogsListRequestMethodErrorComponent'
       - $ref: '#/components/schemas/HttpLogsListRequestQueryErrorComponent'
-      - $ref: '#/components/schemas/HttpLogsListRequestIdErrorComponent'
       - $ref: '#/components/schemas/HttpLogsListStackIdErrorComponent'
       - $ref: '#/components/schemas/HttpLogsListStackServiceNameErrorComponent'
       - $ref: '#/components/schemas/HttpLogsListServiceIdErrorComponent'
@@ -16227,7 +15898,6 @@ components:
           time: '#/components/schemas/HttpLogsListTimeErrorComponent'
           request_method: '#/components/schemas/HttpLogsListRequestMethodErrorComponent'
           request_query: '#/components/schemas/HttpLogsListRequestQueryErrorComponent'
-          request_id: '#/components/schemas/HttpLogsListRequestIdErrorComponent'
           stack_id: '#/components/schemas/HttpLogsListStackIdErrorComponent'
           stack_service_name: '#/components/schemas/HttpLogsListStackServiceNameErrorComponent'
           service_id: '#/components/schemas/HttpLogsListServiceIdErrorComponent'
@@ -16242,25 +15912,6 @@ components:
         mapping:
           validation_error: '#/components/schemas/HttpLogsListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    HttpLogsListRequestIdErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - request_id
-          type: string
-          description: '* `request_id` - request_id'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     HttpLogsListRequestMethodErrorComponent:
       type: object
       properties:
@@ -18370,20 +18021,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDeploymentsHttpLogsFieldsListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDeploymentsHttpLogsRetrieveErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     ProjectsServiceDetailsDeploymentsListError:
       oneOf:
       - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsListStatusErrorComponent'
@@ -18477,20 +18114,6 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     ProjectsServiceDetailsDetectedPortsListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsHttpLogsFieldsListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsHttpLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:

@@ -252,7 +252,6 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
             "request_query",
             "status",
             "request_ip",
-            "request_id",
             "request_user_agent",
             "stack_id",
             "stack_service_name",
@@ -267,6 +266,9 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
 
 
 class HttpLogFieldsQuerySerializer(serializers.Serializer):
+    service_id = serializers.CharField(required=False)
+    stack_id = serializers.CharField(required=False)
+    deployment_hash = serializers.CharField(required=False)
     field = serializers.ChoiceField(
         choices=[
             "request_host",
@@ -276,6 +278,17 @@ class HttpLogFieldsQuerySerializer(serializers.Serializer):
         ]
     )
     value = serializers.CharField(allow_blank=True)
+
+    def validate(self, attrs: dict[str, str]):
+        if (
+            not attrs.get("service_id")
+            and not attrs.get("deployment_hash")
+            and not attrs.get("stack_id")
+        ):
+            raise serializers.ValidationError(
+                "One of `service_id` | `deployment_hash` | `stack_id` is required"
+            )
+        return attrs
 
 
 class HttpLogFieldsResponseSerializer(serializers.ListSerializer):

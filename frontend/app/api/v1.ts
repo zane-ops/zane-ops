@@ -205,6 +205,10 @@ export interface paths {
     /** Get single http log */
     get: operations["http_logs_retrieve"];
   };
+  "/api/http-logs/fields/": {
+    /** Get http logs fields values */
+    get: operations["http_logs_fields_list"];
+  };
   "/api/ping/": {
     /**
      * Ping
@@ -345,14 +349,6 @@ export interface paths {
     /** Get deployment build logs */
     get: operations["projects_service_details_deployments_build_logs_retrieve"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/": {
-    /** Get single deployment http log */
-    get: operations["projects_service_details_deployments_http_logs_retrieve"];
-  };
-  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/fields/": {
-    /** Get deployment http logs fields values */
-    get: operations["projects_service_details_deployments_http_logs_fields_list"];
-  };
   "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/metrics/": {
     /** Get service or deployment metrics */
     get: operations["projects_service_details_deployments_metrics_list"];
@@ -364,14 +360,6 @@ export interface paths {
   "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/detected-ports/": {
     /** Get detected service ports */
     get: operations["projects_service_details_detected_ports_list"];
-  };
-  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/{request_uuid}/": {
-    /** Get single service http log */
-    get: operations["projects_service_details_http_logs_retrieve"];
-  };
-  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/fields/": {
-    /** Get service http logs fields values */
-    get: operations["projects_service_details_http_logs_fields_list"];
   };
   "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/metrics/": {
     /** Get service or deployment metrics */
@@ -3021,7 +3009,7 @@ export interface components {
       time: string;
       deployment_id: string | null;
       service_id: string | null;
-      request_id: string | null;
+      request_uuid: string | null;
       request_ip: string;
       request_path: string;
       request_query: string | null;
@@ -3041,6 +3029,7 @@ export interface components {
       stack_id: string | null;
       stack_service_name: string | null;
     };
+    HttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     HttpLogsListDeploymentIdErrorComponent: {
       /**
        * @description * `deployment_id` - deployment_id
@@ -3054,21 +3043,8 @@ export interface components {
       code: "null_characters_not_allowed";
       detail: string;
     };
-    HttpLogsListError: components["schemas"]["HttpLogsListTimeErrorComponent"] | components["schemas"]["HttpLogsListRequestMethodErrorComponent"] | components["schemas"]["HttpLogsListRequestQueryErrorComponent"] | components["schemas"]["HttpLogsListRequestIdErrorComponent"] | components["schemas"]["HttpLogsListStackIdErrorComponent"] | components["schemas"]["HttpLogsListStackServiceNameErrorComponent"] | components["schemas"]["HttpLogsListServiceIdErrorComponent"] | components["schemas"]["HttpLogsListDeploymentIdErrorComponent"] | components["schemas"]["HttpLogsListSortByErrorComponent"];
+    HttpLogsListError: components["schemas"]["HttpLogsListTimeErrorComponent"] | components["schemas"]["HttpLogsListRequestMethodErrorComponent"] | components["schemas"]["HttpLogsListRequestQueryErrorComponent"] | components["schemas"]["HttpLogsListStackIdErrorComponent"] | components["schemas"]["HttpLogsListStackServiceNameErrorComponent"] | components["schemas"]["HttpLogsListServiceIdErrorComponent"] | components["schemas"]["HttpLogsListDeploymentIdErrorComponent"] | components["schemas"]["HttpLogsListSortByErrorComponent"];
     HttpLogsListErrorResponse400: components["schemas"]["HttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    HttpLogsListRequestIdErrorComponent: {
-      /**
-       * @description * `request_id` - request_id
-       * @enum {string}
-       */
-      attr: "request_id";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
     HttpLogsListRequestMethodErrorComponent: {
       /**
        * @description * `request_method` - request_method
@@ -4039,8 +4015,6 @@ export interface components {
     };
     ProjectsPreviewTemplatesRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsBuildLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDeploymentsHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDeploymentsHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsListError: components["schemas"]["ProjectsServiceDetailsDeploymentsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsListQueuedAtErrorComponent"];
     ProjectsServiceDetailsDeploymentsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDeploymentsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsListQueuedAtErrorComponent: {
@@ -4078,8 +4052,6 @@ export interface components {
     ProjectsServiceDetailsDeploymentsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsRuntimeLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDetectedPortsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsVariablesCreateError: components["schemas"]["ProjectsVariablesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsVariablesCreateKeyErrorComponent"] | components["schemas"]["ProjectsVariablesCreateValueErrorComponent"];
@@ -8967,7 +8939,6 @@ export interface operations {
         per_page?: number;
         /** @description Multiple values may be separated by commas. */
         request_host?: string[];
-        request_id?: string;
         /** @description Multiple values may be separated by commas. */
         request_ip?: string[];
         /**
@@ -9057,6 +9028,46 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get http logs fields values */
+  http_logs_fields_list: {
+    parameters: {
+      query: {
+        deployment_hash?: string;
+        /**
+         * @description * `request_host` - request_host
+         * * `request_path` - request_path
+         * * `request_user_agent` - request_user_agent
+         * * `request_ip` - request_ip
+         */
+        field: "request_host" | "request_path" | "request_user_agent" | "request_ip";
+        service_id?: string;
+        stack_id?: string;
+        value: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": string[];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["HttpLogsFieldsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
       429: {
@@ -10037,93 +10048,6 @@ export interface operations {
       };
     };
   };
-  /** Get single deployment http log */
-  projects_service_details_deployments_http_logs_retrieve: {
-    parameters: {
-      path: {
-        deployment_hash: string;
-        env_slug: string;
-        project_slug: string;
-        request_uuid: string;
-        service_slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["HttpLog"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsRetrieveErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /** Get deployment http logs fields values */
-  projects_service_details_deployments_http_logs_fields_list: {
-    parameters: {
-      query: {
-        /**
-         * @description * `request_host` - request_host
-         * * `request_path` - request_path
-         * * `request_user_agent` - request_user_agent
-         * * `request_ip` - request_ip
-         */
-        field: "request_host" | "request_path" | "request_user_agent" | "request_ip";
-        value: string;
-      };
-      path: {
-        deployment_hash: string;
-        env_slug: string;
-        project_slug: string;
-        service_slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": string[];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsFieldsListErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
   /** Get service or deployment metrics */
   projects_service_details_deployments_metrics_list: {
     parameters: {
@@ -10236,91 +10160,6 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ProjectsServiceDetailsDetectedPortsListErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /** Get single service http log */
-  projects_service_details_http_logs_retrieve: {
-    parameters: {
-      path: {
-        env_slug: string;
-        project_slug: string;
-        request_uuid: string;
-        service_slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["HttpLog"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsHttpLogsRetrieveErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /** Get service http logs fields values */
-  projects_service_details_http_logs_fields_list: {
-    parameters: {
-      query: {
-        /**
-         * @description * `request_host` - request_host
-         * * `request_path` - request_path
-         * * `request_user_agent` - request_user_agent
-         * * `request_ip` - request_ip
-         */
-        field: "request_host" | "request_path" | "request_user_agent" | "request_ip";
-        value: string;
-      };
-      path: {
-        env_slug: string;
-        project_slug: string;
-        service_slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": string[];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsHttpLogsFieldsListErrorResponse400"];
         };
       };
       401: {

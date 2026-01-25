@@ -52,6 +52,7 @@ from ..serializers import HttpLogSerializer
 
 from rest_framework.utils.serializer_helpers import ReturnDict
 from temporal.helpers import ZaneProxyClient
+from django.db.models import Q
 
 
 @extend_schema(exclude=True)
@@ -306,62 +307,47 @@ class LogIngestAPIView(APIView):
             return Response(response.data, status=status.HTTP_200_OK)
 
 
-class ServiceHttpLogsFieldsAPIView(APIView):
+class HttpLogsFieldsAPIView(APIView):
     serializer_class = HttpLogFieldsResponseSerializer
 
     @extend_schema(
-        summary="Get service http logs fields values",
+        summary="Get http logs fields values",
         parameters=[HttpLogFieldsQuerySerializer],
     )
-    def get(
-        self,
-        request: Request,
-        project_slug: str,
-        service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV_NAME,
-    ):
-        try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
-            environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
-            )
-            service = Service.objects.get(
-                slug=service_slug, project=project, environment=environment
-            )
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist."
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
-            )
-        except Service.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
-            )
-        else:
-            form = HttpLogFieldsQuerySerializer(data=request.query_params)
-            if form.is_valid(raise_exception=True):
-                field = form.data["field"]  # type: ignore
-                value = form.data["value"]  # type: ignore
+    def get(self, request: Request):
+        form = HttpLogFieldsQuerySerializer(data=request.query_params)
+        form.is_valid(raise_exception=True)
 
-                condition = {}
-                if len(value) > 0:
-                    condition = {f"{field}__startswith": value}
+        data = cast(dict, form.data)
+        field = data["field"]
+        value = data["value"]
 
-                values = (
-                    HttpLog.objects.filter(
-                        service_id=service.id,
-                        **condition,
-                    )
-                    .order_by(field)
-                    .values_list(field, flat=True)
-                    .distinct()[:7]
-                )
+        service_id = data.get("service_id")
+        stack_id = data.get("stack_id")
+        deployment_id = data.get("deployment_hash")
 
-                seriaziler = HttpLogFieldsResponseSerializer([item for item in values])
-                return Response(seriaziler.data)
+        condition = Q()
+        if len(value) > 0:
+            condition &= Q(**{f"{field}__startswith": value})
+
+        if service_id:
+            condition &= Q(service_id=service_id)
+
+        if stack_id:
+            condition &= Q(stack_id=stack_id)
+
+        if deployment_id:
+            condition &= Q(deployment_id=deployment_id)
+
+        values = (
+            HttpLog.objects.filter(condition)
+            .order_by(field)
+            .values_list(field, flat=True)
+            .distinct()[:7]
+        )
+
+        seriaziler = HttpLogFieldsResponseSerializer([item for item in values])
+        return Response(seriaziler.data)
 
 
 class HttpLogsAPIView(ListAPIView):
@@ -385,59 +371,11 @@ class HttpLogsAPIView(ListAPIView):
             raise e
 
 
+@extend_schema(summary="Get single http log")
 class SingleHttpLogAPIView(RetrieveAPIView):
     serializer_class = HttpLogSerializer
-    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
-    lookup_url_kwarg = "request_uuid"  # This corresponds to the URL configuration
-
-    @extend_schema(summary="Get single http log")
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-
-
-class ServiceSingleHttpLogAPIView(RetrieveAPIView):
-    serializer_class = HttpLogSerializer
-    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
-    lookup_url_kwarg = "request_uuid"  # This corresponds to the URL configuration
-
-    @extend_schema(summary="Get single service http log")
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-
-    def get_object(self):  # type: ignore
-        project_slug = self.kwargs["project_slug"]
-        service_slug = self.kwargs["service_slug"]
-        request_uuid = self.kwargs["request_uuid"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
-
-        try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
-
-            environment = Environment.objects.get(name=env_slug, project=project)
-            service = Service.objects.get(
-                slug=service_slug, project=project, environment=environment
-            )
-            http_log = service.http_logs.filter(
-                service_id=service.id, request_id=request_uuid
-            ).first()
-
-            if http_log is None:
-                raise exceptions.NotFound(
-                    detail=f"A HTTP log with the id of `{request_uuid}` does not exist for this deployment."
-                )
-            return http_log
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist."
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
-            )
-        except Service.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
-            )
+    queryset = HttpLog.objects.all()
+    lookup_field = "request_uuid"
 
 
 class ServiceDeploymentRuntimeLogsAPIView(APIView):
@@ -545,120 +483,3 @@ class ServiceDeploymentBuildLogsAPIView(APIView):
                     ),  # type: ignore
                 )
                 return Response(data)
-
-
-class ServiceDeploymentHttpLogsFieldsAPIView(APIView):
-    serializer_class = HttpLogFieldsResponseSerializer
-
-    @extend_schema(
-        summary="Get deployment http logs fields values",
-        parameters=[HttpLogFieldsQuerySerializer],
-    )
-    def get(
-        self,
-        request: Request,
-        project_slug: str,
-        service_slug: str,
-        deployment_hash: str,
-        env_slug: str = Environment.PRODUCTION_ENV_NAME,
-    ):
-        try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
-
-            environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
-            )
-            service = Service.objects.get(
-                slug=service_slug, project=project, environment=environment
-            )
-            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist."
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
-            )
-        except Service.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
-            )
-        except Deployment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
-            )
-        else:
-            form = HttpLogFieldsQuerySerializer(data=request.query_params)
-            if form.is_valid(raise_exception=True):
-                field = form.data["field"]  # type: ignore # type: ignore
-                value = form.data["value"]  # type: ignore # type: ignore
-
-                condition = {}
-                if len(value) > 0:
-                    condition = {f"{field}__startswith": value}
-
-                values = (
-                    HttpLog.objects.filter(
-                        deployment_id=deployment.hash,
-                        service_id=service.id,
-                        **condition,
-                    )
-                    .order_by(field)
-                    .values_list(field, flat=True)
-                    .distinct()[:7]
-                )
-
-                seriaziler = HttpLogFieldsResponseSerializer([item for item in values])
-                return Response(seriaziler.data)
-
-
-class ServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
-    serializer_class = HttpLogSerializer
-    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
-    lookup_url_kwarg = "request_uuid"  # This corresponds to the URL configuration
-
-    @extend_schema(summary="Get single deployment http log")
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-
-    def get_object(self):  # type: ignore
-        project_slug = self.kwargs["project_slug"]
-        service_slug = self.kwargs["service_slug"]
-        deployment_hash = self.kwargs["deployment_hash"]
-        request_uuid = self.kwargs["request_uuid"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
-
-        try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
-
-            environment = Environment.objects.get(name=env_slug, project=project)
-            service = Service.objects.get(
-                slug=service_slug, project=project, environment=environment
-            )
-            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
-            http_log = deployment.http_logs.filter(
-                deployment_id=deployment_hash, request_id=request_uuid
-            ).first()
-
-            if http_log is None:
-                raise exceptions.NotFound(
-                    detail=f"A HTTP log with the id of `{request_uuid}` does not exist for this deployment."
-                )
-            return http_log
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist."
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
-            )
-        except Service.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
-            )
-        except Deployment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
-            )

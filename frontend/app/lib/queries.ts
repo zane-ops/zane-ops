@@ -404,7 +404,7 @@ export const serviceQueries = {
       ] as const,
       queryFn: async ({ pageParam, signal, queryKey }) => {
         const allData = queryClient.getQueryData(queryKey) as InfiniteData<
-          DeploymentHttpLogQueryData,
+          HttpLogQueryData,
           string | null
         >;
         const existingData = allData?.pages.find(
@@ -443,7 +443,7 @@ export const serviceQueries = {
           signal
         });
 
-        let apiData: DeploymentHttpLogQueryData = {
+        let apiData: HttpLogQueryData = {
           next: null,
           previous: null,
           results: [],
@@ -648,6 +648,7 @@ export const serviceQueries = {
     project_slug: string;
     service_slug: string;
     env_slug: string;
+    service_id: string;
     request_uuid: string;
   }) =>
     queryOptions({
@@ -661,20 +662,14 @@ export const serviceQueries = {
         request_uuid
       ] as const,
       queryFn: async ({ signal }) => {
-        const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/{request_uuid}/",
-          {
-            params: {
-              path: {
-                project_slug,
-                service_slug,
-                env_slug,
-                request_uuid
-              }
-            },
-            signal
-          }
-        );
+        const { data } = await apiClient.GET("/api/http-logs/{request_uuid}/", {
+          params: {
+            path: {
+              request_uuid
+            }
+          },
+          signal
+        });
         return data;
       }
     }),
@@ -682,16 +677,15 @@ export const serviceQueries = {
     project_slug,
     service_slug,
     env_slug,
+    service_id,
     field,
     value
   }: {
     project_slug: string;
     service_slug: string;
+    service_id: string;
     env_slug: string;
-    field: RequestParams<
-      "get",
-      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/fields/"
-    >["field"];
+    field: RequestParams<"get", "/api/http-logs/fields/">["field"];
     value: string;
   }) =>
     queryOptions({
@@ -701,28 +695,22 @@ export const serviceQueries = {
           service_slug,
           env_slug
         }).queryKey,
+        service_id,
         "HTTP_LOG_FIELDS",
         field,
         value
       ],
       queryFn: async ({ signal }) => {
-        const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/fields/",
-          {
-            signal,
-            params: {
-              path: {
-                project_slug,
-                service_slug,
-                env_slug
-              },
-              query: {
-                field,
-                value
-              }
+        const { data } = await apiClient.GET("/api/http-logs/fields/", {
+          signal,
+          params: {
+            query: {
+              field,
+              value,
+              service_id
             }
           }
-        );
+        });
         return data ?? [];
       }
     })
@@ -1231,7 +1219,7 @@ export const deploymentQueries = {
       ] as const,
       queryFn: async ({ pageParam, signal, queryKey }) => {
         const allData = queryClient.getQueryData(queryKey) as InfiniteData<
-          DeploymentHttpLogQueryData,
+          HttpLogQueryData,
           string | null
         >;
         const existingData = allData?.pages.find(
@@ -1270,7 +1258,7 @@ export const deploymentQueries = {
           signal
         });
 
-        let apiData: DeploymentHttpLogQueryData = {
+        let apiData: HttpLogQueryData = {
           next: null,
           previous: null,
           results: [],
@@ -1355,21 +1343,14 @@ export const deploymentQueries = {
         request_uuid
       ] as const,
       queryFn: async ({ signal }) => {
-        const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/",
-          {
-            params: {
-              path: {
-                project_slug,
-                service_slug,
-                env_slug,
-                deployment_hash,
-                request_uuid
-              }
-            },
-            signal
-          }
-        );
+        const { data } = await apiClient.GET("/api/http-logs/{request_uuid}/", {
+          params: {
+            path: {
+              request_uuid
+            }
+          },
+          signal
+        });
         return data;
       }
     }),
@@ -1385,10 +1366,7 @@ export const deploymentQueries = {
     service_slug: string;
     env_slug: string;
     deployment_hash: string;
-    field: RequestParams<
-      "get",
-      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/fields/"
-    >["field"];
+    field: RequestParams<"get", "/api/http-logs/fields/">["field"];
     value: string;
   }) =>
     queryOptions({
@@ -1404,24 +1382,16 @@ export const deploymentQueries = {
         value
       ],
       queryFn: async ({ signal }) => {
-        const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/fields/",
-          {
-            signal,
-            params: {
-              path: {
-                project_slug,
-                service_slug,
-                env_slug,
-                deployment_hash
-              },
-              query: {
-                field,
-                value
-              }
+        const { data } = await apiClient.GET("/api/http-logs/fields/", {
+          signal,
+          params: {
+            query: {
+              field,
+              value,
+              deployment_hash
             }
           }
-        );
+        });
         return data ?? [];
       }
     })
@@ -1474,13 +1444,8 @@ type DeploymentLogQueryData = Pick<
   cursor?: string | null;
 };
 
-type DeploymentHttpLogQueryData = Pick<
-  NonNullable<
-    ApiResponse<
-      "get",
-      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/"
-    >
-  >,
+type HttpLogQueryData = Pick<
+  NonNullable<ApiResponse<"get", "/api/http-logs/">>,
   "next" | "previous" | "results"
 > & {
   cursor?: string | null;

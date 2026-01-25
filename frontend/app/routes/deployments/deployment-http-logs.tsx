@@ -429,12 +429,12 @@ export default function DeploymentHttpLogsPage({
                   <TableRow
                     className="border-border cursor-pointer"
                     data-state={
-                      log.request_id === search.request_id ? "selected" : null
+                      log.request_uuid === search.request_id ? "selected" : null
                     }
                     key={log.id}
                     onClick={() => {
-                      if (log.request_id) {
-                        searchParams.set("request_id", log.request_id);
+                      if (log.request_uuid) {
+                        searchParams.set("request_id", log.request_uuid);
                         setSearchParams(searchParams);
                       }
                     }}

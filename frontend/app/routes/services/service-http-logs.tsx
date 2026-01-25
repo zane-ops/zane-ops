@@ -14,7 +14,12 @@ import {
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
 import { flushSync } from "react-dom";
-import { useParams, useSearchParams } from "react-router";
+import {
+  useLoaderData,
+  useMatches,
+  useParams,
+  useSearchParams
+} from "react-router";
 import { useDebouncedCallback } from "use-debounce";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { HttpLogRequestDetails } from "~/components/http-log-request-details";
@@ -100,12 +105,13 @@ export async function clientLoader({
             project_slug,
             request_uuid: search.request_id,
             service_slug,
-            env_slug
+            env_slug,
+            service_id: service.id
           })
         )
       : undefined
   ] as const);
-  return { httpLogs, httpLog };
+  return { httpLogs, httpLog, service };
 }
 type SortDirection = "ascending" | "descending" | "indeterminate";
 
@@ -436,11 +442,11 @@ export default function ServiceHttpLogsPage({
                     className="border-border cursor-pointer"
                     key={log.id}
                     data-state={
-                      log.request_id === search.request_id ? "selected" : null
+                      log.request_uuid === search.request_id ? "selected" : null
                     }
                     onClick={() => {
-                      if (log.request_id) {
-                        searchParams.set("request_id", log.request_id);
+                      if (log.request_uuid) {
+                        searchParams.set("request_id", log.request_uuid);
                         setSearchParams(searchParams);
                       }
                     }}
@@ -932,11 +938,14 @@ function HostFilter({ hosts }: HostFilterProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
+  const loaderData = useLoaderData<typeof clientLoader>();
+
   const { data: hostList = [] } = useQuery(
     serviceQueries.filterHttpLogFields({
       project_slug,
       service_slug,
       env_slug,
+      service_id: loaderData.service.id,
       field: "request_host",
       value: inputValue
     })
@@ -975,12 +984,14 @@ function PathFilter({ paths }: PathFilterProps) {
   } = useParams() as Required<Route.LoaderArgs["params"]>;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
+  const loaderData = useLoaderData<typeof clientLoader>();
 
   const { data: hostList = [] } = useQuery(
     serviceQueries.filterHttpLogFields({
       project_slug,
       service_slug,
       env_slug,
+      service_id: loaderData.service.id,
       field: "request_path",
       value: inputValue
     })
@@ -1020,11 +1031,14 @@ function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
+  const loaderData = useLoaderData<typeof clientLoader>();
+
   const { data: ipList = [] } = useQuery(
     serviceQueries.filterHttpLogFields({
       project_slug,
       service_slug,
       env_slug,
+      service_id: loaderData.service.id,
       field: "request_ip",
       value: inputValue
     })
@@ -1061,12 +1075,14 @@ function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
   } = useParams() as Required<Route.LoaderArgs["params"]>;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
+  const loaderData = useLoaderData<typeof clientLoader>();
 
   const { data: uaList = [] } = useQuery(
     serviceQueries.filterHttpLogFields({
       project_slug,
       service_slug,
       env_slug,
+      service_id: loaderData.service.id,
       field: "request_user_agent",
       value: inputValue
     })
