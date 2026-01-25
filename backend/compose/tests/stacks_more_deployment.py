@@ -764,3 +764,247 @@ class TestArchiveProjectViewTests(ComposeStackAPITestBase):
             filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
         )
         self.assertEqual(0, len(volumes))
+
+
+class TestArchiveEnvironmentViewTests(ComposeStackAPITestBase):
+    async def acreate_and_deploy_compose_stack_in_environment(
+        self,
+        content: str,
+        environment: str = "staging",
+        slug="my-stack",
+    ):
+        project = await self.acreate_project(slug="compose")
+
+        create_env_payload = {
+            "name": environment,
+        }
+
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:projects.environment.create",
+                kwargs={
+                    "slug": project.slug,
+                },
+            ),
+            data=create_env_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        create_stack_payload = {
+            "slug": slug,
+            "user_content": content,
+        }
+
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": environment,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack, await ComposeStack.objects.filter(slug=slug).afirst()
+        )
+        self.assertIsNotNone(stack)
+        self.assertIsNone(stack.user_content)
+        self.assertIsNone(stack.computed_content)
+
+        # Deploy the stack
+        response = await self.async_client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": environment,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        await stack.arefresh_from_db()
+
+        env = await project.environments.aget(name=environment)
+        return project, stack, env
+
+    async def test_delete_environment_should_delete_included_stacks(self):
+        p, stack, env = await self.acreate_and_deploy_compose_stack_in_environment(
+            content=DOCKER_COMPOSE_MINIMAL
+        )
+
+        self.assertEqual(
+            1, await ComposeStack.objects.filter(environment_id=env.id).acount()
+        )
+
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={
+                    "slug": p.slug,
+                    "env_slug": env.name,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(
+            0, await ComposeStack.objects.filter(environment_id=env.id).acount()
+        )
+
+    async def test_delete_environment_should_delete_included_stack_resources(self):
+        p, stack, env = await self.acreate_and_deploy_compose_stack_in_environment(
+            content=DOCKER_COMPOSE_MINIMAL
+        )
+
+        stack_name = stack.name
+        service_list = self.fake_docker_client.services_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(1, len(service_list))
+
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={
+                    "slug": p.slug,
+                    "env_slug": env.name,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(
+            0, await ComposeStack.objects.filter(environment_id=env.id).acount()
+        )
+
+        service_list = self.fake_docker_client.services_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(0, len(service_list))
+
+    @responses.activate()
+    async def test_archive_environment_delete_stack_urls_in_proxy(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        p, stack, env = await self.acreate_and_deploy_compose_stack_in_environment(
+            content=DOCKER_COMPOSE_WEB_SERVICE
+        )
+
+        stack_id = stack.id
+        # Get route info before archiving
+        routes = stack.urls["web"]  # type: ignore
+        route = cast(dict, routes[0])
+
+        # Verify route is registered in Caddy
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_compose_stack_service(
+                stack_id=stack.id,
+                service_name="web",
+                url=ComposeStackUrlRouteDto.from_dict(route),
+            )
+        )
+        self.assertEqual(200, response.status_code)
+
+        # delete environment
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={
+                    "slug": p.slug,
+                    "env_slug": env.name,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # delete project
+        self.assertEqual(0, await ComposeStack.objects.filter(project_id=p.id).acount())
+
+        # Verify route is removed from Caddy
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_compose_stack_service(
+                stack_id=stack_id,
+                service_name="web",
+                url=ComposeStackUrlRouteDto.from_dict(route),
+            )
+        )
+        self.assertEqual(404, response.status_code)
+
+    @responses.activate()
+    async def test_archive_environment_delete_stack_configs(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        p, stack, env = await self.acreate_and_deploy_compose_stack_in_environment(
+            content=DOCKER_COMPOSE_WITH_INLINE_CONFIGS
+        )
+
+        stack_name = stack.name
+
+        # Verify config stack exists
+        config_list = self.fake_docker_client.config_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(1, len(config_list))
+
+        # delete environment
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={
+                    "slug": p.slug,
+                    "env_slug": env.name,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify config stack is deleted
+        config_list = self.fake_docker_client.config_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(0, len(config_list))
+
+    @responses.activate()
+    async def test_archive_environment_delete_stack_volumes(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        p, stack, env = await self.acreate_and_deploy_compose_stack_in_environment(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+
+        stack_name = stack.name
+
+        # Verify Docker volumes exist
+        volumes = self.fake_docker_client.volumes_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(1, len(volumes))
+
+        # delete environment
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={
+                    "slug": p.slug,
+                    "env_slug": env.name,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify Docker volumes are removed
+        volumes = self.fake_docker_client.volumes_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(0, len(volumes))

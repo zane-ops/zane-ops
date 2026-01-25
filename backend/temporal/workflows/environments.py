@@ -5,7 +5,12 @@ from temporalio import workflow
 from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
-    from ..activities import DockerSwarmActivities, GitActivities, delete_env_resources
+    from ..activities import (
+        DockerSwarmActivities,
+        GitActivities,
+        delete_env_resources,
+        ComposeStackActivities,
+    )
     from ..shared import (
         EnvironmentDetails,
     )
@@ -38,7 +43,6 @@ class ArchiveEnvWorkflow:
 
     @workflow.run
     async def run(self, environment: EnvironmentDetails):
-        print(f"Running workflow ArchiveEnvWorkflow(payload={environment})")
         services = await workflow.execute_activity_method(
             DockerSwarmActivities.get_archived_env_services,
             environment,
@@ -46,7 +50,6 @@ class ArchiveEnvWorkflow:
             retry_policy=self.retry_policy,
         )
 
-        print(f"Running activities `unexpose_docker_service_from_http({services=})`")
         await asyncio.gather(
             *[
                 workflow.execute_activity_method(
@@ -56,10 +59,49 @@ class ArchiveEnvWorkflow:
                     retry_policy=self.retry_policy,
                 )
                 for service in services
+            ],
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.unexpose_stack_services_from_http,
+                    stack,
+                    start_to_close_timeout=timedelta(seconds=10),
+                    retry_policy=self.retry_policy,
+                )
+                for stack in environment.compose_stacks
+            ],
+        )
+
+        await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.delete_stack_healthcheck_schedule,
+                    stack,
+                    start_to_close_timeout=timedelta(seconds=10),
+                    retry_policy=self.retry_policy,
+                )
+                for stack in environment.compose_stacks
             ]
         )
 
-        print(f"Running activities `cleanup_docker_service_resources({services=})`")
+        all_stack_services = await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.get_services_in_stack,
+                    stack,
+                    start_to_close_timeout=timedelta(seconds=10),
+                    retry_policy=self.retry_policy,
+                )
+                for stack in environment.compose_stacks
+            ]
+        )
+
+        # flatten the list of services
+        all_stack_services = [
+            stack_service
+            for service_list in all_stack_services
+            for stack_service in service_list
+        ]
+
         await asyncio.gather(
             *[
                 workflow.execute_activity_method(
@@ -69,6 +111,27 @@ class ArchiveEnvWorkflow:
                     retry_policy=self.retry_policy,
                 )
                 for service in services
+            ],
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.remove_stack_with_cli,
+                    stack,
+                    start_to_close_timeout=timedelta(minutes=2, seconds=30),
+                    retry_policy=self.retry_policy,
+                )
+                for stack in environment.compose_stacks
+            ],
+        )
+
+        await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.wait_for_stack_service_containers_to_be_deleted,
+                    service,
+                    start_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=self.retry_policy,
+                )
+                for service in all_stack_services
             ]
         )
 
@@ -77,6 +140,27 @@ class ArchiveEnvWorkflow:
             environment,
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
+        )
+
+        await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.delete_stack_configs,
+                    stack,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
+                for stack in environment.compose_stacks
+            ],
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.delete_stack_volumes,
+                    stack,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
+                for stack in environment.compose_stacks
+            ],
         )
 
         return await workflow.execute_activity_method(

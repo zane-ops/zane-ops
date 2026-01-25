@@ -386,11 +386,7 @@ class GitlabWebhookAPIView(APIView):
                         for environment in matching_preview_envs:
                             environment_delete_payload.append(
                                 (
-                                    EnvironmentDetails(
-                                        id=environment.id,
-                                        project_id=environment.project.id,
-                                        name=environment.name,
-                                    ),
+                                    EnvironmentDetails.from_environment(environment),
                                     environment.archive_workflow_id,
                                 )
                             )
@@ -803,10 +799,8 @@ class GitlabWebhookAPIView(APIView):
                             workflows_to_run.append(
                                 StartWorkflowArg(
                                     workflow=ArchiveEnvWorkflow.run,
-                                    payload=EnvironmentDetails(
-                                        id=environment.id,
-                                        project_id=environment.project.id,
-                                        name=environment.name,
+                                    payload=EnvironmentDetails.from_environment(
+                                        environment
                                     ),
                                     workflow_id=environment.archive_workflow_id,
                                 )

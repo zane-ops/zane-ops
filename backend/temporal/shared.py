@@ -6,7 +6,7 @@ import yaml
 
 
 if TYPE_CHECKING:
-    from zane_api.models import Deployment
+    from zane_api.models import Deployment, Environment
     from compose.models import ComposeStackDeployment
 
 from zane_api.dtos import (
@@ -352,6 +352,19 @@ class EnvironmentDetails:
     id: str
     name: str
     project_id: str
+    compose_stacks: List["ComposeStackArchiveDetails"] = field(default_factory=list)
+
+    @classmethod
+    def from_environment(cls, env: "Environment"):
+        return cls(
+            id=env.id,
+            name=env.name,
+            project_id=env.project_id,  # type: ignore
+            compose_stacks=[
+                ComposeStackArchiveDetails(stack=stack.snapshot)
+                for stack in env.compose_stacks.all()
+            ],
+        )
 
     @property
     def archive_workflow_id(self) -> str:

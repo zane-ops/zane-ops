@@ -78,9 +78,6 @@ class ComposeStackAPITestBase(AuthAPITestCase):
         content: str,
         slug="my-stack",
     ):
-        from typing import cast
-        from zane_api.utils import jprint
-
         project = await self.acreate_project(slug="compose")
 
         create_stack_payload = {
@@ -131,9 +128,6 @@ class ComposeStackAPITestBase(AuthAPITestCase):
         content: str,
         slug="my-stack",
     ):
-        from typing import cast
-        from zane_api.utils import jprint
-
         project = self.create_project(slug="compose")
 
         create_stack_payload = {

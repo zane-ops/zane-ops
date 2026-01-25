@@ -56,25 +56,22 @@ class RemoveProjectResourcesWorkflow:
         await asyncio.gather(
             *[
                 workflow.execute_activity_method(
-                    ComposeStackActivities.unexpose_stack_services_from_http,
-                    stack,
-                    start_to_close_timeout=timedelta(seconds=10),
-                    retry_policy=retry_policy,
-                )
-                for stack in payload.compose_stacks
-            ]
-        )
-
-        await asyncio.gather(
-            *[
-                workflow.execute_activity_method(
                     DockerSwarmActivities.unexpose_docker_service_from_http,
                     service,
                     start_to_close_timeout=timedelta(seconds=10),
                     retry_policy=retry_policy,
                 )
                 for service in services
-            ]
+            ],
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.unexpose_stack_services_from_http,
+                    stack,
+                    start_to_close_timeout=timedelta(seconds=10),
+                    retry_policy=retry_policy,
+                )
+                for stack in payload.compose_stacks
+            ],
         )
 
         await asyncio.gather(

@@ -371,11 +371,7 @@ class ReviewPreviewEnvDeployAPIView(APIView):
                 workflows_to_run.append(
                     StartWorkflowArg(
                         workflow=ArchiveEnvWorkflow.run,
-                        payload=EnvironmentDetails(
-                            id=environment.id,
-                            project_id=project.id,
-                            name=environment.name,
-                        ),
+                        payload=EnvironmentDetails.from_environment(environment),
                         workflow_id=environment.archive_workflow_id,
                     )
                 )
@@ -503,9 +499,7 @@ class EnvironmentDetailsAPIView(APIView):
 
         environment.delete_resources()
 
-        details = EnvironmentDetails(
-            id=environment.id, project_id=project.id, name=environment.name
-        )
+        details = EnvironmentDetails.from_environment(environment)
         workflow_id = environment.archive_workflow_id
         transaction.on_commit(
             lambda: TemporalClient.start_workflow(
