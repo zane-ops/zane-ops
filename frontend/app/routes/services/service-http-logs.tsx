@@ -43,7 +43,7 @@ import {
   serviceQueries
 } from "~/lib/queries";
 import type { Writeable } from "~/lib/types";
-import { cn, formatLogTime } from "~/lib/utils";
+import { cn, formatLogTime, notFound } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { formatTimeValue } from "~/utils";
 import type { Route } from "./+types/service-http-logs";
@@ -56,6 +56,18 @@ export async function clientLoader({
     envSlug: env_slug
   }
 }: Route.ClientLoaderArgs) {
+  const service = await queryClient.ensureQueryData(
+    serviceQueries.single({
+      project_slug,
+      service_slug,
+      env_slug
+    })
+  );
+
+  if (!service) {
+    throw notFound();
+  }
+
   const searchParams = new URL(request.url).searchParams;
   const search = httpLogSearchSchema.parse(searchParams);
   const filters = {
@@ -77,6 +89,7 @@ export async function clientLoader({
         project_slug,
         service_slug,
         env_slug,
+        service_id: service.id,
         filters,
         queryClient
       })
@@ -102,6 +115,11 @@ export default function ServiceHttpLogsPage({
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
+  },
+  matches: {
+    2: {
+      loaderData: { service }
+    }
   }
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -127,6 +145,7 @@ export default function ServiceHttpLogsPage({
       project_slug,
       service_slug,
       env_slug,
+      service_id: service.id,
       filters,
       queryClient,
       autoRefetchEnabled: isAutoRefetchEnabled
@@ -145,7 +164,7 @@ export default function ServiceHttpLogsPage({
       nextDirection = "indeterminate";
     }
 
-    let newSortBy = (sort_by ?? []).filter(
+    const newSortBy = (sort_by ?? []).filter(
       (sort_field) => sort_field !== field && sort_field !== `-${field}`
     );
     switch (nextDirection) {
@@ -474,7 +493,7 @@ type LogTableRowProps = {
 
 function LogTableRowContent({ log }: LogTableRowProps) {
   const logTime = formatLogTime(log.time);
-  let { value: duration, unit } = formatTimeValue(
+  const { value: duration, unit } = formatTimeValue(
     log.request_duration_ns / 1_000_000 /*from ns to ms*/
   );
 

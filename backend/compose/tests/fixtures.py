@@ -29,6 +29,24 @@ services:
         zane.http.routes.0.base_path: "/"
 """
 
+DOCKER_COMPOSE_MULTIPLE_WEB_SERVICES = """
+services:
+  frontend:
+    image: nginxdemos/hello:latest
+    deploy:
+      labels:
+        zane.http.routes.0.port: "80"
+        zane.http.routes.0.domain: "frontend.127-0-0-1.sslip.io"
+        zane.http.routes.0.base_path: "/"
+  api:
+    image: nginxdemos/hello:latest
+    deploy:
+      labels:
+        zane.http.routes.0.port: "80"
+        zane.http.routes.0.domain: "api.127-0-0-1.sslip.io"
+        zane.http.routes.0.base_path: "/"
+"""
+
 DOCKER_COMPOSE_MULTIPLE_ROUTES = """
 services:
   api:

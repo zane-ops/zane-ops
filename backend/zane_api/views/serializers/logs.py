@@ -16,7 +16,7 @@ from ...models import (
 from ...utils import Colors
 
 from search.dtos import RuntimeLogLevel
-
+from temporal.helpers import ZaneProxyClient
 
 # ==============================
 #       Collect Logs           #
@@ -84,15 +84,24 @@ class HTTPServiceLogSerializer(serializers.Serializer):
         child=serializers.ListField(child=serializers.CharField())
     )
     request = HTTPServiceRequestSerializer()
-    zane_deployment_upstream = serializers.CharField()
+    zane_deployment_upstream = serializers.CharField(
+        required=False,
+    )
     zane_deployment_green_hash = serializers.CharField(
         allow_null=True, required=False, allow_blank=True
     )
     zane_deployment_blue_hash = serializers.CharField(
         allow_null=True, required=False, allow_blank=True
     )
-    zane_service_id = serializers.CharField()
+    zane_service_id = serializers.CharField(required=False)
+    zane_stack_id = serializers.CharField(required=False)
+    zane_stack_service_name = serializers.CharField(required=False)
+    zane_registry_id = serializers.CharField(required=False)
     zane_deployment_id = serializers.CharField(required=False)
+    zane_service_type = serializers.ChoiceField(
+        choices=ZaneProxyClient.ServiceType.choices(),
+        default=ZaneProxyClient.ServiceType.MANAGED_SERVICE,
+    )
     uuid = serializers.CharField(allow_null=True, required=False, allow_blank=True)
 
 
@@ -245,6 +254,10 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
             "request_ip",
             "request_id",
             "request_user_agent",
+            "stack_id",
+            "stack_service_name",
+            "service_id",
+            "deployment_id",
         ]
 
 

@@ -51,6 +51,7 @@ from ..models import (
 from ..serializers import HttpLogSerializer
 
 from rest_framework.utils.serializer_helpers import ReturnDict
+from temporal.helpers import ZaneProxyClient
 
 
 @extend_schema(exclude=True)
@@ -87,79 +88,179 @@ class LogIngestAPIView(APIView):
                                 pass
                             else:
                                 service_id = content.get("zane_service_id")
-                                if service_id:
+                                stack_id = content.get("zane_stack_id")
+                                if service_id or stack_id:
                                     log_serializer = HTTPServiceLogSerializer(
                                         data=content
                                     )
                                     if log_serializer.is_valid():
                                         log_content: dict = log_serializer.data  # type: ignore
-                                        upstream: str = log_content.get(
-                                            "zane_deployment_upstream"
-                                        )  # type: ignore
-                                        deployment_id = content.get(
-                                            "zane_deployment_id"
+
+                                        service_type = log_content.get(
+                                            "zane_service_type"
                                         )
-                                        # For backward compatibility
-                                        if deployment_id is not None:
-                                            if "blue.zaneops.internal" in upstream:
-                                                deployment_id = log_content.get(
-                                                    "zane_deployment_blue_hash"
-                                                )
-                                            elif "green.zaneops.internal" in upstream:
-                                                deployment_id = log_content.get(
-                                                    "zane_deployment_green_hash"
+                                        match service_type:
+                                            case ZaneProxyClient.ServiceType.COMPOSE_STACK_SERVICE:
+                                                stack_service_name = content.get(
+                                                    "zane_stack_service_name"
                                                 )
 
-                                        if deployment_id:
-                                            req = log_content["request"]
-                                            duration_in_seconds = log_content[
-                                                "duration"
-                                            ]
+                                                if stack_service_name:
+                                                    req = log_content["request"]
+                                                    duration_in_seconds = log_content[
+                                                        "duration"
+                                                    ]
 
-                                            full_url = urlparse(
-                                                f"https://{req['host']}{req['uri']}"
-                                            )
-                                            client_ip = req["headers"].get(
-                                                "X-Forwarded-For", req["remote_ip"]
-                                            )
-                                            user_agent = req["headers"].get(
-                                                "User-Agent"
-                                            )
-                                            http_logs.append(
-                                                HttpLog(
-                                                    time=log["time"],
-                                                    service_id=log_content.get(
-                                                        "zane_service_id"
-                                                    ),
-                                                    deployment_id=deployment_id,
-                                                    request_duration_ns=(
-                                                        duration_in_seconds
-                                                        * 1_000_000_000
-                                                    ),
-                                                    request_path=full_url.path,
-                                                    request_query=full_url.query,
-                                                    request_protocol=req["proto"],
-                                                    request_host=req["host"],
-                                                    status=log_content["status"],
-                                                    request_headers=req["headers"],
-                                                    response_headers=log_content[
-                                                        "resp_headers"
-                                                    ],
-                                                    request_user_agent=(
-                                                        user_agent[0]
-                                                        if isinstance(user_agent, list)
-                                                        else None
-                                                    ),
-                                                    request_ip=(
-                                                        client_ip[0].split(",")[0]
-                                                        if isinstance(client_ip, list)
-                                                        else client_ip
-                                                    ),
-                                                    request_id=log_content.get("uuid"),
-                                                    request_method=req["method"],
+                                                    full_url = urlparse(
+                                                        f"https://{req['host']}{req['uri']}"
+                                                    )
+                                                    client_ip = req["headers"].get(
+                                                        "X-Forwarded-For",
+                                                        req["remote_ip"],
+                                                    )
+                                                    user_agent = req["headers"].get(
+                                                        "User-Agent"
+                                                    )
+                                                    http_logs.append(
+                                                        HttpLog(
+                                                            time=log["time"],
+                                                            stack_id=stack_id,
+                                                            stack_service_name=stack_service_name,
+                                                            request_duration_ns=(
+                                                                duration_in_seconds
+                                                                * 1_000_000_000
+                                                            ),
+                                                            request_path=full_url.path,
+                                                            request_query=full_url.query,
+                                                            request_protocol=req[
+                                                                "proto"
+                                                            ],
+                                                            request_host=req["host"],
+                                                            status=log_content[
+                                                                "status"
+                                                            ],
+                                                            request_headers=req[
+                                                                "headers"
+                                                            ],
+                                                            response_headers=log_content[
+                                                                "resp_headers"
+                                                            ],
+                                                            request_user_agent=(
+                                                                user_agent[0]
+                                                                if isinstance(
+                                                                    user_agent, list
+                                                                )
+                                                                else None
+                                                            ),
+                                                            request_ip=(
+                                                                client_ip[0].split(",")[
+                                                                    0
+                                                                ]
+                                                                if isinstance(
+                                                                    client_ip, list
+                                                                )
+                                                                else client_ip
+                                                            ),
+                                                            request_id=log_content.get(
+                                                                "uuid"
+                                                            ),
+                                                            request_method=req[
+                                                                "method"
+                                                            ],
+                                                        )
+                                                    )
+                                            case ZaneProxyClient.ServiceType.MANAGED_SERVICE:
+                                                upstream: str = log_content.get(
+                                                    "zane_deployment_upstream"
+                                                )  # type: ignore
+                                                deployment_id = content.get(
+                                                    "zane_deployment_id"
                                                 )
-                                            )
-                                            continue
+                                                # For backward compatibility
+                                                if deployment_id is not None:
+                                                    if (
+                                                        "blue.zaneops.internal"
+                                                        in upstream
+                                                    ):
+                                                        deployment_id = log_content.get(
+                                                            "zane_deployment_blue_hash"
+                                                        )
+                                                    elif (
+                                                        "green.zaneops.internal"
+                                                        in upstream
+                                                    ):
+                                                        deployment_id = log_content.get(
+                                                            "zane_deployment_green_hash"
+                                                        )
+
+                                                if deployment_id:
+                                                    req = log_content["request"]
+                                                    duration_in_seconds = log_content[
+                                                        "duration"
+                                                    ]
+
+                                                    full_url = urlparse(
+                                                        f"https://{req['host']}{req['uri']}"
+                                                    )
+                                                    client_ip = req["headers"].get(
+                                                        "X-Forwarded-For",
+                                                        req["remote_ip"],
+                                                    )
+                                                    user_agent = req["headers"].get(
+                                                        "User-Agent"
+                                                    )
+                                                    http_logs.append(
+                                                        HttpLog(
+                                                            time=log["time"],
+                                                            service_id=log_content.get(
+                                                                "zane_service_id"
+                                                            ),
+                                                            deployment_id=deployment_id,
+                                                            request_duration_ns=(
+                                                                duration_in_seconds
+                                                                * 1_000_000_000
+                                                            ),
+                                                            request_path=full_url.path,
+                                                            request_query=full_url.query,
+                                                            request_protocol=req[
+                                                                "proto"
+                                                            ],
+                                                            request_host=req["host"],
+                                                            status=log_content[
+                                                                "status"
+                                                            ],
+                                                            request_headers=req[
+                                                                "headers"
+                                                            ],
+                                                            response_headers=log_content[
+                                                                "resp_headers"
+                                                            ],
+                                                            request_user_agent=(
+                                                                user_agent[0]
+                                                                if isinstance(
+                                                                    user_agent, list
+                                                                )
+                                                                else None
+                                                            ),
+                                                            request_ip=(
+                                                                client_ip[0].split(",")[
+                                                                    0
+                                                                ]
+                                                                if isinstance(
+                                                                    client_ip, list
+                                                                )
+                                                                else client_ip
+                                                            ),
+                                                            request_id=log_content.get(
+                                                                "uuid"
+                                                            ),
+                                                            request_method=req[
+                                                                "method"
+                                                            ],
+                                                        )
+                                                    )
+
+                                        continue
                         case ZaneServices.API | ZaneServices.WORKER:
                             # do nothing for now...
                             pass
@@ -263,7 +364,7 @@ class ServiceHttpLogsFieldsAPIView(APIView):
                 return Response(seriaziler.data)
 
 
-class ServiceHttpLogsAPIView(ListAPIView):
+class HttpLogsAPIView(ListAPIView):
     serializer_class = HttpLogSerializer
     queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
     pagination_class = DeploymentHttpLogsPagination
@@ -271,7 +372,7 @@ class ServiceHttpLogsAPIView(ListAPIView):
     filterset_class = DeploymentHttpLogsFilterSet
 
     @extend_schema(
-        summary="Get service HTTP logs",
+        summary="Get HTTP logs",
     )
     def get(self, request: Request, *args, **kwargs):
         try:
@@ -283,33 +384,15 @@ class ServiceHttpLogsAPIView(ListAPIView):
                 return Response(EMPTY_CURSOR_RESPONSE)
             raise e
 
-    def get_queryset(self):  # type: ignore
-        project_slug = self.kwargs["project_slug"]
-        service_slug = self.kwargs["service_slug"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
 
-        try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+class SingleHttpLogAPIView(RetrieveAPIView):
+    serializer_class = HttpLogSerializer
+    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    lookup_url_kwarg = "request_uuid"  # This corresponds to the URL configuration
 
-            environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
-            )
-            service = Service.objects.get(
-                slug=service_slug, project=project, environment=environment
-            )
-            return service.http_logs
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist."
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
-            )
-        except Service.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
-            )
+    @extend_schema(summary="Get single http log")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
 
 class ServiceSingleHttpLogAPIView(RetrieveAPIView):
@@ -528,58 +611,6 @@ class ServiceDeploymentHttpLogsFieldsAPIView(APIView):
 
                 seriaziler = HttpLogFieldsResponseSerializer([item for item in values])
                 return Response(seriaziler.data)
-
-
-class ServiceDeploymentHttpLogsAPIView(ListAPIView):
-    serializer_class = HttpLogSerializer
-    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
-    pagination_class = DeploymentHttpLogsPagination
-    filter_backends = [DjangoFilterBackend]
-    filterset_class = DeploymentHttpLogsFilterSet
-
-    @extend_schema(
-        summary="Get deployment HTTP logs",
-    )
-    def get(self, request, *args, **kwargs):
-        try:
-            return super().get(request, *args, **kwargs)
-        except exceptions.NotFound as e:
-            if "Invalid cursor" in str(e.detail):
-                return Response(EMPTY_CURSOR_RESPONSE)
-            raise e
-
-    def get_queryset(self):  # type: ignore
-        project_slug = self.kwargs["project_slug"]
-        service_slug = self.kwargs["service_slug"]
-        deployment_hash = self.kwargs["deployment_hash"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
-
-        try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
-            environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
-            )
-            service = Service.objects.get(
-                slug=service_slug, project=project, environment=environment
-            )
-            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
-            return deployment.http_logs
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist."
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
-            )
-        except Service.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
-            )
-        except Deployment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
-            )
 
 
 class ServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):

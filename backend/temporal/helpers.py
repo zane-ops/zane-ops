@@ -2,7 +2,7 @@ import asyncio
 import os
 import shutil
 
-from typing import Any, Coroutine, Dict, List, Literal, TypedDict, cast
+from typing import Any, Dict, List, Literal, TypedDict, cast
 from docker.models.services import Service as DockerService
 
 
@@ -298,6 +298,15 @@ class ZaneProxyEtagError(Exception):
 class ZaneProxyClient:
     MAX_ETAG_ATTEMPTS = 3
 
+    class ServiceType:
+        MANAGED_SERVICE = "managed_service"
+        COMPOSE_STACK_SERVICE = "compose_stack_service"
+        BUILD_REGISTRY = "build_registry"
+
+        @classmethod
+        def choices(cls) -> List[str]:
+            return [cls.MANAGED_SERVICE, cls.COMPOSE_STACK_SERVICE, cls.BUILD_REGISTRY]
+
     @classmethod
     def _get_id_for_deployment(cls, deployment_hash: str, domain: str):
         return f"{deployment_hash}-{domain}"
@@ -502,6 +511,11 @@ class ZaneProxyClient:
                 green_hash = previous_deployment.hash
 
         proxy_handlers = [
+            {
+                "handler": "log_append",
+                "key": "zane_service_type",
+                "value": ZaneProxyClient.ServiceType.MANAGED_SERVICE,
+            },
             {
                 "handler": "log_append",
                 "key": "zane_service_id",
@@ -796,7 +810,7 @@ class ZaneProxyClient:
             {
                 "handler": "log_append",
                 "key": "zane_service_type",
-                "value": "BUILD_REGISTRY",
+                "value": ZaneProxyClient.ServiceType.BUILD_REGISTRY,
             },
             {
                 "handler": "log_append",
@@ -1003,11 +1017,11 @@ class ZaneProxyClient:
             {
                 "handler": "log_append",
                 "key": "zane_service_type",
-                "value": "compose_stack_service",
+                "value": ZaneProxyClient.ServiceType.COMPOSE_STACK_SERVICE,
             },
             {
                 "handler": "log_append",
-                "key": "zane_service_name",
+                "key": "zane_stack_service_name",
                 "value": service_name,
             },
             {

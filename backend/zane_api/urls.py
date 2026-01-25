@@ -215,10 +215,15 @@ urlpatterns = [
         name="services.deployment_single",
     ),
     re_path(
-        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/service-details"
-        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/http-logs/?$",
-        views.ServiceHttpLogsAPIView.as_view(),
-        name="services.http_logs",
+        r"^http-logs/?$",
+        views.HttpLogsAPIView.as_view(),
+        name="http_logs",
+    ),
+    re_path(
+        r"^http-logs"
+        rf"/(?P<request_uuid>{UUID_REGEX})/?$",
+        views.SingleHttpLogAPIView.as_view(),
+        name="http_logs.single",
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/service-details"
@@ -256,12 +261,6 @@ urlpatterns = [
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/build-logs/?$",
         views.ServiceDeploymentBuildLogsAPIView.as_view(),
         name="services.deployment.build_logs",
-    ),
-    re_path(
-        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/service-details"
-        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/deployments/(?P<deployment_hash>[a-zA-Z0-9-_]+)/http-logs/?$",
-        views.ServiceDeploymentHttpLogsAPIView.as_view(),
-        name="services.deployment_http_logs",
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/service-details"

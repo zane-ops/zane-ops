@@ -378,10 +378,12 @@ export const serviceQueries = {
     project_slug,
     service_slug,
     env_slug,
+    service_id,
     autoRefetchEnabled = true,
     filters = {},
     queryClient
   }: {
+    service_id: string;
     project_slug: string;
     service_slug: string;
     env_slug: string;
@@ -396,6 +398,7 @@ export const serviceQueries = {
           service_slug,
           env_slug
         }).queryKey,
+        service_id,
         "HTTP_LOGS",
         filters
       ] as const,
@@ -426,26 +429,19 @@ export const serviceQueries = {
           cursor = existingData.cursor;
         }
 
-        const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/",
-          {
-            params: {
-              path: {
-                project_slug,
-                service_slug,
-                env_slug
-              },
-              query: {
-                ...filters,
-                cursor,
-                per_page: DEFAULT_LOGS_PER_PAGE,
-                time_before: filters.time_before?.toISOString(),
-                time_after: filters.time_after?.toISOString()
-              }
-            },
-            signal
-          }
-        );
+        const { data } = await apiClient.GET("/api/http-logs/", {
+          params: {
+            query: {
+              ...filters,
+              cursor,
+              service_id,
+              per_page: DEFAULT_LOGS_PER_PAGE,
+              time_before: filters.time_before?.toISOString(),
+              time_after: filters.time_after?.toISOString()
+            }
+          },
+          signal
+        });
 
         let apiData: DeploymentHttpLogQueryData = {
           next: null,
@@ -473,26 +469,19 @@ export const serviceQueries = {
         // we want to do so that we don't to always fetch the latest data for the initial page
         // instead what we want is to fetch from the data it starts
         if (pageParam === null && apiData.next !== null && !apiData.cursor) {
-          const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/",
-            {
-              params: {
-                path: {
-                  project_slug,
-                  service_slug,
-                  env_slug
-                },
-                query: {
-                  ...filters,
-                  per_page: DEFAULT_LOGS_PER_PAGE,
-                  cursor: apiData.next,
-                  time_before: filters.time_before?.toISOString(),
-                  time_after: filters.time_after?.toISOString()
-                }
-              },
-              signal
-            }
-          );
+          const { data: nextPage } = await apiClient.GET("/api/http-logs/", {
+            params: {
+              query: {
+                ...filters,
+                service_id,
+                per_page: DEFAULT_LOGS_PER_PAGE,
+                cursor: apiData.next,
+                time_before: filters.time_before?.toISOString(),
+                time_after: filters.time_after?.toISOString()
+              }
+            },
+            signal
+          });
           if (nextPage?.previous) {
             apiData.cursor = new URL(nextPage.previous).searchParams.get(
               "cursor"
@@ -1267,27 +1256,19 @@ export const deploymentQueries = {
           cursor = existingData.cursor;
         }
 
-        const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/",
-          {
-            params: {
-              path: {
-                project_slug,
-                service_slug,
-                env_slug,
-                deployment_hash
-              },
-              query: {
-                ...filters,
-                cursor,
-                per_page: DEFAULT_LOGS_PER_PAGE,
-                time_before: filters.time_before?.toISOString(),
-                time_after: filters.time_after?.toISOString()
-              }
-            },
-            signal
-          }
-        );
+        const { data } = await apiClient.GET("/api/http-logs/", {
+          params: {
+            query: {
+              ...filters,
+              cursor,
+              deployment_id: deployment_hash,
+              per_page: DEFAULT_LOGS_PER_PAGE,
+              time_before: filters.time_before?.toISOString(),
+              time_after: filters.time_after?.toISOString()
+            }
+          },
+          signal
+        });
 
         let apiData: DeploymentHttpLogQueryData = {
           next: null,
@@ -1315,27 +1296,19 @@ export const deploymentQueries = {
         // we want to do so that we don't to always fetch the latest data for the initial page
         // instead what we want is to fetch from the data it starts
         if (pageParam === null && apiData.next !== null && !apiData.cursor) {
-          const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/",
-            {
-              params: {
-                path: {
-                  project_slug,
-                  service_slug,
-                  env_slug,
-                  deployment_hash
-                },
-                query: {
-                  ...filters,
-                  per_page: DEFAULT_LOGS_PER_PAGE,
-                  cursor: apiData.next,
-                  time_before: filters.time_before?.toISOString(),
-                  time_after: filters.time_after?.toISOString()
-                }
-              },
-              signal
-            }
-          );
+          const { data: nextPage } = await apiClient.GET("/api/http-logs/", {
+            params: {
+              query: {
+                ...filters,
+                per_page: DEFAULT_LOGS_PER_PAGE,
+                deployment_id: deployment_hash,
+                cursor: apiData.next,
+                time_before: filters.time_before?.toISOString(),
+                time_after: filters.time_after?.toISOString()
+              }
+            },
+            signal
+          });
           if (nextPage?.previous) {
             apiData.cursor = new URL(nextPage.previous).searchParams.get(
               "cursor"

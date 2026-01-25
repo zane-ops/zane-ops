@@ -540,6 +540,8 @@ class HttpLogSerializer(serializers.ModelSerializer):
             "request_headers",
             "response_headers",
             "request_user_agent",
+            "stack_id",
+            "stack_service_name",
         ]
 
 

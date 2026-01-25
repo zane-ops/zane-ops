@@ -1832,18 +1832,15 @@ class DeploymentChange(BaseDeploymentChange):
         )
 
 
-class Log(models.Model):
+class HttpLog(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(default=timezone.now)
     service_id = models.CharField(null=True)
     deployment_id = models.CharField(null=True)
+    stack_id = models.CharField(null=True)
+    stack_service_name = models.CharField(null=True)
     time = models.DateTimeField()
 
-    class Meta:
-        abstract = True
-
-
-class HttpLog(Log):
     class RequestMethod(models.TextChoices):
         GET = "GET", _("GET")
         POST = "POST", _("POST")

@@ -197,6 +197,14 @@ export interface paths {
      */
     get: operations["searchDockerRegistry"];
   };
+  "/api/http-logs/": {
+    /** Get HTTP logs */
+    get: operations["http_logs_list"];
+  };
+  "/api/http-logs/{request_uuid}/": {
+    /** Get single http log */
+    get: operations["http_logs_retrieve"];
+  };
   "/api/ping/": {
     /**
      * Ping
@@ -337,10 +345,6 @@ export interface paths {
     /** Get deployment build logs */
     get: operations["projects_service_details_deployments_build_logs_retrieve"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/": {
-    /** Get deployment HTTP logs */
-    get: operations["projects_service_details_deployments_http_logs_list"];
-  };
   "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/": {
     /** Get single deployment http log */
     get: operations["projects_service_details_deployments_http_logs_retrieve"];
@@ -360,10 +364,6 @@ export interface paths {
   "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/detected-ports/": {
     /** Get detected service ports */
     get: operations["projects_service_details_detected_ports_list"];
-  };
-  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/": {
-    /** Get service HTTP logs */
-    get: operations["projects_service_details_http_logs_list"];
   };
   "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/{request_uuid}/": {
     /** Get single service http log */
@@ -3038,7 +3038,134 @@ export interface components {
         [key: string]: string[];
       };
       request_user_agent: string | null;
+      stack_id: string | null;
+      stack_service_name: string | null;
     };
+    HttpLogsListDeploymentIdErrorComponent: {
+      /**
+       * @description * `deployment_id` - deployment_id
+       * @enum {string}
+       */
+      attr: "deployment_id";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    HttpLogsListError: components["schemas"]["HttpLogsListTimeErrorComponent"] | components["schemas"]["HttpLogsListRequestMethodErrorComponent"] | components["schemas"]["HttpLogsListRequestQueryErrorComponent"] | components["schemas"]["HttpLogsListRequestIdErrorComponent"] | components["schemas"]["HttpLogsListStackIdErrorComponent"] | components["schemas"]["HttpLogsListStackServiceNameErrorComponent"] | components["schemas"]["HttpLogsListServiceIdErrorComponent"] | components["schemas"]["HttpLogsListDeploymentIdErrorComponent"] | components["schemas"]["HttpLogsListSortByErrorComponent"];
+    HttpLogsListErrorResponse400: components["schemas"]["HttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    HttpLogsListRequestIdErrorComponent: {
+      /**
+       * @description * `request_id` - request_id
+       * @enum {string}
+       */
+      attr: "request_id";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    HttpLogsListRequestMethodErrorComponent: {
+      /**
+       * @description * `request_method` - request_method
+       * @enum {string}
+       */
+      attr: "request_method";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `invalid_list` - invalid_list
+       * @enum {string}
+       */
+      code: "invalid_choice" | "invalid_list";
+      detail: string;
+    };
+    HttpLogsListRequestQueryErrorComponent: {
+      /**
+       * @description * `request_query` - request_query
+       * @enum {string}
+       */
+      attr: "request_query";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    HttpLogsListServiceIdErrorComponent: {
+      /**
+       * @description * `service_id` - service_id
+       * @enum {string}
+       */
+      attr: "service_id";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    HttpLogsListSortByErrorComponent: {
+      /**
+       * @description * `sort_by` - sort_by
+       * @enum {string}
+       */
+      attr: "sort_by";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * @enum {string}
+       */
+      code: "invalid_choice";
+      detail: string;
+    };
+    HttpLogsListStackIdErrorComponent: {
+      /**
+       * @description * `stack_id` - stack_id
+       * @enum {string}
+       */
+      attr: "stack_id";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    HttpLogsListStackServiceNameErrorComponent: {
+      /**
+       * @description * `stack_service_name` - stack_service_name
+       * @enum {string}
+       */
+      attr: "stack_service_name";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    HttpLogsListTimeErrorComponent: {
+      /**
+       * @description * `time` - time
+       * @enum {string}
+       */
+      attr: "time";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    HttpLogsListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["HttpLogsListError"][];
+    };
+    HttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     /**
      * @description * `ADD` - Add
      * * `DELETE` - Delete
@@ -3913,78 +4040,6 @@ export interface components {
     ProjectsPreviewTemplatesRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsBuildLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListSortByErrorComponent"];
-    ProjectsServiceDetailsDeploymentsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDeploymentsHttpLogsListRequestIdErrorComponent: {
-      /**
-       * @description * `request_id` - request_id
-       * @enum {string}
-       */
-      attr: "request_id";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    ProjectsServiceDetailsDeploymentsHttpLogsListRequestMethodErrorComponent: {
-      /**
-       * @description * `request_method` - request_method
-       * @enum {string}
-       */
-      attr: "request_method";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * * `invalid_list` - invalid_list
-       * @enum {string}
-       */
-      code: "invalid_choice" | "invalid_list";
-      detail: string;
-    };
-    ProjectsServiceDetailsDeploymentsHttpLogsListRequestQueryErrorComponent: {
-      /**
-       * @description * `request_query` - request_query
-       * @enum {string}
-       */
-      attr: "request_query";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    ProjectsServiceDetailsDeploymentsHttpLogsListSortByErrorComponent: {
-      /**
-       * @description * `sort_by` - sort_by
-       * @enum {string}
-       */
-      attr: "sort_by";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * @enum {string}
-       */
-      code: "invalid_choice";
-      detail: string;
-    };
-    ProjectsServiceDetailsDeploymentsHttpLogsListTimeErrorComponent: {
-      /**
-       * @description * `time` - time
-       * @enum {string}
-       */
-      attr: "time";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    ProjectsServiceDetailsDeploymentsHttpLogsListValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListError"][];
-    };
     ProjectsServiceDetailsDeploymentsHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsListError: components["schemas"]["ProjectsServiceDetailsDeploymentsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsListQueuedAtErrorComponent"];
     ProjectsServiceDetailsDeploymentsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDeploymentsListValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -4024,78 +4079,6 @@ export interface components {
     ProjectsServiceDetailsDeploymentsRuntimeLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDetectedPortsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsHttpLogsListSortByErrorComponent"];
-    ProjectsServiceDetailsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsHttpLogsListRequestIdErrorComponent: {
-      /**
-       * @description * `request_id` - request_id
-       * @enum {string}
-       */
-      attr: "request_id";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    ProjectsServiceDetailsHttpLogsListRequestMethodErrorComponent: {
-      /**
-       * @description * `request_method` - request_method
-       * @enum {string}
-       */
-      attr: "request_method";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * * `invalid_list` - invalid_list
-       * @enum {string}
-       */
-      code: "invalid_choice" | "invalid_list";
-      detail: string;
-    };
-    ProjectsServiceDetailsHttpLogsListRequestQueryErrorComponent: {
-      /**
-       * @description * `request_query` - request_query
-       * @enum {string}
-       */
-      attr: "request_query";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    ProjectsServiceDetailsHttpLogsListSortByErrorComponent: {
-      /**
-       * @description * `sort_by` - sort_by
-       * @enum {string}
-       */
-      attr: "sort_by";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * @enum {string}
-       */
-      code: "invalid_choice";
-      detail: string;
-    };
-    ProjectsServiceDetailsHttpLogsListTimeErrorComponent: {
-      /**
-       * @description * `time` - time
-       * @enum {string}
-       */
-      attr: "time";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    ProjectsServiceDetailsHttpLogsListValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["ProjectsServiceDetailsHttpLogsListError"][];
-    };
     ProjectsServiceDetailsHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -8973,6 +8956,116 @@ export interface operations {
       };
     };
   };
+  /** Get HTTP logs */
+  http_logs_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        deployment_id?: string;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+        /** @description Multiple values may be separated by commas. */
+        request_host?: string[];
+        request_id?: string;
+        /** @description Multiple values may be separated by commas. */
+        request_ip?: string[];
+        /**
+         * @description * `GET` - GET
+         * * `POST` - POST
+         * * `PUT` - PUT
+         * * `DELETE` - DELETE
+         * * `PATCH` - PATCH
+         * * `OPTIONS` - OPTIONS
+         * * `HEAD` - HEAD
+         */
+        request_method?: ("DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT")[];
+        /** @description Multiple values may be separated by commas. */
+        request_path?: string[];
+        request_query?: string;
+        /** @description Multiple values may be separated by commas. */
+        request_user_agent?: string[];
+        service_id?: string;
+        /**
+         * @description Ordering
+         *
+         * * `time` - Time
+         * * `-time` - Time (descending)
+         * * `request_duration_ns` - Request duration ns
+         * * `-request_duration_ns` - Request duration ns (descending)
+         */
+        sort_by?: ("-request_duration_ns" | "-time" | "request_duration_ns" | "time")[];
+        stack_id?: string;
+        stack_service_name?: string;
+        /** @description Multiple values may be separated by commas. */
+        status?: string[];
+        time_after?: string;
+        time_before?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedHttpLogList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["HttpLogsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get single http log */
+  http_logs_retrieve: {
+    parameters: {
+      path: {
+        request_uuid: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["HttpLog"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["HttpLogsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /**
    * Ping
    * @description simple healthcheck endpoint.
@@ -9944,83 +10037,6 @@ export interface operations {
       };
     };
   };
-  /** Get deployment HTTP logs */
-  projects_service_details_deployments_http_logs_list: {
-    parameters: {
-      query?: {
-        /** @description The pagination cursor value. */
-        cursor?: string;
-        /** @description Number of results to return per page. */
-        per_page?: number;
-        /** @description Multiple values may be separated by commas. */
-        request_host?: string[];
-        request_id?: string;
-        /** @description Multiple values may be separated by commas. */
-        request_ip?: string[];
-        /**
-         * @description * `GET` - GET
-         * * `POST` - POST
-         * * `PUT` - PUT
-         * * `DELETE` - DELETE
-         * * `PATCH` - PATCH
-         * * `OPTIONS` - OPTIONS
-         * * `HEAD` - HEAD
-         */
-        request_method?: ("DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT")[];
-        /** @description Multiple values may be separated by commas. */
-        request_path?: string[];
-        request_query?: string;
-        /** @description Multiple values may be separated by commas. */
-        request_user_agent?: string[];
-        /**
-         * @description Ordering
-         *
-         * * `time` - Time
-         * * `-time` - Time (descending)
-         * * `request_duration_ns` - Request duration ns
-         * * `-request_duration_ns` - Request duration ns (descending)
-         */
-        sort_by?: ("-request_duration_ns" | "-time" | "request_duration_ns" | "time")[];
-        /** @description Multiple values may be separated by commas. */
-        status?: string[];
-        time_after?: string;
-        time_before?: string;
-      };
-      path: {
-        deployment_hash: string;
-        env_slug: string;
-        project_slug: string;
-        service_slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["PaginatedHttpLogList"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
   /** Get single deployment http log */
   projects_service_details_deployments_http_logs_retrieve: {
     parameters: {
@@ -10220,82 +10236,6 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ProjectsServiceDetailsDetectedPortsListErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /** Get service HTTP logs */
-  projects_service_details_http_logs_list: {
-    parameters: {
-      query?: {
-        /** @description The pagination cursor value. */
-        cursor?: string;
-        /** @description Number of results to return per page. */
-        per_page?: number;
-        /** @description Multiple values may be separated by commas. */
-        request_host?: string[];
-        request_id?: string;
-        /** @description Multiple values may be separated by commas. */
-        request_ip?: string[];
-        /**
-         * @description * `GET` - GET
-         * * `POST` - POST
-         * * `PUT` - PUT
-         * * `DELETE` - DELETE
-         * * `PATCH` - PATCH
-         * * `OPTIONS` - OPTIONS
-         * * `HEAD` - HEAD
-         */
-        request_method?: ("DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT")[];
-        /** @description Multiple values may be separated by commas. */
-        request_path?: string[];
-        request_query?: string;
-        /** @description Multiple values may be separated by commas. */
-        request_user_agent?: string[];
-        /**
-         * @description Ordering
-         *
-         * * `time` - Time
-         * * `-time` - Time (descending)
-         * * `request_duration_ns` - Request duration ns
-         * * `-request_duration_ns` - Request duration ns (descending)
-         */
-        sort_by?: ("-request_duration_ns" | "-time" | "request_duration_ns" | "time")[];
-        /** @description Multiple values may be separated by commas. */
-        status?: string[];
-        time_after?: string;
-        time_before?: string;
-      };
-      path: {
-        env_slug: string;
-        project_slug: string;
-        service_slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["PaginatedHttpLogList"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsHttpLogsListErrorResponse400"];
         };
       };
       401: {
