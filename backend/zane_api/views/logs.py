@@ -55,6 +55,35 @@ from temporal.helpers import ZaneProxyClient
 from django.db.models import Q
 
 
+def _build_http_log(log_time: str, log_content: dict, **extra_fields) -> HttpLog:
+    """Build an HttpLog from proxy log content with common fields extracted."""
+    req = log_content["request"]
+    duration_in_seconds = log_content["duration"]
+    full_url = urlparse(f"https://{req['host']}{req['uri']}")
+
+    client_ip = req["headers"].get("X-Forwarded-For", req["remote_ip"])
+    user_agent = req["headers"].get("User-Agent")
+
+    return HttpLog(
+        time=log_time,
+        request_duration_ns=int(duration_in_seconds * 1_000_000_000),
+        request_path=full_url.path,
+        request_query=full_url.query,
+        request_protocol=req["proto"],
+        request_host=req["host"],
+        status=log_content["status"],
+        request_headers=req["headers"],
+        response_headers=log_content["resp_headers"],
+        request_user_agent=user_agent[0] if isinstance(user_agent, list) else None,
+        request_ip=client_ip[0].split(",")[0]
+        if isinstance(client_ip, list)
+        else client_ip,
+        request_uuid=log_content.get("uuid"),
+        request_method=req["method"],
+        **extra_fields,
+    )
+
+
 @extend_schema(exclude=True)
 class LogIngestAPIView(APIView):
     permission_classes = [InternalZaneAppPermission]
@@ -104,135 +133,24 @@ class LogIngestAPIView(APIView):
                                         match service_type:
                                             case ZaneProxyClient.ServiceType.BUILD_REGISTRY:
                                                 if registry_id:
-                                                    req = log_content["request"]
-                                                    duration_in_seconds = log_content[
-                                                        "duration"
-                                                    ]
-
-                                                    full_url = urlparse(
-                                                        f"https://{req['host']}{req['uri']}"
-                                                    )
-                                                    client_ip = req["headers"].get(
-                                                        "X-Forwarded-For",
-                                                        req["remote_ip"],
-                                                    )
-                                                    user_agent = req["headers"].get(
-                                                        "User-Agent"
-                                                    )
                                                     http_logs.append(
-                                                        HttpLog(
-                                                            time=log["time"],
+                                                        _build_http_log(
+                                                            log["time"],
+                                                            log_content,
                                                             registry_id=registry_id,
-                                                            request_duration_ns=(
-                                                                duration_in_seconds
-                                                                * 1_000_000_000
-                                                            ),
-                                                            request_path=full_url.path,
-                                                            request_query=full_url.query,
-                                                            request_protocol=req[
-                                                                "proto"
-                                                            ],
-                                                            request_host=req["host"],
-                                                            status=log_content[
-                                                                "status"
-                                                            ],
-                                                            request_headers=req[
-                                                                "headers"
-                                                            ],
-                                                            response_headers=log_content[
-                                                                "resp_headers"
-                                                            ],
-                                                            request_user_agent=(
-                                                                user_agent[0]
-                                                                if isinstance(
-                                                                    user_agent, list
-                                                                )
-                                                                else None
-                                                            ),
-                                                            request_ip=(
-                                                                client_ip[0].split(",")[
-                                                                    0
-                                                                ]
-                                                                if isinstance(
-                                                                    client_ip, list
-                                                                )
-                                                                else client_ip
-                                                            ),
-                                                            request_uuid=log_content.get(
-                                                                "uuid"
-                                                            ),
-                                                            request_method=req[
-                                                                "method"
-                                                            ],
                                                         )
                                                     )
                                             case ZaneProxyClient.ServiceType.COMPOSE_STACK_SERVICE:
                                                 stack_service_name = content.get(
                                                     "zane_stack_service_name"
                                                 )
-
                                                 if stack_service_name:
-                                                    req = log_content["request"]
-                                                    duration_in_seconds = log_content[
-                                                        "duration"
-                                                    ]
-
-                                                    full_url = urlparse(
-                                                        f"https://{req['host']}{req['uri']}"
-                                                    )
-                                                    client_ip = req["headers"].get(
-                                                        "X-Forwarded-For",
-                                                        req["remote_ip"],
-                                                    )
-                                                    user_agent = req["headers"].get(
-                                                        "User-Agent"
-                                                    )
                                                     http_logs.append(
-                                                        HttpLog(
-                                                            time=log["time"],
+                                                        _build_http_log(
+                                                            log["time"],
+                                                            log_content,
                                                             stack_id=stack_id,
                                                             stack_service_name=stack_service_name,
-                                                            request_duration_ns=(
-                                                                duration_in_seconds
-                                                                * 1_000_000_000
-                                                            ),
-                                                            request_path=full_url.path,
-                                                            request_query=full_url.query,
-                                                            request_protocol=req[
-                                                                "proto"
-                                                            ],
-                                                            request_host=req["host"],
-                                                            status=log_content[
-                                                                "status"
-                                                            ],
-                                                            request_headers=req[
-                                                                "headers"
-                                                            ],
-                                                            response_headers=log_content[
-                                                                "resp_headers"
-                                                            ],
-                                                            request_user_agent=(
-                                                                user_agent[0]
-                                                                if isinstance(
-                                                                    user_agent, list
-                                                                )
-                                                                else None
-                                                            ),
-                                                            request_ip=(
-                                                                client_ip[0].split(",")[
-                                                                    0
-                                                                ]
-                                                                if isinstance(
-                                                                    client_ip, list
-                                                                )
-                                                                else client_ip
-                                                            ),
-                                                            request_uuid=log_content.get(
-                                                                "uuid"
-                                                            ),
-                                                            request_method=req[
-                                                                "method"
-                                                            ],
                                                         )
                                                     )
                                             case ZaneProxyClient.ServiceType.MANAGED_SERVICE:
@@ -260,69 +178,14 @@ class LogIngestAPIView(APIView):
                                                         )
 
                                                 if deployment_id:
-                                                    req = log_content["request"]
-                                                    duration_in_seconds = log_content[
-                                                        "duration"
-                                                    ]
-
-                                                    full_url = urlparse(
-                                                        f"https://{req['host']}{req['uri']}"
-                                                    )
-                                                    client_ip = req["headers"].get(
-                                                        "X-Forwarded-For",
-                                                        req["remote_ip"],
-                                                    )
-                                                    user_agent = req["headers"].get(
-                                                        "User-Agent"
-                                                    )
                                                     http_logs.append(
-                                                        HttpLog(
-                                                            time=log["time"],
+                                                        _build_http_log(
+                                                            log["time"],
+                                                            log_content,
                                                             service_id=log_content.get(
                                                                 "zane_service_id"
                                                             ),
                                                             deployment_id=deployment_id,
-                                                            request_duration_ns=(
-                                                                duration_in_seconds
-                                                                * 1_000_000_000
-                                                            ),
-                                                            request_path=full_url.path,
-                                                            request_query=full_url.query,
-                                                            request_protocol=req[
-                                                                "proto"
-                                                            ],
-                                                            request_host=req["host"],
-                                                            status=log_content[
-                                                                "status"
-                                                            ],
-                                                            request_headers=req[
-                                                                "headers"
-                                                            ],
-                                                            response_headers=log_content[
-                                                                "resp_headers"
-                                                            ],
-                                                            request_user_agent=(
-                                                                user_agent[0]
-                                                                if isinstance(
-                                                                    user_agent, list
-                                                                )
-                                                                else None
-                                                            ),
-                                                            request_ip=(
-                                                                client_ip[0].split(",")[
-                                                                    0
-                                                                ]
-                                                                if isinstance(
-                                                                    client_ip, list
-                                                                )
-                                                                else client_ip
-                                                            ),
-                                                            request_uuid=log_content.get(
-                                                                "uuid"
-                                                            ),
-                                                            request_method=req[
-                                                                "method"
-                                                            ],
                                                         )
                                                     )
 
