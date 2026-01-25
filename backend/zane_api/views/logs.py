@@ -162,7 +162,7 @@ class LogIngestAPIView(APIView):
                                                                 )
                                                                 else client_ip
                                                             ),
-                                                            request_id=log_content.get(
+                                                            request_uuid=log_content.get(
                                                                 "uuid"
                                                             ),
                                                             request_method=req[
@@ -252,7 +252,7 @@ class LogIngestAPIView(APIView):
                                                                 )
                                                                 else client_ip
                                                             ),
-                                                            request_id=log_content.get(
+                                                            request_uuid=log_content.get(
                                                                 "uuid"
                                                             ),
                                                             request_method=req[
