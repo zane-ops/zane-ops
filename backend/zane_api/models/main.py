@@ -1873,7 +1873,11 @@ class HttpLog(models.Model):
     request_path = models.CharField(max_length=2000)
     request_query = models.CharField(max_length=2000, null=True, blank=True)
     request_ip = models.GenericIPAddressField()
-    request_id = models.CharField(null=True, max_length=255)
+    request_uuid = models.CharField(
+        null=True,
+        max_length=255,
+        unique=True,
+    )
     request_user_agent = models.TextField(blank=True, null=True)
 
     class Meta:
@@ -1887,7 +1891,7 @@ class HttpLog(models.Model):
             models.Index(fields=["time"]),
             models.Index(fields=["request_user_agent"]),
             models.Index(fields=["request_ip"]),
-            models.Index(fields=["request_id"]),
+            models.Index(fields=["request_uuid"]),
             models.Index(fields=["request_query"]),
         ]
         ordering = ("-time",)
