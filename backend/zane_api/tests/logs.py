@@ -16,6 +16,7 @@ from search.dtos import RuntimeLogSource, RuntimeLogLevel
 import requests
 
 import urllib.request
+from urllib.parse import urlencode
 
 
 class RuntimeLogCollectViewTests(AuthAPITestCase):
@@ -902,7 +903,7 @@ class HttpLogViewTests(AuthAPITestCase):
         },
     ]
 
-    def test_view_logs(self):
+    def test_view_http_logs(self):
         p, service = self.create_and_deploy_caddy_docker_service()
 
         fist_deployment: Deployment = service.deployments.first()
@@ -939,21 +940,16 @@ class HttpLogViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
+        params = {
+            "deployment_hash": fist_deployment.hash,
+        }
         response = self.client.get(
-            reverse(
-                "zane_api:services.deployment_http_logs",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                    "deployment_hash": fist_deployment.hash,
-                },
-            ),
+            reverse("zane_api:http_logs", query=params),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(len(simple_proxy_logs), len(response.json()["results"]))
 
-    def test_filter(self):
+    def test_filter_http_logs(self):
         p, service = self.create_and_deploy_caddy_docker_service()
 
         fist_deployment: Deployment = service.deployments.first()
@@ -992,15 +988,13 @@ class HttpLogViewTests(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:services.deployment_http_logs",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
+                "zane_api:http_logs",
+                query={
                     "deployment_hash": fist_deployment.hash,
+                    "request_path": "/abc",
+                    "request_method": "POST",
                 },
             ),
-            QUERY_STRING=f"request_path=/abc&request_method=POST",
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, len(response.json()["results"]))
@@ -1313,7 +1307,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
         self.assertEqual("10.0.0.2", log.request_ip)
         self.assertEqual("nginx-demo.zaneops.local", log.request_host)
         self.assertEqual(HttpLog.RequestProtocols.HTTP_2, log.request_protocol)
-        self.assertIsNotNone(log.request_id)
+        self.assertIsNotNone(log.request_uuid)
 
     async def test_correctly_split_logs_per_deployment(self):
         p, service = await self.acreate_and_deploy_caddy_docker_service()
