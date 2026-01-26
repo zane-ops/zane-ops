@@ -5,7 +5,10 @@ import requests
 from datetime import timedelta
 from typing import Sequence
 from zane_api.utils import Colors
-from .serializers import RuntimeLogsQuerySerializer, RuntimeLogsSearchSerializer
+from .serializers import (
+    RuntimeLogsQuerySerializer,
+    RuntimeLogsSearchSerializer,
+)
 from .dtos import RuntimeLogDto
 from django.conf import settings
 from uuid import uuid4
@@ -119,6 +122,8 @@ class LokiSearchClient:
                 "content": log_data["content"],
                 "content_text": log_data["content_text"],
                 "created_at": log_data["created_at"],
+                "stack_service_name": log_data.get("stack_service_name"),
+                "stack_id": log_data.get("stack_id"),
                 "timestamp": int(float(log_data["time"])),  # timestamp for pagination
             }
             hits.append(hit)
@@ -198,8 +203,10 @@ class LokiSearchClient:
                     ).isoformat(),  # remove nanoseconds, then divide by 1 million to get microseconds
                     "level": hit["level"],
                     "source": hit["source"],
-                    "service_id": hit["service_id"],
-                    "deployment_id": hit["deployment_id"],
+                    "service_id": hit.get("service_id"),
+                    "deployment_id": hit.get("deployment_id"),
+                    "stack_id": hit.get("stack_id"),
+                    "stack_service_name": hit.get("stack_service_name"),
                     "content": hit["content"],
                     "content_text": hit["content_text"],
                     "timestamp": hit["timestamp"],
