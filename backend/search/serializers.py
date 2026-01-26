@@ -7,8 +7,13 @@ from django.core.exceptions import ValidationError
 
 class RuntimeLogSerializer(serializers.Serializer):
     id = serializers.CharField()
-    service_id = serializers.CharField(allow_null=True)
-    deployment_id = serializers.CharField(allow_null=True)
+    # managed services
+    service_id = serializers.CharField(allow_null=True, required=False)
+    deployment_id = serializers.CharField(allow_null=True, required=False)
+    # compose stack
+    stack_id = serializers.CharField(allow_null=True, required=False)
+    stack_service_name = serializers.CharField(allow_null=True, required=False)
+    # common args
     time = serializers.DateTimeField()
     timestamp = serializers.IntegerField()
     content = serializers.JSONField(allow_null=True)
@@ -32,6 +37,10 @@ class RuntimeLogsSearchSerializer(serializers.Serializer):
 class RuntimeLogsQuerySerializer(serializers.Serializer):
     deployment_id = serializers.CharField(required=False)
     service_id = serializers.CharField(required=False)
+    stack_id = serializers.CharField(required=False)
+    stack_service_names = serializers.ListField(
+        child=serializers.CharField(), required=False
+    )
     time_before = serializers.DateTimeField(required=False)
     time_after = serializers.DateTimeField(required=False)
     query = serializers.CharField(

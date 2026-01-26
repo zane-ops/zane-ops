@@ -583,7 +583,7 @@ class ComposeSpecProcessor:
                     "tag": json.dumps(
                         {
                             "zane.stack": stack.id,
-                            "zane.service": service_name.removeprefix(
+                            "zane.stack.service": service_name.removeprefix(
                                 f"{stack.hash_prefix}_"
                             ),
                         }

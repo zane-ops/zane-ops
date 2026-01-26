@@ -46,6 +46,16 @@ urlpatterns = [
         name="stacks.archive",
     ),
     re_path(
+        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/runtime-logs/?$",
+        views.ComposeStackRuntimeLogsAPIView.as_view(),
+        name="stack.runtime_logs",
+    ),
+    re_path(
+        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/build-logs/?$",
+        views.ComposeStackBuildLogsAPIView.as_view(),
+        name="stack.build_logs",
+    ),
+    re_path(
         rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/toggle/?$",
         views.ToggleComposeStackAPIView.as_view(),
         name="stacks.toggle",

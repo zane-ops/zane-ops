@@ -5,4 +5,4 @@ from .stacks_cancel import *
 from .stacks_dokploy_compat import *
 from .stacks_more_deployment import *
 from .stacks_prefix_override import *
-from .stack_httplogs import *
+from .stack_logs import *

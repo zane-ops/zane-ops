@@ -50,7 +50,7 @@ from ..models import (
 )
 from ..serializers import HttpLogSerializer
 
-from rest_framework.utils.serializer_helpers import ReturnDict
+
 from temporal.helpers import ZaneProxyClient
 from django.db.models import Q
 
@@ -110,7 +110,7 @@ class LogIngestAPIView(APIView):
                     match service_id:
                         case None:
                             # Ignore this log
-                            continue
+                            pass
                         case ZaneServices.PROXY:
                             try:
                                 content = json.loads(log["log"])
@@ -211,6 +211,26 @@ class LogIngestAPIView(APIView):
                                     content_text=escape_ansi(log["log"]),
                                 )
                             )
+
+                    stack_id = json_tag.get("zane.stack")
+                    if stack_id is not None:
+                        stack_service_name = json_tag.get("zane.stack.service")
+                        simple_logs.append(
+                            RuntimeLogDto(
+                                time=log["time"],
+                                created_at=timezone.now(),
+                                level=(
+                                    RuntimeLogLevel.INFO
+                                    if log["source"] == "stdout"
+                                    else RuntimeLogLevel.ERROR
+                                ),
+                                source=RuntimeLogSource.SERVICE,
+                                stack_id=stack_id,
+                                stack_service_name=stack_service_name,
+                                content=log["log"],
+                                content_text=escape_ansi(log["log"]),
+                            )
+                        )
 
             start_time = datetime.now()
             search_client = LokiSearchClient(host=settings.LOKI_HOST)
@@ -348,11 +368,13 @@ class ServiceDeploymentRuntimeLogsAPIView(APIView):
             )
         else:
             form = DeploymentRuntimeLogsQuerySerializer(data=request.query_params)
-            print(f"{request.query_params=}")
             if form.is_valid(raise_exception=True):
                 search_client = LokiSearchClient(host=settings.LOKI_HOST)
                 data = search_client.search(
-                    query=dict(**form.validated_data, deployment_id=deployment.hash),  # type: ignore
+                    query=dict(
+                        **form.validated_data,  # type: ignore
+                        deployment_id=deployment.hash,
+                    )
                 )
                 return Response(data)
 
@@ -400,14 +422,13 @@ class ServiceDeploymentBuildLogsAPIView(APIView):
             )
         else:
             form = DeploymentBuildLogsQuerySerializer(data=request.query_params)
-            print(f"{request.query_params=}")
             if form.is_valid(raise_exception=True):
                 search_client = LokiSearchClient(host=settings.LOKI_HOST)
                 data = search_client.search(
                     query=dict(
-                        cursor=cast(ReturnDict, form.validated_data).get("cursor"),
+                        **form.validated_data,  # type: ignore
                         deployment_id=deployment.hash,
                         source=[RuntimeLogSource.BUILD, RuntimeLogSource.SYSTEM],
-                    ),  # type: ignore
+                    )
                 )
                 return Response(data)

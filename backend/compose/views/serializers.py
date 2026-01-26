@@ -26,6 +26,7 @@ from drf_standardized_errors.formatter import ExceptionFormatter
 from zane_api.serializers import URLDomainField, URLPathField
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
+from search.dtos import RuntimeLogLevel
 
 
 class ComposeStackChangeSerializer(serializers.ModelSerializer):
@@ -668,3 +669,69 @@ class CreateComposeStackFromDokployTemplateObjectRequestSerializer(
             )
 
         return slug
+
+
+# =======================================
+#           Stack runtime Logs          #
+# =======================================
+
+
+class StackRuntimeLogsQuerySerializer(serializers.Serializer):
+    time_before = serializers.DateTimeField(required=False)
+    time_after = serializers.DateTimeField(required=False)
+    query = serializers.CharField(
+        required=False, allow_blank=True, trim_whitespace=False
+    )
+    level = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=[RuntimeLogLevel.INFO, RuntimeLogLevel.ERROR]
+        ),
+        required=False,
+    )
+    per_page = serializers.IntegerField(
+        required=False, min_value=1, max_value=100, default=50
+    )
+    cursor = serializers.CharField(required=False)
+    stack_service_names = serializers.ListField(
+        child=serializers.CharField(), required=False
+    )
+
+    def validate_cursor(self, cursor: str):
+        try:
+            decoded_data = base64.b64decode(cursor, validate=True)
+            decoded_string = decoded_data.decode("utf-8")
+            serializer = CursorSerializer(data=json.loads(decoded_string))
+            serializer.is_valid(raise_exception=True)
+        except (serializers.ValidationError, ValueError):
+            raise serializers.ValidationError(
+                {
+                    "cursor": "Invalid cursor format, it should be a base64 encoded string of a JSON object."
+                }
+            )
+        return cursor
+
+
+class CursorSerializer(serializers.Serializer):
+    sort = serializers.ListField(required=True, child=serializers.CharField())
+    order = serializers.ChoiceField(choices=["desc", "asc"], required=True)
+
+
+class StackBuildLogsQuerySerializer(serializers.Serializer):
+    cursor = serializers.CharField(required=False)
+    per_page = serializers.IntegerField(
+        required=False, min_value=1, max_value=100, default=50
+    )
+
+    def validate_cursor(self, cursor: str):
+        try:
+            decoded_data = base64.b64decode(cursor, validate=True)
+            decoded_string = decoded_data.decode("utf-8")
+            serializer = CursorSerializer(data=json.loads(decoded_string))
+            serializer.is_valid(raise_exception=True)
+        except (serializers.ValidationError, ValueError):
+            raise serializers.ValidationError(
+                {
+                    "cursor": "Invalid cursor format, it should be a base64 encoded string of a JSON object."
+                }
+            )
+        return cursor

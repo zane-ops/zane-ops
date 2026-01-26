@@ -32,13 +32,8 @@ class LokiSearchClient:
             log_dict["id"] = str(uuid4())
 
             # Define labels for Loki from key fields.
-            labels = {
-                "service_id": log_dict.get("service_id") or "unknown",
-                "deployment_id": log_dict.get("deployment_id") or "unknown",
-                "level": log_dict.get("level"),
-                "source": log_dict.get("source"),
-                "app": f"{settings.LOKI_APP_NAME}",
-            }
+            labels = doc.loki_labels
+
             # Construct a label selector string
             label_key = ",".join([f'{k}="{v}"' for k, v in labels.items()])
             ts = f"{log_dict.get('time'):.0f}"
@@ -60,15 +55,10 @@ class LokiSearchClient:
         Insert a single log entry to Loki.
         """
         log_dict = document.to_dict()
+        labels = document.loki_labels
+
         log_dict["id"] = str(uuid4())
 
-        labels = {
-            "service_id": log_dict.get("service_id") or "unknown",
-            "deployment_id": log_dict.get("deployment_id") or "unknown",
-            "level": log_dict.get("level"),
-            "source": log_dict.get("source"),
-            "app": f"{settings.LOKI_APP_NAME}",
-        }
         ts = f"{log_dict.get('time'):.0f}"
         payload = {
             "streams": [{"stream": labels, "values": [[ts, json.dumps(log_dict)]]}]
@@ -278,6 +268,16 @@ class LokiSearchClient:
         page_size = int(search_params.get("per_page", 50))
 
         label_selectors: list[str] = []
+        if search_params.get("stack_id"):
+            label_selectors.append(f'stack_id="{search_params["stack_id"]}"')
+        if search_params.get("stack_service_names"):
+            services = search_params["stack_service_names"]
+            if isinstance(services, list):
+                label_selectors.append(
+                    'stack_service_name=~"(' + "|".join(services) + ')"'
+                )
+            else:
+                label_selectors.append(f'stack_service_name="{services}"')
         if search_params.get("service_id"):
             label_selectors.append(f'service_id="{search_params["service_id"]}"')
         if search_params.get("deployment_id"):

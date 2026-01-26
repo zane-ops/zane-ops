@@ -1,4 +1,6 @@
 import base64
+
+from datetime import datetime, timedelta
 import json
 from typing import cast
 import uuid
@@ -405,3 +407,117 @@ class HTTPLogComposeStackCollectViewTests(ComposeStackAPITestBase):
             len(self.sample_log_entries) // 2,
             HttpLog.objects.filter(stack_service_name="api").count(),
         )
+
+
+now = datetime.now()
+
+
+class RuntimelogComposeStackCollectViewTests(ComposeStackAPITestBase):
+    sample_logs = [
+        {
+            "container_name": "/zn-compose_stk_mfynFkbQ_mfynfkbq_backend.1.xj5ew8avqg0n4tpksir93zjgp",
+            "source": "stdout",
+            "log": '\u001b[2m2026-01-25T17:12:12.857167Z\u001b[0m \u001b[32m INFO\u001b[0m \u001b[2mconvex-cloud-http\u001b[0m\u001b[2m:\u001b[0m [] 10.0.1.3:43466 "GET /api/shapes2 HTTP/1.1" 200 "http://compose-convex-1crnchiscp.127-0-0-1.sslip.io/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36" application/json - 0.473ms',
+            "container_id": "2978edd2a498d5dc08f74217a669fc4553030e9a6b2379e3cf0cd24599d2a9e2",
+            "time": (now - timedelta(seconds=5)).isoformat(),
+        },
+        {
+            "log": '\u001b[2m2026-01-25T17:14:18.855477Z\u001b[0m \u001b[32m INFO\u001b[0m \u001b[2mconvex-cloud-http\u001b[0m\u001b[2m:\u001b[0m [] 10.0.1.3:43466 "GET /api/shapes2 HTTP/1.1" 200 "http://compose-convex-1crnchiscp.127-0-0-1.sslip.io/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36" application/json - 1.906ms',
+            "container_id": "2978edd2a498d5dc08f74217a669fc4553030e9a6b2379e3cf0cd24599d2a9e2",
+            "container_name": "/zn-compose_stk_mfynFkbQ_mfynfkbq_backend.1.xj5ew8avqg0n4tpksir93zjgp",
+            "source": "stdout",
+            "time": (now - timedelta(seconds=4)).isoformat(),
+        },
+        {
+            "container_id": "2978edd2a498d5dc08f74217a669fc4553030e9a6b2379e3cf0cd24599d2a9e2",
+            "container_name": "/zn-compose_stk_mfynFkbQ_mfynfkbq_backend.1.xj5ew8avqg0n4tpksir93zjgp",
+            "source": "stdout",
+            "log": '\u001b[2m2026-01-25T17:15:42.856911Z\u001b[0m \u001b[32m INFO\u001b[0m \u001b[2mconvex-cloud-http\u001b[0m\u001b[2m:\u001b[0m [] 10.0.1.3:43466 "GET /api/shapes2 HTTP/1.1" 200 "http://compose-convex-1crnchiscp.127-0-0-1.sslip.io/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36" application/json - 0.501ms',
+            "time": (now - timedelta(seconds=3)).isoformat(),
+        },
+        {
+            "source": "stdout",
+            "log": "",
+            "container_id": "bc603d5dd4ea387ae8f37470d487e48cbed5e05f78ab23d9f87011faa1bee2f1",
+            "container_name": "/zn-compose_stk_mfynFkbQ_mfynfkbq_dashboard.1.qs985zn1t8rebn3xessh698yz",
+            "time": (now - timedelta(seconds=2)).isoformat(),
+        },
+        {
+            "container_name": "/zn-compose_stk_mfynFkbQ_mfynfkbq_dashboard.1.qs985zn1t8rebn3xessh698yz",
+            "source": "stdout",
+            "log": " \u2713 Starting...",
+            "container_id": "bc603d5dd4ea387ae8f37470d487e48cbed5e05f78ab23d9f87011faa1bee2f1",
+            "time": (now - timedelta(seconds=1)).isoformat(),
+        },
+        {
+            "container_id": "bc603d5dd4ea387ae8f37470d487e48cbed5e05f78ab23d9f87011faa1bee2f1",
+            "container_name": "/zn-compose_stk_mfynFkbQ_mfynfkbq_dashboard.1.qs985zn1t8rebn3xessh698yz",
+            "source": "stdout",
+            "log": " \u2713 Ready in 352ms",
+            "time": now.isoformat(),
+        },
+    ]
+
+    def test_ingest_stack_service_logs(self):
+        # Deploy initial stack
+        p, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MULTIPLE_WEB_SERVICES
+        )
+
+        # Insert logs
+        simple_logs = [
+            {
+                **content,
+                "tag": json.dumps(
+                    {
+                        "zane.stack": stack.id,
+                        "zane.stack.service": (
+                            "frontend"
+                            if i >= len(self.sample_logs) // 2
+                            else "api"  # frontend is the last 3 logs
+                        ),
+                    }
+                ),
+                "source": "stdout" if i % 2 == 0 else "stderr",
+            }
+            for i, content in enumerate(self.sample_logs)
+        ]
+        response = self.client.post(
+            reverse("zane_api:logs.ingest"),
+            data=simple_logs,
+            headers={
+                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        response = self.client.get(
+            reverse(
+                "compose:stack.runtime_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        # check that all logs have been inserted
+        self.assertEqual(len(simple_logs), len(response.json()["results"]))
+
+        response = self.client.get(
+            reverse(
+                "compose:stack.runtime_logs",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "slug": stack.slug,
+                },
+                query={"stack_service_names": "frontend"},
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        # check that all logs for frontend
+        self.assertEqual(len(simple_logs) // 2, len(response.json()["results"]))
