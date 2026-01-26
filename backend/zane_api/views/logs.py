@@ -28,7 +28,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 
 
-from search.serializers import RuntimeLogsSearchSerializer
+from search.serializers import RuntimeLogsSearchSerializer, RuntimeLogsContextSerializer
 
 from .base import EMPTY_CURSOR_RESPONSE
 
@@ -377,6 +377,57 @@ class ServiceDeploymentRuntimeLogsAPIView(APIView):
                     )
                 )
                 return Response(data)
+
+
+class ServiceDeploymentRuntimeLogsWithContextAPIView(APIView):
+    serializer_class = RuntimeLogsContextSerializer
+
+    @extend_schema(
+        summary="Get deployment logs with context",
+    )
+    def get(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        deployment_hash: str,
+        env_slug: str,
+        time: str,
+    ):
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            service = Service.objects.get(
+                slug=service_slug, project=project, environment=environment
+            )
+            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except Service.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
+            )
+        except Deployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+
+        search_client = LokiSearchClient(host=settings.LOKI_HOST)
+        time_ns = int(time)
+        data = search_client.get_context(
+            timestamp_ns=time_ns,
+            deployment_id=deployment.hash,
+        )
+        return Response(data)
 
 
 class ServiceDeploymentBuildLogsAPIView(APIView):

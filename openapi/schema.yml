@@ -6245,6 +6245,107 @@ paths:
               schema:
                 $ref: '#/components/schemas/RuntimeLogsSearch'
           description: ''
+  ? /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/with-context/{time}
+  : get:
+      operationId: projects_service_details_deployments_runtime_logs_with_context_retrieve
+      summary: Get deployment logs with context
+      parameters:
+      - in: path
+        name: deployment_hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: time
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsRuntimeLogsWithContextRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeLogsContext'
+          description: ''
   /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/detected-ports/:
     get:
       operationId: projects_service_details_detected_ports_list
@@ -18362,6 +18463,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsServiceDetailsDeploymentsRuntimeLogsWithContextRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ProjectsServiceDetailsDetectedPortsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -22463,6 +22571,25 @@ components:
       - stack_service_name
       - time
       - timestamp
+    RuntimeLogsContext:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuntimeLog'
+        before_count:
+          type: integer
+        after_count:
+          type: integer
+        query_time_ms:
+          type: number
+          format: double
+      required:
+      - after_count
+      - before_count
+      - query_time_ms
+      - results
     RuntimeLogsSearch:
       type: object
       properties:

@@ -365,6 +365,10 @@ export interface paths {
     /** Get deployment logs */
     get: operations["projects_service_details_deployments_runtime_logs_retrieve"];
   };
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/with-context/{time}": {
+    /** Get deployment logs with context */
+    get: operations["projects_service_details_deployments_runtime_logs_with_context_retrieve"];
+  };
   "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/detected-ports/": {
     /** Get detected service ports */
     get: operations["projects_service_details_detected_ports_list"];
@@ -4061,6 +4065,7 @@ export interface components {
     ProjectsServiceDetailsDeploymentsMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsRuntimeLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDeploymentsRuntimeLogsWithContextRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDetectedPortsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -6215,6 +6220,13 @@ export interface components {
       content_text: string | null;
       level: components["schemas"]["LevelEnum"];
       source: components["schemas"]["SourceEnum"];
+    };
+    RuntimeLogsContext: {
+      results: components["schemas"]["RuntimeLog"][];
+      before_count: number;
+      after_count: number;
+      /** Format: double */
+      query_time_ms: number;
     };
     RuntimeLogsSearch: {
       previous: string | null;
@@ -10222,6 +10234,45 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsRuntimeLogsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get deployment logs with context */
+  projects_service_details_deployments_runtime_logs_with_context_retrieve: {
+    parameters: {
+      path: {
+        deployment_hash: string;
+        env_slug: string;
+        project_slug: string;
+        service_slug: string;
+        time: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RuntimeLogsContext"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsRuntimeLogsWithContextRetrieveErrorResponse400"];
         };
       };
       401: {

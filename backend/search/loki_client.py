@@ -10,7 +10,7 @@ from .serializers import (
     RuntimeLogsSearchSerializer,
     RuntimeLogsContextSerializer,
 )
-from .dtos import RuntimeLogDto
+from .dtos import RuntimeLogDto, RuntimeLogSource
 from django.conf import settings
 from uuid import uuid4
 import re
@@ -254,7 +254,6 @@ class LokiSearchClient:
         self,
         timestamp_ns: int,
         lines: int = 10,
-        service_id: str | None = None,
         stack_id: str | None = None,
         stack_service_names: list[str] | None = None,
         deployment_id: str | None = None,
@@ -270,16 +269,12 @@ class LokiSearchClient:
         if stack_id:
             label_selectors.append(f'stack_id="{stack_id}"')
         if stack_service_names:
-            if len(stack_service_names) > 1:
-                label_selectors.append(
-                    'stack_service_name=~"(' + "|".join(stack_service_names) + ')"'
-                )
-            else:
-                label_selectors.append(f'stack_service_name="{stack_service_names[0]}"')
-        if service_id:
-            label_selectors.append(f'service_id="{service_id}"')
+            label_selectors.append(
+                'stack_service_name=~"(' + "|".join(stack_service_names) + ')"'
+            )
         if deployment_id:
             label_selectors.append(f'deployment_id="{deployment_id}"')
+        label_selectors.append(f'source="{RuntimeLogSource.SERVICE}"')
         label_selectors.append(f'app="{settings.LOKI_APP_NAME}"')
 
         query_string = "{" + ",".join(label_selectors) + "} | json"
