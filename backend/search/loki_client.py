@@ -8,6 +8,7 @@ from zane_api.utils import Colors
 from .serializers import (
     RuntimeLogsQuerySerializer,
     RuntimeLogsSearchSerializer,
+    RuntimeLogsContextSerializer,
 )
 from .dtos import RuntimeLogDto
 from django.conf import settings
@@ -248,6 +249,166 @@ class LokiSearchClient:
         )
         print("====== END LOGS COUNT (Loki) ======")
         return total
+
+    def get_context(
+        self,
+        timestamp_ns: int,
+        lines: int = 10,
+        service_id: str | None = None,
+        stack_id: str | None = None,
+        stack_service_names: list[str] | None = None,
+        deployment_id: str | None = None,
+    ):
+        """
+        Get context around a single log entry.
+        Returns `lines` logs before and `lines` logs after the given timestamp.
+        """
+        print("\n====== LOGS CONTEXT (Loki) ======")
+        print(f"timestamp_ns={timestamp_ns}, lines={lines}")
+
+        label_selectors: list[str] = []
+        if stack_id:
+            label_selectors.append(f'stack_id="{stack_id}"')
+        if stack_service_names:
+            if len(stack_service_names) > 1:
+                label_selectors.append(
+                    'stack_service_name=~"(' + "|".join(stack_service_names) + ')"'
+                )
+            else:
+                label_selectors.append(f'stack_service_name="{stack_service_names[0]}"')
+        if service_id:
+            label_selectors.append(f'service_id="{service_id}"')
+        if deployment_id:
+            label_selectors.append(f'deployment_id="{deployment_id}"')
+        label_selectors.append(f'app="{settings.LOKI_APP_NAME}"')
+
+        query_string = "{" + ",".join(label_selectors) + "} | json"
+        print(f"query_string={Colors.GREY}{query_string}{Colors.ENDC}")
+
+        # Fetch logs BEFORE the target (older logs, direction=backward)
+        before_params = {
+            "query": query_string,
+            "limit": lines,
+            "end": timestamp_ns,  # end is exclusive, so this won't include the target
+            "direction": "backward",
+        }
+        before_response = requests.get(
+            f"{self.base_url}/loki/api/v1/query_range",
+            params=before_params,
+        )
+        before_response.raise_for_status()
+        before_result = before_response.json()
+
+        # Fetch logs AFTER the target (newer logs, direction=forward)
+        after_params = {
+            "query": query_string,
+            "limit": lines + 1,  # +1 to include the target log itself
+            "start": timestamp_ns,
+            "direction": "forward",
+        }
+        after_response = requests.get(
+            f"{self.base_url}/loki/api/v1/query_range",
+            params=after_params,
+        )
+        after_response.raise_for_status()
+        after_result = after_response.json()
+
+        # Compute query time from both requests
+        before_summary = (
+            before_result.get("data", {})
+            .get("stats", {})
+            .get("summary", {"queueTime": 0, "execTime": 0})
+        )
+        after_summary = (
+            after_result.get("data", {})
+            .get("stats", {})
+            .get("summary", {"queueTime": 0, "execTime": 0})
+        )
+        query_time_ms = (
+            (before_summary["queueTime"] + before_summary["execTime"])
+            + (after_summary["queueTime"] + after_summary["execTime"])
+        ) * 1000
+        query_time_ms = float(f"{query_time_ms:.2f}")
+
+        # Collect all hits
+        hits: list[dict] = []
+        for stream in before_result.get("data", {}).get("result", []):
+            log_data = stream["stream"]
+            hits.append(
+                {
+                    "id": log_data["id"],
+                    "time": int(float(log_data["time"])),
+                    "level": log_data["level"],
+                    "source": log_data["source"],
+                    "service_id": log_data.get("service_id"),
+                    "deployment_id": log_data.get("deployment_id"),
+                    "stack_id": log_data.get("stack_id"),
+                    "stack_service_name": log_data.get("stack_service_name"),
+                    "content": log_data["content"],
+                    "content_text": log_data["content_text"],
+                    "created_at": log_data["created_at"],
+                    "timestamp": int(float(log_data["time"])),
+                }
+            )
+
+        before_count = len(hits)
+
+        for stream in after_result.get("data", {}).get("result", []):
+            log_data = stream["stream"]
+            hits.append(
+                {
+                    "id": log_data["id"],
+                    "time": int(float(log_data["time"])),
+                    "level": log_data["level"],
+                    "source": log_data["source"],
+                    "service_id": log_data.get("service_id"),
+                    "deployment_id": log_data.get("deployment_id"),
+                    "stack_id": log_data.get("stack_id"),
+                    "stack_service_name": log_data.get("stack_service_name"),
+                    "content": log_data["content"],
+                    "content_text": log_data["content_text"],
+                    "created_at": log_data["created_at"],
+                    "timestamp": int(float(log_data["time"])),
+                }
+            )
+
+        after_count = len(hits) - before_count
+
+        # Sort oldest to newest
+        hits = sorted(hits, key=lambda hit: (hit["timestamp"], hit["created_at"]))
+
+        print(
+            f"Found {Colors.BLUE}{before_count}{Colors.ENDC} before, "
+            f"{Colors.BLUE}{after_count}{Colors.ENDC} after in {Colors.GREEN}{query_time_ms}ms{Colors.ENDC}"
+        )
+        print("====== END LOGS CONTEXT (Loki) ======\n")
+
+        data = {
+            "query_time_ms": query_time_ms,
+            "results": [
+                {
+                    "id": hit["id"],
+                    "time": datetime.datetime.fromtimestamp(
+                        (hit["time"] // 1_000) / 1e6
+                    ).isoformat(),
+                    "level": hit["level"],
+                    "source": hit["source"],
+                    "service_id": hit.get("service_id"),
+                    "deployment_id": hit.get("deployment_id"),
+                    "stack_id": hit.get("stack_id"),
+                    "stack_service_name": hit.get("stack_service_name"),
+                    "content": hit["content"],
+                    "content_text": hit["content_text"],
+                    "timestamp": hit["timestamp"],
+                }
+                for hit in hits
+            ],
+            "before_count": before_count,
+            "after_count": after_count,
+        }
+
+        serializer = RuntimeLogsContextSerializer(data)
+        return serializer.data
 
     def delete(self, query: dict | None = None):
         print("====== LOGS DELETE (Loki) ======")

@@ -34,6 +34,13 @@ class RuntimeLogsSearchSerializer(serializers.Serializer):
     query_time_ms = serializers.FloatField(required=False)
 
 
+class RuntimeLogsContextSerializer(serializers.Serializer):
+    results = serializers.ListSerializer(child=RuntimeLogSerializer())
+    before_count = serializers.IntegerField()
+    after_count = serializers.IntegerField()
+    query_time_ms = serializers.FloatField(required=False)
+
+
 class RuntimeLogsQuerySerializer(serializers.Serializer):
     deployment_id = serializers.CharField(required=False)
     service_id = serializers.CharField(required=False)
