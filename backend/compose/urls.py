@@ -51,6 +51,11 @@ urlpatterns = [
         name="stack.runtime_logs",
     ),
     re_path(
+        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/runtime-logs/with-context/(?P<time>[0-9]+)/?$",
+        views.ComposeStackRuntimeLogsWithContextAPIView.as_view(),
+        name="stack.runtime_logs.with_context",
+    ),
+    re_path(
         rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/build-logs/?$",
         views.ComposeStackBuildLogsAPIView.as_view(),
         name="stack.build_logs",

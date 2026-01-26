@@ -101,6 +101,10 @@ export interface paths {
     /** Get stack runtime logs */
     get: operations["compose_stacks_runtime_logs_retrieve"];
   };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/runtime-logs/with-context/{time}/": {
+    /** Get stack runtime logs with context */
+    get: operations["compose_stacks_runtime_logs_with_context_retrieve"];
+  };
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/toggle/": {
     /**
      * Stop/Start a compose stack
@@ -1301,6 +1305,7 @@ export interface components {
     };
     ComposeStacksListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksRuntimeLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ComposeStacksRuntimeLogsWithContextRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksUpdateError: components["schemas"]["ComposeStacksUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ComposeStacksUpdateSlugErrorComponent"];
     ComposeStacksUpdateErrorResponse400: components["schemas"]["ComposeStacksUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ComposeStacksUpdateNonFieldErrorsErrorComponent: {
@@ -8143,6 +8148,47 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ComposeStacksRuntimeLogsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get stack runtime logs with context */
+  compose_stacks_runtime_logs_with_context_retrieve: {
+    parameters: {
+      query?: {
+        stack_service_names?: string[];
+      };
+      path: {
+        env_slug: string;
+        project_slug: string;
+        slug: string;
+        time: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RuntimeLogsContext"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ComposeStacksRuntimeLogsWithContextRetrieveErrorResponse400"];
         };
       };
       401: {

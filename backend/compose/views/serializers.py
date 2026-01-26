@@ -735,3 +735,9 @@ class StackBuildLogsQuerySerializer(serializers.Serializer):
                 }
             )
         return cursor
+
+
+class StackRuntimeLogsContextQuerySerializer(serializers.Serializer):
+    stack_service_names = serializers.ListField(
+        child=serializers.CharField(), required=False
+    )
