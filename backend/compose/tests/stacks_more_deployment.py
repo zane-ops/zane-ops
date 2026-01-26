@@ -533,7 +533,7 @@ services:
         self.assertEqual(first_deployment_hash, response_data["redeploy_hash"])
 
 
-class TestArchiveProjectViewTests(ComposeStackAPITestBase):
+class TestArchiveProjectWithStackViewTests(ComposeStackAPITestBase):
     def test_delete_project_should_delete_included_stacks(self):
         p, stack = self.create_and_deploy_compose_stack(content=DOCKER_COMPOSE_MINIMAL)
 
@@ -665,7 +665,7 @@ class TestArchiveProjectViewTests(ComposeStackAPITestBase):
         self.assertEqual(0, len(volumes))
 
 
-class TestArchiveEnvironmentViewTests(ComposeStackAPITestBase):
+class TestArchiveEnvironmentWithStackViewTests(ComposeStackAPITestBase):
     async def acreate_and_deploy_compose_stack_in_environment(
         self,
         content: str,

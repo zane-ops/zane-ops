@@ -74,18 +74,6 @@ class RemoveProjectResourcesWorkflow:
             ],
         )
 
-        await asyncio.gather(
-            *[
-                workflow.execute_activity_method(
-                    ComposeStackActivities.delete_stack_healthcheck_schedule,
-                    stack,
-                    start_to_close_timeout=timedelta(seconds=10),
-                    retry_policy=retry_policy,
-                )
-                for stack in payload.compose_stacks
-            ]
-        )
-
         all_stack_services = await asyncio.gather(
             *[
                 workflow.execute_activity_method(
@@ -153,16 +141,7 @@ class RemoveProjectResourcesWorkflow:
         await asyncio.gather(
             *[
                 workflow.execute_activity_method(
-                    ComposeStackActivities.delete_stack_configs,
-                    stack,
-                    start_to_close_timeout=timedelta(seconds=30),
-                    retry_policy=retry_policy,
-                )
-                for stack in payload.compose_stacks
-            ],
-            *[
-                workflow.execute_activity_method(
-                    ComposeStackActivities.delete_stack_volumes,
+                    ComposeStackActivities.delete_stack_resources,
                     stack,
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=retry_policy,

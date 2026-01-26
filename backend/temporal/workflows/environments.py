@@ -71,18 +71,6 @@ class ArchiveEnvWorkflow:
             ],
         )
 
-        await asyncio.gather(
-            *[
-                workflow.execute_activity_method(
-                    ComposeStackActivities.delete_stack_healthcheck_schedule,
-                    stack,
-                    start_to_close_timeout=timedelta(seconds=10),
-                    retry_policy=self.retry_policy,
-                )
-                for stack in environment.compose_stacks
-            ]
-        )
-
         all_stack_services = await asyncio.gather(
             *[
                 workflow.execute_activity_method(
@@ -145,22 +133,13 @@ class ArchiveEnvWorkflow:
         await asyncio.gather(
             *[
                 workflow.execute_activity_method(
-                    ComposeStackActivities.delete_stack_configs,
+                    ComposeStackActivities.delete_stack_resources,
                     stack,
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
                 )
                 for stack in environment.compose_stacks
-            ],
-            *[
-                workflow.execute_activity_method(
-                    ComposeStackActivities.delete_stack_volumes,
-                    stack,
-                    start_to_close_timeout=timedelta(seconds=30),
-                    retry_policy=self.retry_policy,
-                )
-                for stack in environment.compose_stacks
-            ],
+            ]
         )
 
         return await workflow.execute_activity_method(
