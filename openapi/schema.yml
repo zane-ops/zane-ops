@@ -1098,6 +1098,107 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/build-logs/:
+    get:
+      operationId: compose_stacks_build_logs_retrieve
+      summary: Get stack build logs
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+          minLength: 1
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStacksBuildLogsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeLogsSearch'
+          description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/:
     put:
       operationId: deployComposeStack
@@ -1392,6 +1493,140 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ComposeStackChange'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/runtime-logs/:
+    get:
+      operationId: compose_stacks_runtime_logs_retrieve
+      summary: Get stack runtime logs
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+          minLength: 1
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: level
+        schema:
+          type: array
+          items:
+            enum:
+            - INFO
+            - ERROR
+            type: string
+            description: |-
+              * `INFO` - INFO
+              * `ERROR` - ERROR
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: query
+        schema:
+          type: string
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: stack_service_names
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+      - in: query
+        name: time_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: time_before
+        schema:
+          type: string
+          format: date-time
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStacksRuntimeLogsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeLogsSearch'
           description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/toggle/:
     put:
@@ -11805,6 +12040,13 @@ components:
       - domain
       - port
       - strip_prefix
+    ComposeStacksBuildLogsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ComposeStacksCreateCreateError:
       oneOf:
       - $ref: '#/components/schemas/ComposeStacksCreateCreateNonFieldErrorsErrorComponent'
@@ -11917,6 +12159,13 @@ components:
       - errors
       - type
     ComposeStacksListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ComposeStacksRuntimeLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -22182,6 +22431,12 @@ components:
         deployment_id:
           type: string
           nullable: true
+        stack_id:
+          type: string
+          nullable: true
+        stack_service_name:
+          type: string
+          nullable: true
         time:
           type: string
           format: date-time
@@ -22204,6 +22459,8 @@ components:
       - level
       - service_id
       - source
+      - stack_id
+      - stack_service_name
       - time
       - timestamp
     RuntimeLogsSearch:

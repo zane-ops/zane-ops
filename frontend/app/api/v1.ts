@@ -81,6 +81,10 @@ export interface paths {
     /** Archive a compose stack */
     delete: operations["archiveComposeStack"];
   };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/build-logs/": {
+    /** Get stack build logs */
+    get: operations["compose_stacks_build_logs_retrieve"];
+  };
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/": {
     /** Queue a new deployment for the compose stack */
     put: operations["deployComposeStack"];
@@ -92,6 +96,10 @@ export interface paths {
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/request-changes/": {
     /** Request a new compose stack change */
     put: operations["requestComposeStackUpdate"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/runtime-logs/": {
+    /** Get stack runtime logs */
+    get: operations["compose_stacks_runtime_logs_retrieve"];
   };
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/toggle/": {
     /**
@@ -1231,6 +1239,7 @@ export interface components {
       strip_prefix: boolean;
       port: number;
     };
+    ComposeStacksBuildLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksCreateCreateError: components["schemas"]["ComposeStacksCreateCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ComposeStacksCreateCreateSlugErrorComponent"] | components["schemas"]["ComposeStacksCreateCreateUserContentErrorComponent"];
     ComposeStacksCreateCreateErrorResponse400: components["schemas"]["ComposeStacksCreateCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ComposeStacksCreateCreateNonFieldErrorsErrorComponent: {
@@ -1287,6 +1296,7 @@ export interface components {
       errors: components["schemas"]["ComposeStacksCreateCreateError"][];
     };
     ComposeStacksListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ComposeStacksRuntimeLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksUpdateError: components["schemas"]["ComposeStacksUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ComposeStacksUpdateSlugErrorComponent"];
     ComposeStacksUpdateErrorResponse400: components["schemas"]["ComposeStacksUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ComposeStacksUpdateNonFieldErrorsErrorComponent: {
@@ -6196,6 +6206,8 @@ export interface components {
       id: string;
       service_id: string | null;
       deployment_id: string | null;
+      stack_id: string | null;
+      stack_service_name: string | null;
       /** Format: date-time */
       time: string;
       timestamp: number;
@@ -7925,6 +7937,47 @@ export interface operations {
       };
     };
   };
+  /** Get stack build logs */
+  compose_stacks_build_logs_retrieve: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        per_page?: number;
+      };
+      path: {
+        env_slug: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RuntimeLogsSearch"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ComposeStacksBuildLogsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /** Queue a new deployment for the compose stack */
   deployComposeStack: {
     parameters: {
@@ -8032,6 +8085,52 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["RequestComposeStackUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get stack runtime logs */
+  compose_stacks_runtime_logs_retrieve: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        level?: ("INFO" | "ERROR")[];
+        per_page?: number;
+        query?: string;
+        stack_service_names?: string[];
+        time_after?: string;
+        time_before?: string;
+      };
+      path: {
+        env_slug: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RuntimeLogsSearch"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ComposeStacksRuntimeLogsRetrieveErrorResponse400"];
         };
       };
       401: {
