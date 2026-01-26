@@ -232,13 +232,6 @@ class DeployComposeStackWorkflow:
                 retry_policy=self.retry_policy,
             )
 
-            await workflow.execute_activity_method(
-                ComposeStackActivities.cleanup_old_stack_services,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-
         finally:
             if not self.check_for_cancellation(deployment):
                 if build_details is not None:

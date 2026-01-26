@@ -172,6 +172,7 @@ class ComposeStackActivities:
                 "stack",
                 "deploy",
                 "--detach",
+                "--prune",
                 "--compose-file",
                 stack_file_path,
                 "--with-registry-auth",
