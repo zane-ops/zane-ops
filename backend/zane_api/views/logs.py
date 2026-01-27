@@ -424,6 +424,7 @@ class ServiceDeploymentRuntimeLogsWithContextAPIView(APIView):
         search_client = LokiSearchClient(host=settings.LOKI_HOST)
         time_ns = int(time)
         data = search_client.get_context(
+            lines=15,
             timestamp_ns=time_ns,
             deployment_id=deployment.hash,
         )

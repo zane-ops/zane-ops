@@ -30,7 +30,7 @@ import {
 } from "~/lib/constants";
 import type { HttpLog } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { formatTimeValue, formattedTime } from "~/utils";
+import { formatDuration, formattedTime } from "~/utils";
 
 type HttpLogRequestDetailsProps = {
   log?: HttpLog;
@@ -69,7 +69,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryParams = new URLSearchParams(log.request_query ?? "");
   const statusMessage = STANDARD_HTTP_STATUS_CODES[log.status];
-  const { value: duration, unit } = formatTimeValue(
+  const { value: duration, unit } = formatDuration(
     log.request_duration_ns / 1_000_000 /*from ns to ms*/
   );
 
@@ -349,6 +349,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
               href={`//${log.request_host}${log.request_path}`}
               target="_blank"
               className="text-link underline break-all"
+              rel="noreferrer"
             >
               {log.request_path}
             </a>

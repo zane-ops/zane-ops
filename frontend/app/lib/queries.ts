@@ -6,7 +6,7 @@ import {
   queryOptions,
   type skipToken
 } from "@tanstack/react-query";
-import { preprocess, z } from "zod";
+import { optional, preprocess, z } from "zod";
 import { zfd } from "zod-form-data";
 import type { ApiResponse, RequestParams } from "~/api/client";
 import { apiClient } from "~/api/client";
@@ -742,7 +742,8 @@ export const deploymentLogSearchSchema = zfd.formData({
   isMaximized: preprocess(
     (arg) => arg === "true",
     z.coerce.boolean().optional().catch(false)
-  )
+  ),
+  context: z.coerce.number().optional().catch(undefined)
 });
 
 export type DeploymentLogFilters = z.infer<typeof deploymentLogSearchSchema>;
@@ -1001,6 +1002,58 @@ export const deploymentQueries = {
       },
       placeholderData: keepPreviousData,
       staleTime: Number.POSITIVE_INFINITY
+    }),
+  logWithContext: ({
+    project_slug,
+    service_slug,
+    env_slug,
+    deployment_hash,
+    time
+  }: {
+    project_slug: string;
+    service_slug: string;
+    env_slug: string;
+    deployment_hash: string;
+    time: number;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...deploymentQueries.single({
+          project_slug,
+          service_slug,
+          env_slug,
+          deployment_hash
+        }).queryKey,
+        "RUNTIME_LOGS",
+        "WITH_CONTEXT",
+        time
+      ],
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/with-context/{time}",
+          {
+            params: {
+              path: {
+                project_slug,
+                service_slug,
+                env_slug,
+                deployment_hash,
+                time: time.toString()
+              }
+            },
+            signal
+          }
+        );
+
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (!query.state.data) {
+          return false;
+        }
+        return LOGS_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData
     }),
   buildLogs: ({
     project_slug,

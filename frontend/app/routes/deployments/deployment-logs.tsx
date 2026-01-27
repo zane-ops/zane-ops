@@ -1,8 +1,14 @@
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient
+} from "@tanstack/react-query";
 import { AnsiHtml } from "fancy-ansi/react";
 import {
   ArrowDownIcon,
+  ArrowLeftIcon,
   ChevronRightIcon,
+  ChevronsUpDownIcon,
   LoaderIcon,
   Maximize2Icon,
   Minimize2Icon,
@@ -40,7 +46,7 @@ import {
 import { cn, formatLogTime } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { excerpt } from "~/utils";
-import { type Route } from "./+types/deployment-logs";
+import type { Route } from "./+types/deployment-logs";
 
 export async function clientLoader({
   params: {
@@ -107,10 +113,24 @@ export default function DeploymentLogsPage({
       filters,
       queryClient,
       autoRefetchEnabled: isAutoRefetchEnabled
-    })
+    }),
+    enabled: !search.context
   });
 
-  const logs = (logsQuery.data?.pages ?? []).flatMap((item) => item.results);
+  const logsWithContextQuery = useQuery({
+    ...deploymentQueries.logWithContext({
+      deployment_hash,
+      project_slug,
+      service_slug,
+      env_slug,
+      time: search.context!
+    }),
+    enabled: !!search.context
+  });
+
+  const logs = logsWithContextQuery.isEnabled
+    ? (logsWithContextQuery.data?.results ?? [])
+    : (logsQuery.data?.pages ?? []).flatMap((item) => item.results);
   const logContentRef = React.useRef<React.ComponentRef<"section">>(null);
   const [, startTransition] = React.useTransition();
   const [isAtBottom, setIsAtBottom] = React.useState(true);
@@ -349,6 +369,7 @@ export default function DeploymentLogsPage({
             data={logs}
             components={{
               Header: () =>
+                !search.context &&
                 (logsQuery.hasPreviousPage ||
                   logsQuery.isFetchingPreviousPage) && (
                   <div
@@ -363,12 +384,20 @@ export default function DeploymentLogsPage({
                 ),
               Footer: () => (
                 <>
-                  <div ref={fetchNextPageRef} className="w-fit h-px" />
+                  {!search.context && (
+                    <div ref={fetchNextPageRef} className="w-fit h-px" />
+                  )}
                   <div
                     className={cn("w-full pb-2 text-center text-grey italic")}
                     ref={autoRefetchRef}
                   >
-                    -- LIVE <Ping /> new log entries will appear here --
+                    {search.context ? (
+                      <>-- End of log context --</>
+                    ) : (
+                      <>
+                        -- LIVE <Ping /> new log entries will appear here --
+                      </>
+                    )}
                   </div>
                 </>
               )
@@ -377,6 +406,7 @@ export default function DeploymentLogsPage({
               <Log
                 id={log.id}
                 time={log.time}
+                timestamp={log.timestamp}
                 level={log.level}
                 key={log.id}
                 content={(log.content as string) ?? ""}
@@ -424,6 +454,7 @@ const HeaderSection = React.memo(function HeaderSection({
   const isEmptySearchParams =
     !search.time_after &&
     !search.time_before &&
+    !search.context &&
     (search.level ?? []).length === 0 &&
     (search.query ?? "").length === 0;
 
@@ -442,6 +473,15 @@ const HeaderSection = React.memo(function HeaderSection({
     }
   };
 
+  const clearContext = () => {
+    startTransition(() => {
+      searchParams.delete("context");
+      setSearchParams(searchParams, {
+        replace: true
+      });
+    });
+  };
+
   const searchLogsForContent = useDebouncedCallback((query: string) => {
     startTransition(() => {
       searchParams.set("query", query);
@@ -449,10 +489,18 @@ const HeaderSection = React.memo(function HeaderSection({
     });
   }, 300);
 
+  // const contextAsDate = search.context
+  const logContextTime = search.context
+    ? formatLogTime(new Date(search.context / 1_000_000 /* ns to ms */))
+    : null;
+
   return (
     <>
       <section className="rounded-t-sm w-full flex gap-2 flex-col items-start">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div
+          className="flex items-center gap-2 flex-wrap"
+          hidden={!!search.context}
+        >
           <DateRangeWithShortcuts
             date={date}
             setDate={(newDateRange) => {
@@ -499,21 +547,51 @@ const HeaderSection = React.memo(function HeaderSection({
         </div>
 
         <div className="flex gap-2 w-full items-center relative">
-          <SearchIcon size={15} className="absolute left-4 text-grey" />
+          {logContextTime ? (
+            <>
+              <Button
+                variant="outline"
+                className="inline-flex w-min gap-1"
+                onClick={clearContext}
+              >
+                <ArrowLeftIcon size={15} />
+                <span>Back</span>
+              </Button>
+              <div className="px-11 relative flex-1  bg-muted/40 dark:bg-card/30 py-2 rounded-md">
+                <SearchIcon
+                  size={15}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-grey"
+                />
+                <span className="text-grey">Viewing surrounding logs</span>
 
-          <Input
-            className="px-14 w-full md:min-w-150 text-sm  bg-muted/40 dark:bg-card/30"
-            placeholder="Search for log contents"
-            name="query"
-            defaultValue={search.query}
-            ref={inputRef}
-            onChange={(ev) => {
-              const newQuery = ev.currentTarget.value;
-              if (newQuery !== (search.query ?? "")) {
-                searchLogsForContent(newQuery);
-              }
-            }}
-          />
+                {search.query && (
+                  <>
+                    <span className="text-grey"> • from search: "</span>
+                    {search.query}
+                    <span className="text-grey">"</span>
+                  </>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <SearchIcon size={15} className="absolute left-4 text-grey" />
+              <Input
+                className="px-14 w-full md:min-w-150 text-sm  bg-muted/40 dark:bg-card/30"
+                placeholder="Search for log contents"
+                name="query"
+                defaultValue={search.query}
+                ref={inputRef}
+                hidden={!!search.context}
+                onChange={(ev) => {
+                  const newQuery = ev.currentTarget.value;
+                  if (newQuery !== (search.query ?? "")) {
+                    searchLogsForContent(newQuery);
+                  }
+                }}
+              />
+            </>
+          )}
 
           <TooltipProvider>
             <Tooltip delayDuration={0}>
@@ -547,15 +625,22 @@ const HeaderSection = React.memo(function HeaderSection({
   );
 });
 
-type LogProps = Pick<DeploymentLog, "id" | "level" | "time"> & {
+type LogProps = Pick<DeploymentLog, "id" | "level" | "time" | "timestamp"> & {
   content: string;
   content_text: string;
 };
 
-export function Log({ content, level, time, id, content_text }: LogProps) {
+export function Log({
+  content,
+  level,
+  time,
+  timestamp,
+  id,
+  content_text
+}: LogProps) {
   const date = new Date(time);
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get("query") ?? "";
 
   const logTime = formatLogTime(date);
@@ -564,18 +649,44 @@ export function Log({ content, level, time, id, content_text }: LogProps) {
     <div
       id={`log-item-${id}`}
       className={cn(
-        "w-full flex gap-2 hover:bg-slate-400/20 relative  group",
+        "w-full flex gap-2 hover:bg-slate-400/20 relative group",
         "py-0 px-4 border-none border-0 ring-0",
-        level === "ERROR" && "bg-red-400/20"
+        level === "ERROR" && "bg-red-400/20",
+        searchParams.get("context") === timestamp.toString() &&
+          "bg-yellow-400/20"
       )}
     >
-      <span className="inline-flex items-start select-none min-w-fit flex-none">
+      <span className="inline-flex items-start select-none min-w-fit flex-none relative ">
         <time className="text-grey" dateTime={date.toISOString()}>
           <span className="sr-only sm:not-sr-only">
             {logTime.dateFormat},&nbsp;
           </span>
           <span>{logTime.hourFormat}</span>
         </time>
+
+        {searchParams.get("query") && !searchParams.get("context") && (
+          <button
+            onClick={() => {
+              searchParams.set("context", timestamp.toString());
+              setSearchParams(searchParams, { replace: true });
+            }}
+            className={cn(
+              buttonVariants({
+                variant: "outline"
+              }),
+              "starting:h-0 starting:scale-90",
+              "absolute bottom-full -left-4 hidden group-hover:inline-flex z-10",
+              "px-2 py-1 mx-2 h-auto rounded items-center cursor-pointer gap-1",
+              "transition-all duration-150 text-xs"
+            )}
+          >
+            <span className="">View in context</span>
+            <ChevronsUpDownIcon
+              className={cn("flex-none relative top-0.25")}
+              size={12}
+            />
+          </button>
+        )}
       </span>
 
       <div className="grid relative z-10 w-full">

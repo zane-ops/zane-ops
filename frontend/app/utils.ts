@@ -91,7 +91,7 @@ export async function getCsrfTokenHeader() {
 
 export function timeAgoFormatter(
   dateInput: string | Date,
-  short: boolean = false
+  short = false
 ): string {
   const date = new Date(dateInput);
   const now = new Date();
@@ -284,7 +284,7 @@ export function formatStorageValue(value: number) {
   };
 }
 
-export function formatTimeValue(value: number) {
+export function formatDuration(value: number) {
   const ms = 1;
   const sec = 1000 * ms;
   const min = 60 * sec;
@@ -361,8 +361,8 @@ export function durationToMs(
 
 export function stripSlashIfExists(
   url: string,
-  stripEnd: boolean = true,
-  stripStart: boolean = false
+  stripEnd = true,
+  stripStart = false
 ): string {
   let finalUrl: string = url;
   if (stripEnd && url.endsWith("/")) {
@@ -378,7 +378,7 @@ export function getDockerImageIconURL(image: string) {
   let iconSrc: string | null = null;
 
   const imageWithoutTag = image.split(":")[0];
-  let isDockerHubImage =
+  const isDockerHubImage =
     !imageWithoutTag.startsWith("ghcr.io") && !imageWithoutTag.includes(".");
 
   if (imageWithoutTag.startsWith("ghcr.io")) {
