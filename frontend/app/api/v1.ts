@@ -10302,6 +10302,9 @@ export interface operations {
   /** Get deployment logs with context */
   projects_service_details_deployments_runtime_logs_with_context_retrieve: {
     parameters: {
+      query?: {
+        lines?: number;
+      };
       path: {
         deployment_hash: string;
         env_slug: string;

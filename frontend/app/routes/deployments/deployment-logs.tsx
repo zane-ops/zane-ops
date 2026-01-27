@@ -27,6 +27,13 @@ import { Ping } from "~/components/ping";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "~/components/ui/select";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -123,7 +130,8 @@ export default function DeploymentLogsPage({
       project_slug,
       service_slug,
       env_slug,
-      time: search.context!
+      time: search.context!,
+      context_lines: search.context_lines ?? 20
     }),
     enabled: !!search.context
   });
@@ -557,6 +565,28 @@ const HeaderSection = React.memo(function HeaderSection({
                 <ArrowLeftIcon size={15} />
                 <span>Back</span>
               </Button>
+              <Select
+                value={(search.context_lines ?? 20).toString()}
+                onValueChange={(value) => {
+                  searchParams.set("context_lines", value);
+                  setSearchParams(searchParams);
+                }}
+              >
+                <SelectTrigger className="w-36 [&_[data-label]]:inline">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="border border-border" side="top">
+                  {[10, 20, 30, 40, 50, 100].map((pageSize) => (
+                    <SelectItem key={pageSize} value={pageSize.toString()}>
+                      <span data-label className="text-grey hidden">
+                        Show
+                      </span>
+                      &nbsp;
+                      {pageSize} lines
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="px-11 relative flex-1  bg-muted/40 dark:bg-card/30 py-2 rounded-md">
                 <SearchIcon
                   size={15}

@@ -34,6 +34,10 @@ class RuntimeLogsSearchSerializer(serializers.Serializer):
     query_time_ms = serializers.FloatField(required=False)
 
 
+class RuntimeLogsContextParamsSerializer(serializers.Serializer):
+    lines = serializers.IntegerField(min_value=5, default=20)
+
+
 class RuntimeLogsContextSerializer(serializers.Serializer):
     results = serializers.ListSerializer(child=RuntimeLogSerializer())
     before_count = serializers.IntegerField()

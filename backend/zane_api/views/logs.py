@@ -1,4 +1,5 @@
 import json
+import math
 from urllib.parse import urlparse
 
 from drf_spectacular.utils import extend_schema
@@ -28,7 +29,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 
 
-from search.serializers import RuntimeLogsSearchSerializer, RuntimeLogsContextSerializer
+from search.serializers import (
+    RuntimeLogsSearchSerializer,
+    RuntimeLogsContextSerializer,
+    RuntimeLogsContextParamsSerializer,
+)
 
 from .base import EMPTY_CURSOR_RESPONSE
 
@@ -384,6 +389,7 @@ class ServiceDeploymentRuntimeLogsWithContextAPIView(APIView):
 
     @extend_schema(
         summary="Get deployment logs with context",
+        parameters=[RuntimeLogsContextParamsSerializer],
     )
     def get(
         self,
@@ -423,8 +429,13 @@ class ServiceDeploymentRuntimeLogsWithContextAPIView(APIView):
 
         search_client = LokiSearchClient(host=settings.LOKI_HOST)
         time_ns = int(time)
+
+        form = RuntimeLogsContextParamsSerializer(data=request.query_params)
+        form.is_valid(raise_exception=True)
+
+        lines = cast(dict, form.validated_data).get("lines", 20)
         data = search_client.get_context(
-            lines=15,
+            lines=math.ceil(lines / 2),
             timestamp_ns=time_ns,
             deployment_id=deployment.hash,
         )

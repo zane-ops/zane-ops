@@ -743,7 +743,8 @@ export const deploymentLogSearchSchema = zfd.formData({
     (arg) => arg === "true",
     z.coerce.boolean().optional().catch(false)
   ),
-  context: z.coerce.number().optional().catch(undefined)
+  context: z.coerce.number().optional().catch(undefined),
+  context_lines: z.coerce.number().min(5).optional().catch(undefined)
 });
 
 export type DeploymentLogFilters = z.infer<typeof deploymentLogSearchSchema>;
@@ -1008,13 +1009,15 @@ export const deploymentQueries = {
     service_slug,
     env_slug,
     deployment_hash,
-    time
+    time,
+    context_lines = 20
   }: {
     project_slug: string;
     service_slug: string;
     env_slug: string;
     deployment_hash: string;
     time: number;
+    context_lines?: number;
   }) =>
     queryOptions({
       queryKey: [
@@ -1026,7 +1029,8 @@ export const deploymentQueries = {
         }).queryKey,
         "RUNTIME_LOGS",
         "WITH_CONTEXT",
-        time
+        time,
+        context_lines
       ],
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
@@ -1039,6 +1043,9 @@ export const deploymentQueries = {
                 env_slug,
                 deployment_hash,
                 time: time.toString()
+              },
+              query: {
+                lines: context_lines
               }
             },
             signal
