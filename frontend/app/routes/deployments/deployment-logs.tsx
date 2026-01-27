@@ -695,7 +695,7 @@ export function Log({
           <span>{logTime.hourFormat}</span>
         </time>
 
-        {searchParams.get("query") && !searchParams.get("context") && (
+        {searchParams.get("query") && (
           <button
             onClick={() => {
               searchParams.set("context", timestamp.toString());
