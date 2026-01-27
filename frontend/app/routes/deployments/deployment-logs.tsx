@@ -484,6 +484,7 @@ const HeaderSection = React.memo(function HeaderSection({
   const clearContext = () => {
     startTransition(() => {
       searchParams.delete("context");
+      searchParams.delete("context_lines");
       setSearchParams(searchParams, {
         replace: true
       });
@@ -569,14 +570,14 @@ const HeaderSection = React.memo(function HeaderSection({
                 value={(search.context_lines ?? 20).toString()}
                 onValueChange={(value) => {
                   searchParams.set("context_lines", value);
-                  setSearchParams(searchParams);
+                  setSearchParams(searchParams, { replace: true });
                 }}
               >
                 <SelectTrigger className="w-36 [&_[data-label]]:inline">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="border border-border" side="top">
-                  {[10, 20, 30, 40, 50, 100].map((pageSize) => (
+                  {[10, 20, 30, 40, 50, 100, 500].map((pageSize) => (
                     <SelectItem key={pageSize} value={pageSize.toString()}>
                       <span data-label className="text-grey hidden">
                         Show
