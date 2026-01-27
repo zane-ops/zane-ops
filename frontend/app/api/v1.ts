@@ -8171,6 +8171,7 @@ export interface operations {
   compose_stacks_runtime_logs_with_context_retrieve: {
     parameters: {
       query?: {
+        lines?: number;
         stack_service_names?: string[];
       };
       path: {

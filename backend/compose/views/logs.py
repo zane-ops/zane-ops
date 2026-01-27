@@ -1,3 +1,4 @@
+import math
 from typing import cast
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
@@ -9,7 +10,11 @@ from search.loki_client import LokiSearchClient
 from search.serializers import RuntimeLogsSearchSerializer, RuntimeLogsContextSerializer
 
 from zane_api.models import Environment, Project
-from .serializers import StackRuntimeLogsQuerySerializer, StackBuildLogsQuerySerializer, StackRuntimeLogsContextQuerySerializer
+from .serializers import (
+    StackRuntimeLogsQuerySerializer,
+    StackBuildLogsQuerySerializer,
+    StackRuntimeLogsContextQuerySerializer,
+)
 from ..models import ComposeStack
 from search.dtos import RuntimeLogSource
 
@@ -164,9 +169,11 @@ class ComposeStackRuntimeLogsWithContextAPIView(APIView):
         if form.is_valid(raise_exception=True):
             search_client = LokiSearchClient(host=settings.LOKI_HOST)
             time_ns = int(time)
+            lines = cast(dict, form.validated_data).get("lines", 20)
             data = search_client.get_context(
                 timestamp_ns=time_ns,
                 stack_id=stack.id,
+                lines=math.ceil(lines / 2),
                 stack_service_names=form.validated_data.get("stack_service_names"),  # type: ignore
             )
             return Response(data)

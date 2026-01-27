@@ -1639,6 +1639,12 @@ paths:
           type: string
           pattern: ^[-a-zA-Z0-9_]+$
         required: true
+      - in: query
+        name: lines
+        schema:
+          type: integer
+          minimum: 5
+          default: 20
       - in: path
         name: project_slug
         schema:

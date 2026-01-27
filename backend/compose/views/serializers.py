@@ -27,6 +27,7 @@ from zane_api.serializers import URLDomainField, URLPathField
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from search.dtos import RuntimeLogLevel
+from search.serializers import RuntimeLogsContextParamsSerializer
 
 
 class ComposeStackChangeSerializer(serializers.ModelSerializer):
@@ -737,7 +738,7 @@ class StackBuildLogsQuerySerializer(serializers.Serializer):
         return cursor
 
 
-class StackRuntimeLogsContextQuerySerializer(serializers.Serializer):
+class StackRuntimeLogsContextQuerySerializer(RuntimeLogsContextParamsSerializer):
     stack_service_names = serializers.ListField(
         child=serializers.CharField(), required=False
     )
