@@ -379,7 +379,7 @@ export default function DeploymentLogsPage({
               Header: () =>
                 !search.context &&
                 (logsQuery.hasPreviousPage ||
-                  logsQuery.isFetchingPreviousPage) && (
+                  logsQuery.isFetchingPreviousPage) ? (
                   <div
                     ref={fetchPreviousPageRef}
                     className={cn(
@@ -389,6 +389,8 @@ export default function DeploymentLogsPage({
                     <LoaderIcon size={15} className="animate-spin" />
                     <p>Fetching previous logs...</p>
                   </div>
+                ) : (
+                  <div className="h-8"></div>
                 ),
               Footer: () => (
                 <>
@@ -570,7 +572,7 @@ const HeaderSection = React.memo(function HeaderSection({
                 value={(search.context_lines ?? 20).toString()}
                 onValueChange={(value) => {
                   searchParams.set("context_lines", value);
-                  setSearchParams(searchParams, { replace: true });
+                  setSearchParams(searchParams);
                 }}
               >
                 <SelectTrigger className="w-36 [&_[data-label]]:inline">
@@ -699,7 +701,7 @@ export function Log({
           <button
             onClick={() => {
               searchParams.set("context", timestamp.toString());
-              setSearchParams(searchParams, { replace: true });
+              setSearchParams(searchParams);
             }}
             className={cn(
               buttonVariants({
