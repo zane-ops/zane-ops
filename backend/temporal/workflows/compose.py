@@ -184,6 +184,13 @@ class DeployComposeStackWorkflow:
             if self.check_for_cancellation(deployment):
                 return await self.handle_cancellation(deployment, build_details)
 
+            await workflow.execute_activity_method(
+                ComposeStackActivities.expose_stack_services_to_http,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
             healthcheck_activity_handle = workflow.start_activity_method(
                 ComposeStackActivities.check_stack_health,
                 deployment,
@@ -212,12 +219,6 @@ class DeployComposeStackWorkflow:
                     return await self.handle_cancellation(deployment, build_details)
                 raise
 
-            await workflow.execute_activity_method(
-                ComposeStackActivities.expose_stack_services_to_http,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
             await workflow.execute_activity_method(
                 ComposeStackActivities.create_stack_healthcheck_schedule,
                 deployment,
