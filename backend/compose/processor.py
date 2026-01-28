@@ -349,6 +349,20 @@ class ComposeSpecProcessor:
                             f"Invalid compose file: service '{name}' has a bind volume with relative source path '{volume.source}'. Only absolute paths are supported for bind mounts."
                         )
 
+            config_target_sources: dict[str, list[str]] = {}
+            for config in service_spec.configs:
+                config_source_list = config_target_sources.get(config.target, [])
+                config_source_list.append(config.source)
+
+                config_target_sources[config.target] = config_source_list
+                if len(config_source_list) > 1:
+                    sources = " and ".join(
+                        [f"'{source}'" for source in config_source_list]
+                    )
+                    raise ValidationError(
+                        f"Invalid compose file: service '{name}' has a two configs {sources} pointing to the same target '{config.target}'."
+                    )
+
         # Validate configs use content instead of file
         for name, config in user_spec_dict.get("configs", {}).items():
             if config.get("file") is not None:

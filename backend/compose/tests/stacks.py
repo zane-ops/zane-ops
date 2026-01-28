@@ -41,6 +41,7 @@ from .fixtures import (
     INVALID_COMPOSE_ROUTE_MISSING_PORT,
     INVALID_COMPOSE_SERVICE_NAME_SPECIAL,
     INVALID_COMPOSE_SERVICES_NOT_DICT,
+    INVALID_COMPOSE_DUPLICATE_CONFIG_TARGET,
     INVALID_COMPOSE_WITH_CONFIG_FILE_LOCATION,
     INVALID_COMPOSE_X_ENV_NOT_DICT,
     INVALID_COMPOSE_YAML_SYNTAX,
@@ -1531,6 +1532,29 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         create_stack_payload = {
             "slug": "services-list",
             "user_content": INVALID_COMPOSE_SERVICES_NOT_DICT,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+
+    def test_create_compose_stack_with_duplicate_config_target_fails(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "duplicate-config-target",
+            "user_content": INVALID_COMPOSE_DUPLICATE_CONFIG_TARGET,
         }
 
         response = self.client.post(

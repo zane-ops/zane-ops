@@ -1410,6 +1410,27 @@ services:
       APP_SECRET: ${APP_SECRET}
 """
 
+INVALID_COMPOSE_DUPLICATE_CONFIG_TARGET = """
+services:
+  web:
+    image: nginx:alpine
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf
+      - source: nginx_config_override
+        target: /etc/nginx/nginx.conf
+
+configs:
+  nginx_config:
+    content: |
+      user nginx;
+      worker_processes auto;
+  nginx_config_override:
+    content: |
+      user nginx;
+      worker_processes 2;
+"""
+
 # This compose file has shared env reference outside x-zane-env (should not be expanded)
 DOCKER_COMPOSE_WITH_SHARED_ENV_OUTSIDE_X_ZANE_ENV = """
 services:
