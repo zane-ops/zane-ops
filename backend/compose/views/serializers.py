@@ -258,8 +258,27 @@ class ComposeStackWebhookDeployRequestSerializer(serializers.Serializer):
     commit_message = serializers.CharField(default="Update stack")
     user_content = serializers.CharField(required=False)
 
-    def validate_user_content(self, content: str):
-        return content
+    def validate_user_content(self, user_content: str):
+        stack: ComposeStack | None = self.context.get("stack")
+        if stack is None:
+            raise serializers.ValidationError("`stack` is required in context.")
+
+        try:
+            ComposeSpecProcessor.validate_compose_file_syntax(user_content)
+        except ValidationError as e:
+            raise serializers.ValidationError(e.messages)
+
+        # process compose stack to validate URLs
+        computed_spec = ComposeSpecProcessor.process_compose_spec(
+            user_content=user_content,
+            stack=stack,
+        )
+
+        ComposeSpecProcessor.validate_and_extract_service_urls(
+            spec=computed_spec,
+            stack=stack,
+        )
+        return user_content
 
 
 class ComposeStackToggleRequestSerializer(serializers.Serializer):

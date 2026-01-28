@@ -679,7 +679,9 @@ class ComposeStackWebhookDeployAPIView(APIView):
                 detail=f"A compose stack with a deploy_token `{deploy_token}` doesn't exist."
             )
 
-        form = ComposeStackWebhookDeployRequestSerializer(data=request.data or {})
+        form = ComposeStackWebhookDeployRequestSerializer(
+            data=request.data or {}, context={"stack": stack}
+        )
         form.is_valid(raise_exception=True)
 
         data = cast(dict[str, str], form.data)

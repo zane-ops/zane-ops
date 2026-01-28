@@ -1116,4 +1116,4 @@ class TestDeployTokenComposeStackViewTests(ComposeStackAPITestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-        self.get_error_from_response(response, "user_content")
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
