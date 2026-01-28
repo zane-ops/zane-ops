@@ -1378,3 +1378,43 @@ services:
     environment:
       CONFIG: ${__CONFIG_VALUE}
 """
+
+# For shared env variables tests
+# This compose file references shared env variables from the environment in x-zane-env section
+DOCKER_COMPOSE_WITH_SHARED_ENV_REFERENCES = """
+x-zane-env:
+  GITHUB_CLIENT_ID: "{{env.GITHUB_CLIENT_ID}}"
+  GITHUB_TOKEN: "{{env.GITHUB_TOKEN}}"
+  DATABASE_URL: "postgres://user:pass@db:5432/{{env.DB_NAME}}"
+
+services:
+  app:
+    image: myapp:latest
+    environment:
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      DATABASE_URL: ${DATABASE_URL}
+"""
+
+# This compose file does NOT reference any shared env variables
+DOCKER_COMPOSE_WITHOUT_SHARED_ENV_REFERENCES = """
+x-zane-env:
+  APP_SECRET: "{{ generate_password | 32 }}"
+
+services:
+  app:
+    image: myapp:latest
+    environment:
+      APP_NAME: "my-application"
+      DEBUG: "false"
+      APP_SECRET: ${APP_SECRET}
+"""
+
+# This compose file has shared env reference outside x-zane-env (should not be expanded)
+DOCKER_COMPOSE_WITH_SHARED_ENV_OUTSIDE_X_ZANE_ENV = """
+services:
+  app:
+    image: myapp:latest
+    environment:
+      GITHUB_CLIENT_ID: "{{env.GITHUB_CLIENT_ID}}"
+"""

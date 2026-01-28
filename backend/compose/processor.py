@@ -20,6 +20,7 @@ import secrets
 from zane_api.utils import (
     generate_random_chars,
     find_item_in_sequence,
+    replace_placeholders,
 )
 from faker import Faker
 import tempfile
@@ -540,6 +541,10 @@ class ComposeSpecProcessor:
 
             override_dict[key] = str(env.value)
 
+        shared_variables: dict[str, str] = {}
+        for env in stack.environment.variables.all():
+            shared_variables[env.key] = env.value
+
         # expand all envs that are related to each-other
         for key, env in spec.envs.items():
             env.value = str(
@@ -548,6 +553,10 @@ class ComposeSpecProcessor:
                     environ=override_dict,
                     surrounded_vars_only=True,
                 )
+            )
+            # expand shared variables
+            env.value = str(
+                replace_placeholders(env.value, replacements={"env": shared_variables})
             )
 
         # Process each service

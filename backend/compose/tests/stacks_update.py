@@ -4,7 +4,7 @@ import responses
 import requests
 from django.conf import settings
 
-from zane_api.models import Environment
+from zane_api.models import Environment, SharedEnvVariable
 from ..models import ComposeStack, ComposeStackChange, ComposeStackEnvOverride
 from .fixtures import (
     DOCKER_COMPOSE_MINIMAL,
@@ -12,8 +12,9 @@ from .fixtures import (
     DOCKER_COMPOSE_WITH_X_ENV_IN_URLS,
     DOCKER_COMPOSE_WITH_PLACEHOLDERS,
     DOCKER_COMPOSE_WEB_SERVICE,
-    DOCKER_COMPOSE_WEB_WITH_DB,
-    DOCKER_COMPOSE_WEB_ONLY,
+    DOCKER_COMPOSE_WITH_SHARED_ENV_REFERENCES,
+    DOCKER_COMPOSE_WITHOUT_SHARED_ENV_REFERENCES,
+    DOCKER_COMPOSE_WITH_SHARED_ENV_OUTSIDE_X_ZANE_ENV,
 )
 from typing import cast
 from zane_api.utils import jprint
@@ -820,3 +821,247 @@ configs:
         # app_config should still be at v1 (didn't change)
         self.assertIn("app_config_v1:", new_computed)
         self.assertNotIn("app_config_v2:", new_computed)
+
+
+class ComposeStackSharedEnvViewTests(ComposeStackAPITestBase):
+    def test_shared_env_variables_are_passed_to_compose_stacks_if_referenced(self):
+        """
+        When a compose stack references shared env variables using {{env.VAR}} syntax
+        in the x-zane-env section, those variables should be expanded in the computed content.
+        """
+        project = self.create_project(slug="shared-env-test")
+        environment = project.production_env
+
+        # Create shared env variables for the environment
+        SharedEnvVariable.objects.bulk_create(
+            [
+                SharedEnvVariable(
+                    key="GITHUB_CLIENT_ID",
+                    value="gh-client-123",
+                    environment=environment,
+                ),
+                SharedEnvVariable(
+                    key="GITHUB_TOKEN",
+                    value="ghp_secretToken456",
+                    environment=environment,
+                ),
+                SharedEnvVariable(
+                    key="DB_NAME",
+                    value="my_database",
+                    environment=environment,
+                ),
+            ]
+        )
+
+        # Create compose stack that references shared env variables
+        create_stack_payload = {
+            "slug": "shared-env-stack",
+            "user_content": DOCKER_COMPOSE_WITH_SHARED_ENV_REFERENCES,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="shared-env-stack").first(),
+        )
+        self.assertIsNotNone(stack)
+
+        # Deploy the stack
+        response = self.client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        stack.refresh_from_db()
+        computed_content = cast(str, stack.computed_content)
+
+        print(
+            "========= computed =========",
+            computed_content,
+            "========= end computed =========",
+            sep="\n",
+        )
+
+        # Verify shared env variables were expanded in computed content
+        self.assertIn("gh-client-123", computed_content)
+        self.assertIn("ghp_secretToken456", computed_content)
+        self.assertIn("my_database", computed_content)
+
+        # Verify the placeholder syntax is no longer present
+        self.assertNotIn("{{env.GITHUB_CLIENT_ID}}", computed_content)
+        self.assertNotIn("{{env.GITHUB_TOKEN}}", computed_content)
+        self.assertNotIn("{{env.DB_NAME}}", computed_content)
+
+    def test_shared_env_variables_are_not_passed_to_compose_stacks_if_not_referenced(
+        self,
+    ):
+        """
+        When a compose stack does NOT reference shared env variables,
+        those variables should NOT appear in the computed content.
+        """
+        project = self.create_project(slug="no-shared-env-test")
+        environment = project.production_env
+
+        # Create shared env variables for the environment
+        SharedEnvVariable.objects.bulk_create(
+            [
+                SharedEnvVariable(
+                    key="GITHUB_CLIENT_ID",
+                    value="gh-client-123",
+                    environment=environment,
+                ),
+                SharedEnvVariable(
+                    key="GITHUB_TOKEN",
+                    value="ghp_secretToken456",
+                    environment=environment,
+                ),
+            ]
+        )
+
+        # Create compose stack that does NOT reference shared env variables
+        create_stack_payload = {
+            "slug": "no-shared-env-stack",
+            "user_content": DOCKER_COMPOSE_WITHOUT_SHARED_ENV_REFERENCES,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="no-shared-env-stack").first(),
+        )
+        self.assertIsNotNone(stack)
+
+        # Deploy the stack
+        response = self.client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        stack.refresh_from_db()
+        computed_content = cast(str, stack.computed_content)
+
+        print(
+            "========= computed =========",
+            computed_content,
+            "========= end computed =========",
+            sep="\n",
+        )
+
+        # Verify shared env variables are NOT present in computed content
+        self.assertNotIn("gh-client-123", computed_content)
+        self.assertNotIn("ghp_secretToken456", computed_content)
+        self.assertNotIn("GITHUB_CLIENT_ID", computed_content)
+        self.assertNotIn("GITHUB_TOKEN", computed_content)
+
+        # Verify the stack's own variables are present
+        self.assertIn("my-application", computed_content)
+        self.assertIn("false", computed_content)
+
+    def test_shared_env_reference_outside_x_zane_env_is_not_expanded(self):
+        """
+        When {{env.VAR}} syntax is used outside the x-zane-env section,
+        it should NOT be expanded (treated as literal string).
+        """
+        project = self.create_project(slug="outside-x-env-test")
+        environment = project.production_env
+
+        # Create shared env variable
+        SharedEnvVariable.objects.create(
+            key="GITHUB_CLIENT_ID",
+            value="gh-client-123",
+            environment=environment,
+        )
+
+        # Create compose stack with shared env reference outside x-zane-env
+        create_stack_payload = {
+            "slug": "outside-x-env-stack",
+            "user_content": DOCKER_COMPOSE_WITH_SHARED_ENV_OUTSIDE_X_ZANE_ENV,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="outside-x-env-stack").first(),
+        )
+        self.assertIsNotNone(stack)
+
+        # Deploy the stack
+        response = self.client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        stack.refresh_from_db()
+        computed_content = cast(str, stack.computed_content)
+
+        print(
+            "========= computed =========",
+            computed_content,
+            "========= end computed =========",
+            sep="\n",
+        )
+
+        # The {{env.VAR}} outside x-zane-env should remain unexpanded
+        self.assertIn("{{env.GITHUB_CLIENT_ID}}", computed_content)
+        # The actual value should NOT be present
+        self.assertNotIn("gh-client-123", computed_content)
