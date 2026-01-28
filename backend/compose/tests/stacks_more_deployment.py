@@ -16,6 +16,8 @@ from .fixtures import (
     DOCKER_COMPOSE_MINIMAL,
     DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES,
     DOCKER_COMPOSE_SIMPLE_DB,
+    DOCKER_COMPOSE_WEB_WITH_DB,
+    INVALID_COMPOSE_NO_IMAGE,
     DOCKER_COMPOSE_WEB_SERVICE,
     DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
 )
@@ -931,7 +933,7 @@ class TestDeployTokenComposeStackViewTests(ComposeStackAPITestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        stack = cast(ComposeStack, ComposeStack.objects.filter(slug="my-stack").first())
+        stack = cast(ComposeStack, ComposeStack.objects.first())
         self.assertIsNotNone(stack.deploy_token)
 
     def test_stack_regenerates_deploy_token(self):
@@ -954,3 +956,164 @@ class TestDeployTokenComposeStackViewTests(ComposeStackAPITestBase):
 
         stack.refresh_from_db()
         self.assertNotEqual(initial_token, stack.deploy_token)
+
+    def test_deploy_compose_stack_using_token(self):
+        project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "my-stack",
+            "user_content": DOCKER_COMPOSE_MINIMAL,
+        }
+
+        # create stack
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(ComposeStack, ComposeStack.objects.first())
+
+        # deploy stack using webhook
+        response = self.client.put(
+            reverse(
+                "compose:stacks.webhook_deploy",
+                kwargs={"deploy_token": stack.deploy_token},
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(1, stack.deployments.count())
+
+    async def test_webhook_deploy_compose_stack_create_resources(self):
+        project = await self.acreate_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "my-stack",
+            "user_content": DOCKER_COMPOSE_MINIMAL,
+        }
+
+        # create stack
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(ComposeStack, await ComposeStack.objects.afirst())
+
+        # deploy stack using webhook
+        response = await self.async_client.put(
+            reverse(
+                "compose:stacks.webhook_deploy",
+                kwargs={"deploy_token": stack.deploy_token},
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(1, await stack.deployments.acount())
+
+        service = None
+        try:
+            service = self.fake_docker_client.services_get(
+                f"{stack.name}_{stack.hash_prefix}_redis"
+            )
+        except Exception:
+            pass
+        self.assertIsNotNone(service)
+
+    def test_deploy_compose_stack_using_token_update_user_content(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL
+        )
+
+        # deploy stack using webhook
+        deploy_payload = {
+            "user_content": DOCKER_COMPOSE_WEB_WITH_DB,
+        }
+        response = self.client.put(
+            reverse(
+                "compose:stacks.webhook_deploy",
+                kwargs={
+                    "deploy_token": stack.deploy_token,
+                },
+            ),
+            data=deploy_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # the user content should have been updated
+        stack.refresh_from_db()
+        self.assertEqual(DOCKER_COMPOSE_WEB_WITH_DB.strip(), stack.user_content)
+
+        # a change with the new content should be created
+        deployment = cast(ComposeStackDeployment, stack.deployments.latest("queued_at"))
+        self.assertIsNotNone(deployment)
+
+        content_change = cast(
+            ComposeStackChange,
+            deployment.changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT
+            ).first(),
+        )
+        self.assertIsNotNone(content_change)
+        self.assertEqual(DOCKER_COMPOSE_WEB_WITH_DB.strip(), content_change.new_value)
+
+    def test_deploy_compose_stack_using_token_validate_new_user_content(self):
+        project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "my-stack",
+            "user_content": DOCKER_COMPOSE_MINIMAL,
+        }
+
+        # create stack
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(ComposeStack, ComposeStack.objects.first())
+
+        # deploy stack using webhook
+        deploy_payload = {
+            "user_content": INVALID_COMPOSE_NO_IMAGE,
+        }
+        response = self.client.put(
+            reverse(
+                "compose:stacks.webhook_deploy",
+                kwargs={
+                    "deploy_token": stack.deploy_token,
+                },
+            ),
+            data=deploy_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        self.get_error_from_response(response, "user_content")

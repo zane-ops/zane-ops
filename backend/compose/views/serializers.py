@@ -254,6 +254,14 @@ class ComposeStackDeployRequestSerializer(serializers.Serializer):
     commit_message = serializers.CharField(default="Update stack")
 
 
+class ComposeStackWebhookDeployRequestSerializer(serializers.Serializer):
+    commit_message = serializers.CharField(default="Update stack")
+    user_content = serializers.CharField(required=False)
+
+    def validate_user_content(self, content: str):
+        return content
+
+
 class ComposeStackToggleRequestSerializer(serializers.Serializer):
     desired_state = serializers.ChoiceField(choices=["start", "stop"])
 

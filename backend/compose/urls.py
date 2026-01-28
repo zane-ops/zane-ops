@@ -36,6 +36,11 @@ urlpatterns = [
         name="stacks.regenerate_deploy_token",
     ),
     re_path(
+        r"^deploy-stack/(?P<deploy_token>[a-zA-Z0-9-_]+)/?$",
+        views.ComposeStackWebhookDeployAPIView.as_view(),
+        name="stacks.webhook_deploy",
+    ),
+    re_path(
         rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/request-changes/?$",
         views.ComposeStackRequestChangesAPIView.as_view(),
         name="stacks.request_changes",

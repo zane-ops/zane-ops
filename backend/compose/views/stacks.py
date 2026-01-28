@@ -21,6 +21,7 @@ from .serializers import (
     CreateComposeStackFromDokployTemplateRequestSerializer,
     CreateComposeStackFromDokployTemplateObjectRequestSerializer,
     ComposeStackToggleRequestSerializer,
+    ComposeStackWebhookDeployRequestSerializer,
 )
 from ..models import ComposeStack, ComposeStackDeployment, ComposeStackChange
 from django.db.models import QuerySet
@@ -52,6 +53,8 @@ from ..dtos import ComposeStackSnapshot, DokployTemplate, ComposeStackEnvOverrid
 from rest_framework.serializers import Serializer
 from ..adapters import DokployComposeAdapter
 from ..processor import ComposeSpecProcessor
+from rest_framework import permissions
+from rest_framework.throttling import ScopedRateThrottle
 
 
 class ComposeStackListAPIView(ListAPIView):
@@ -648,6 +651,75 @@ class ComposeStackReDeployAPIView(APIView):
 
         serializer = ComposeStackDeploymentSerializer(new_deployment)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+class ComposeStackWebhookDeployAPIView(APIView):
+    serializer_class = ComposeStackDeploymentSerializer
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "deploy_webhook"
+
+    @transaction.atomic()
+    @extend_schema(
+        request=ComposeStackWebhookDeployRequestSerializer,
+        responses={202: None},
+        operation_id="webhookDeployComposeStack",
+        summary="Webhook to deploy a compose stack",
+        description="trigger a new deployment.",
+    )
+    def put(self, request: Request, deploy_token: str):
+        try:
+            stack = (
+                ComposeStack.objects.filter(
+                    deploy_token=deploy_token,
+                ).prefetch_related("changes", "env_overrides")
+            ).get()
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with a deploy_token `{deploy_token}` doesn't exist."
+            )
+
+        form = ComposeStackWebhookDeployRequestSerializer(data=request.data or {})
+        form.is_valid(raise_exception=True)
+
+        data = cast(dict[str, str], form.data)
+
+        # create user content change if added
+        user_content = data.get("user_content")
+        if user_content is not None:
+            stack.add_change(
+                ComposeStackChange(
+                    field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                    new_value=user_content,
+                    old_value=stack.user_content,
+                    type=ComposeStackChange.ChangeType.UPDATE,
+                    stack=stack,
+                )
+            )
+
+        # deploy the stack
+        deployment = ComposeStackDeployment.objects.create(
+            commit_message=data["commit_message"],
+            stack=stack,
+        )
+        stack.apply_pending_changes(deployment=deployment)
+
+        deployment.stack_snapshot = stack.snapshot.to_dict()  # type: ignore
+        deployment.save()
+
+        payload = ComposeStackDeploymentDetails.from_deployment(deployment=deployment)
+
+        def commit_callback():
+            TemporalClient.start_workflow(
+                DeployComposeStackWorkflow.run,
+                arg=payload,
+                id=deployment.workflow_id,
+            )
+
+        transaction.on_commit(commit_callback)
+
+        serializer = ComposeStackDeploymentSerializer(deployment)
+        return Response(data=serializer.data)
 
 
 class ComposeStackDeployAPIView(APIView):
