@@ -27,6 +27,7 @@ from ..models import Service, DeploymentChange
 from ..serializers import ServiceSerializer
 from temporal.helpers import generate_caddyfile_for_static_website
 from copy import deepcopy
+from ..utils import generate_random_chars
 
 
 def build_pending_changeset_with_extra(service: Service, change: dict | None = None):
@@ -527,7 +528,11 @@ def diff_service_snapshots(
                     | PortConfigurationDto
                     | ConfigDto
                     | SharedVolumeDto,
-                ] = {item.id: item for item in current_value}
+                ] = {
+                    # generate a random `item_id` if it's None to prevent bugs
+                    (item.id or generate_random_chars(8)): item
+                    for item in current_value
+                }
                 target_items: dict[
                     str,
                     VolumeDto
@@ -536,7 +541,11 @@ def diff_service_snapshots(
                     | PortConfigurationDto
                     | ConfigDto
                     | SharedVolumeDto,
-                ] = {item.id: item for item in target_value}
+                ] = {
+                    # generate a random `item_id` if it's None to prevent bugs
+                    (item.id or generate_random_chars(8)): item
+                    for item in target_value
+                }
 
                 for item_id in current_items:
                     if item_id not in target_items:

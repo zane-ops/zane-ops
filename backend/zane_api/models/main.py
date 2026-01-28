@@ -2146,7 +2146,9 @@ class Environment(TimestampedModel):
 
         for service in services_to_clone:
             cloned_service = service.clone(environment=new_environment)
-            current = cast(ReturnDict, ServiceSerializer(cloned_service).data)
+            current = ServiceSnapshot.from_dict(
+                cast(dict, ServiceSerializer(cloned_service).data)
+            )
 
             target_without_changes = cast(ReturnDict, ServiceSerializer(service).data)
             target = apply_changes_to_snapshot(
