@@ -545,6 +545,92 @@ paths:
               schema:
                 $ref: '#/components/schemas/OngoingUpdateResponse'
           description: ''
+  /api/compose/deploy-stack/{deploy_token}/:
+    put:
+      operationId: webhookDeployComposeStack
+      description: trigger a new deployment.
+      summary: Webhook to deploy a compose stack
+      parameters:
+      - in: path
+        name: deploy_token
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      tags:
+      - compose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComposeStackWebhookDeployRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ComposeStackWebhookDeployRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ComposeStackWebhookDeployRequestRequest'
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeployComposeStackErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '202':
+          description: No response body
   /api/compose/stacks/{project_slug}/{env_slug}/:
     get:
       operationId: compose_stacks_list
@@ -1393,6 +1479,107 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ComposeStackDeployment'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/regenerate-deploy-token/:
+    put:
+      operationId: regenerateComposeStackDeployToken
+      summary: Regenerate a compose stack deploy token
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComposeStackRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ComposeStackRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ComposeStackRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegenerateComposeStackDeployTokenErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStack'
           description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/request-changes/:
     put:
@@ -11739,9 +11926,14 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/ComposeStackServiceStatus'
           readOnly: true
+        deploy_token:
+          type: string
+          readOnly: true
+          nullable: true
       required:
       - computed_content
       - configs
+      - deploy_token
       - env_overrides
       - id
       - network_alias_prefix
@@ -12202,9 +12394,14 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/ComposeStackServiceStatus'
           readOnly: true
+        deploy_token:
+          type: string
+          readOnly: true
+          nullable: true
       required:
       - computed_content
       - configs
+      - deploy_token
       - env_overrides
       - id
       - network_alias_prefix
@@ -12255,6 +12452,16 @@ components:
       - domain
       - port
       - strip_prefix
+    ComposeStackWebhookDeployRequestRequest:
+      type: object
+      properties:
+        commit_message:
+          type: string
+          minLength: 1
+          default: Update stack
+        user_content:
+          type: string
+          minLength: 1
     ComposeStacksBuildLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -19130,6 +19337,117 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    RegenerateComposeStackDeployTokenError:
+      oneOf:
+      - $ref: '#/components/schemas/RegenerateComposeStackDeployTokenNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateComposeStackDeployTokenSlugErrorComponent'
+      - $ref: '#/components/schemas/RegenerateComposeStackDeployTokenUserContentErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/RegenerateComposeStackDeployTokenNonFieldErrorsErrorComponent'
+          slug: '#/components/schemas/RegenerateComposeStackDeployTokenSlugErrorComponent'
+          user_content: '#/components/schemas/RegenerateComposeStackDeployTokenUserContentErrorComponent'
+    RegenerateComposeStackDeployTokenErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/RegenerateComposeStackDeployTokenValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/RegenerateComposeStackDeployTokenValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RegenerateComposeStackDeployTokenNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateComposeStackDeployTokenSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateComposeStackDeployTokenUserContentErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - user_content
+          type: string
+          description: '* `user_content` - user_content'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateComposeStackDeployTokenValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegenerateComposeStackDeployTokenError'
+      required:
+      - errors
+      - type
     RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent:
       type: object
       properties:
@@ -25049,6 +25367,113 @@ components:
       required:
       - container_path
       - name
+    WebhookDeployComposeStackCommitMessageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_message
+          type: string
+          description: '* `commit_message` - commit_message'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookDeployComposeStackError:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookDeployComposeStackNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WebhookDeployComposeStackCommitMessageErrorComponent'
+      - $ref: '#/components/schemas/WebhookDeployComposeStackUserContentErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/WebhookDeployComposeStackNonFieldErrorsErrorComponent'
+          commit_message: '#/components/schemas/WebhookDeployComposeStackCommitMessageErrorComponent'
+          user_content: '#/components/schemas/WebhookDeployComposeStackUserContentErrorComponent'
+    WebhookDeployComposeStackErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookDeployComposeStackValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/WebhookDeployComposeStackValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    WebhookDeployComposeStackNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookDeployComposeStackUserContentErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - user_content
+          type: string
+          description: '* `user_content` - user_content'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookDeployComposeStackValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookDeployComposeStackError'
+      required:
+      - errors
+      - type
     WebhookDockerDeployServiceCleanupQueueErrorComponent:
       type: object
       properties:

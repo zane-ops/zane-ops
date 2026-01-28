@@ -58,6 +58,13 @@ export interface paths {
      */
     get: operations["check_ongoing_update_status_retrieve"];
   };
+  "/api/compose/deploy-stack/{deploy_token}/": {
+    /**
+     * Webhook to deploy a compose stack
+     * @description trigger a new deployment.
+     */
+    put: operations["webhookDeployComposeStack"];
+  };
   "/api/compose/stacks/{project_slug}/{env_slug}/": {
     get: operations["compose_stacks_list"];
   };
@@ -92,6 +99,10 @@ export interface paths {
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/{hash}/": {
     /** Rollback to a previous version of the compose stack */
     put: operations["reDeployComposeStack"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/regenerate-deploy-token/": {
+    /** Regenerate a compose stack deploy token */
+    put: operations["regenerateComposeStackDeployToken"];
   };
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/request-changes/": {
     /** Request a new compose stack change */
@@ -1052,6 +1063,7 @@ export interface components {
       service_statuses: {
         [key: string]: components["schemas"]["ComposeStackServiceStatus"];
       };
+      deploy_token: string | null;
     };
     ComposeStackChange: {
       id: string;
@@ -1231,6 +1243,7 @@ export interface components {
       service_statuses: {
         [key: string]: components["schemas"]["ComposeStackServiceStatus"];
       };
+      deploy_token: string | null;
     };
     ComposeStackUpdateRequest: {
       slug?: string;
@@ -1246,6 +1259,11 @@ export interface components {
       base_path: string;
       strip_prefix: boolean;
       port: number;
+    };
+    ComposeStackWebhookDeployRequestRequest: {
+      /** @default Update stack */
+      commit_message?: string;
+      user_content?: string;
     };
     ComposeStacksBuildLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksCreateCreateError: components["schemas"]["ComposeStacksCreateCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ComposeStacksCreateCreateSlugErrorComponent"] | components["schemas"]["ComposeStacksCreateCreateUserContentErrorComponent"];
@@ -4295,6 +4313,61 @@ export interface components {
     };
     RecentDeploymentsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    RegenerateComposeStackDeployTokenError: components["schemas"]["RegenerateComposeStackDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateComposeStackDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateComposeStackDeployTokenUserContentErrorComponent"];
+    RegenerateComposeStackDeployTokenErrorResponse400: components["schemas"]["RegenerateComposeStackDeployTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RegenerateComposeStackDeployTokenNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    RegenerateComposeStackDeployTokenSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateComposeStackDeployTokenUserContentErrorComponent: {
+      /**
+       * @description * `user_content` - user_content
+       * @enum {string}
+       */
+      attr: "user_content";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateComposeStackDeployTokenValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["RegenerateComposeStackDeployTokenError"][];
+    };
     RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent: {
       /**
        * @description * `auto_deploy_enabled` - auto_deploy_enabled
@@ -7153,6 +7226,59 @@ export interface components {
       name: string;
       container_path: string;
     };
+    WebhookDeployComposeStackCommitMessageErrorComponent: {
+      /**
+       * @description * `commit_message` - commit_message
+       * @enum {string}
+       */
+      attr: "commit_message";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookDeployComposeStackError: components["schemas"]["WebhookDeployComposeStackNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookDeployComposeStackCommitMessageErrorComponent"] | components["schemas"]["WebhookDeployComposeStackUserContentErrorComponent"];
+    WebhookDeployComposeStackErrorResponse400: components["schemas"]["WebhookDeployComposeStackValidationError"] | components["schemas"]["ParseErrorResponse"];
+    WebhookDeployComposeStackNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    WebhookDeployComposeStackUserContentErrorComponent: {
+      /**
+       * @description * `user_content` - user_content
+       * @enum {string}
+       */
+      attr: "user_content";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookDeployComposeStackValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["WebhookDeployComposeStackError"][];
+    };
     WebhookDockerDeployServiceCleanupQueueErrorComponent: {
       /**
        * @description * `cleanup_queue` - cleanup_queue
@@ -7719,6 +7845,50 @@ export interface operations {
       };
     };
   };
+  /**
+   * Webhook to deploy a compose stack
+   * @description trigger a new deployment.
+   */
+  webhookDeployComposeStack: {
+    parameters: {
+      path: {
+        deploy_token: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["ComposeStackWebhookDeployRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ComposeStackWebhookDeployRequestRequest"];
+        "multipart/form-data": components["schemas"]["ComposeStackWebhookDeployRequestRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WebhookDeployComposeStackErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   compose_stacks_list: {
     parameters: {
       path: {
@@ -8058,6 +8228,50 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ReDeployComposeStackErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Regenerate a compose stack deploy token */
+  regenerateComposeStackDeployToken: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ComposeStackRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ComposeStackRequest"];
+        "multipart/form-data": components["schemas"]["ComposeStackRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ComposeStack"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["RegenerateComposeStackDeployTokenErrorResponse400"];
         };
       };
       401: {
