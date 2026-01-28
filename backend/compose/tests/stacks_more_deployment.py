@@ -907,3 +907,50 @@ class TestArchiveEnvironmentWithStackViewTests(ComposeStackAPITestBase):
             filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
         )
         self.assertEqual(0, len(volumes))
+
+
+class TestDeployTokenComposeStackViewTests(ComposeStackAPITestBase):
+    def test_create_stack_generates_deploy_token(self):
+        project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "my-stack",
+            "user_content": DOCKER_COMPOSE_MINIMAL,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(ComposeStack, ComposeStack.objects.filter(slug="my-stack").first())
+        self.assertIsNotNone(stack.deploy_token)
+
+    def test_stack_regenerates_deploy_token(self):
+        project, stack = self.create_and_deploy_compose_stack(DOCKER_COMPOSE_MINIMAL)
+
+        initial_token = stack.deploy_token
+
+        response = self.client.put(
+            reverse(
+                "compose:stacks.regenerate_deploy_token",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        stack.refresh_from_db()
+        self.assertNotEqual(initial_token, stack.deploy_token)

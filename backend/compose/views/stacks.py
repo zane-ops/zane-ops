@@ -1,3 +1,4 @@
+import secrets
 from typing import Any, cast
 from rest_framework.generics import (
     CreateAPIView,
@@ -357,6 +358,46 @@ class ComposeStackDetailsAPIView(RetrieveUpdateAPIView):
             )
 
         return stack
+
+
+class ComposeStackRegenerateDeployTokenAPIView(APIView):
+    serializer_class = ComposeStackSerializer
+
+    @extend_schema(
+        operation_id="regenerateComposeStackDeployToken",
+        summary="Regenerate a compose stack deploy token",
+    )
+    def put(self, request: Request, project_slug: str, env_slug: str, slug: str):
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=self.request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = ComposeStack.objects.filter(
+                environment=environment,
+                project=project,
+                slug=slug,
+            ).get()
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+
+        stack.deploy_token = secrets.token_hex(16)
+        stack.save()
+        serializer = ComposeStackUpdateSerializer(stack)
+        return Response(data=serializer.data)
 
 
 class ComposeStackArchiveAPIView(APIView):

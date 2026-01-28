@@ -51,6 +51,8 @@ class ComposeStack(TimestampedModel):
         on_delete=models.CASCADE,
         related_name="compose_stacks",
     )
+
+    # Token to trigger a deployment of this stack
     deploy_token = models.CharField(max_length=35, null=True, unique=True)
 
     # Compose content

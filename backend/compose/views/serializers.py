@@ -1,5 +1,6 @@
 import base64
 import json
+import secrets
 import subprocess
 import tempfile
 import tomllib
@@ -146,6 +147,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             environment=environment,
             slug=slug,
             network_alias_prefix=f"zn-{slug}",
+            deploy_token=secrets.token_hex(16),
         )
 
         artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
@@ -191,9 +193,11 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             "configs",
             "env_overrides",
             "service_statuses",
+            "deploy_token",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
+            "deploy_token": {"read_only": True},
             "computed_content": {"read_only": True},
             "name": {"read_only": True},
             "network_alias_prefix": {"read_only": True},
