@@ -11689,14 +11689,14 @@ components:
       - client_error
       type: string
       description: '* `client_error` - Client Error'
-    CloneEnvironmentDeployServicesErrorComponent:
+    CloneEnvironmentDeployAfterCloneErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - deploy_services
+          - deploy_after_clone
           type: string
-          description: '* `deploy_services` - deploy_services'
+          description: '* `deploy_after_clone` - deploy_after_clone'
         code:
           enum:
           - invalid
@@ -11714,13 +11714,13 @@ components:
     CloneEnvironmentError:
       oneOf:
       - $ref: '#/components/schemas/CloneEnvironmentNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/CloneEnvironmentDeployServicesErrorComponent'
+      - $ref: '#/components/schemas/CloneEnvironmentDeployAfterCloneErrorComponent'
       - $ref: '#/components/schemas/CloneEnvironmentNameErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/CloneEnvironmentNonFieldErrorsErrorComponent'
-          deploy_services: '#/components/schemas/CloneEnvironmentDeployServicesErrorComponent'
+          deploy_after_clone: '#/components/schemas/CloneEnvironmentDeployAfterCloneErrorComponent'
           name: '#/components/schemas/CloneEnvironmentNameErrorComponent'
     CloneEnvironmentErrorResponse400:
       oneOf:
@@ -11785,7 +11785,7 @@ components:
     CloneEnvironmentRequestRequest:
       type: object
       properties:
-        deploy_services:
+        deploy_after_clone:
           type: boolean
           default: false
         name:

@@ -952,12 +952,12 @@ export interface components {
      * @enum {string}
      */
     ClientErrorEnum: "client_error";
-    CloneEnvironmentDeployServicesErrorComponent: {
+    CloneEnvironmentDeployAfterCloneErrorComponent: {
       /**
-       * @description * `deploy_services` - deploy_services
+       * @description * `deploy_after_clone` - deploy_after_clone
        * @enum {string}
        */
-      attr: "deploy_services";
+      attr: "deploy_after_clone";
       /**
        * @description * `invalid` - invalid
        * * `null` - null
@@ -966,7 +966,7 @@ export interface components {
       code: "invalid" | "null";
       detail: string;
     };
-    CloneEnvironmentError: components["schemas"]["CloneEnvironmentNonFieldErrorsErrorComponent"] | components["schemas"]["CloneEnvironmentDeployServicesErrorComponent"] | components["schemas"]["CloneEnvironmentNameErrorComponent"];
+    CloneEnvironmentError: components["schemas"]["CloneEnvironmentNonFieldErrorsErrorComponent"] | components["schemas"]["CloneEnvironmentDeployAfterCloneErrorComponent"] | components["schemas"]["CloneEnvironmentNameErrorComponent"];
     CloneEnvironmentErrorResponse400: components["schemas"]["CloneEnvironmentValidationError"] | components["schemas"]["ParseErrorResponse"];
     CloneEnvironmentNameErrorComponent: {
       /**
@@ -1002,7 +1002,7 @@ export interface components {
     };
     CloneEnvironmentRequestRequest: {
       /** @default false */
-      deploy_services?: boolean;
+      deploy_after_clone?: boolean;
       name: string;
     };
     CloneEnvironmentValidationError: {
