@@ -150,7 +150,7 @@ class CloneEnvironmentWithStackViewTests(ComposeStackAPITestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        staging_env = p.environments.get(name="staging")
+        staging_env = await p.environments.aget(name="staging")
 
         stacks_in_staging = staging_env.compose_stacks
         self.assertEqual(1, stacks_in_staging.count())
