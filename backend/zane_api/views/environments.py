@@ -137,8 +137,9 @@ class CloneEnviromentAPIView(APIView):
         form = CloneEnvironmentRequestSerializer(data=request.data)
         form.is_valid(raise_exception=True)
 
-        name = form.data["name"].lower()  # type: ignore
-        should_deploy_services = form.data["deploy_services"]  # type: ignore
+        data = cast(dict, form.data)
+        name = data["name"].lower()
+        should_deploy = data["deploy_after_clone"]
         try:
             new_environment = current_environment.clone(
                 env_name=name,
@@ -160,7 +161,7 @@ class CloneEnviromentAPIView(APIView):
                 )
             ]
 
-            if should_deploy_services:
+            if should_deploy:
                 for service in new_environment.services.all():
                     if service.type == Service.ServiceType.DOCKER_REGISTRY:
                         workflow = DeployDockerServiceWorkflow.run

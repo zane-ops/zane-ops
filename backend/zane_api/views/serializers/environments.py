@@ -41,7 +41,7 @@ class UpdateEnvironmentRequestSerializer(serializers.Serializer):
 
 
 class CloneEnvironmentRequestSerializer(serializers.Serializer):
-    deploy_services = serializers.BooleanField(default=False, required=False)
+    deploy_after_clone = serializers.BooleanField(default=False, required=False)
     name = serializers.SlugField(max_length=255)
 
     def validate_name(self, name: str):

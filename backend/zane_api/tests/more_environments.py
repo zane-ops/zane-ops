@@ -206,7 +206,7 @@ class MoreEnvironmentViewTests(AuthAPITestCase):
                 "zane_api:projects.environment.clone",
                 kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
-            data={"name": "staging", "deploy_services": True},
+            data={"name": "staging", "deploy_after_clone": True},
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
