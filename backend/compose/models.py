@@ -1,3 +1,4 @@
+import secrets
 from typing import TYPE_CHECKING, cast
 from django.db import models
 
@@ -259,6 +260,15 @@ class ComposeStack(TimestampedModel):
         self.unapplied_changes.update(applied=True, deployment=deployment)
         self.save()
         self.refresh_from_db()
+
+    def clone(self, environment: "Environment"):
+        return ComposeStack.objects.create(
+            slug=self.slug,
+            environment=environment,
+            project=self.project,
+            network_alias_prefix=self.network_alias_prefix,
+            deploy_token=secrets.token_hex(16),
+        )
 
 
 class ComposeStackDeployment(TimestampedModel):

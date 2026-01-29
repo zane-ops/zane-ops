@@ -26,7 +26,9 @@ from ..dtos import ComposeStackUrlRouteDto
 
 class CloneEnvironmentWithStackViewTests(ComposeStackAPITestBase):
     def test_clone_environment_should_clone_included_stacks(self):
-        p, _ = self.create_and_deploy_compose_stack(content=DOCKER_COMPOSE_MINIMAL)
+        p, original_stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL
+        )
 
         response = self.client.post(
             reverse(
@@ -43,18 +45,24 @@ class CloneEnvironmentWithStackViewTests(ComposeStackAPITestBase):
         stacks_in_staging = staging_env.compose_stacks
         self.assertEqual(1, stacks_in_staging.count())
 
-        stack = cast(ComposeStack, stacks_in_staging.first())
+        cloned_stack = cast(ComposeStack, stacks_in_staging.first())
 
-        self.assertEqual(1, stack.unapplied_changes.count())
+        self.assertEqual(1, cloned_stack.unapplied_changes.count())
 
         content_change = cast(
             ComposeStackChange,
-            stack.unapplied_changes.filter(
+            cloned_stack.unapplied_changes.filter(
                 field=ComposeStackChange.ChangeField.COMPOSE_CONTENT
             ).first(),
         )
         self.assertIsNotNone(content_change)
         self.assertEqual(DOCKER_COMPOSE_MINIMAL.strip(), content_change.new_value)
+
+        self.assertEqual(original_stack.slug, cloned_stack.slug)
+        self.assertEqual(
+            original_stack.network_alias_prefix, cloned_stack.network_alias_prefix
+        )
+        self.assertNotEqual(original_stack.deploy_token, cloned_stack.deploy_token)
 
     def test_clone_environment_with_undeployed_stacks_should_include_unapplied_changes_in_diffing(
         self,

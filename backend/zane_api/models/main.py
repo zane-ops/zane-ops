@@ -2048,6 +2048,7 @@ class Environment(TimestampedModel):
     ):
         from ..serializers import ServiceSerializer
         from ..views.helpers import apply_changes_to_snapshot, diff_service_snapshots
+        from compose.models import ComposeStackChange
 
         if preview_data is not None:
             assert preview_data.template.base_environment.id == self.id
@@ -2077,6 +2078,7 @@ class Environment(TimestampedModel):
                 ]
             )
         services_to_clone: Sequence[Service] = []
+        stacks_to_clone: Sequence["ComposeStack"] = []
 
         # Step 2: clone services
         if preview_data is None:
@@ -2096,6 +2098,9 @@ class Environment(TimestampedModel):
                 )
                 .all()
             )
+            stacks_to_clone = self.compose_stacks.prefetch_related(
+                "changes", "env_overrides"
+            ).all()
         else:
             match preview_data.template.clone_strategy:
                 case PreviewEnvTemplate.PreviewCloneStrategy.ALL:
@@ -2143,6 +2148,30 @@ class Environment(TimestampedModel):
                 service.id for service in services_to_clone
             ]:
                 services_to_clone.append(preview_data.metadata.service)
+
+        for original_stack in stacks_to_clone:
+            cloned_stack = original_stack.clone(environment=new_environment)
+
+            new_stack_changes: list[ComposeStackChange] = []
+
+            new_content = original_stack.user_content
+
+            content_change = original_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+            ).first()
+            if content_change is not None:
+                new_content = cast(str, content_change.new_value)
+
+            new_stack_changes.append(
+                ComposeStackChange(
+                    field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                    type=ComposeStackChange.ChangeType.UPDATE,
+                    new_value=new_content,
+                    stack=cloned_stack,
+                )
+            )
+
+            ComposeStackChange.objects.bulk_create(new_stack_changes)
 
         for service in services_to_clone:
             cloned_service = service.clone(environment=new_environment)
