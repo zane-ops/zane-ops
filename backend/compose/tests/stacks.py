@@ -124,6 +124,38 @@ class ComposeStackAPITestBase(AuthAPITestCase):
 
         return project, stack
 
+    def create_compose_stack(
+        self,
+        content: str,
+        slug="my-stack",
+    ):
+        project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": slug,
+            "user_content": content,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(ComposeStack, ComposeStack.objects.filter(slug=slug).first())
+        self.assertIsNotNone(stack)
+        self.assertIsNone(stack.user_content)
+        self.assertIsNone(stack.computed_content)
+
+        return project, stack
+
     def create_and_deploy_compose_stack(
         self,
         content: str,
