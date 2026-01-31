@@ -66,9 +66,10 @@ export default function PreviewTemplatesPage({
         These environments are created when triggered by either an API call or a
         pull request. &nbsp;
         <a
-          href="https://zaneops.dev/knowledge-base/preview-templates/"
+          href="https://zaneops.dev/knowledge-base/preview-environments/a-preview-templates/"
           target="_blank"
           className="text-link underline inline-flex gap-1 items-center"
+          rel="noreferrer"
         >
           Learn more <ExternalLinkIcon size={12} />
         </a>
