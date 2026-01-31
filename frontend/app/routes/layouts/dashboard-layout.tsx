@@ -456,7 +456,7 @@ const socialLinks = [
   {
     id: "sponsor",
     name: "Sponsor this project",
-    url: "https://github.com/sponsors/Fredkiss3",
+    url: "https://github.com/sponsors/zane-ops",
     icon: (
       <HeartIcon
         size={20}
