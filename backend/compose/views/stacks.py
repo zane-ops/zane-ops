@@ -644,7 +644,7 @@ class ComposeStackReDeployAPIView(APIView):
             TemporalClient.start_workflow(
                 DeployComposeStackWorkflow.run,
                 arg=payload,
-                id=deployment.workflow_id,
+                id=payload.workflow_id,
             )
 
         transaction.on_commit(commit_callback)
@@ -715,7 +715,7 @@ class ComposeStackWebhookDeployAPIView(APIView):
             TemporalClient.start_workflow(
                 DeployComposeStackWorkflow.run,
                 arg=payload,
-                id=deployment.workflow_id,
+                id=payload.workflow_id,
             )
 
         transaction.on_commit(commit_callback)
@@ -784,7 +784,7 @@ class ComposeStackDeployAPIView(APIView):
             TemporalClient.start_workflow(
                 DeployComposeStackWorkflow.run,
                 arg=payload,
-                id=deployment.workflow_id,
+                id=payload.workflow_id,
             )
 
         transaction.on_commit(commit_callback)

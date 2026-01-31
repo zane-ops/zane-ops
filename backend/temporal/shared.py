@@ -636,6 +636,10 @@ class ComposeStackDeploymentDetails:
     hash: str
     stack: ComposeStackSnapshot
 
+    @property
+    def workflow_id(self):
+        return f"deploy-compose-{self.stack.id}"
+
     @classmethod
     def from_deployment(
         cls,

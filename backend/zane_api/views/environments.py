@@ -45,10 +45,12 @@ from temporal.workflows import (
     ArchiveEnvWorkflow,
     DeployDockerServiceWorkflow,
     DelayedArchiveEnvWorkflow,
+    DeployComposeStackWorkflow,
 )
 from temporal.shared import (
     EnvironmentDetails,
     DeploymentDetails,
+    ComposeStackDeploymentDetails,
 )
 from rest_framework import viewsets
 from rest_framework import permissions
@@ -162,10 +164,30 @@ class CloneEnviromentAPIView(APIView):
             ]
 
             if should_deploy:
+                for stack in new_environment.compose_stacks.all():
+                    deployment = stack.deployments.create(
+                        commit_message="Deploy from clone",
+                    )
+                    stack.apply_pending_changes(deployment)
+
+                    deployment.stack_snapshot = stack.snapshot.to_dict()  # type: ignore
+                    deployment.save()
+
+                    payload = ComposeStackDeploymentDetails.from_deployment(deployment)
+                    workflows_to_run.append(
+                        StartWorkflowArg(
+                            DeployComposeStackWorkflow.run,
+                            payload,
+                            payload.workflow_id,
+                        )
+                    )
+                    pass
                 for service in new_environment.services.all():
                     if service.type == Service.ServiceType.DOCKER_REGISTRY:
                         workflow = DeployDockerServiceWorkflow.run
-                        new_deployment = service.prepare_new_docker_deployment()
+                        new_deployment = service.prepare_new_docker_deployment(
+                            commit_message="Clone deployment"
+                        )
                     else:
                         workflow = DeployGitServiceWorkflow.run
                         new_deployment = service.prepare_new_git_deployment()
