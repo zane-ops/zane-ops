@@ -100,7 +100,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
       <dl className="flex flex-col gap-x-4 gap-y-2 items-center auto-rows-max">
         <div className="grid grid-cols-2 items-center gap-x-4 w-full">
           <dt className="text-grey  inline-flex items-center">ID</dt>
-          <dd className="text-sm">{log.request_id}</dd>
+          <dd className="text-sm">{log.request_uuid}</dd>
         </div>
         {deploymentHashHeader && (
           <div className="grid grid-cols-2 items-center gap-x-4 w-full">
