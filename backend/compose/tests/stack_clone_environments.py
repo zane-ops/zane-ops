@@ -7,12 +7,15 @@ from rest_framework import status
 from zane_api.models import Environment
 from zane_api.utils import jprint
 
-from ..models import ComposeStack, ComposeStackChange
+from ..models import ComposeStack, ComposeStackChange, ComposeStackEnvOverride
 from .fixtures import (
     DOCKER_COMPOSE_MINIMAL,
     DOCKER_COMPOSE_WEB_SERVICE,
+    DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES,
+    DOCKER_COMPOSE_WITH_GENERATE_DOMAIN,
 )
 from .stacks import ComposeStackAPITestBase
+import yaml
 
 
 class CloneEnvironmentWithStackViewTests(ComposeStackAPITestBase):
@@ -47,13 +50,99 @@ class CloneEnvironmentWithStackViewTests(ComposeStackAPITestBase):
             ).first(),
         )
         self.assertIsNotNone(content_change)
-        self.assertEqual(DOCKER_COMPOSE_MINIMAL.strip(), content_change.new_value)
+        self.assertEqual(
+            yaml.safe_dump(yaml.safe_load(DOCKER_COMPOSE_MINIMAL), sort_keys=False),
+            content_change.new_value,
+        )
 
         self.assertEqual(original_stack.slug, cloned_stack.slug)
         self.assertEqual(
             original_stack.network_alias_prefix, cloned_stack.network_alias_prefix
         )
         self.assertNotEqual(original_stack.deploy_token, cloned_stack.deploy_token)
+
+    def test_clone_environment_with_environment_overrides(self):
+        p, original_stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES
+        )
+
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.environment.clone",
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
+            ),
+            data={
+                "name": "staging",
+                "deploy_after_clone": True,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        staging_env = p.environments.get(name="staging")
+
+        stacks_in_staging = staging_env.compose_stacks
+        self.assertEqual(1, stacks_in_staging.count())
+
+        cloned_stack = cast(ComposeStack, stacks_in_staging.first())
+
+        self.assertEqual(2, cloned_stack.env_overrides.count())
+
+        for env in original_stack.env_overrides.all():
+            cloned_env = cast(
+                ComposeStackEnvOverride,
+                cloned_stack.env_overrides.filter(key=env.key).first(),
+            )
+            self.assertIsNotNone(cloned_env)
+            self.assertEqual(
+                env.value, cloned_env.value, f"envs `{env.key}` do not match"
+            )
+
+    def test_clone_environment_with_generate_domain_override_is_not_passed_directly(
+        self,
+    ):
+        p, original_stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_WITH_GENERATE_DOMAIN
+        )
+
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.environment.clone",
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
+            ),
+            data={
+                "name": "staging",
+                "deploy_after_clone": True,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        staging_env = p.environments.get(name="staging")
+
+        stacks_in_staging = staging_env.compose_stacks
+        self.assertEqual(1, stacks_in_staging.count())
+
+        cloned_stack = cast(ComposeStack, stacks_in_staging.first())
+
+        self.assertEqual(1, cloned_stack.env_overrides.count())
+
+        print(
+            "========= original =========",
+            original_stack.user_content,
+            sep="\n",
+        )
+        print(
+            "========= cloned =========",
+            cloned_stack.user_content,
+            sep="\n",
+        )
+
+        original_env = original_stack.env_overrides.get(key="APP_DOMAIN")
+        # `APP_DOMAIN` should be regenerated
+        cloned_env = cloned_stack.env_overrides.get(key="APP_DOMAIN")
+
+        self.assertNotEqual(original_env.value, cloned_env.value)
 
     def test_clone_environment_with_undeployed_stacks_should_include_unapplied_changes_in_diffing(
         self,
@@ -86,7 +175,10 @@ class CloneEnvironmentWithStackViewTests(ComposeStackAPITestBase):
             ).first(),
         )
         self.assertIsNotNone(content_change)
-        self.assertEqual(DOCKER_COMPOSE_MINIMAL.strip(), content_change.new_value)
+        self.assertEqual(
+            yaml.safe_dump(yaml.safe_load(DOCKER_COMPOSE_MINIMAL), sort_keys=False),
+            content_change.new_value,
+        )
 
     async def test_clone_environment_with_deploy_true_should_deploy_included_stacks(
         self,
@@ -114,7 +206,10 @@ class CloneEnvironmentWithStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(cloned_stack)
 
         # user content change has been applied
-        self.assertEqual(DOCKER_COMPOSE_MINIMAL.strip(), cloned_stack.user_content)
+        self.assertEqual(
+            yaml.safe_dump(yaml.safe_load(DOCKER_COMPOSE_MINIMAL), sort_keys=False),
+            cloned_stack.user_content,
+        )
 
         self.assertEqual(1, await cloned_stack.deployments.acount())
 

@@ -300,7 +300,7 @@ class ComposeSpecProcessor:
             # If docker rejects inline config content, retry with file references
             # to ensure there are no other validation errors
             if error.endswith("Additional property content is not allowed"):
-                user_spec_dict = cls._parse_user_yaml(user_content)
+                user_spec_dict = cls.parse_user_yaml(user_content)
 
                 # Replace config content with temporary file references
                 for config in user_spec_dict.get("configs", {}).values():
@@ -318,7 +318,7 @@ class ComposeSpecProcessor:
                 raise ValidationError(f"Invalid compose file: {error}")
 
         # Parse and validate YAML structure
-        user_spec_dict = cls._parse_user_yaml(user_content)
+        user_spec_dict = cls.parse_user_yaml(user_content)
 
         if not user_spec_dict.get("services"):
             raise ValidationError(
@@ -377,7 +377,7 @@ class ComposeSpecProcessor:
             raise ValidationError(f"Invalid compose file: {e}")
 
     @classmethod
-    def _parse_user_yaml(cls, content: str) -> Dict[str, Dict[str, Any]]:
+    def parse_user_yaml(cls, content: str) -> Dict[str, Dict[str, Any]]:
         """
         Parse user YAML to dict.
 
@@ -395,7 +395,7 @@ class ComposeSpecProcessor:
             raise ValidationError(f"Invalid YAML syntax: {str(e)}")
 
     @classmethod
-    def _extract_template_expression(cls, env_value: str) -> str | None:
+    def extract_template_expression(cls, env_value: str) -> str | None:
         """
         Extract template function name from environment variable value.
 
@@ -483,7 +483,7 @@ class ComposeSpecProcessor:
         Replace all fixed stack urls with generated ones to prevent conflicts
         with existing urls.
         """
-        compose_dict = cls._parse_user_yaml(user_content)
+        compose_dict = cls.parse_user_yaml(user_content)
 
         spec = ComposeStackSpec.from_dict(compose_dict)
 
@@ -513,7 +513,7 @@ class ComposeSpecProcessor:
                     surrounded_vars_only=True,
                 )
 
-                template_func = cls._extract_template_expression(domain_value)
+                template_func = cls.extract_template_expression(domain_value)
 
                 if template_func != "generate_domain":
                     # create new variable in `x-zane-env`
@@ -559,7 +559,7 @@ class ComposeSpecProcessor:
         """
 
         # Parse YAML
-        spec_dict = ComposeSpecProcessor._parse_user_yaml(user_content)
+        spec_dict = ComposeSpecProcessor.parse_user_yaml(user_content)
 
         # Convert to dataclass
         spec = ComposeStackSpec.from_dict(spec_dict)
@@ -607,7 +607,7 @@ class ComposeSpecProcessor:
 
         # generate temlate values
         for key, env in spec.envs.items():
-            template_func = cls._extract_template_expression(env.value)
+            template_func = cls.extract_template_expression(env.value)
 
             if key in override_dict:
                 env.value = override_dict[key]  # replace values with existing overrides
@@ -771,7 +771,7 @@ class ComposeSpecProcessor:
         stack_hash_prefix: str,
     ) -> Dict[str, Any]:
         # Parse YAML
-        user_spec_dict = ComposeSpecProcessor._parse_user_yaml(user_content)
+        user_spec_dict = ComposeSpecProcessor.parse_user_yaml(user_content)
 
         compose_dict: Dict[str, Dict[str, Any]] = spec.to_dict()
 

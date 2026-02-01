@@ -2048,8 +2048,6 @@ class Environment(TimestampedModel):
     ):
         from ..serializers import ServiceSerializer
         from ..views.helpers import apply_changes_to_snapshot, diff_service_snapshots
-        from compose.models import ComposeStackChange
-        from compose.processor import ComposeSpecProcessor
 
         if preview_data is not None:
             assert preview_data.template.base_environment.id == self.id
@@ -2151,32 +2149,7 @@ class Environment(TimestampedModel):
                 services_to_clone.append(preview_data.metadata.service)
 
         for original_stack in stacks_to_clone:
-            cloned_stack = original_stack.clone(environment=new_environment)
-
-            new_stack_changes: list[ComposeStackChange] = []
-
-            new_content = original_stack.user_content
-
-            content_change = original_stack.unapplied_changes.filter(
-                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
-            ).first()
-            if content_change is not None:
-                new_content = cast(str, content_change.new_value)
-
-            new_content = ComposeSpecProcessor.replace_stack_urls_in_compose(
-                new_content
-            )
-
-            new_stack_changes.append(
-                ComposeStackChange(
-                    field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
-                    type=ComposeStackChange.ChangeType.UPDATE,
-                    new_value=new_content,
-                    stack=cloned_stack,
-                )
-            )
-
-            ComposeStackChange.objects.bulk_create(new_stack_changes)
+            original_stack.clone(environment=new_environment)
 
         for service in services_to_clone:
             cloned_service = service.clone(environment=new_environment)

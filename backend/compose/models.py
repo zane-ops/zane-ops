@@ -136,11 +136,13 @@ class ComposeStack(TimestampedModel):
             computed_content=cast(str, self.computed_content),
             urls={
                 service: [ComposeStackUrlRouteDto.from_dict(url) for url in urls]
-                for service, urls in cast(dict[str, list[dict]], self.urls).items()
+                for service, urls in cast(
+                    dict[str, list[dict]], self.urls or {}
+                ).items()
             },
             configs={
                 name: ComposeVersionedConfig.from_dict(config)
-                for name, config in cast(dict[str, dict], self.configs).items()
+                for name, config in cast(dict[str, dict], self.configs or {}).items()
             },
             env_overrides=[
                 ComposeStackEnvOverrideDto(
@@ -262,13 +264,66 @@ class ComposeStack(TimestampedModel):
         self.refresh_from_db()
 
     def clone(self, environment: "Environment"):
-        return ComposeStack.objects.create(
+        from .processor import ComposeSpecProcessor
+
+        cloned_stack = ComposeStack.objects.create(
             slug=self.slug,
             environment=environment,
             project=self.project,
             network_alias_prefix=self.network_alias_prefix,
             deploy_token=secrets.token_hex(16),
         )
+
+        new_stack_changes: list[ComposeStackChange] = []
+
+        new_content = self.user_content
+
+        content_change = self.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+        ).first()
+        if content_change is not None:
+            new_content = cast(str, content_change.new_value)
+
+        new_content = ComposeSpecProcessor.replace_stack_urls_in_compose(
+            cast(str, new_content)
+        )
+
+        new_stack_changes.append(
+            ComposeStackChange(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+                new_value=new_content,
+                stack=cloned_stack,
+            )
+        )
+
+        # Copy env variables
+        target_snapshot = self.snapshot
+
+        compose_dict = ComposeSpecProcessor.parse_user_yaml(new_content)
+        x_env = compose_dict.get("x-zane-env", {})
+
+        for env in target_snapshot.env_overrides:
+            if env.key in x_env:
+                template_func = ComposeSpecProcessor.extract_template_expression(
+                    x_env[env.key]
+                )
+                # do not copy over `generate_domain` env variables so that they are re-created
+                if template_func == "generate_domain":
+                    continue
+
+            new_stack_changes.append(
+                ComposeStackChange(
+                    type=ComposeStackChange.ChangeType.ADD,
+                    field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
+                    new_value=env.to_dict(),
+                    stack=cloned_stack,
+                )
+            )
+
+        ComposeStackChange.objects.bulk_create(new_stack_changes)
+
+        return cloned_stack
 
 
 class ComposeStackDeployment(TimestampedModel):
