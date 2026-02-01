@@ -19,7 +19,7 @@ from ...serializers import EnvironmentSerializer
 from django.db import IntegrityError
 from ..base import ResourceConflict
 from .common import EnvRequestSerializer
-
+from compose.models import ComposeStack
 # ==========================================
 #               Environments               #
 # ==========================================
@@ -231,11 +231,14 @@ class SimpleTemplateService(serializers.ModelSerializer):
     class Meta:
         model = Service
         fields = ["id", "slug"]
+        extra_kwargs = {"slug": {"read_only": True}}
 
-    def get_fields(self):
-        fields = super().get_fields()
-        fields["slug"].read_only = True
-        return fields
+
+class SimpleComposeStackService(serializers.ModelSerializer):
+    class Meta:
+        model = ComposeStack
+        fields = ["id", "slug"]
+        extra_kwargs = {"slug": {"read_only": True}}
 
 
 class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
@@ -244,6 +247,13 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         many=True, write_only=True, queryset=Service.objects.all(), default=[]
     )
     services_to_clone = SimpleTemplateService(
+        many=True,
+        read_only=True,
+    )
+    stacks_to_clone_ids = serializers.PrimaryKeyRelatedField(
+        many=True, write_only=True, queryset=ComposeStack.objects.all(), default=[]
+    )
+    stacks_to_clone = SimpleComposeStackService(
         many=True,
         read_only=True,
     )
@@ -334,6 +344,9 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         services_to_clone: list[Service] | None = validated_data.pop(
             "services_to_clone_ids", None
         )
+        stacks_to_clone: list[ComposeStack] | None = validated_data.pop(
+            "stacks_to_clone_ids", None
+        )
         base_environment: Environment | None = validated_data.pop(
             "base_environment_id", None
         )
@@ -376,11 +389,14 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         if clone_strategy is not None:
             if clone_strategy == PreviewEnvTemplate.PreviewCloneStrategy.ALL:
                 instance.services_to_clone.set([])
-            elif (
-                clone_strategy == PreviewEnvTemplate.PreviewCloneStrategy.ONLY
-                and services_to_clone is not None
+                instance.stacks_to_clone.set([])
+            elif clone_strategy == PreviewEnvTemplate.PreviewCloneStrategy.ONLY and (
+                services_to_clone is not None or stacks_to_clone is not None
             ):
-                instance.services_to_clone.set(services_to_clone)
+                if services_to_clone:
+                    instance.services_to_clone.set(services_to_clone)
+                if stacks_to_clone:
+                    instance.stacks_to_clone.set(stacks_to_clone)
 
         if variables_data is not None:
             instance.variables.all().delete()
@@ -401,6 +417,8 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
             "slug",
             "services_to_clone",  # read
             "services_to_clone_ids",  # write
+            "stacks_to_clone",  # read
+            "stacks_to_clone_ids",  # write
             "base_environment",  # read
             "base_environment_id",  # write
             "variables",

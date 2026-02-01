@@ -17347,6 +17347,15 @@ components:
             default: []
           writeOnly: true
           default: []
+        stacks_to_clone_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            writeOnly: true
+            default: []
+          writeOnly: true
+          default: []
         base_environment_id:
           type: string
           minLength: 1
@@ -17548,6 +17557,11 @@ components:
           items:
             $ref: '#/components/schemas/SimpleTemplateService'
           readOnly: true
+        stacks_to_clone:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimpleComposeStackService'
+          readOnly: true
         base_environment:
           allOf:
           - $ref: '#/components/schemas/Environment'
@@ -17598,6 +17612,7 @@ components:
       - preview_root_domain
       - services_to_clone
       - slug
+      - stacks_to_clone
       - ttl_seconds
       - variables
     PreviewEnvTemplateRequest:
@@ -17609,6 +17624,15 @@ components:
           maxLength: 100
           pattern: ^[-a-zA-Z0-9_]+$
         services_to_clone_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            writeOnly: true
+            default: []
+          writeOnly: true
+          default: []
+        stacks_to_clone_ids:
           type: array
           items:
             type: string
@@ -18036,6 +18060,7 @@ components:
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateSlugErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateStacksToCloneIdsErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent'
@@ -18053,6 +18078,7 @@ components:
           non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent'
           slug: '#/components/schemas/ProjectsPreviewTemplatesCreateSlugErrorComponent'
           services_to_clone_ids: '#/components/schemas/ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent'
+          stacks_to_clone_ids: '#/components/schemas/ProjectsPreviewTemplatesCreateStacksToCloneIdsErrorComponent'
           base_environment_id: '#/components/schemas/ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent'
           clone_strategy: '#/components/schemas/ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent'
           ttl_seconds: '#/components/schemas/ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent'
@@ -18222,6 +18248,32 @@ components:
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateStacksToCloneIdsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - stacks_to_clone_ids
+          type: string
+          description: '* `stacks_to_clone_ids` - stacks_to_clone_ids'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `not_a_list` - not_a_list
+            * `null` - null
         detail:
           type: string
       required:
@@ -18455,6 +18507,7 @@ components:
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateStacksToCloneIdsErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent'
@@ -18472,6 +18525,7 @@ components:
           non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent'
           slug: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent'
           services_to_clone_ids: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent'
+          stacks_to_clone_ids: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateStacksToCloneIdsErrorComponent'
           base_environment_id: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent'
           clone_strategy: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent'
           ttl_seconds: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent'
@@ -18641,6 +18695,32 @@ components:
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateStacksToCloneIdsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - stacks_to_clone_ids
+          type: string
+          description: '* `stacks_to_clone_ids` - stacks_to_clone_ids'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `not_a_list` - not_a_list
+            * `null` - null
         detail:
           type: string
       required:
@@ -23866,6 +23946,26 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    SimpleComposeStackService:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - slug
+    SimpleComposeStackServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
     SimpleDeployment:
       type: object
       properties:
@@ -24050,7 +24150,6 @@ components:
         slug:
           type: string
           readOnly: true
-          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - id
