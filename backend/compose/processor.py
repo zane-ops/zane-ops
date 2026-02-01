@@ -480,7 +480,8 @@ class ComposeSpecProcessor:
     @classmethod
     def replace_stack_urls_in_compose(cls, user_content: str) -> str:
         """
-        Replace all fixed stack urls with generated ones
+        Replace all fixed stack urls with generated ones to prevent conflicts
+        with existing urls.
         """
         compose_dict = cls._parse_user_yaml(user_content)
 
@@ -514,7 +515,6 @@ class ComposeSpecProcessor:
 
                 template_func = cls._extract_template_expression(domain_value)
 
-                # We need to replace the
                 if template_func != "generate_domain":
                     # create new variable in `x-zane-env`
                     variable_name = f"__zane_override_{name}_routes_{route_index}"
