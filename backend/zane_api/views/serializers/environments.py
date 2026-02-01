@@ -267,7 +267,7 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         required=False,
     )
 
-    def validate_base_environment(self, env: Environment):
+    def validate_base_environment_id(self, env: Environment):
         if env.is_preview:
             raise serializers.ValidationError(
                 "Cannot use a preview environment as a base for templates"
