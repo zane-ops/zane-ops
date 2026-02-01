@@ -1,4 +1,3 @@
-import json
 import re
 from typing import cast
 
@@ -391,9 +390,9 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
         merge_data["object_attributes"]["action"] = "update"
         merge_data["object_attributes"]["title"] = "New title"
         merge_data["object_attributes"]["target_branch"] = "develop"
-        merge_data["object_attributes"][
-            "oldrev"
-        ] = "9532d17cf649644ebf0f4ccf95974ba3520ba27c"
+        merge_data["object_attributes"]["oldrev"] = (
+            "9532d17cf649644ebf0f4ccf95974ba3520ba27c"
+        )
         response = self.client.post(
             reverse("git_connectors:gitlab.webhook"),
             data=merge_data,
@@ -459,9 +458,9 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
         # receive merge request update event
         merge_data = deepcopy(GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA)
         merge_data["object_attributes"]["action"] = "update"
-        merge_data["object_attributes"][
-            "oldrev"
-        ] = "9532d17cf649644ebf0f4ccf95974ba3520ba27c"
+        merge_data["object_attributes"]["oldrev"] = (
+            "9532d17cf649644ebf0f4ccf95974ba3520ba27c"
+        )
         response = await self.async_client.post(
             reverse("git_connectors:gitlab.webhook"),
             data=merge_data,
@@ -686,9 +685,9 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
         event_data = deepcopy(GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA)
 
         merge_request = event_data["object_attributes"]
-        merge_request["source"][
-            "git_http_url"
-        ] = "https://gitlab.com/mohamedcherifh/private-ac"
+        merge_request["source"]["git_http_url"] = (
+            "https://gitlab.com/mohamedcherifh/private-ac"
+        )
 
         response = await self.async_client.post(
             reverse("git_connectors:gitlab.webhook"),
@@ -785,9 +784,9 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
         event_data = deepcopy(GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA)
 
         merge_request = event_data["object_attributes"]
-        merge_request["source"][
-            "git_http_url"
-        ] = "https://gitlab.com/mohamedcherifh/private-ac"
+        merge_request["source"]["git_http_url"] = (
+            "https://gitlab.com/mohamedcherifh/private-ac"
+        )
 
         response = await self.async_client.post(
             reverse("git_connectors:gitlab.webhook"),
@@ -880,9 +879,9 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
         event_data = deepcopy(GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA)
 
         merge_request = event_data["object_attributes"]
-        merge_request["source"][
-            "git_http_url"
-        ] = "https://gitlab.com/mohamedcherifh/private-ac"
+        merge_request["source"]["git_http_url"] = (
+            "https://gitlab.com/mohamedcherifh/private-ac"
+        )
 
         response = await self.async_client.post(
             reverse("git_connectors:gitlab.webhook"),
@@ -950,9 +949,9 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
         event_data = deepcopy(GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA)
 
         merge_request = event_data["object_attributes"]
-        merge_request["source"][
-            "git_http_url"
-        ] = "https://gitlab.com/mohamedcherifh/private-ac"
+        merge_request["source"]["git_http_url"] = (
+            "https://gitlab.com/mohamedcherifh/private-ac"
+        )
 
         response = await self.async_client.post(
             reverse("git_connectors:gitlab.webhook"),
@@ -1033,9 +1032,9 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
         event_data = deepcopy(GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA)
 
         merge_request = event_data["object_attributes"]
-        merge_request["source"][
-            "git_http_url"
-        ] = "https://gitlab.com/mohamedcherifh/private-ac"
+        merge_request["source"]["git_http_url"] = (
+            "https://gitlab.com/mohamedcherifh/private-ac"
+        )
 
         response = self.client.post(
             reverse("git_connectors:gitlab.webhook"),
@@ -1191,9 +1190,9 @@ class GitlabMergeRequestCommentViewTests(BaseGitlabMergeRequestViewTestCase):
         event_data = deepcopy(GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA)
 
         merge_request = event_data["object_attributes"]
-        merge_request["source"][
-            "git_http_url"
-        ] = "https://gitlab.com/mohamedcherifh/private-ac"
+        merge_request["source"]["git_http_url"] = (
+            "https://gitlab.com/mohamedcherifh/private-ac"
+        )
 
         response = self.client.post(
             reverse("git_connectors:gitlab.webhook"),

@@ -362,7 +362,7 @@ class EnvironmentDetails:
             project_id=env.project_id,  # type: ignore
             compose_stacks=[
                 ComposeStackArchiveDetails(stack=stack.snapshot)
-                for stack in env.compose_stacks.all()
+                for stack in env.compose_stacks.filter(user_content__isnull=False).all()
             ],
         )
 

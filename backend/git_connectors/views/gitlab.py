@@ -30,6 +30,7 @@ from temporal.workflows import (
     DeployGitServiceWorkflow,
     DelayedArchiveEnvWorkflow,
     ArchiveEnvWorkflow,
+    DeployComposeStackWorkflow,
 )
 
 from django.db import transaction
@@ -54,6 +55,7 @@ from temporal.shared import (
     DeploymentDetails,
     CancelDeploymentSignalInput,
     EnvironmentDetails,
+    ComposeStackDeploymentDetails,
 )
 from ..dtos import GitCommitInfo
 from ..constants import GITLAB_NULL_COMMIT
@@ -625,6 +627,28 @@ class GitlabWebhookAPIView(APIView):
                                         workflow_id=new_environment.workflow_id,
                                     )
                                 )
+
+                                for stack in new_environment.compose_stacks.all():
+                                    deployment = stack.deployments.create(
+                                        commit_message="Deploy from pull request",
+                                    )
+                                    stack.apply_pending_changes(deployment)
+
+                                    deployment.stack_snapshot = stack.snapshot.to_dict()  # type: ignore
+                                    deployment.save()
+
+                                    payload = (
+                                        ComposeStackDeploymentDetails.from_deployment(
+                                            deployment
+                                        )
+                                    )
+                                    workflows_to_run.append(
+                                        StartWorkflowArg(
+                                            DeployComposeStackWorkflow.run,
+                                            payload,
+                                            payload.workflow_id,
+                                        )
+                                    )
 
                                 for service in new_environment.services.all():
                                     if (

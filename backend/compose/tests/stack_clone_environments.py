@@ -18,6 +18,16 @@ from .fixtures import (
 from .stacks import ComposeStackAPITestBase
 import yaml
 from zane_api.tests.preview_environments import BasePreviewEnvTests
+from git_connectors.models import GitHubApp, GitlabApp
+from git_connectors.tests.fixtures import (
+    GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA,
+    GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA,
+    mock_github_comments_api,
+    get_github_signed_event_headers,
+    mock_gitlab_notes_api,
+)
+from git_connectors.serializers.github import GithubWebhookEvent
+from git_connectors.serializers.gitlab import GitlabWebhookEvent
 
 
 class CloneEnvironmentWithStackViewTests(ComposeStackAPITestBase):
@@ -331,9 +341,7 @@ class CloneEnvironmentViaPreviewTrigger(BasePreviewEnvTests, ComposeStackAPITest
 
         preview_env = cast(
             Environment,
-            p.environments.filter(is_preview=True)
-            .select_related("preview_metadata")
-            .first(),
+            p.environments.filter(is_preview=True).first(),
         )
         self.assertIsNotNone(preview_env)
 
@@ -381,8 +389,8 @@ class CloneEnvironmentViaPreviewTrigger(BasePreviewEnvTests, ComposeStackAPITest
             ),
             data={"branch_name": "feat/test-1"},
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         preview_env = cast(
             Environment,
@@ -397,3 +405,100 @@ class CloneEnvironmentViaPreviewTrigger(BasePreviewEnvTests, ComposeStackAPITest
 
         self.assertIsNotNone(stacks_in_preview.filter(slug=included_stack.slug).first())
         self.assertIsNone(stacks_in_preview.filter(slug=ignored_stack.slug).first())
+
+    @responses.activate
+    def test_clone_env_via_github_pull_request_deploy_compose_stack(self):
+        mock_github_comments_api()
+        gitapp = self.create_and_install_github_app()
+
+        github = cast(GitHubApp, gitapp.github)
+
+        # Deploy git service & compose stack
+        p, service = self.create_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+
+        _, original_stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL,
+            project=p,
+        )
+
+        # receive pull request opened event
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PULL_REQUEST,
+                GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA,
+                github.webhook_secret,
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True).first(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        stacks_in_preview = preview_env.compose_stacks
+        self.assertEqual(1, stacks_in_preview.count())
+
+        cloned_stack = cast(ComposeStack, stacks_in_preview.first())
+
+        # user content change has been applied
+        self.assertIsNotNone(cloned_stack.user_content)
+
+        # stack has been deployed
+        self.assertGreater(cloned_stack.deployments.count(), 0)
+
+    @responses.activate
+    def test_clone_env_via_gitlab_merge_request_deploy_compose_stack(self):
+        mock_gitlab_notes_api()
+        gitapp = self.create_gitlab_app()
+
+        gitlab = cast(GitlabApp, gitapp.gitlab)
+
+        # Deploy git service & compose stack
+        p, service = self.create_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://gitlab.com/fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        _, original_stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL,
+            project=p,
+        )
+
+        # receive merge request opened event
+        response = self.client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True).first(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        stacks_in_preview = preview_env.compose_stacks
+        self.assertEqual(1, stacks_in_preview.count())
+
+        cloned_stack = cast(ComposeStack, stacks_in_preview.first())
+
+        # user content change has been applied
+        self.assertIsNotNone(cloned_stack.user_content)
+
+        # stack has been deployed
+        self.assertGreater(cloned_stack.deployments.count(), 0)
