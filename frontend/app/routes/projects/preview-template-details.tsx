@@ -127,14 +127,22 @@ function EditPreviewTemplateForm({
     template.clone_strategy
   );
 
-  const { data } = useQuery({
+  const { data: serviceList } = useQuery({
     ...environmentQueries.serviceList(params.projectSlug!, baseEnvironment.name)
   });
+  const { data: stackList } = useQuery({
+    ...environmentQueries.stacksList(params.projectSlug!, baseEnvironment.name)
+  });
 
-  const serviceListPerEnv = data ?? [];
+  const serviceListPerEnv = serviceList ?? [];
+  const stackListPerEnv = stackList ?? [];
 
   const [servicesToClone, setServicesToClone] = React.useState(
     template.services_to_clone
+  );
+
+  const [stacksToClone, setStacksToClone] = React.useState(
+    template.stacks_to_clone
   );
 
   const defaultValue = `# paste your .env values here\n`;
@@ -294,7 +302,7 @@ function EditPreviewTemplateForm({
             />
             Advanced options
           </AccordionTrigger>
-          <AccordionContent className="flex flex-col gap-5 text-base">
+          <AccordionContent className="flex flex-col gap-5 text-base px-1">
             <FieldSet
               name="env_variables"
               className="flex flex-col gap-1.5 flex-1 mt-5"
@@ -428,8 +436,10 @@ function EditPreviewTemplateForm({
                     <SelectValue placeholder="Select strategy" />
                   </SelectTrigger>
                   <SelectContent className="z-999">
-                    <SelectItem value="ALL">All services</SelectItem>
-                    <SelectItem value="ONLY">Only selected services</SelectItem>
+                    <SelectItem value="ALL">All services & stacks</SelectItem>
+                    <SelectItem value="ONLY">
+                      Only selected resources
+                    </SelectItem>
                   </SelectContent>
                 </FieldSetSelect>
               </FieldSet>
@@ -477,6 +487,50 @@ function EditPreviewTemplateForm({
                         }
                       }
                       setServicesToClone(newServices);
+                    }}
+                  />
+                </FieldSet>
+
+                {stacksToClone.map((stk) => (
+                  <input
+                    type="hidden"
+                    name="stacks_to_clone_ids"
+                    value={stk.id}
+                    key={stk.id}
+                  />
+                ))}
+                <FieldSet
+                  name="selected_stacks"
+                  errors={errors.stacks_to_clone_ids}
+                  className="flex flex-col gap-2  w-full"
+                >
+                  <FieldSetLabel htmlFor="selected_stacks">
+                    Selected compose stacks
+                  </FieldSetLabel>
+
+                  <MultiSelect
+                    value={stacksToClone.map((stk) => stk.slug)}
+                    align="start"
+                    id="selected_stacks"
+                    className="w-full border-border border-solid"
+                    options={stackListPerEnv.map((stack) => stack.slug)}
+                    Icon={ChevronDownIcon}
+                    label=""
+                    order="icon-label"
+                    onValueChange={(newVal) => {
+                      const newStacks: Writeable<
+                        typeof template.stacks_to_clone
+                      > = [];
+
+                      for (const slug of newVal) {
+                        const found = stackListPerEnv.find(
+                          (srv) => srv.slug === slug
+                        );
+                        if (found) {
+                          newStacks.push(found);
+                        }
+                      }
+                      setStacksToClone(newStacks);
                     }}
                   />
                 </FieldSet>
@@ -582,6 +636,10 @@ export async function clientAction({
     .getAll("services_to_clone_ids")
     .map((val) => val.toString());
 
+  const stacks_to_clone_ids = formData
+    .getAll("stacks_to_clone_ids")
+    .map((val) => val.toString());
+
   const rootDomainString = formData
     .get("preview_root_domain")
     ?.toString()
@@ -611,7 +669,8 @@ export async function clientAction({
       : undefined,
     preview_root_domain: !rootDomainString ? undefined : rootDomainString,
     slug: formData.get("slug")?.toString(),
-    services_to_clone_ids
+    services_to_clone_ids,
+    stacks_to_clone_ids
   } satisfies RequestInput<
     "patch",
     "/api/projects/{project_slug}/preview-templates/{template_slug}/"

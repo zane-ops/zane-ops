@@ -647,6 +647,30 @@ paths:
           type: string
           pattern: ^[-a-zA-Z0-9_]+$
         required: true
+      - in: query
+        name: slug
+        schema:
+          type: string
+      - in: query
+        name: sort_by
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - -slug
+            - -updated_at
+            - slug
+            - updated_at
+        description: |-
+          Ordering
+
+          * `slug` - Slug
+          * `-slug` - Slug (descending)
+          * `updated_at` - Updated at
+          * `-updated_at` - Updated at (descending)
+        explode: false
+        style: form
       tags:
       - compose
       security:
@@ -12580,13 +12604,74 @@ components:
       required:
       - errors
       - type
+    ComposeStacksListError:
+      oneOf:
+      - $ref: '#/components/schemas/ComposeStacksListSlugErrorComponent'
+      - $ref: '#/components/schemas/ComposeStacksListSortByErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          slug: '#/components/schemas/ComposeStacksListSlugErrorComponent'
+          sort_by: '#/components/schemas/ComposeStacksListSortByErrorComponent'
     ComposeStacksListErrorResponse400:
       oneOf:
+      - $ref: '#/components/schemas/ComposeStacksListValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
+          validation_error: '#/components/schemas/ComposeStacksListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    ComposeStacksListSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ComposeStacksListSortByErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - sort_by
+          type: string
+          description: '* `sort_by` - sort_by'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ComposeStacksListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStacksListError'
+      required:
+      - errors
+      - type
     ComposeStacksRuntimeLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'

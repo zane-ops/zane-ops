@@ -175,7 +175,7 @@ export const environmentQueries = {
     queryOptions({
       queryKey: [
         ...environmentQueries.single(project_slug, env_slug).queryKey,
-        "SERVICE-LIST",
+        "SERVICE_LIST",
         filters
       ] as const,
       queryFn: async ({ signal }) => {
@@ -188,6 +188,47 @@ export const environmentQueries = {
               },
               path: {
                 slug: project_slug,
+                env_slug
+              }
+            },
+            signal
+          }
+        );
+
+        if (!data) {
+          throw notFound();
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
+
+  stacksList: (
+    project_slug: string,
+    env_slug: string,
+    filters: ProjectSearch = {}
+  ) =>
+    queryOptions({
+      queryKey: [
+        ...environmentQueries.single(project_slug, env_slug).queryKey,
+        "COMPOSE_STACK_LIST",
+        filters
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/compose/stacks/{project_slug}/{env_slug}/",
+          {
+            params: {
+              query: {
+                ...filters
+              },
+              path: {
+                project_slug,
                 env_slug
               }
             },

@@ -22,6 +22,7 @@ from .serializers import (
     CreateComposeStackFromDokployTemplateObjectRequestSerializer,
     ComposeStackToggleRequestSerializer,
     ComposeStackWebhookDeployRequestSerializer,
+    ComposeStacksListFilterSet,
 )
 from ..models import ComposeStack, ComposeStackDeployment, ComposeStackChange
 from django.db.models import QuerySet
@@ -55,12 +56,15 @@ from ..adapters import DokployComposeAdapter
 from ..processor import ComposeSpecProcessor
 from rest_framework import permissions
 from rest_framework.throttling import ScopedRateThrottle
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class ComposeStackListAPIView(ListAPIView):
     serializer_class = ComposeStackSerializer
     queryset = ComposeStack.objects.all()
     pagination_class = None
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ComposeStacksListFilterSet
 
     def get_queryset(self) -> QuerySet[ComposeStack]:  # type: ignore
         project_slug = self.kwargs["project_slug"]
@@ -88,8 +92,8 @@ class ComposeStackListAPIView(ListAPIView):
                 environment=environment,
                 project=project,
             )
+            .prefetch_related("changes", "env_overrides")
             .all()
-            .prefetch_related("changes")
         )
 
 

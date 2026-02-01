@@ -300,6 +300,7 @@ class Service(BaseService):
     volumes: Manager["Volume"]
     configs: Manager["Config"]
     project_id: str
+    environment_id: str
     shared_volumes: Manager["SharedVolume"]
 
     class ServiceType(models.TextChoices):

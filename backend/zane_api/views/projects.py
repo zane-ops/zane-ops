@@ -63,7 +63,7 @@ from temporal.shared import (
     EnvironmentDetails,
     ComposeStackArchiveDetails,
 )
-from compose.dtos import ComposeStackSnapshot
+
 from temporal.workflows import (
     CreateProjectResourcesWorkflow,
     RemoveProjectResourcesWorkflow,

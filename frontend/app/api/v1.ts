@@ -1321,7 +1321,38 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ComposeStacksCreateCreateError"][];
     };
-    ComposeStacksListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ComposeStacksListError: components["schemas"]["ComposeStacksListSlugErrorComponent"] | components["schemas"]["ComposeStacksListSortByErrorComponent"];
+    ComposeStacksListErrorResponse400: components["schemas"]["ComposeStacksListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ComposeStacksListSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ComposeStacksListSortByErrorComponent: {
+      /**
+       * @description * `sort_by` - sort_by
+       * @enum {string}
+       */
+      attr: "sort_by";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * @enum {string}
+       */
+      code: "invalid_choice";
+      detail: string;
+    };
+    ComposeStacksListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ComposeStacksListError"][];
+    };
     ComposeStacksRuntimeLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksRuntimeLogsWithContextRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksUpdateError: components["schemas"]["ComposeStacksUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ComposeStacksUpdateSlugErrorComponent"];
@@ -7935,6 +7966,18 @@ export interface operations {
   };
   compose_stacks_list: {
     parameters: {
+      query?: {
+        slug?: string;
+        /**
+         * @description Ordering
+         *
+         * * `slug` - Slug
+         * * `-slug` - Slug (descending)
+         * * `updated_at` - Updated at
+         * * `-updated_at` - Updated at (descending)
+         */
+        sort_by?: ("-slug" | "-updated_at" | "slug" | "updated_at")[];
+      };
       path: {
         env_slug: string;
         project_slug: string;

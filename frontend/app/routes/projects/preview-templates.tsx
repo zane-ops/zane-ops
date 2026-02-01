@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   BookTemplateIcon,
+  BoxesIcon,
   ChevronRightIcon,
   ContainerIcon,
   ExternalLinkIcon,
@@ -121,21 +122,42 @@ function PreviewTemplateCard({ template }: PreviewTemplateCardProps) {
               <dd>{template.base_environment.name}</dd>
             </div>
 
-            <div className="flex items-center gap-1">
-              <dt className="text-grey inline-flex items-center gap-1.5">
-                <ContainerIcon size={15} className="text-grey flex-none" />
-                <span>Services to clone:</span>
-              </dt>
-              <dd className="flex items-center gap-0.5 flex-wrap">
-                {template.clone_strategy === "ALL" ? (
-                  <span className="font-mono">{`[all services]`}</span>
-                ) : (
-                  template.services_to_clone.map((v) => (
-                    <Code key={v.id}>{v.slug}</Code>
-                  ))
-                )}
-              </dd>
-            </div>
+            {(template.clone_strategy === "ALL" ||
+              template.services_to_clone.length > 0) && (
+              <div className="flex items-center gap-1">
+                <dt className="text-grey inline-flex items-center gap-1.5">
+                  <ContainerIcon size={15} className="text-grey flex-none" />
+                  <span>Services to clone:</span>
+                </dt>
+                <dd className="flex items-center gap-0.5 flex-wrap">
+                  {template.clone_strategy === "ALL" ? (
+                    <span className="font-mono">{`[all services]`}</span>
+                  ) : (
+                    template.services_to_clone.map((v) => (
+                      <Code key={v.id}>{v.slug}</Code>
+                    ))
+                  )}
+                </dd>
+              </div>
+            )}
+            {(template.clone_strategy === "ALL" ||
+              template.stacks_to_clone.length > 0) && (
+              <div className="flex items-center gap-1">
+                <dt className="text-grey inline-flex items-center gap-1.5">
+                  <BoxesIcon size={15} className="text-grey flex-none" />
+                  <span>Stacks to clone:</span>
+                </dt>
+                <dd className="flex items-center gap-0.5 flex-wrap">
+                  {template.clone_strategy === "ALL" ? (
+                    <span className="font-mono">{`[all stacks]`}</span>
+                  ) : (
+                    template.stacks_to_clone.map((v) => (
+                      <Code key={v.id}>{v.slug}</Code>
+                    ))
+                  )}
+                </dd>
+              </div>
+            )}
 
             <div className="flex items-center gap-1">
               <dt className="text-grey inline-flex items-center gap-1.5">

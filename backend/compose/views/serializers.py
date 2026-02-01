@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import tomllib
 from typing import Any, cast
+import django_filters
 from rest_framework import serializers
 import yaml
 from ..models import (
@@ -252,6 +253,17 @@ class ComposeStackDeploymentSerializer(serializers.ModelSerializer):
 
 class ComposeStackDeployRequestSerializer(serializers.Serializer):
     commit_message = serializers.CharField(default="Update stack")
+
+
+class ComposeStacksListFilterSet(django_filters.FilterSet):
+    sort_by = django_filters.OrderingFilter(
+        fields=["slug", "updated_at"],
+    )
+    slug = django_filters.CharFilter(lookup_expr="icontains")
+
+    class Meta:
+        model = ComposeStack
+        fields = ["slug"]
 
 
 class ComposeStackWebhookDeployRequestSerializer(serializers.Serializer):
