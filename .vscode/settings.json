@@ -23,5 +23,6 @@
   },
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff"
-  }
+  },
+  "python.REPL.enableREPLSmartSend": false
 }
