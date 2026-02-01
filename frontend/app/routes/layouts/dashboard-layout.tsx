@@ -498,7 +498,6 @@ function Footer() {
                   className="flex items-center gap-2 pl-2.5"
                   href={link.url}
                   target="_blank"
-                  rel="noreferrer"
                 >
                   {link.icon}
                   {link.name}
@@ -510,7 +509,6 @@ function Footer() {
                 className={cn("flex underline items-center gap-2")}
                 href={link.url}
                 target="_blank"
-                rel="noreferrer"
               >
                 {link.icon}
                 {link.name}
@@ -571,7 +569,6 @@ function Footer() {
                   className="underline font-semibold"
                   href={`https://github.com/zane-ops/zane-ops/tree/${data.commit_sha}`}
                   target="_blank"
-                  rel="noreferrer"
                 >
                   #{data.commit_sha.substring(0, 7)}
                 </a>
@@ -586,7 +583,6 @@ function Footer() {
                   className="underline font-semibold"
                   href={image_version_url}
                   target="_blank"
-                  rel="noreferrer"
                 >
                   {data.image_version}
                 </a>

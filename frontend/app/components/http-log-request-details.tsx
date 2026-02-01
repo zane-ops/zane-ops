@@ -349,7 +349,6 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
               href={`//${log.request_host}${log.request_path}`}
               target="_blank"
               className="text-link underline break-all"
-              rel="noreferrer"
             >
               {log.request_path}
             </a>

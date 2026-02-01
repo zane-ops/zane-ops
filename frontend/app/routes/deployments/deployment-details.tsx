@@ -239,7 +239,6 @@ export default function DeploymentDetailsPage({
                     href={deployment.service_snapshot.repository_url ?? "#"}
                     target="_blank"
                     className="underline text-link inline-flex gap-1 items-center"
-                    rel="noreferrer"
                   >
                     {deployment.service_snapshot.repository_url}{" "}
                     <ExternalLinkIcon size={15} />

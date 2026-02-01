@@ -63,7 +63,7 @@ export function DockerServiceCard({
   onToggleSelect
 }: DockerServiceCardProps) {
   const [imageNotFound, setImageNotFound] = React.useState(false);
-  let iconSrc = getDockerImageIconURL(image);
+  const iconSrc = getDockerImageIconURL(image);
 
   return (
     <Card className="rounded-2xl flex group flex-col h-[220px] bg-toggle relative ring-1 ring-transparent hover:ring-primary focus-within:ring-primary transition-colors duration-300">
@@ -161,7 +161,6 @@ export function DockerServiceCard({
         {!!url && (
           <a
             href={`//${url}`}
-            target="_blank"
             className="text-sm flex items-center gap-2 text-link z-10 relative hover:underline"
           >
             <LinkIcon className="flex-none" size={15} />
