@@ -2049,6 +2049,7 @@ class Environment(TimestampedModel):
         from ..serializers import ServiceSerializer
         from ..views.helpers import apply_changes_to_snapshot, diff_service_snapshots
         from compose.models import ComposeStackChange
+        from compose.processor import ComposeSpecProcessor
 
         if preview_data is not None:
             assert preview_data.template.base_environment.id == self.id
@@ -2161,6 +2162,10 @@ class Environment(TimestampedModel):
             ).first()
             if content_change is not None:
                 new_content = cast(str, content_change.new_value)
+
+            new_content = ComposeSpecProcessor.replace_stack_urls_in_compose(
+                new_content
+            )
 
             new_stack_changes.append(
                 ComposeStackChange(

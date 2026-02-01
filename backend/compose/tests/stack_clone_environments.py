@@ -1,22 +1,18 @@
+from typing import cast
+
+import docker.errors
+
 from django.urls import reverse
 from rest_framework import status
-import responses
-import requests
-from django.conf import settings
+from zane_api.models import Environment
+from zane_api.utils import jprint
 
-from zane_api.models import Environment, SharedEnvVariable
-from ..models import ComposeStack, ComposeStackChange, ComposeStackEnvOverride
+from ..models import ComposeStack, ComposeStackChange
 from .fixtures import (
     DOCKER_COMPOSE_MINIMAL,
     DOCKER_COMPOSE_WEB_SERVICE,
 )
-from typing import cast
-from zane_api.utils import jprint
-from temporal.helpers import ZaneProxyClient
-
 from .stacks import ComposeStackAPITestBase
-from ..dtos import ComposeStackUrlRouteDto
-import docker.errors
 
 
 class CloneEnvironmentWithStackViewTests(ComposeStackAPITestBase):
@@ -176,7 +172,7 @@ class CloneEnvironmentWithStackURLsViewTests(ComposeStackAPITestBase):
                 "zane_api:projects.environment.clone",
                 kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
-            data={"name": "staging"},
+            data={"name": "staging", "deploy_after_clone": True},
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -188,19 +184,22 @@ class CloneEnvironmentWithStackURLsViewTests(ComposeStackAPITestBase):
 
         cloned_stack = cast(ComposeStack, stacks_in_staging.first())
 
-        self.assertEqual(1, cloned_stack.unapplied_changes.count())
-
-        content_change = cast(
-            ComposeStackChange,
-            cloned_stack.unapplied_changes.filter(
-                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT
-            ).first(),
-        )
-        self.assertIsNotNone(content_change)
+        self.assertIsNotNone(cloned_stack.user_content)
         self.assertNotIn(
-            "hello.127-0-0-1.sslip.io", cast(str, content_change.new_value)
+            "hello.127-0-0-1.sslip.io", cast(str, cloned_stack.user_content)
+        )
+
+        print(
+            "========= original =========",
+            original_stack.user_content,
+            sep="\n",
+        )
+        print(
+            "========= cloned =========",
+            cloned_stack.user_content,
+            sep="\n",
         )
 
         # it should create an env override in compose stack file
-        self.assertIn("x-zane-env", cast(str, content_change.new_value))
-        self.assertIn("{{ generate_domain }}", cast(str, content_change.new_value))
+        self.assertIn("x-zane-env", cast(str, cloned_stack.user_content))
+        self.assertIn("{{ generate_domain }}", cast(str, cloned_stack.user_content))

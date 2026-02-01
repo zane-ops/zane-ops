@@ -482,9 +482,9 @@ class ComposeSpecProcessor:
         """
         Replace all fixed stack urls with generated ones
         """
-        compose = cls._parse_user_yaml(user_content)
+        compose_dict = cls._parse_user_yaml(user_content)
 
-        spec = ComposeStackSpec.from_dict(compose)
+        spec = ComposeStackSpec.from_dict(compose_dict)
 
         environ = spec.to_dict()["x-zane-env"]
 
@@ -494,10 +494,6 @@ class ComposeSpecProcessor:
 
             labels: Dict[str, str] = service.deploy["labels"]
 
-            # Extract routes
-            routes = []
-            route_dict = {}
-
             for label in labels:
                 domain_label_regex = re.compile(r"^zane\.http\.routes\.(\d+)\.domain$")
 
@@ -506,17 +502,31 @@ class ComposeSpecProcessor:
                     continue
 
                 route_index = matches.group(1)
-                domain = str(labels.get(f"zane.http.routes.{route_index}.domain"))
+                domain_label_key = f"zane.http.routes.{route_index}.domain"
 
-                env_ref_pattern = re.compile(
-                    r"^\$\{([A-Za-z_][A-Za-z0-9_]*)(?:\-.*)?\}$"
+                domain = str(labels[domain_label_key])
+
+                domain_value = expand(
+                    domain,
+                    environ=environ,
+                    surrounded_vars_only=True,
                 )
 
-                ref_matches = env_ref_pattern.match(domain)
-                if ref_matches is not None:
-                    env = matches.group(1)
+                template_func = cls._extract_template_expression(domain_value)
 
-        return ""
+                # We need to replace the
+                if template_func != "generate_domain":
+                    # create new variable in `x-zane-env`
+                    variable_name = f"__zane_override_{name}_routes_{route_index}"
+                    environ[variable_name] = "{{ generate_domain }}"
+                    labels[domain_label_key] = f"${{{variable_name}}}"
+                continue
+
+            # update labels
+            compose_dict["services"][name]["deploy"]["labels"] = labels
+            compose_dict["x-zane-env"] = environ
+
+        return yaml.safe_dump(compose_dict)
 
     @classmethod
     def process_compose_spec(
