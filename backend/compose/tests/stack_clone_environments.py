@@ -3,8 +3,9 @@ from typing import cast
 import docker.errors
 
 from django.urls import reverse
+import responses
 from rest_framework import status
-from zane_api.models import Environment
+from zane_api.models import Environment, PreviewEnvTemplate
 from zane_api.utils import jprint
 
 from ..models import ComposeStack, ComposeStackChange, ComposeStackEnvOverride
@@ -16,6 +17,7 @@ from .fixtures import (
 )
 from .stacks import ComposeStackAPITestBase
 import yaml
+from zane_api.tests.preview_environments import BasePreviewEnvTests
 
 
 class CloneEnvironmentWithStackViewTests(ComposeStackAPITestBase):
@@ -298,3 +300,100 @@ class CloneEnvironmentWithStackURLsViewTests(ComposeStackAPITestBase):
         # it should create an env override in compose stack file
         self.assertIn("x-zane-env", cast(str, cloned_stack.user_content))
         self.assertIn("{{ generate_domain }}", cast(str, cloned_stack.user_content))
+
+
+class CloneEnvironmentViaPreviewTrigger(BasePreviewEnvTests, ComposeStackAPITestBase):
+    @responses.activate
+    def test_clone_env_via_preview_clone_stacks_in_preview(self):
+        gitapp = self.create_and_install_github_app()
+
+        # Deploy git service & compose stack
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        _, original_stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL,
+            project=p,
+        )
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        stacks_in_preview = preview_env.compose_stacks
+        self.assertEqual(1, stacks_in_preview.count())
+
+        cloned_stack = cast(ComposeStack, stacks_in_preview.first())
+
+        # user content change has been applied
+        self.assertIsNotNone(cloned_stack.user_content)
+
+        # stack has been deployed
+        self.assertGreater(cloned_stack.deployments.count(), 0)
+
+    @responses.activate
+    def test_clone_env_via_preview_with_ignored_stacks_in_template_do_not_clone_those_stacks(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+
+        # Deploy git service & compose stack
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        _, ignored_stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL, project=p, slug="ignored"
+        )
+
+        _, included_stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL, project=p, slug="included"
+        )
+
+        template = p.default_preview_template
+        template.clone_strategy = PreviewEnvTemplate.PreviewCloneStrategy.ONLY
+        template.stacks_to_clone.add(included_stack)
+        template.save()
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        stacks_in_preview = preview_env.compose_stacks
+        self.assertEqual(1, stacks_in_preview.count())
+
+        self.assertIsNotNone(stacks_in_preview.filter(slug=included_stack.slug).first())
+        self.assertIsNone(stacks_in_preview.filter(slug=ignored_stack.slug).first())

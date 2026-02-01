@@ -181,7 +181,6 @@ class CloneEnviromentAPIView(APIView):
                             payload.workflow_id,
                         )
                     )
-                    pass
                 for service in new_environment.services.all():
                     if service.type == Service.ServiceType.DOCKER_REGISTRY:
                         workflow = DeployDockerServiceWorkflow.run
@@ -863,6 +862,24 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                     new_environment.workflow_id,
                 )
             ]
+
+            for stack in new_environment.compose_stacks.all():
+                deployment = stack.deployments.create(
+                    commit_message="Deploy from clone",
+                )
+                stack.apply_pending_changes(deployment)
+
+                deployment.stack_snapshot = stack.snapshot.to_dict()  # type: ignore
+                deployment.save()
+
+                payload = ComposeStackDeploymentDetails.from_deployment(deployment)
+                workflows_to_run.append(
+                    StartWorkflowArg(
+                        DeployComposeStackWorkflow.run,
+                        payload,
+                        payload.workflow_id,
+                    )
+                )
 
             for service in new_environment.services.all():
                 if service.type == Service.ServiceType.DOCKER_REGISTRY:

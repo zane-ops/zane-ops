@@ -2081,7 +2081,7 @@ class Environment(TimestampedModel):
 
         # Step 2: clone services
         if preview_data is None:
-            services_to_clone = (
+            services_to_clone = list(
                 self.services.select_related(
                     "healthcheck",
                     "project",
@@ -2097,9 +2097,9 @@ class Environment(TimestampedModel):
                 )
                 .all()
             )
-            stacks_to_clone = self.compose_stacks.prefetch_related(
-                "changes", "env_overrides"
-            ).all()
+            stacks_to_clone = list(
+                self.compose_stacks.prefetch_related("changes", "env_overrides").all()
+            )
         else:
             match preview_data.template.clone_strategy:
                 case PreviewEnvTemplate.PreviewCloneStrategy.ALL:
@@ -2118,6 +2118,11 @@ class Environment(TimestampedModel):
                             "configs",
                         )
                         .all()
+                    )
+                    stacks_to_clone = list(
+                        self.compose_stacks.prefetch_related(
+                            "changes", "env_overrides"
+                        ).all()
                     )
 
                 case PreviewEnvTemplate.PreviewCloneStrategy.ONLY:
@@ -2140,6 +2145,15 @@ class Environment(TimestampedModel):
                             "changes",
                             "configs",
                         )
+                        .all()
+                    )
+                    stacks_to_clone = list(
+                        self.compose_stacks.filter(
+                            id__in=preview_data.template.stacks_to_clone.values_list(
+                                "id", flat=True
+                            )
+                        )
+                        .prefetch_related("changes", "env_overrides")
                         .all()
                     )
 
@@ -2266,6 +2280,9 @@ class PreviewEnvTemplate(models.Model):
     preview_metas: Manager["PreviewEnvMetadata"]
     variables: Manager["SharedTemplateEnvVariable"]
 
+    if TYPE_CHECKING:
+        stacks_to_clone: RelatedManager["ComposeStack"]
+
     class PreviewCloneStrategy(models.TextChoices):
         ALL = "ALL", _("All services")
         ONLY = "ONLY", _("Only specific services")
@@ -2284,6 +2301,10 @@ class PreviewEnvTemplate(models.Model):
     )
     services_to_clone = models.ManyToManyField(
         to=Service,
+        related_name="preview_templates",
+    )
+    stacks_to_clone = models.ManyToManyField(
+        to="compose.ComposeStack",
         related_name="preview_templates",
     )
     ttl_seconds = models.PositiveIntegerField(null=True)

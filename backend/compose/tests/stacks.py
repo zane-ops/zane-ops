@@ -158,11 +158,10 @@ class ComposeStackAPITestBase(AuthAPITestCase):
         return project, stack
 
     def create_and_deploy_compose_stack(
-        self,
-        content: str,
-        slug="my-stack",
+        self, content: str, slug="my-stack", project: Project | None = None
     ):
-        project = self.create_project(slug="compose")
+        if not project:
+            project = self.create_project(slug="compose")
 
         create_stack_payload = {
             "slug": slug,
