@@ -524,9 +524,19 @@ class ComposeSpecProcessor:
 
             # update labels
             compose_dict["services"][name]["deploy"]["labels"] = labels
-            compose_dict["x-zane-env"] = environ
+            if environ:
+                compose_dict["x-zane-env"] = environ
 
-        return yaml.safe_dump(compose_dict)
+        # we need to reorder the compose file properties
+        compose = {}
+        if compose_dict.get("version"):
+            compose["version"] = compose_dict.pop("version")
+        if compose_dict.get("x-zane-env"):
+            compose["x-zane-env"] = compose_dict.pop("x-zane-env")
+        compose["services"] = compose_dict.pop("services")
+        compose.update(compose_dict)
+
+        return yaml.safe_dump(compose, sort_keys=False)
 
     @classmethod
     def process_compose_spec(
