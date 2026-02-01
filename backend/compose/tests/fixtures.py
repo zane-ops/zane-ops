@@ -245,6 +245,12 @@ services:
     image: valkey/valkey:alpine
 """
 
+INVALID_COMPOSE_VAR_SYNTAX = """
+services:
+  redis:
+    image: valkey/valkey:$${ IMAGE_VERSION:-alpine}
+"""
+
 
 INVALID_COMPOSE_NO_IMAGE = """
 services:

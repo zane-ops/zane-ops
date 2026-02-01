@@ -33,6 +33,7 @@ from .fixtures import (
     DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES,
     INVALID_COMPOSE_EMPTY,
     INVALID_COMPOSE_EMPTY_SERVICES,
+    INVALID_COMPOSE_VAR_SYNTAX,
     INVALID_COMPOSE_NO_IMAGE,
     INVALID_COMPOSE_NO_SERVICES,
     INVALID_COMPOSE_RELATIVE_BIND_VOLUME,
@@ -1495,6 +1496,29 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         create_stack_payload = {
             "slug": "empty-compose",
             "user_content": INVALID_COMPOSE_EMPTY,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+
+    def test_create_compose_stack_with_invalid_variable_syntax_fails(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "empty-compose",
+            "user_content": INVALID_COMPOSE_VAR_SYNTAX,
         }
 
         response = self.client.post(

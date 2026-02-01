@@ -33,6 +33,7 @@ from zane_api.models import URL, DeploymentURL
 from container_registry.models import BuildRegistry
 from django.db.models import Q
 import uuid
+from django.db import connection
 
 
 class ComposeStackSpecSerializer(serializers.Serializer):
@@ -153,7 +154,6 @@ class ComposeStackURLRouteSerializer(serializers.Serializer):
         exclude_stack_id: str | None = None,
     ):
         """Check if the URL conflicts with any deployed compose stack URLs using raw SQL."""
-        from django.db import connection
 
         # Build the exclusion clause
         exclude_clause = ""
@@ -370,6 +370,12 @@ class ComposeSpecProcessor:
                     f"Invalid compose file: configs.{name} Additional property file is not allowed, please use config.content instead"
                 )
 
+        # check that no error is raised when expanding variables
+        try:
+            expand(user_content, environ={}, surrounded_vars_only=True)
+        except Exception as e:
+            raise ValidationError(f"Invalid compose file: {e}")
+
     @classmethod
     def _parse_user_yaml(cls, content: str) -> Dict[str, Dict[str, Any]]:
         """
@@ -470,6 +476,47 @@ class ComposeSpecProcessor:
                 raise ValidationError(
                     f"Unsupported template function `{template_func}`"
                 )
+
+    @classmethod
+    def replace_stack_urls_in_compose(cls, user_content: str) -> str:
+        """
+        Replace all fixed stack urls with generated ones
+        """
+        compose = cls._parse_user_yaml(user_content)
+
+        spec = ComposeStackSpec.from_dict(compose)
+
+        environ = spec.to_dict()["x-zane-env"]
+
+        for name, service in spec.services.items():
+            if not service.deploy or not service.deploy.get("labels"):
+                continue
+
+            labels: Dict[str, str] = service.deploy["labels"]
+
+            # Extract routes
+            routes = []
+            route_dict = {}
+
+            for label in labels:
+                domain_label_regex = re.compile(r"^zane\.http\.routes\.(\d+)\.domain$")
+
+                matches = domain_label_regex.match(label)
+                if matches is None:
+                    continue
+
+                route_index = matches.group(1)
+                domain = str(labels.get(f"zane.http.routes.{route_index}.domain"))
+
+                env_ref_pattern = re.compile(
+                    r"^\$\{([A-Za-z_][A-Za-z0-9_]*)(?:\-.*)?\}$"
+                )
+
+                ref_matches = env_ref_pattern.match(domain)
+                if ref_matches is not None:
+                    env = matches.group(1)
+
+        return ""
 
     @classmethod
     def process_compose_spec(
