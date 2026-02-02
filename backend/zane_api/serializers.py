@@ -563,6 +563,8 @@ class EnvironmentWithVariablesSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     healthy_services = serializers.IntegerField(read_only=True)
     total_services = serializers.IntegerField(read_only=True)
+    total_stack_services = serializers.IntegerField(read_only=True)
+    healthy_stack_services = serializers.IntegerField(read_only=True)
     environments = SimpleEnvironmentSerializer(many=True, read_only=True)
 
     class Meta:
@@ -576,4 +578,6 @@ class ProjectSerializer(serializers.ModelSerializer):
             "updated_at",
             "healthy_services",
             "total_services",
+            "total_stack_services",
+            "healthy_stack_services",
         ]
