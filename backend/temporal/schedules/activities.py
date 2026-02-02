@@ -1,14 +1,13 @@
 import asyncio
 import dataclasses
 from datetime import timedelta
-from typing import Any, Dict, List, cast
+from typing import Dict, List, cast
 from rest_framework import status
 from temporalio import workflow, activity
 from temporalio.exceptions import ApplicationError
 
 
 from ..shared import (
-    CleanupResult,
     HealthcheckDeploymentDetails,
     DeploymentResult,
     ServiceMetricsResult,
@@ -41,7 +40,7 @@ with workflow.unsafe.imports_passed_through():
     from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
     from container_registry.models import BuildRegistry
     from compose.models import ComposeStack, ComposeStackMetrics
-    from compose.dtos import ComposeStackServiceStatus, ComposeStackServiceStatusDto
+    from compose.dtos import ComposeStackServiceStatusDto
     from docker.models.services import Service as DockerService
     from ..helpers import (
         get_compose_stack_swarm_service_status,

@@ -581,6 +581,9 @@ async def get_compose_stack_swarm_service_status(
         # default is replicated
         mode_type = "replicated"
 
+    # Determine status based on mode
+    is_job = mode_type in ["replicated-job", "global-job"]
+
     # Get counts from ServiceStatus
     running_replicas = service_status["RunningTasks"]
     desired_replicas = service_status["DesiredTasks"]
@@ -588,9 +591,6 @@ async def get_compose_stack_swarm_service_status(
 
     # Get all tasks for the tasks list
     tasks = [DockerSwarmTask.from_dict(task) for task in service.tasks()]
-
-    # Determine status based on mode
-    is_job = mode_type in ["replicated-job", "global-job"]
 
     if is_job:
         # For jobs, healthy means completed >= desired
