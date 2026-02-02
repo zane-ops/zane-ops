@@ -53,9 +53,13 @@ from asgiref.sync import sync_to_async
 
 if TYPE_CHECKING:
     from container_registry.models import SharedRegistryCredentials  # noqa: F401
+    from compose.models import ComposeStack
+    from django.db.models.manager import RelatedManager
 
 
 class Project(TimestampedModel):
+    if TYPE_CHECKING:
+        compose_stacks: RelatedManager["ComposeStack"]
     environments: Manager["Environment"]
     preview_templates: Manager["PreviewEnvTemplate"]
     services: Manager["Service"]
@@ -296,6 +300,7 @@ class Service(BaseService):
     volumes: Manager["Volume"]
     configs: Manager["Config"]
     project_id: str
+    environment_id: str
     shared_volumes: Manager["SharedVolume"]
 
     class ServiceType(models.TextChoices):
@@ -1828,18 +1833,16 @@ class DeploymentChange(BaseDeploymentChange):
         )
 
 
-class Log(models.Model):
+class HttpLog(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(default=timezone.now)
     service_id = models.CharField(null=True)
     deployment_id = models.CharField(null=True)
+    stack_id = models.CharField(null=True)
+    registry_id = models.CharField(null=True)
+    stack_service_name = models.CharField(null=True)
     time = models.DateTimeField()
 
-    class Meta:
-        abstract = True
-
-
-class HttpLog(Log):
     class RequestMethod(models.TextChoices):
         GET = "GET", _("GET")
         POST = "POST", _("POST")
@@ -1872,13 +1875,20 @@ class HttpLog(Log):
     request_path = models.CharField(max_length=2000)
     request_query = models.CharField(max_length=2000, null=True, blank=True)
     request_ip = models.GenericIPAddressField()
-    request_id = models.CharField(null=True, max_length=255)
+    request_uuid = models.CharField(
+        null=True,
+        max_length=255,
+        unique=True,
+    )
     request_user_agent = models.TextField(blank=True, null=True)
 
     class Meta:
         indexes = [
             models.Index(fields=["deployment_id"]),
             models.Index(fields=["service_id"]),
+            models.Index(fields=["registry_id"]),
+            models.Index(fields=["stack_id"]),
+            models.Index(fields=["stack_service_name"]),
             models.Index(fields=["request_method"]),
             models.Index(fields=["status"]),
             models.Index(fields=["request_host"]),
@@ -1886,7 +1896,7 @@ class HttpLog(Log):
             models.Index(fields=["time"]),
             models.Index(fields=["request_user_agent"]),
             models.Index(fields=["request_ip"]),
-            models.Index(fields=["request_id"]),
+            models.Index(fields=["request_uuid"]),
             models.Index(fields=["request_query"]),
         ]
         ordering = ("-time",)
@@ -1986,6 +1996,8 @@ class CloneEnvPreviewPayload:
 
 
 class Environment(TimestampedModel):
+    if TYPE_CHECKING:
+        compose_stacks: RelatedManager["ComposeStack"]
     services: Manager[Service]
     variables: Manager["SharedEnvVariable"]
     PRODUCTION_ENV_NAME = "production"
@@ -2066,10 +2078,11 @@ class Environment(TimestampedModel):
                 ]
             )
         services_to_clone: Sequence[Service] = []
+        stacks_to_clone: Sequence["ComposeStack"] = []
 
         # Step 2: clone services
         if preview_data is None:
-            services_to_clone = (
+            services_to_clone = list(
                 self.services.select_related(
                     "healthcheck",
                     "project",
@@ -2084,6 +2097,9 @@ class Environment(TimestampedModel):
                     "configs",
                 )
                 .all()
+            )
+            stacks_to_clone = list(
+                self.compose_stacks.prefetch_related("changes", "env_overrides").all()
             )
         else:
             match preview_data.template.clone_strategy:
@@ -2103,6 +2119,11 @@ class Environment(TimestampedModel):
                             "configs",
                         )
                         .all()
+                    )
+                    stacks_to_clone = list(
+                        self.compose_stacks.prefetch_related(
+                            "changes", "env_overrides"
+                        ).all()
                     )
 
                 case PreviewEnvTemplate.PreviewCloneStrategy.ONLY:
@@ -2127,15 +2148,29 @@ class Environment(TimestampedModel):
                         )
                         .all()
                     )
+                    stacks_to_clone = list(
+                        self.compose_stacks.filter(
+                            id__in=preview_data.template.stacks_to_clone.values_list(
+                                "id", flat=True
+                            )
+                        )
+                        .prefetch_related("changes", "env_overrides")
+                        .all()
+                    )
 
             if preview_data.metadata.service.id not in [
                 service.id for service in services_to_clone
             ]:
                 services_to_clone.append(preview_data.metadata.service)
 
+        for original_stack in stacks_to_clone:
+            original_stack.clone(environment=new_environment)
+
         for service in services_to_clone:
             cloned_service = service.clone(environment=new_environment)
-            current = cast(ReturnDict, ServiceSerializer(cloned_service).data)
+            current = ServiceSnapshot.from_dict(
+                cast(dict, ServiceSerializer(cloned_service).data)
+            )
 
             target_without_changes = cast(ReturnDict, ServiceSerializer(service).data)
             target = apply_changes_to_snapshot(
@@ -2246,6 +2281,9 @@ class PreviewEnvTemplate(models.Model):
     preview_metas: Manager["PreviewEnvMetadata"]
     variables: Manager["SharedTemplateEnvVariable"]
 
+    if TYPE_CHECKING:
+        stacks_to_clone: RelatedManager["ComposeStack"]
+
     class PreviewCloneStrategy(models.TextChoices):
         ALL = "ALL", _("All services")
         ONLY = "ONLY", _("Only specific services")
@@ -2264,6 +2302,10 @@ class PreviewEnvTemplate(models.Model):
     )
     services_to_clone = models.ManyToManyField(
         to=Service,
+        related_name="preview_templates",
+    )
+    stacks_to_clone = models.ManyToManyField(
+        to="compose.ComposeStack",
         related_name="preview_templates",
     )
     ttl_seconds = models.PositiveIntegerField(null=True)

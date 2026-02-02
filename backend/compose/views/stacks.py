@@ -1,3 +1,4 @@
+import secrets
 from typing import Any, cast
 from rest_framework.generics import (
     CreateAPIView,
@@ -12,7 +13,6 @@ from .serializers import (
     ComposeStackDeployRequestSerializer,
     ComposeStackDeploymentSerializer,
     ComposeStackSnapshotSerializer,
-    ComposeStackArchiveRequestSerializer,
     ComposeContentFieldChangeSerializer,
     ComposeEnvOverrideItemChangeSerializer,
     ComposeStackFieldChangeRequestSerializer,
@@ -21,6 +21,8 @@ from .serializers import (
     CreateComposeStackFromDokployTemplateRequestSerializer,
     CreateComposeStackFromDokployTemplateObjectRequestSerializer,
     ComposeStackToggleRequestSerializer,
+    ComposeStackWebhookDeployRequestSerializer,
+    ComposeStacksListFilterSet,
 )
 from ..models import ComposeStack, ComposeStackDeployment, ComposeStackChange
 from django.db.models import QuerySet
@@ -52,12 +54,17 @@ from ..dtos import ComposeStackSnapshot, DokployTemplate, ComposeStackEnvOverrid
 from rest_framework.serializers import Serializer
 from ..adapters import DokployComposeAdapter
 from ..processor import ComposeSpecProcessor
+from rest_framework import permissions
+from rest_framework.throttling import ScopedRateThrottle
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class ComposeStackListAPIView(ListAPIView):
     serializer_class = ComposeStackSerializer
     queryset = ComposeStack.objects.all()
     pagination_class = None
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ComposeStacksListFilterSet
 
     def get_queryset(self) -> QuerySet[ComposeStack]:  # type: ignore
         project_slug = self.kwargs["project_slug"]
@@ -85,8 +92,8 @@ class ComposeStackListAPIView(ListAPIView):
                 environment=environment,
                 project=project,
             )
+            .prefetch_related("changes", "env_overrides")
             .all()
-            .prefetch_related("changes")
         )
 
 
@@ -360,11 +367,51 @@ class ComposeStackDetailsAPIView(RetrieveUpdateAPIView):
         return stack
 
 
+class ComposeStackRegenerateDeployTokenAPIView(APIView):
+    serializer_class = ComposeStackSerializer
+
+    @extend_schema(
+        operation_id="regenerateComposeStackDeployToken",
+        summary="Regenerate a compose stack deploy token",
+    )
+    def put(self, request: Request, project_slug: str, env_slug: str, slug: str):
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=self.request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = ComposeStack.objects.filter(
+                environment=environment,
+                project=project,
+                slug=slug,
+            ).get()
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+
+        stack.deploy_token = secrets.token_hex(16)
+        stack.save()
+        serializer = ComposeStackUpdateSerializer(stack)
+        return Response(data=serializer.data)
+
+
 class ComposeStackArchiveAPIView(APIView):
     @transaction.atomic()
     @extend_schema(
         responses={204: None},
-        request=ComposeStackArchiveRequestSerializer,
+        request=None,
         operation_id="archiveComposeStack",
         summary="Archive a compose stack",
     )
@@ -399,18 +446,8 @@ class ComposeStackArchiveAPIView(APIView):
                 detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
             )
 
-        form = ComposeStackArchiveRequestSerializer(data=request.data or {})
-        form.is_valid(raise_exception=True)
-
-        data = cast(dict[str, bool], form.data)
-
         if stack.deployments.count() > 0:
-            snapshot_dict = cast(dict, ComposeStackSnapshotSerializer(stack).data)
-            payload = ComposeStackArchiveDetails(
-                stack=ComposeStackSnapshot.from_dict(snapshot_dict),
-                delete_configs=data["delete_configs"],
-                delete_volumes=data["delete_volumes"],
-            )
+            payload = ComposeStackArchiveDetails(stack=stack.snapshot)
             workflow_id = stack.archive_workflow_id
 
             def commit_callback():
@@ -536,9 +573,7 @@ class ComposeStackReDeployAPIView(APIView):
                 detail=f"A deployment with the hash `{hash}` does not exist for this stack."
             )
 
-        current_snapshot = ComposeStackSnapshot.from_dict(
-            cast(dict, ComposeStackSnapshotSerializer(stack).data)
-        )
+        current_snapshot = stack.snapshot
         target_snapshot = ComposeStackSnapshot.from_dict(
             cast(dict, deployment.stack_snapshot)
         )
@@ -613,13 +648,84 @@ class ComposeStackReDeployAPIView(APIView):
             TemporalClient.start_workflow(
                 DeployComposeStackWorkflow.run,
                 arg=payload,
-                id=deployment.workflow_id,
+                id=payload.workflow_id,
             )
 
         transaction.on_commit(commit_callback)
 
         serializer = ComposeStackDeploymentSerializer(new_deployment)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+class ComposeStackWebhookDeployAPIView(APIView):
+    serializer_class = ComposeStackDeploymentSerializer
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "deploy_webhook"
+
+    @transaction.atomic()
+    @extend_schema(
+        request=ComposeStackWebhookDeployRequestSerializer,
+        responses={202: None},
+        operation_id="webhookDeployComposeStack",
+        summary="Webhook to deploy a compose stack",
+        description="trigger a new deployment.",
+    )
+    def put(self, request: Request, deploy_token: str):
+        try:
+            stack = (
+                ComposeStack.objects.filter(
+                    deploy_token=deploy_token,
+                ).prefetch_related("changes", "env_overrides")
+            ).get()
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with a deploy_token `{deploy_token}` doesn't exist."
+            )
+
+        form = ComposeStackWebhookDeployRequestSerializer(
+            data=request.data or {}, context={"stack": stack}
+        )
+        form.is_valid(raise_exception=True)
+
+        data = cast(dict[str, str], form.data)
+
+        # create user content change if added
+        user_content = data.get("user_content")
+        if user_content is not None:
+            stack.add_change(
+                ComposeStackChange(
+                    field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                    new_value=user_content,
+                    old_value=stack.user_content,
+                    type=ComposeStackChange.ChangeType.UPDATE,
+                    stack=stack,
+                )
+            )
+
+        # deploy the stack
+        deployment = ComposeStackDeployment.objects.create(
+            commit_message=data["commit_message"],
+            stack=stack,
+        )
+        stack.apply_pending_changes(deployment=deployment)
+
+        deployment.stack_snapshot = stack.snapshot.to_dict()  # type: ignore
+        deployment.save()
+
+        payload = ComposeStackDeploymentDetails.from_deployment(deployment=deployment)
+
+        def commit_callback():
+            TemporalClient.start_workflow(
+                DeployComposeStackWorkflow.run,
+                arg=payload,
+                id=payload.workflow_id,
+            )
+
+        transaction.on_commit(commit_callback)
+
+        serializer = ComposeStackDeploymentSerializer(deployment)
+        return Response(data=serializer.data)
 
 
 class ComposeStackDeployAPIView(APIView):
@@ -673,7 +779,7 @@ class ComposeStackDeployAPIView(APIView):
 
         stack.apply_pending_changes(deployment=deployment)
 
-        deployment.stack_snapshot = ComposeStackSnapshotSerializer(stack).data  # type: ignore
+        deployment.stack_snapshot = stack.snapshot.to_dict()  # type: ignore
         deployment.save()
 
         payload = ComposeStackDeploymentDetails.from_deployment(deployment=deployment)
@@ -682,7 +788,7 @@ class ComposeStackDeployAPIView(APIView):
             TemporalClient.start_workflow(
                 DeployComposeStackWorkflow.run,
                 arg=payload,
-                id=deployment.workflow_id,
+                id=payload.workflow_id,
             )
 
         transaction.on_commit(commit_callback)

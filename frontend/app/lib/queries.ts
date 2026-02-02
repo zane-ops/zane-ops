@@ -6,7 +6,7 @@ import {
   queryOptions,
   type skipToken
 } from "@tanstack/react-query";
-import { preprocess, z } from "zod";
+import { optional, preprocess, z } from "zod";
 import { zfd } from "zod-form-data";
 import type { ApiResponse, RequestParams } from "~/api/client";
 import { apiClient } from "~/api/client";
@@ -175,7 +175,7 @@ export const environmentQueries = {
     queryOptions({
       queryKey: [
         ...environmentQueries.single(project_slug, env_slug).queryKey,
-        "SERVICE-LIST",
+        "SERVICE_LIST",
         filters
       ] as const,
       queryFn: async ({ signal }) => {
@@ -188,6 +188,47 @@ export const environmentQueries = {
               },
               path: {
                 slug: project_slug,
+                env_slug
+              }
+            },
+            signal
+          }
+        );
+
+        if (!data) {
+          throw notFound();
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
+
+  stacksList: (
+    project_slug: string,
+    env_slug: string,
+    filters: ProjectSearch = {}
+  ) =>
+    queryOptions({
+      queryKey: [
+        ...environmentQueries.single(project_slug, env_slug).queryKey,
+        "COMPOSE_STACK_LIST",
+        filters
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/compose/stacks/{project_slug}/{env_slug}/",
+          {
+            params: {
+              query: {
+                ...filters
+              },
+              path: {
+                project_slug,
                 env_slug
               }
             },
@@ -378,10 +419,12 @@ export const serviceQueries = {
     project_slug,
     service_slug,
     env_slug,
+    service_id,
     autoRefetchEnabled = true,
     filters = {},
     queryClient
   }: {
+    service_id: string;
     project_slug: string;
     service_slug: string;
     env_slug: string;
@@ -396,12 +439,13 @@ export const serviceQueries = {
           service_slug,
           env_slug
         }).queryKey,
+        service_id,
         "HTTP_LOGS",
         filters
       ] as const,
       queryFn: async ({ pageParam, signal, queryKey }) => {
         const allData = queryClient.getQueryData(queryKey) as InfiniteData<
-          DeploymentHttpLogQueryData,
+          HttpLogQueryData,
           string | null
         >;
         const existingData = allData?.pages.find(
@@ -426,28 +470,21 @@ export const serviceQueries = {
           cursor = existingData.cursor;
         }
 
-        const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/",
-          {
-            params: {
-              path: {
-                project_slug,
-                service_slug,
-                env_slug
-              },
-              query: {
-                ...filters,
-                cursor,
-                per_page: DEFAULT_LOGS_PER_PAGE,
-                time_before: filters.time_before?.toISOString(),
-                time_after: filters.time_after?.toISOString()
-              }
-            },
-            signal
-          }
-        );
+        const { data } = await apiClient.GET("/api/http-logs/", {
+          params: {
+            query: {
+              ...filters,
+              cursor,
+              service_id,
+              per_page: DEFAULT_LOGS_PER_PAGE,
+              time_before: filters.time_before?.toISOString(),
+              time_after: filters.time_after?.toISOString()
+            }
+          },
+          signal
+        });
 
-        let apiData: DeploymentHttpLogQueryData = {
+        let apiData: HttpLogQueryData = {
           next: null,
           previous: null,
           results: [],
@@ -473,26 +510,19 @@ export const serviceQueries = {
         // we want to do so that we don't to always fetch the latest data for the initial page
         // instead what we want is to fetch from the data it starts
         if (pageParam === null && apiData.next !== null && !apiData.cursor) {
-          const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/",
-            {
-              params: {
-                path: {
-                  project_slug,
-                  service_slug,
-                  env_slug
-                },
-                query: {
-                  ...filters,
-                  per_page: DEFAULT_LOGS_PER_PAGE,
-                  cursor: apiData.next,
-                  time_before: filters.time_before?.toISOString(),
-                  time_after: filters.time_after?.toISOString()
-                }
-              },
-              signal
-            }
-          );
+          const { data: nextPage } = await apiClient.GET("/api/http-logs/", {
+            params: {
+              query: {
+                ...filters,
+                service_id,
+                per_page: DEFAULT_LOGS_PER_PAGE,
+                cursor: apiData.next,
+                time_before: filters.time_before?.toISOString(),
+                time_after: filters.time_after?.toISOString()
+              }
+            },
+            signal
+          });
           if (nextPage?.previous) {
             apiData.cursor = new URL(nextPage.previous).searchParams.get(
               "cursor"
@@ -659,6 +689,7 @@ export const serviceQueries = {
     project_slug: string;
     service_slug: string;
     env_slug: string;
+    service_id: string;
     request_uuid: string;
   }) =>
     queryOptions({
@@ -672,20 +703,14 @@ export const serviceQueries = {
         request_uuid
       ] as const,
       queryFn: async ({ signal }) => {
-        const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/{request_uuid}/",
-          {
-            params: {
-              path: {
-                project_slug,
-                service_slug,
-                env_slug,
-                request_uuid
-              }
-            },
-            signal
-          }
-        );
+        const { data } = await apiClient.GET("/api/http-logs/{request_uuid}/", {
+          params: {
+            path: {
+              request_uuid
+            }
+          },
+          signal
+        });
         return data;
       }
     }),
@@ -693,16 +718,15 @@ export const serviceQueries = {
     project_slug,
     service_slug,
     env_slug,
+    service_id,
     field,
     value
   }: {
     project_slug: string;
     service_slug: string;
+    service_id: string;
     env_slug: string;
-    field: RequestParams<
-      "get",
-      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/fields/"
-    >["field"];
+    field: RequestParams<"get", "/api/http-logs/fields/">["field"];
     value: string;
   }) =>
     queryOptions({
@@ -712,28 +736,22 @@ export const serviceQueries = {
           service_slug,
           env_slug
         }).queryKey,
+        service_id,
         "HTTP_LOG_FIELDS",
         field,
         value
       ],
       queryFn: async ({ signal }) => {
-        const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/fields/",
-          {
-            signal,
-            params: {
-              path: {
-                project_slug,
-                service_slug,
-                env_slug
-              },
-              query: {
-                field,
-                value
-              }
+        const { data } = await apiClient.GET("/api/http-logs/fields/", {
+          signal,
+          params: {
+            query: {
+              field,
+              value,
+              service_id
             }
           }
-        );
+        });
         return data ?? [];
       }
     })
@@ -765,7 +783,9 @@ export const deploymentLogSearchSchema = zfd.formData({
   isMaximized: preprocess(
     (arg) => arg === "true",
     z.coerce.boolean().optional().catch(false)
-  )
+  ),
+  context: z.coerce.number().optional().catch(undefined),
+  context_lines: z.coerce.number().min(5).optional().catch(undefined)
 });
 
 export type DeploymentLogFilters = z.infer<typeof deploymentLogSearchSchema>;
@@ -1025,6 +1045,64 @@ export const deploymentQueries = {
       placeholderData: keepPreviousData,
       staleTime: Number.POSITIVE_INFINITY
     }),
+  logWithContext: ({
+    project_slug,
+    service_slug,
+    env_slug,
+    deployment_hash,
+    time,
+    context_lines = 20
+  }: {
+    project_slug: string;
+    service_slug: string;
+    env_slug: string;
+    deployment_hash: string;
+    time: number;
+    context_lines?: number;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...deploymentQueries.single({
+          project_slug,
+          service_slug,
+          env_slug,
+          deployment_hash
+        }).queryKey,
+        "RUNTIME_LOGS",
+        "WITH_CONTEXT",
+        time,
+        context_lines
+      ],
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/with-context/{time}",
+          {
+            params: {
+              path: {
+                project_slug,
+                service_slug,
+                env_slug,
+                deployment_hash,
+                time: time.toString()
+              },
+              query: {
+                lines: context_lines
+              }
+            },
+            signal
+          }
+        );
+
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (!query.state.data) {
+          return false;
+        }
+        return LOGS_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData
+    }),
   buildLogs: ({
     project_slug,
     service_slug,
@@ -1242,7 +1320,7 @@ export const deploymentQueries = {
       ] as const,
       queryFn: async ({ pageParam, signal, queryKey }) => {
         const allData = queryClient.getQueryData(queryKey) as InfiniteData<
-          DeploymentHttpLogQueryData,
+          HttpLogQueryData,
           string | null
         >;
         const existingData = allData?.pages.find(
@@ -1267,29 +1345,21 @@ export const deploymentQueries = {
           cursor = existingData.cursor;
         }
 
-        const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/",
-          {
-            params: {
-              path: {
-                project_slug,
-                service_slug,
-                env_slug,
-                deployment_hash
-              },
-              query: {
-                ...filters,
-                cursor,
-                per_page: DEFAULT_LOGS_PER_PAGE,
-                time_before: filters.time_before?.toISOString(),
-                time_after: filters.time_after?.toISOString()
-              }
-            },
-            signal
-          }
-        );
+        const { data } = await apiClient.GET("/api/http-logs/", {
+          params: {
+            query: {
+              ...filters,
+              cursor,
+              deployment_id: deployment_hash,
+              per_page: DEFAULT_LOGS_PER_PAGE,
+              time_before: filters.time_before?.toISOString(),
+              time_after: filters.time_after?.toISOString()
+            }
+          },
+          signal
+        });
 
-        let apiData: DeploymentHttpLogQueryData = {
+        let apiData: HttpLogQueryData = {
           next: null,
           previous: null,
           results: [],
@@ -1315,27 +1385,19 @@ export const deploymentQueries = {
         // we want to do so that we don't to always fetch the latest data for the initial page
         // instead what we want is to fetch from the data it starts
         if (pageParam === null && apiData.next !== null && !apiData.cursor) {
-          const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/",
-            {
-              params: {
-                path: {
-                  project_slug,
-                  service_slug,
-                  env_slug,
-                  deployment_hash
-                },
-                query: {
-                  ...filters,
-                  per_page: DEFAULT_LOGS_PER_PAGE,
-                  cursor: apiData.next,
-                  time_before: filters.time_before?.toISOString(),
-                  time_after: filters.time_after?.toISOString()
-                }
-              },
-              signal
-            }
-          );
+          const { data: nextPage } = await apiClient.GET("/api/http-logs/", {
+            params: {
+              query: {
+                ...filters,
+                per_page: DEFAULT_LOGS_PER_PAGE,
+                deployment_id: deployment_hash,
+                cursor: apiData.next,
+                time_before: filters.time_before?.toISOString(),
+                time_after: filters.time_after?.toISOString()
+              }
+            },
+            signal
+          });
           if (nextPage?.previous) {
             apiData.cursor = new URL(nextPage.previous).searchParams.get(
               "cursor"
@@ -1382,21 +1444,14 @@ export const deploymentQueries = {
         request_uuid
       ] as const,
       queryFn: async ({ signal }) => {
-        const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/",
-          {
-            params: {
-              path: {
-                project_slug,
-                service_slug,
-                env_slug,
-                deployment_hash,
-                request_uuid
-              }
-            },
-            signal
-          }
-        );
+        const { data } = await apiClient.GET("/api/http-logs/{request_uuid}/", {
+          params: {
+            path: {
+              request_uuid
+            }
+          },
+          signal
+        });
         return data;
       }
     }),
@@ -1412,10 +1467,7 @@ export const deploymentQueries = {
     service_slug: string;
     env_slug: string;
     deployment_hash: string;
-    field: RequestParams<
-      "get",
-      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/fields/"
-    >["field"];
+    field: RequestParams<"get", "/api/http-logs/fields/">["field"];
     value: string;
   }) =>
     queryOptions({
@@ -1431,24 +1483,16 @@ export const deploymentQueries = {
         value
       ],
       queryFn: async ({ signal }) => {
-        const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/fields/",
-          {
-            signal,
-            params: {
-              path: {
-                project_slug,
-                service_slug,
-                env_slug,
-                deployment_hash
-              },
-              query: {
-                field,
-                value
-              }
+        const { data } = await apiClient.GET("/api/http-logs/fields/", {
+          signal,
+          params: {
+            query: {
+              field,
+              value,
+              deployment_hash
             }
           }
-        );
+        });
         return data ?? [];
       }
     })
@@ -1501,13 +1545,8 @@ type DeploymentLogQueryData = Pick<
   cursor?: string | null;
 };
 
-type DeploymentHttpLogQueryData = Pick<
-  NonNullable<
-    ApiResponse<
-      "get",
-      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/"
-    >
-  >,
+type HttpLogQueryData = Pick<
+  NonNullable<ApiResponse<"get", "/api/http-logs/">>,
   "next" | "previous" | "results"
 > & {
   cursor?: string | null;

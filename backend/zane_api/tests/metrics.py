@@ -12,15 +12,14 @@ from temporal.workflows import (
 from temporal.schedules import (
     GetDockerDeploymentStatsWorkflow,
 )
+from ..utils import jprint
 
 
 class DockerServiceMetricsScheduleTests(AuthAPITestCase):
     async def test_create_metrics_schedule_when_deploying_a_service(self):
         _, service = await self.acreate_and_deploy_redis_docker_service()
 
-        initial_deployment: Deployment = (
-            await service.alatest_production_deployment
-        )  # type: ignore
+        initial_deployment: Deployment = await service.alatest_production_deployment  # type: ignore
 
         self.assertIsNotNone(initial_deployment)
         self.assertIsNotNone(
@@ -29,9 +28,7 @@ class DockerServiceMetricsScheduleTests(AuthAPITestCase):
 
     async def test_delete_previous_deployment_metrics_schedule_on_new_deployment(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
-        initial_deployment: Deployment = (
-            await service.alatest_production_deployment
-        )  # type: ignore
+        initial_deployment: Deployment = await service.alatest_production_deployment  # type: ignore
 
         response = await self.async_client.put(
             reverse(
@@ -49,7 +46,7 @@ class DockerServiceMetricsScheduleTests(AuthAPITestCase):
             self.get_workflow_schedule_by_id(initial_deployment.metrics_schedule_id)
         )
 
-    async def test_run_stats_schedule(self):
+    async def test_run_service_metrics_schedule(self):
         async with self.workflowEnvironment() as env:
             p, service = await self.acreate_and_deploy_redis_docker_service()
             latest_deployment: Deployment = await service.alatest_production_deployment  # type: ignore
@@ -63,13 +60,14 @@ class DockerServiceMetricsScheduleTests(AuthAPITestCase):
                 service_id=latest_deployment.service.id,
                 project_id=latest_deployment.service.project_id,
             )
-            await env.client.execute_workflow(
+            result = await env.client.execute_workflow(
                 workflow=GetDockerDeploymentStatsWorkflow.run,
                 arg=deployment,
                 id=latest_deployment.monitor_schedule_id,
                 task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
             )
+            jprint(result)
             metrics_count = await ServiceMetrics.objects.filter(
                 deployment__hash=deployment.hash, service=service
             ).acount()

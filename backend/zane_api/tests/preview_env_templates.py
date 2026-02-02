@@ -38,7 +38,10 @@ class MoreEnvironmentViewTests(AuthAPITestCase):
 
         deployment = cast(Deployment, await service.deployments.afirst())
         fake_service = self.fake_docker_client.get_deployment_service(deployment)
-        global_network_config = find_item_in_sequence(lambda net: net["Target"] == "zane", fake_service.networks)  # type: ignore
+        global_network_config = find_item_in_sequence(
+            lambda net: net["Target"] == "zane",
+            fake_service.networks,  # type: ignore
+        )
 
         global_aliases = [
             alias
@@ -49,7 +52,6 @@ class MoreEnvironmentViewTests(AuthAPITestCase):
 
 
 class PreviewEnvTestsBase(AuthAPITestCase):
-
     def create_gitlab_app(self, with_webhook: bool = True):
         self.loginUser()
         body = {
@@ -322,7 +324,10 @@ class PreviewTemplateViewTests(AuthAPITestCase):
             },
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "base_environment_id")
+        )
 
     @responses.activate
     def test_cannot_delete_environment_if_preview_is_based_on_them(self):

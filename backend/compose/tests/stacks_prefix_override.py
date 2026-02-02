@@ -1,10 +1,3 @@
-"""
-Tests for double underscore prefix convention in x-zane-env variables.
-
-Double underscore-prefixed variables (e.g., __DB_NAME) are marked as exposed
-and automatically create env overrides. The key keeps its double underscore prefix.
-"""
-
 from django.urls import reverse
 
 from zane_api.models import Environment

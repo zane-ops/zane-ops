@@ -529,7 +529,7 @@ class HttpLogSerializer(serializers.ModelSerializer):
             "time",
             "deployment_id",
             "service_id",
-            "request_id",
+            "request_uuid",
             "request_ip",
             "request_path",
             "request_query",
@@ -540,6 +540,8 @@ class HttpLogSerializer(serializers.ModelSerializer):
             "request_headers",
             "response_headers",
             "request_user_agent",
+            "stack_id",
+            "stack_service_name",
         ]
 
 

@@ -12,8 +12,22 @@ from ..models import (
     ComposeStackDeployment,
     ComposeStackEnvOverride,
 )
-from .fixtures import DOCKER_COMPOSE_MINIMAL, DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES
+from .fixtures import (
+    DOCKER_COMPOSE_MINIMAL,
+    DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES,
+    DOCKER_COMPOSE_SIMPLE_DB,
+    DOCKER_COMPOSE_WEB_WITH_DB,
+    INVALID_COMPOSE_NO_IMAGE,
+    DOCKER_COMPOSE_WEB_SERVICE,
+    DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
+)
 from .stacks import ComposeStackAPITestBase
+import responses
+from django.conf import settings
+import requests
+from temporal.proxy import ZaneProxyClient
+
+from compose.dtos import ComposeStackUrlRouteDto
 
 
 class ToggleStackSleepViewTests(ComposeStackAPITestBase):
@@ -521,103 +535,586 @@ services:
         self.assertIn("redeploy_hash", response_data)
         self.assertEqual(first_deployment_hash, response_data["redeploy_hash"])
 
-    async def test_rollback_recreates_docker_services(self):
-        """Rolling back should recreate docker services that were removed after the target deployment"""
-        # Deploy initial stack with two services
-        initial_content = """
-services:
-  redis:
-    image: valkey/valkey:alpine
-  nginx:
-    image: nginx:alpine
-"""
-        project, stack = await self.acreate_and_deploy_compose_stack(
-            content=initial_content
+
+class TestArchiveProjectWithStackViewTests(ComposeStackAPITestBase):
+    def test_delete_project_should_delete_included_stacks(self):
+        p, stack = self.create_and_deploy_compose_stack(content=DOCKER_COMPOSE_MINIMAL)
+
+        response = self.client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": p.slug})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(0, ComposeStack.objects.filter(pk=stack.id).count())
+
+    async def test_delete_project_should_delete_included_stack_resources(self):
+        p, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL
         )
 
-        first_deployment = cast(
-            ComposeStackDeployment,
-            await stack.deployments.order_by("queued_at").afirst(),
-        )
-        self.assertIsNotNone(first_deployment)
-        first_deployment_hash = first_deployment.hash
+        stack_name = stack.name
 
-        # Verify initial docker services are created
-        initial_services = self.fake_docker_client.services_list(
-            filters={"label": [f"com.docker.stack.namespace={stack.name}"]}
+        response = await self.async_client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": p.slug})
         )
-        initial_service_names = {s.name for s in initial_services}
-        self.assertEqual(2, len(initial_services))
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        # Update compose content to remove nginx service
-        updated_content = """
-services:
-  redis:
-    image: valkey/valkey:alpine
-"""
-        response = await self.async_client.put(
+        self.assertEqual(0, await ComposeStack.objects.filter(project_id=p.id).acount())
+
+        service_list = self.fake_docker_client.services_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(0, len(service_list))
+
+    @responses.activate()
+    async def test_archive_project_delete_stack_urls_in_proxy(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        p, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_WEB_SERVICE
+        )
+
+        stack_id = stack.id
+        # Get route info before archiving
+        routes = stack.urls["web"]  # type: ignore
+        route = cast(dict, routes[0])
+
+        # Verify route is registered in Caddy
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_compose_stack_service(
+                stack_id=stack.id,
+                service_name="web",
+                url=ComposeStackUrlRouteDto.from_dict(route),
+            )
+        )
+        self.assertEqual(200, response.status_code)
+
+        # delete project
+        response = await self.async_client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": p.slug})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # delete project
+        self.assertEqual(0, await ComposeStack.objects.filter(project_id=p.id).acount())
+
+        # Verify route is removed from Caddy
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_compose_stack_service(
+                stack_id=stack_id,
+                service_name="web",
+                url=ComposeStackUrlRouteDto.from_dict(route),
+            )
+        )
+        self.assertEqual(404, response.status_code)
+
+    @responses.activate()
+    async def test_archive_project_delete_stack_configs(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        p, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_WITH_INLINE_CONFIGS
+        )
+
+        stack_name = stack.name
+
+        # Verify config stack exists
+        config_list = self.fake_docker_client.config_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(1, len(config_list))
+
+        # delete project
+        response = await self.async_client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": p.slug})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify config stack is deleted
+        config_list = self.fake_docker_client.config_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(0, len(config_list))
+
+    @responses.activate()
+    async def test_archive_project_delete_stack_volumes(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        p, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+
+        stack_name = stack.name
+
+        # Verify Docker volumes exist
+        volumes = self.fake_docker_client.volumes_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(1, len(volumes))
+
+        # delete project
+        response = await self.async_client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": p.slug})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify Docker volumes are removed
+        volumes = self.fake_docker_client.volumes_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(0, len(volumes))
+
+
+class TestArchiveEnvironmentWithStackViewTests(ComposeStackAPITestBase):
+    async def acreate_and_deploy_compose_stack_in_environment(
+        self,
+        content: str,
+        environment: str = "staging",
+        slug="my-stack",
+    ):
+        project = await self.acreate_project(slug="compose")
+
+        create_env_payload = {
+            "name": environment,
+        }
+
+        response = await self.async_client.post(
             reverse(
-                "compose:stacks.request_changes",
+                "zane_api:projects.environment.create",
                 kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                    "slug": stack.slug,
+                    "slug": project.slug,
                 },
             ),
-            data={
-                "field": ComposeStackChange.ChangeField.COMPOSE_CONTENT,
-                "type": ComposeStackChange.ChangeType.UPDATE,
-                "new_value": updated_content,
-            },
+            data=create_env_payload,
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        # Deploy the updated stack (nginx removed)
+        create_stack_payload = {
+            "slug": slug,
+            "user_content": content,
+        }
+
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": environment,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack, await ComposeStack.objects.filter(slug=slug).afirst()
+        )
+        self.assertIsNotNone(stack)
+        self.assertIsNone(stack.user_content)
+        self.assertIsNone(stack.computed_content)
+
+        # Deploy the stack
         response = await self.async_client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
                     "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "env_slug": environment,
                     "slug": stack.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        await stack.arefresh_from_db()
-        self.assertEqual(2, await stack.deployments.acount())
-
-        # Verify nginx service was removed
-        services_after_update = self.fake_docker_client.services_list(
-            filters={"label": [f"com.docker.stack.namespace={stack.name}"]}
-        )
-        self.assertEqual(1, len(services_after_update))
-
-        # Rollback to first deployment
-        response = await self.async_client.put(
-            reverse(
-                "compose:stacks.redeploy",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                    "slug": stack.slug,
-                    "hash": first_deployment_hash,
                 },
             ),
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        # Verify docker services are recreated
         await stack.arefresh_from_db()
-        self.assertEqual(3, await stack.deployments.acount())
 
-        services_after_rollback = self.fake_docker_client.services_list(
-            filters={"label": [f"com.docker.stack.namespace={stack.name}"]}
+        env = await project.environments.aget(name=environment)
+        return project, stack, env
+
+    async def test_delete_environment_should_delete_included_stacks(self):
+        p, stack, env = await self.acreate_and_deploy_compose_stack_in_environment(
+            content=DOCKER_COMPOSE_MINIMAL
         )
-        self.assertEqual(2, len(services_after_rollback))
 
-        # Verify service names match the initial deployment
-        rollback_service_names = {s.name for s in services_after_rollback}
-        self.assertEqual(initial_service_names, rollback_service_names)
+        self.assertEqual(
+            1, await ComposeStack.objects.filter(environment_id=env.id).acount()
+        )
+
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={
+                    "slug": p.slug,
+                    "env_slug": env.name,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(
+            0, await ComposeStack.objects.filter(environment_id=env.id).acount()
+        )
+
+    async def test_delete_environment_should_delete_included_stack_resources(self):
+        p, stack, env = await self.acreate_and_deploy_compose_stack_in_environment(
+            content=DOCKER_COMPOSE_MINIMAL
+        )
+
+        stack_name = stack.name
+        service_list = self.fake_docker_client.services_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(1, len(service_list))
+
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={
+                    "slug": p.slug,
+                    "env_slug": env.name,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(
+            0, await ComposeStack.objects.filter(environment_id=env.id).acount()
+        )
+
+        service_list = self.fake_docker_client.services_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(0, len(service_list))
+
+    @responses.activate()
+    async def test_archive_environment_delete_stack_urls_in_proxy(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        p, stack, env = await self.acreate_and_deploy_compose_stack_in_environment(
+            content=DOCKER_COMPOSE_WEB_SERVICE
+        )
+
+        stack_id = stack.id
+        # Get route info before archiving
+        routes = stack.urls["web"]  # type: ignore
+        route = cast(dict, routes[0])
+
+        # Verify route is registered in Caddy
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_compose_stack_service(
+                stack_id=stack.id,
+                service_name="web",
+                url=ComposeStackUrlRouteDto.from_dict(route),
+            )
+        )
+        self.assertEqual(200, response.status_code)
+
+        # delete environment
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={
+                    "slug": p.slug,
+                    "env_slug": env.name,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # delete project
+        self.assertEqual(0, await ComposeStack.objects.filter(project_id=p.id).acount())
+
+        # Verify route is removed from Caddy
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_compose_stack_service(
+                stack_id=stack_id,
+                service_name="web",
+                url=ComposeStackUrlRouteDto.from_dict(route),
+            )
+        )
+        self.assertEqual(404, response.status_code)
+
+    @responses.activate()
+    async def test_archive_environment_delete_stack_configs(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        p, stack, env = await self.acreate_and_deploy_compose_stack_in_environment(
+            content=DOCKER_COMPOSE_WITH_INLINE_CONFIGS
+        )
+
+        stack_name = stack.name
+
+        # Verify config stack exists
+        config_list = self.fake_docker_client.config_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(1, len(config_list))
+
+        # delete environment
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={
+                    "slug": p.slug,
+                    "env_slug": env.name,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify config stack is deleted
+        config_list = self.fake_docker_client.config_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(0, len(config_list))
+
+    @responses.activate()
+    async def test_archive_environment_delete_stack_volumes(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        p, stack, env = await self.acreate_and_deploy_compose_stack_in_environment(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+
+        stack_name = stack.name
+
+        # Verify Docker volumes exist
+        volumes = self.fake_docker_client.volumes_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(1, len(volumes))
+
+        # delete environment
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={
+                    "slug": p.slug,
+                    "env_slug": env.name,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify Docker volumes are removed
+        volumes = self.fake_docker_client.volumes_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(0, len(volumes))
+
+
+class TestDeployTokenComposeStackViewTests(ComposeStackAPITestBase):
+    def test_create_stack_generates_deploy_token(self):
+        project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "my-stack",
+            "user_content": DOCKER_COMPOSE_MINIMAL,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(ComposeStack, ComposeStack.objects.first())
+        self.assertIsNotNone(stack.deploy_token)
+
+    def test_stack_regenerates_deploy_token(self):
+        project, stack = self.create_and_deploy_compose_stack(DOCKER_COMPOSE_MINIMAL)
+
+        initial_token = stack.deploy_token
+
+        response = self.client.put(
+            reverse(
+                "compose:stacks.regenerate_deploy_token",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        stack.refresh_from_db()
+        self.assertNotEqual(initial_token, stack.deploy_token)
+
+    def test_deploy_compose_stack_using_token(self):
+        project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "my-stack",
+            "user_content": DOCKER_COMPOSE_MINIMAL,
+        }
+
+        # create stack
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(ComposeStack, ComposeStack.objects.first())
+
+        # deploy stack using webhook
+        response = self.client.put(
+            reverse(
+                "compose:stacks.webhook_deploy",
+                kwargs={"deploy_token": stack.deploy_token},
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(1, stack.deployments.count())
+
+    async def test_webhook_deploy_compose_stack_create_resources(self):
+        project = await self.acreate_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "my-stack",
+            "user_content": DOCKER_COMPOSE_MINIMAL,
+        }
+
+        # create stack
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(ComposeStack, await ComposeStack.objects.afirst())
+
+        # deploy stack using webhook
+        response = await self.async_client.put(
+            reverse(
+                "compose:stacks.webhook_deploy",
+                kwargs={"deploy_token": stack.deploy_token},
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(1, await stack.deployments.acount())
+
+        service = None
+        try:
+            service = self.fake_docker_client.services_get(
+                f"{stack.name}_{stack.hash_prefix}_redis"
+            )
+        except Exception:
+            pass
+        self.assertIsNotNone(service)
+
+    def test_deploy_compose_stack_using_token_update_user_content(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL
+        )
+
+        # deploy stack using webhook
+        deploy_payload = {
+            "user_content": DOCKER_COMPOSE_WEB_WITH_DB,
+        }
+        response = self.client.put(
+            reverse(
+                "compose:stacks.webhook_deploy",
+                kwargs={
+                    "deploy_token": stack.deploy_token,
+                },
+            ),
+            data=deploy_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # the user content should have been updated
+        stack.refresh_from_db()
+        self.assertEqual(DOCKER_COMPOSE_WEB_WITH_DB.strip(), stack.user_content)
+
+        # a change with the new content should be created
+        deployment = cast(ComposeStackDeployment, stack.deployments.latest("queued_at"))
+        self.assertIsNotNone(deployment)
+
+        content_change = cast(
+            ComposeStackChange,
+            deployment.changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT
+            ).first(),
+        )
+        self.assertIsNotNone(content_change)
+        self.assertEqual(DOCKER_COMPOSE_WEB_WITH_DB.strip(), content_change.new_value)
+
+    def test_deploy_compose_stack_using_token_validate_new_user_content(self):
+        project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "my-stack",
+            "user_content": DOCKER_COMPOSE_MINIMAL,
+        }
+
+        # create stack
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(ComposeStack, ComposeStack.objects.first())
+
+        # deploy stack using webhook
+        deploy_payload = {
+            "user_content": INVALID_COMPOSE_NO_IMAGE,
+        }
+        response = self.client.put(
+            reverse(
+                "compose:stacks.webhook_deploy",
+                kwargs={
+                    "deploy_token": stack.deploy_token,
+                },
+            ),
+            data=deploy_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))

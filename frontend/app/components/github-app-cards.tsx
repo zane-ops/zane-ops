@@ -134,12 +134,7 @@ export function GithubAppCard({ app, children }: GithubAppCardProps) {
           </renameFetcher.Form>
           <div className="text-sm text-link flex items-center gap-1">
             <ExternalLinkIcon size={15} className="flex-none" />
-            <a
-              href={app.app_url}
-              className="break-all"
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a href={app.app_url} className="break-all" target="_blank">
               {app.app_url}
             </a>
           </div>

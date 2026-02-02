@@ -1,8 +1,15 @@
+import secrets
 from typing import TYPE_CHECKING, cast
 from django.db import models
 
 from zane_api.models import TimestampedModel, Project, Environment, BaseEnvVariable
 from shortuuid.django_fields import ShortUUIDField
+from .dtos import (
+    ComposeStackSnapshot,
+    ComposeVersionedConfig,
+    ComposeStackUrlRouteDto,
+    ComposeStackEnvOverrideDto,
+)
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -19,6 +26,7 @@ class ComposeStack(TimestampedModel):
         changes: RelatedManager["ComposeStackChange"]
         env_overrides: RelatedManager["ComposeStackEnvOverride"]
         deployments: RelatedManager["ComposeStackDeployment"]
+        metrics: RelatedManager["ComposeStackMetrics"]
 
     id = ShortUUIDField(
         length=8,
@@ -45,6 +53,8 @@ class ComposeStack(TimestampedModel):
         on_delete=models.CASCADE,
         related_name="compose_stacks",
     )
+
+    # Token to trigger a deployment of this stack
     deploy_token = models.CharField(max_length=35, null=True, unique=True)
 
     # Compose content
@@ -115,6 +125,36 @@ class ComposeStack(TimestampedModel):
         return f"zn-{self.id}"
 
     @property
+    def snapshot(self) -> ComposeStackSnapshot:
+        return ComposeStackSnapshot(
+            id=self.pk,
+            hash_prefix=self.hash_prefix,
+            name=self.name,
+            slug=self.slug,
+            network_alias_prefix=self.network_alias_prefix,
+            user_content=cast(str, self.user_content),
+            computed_content=cast(str, self.computed_content),
+            urls={
+                service: [ComposeStackUrlRouteDto.from_dict(url) for url in urls]
+                for service, urls in cast(
+                    dict[str, list[dict]], self.urls or {}
+                ).items()
+            },
+            configs={
+                name: ComposeVersionedConfig.from_dict(config)
+                for name, config in cast(dict[str, dict], self.configs or {}).items()
+            },
+            env_overrides=[
+                ComposeStackEnvOverrideDto(
+                    id=env.id,
+                    key=env.key,
+                    value=env.value,
+                )
+                for env in self.env_overrides.all()
+            ],
+        )
+
+    @property
     def archive_workflow_id(self) -> str:
         return f"archive-compose-{self.id}"
 
@@ -125,6 +165,10 @@ class ComposeStack(TimestampedModel):
     @property
     def toggle_workflow_id(self) -> str:
         return f"toggle-compose-{self.id}"
+
+    @property
+    def metrics_schedule_id(self) -> str:
+        return f"metrics-compose-{self.id}"
 
     @property
     def unapplied_changes(self):
@@ -222,6 +266,68 @@ class ComposeStack(TimestampedModel):
         self.unapplied_changes.update(applied=True, deployment=deployment)
         self.save()
         self.refresh_from_db()
+
+    def clone(self, environment: "Environment"):
+        from .processor import ComposeSpecProcessor
+
+        cloned_stack = ComposeStack.objects.create(
+            slug=self.slug,
+            environment=environment,
+            project=self.project,
+            network_alias_prefix=self.network_alias_prefix,
+            deploy_token=secrets.token_hex(16),
+        )
+
+        new_stack_changes: list[ComposeStackChange] = []
+
+        new_content = self.user_content
+
+        content_change = self.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+        ).first()
+        if content_change is not None:
+            new_content = cast(str, content_change.new_value)
+
+        new_content = ComposeSpecProcessor.replace_stack_urls_in_compose(
+            cast(str, new_content)
+        )
+
+        new_stack_changes.append(
+            ComposeStackChange(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+                new_value=new_content,
+                stack=cloned_stack,
+            )
+        )
+
+        # Copy env variables
+        target_snapshot = self.snapshot
+
+        compose_dict = ComposeSpecProcessor.parse_user_yaml(new_content)
+        x_env = compose_dict.get("x-zane-env", {})
+
+        for env in target_snapshot.env_overrides:
+            if env.key in x_env:
+                template_func = ComposeSpecProcessor.extract_template_expression(
+                    x_env[env.key]
+                )
+                # do not copy over `generate_domain` env variables so that they are re-created
+                if template_func == "generate_domain":
+                    continue
+
+            new_stack_changes.append(
+                ComposeStackChange(
+                    type=ComposeStackChange.ChangeType.ADD,
+                    field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
+                    new_value=env.to_dict(),
+                    stack=cloned_stack,
+                )
+            )
+
+        ComposeStackChange.objects.bulk_create(new_stack_changes)
+
+        return cloned_stack
 
 
 class ComposeStackDeployment(TimestampedModel):
@@ -327,3 +433,25 @@ class ComposeStackChange(TimestampedModel):
     new_value = models.JSONField(null=True)
     applied = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class ComposeStackMetrics(TimestampedModel):
+    cpu_percent = models.FloatField()
+    memory_bytes = models.PositiveBigIntegerField()
+    net_tx_bytes = models.PositiveBigIntegerField()
+    net_rx_bytes = models.PositiveBigIntegerField()
+    disk_read_bytes = models.PositiveBigIntegerField()
+    disk_writes_bytes = models.PositiveBigIntegerField()
+
+    stack = models.ForeignKey(
+        to=ComposeStack,
+        on_delete=models.CASCADE,
+        related_name="metrics",
+    )
+    service_name = models.CharField(blank=False)
+
+    class Meta:  # type: ignore
+        indexes = [
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["service_name"]),
+        ]

@@ -136,7 +136,6 @@ export default function ContainerRegistryCredentialsPage({
                       href={credential.url}
                       target="_blank"
                       className="underline text-link inline-flex items-center gap-1"
-                      rel="noreferrer"
                     >
                       <span>{credential.url}</span>
                       <ExternalLinkIcon size={16} className="flex-none" />
@@ -281,7 +280,6 @@ function DeleteConfirmationFormDialog({
                 href={credentials.url}
                 target="_blank"
                 className="underline text-link inline-flex items-center gap-1"
-                rel="noreferrer"
               >
                 <span>{credentials.url}</span>
                 <ExternalLinkIcon size={16} className="flex-none" />

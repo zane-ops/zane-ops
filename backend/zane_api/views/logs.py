@@ -1,4 +1,5 @@
 import json
+import math
 from urllib.parse import urlparse
 
 from drf_spectacular.utils import extend_schema
@@ -28,7 +29,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 
 
-from search.serializers import RuntimeLogsSearchSerializer
+from search.serializers import (
+    RuntimeLogsSearchSerializer,
+    RuntimeLogsContextSerializer,
+    RuntimeLogsContextParamsSerializer,
+)
 
 from .base import EMPTY_CURSOR_RESPONSE
 
@@ -50,7 +55,39 @@ from ..models import (
 )
 from ..serializers import HttpLogSerializer
 
-from rest_framework.utils.serializer_helpers import ReturnDict
+
+from temporal.proxy import ZaneProxyClient
+
+from django.db.models import Q
+
+
+def _build_http_log(log_time: str, log_content: dict, **extra_fields) -> HttpLog:
+    """Build an HttpLog from proxy log content with common fields extracted."""
+    req = log_content["request"]
+    duration_in_seconds = log_content["duration"]
+    full_url = urlparse(f"https://{req['host']}{req['uri']}")
+
+    client_ip = req["headers"].get("X-Forwarded-For", req["remote_ip"])
+    user_agent = req["headers"].get("User-Agent")
+
+    return HttpLog(
+        time=log_time,
+        request_duration_ns=int(duration_in_seconds * 1_000_000_000),
+        request_path=full_url.path,
+        request_query=full_url.query,
+        request_protocol=req["proto"],
+        request_host=req["host"],
+        status=log_content["status"],
+        request_headers=req["headers"],
+        response_headers=log_content["resp_headers"],
+        request_user_agent=user_agent[0] if isinstance(user_agent, list) else None,
+        request_ip=client_ip[0].split(",")[0]
+        if isinstance(client_ip, list)
+        else client_ip,
+        request_uuid=log_content.get("uuid"),
+        request_method=req["method"],
+        **extra_fields,
+    )
 
 
 @extend_schema(exclude=True)
@@ -79,7 +116,7 @@ class LogIngestAPIView(APIView):
                     match service_id:
                         case None:
                             # Ignore this log
-                            continue
+                            pass
                         case ZaneServices.PROXY:
                             try:
                                 content = json.loads(log["log"])
@@ -87,79 +124,78 @@ class LogIngestAPIView(APIView):
                                 pass
                             else:
                                 service_id = content.get("zane_service_id")
-                                if service_id:
+                                stack_id = content.get("zane_stack_id")
+                                registry_id = content.get("zane_registry_id")
+                                if service_id or stack_id or registry_id:
                                     log_serializer = HTTPServiceLogSerializer(
                                         data=content
                                     )
                                     if log_serializer.is_valid():
                                         log_content: dict = log_serializer.data  # type: ignore
-                                        upstream: str = log_content.get(
-                                            "zane_deployment_upstream"
-                                        )  # type: ignore
-                                        deployment_id = content.get(
-                                            "zane_deployment_id"
+
+                                        service_type = log_content.get(
+                                            "zane_service_type"
                                         )
-                                        # For backward compatibility
-                                        if deployment_id is not None:
-                                            if "blue.zaneops.internal" in upstream:
-                                                deployment_id = log_content.get(
-                                                    "zane_deployment_blue_hash"
+                                        match service_type:
+                                            case ZaneProxyClient.ServiceType.BUILD_REGISTRY:
+                                                if registry_id:
+                                                    http_logs.append(
+                                                        _build_http_log(
+                                                            log["time"],
+                                                            log_content,
+                                                            registry_id=registry_id,
+                                                        )
+                                                    )
+                                            case ZaneProxyClient.ServiceType.COMPOSE_STACK_SERVICE:
+                                                stack_service_name = content.get(
+                                                    "zane_stack_service_name"
                                                 )
-                                            elif "green.zaneops.internal" in upstream:
-                                                deployment_id = log_content.get(
-                                                    "zane_deployment_green_hash"
+                                                if stack_service_name:
+                                                    http_logs.append(
+                                                        _build_http_log(
+                                                            log["time"],
+                                                            log_content,
+                                                            stack_id=stack_id,
+                                                            stack_service_name=stack_service_name,
+                                                        )
+                                                    )
+                                            case ZaneProxyClient.ServiceType.MANAGED_SERVICE:
+                                                upstream: str = log_content.get(
+                                                    "zane_deployment_upstream"
+                                                )  # type: ignore
+                                                deployment_id = content.get(
+                                                    "zane_deployment_id"
                                                 )
+                                                # For backward compatibility
+                                                if deployment_id is not None:
+                                                    if (
+                                                        "blue.zaneops.internal"
+                                                        in upstream
+                                                    ):
+                                                        deployment_id = log_content.get(
+                                                            "zane_deployment_blue_hash"
+                                                        )
+                                                    elif (
+                                                        "green.zaneops.internal"
+                                                        in upstream
+                                                    ):
+                                                        deployment_id = log_content.get(
+                                                            "zane_deployment_green_hash"
+                                                        )
 
-                                        if deployment_id:
-                                            req = log_content["request"]
-                                            duration_in_seconds = log_content[
-                                                "duration"
-                                            ]
+                                                if deployment_id:
+                                                    http_logs.append(
+                                                        _build_http_log(
+                                                            log["time"],
+                                                            log_content,
+                                                            service_id=log_content.get(
+                                                                "zane_service_id"
+                                                            ),
+                                                            deployment_id=deployment_id,
+                                                        )
+                                                    )
 
-                                            full_url = urlparse(
-                                                f"https://{req['host']}{req['uri']}"
-                                            )
-                                            client_ip = req["headers"].get(
-                                                "X-Forwarded-For", req["remote_ip"]
-                                            )
-                                            user_agent = req["headers"].get(
-                                                "User-Agent"
-                                            )
-                                            http_logs.append(
-                                                HttpLog(
-                                                    time=log["time"],
-                                                    service_id=log_content.get(
-                                                        "zane_service_id"
-                                                    ),
-                                                    deployment_id=deployment_id,
-                                                    request_duration_ns=(
-                                                        duration_in_seconds
-                                                        * 1_000_000_000
-                                                    ),
-                                                    request_path=full_url.path,
-                                                    request_query=full_url.query,
-                                                    request_protocol=req["proto"],
-                                                    request_host=req["host"],
-                                                    status=log_content["status"],
-                                                    request_headers=req["headers"],
-                                                    response_headers=log_content[
-                                                        "resp_headers"
-                                                    ],
-                                                    request_user_agent=(
-                                                        user_agent[0]
-                                                        if isinstance(user_agent, list)
-                                                        else None
-                                                    ),
-                                                    request_ip=(
-                                                        client_ip[0].split(",")[0]
-                                                        if isinstance(client_ip, list)
-                                                        else client_ip
-                                                    ),
-                                                    request_id=log_content.get("uuid"),
-                                                    request_method=req["method"],
-                                                )
-                                            )
-                                            continue
+                                        continue
                         case ZaneServices.API | ZaneServices.WORKER:
                             # do nothing for now...
                             pass
@@ -181,6 +217,26 @@ class LogIngestAPIView(APIView):
                                     content_text=escape_ansi(log["log"]),
                                 )
                             )
+
+                    stack_id = json_tag.get("zane.stack")
+                    if stack_id is not None:
+                        stack_service_name = json_tag.get("zane.stack.service")
+                        simple_logs.append(
+                            RuntimeLogDto(
+                                time=log["time"],
+                                created_at=timezone.now(),
+                                level=(
+                                    RuntimeLogLevel.INFO
+                                    if log["source"] == "stdout"
+                                    else RuntimeLogLevel.ERROR
+                                ),
+                                source=RuntimeLogSource.SERVICE,
+                                stack_id=stack_id,
+                                stack_service_name=stack_service_name,
+                                content=log["log"],
+                                content_text=escape_ansi(log["log"]),
+                            )
+                        )
 
             start_time = datetime.now()
             search_client = LokiSearchClient(host=settings.LOKI_HOST)
@@ -205,65 +261,50 @@ class LogIngestAPIView(APIView):
             return Response(response.data, status=status.HTTP_200_OK)
 
 
-class ServiceHttpLogsFieldsAPIView(APIView):
+class HttpLogsFieldsAPIView(APIView):
     serializer_class = HttpLogFieldsResponseSerializer
 
     @extend_schema(
-        summary="Get service http logs fields values",
+        summary="Get http logs fields values",
         parameters=[HttpLogFieldsQuerySerializer],
     )
-    def get(
-        self,
-        request: Request,
-        project_slug: str,
-        service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV_NAME,
-    ):
-        try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
-            environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
-            )
-            service = Service.objects.get(
-                slug=service_slug, project=project, environment=environment
-            )
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist."
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
-            )
-        except Service.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
-            )
-        else:
-            form = HttpLogFieldsQuerySerializer(data=request.query_params)
-            if form.is_valid(raise_exception=True):
-                field = form.data["field"]  # type: ignore
-                value = form.data["value"]  # type: ignore
+    def get(self, request: Request):
+        form = HttpLogFieldsQuerySerializer(data=request.query_params)
+        form.is_valid(raise_exception=True)
 
-                condition = {}
-                if len(value) > 0:
-                    condition = {f"{field}__startswith": value}
+        data = cast(dict, form.data)
+        field = data["field"]
+        value = data["value"]
 
-                values = (
-                    HttpLog.objects.filter(
-                        service_id=service.id,
-                        **condition,
-                    )
-                    .order_by(field)
-                    .values_list(field, flat=True)
-                    .distinct()[:7]
-                )
+        service_id = data.get("service_id")
+        stack_id = data.get("stack_id")
+        deployment_id = data.get("deployment_hash")
 
-                seriaziler = HttpLogFieldsResponseSerializer([item for item in values])
-                return Response(seriaziler.data)
+        condition = Q()
+        if len(value) > 0:
+            condition &= Q(**{f"{field}__startswith": value})
+
+        if service_id:
+            condition &= Q(service_id=service_id)
+
+        if stack_id:
+            condition &= Q(stack_id=stack_id)
+
+        if deployment_id:
+            condition &= Q(deployment_id=deployment_id)
+
+        values = (
+            HttpLog.objects.filter(condition)
+            .order_by(field)
+            .values_list(field, flat=True)
+            .distinct()[:7]
+        )
+
+        seriaziler = HttpLogFieldsResponseSerializer([item for item in values])
+        return Response(seriaziler.data)
 
 
-class ServiceHttpLogsAPIView(ListAPIView):
+class HttpLogsAPIView(ListAPIView):
     serializer_class = HttpLogSerializer
     queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
     pagination_class = DeploymentHttpLogsPagination
@@ -271,7 +312,7 @@ class ServiceHttpLogsAPIView(ListAPIView):
     filterset_class = DeploymentHttpLogsFilterSet
 
     @extend_schema(
-        summary="Get service HTTP logs",
+        summary="Get HTTP logs",
     )
     def get(self, request: Request, *args, **kwargs):
         try:
@@ -283,78 +324,12 @@ class ServiceHttpLogsAPIView(ListAPIView):
                 return Response(EMPTY_CURSOR_RESPONSE)
             raise e
 
-    def get_queryset(self):  # type: ignore
-        project_slug = self.kwargs["project_slug"]
-        service_slug = self.kwargs["service_slug"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
 
-        try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
-
-            environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
-            )
-            service = Service.objects.get(
-                slug=service_slug, project=project, environment=environment
-            )
-            return service.http_logs
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist."
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
-            )
-        except Service.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
-            )
-
-
-class ServiceSingleHttpLogAPIView(RetrieveAPIView):
+@extend_schema(summary="Get single http log")
+class SingleHttpLogAPIView(RetrieveAPIView):
     serializer_class = HttpLogSerializer
-    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
-    lookup_url_kwarg = "request_uuid"  # This corresponds to the URL configuration
-
-    @extend_schema(summary="Get single service http log")
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-
-    def get_object(self):  # type: ignore
-        project_slug = self.kwargs["project_slug"]
-        service_slug = self.kwargs["service_slug"]
-        request_uuid = self.kwargs["request_uuid"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
-
-        try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
-
-            environment = Environment.objects.get(name=env_slug, project=project)
-            service = Service.objects.get(
-                slug=service_slug, project=project, environment=environment
-            )
-            http_log = service.http_logs.filter(
-                service_id=service.id, request_id=request_uuid
-            ).first()
-
-            if http_log is None:
-                raise exceptions.NotFound(
-                    detail=f"A HTTP log with the id of `{request_uuid}` does not exist for this deployment."
-                )
-            return http_log
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist."
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
-            )
-        except Service.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
-            )
+    queryset = HttpLog.objects.all()
+    lookup_field = "request_uuid"
 
 
 class ServiceDeploymentRuntimeLogsAPIView(APIView):
@@ -399,13 +374,73 @@ class ServiceDeploymentRuntimeLogsAPIView(APIView):
             )
         else:
             form = DeploymentRuntimeLogsQuerySerializer(data=request.query_params)
-            print(f"{request.query_params=}")
             if form.is_valid(raise_exception=True):
                 search_client = LokiSearchClient(host=settings.LOKI_HOST)
                 data = search_client.search(
-                    query=dict(**form.validated_data, deployment_id=deployment.hash),  # type: ignore
+                    query=dict(
+                        **form.validated_data,  # type: ignore
+                        deployment_id=deployment.hash,
+                    )
                 )
                 return Response(data)
+
+
+class ServiceDeploymentRuntimeLogsWithContextAPIView(APIView):
+    serializer_class = RuntimeLogsContextSerializer
+
+    @extend_schema(
+        summary="Get deployment logs with context",
+        parameters=[RuntimeLogsContextParamsSerializer],
+    )
+    def get(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        deployment_hash: str,
+        env_slug: str,
+        time: str,
+    ):
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            service = Service.objects.get(
+                slug=service_slug, project=project, environment=environment
+            )
+            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except Service.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
+            )
+        except Deployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+
+        search_client = LokiSearchClient(host=settings.LOKI_HOST)
+        time_ns = int(time)
+
+        form = RuntimeLogsContextParamsSerializer(data=request.query_params)
+        form.is_valid(raise_exception=True)
+
+        lines = cast(dict, form.validated_data).get("lines", 20)
+        data = search_client.get_context(
+            lines=math.ceil(lines / 2),
+            timestamp_ns=time_ns,
+            deployment_id=deployment.hash,
+        )
+        return Response(data)
 
 
 class ServiceDeploymentBuildLogsAPIView(APIView):
@@ -451,183 +486,13 @@ class ServiceDeploymentBuildLogsAPIView(APIView):
             )
         else:
             form = DeploymentBuildLogsQuerySerializer(data=request.query_params)
-            print(f"{request.query_params=}")
             if form.is_valid(raise_exception=True):
                 search_client = LokiSearchClient(host=settings.LOKI_HOST)
                 data = search_client.search(
                     query=dict(
-                        cursor=cast(ReturnDict, form.validated_data).get("cursor"),
+                        **form.validated_data,  # type: ignore
                         deployment_id=deployment.hash,
                         source=[RuntimeLogSource.BUILD, RuntimeLogSource.SYSTEM],
-                    ),  # type: ignore
+                    )
                 )
                 return Response(data)
-
-
-class ServiceDeploymentHttpLogsFieldsAPIView(APIView):
-    serializer_class = HttpLogFieldsResponseSerializer
-
-    @extend_schema(
-        summary="Get deployment http logs fields values",
-        parameters=[HttpLogFieldsQuerySerializer],
-    )
-    def get(
-        self,
-        request: Request,
-        project_slug: str,
-        service_slug: str,
-        deployment_hash: str,
-        env_slug: str = Environment.PRODUCTION_ENV_NAME,
-    ):
-        try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
-
-            environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
-            )
-            service = Service.objects.get(
-                slug=service_slug, project=project, environment=environment
-            )
-            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist."
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
-            )
-        except Service.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
-            )
-        except Deployment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
-            )
-        else:
-            form = HttpLogFieldsQuerySerializer(data=request.query_params)
-            if form.is_valid(raise_exception=True):
-                field = form.data["field"]  # type: ignore # type: ignore
-                value = form.data["value"]  # type: ignore # type: ignore
-
-                condition = {}
-                if len(value) > 0:
-                    condition = {f"{field}__startswith": value}
-
-                values = (
-                    HttpLog.objects.filter(
-                        deployment_id=deployment.hash,
-                        service_id=service.id,
-                        **condition,
-                    )
-                    .order_by(field)
-                    .values_list(field, flat=True)
-                    .distinct()[:7]
-                )
-
-                seriaziler = HttpLogFieldsResponseSerializer([item for item in values])
-                return Response(seriaziler.data)
-
-
-class ServiceDeploymentHttpLogsAPIView(ListAPIView):
-    serializer_class = HttpLogSerializer
-    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
-    pagination_class = DeploymentHttpLogsPagination
-    filter_backends = [DjangoFilterBackend]
-    filterset_class = DeploymentHttpLogsFilterSet
-
-    @extend_schema(
-        summary="Get deployment HTTP logs",
-    )
-    def get(self, request, *args, **kwargs):
-        try:
-            return super().get(request, *args, **kwargs)
-        except exceptions.NotFound as e:
-            if "Invalid cursor" in str(e.detail):
-                return Response(EMPTY_CURSOR_RESPONSE)
-            raise e
-
-    def get_queryset(self):  # type: ignore
-        project_slug = self.kwargs["project_slug"]
-        service_slug = self.kwargs["service_slug"]
-        deployment_hash = self.kwargs["deployment_hash"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
-
-        try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
-            environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
-            )
-            service = Service.objects.get(
-                slug=service_slug, project=project, environment=environment
-            )
-            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
-            return deployment.http_logs
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist."
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
-            )
-        except Service.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
-            )
-        except Deployment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
-            )
-
-
-class ServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
-    serializer_class = HttpLogSerializer
-    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
-    lookup_url_kwarg = "request_uuid"  # This corresponds to the URL configuration
-
-    @extend_schema(summary="Get single deployment http log")
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-
-    def get_object(self):  # type: ignore
-        project_slug = self.kwargs["project_slug"]
-        service_slug = self.kwargs["service_slug"]
-        deployment_hash = self.kwargs["deployment_hash"]
-        request_uuid = self.kwargs["request_uuid"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
-
-        try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
-
-            environment = Environment.objects.get(name=env_slug, project=project)
-            service = Service.objects.get(
-                slug=service_slug, project=project, environment=environment
-            )
-            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
-            http_log = deployment.http_logs.filter(
-                deployment_id=deployment_hash, request_id=request_uuid
-            ).first()
-
-            if http_log is None:
-                raise exceptions.NotFound(
-                    detail=f"A HTTP log with the id of `{request_uuid}` does not exist for this deployment."
-                )
-            return http_log
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist."
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
-            )
-        except Service.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
-            )
-        except Deployment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
-            )

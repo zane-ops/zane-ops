@@ -24,17 +24,17 @@ from typing import cast
 from zane_api.utils import jprint
 from ..dtos import ComposeStackServiceStatus
 import requests
-from temporal.helpers import ZaneProxyClient
+from temporal.proxy import ZaneProxyClient
 from django.conf import settings
 from temporal.schedules import MonitorComposeStackWorkflow
 from temporal.activities import ComposeStackActivities
-from compose.dtos import ComposeStackSnapshot
 from temporalio import activity
 from temporal.shared import ComposeStackBuildDetails
 from compose.dtos import ComposeStackUrlRouteDto
 
 
 from .stacks import ComposeStackAPITestBase
+from asgiref.sync import sync_to_async
 
 
 class DeployComposeStackViewTests(ComposeStackAPITestBase):
@@ -588,20 +588,13 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             self.assertEqual({}, stack.service_statuses)
 
             # Run the monitor workflow directly
-            snapshot = ComposeStackSnapshot(
-                id=stack.id,
-                name=stack.name,
-                slug=stack.slug,
-                hash_prefix=stack.hash_prefix,
-                monitor_schedule_id=stack.monitor_schedule_id,
-                network_alias_prefix=stack.network_alias_prefix,
-                user_content=stack.user_content or "",
-                computed_content=stack.computed_content or "",
-            )
+            @sync_to_async
+            def get_snapshot():
+                return stack.snapshot
 
             healthcheck = await env.client.execute_workflow(
                 workflow=MonitorComposeStackWorkflow.run,
-                arg=snapshot,
+                arg=await get_snapshot(),
                 id=stack.monitor_schedule_id,
                 task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
@@ -1103,81 +1096,6 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         self.assertEqual(404, response.status_code)
 
     @responses.activate()
-    async def test_archive_stack_with_delete_configs_false_keeps_configs(self):
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
-        responses.add_passthru(settings.LOKI_HOST)
-
-        project = await self.acreate_project()
-
-        # Create and deploy a stack with inline configs
-        create_stack_payload = {
-            "slug": "keep-config-stack",
-            "user_content": DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
-        }
-
-        response = await self.async_client.post(
-            reverse(
-                "compose:stacks.create",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            ),
-            data=create_stack_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        stack = cast(
-            ComposeStack,
-            await ComposeStack.objects.filter(slug="keep-config-stack").afirst(),
-        )
-        self.assertIsNotNone(stack)
-        stack_name = stack.name
-
-        # Deploy the stack
-        response = await self.async_client.put(
-            reverse(
-                "compose:stacks.deploy",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                    "slug": stack.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        # Verify configs exist before archiving
-        await stack.arefresh_from_db()
-        self.assertIsNotNone(stack.configs)
-
-        config_list_before = self.fake_docker_client.config_list(
-            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
-        )
-        self.assertGreater(len(config_list_before), 0)
-
-        # Archive the stack with delete_configs=False
-        response = await self.async_client.delete(
-            reverse(
-                "compose:stacks.archive",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                    "slug": stack.slug,
-                },
-            ),
-            data={"delete_configs": False},
-            content_type="application/json",
-        )
-        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
-
-        # Verify configs are NOT deleted
-        config_list_after = self.fake_docker_client.config_list(
-            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
-        )
-        self.assertEqual(len(config_list_before), len(config_list_after))
-
-    @responses.activate()
     async def test_archive_compose_stack_deletes_monitor_schedule(self):
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
@@ -1247,16 +1165,16 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         self.assertIsNone(self.get_workflow_schedule_by_id(monitor_schedule_id))
 
     @responses.activate()
-    async def test_archive_stack_with_delete_volumes_false_keeps_volumes(self):
+    async def test_archive_compose_stack_deletes_metrics_schedule(self):
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
 
         project = await self.acreate_project()
 
-        # Create and deploy a stack with volumes
+        # Create and deploy a stack
         create_stack_payload = {
-            "slug": "keep-volume-stack",
-            "user_content": DOCKER_COMPOSE_SIMPLE_DB,
+            "slug": "monitor-stack",
+            "user_content": DOCKER_COMPOSE_MINIMAL,
         }
 
         response = await self.async_client.post(
@@ -1273,10 +1191,11 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
 
         stack = cast(
             ComposeStack,
-            await ComposeStack.objects.filter(slug="keep-volume-stack").afirst(),
+            await ComposeStack.objects.filter(slug="monitor-stack").afirst(),
         )
         self.assertIsNotNone(stack)
-        stack_name = stack.name
+        stack_id = stack.id
+        metrics_schedule_id = stack.metrics_schedule_id
 
         # Deploy the stack
         response = await self.async_client.put(
@@ -1291,13 +1210,11 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        # Verify volumes exist before archiving
-        volumes_before = self.fake_docker_client.volumes_list(
-            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
-        )
-        self.assertGreater(len(volumes_before), 0)
+        # Verify metrics schedule was created
+        schedule_handle = self.get_workflow_schedule_by_id(metrics_schedule_id)
+        self.assertIsNotNone(schedule_handle)
 
-        # Archive the stack with delete_volumes=False
+        # Archive the stack
         response = await self.async_client.delete(
             reverse(
                 "compose:stacks.archive",
@@ -1307,16 +1224,14 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
                     "slug": stack.slug,
                 },
             ),
-            data={"delete_volumes": False},
-            content_type="application/json",
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        # Verify volumes are NOT deleted
-        volumes_after = self.fake_docker_client.volumes_list(
-            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
-        )
-        self.assertEqual(len(volumes_before), len(volumes_after))
+        # Verify stack is deleted
+        self.assertIsNone(await ComposeStack.objects.filter(id=stack_id).afirst())
+
+        # Verify metrics schedule is deleted
+        self.assertIsNone(self.get_workflow_schedule_by_id(metrics_schedule_id))
 
     def test_archive_stack_without_deployment_deletes_stack(self):
         project = self.create_project()

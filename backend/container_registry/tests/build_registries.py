@@ -11,7 +11,8 @@ from ..models import BuildRegistry
 from zane_api.models import Deployment, DeploymentChange
 
 from django.conf import settings
-from temporal.helpers import ZaneProxyClient
+from temporal.proxy import ZaneProxyClient
+
 from temporal.activities.registries import get_config_name_for_registry
 
 

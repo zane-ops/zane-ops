@@ -1,4 +1,3 @@
-import json
 import re
 from typing import cast
 
@@ -19,7 +18,7 @@ from .fixtures import (
 from copy import deepcopy
 from asgiref.sync import sync_to_async
 from rest_framework import status
-from zane_api.utils import generate_random_chars, jprint
+from zane_api.utils import generate_random_chars
 from ..models import GitHubApp
 from zane_api.models import (
     GitApp,

@@ -4,7 +4,7 @@ import responses
 import requests
 from django.conf import settings
 
-from zane_api.models import Environment
+from zane_api.models import Environment, SharedEnvVariable
 from ..models import ComposeStack, ComposeStackChange, ComposeStackEnvOverride
 from .fixtures import (
     DOCKER_COMPOSE_MINIMAL,
@@ -12,12 +12,14 @@ from .fixtures import (
     DOCKER_COMPOSE_WITH_X_ENV_IN_URLS,
     DOCKER_COMPOSE_WITH_PLACEHOLDERS,
     DOCKER_COMPOSE_WEB_SERVICE,
-    DOCKER_COMPOSE_WEB_WITH_DB,
-    DOCKER_COMPOSE_WEB_ONLY,
+    DOCKER_COMPOSE_WITH_SHARED_ENV_REFERENCES,
+    DOCKER_COMPOSE_WITHOUT_SHARED_ENV_REFERENCES,
+    DOCKER_COMPOSE_WITH_SHARED_ENV_OUTSIDE_X_ZANE_ENV,
 )
 from typing import cast
 from zane_api.utils import jprint
-from temporal.helpers import ZaneProxyClient
+from temporal.proxy import ZaneProxyClient
+
 
 from .stacks import ComposeStackAPITestBase
 from ..dtos import ComposeStackUrlRouteDto
@@ -71,66 +73,6 @@ class ComposeStackRequestUpdateViewTests(ComposeStackAPITestBase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         await stack.arefresh_from_db()
-        print(
-            "========= original =========",
-            stack.user_content,
-            "========= end original =========",
-            sep="\n",
-        )
-        print(
-            "========= computed =========",
-            stack.computed_content,
-            "========= end computed =========",
-            sep="\n",
-        )
-
-        return project, stack
-
-    def create_and_deploy_compose_stack(
-        self,
-        content: str,
-        slug="my-stack",
-    ):
-        project = self.create_project(slug="compose")
-
-        create_stack_payload = {
-            "slug": slug,
-            "user_content": content,
-        }
-
-        response = self.client.post(
-            reverse(
-                "compose:stacks.create",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            ),
-            data=create_stack_payload,
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        stack = cast(ComposeStack, ComposeStack.objects.filter(slug=slug).first())
-        self.assertIsNotNone(stack)
-        self.assertIsNone(stack.user_content)
-        self.assertIsNone(stack.computed_content)
-
-        # Deploy the stack
-        response = self.client.put(
-            reverse(
-                "compose:stacks.deploy",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                    "slug": stack.slug,
-                },
-            ),
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        stack.refresh_from_db()
         print(
             "========= original =========",
             stack.user_content,
@@ -821,68 +763,64 @@ configs:
         self.assertIn("app_config_v1:", new_computed)
         self.assertNotIn("app_config_v2:", new_computed)
 
-    @responses.activate()
-    async def test_update_compose_removes_unreferenced_services(self):
+
+class ComposeStackSharedEnvViewTests(ComposeStackAPITestBase):
+    def test_shared_env_variables_are_passed_to_compose_stacks_if_referenced(self):
         """
-        When updating a compose stack to remove services,
-        the removed services should be deleted from Docker Swarm
-        and no longer appear in the stack's computed content.
-
-        Use case: A stack with web, db, and cache services is updated
-        to only have the web service. The db and cache services should
-        be removed from Docker Swarm.
+        When a compose stack references shared env variables using {{env.VAR}} syntax
+        in the x-zane-env section, those variables should be expanded in the computed content.
         """
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
-        responses.add_passthru(settings.LOKI_HOST)
+        project = self.create_project(slug="shared-env-test")
+        environment = project.production_env
 
-        project, stack = await self.acreate_and_deploy_compose_stack(
-            content=DOCKER_COMPOSE_WEB_WITH_DB,
-            slug="service-removal-stack",
+        # Create shared env variables for the environment
+        SharedEnvVariable.objects.bulk_create(
+            [
+                SharedEnvVariable(
+                    key="GITHUB_CLIENT_ID",
+                    value="gh-client-123",
+                    environment=environment,
+                ),
+                SharedEnvVariable(
+                    key="GITHUB_TOKEN",
+                    value="ghp_secretToken456",
+                    environment=environment,
+                ),
+                SharedEnvVariable(
+                    key="DB_NAME",
+                    value="my_database",
+                    environment=environment,
+                ),
+            ]
         )
 
-        # Verify initial services exist in computed content
-        await stack.arefresh_from_db()
-
-        # Verify initial services exist in Docker
-        initial_web_service = self.fake_docker_client.services_get(
-            f"{stack.name}_{stack.hash_prefix}_web"
-        )
-        self.assertIsNotNone(initial_web_service)
-
-        initial_db_service = self.fake_docker_client.services_get(
-            f"{stack.name}_{stack.hash_prefix}_db"
-        )
-        self.assertIsNotNone(initial_db_service)
-
-        initial_cache_service = self.fake_docker_client.services_get(
-            f"{stack.name}_{stack.hash_prefix}_cache"
-        )
-        self.assertIsNotNone(initial_cache_service)
-
-        # Update to only have web service (remove db and cache)
-        update_payload = {
-            "field": ComposeStackChange.ChangeField.COMPOSE_CONTENT,
-            "type": ComposeStackChange.ChangeType.UPDATE,
-            "new_value": DOCKER_COMPOSE_WEB_ONLY,
+        # Create compose stack that references shared env variables
+        create_stack_payload = {
+            "slug": "shared-env-stack",
+            "user_content": DOCKER_COMPOSE_WITH_SHARED_ENV_REFERENCES,
         }
 
-        response = await self.async_client.put(
+        response = self.client.post(
             reverse(
-                "compose:stacks.request_changes",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
-                    "slug": stack.slug,
                 },
             ),
-            data=update_payload,
-            content_type="application/json",
+            data=create_stack_payload,
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        # Deploy the changes
-        response = await self.async_client.put(
+        stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="shared-env-stack").first(),
+        )
+        self.assertIsNotNone(stack)
+
+        # Deploy the stack
+        response = self.client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -895,28 +833,176 @@ configs:
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        await stack.arefresh_from_db()
-        new_computed = cast(str, stack.computed_content)
+        stack.refresh_from_db()
+        computed_content = cast(str, stack.computed_content)
 
         print(
-            "========= new computed =========",
-            new_computed,
-            "========= end new computed =========",
+            "========= computed =========",
+            computed_content,
+            "========= end computed =========",
             sep="\n",
         )
 
-        # Verify web service still exists in Docker
-        web_service = self.fake_docker_client.services_get(
-            f"{stack.name}_{stack.hash_prefix}_web"
-        )
-        self.assertIsNotNone(web_service)
+        # Verify shared env variables were expanded in computed content
+        self.assertIn("gh-client-123", computed_content)
+        self.assertIn("ghp_secretToken456", computed_content)
+        self.assertIn("my_database", computed_content)
 
-        # Verify db and cache services are removed from Docker
-        service_list = self.fake_docker_client.services_list(
-            filters={"label": [f"com.docker.stack.namespace={stack.name}"]}
+        # Verify the placeholder syntax is no longer present
+        self.assertNotIn("{{env.GITHUB_CLIENT_ID}}", computed_content)
+        self.assertNotIn("{{env.GITHUB_TOKEN}}", computed_content)
+        self.assertNotIn("{{env.DB_NAME}}", computed_content)
+
+    def test_shared_env_variables_are_not_passed_to_compose_stacks_if_not_referenced(
+        self,
+    ):
+        """
+        When a compose stack does NOT reference shared env variables,
+        those variables should NOT appear in the computed content.
+        """
+        project = self.create_project(slug="no-shared-env-test")
+        environment = project.production_env
+
+        # Create shared env variables for the environment
+        SharedEnvVariable.objects.bulk_create(
+            [
+                SharedEnvVariable(
+                    key="GITHUB_CLIENT_ID",
+                    value="gh-client-123",
+                    environment=environment,
+                ),
+                SharedEnvVariable(
+                    key="GITHUB_TOKEN",
+                    value="ghp_secretToken456",
+                    environment=environment,
+                ),
+            ]
         )
-        self.assertEqual(1, len(service_list))
-        self.assertEqual(
-            f"{stack.name}_{stack.hash_prefix}_web",
-            service_list[0].name,
+
+        # Create compose stack that does NOT reference shared env variables
+        create_stack_payload = {
+            "slug": "no-shared-env-stack",
+            "user_content": DOCKER_COMPOSE_WITHOUT_SHARED_ENV_REFERENCES,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
         )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="no-shared-env-stack").first(),
+        )
+        self.assertIsNotNone(stack)
+
+        # Deploy the stack
+        response = self.client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        stack.refresh_from_db()
+        computed_content = cast(str, stack.computed_content)
+
+        print(
+            "========= computed =========",
+            computed_content,
+            "========= end computed =========",
+            sep="\n",
+        )
+
+        # Verify shared env variables are NOT present in computed content
+        self.assertNotIn("gh-client-123", computed_content)
+        self.assertNotIn("ghp_secretToken456", computed_content)
+        self.assertNotIn("GITHUB_CLIENT_ID", computed_content)
+        self.assertNotIn("GITHUB_TOKEN", computed_content)
+
+        # Verify the stack's own variables are present
+        self.assertIn("my-application", computed_content)
+        self.assertIn("false", computed_content)
+
+    def test_shared_env_reference_outside_x_zane_env_is_not_expanded(self):
+        """
+        When {{env.VAR}} syntax is used outside the x-zane-env section,
+        it should NOT be expanded (treated as literal string).
+        """
+        project = self.create_project(slug="outside-x-env-test")
+        environment = project.production_env
+
+        # Create shared env variable
+        SharedEnvVariable.objects.create(
+            key="GITHUB_CLIENT_ID",
+            value="gh-client-123",
+            environment=environment,
+        )
+
+        # Create compose stack with shared env reference outside x-zane-env
+        create_stack_payload = {
+            "slug": "outside-x-env-stack",
+            "user_content": DOCKER_COMPOSE_WITH_SHARED_ENV_OUTSIDE_X_ZANE_ENV,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="outside-x-env-stack").first(),
+        )
+        self.assertIsNotNone(stack)
+
+        # Deploy the stack
+        response = self.client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        stack.refresh_from_db()
+        computed_content = cast(str, stack.computed_content)
+
+        print(
+            "========= computed =========",
+            computed_content,
+            "========= end computed =========",
+            sep="\n",
+        )
+
+        # The {{env.VAR}} outside x-zane-env should remain unexpanded
+        self.assertIn("{{env.GITHUB_CLIENT_ID}}", computed_content)
+        # The actual value should NOT be present
+        self.assertNotIn("gh-client-123", computed_content)

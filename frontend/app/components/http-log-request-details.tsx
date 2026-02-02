@@ -30,7 +30,7 @@ import {
 } from "~/lib/constants";
 import type { HttpLog } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { formatTimeValue, formattedTime } from "~/utils";
+import { formatDuration, formattedTime } from "~/utils";
 
 type HttpLogRequestDetailsProps = {
   log?: HttpLog;
@@ -69,7 +69,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryParams = new URLSearchParams(log.request_query ?? "");
   const statusMessage = STANDARD_HTTP_STATUS_CODES[log.status];
-  const { value: duration, unit } = formatTimeValue(
+  const { value: duration, unit } = formatDuration(
     log.request_duration_ns / 1_000_000 /*from ns to ms*/
   );
 
@@ -100,7 +100,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
       <dl className="flex flex-col gap-x-4 gap-y-2 items-center auto-rows-max">
         <div className="grid grid-cols-2 items-center gap-x-4 w-full">
           <dt className="text-grey  inline-flex items-center">ID</dt>
-          <dd className="text-sm">{log.request_id}</dd>
+          <dd className="text-sm">{log.request_uuid}</dd>
         </div>
         {deploymentHashHeader && (
           <div className="grid grid-cols-2 items-center gap-x-4 w-full">

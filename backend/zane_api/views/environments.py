@@ -45,10 +45,12 @@ from temporal.workflows import (
     ArchiveEnvWorkflow,
     DeployDockerServiceWorkflow,
     DelayedArchiveEnvWorkflow,
+    DeployComposeStackWorkflow,
 )
 from temporal.shared import (
     EnvironmentDetails,
     DeploymentDetails,
+    ComposeStackDeploymentDetails,
 )
 from rest_framework import viewsets
 from rest_framework import permissions
@@ -137,8 +139,9 @@ class CloneEnviromentAPIView(APIView):
         form = CloneEnvironmentRequestSerializer(data=request.data)
         form.is_valid(raise_exception=True)
 
-        name = form.data["name"].lower()  # type: ignore
-        should_deploy_services = form.data["deploy_services"]  # type: ignore
+        data = cast(dict, form.data)
+        name = data["name"].lower()
+        should_deploy = data["deploy_after_clone"]
         try:
             new_environment = current_environment.clone(
                 env_name=name,
@@ -160,11 +163,30 @@ class CloneEnviromentAPIView(APIView):
                 )
             ]
 
-            if should_deploy_services:
+            if should_deploy:
+                for stack in new_environment.compose_stacks.all():
+                    deployment = stack.deployments.create(
+                        commit_message="Deploy from clone",
+                    )
+                    stack.apply_pending_changes(deployment)
+
+                    deployment.stack_snapshot = stack.snapshot.to_dict()  # type: ignore
+                    deployment.save()
+
+                    payload = ComposeStackDeploymentDetails.from_deployment(deployment)
+                    workflows_to_run.append(
+                        StartWorkflowArg(
+                            DeployComposeStackWorkflow.run,
+                            payload,
+                            payload.workflow_id,
+                        )
+                    )
                 for service in new_environment.services.all():
                     if service.type == Service.ServiceType.DOCKER_REGISTRY:
                         workflow = DeployDockerServiceWorkflow.run
-                        new_deployment = service.prepare_new_docker_deployment()
+                        new_deployment = service.prepare_new_docker_deployment(
+                            commit_message="Clone deployment"
+                        )
                     else:
                         workflow = DeployGitServiceWorkflow.run
                         new_deployment = service.prepare_new_git_deployment()
@@ -371,11 +393,7 @@ class ReviewPreviewEnvDeployAPIView(APIView):
                 workflows_to_run.append(
                     StartWorkflowArg(
                         workflow=ArchiveEnvWorkflow.run,
-                        payload=EnvironmentDetails(
-                            id=environment.id,
-                            project_id=project.id,
-                            name=environment.name,
-                        ),
+                        payload=EnvironmentDetails.from_environment(environment),
                         workflow_id=environment.archive_workflow_id,
                     )
                 )
@@ -503,9 +521,7 @@ class EnvironmentDetailsAPIView(APIView):
 
         environment.delete_resources()
 
-        details = EnvironmentDetails(
-            id=environment.id, project_id=project.id, name=environment.name
-        )
+        details = EnvironmentDetails.from_environment(environment)
         workflow_id = environment.archive_workflow_id
         transaction.on_commit(
             lambda: TemporalClient.start_workflow(
@@ -846,6 +862,24 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                     new_environment.workflow_id,
                 )
             ]
+
+            for stack in new_environment.compose_stacks.all():
+                deployment = stack.deployments.create(
+                    commit_message="Deploy from clone",
+                )
+                stack.apply_pending_changes(deployment)
+
+                deployment.stack_snapshot = stack.snapshot.to_dict()  # type: ignore
+                deployment.save()
+
+                payload = ComposeStackDeploymentDetails.from_deployment(deployment)
+                workflows_to_run.append(
+                    StartWorkflowArg(
+                        DeployComposeStackWorkflow.run,
+                        payload,
+                        payload.workflow_id,
+                    )
+                )
 
             for service in new_environment.services.all():
                 if service.type == Service.ServiceType.DOCKER_REGISTRY:

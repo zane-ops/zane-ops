@@ -545,6 +545,92 @@ paths:
               schema:
                 $ref: '#/components/schemas/OngoingUpdateResponse'
           description: ''
+  /api/compose/deploy-stack/{deploy_token}/:
+    put:
+      operationId: webhookDeployComposeStack
+      description: trigger a new deployment.
+      summary: Webhook to deploy a compose stack
+      parameters:
+      - in: path
+        name: deploy_token
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      tags:
+      - compose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComposeStackWebhookDeployRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ComposeStackWebhookDeployRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ComposeStackWebhookDeployRequestRequest'
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeployComposeStackErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '202':
+          description: No response body
   /api/compose/stacks/{project_slug}/{env_slug}/:
     get:
       operationId: compose_stacks_list
@@ -561,6 +647,30 @@ paths:
           type: string
           pattern: ^[-a-zA-Z0-9_]+$
         required: true
+      - in: query
+        name: slug
+        schema:
+          type: string
+      - in: query
+        name: sort_by
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - -slug
+            - -updated_at
+            - slug
+            - updated_at
+        description: |-
+          Ordering
+
+          * `slug` - Slug
+          * `-slug` - Slug (descending)
+          * `updated_at` - Updated at
+          * `-updated_at` - Updated at (descending)
+        explode: false
+        style: form
       tags:
       - compose
       security:
@@ -1098,6 +1208,107 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/build-logs/:
+    get:
+      operationId: compose_stacks_build_logs_retrieve
+      summary: Get stack build logs
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+          minLength: 1
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStacksBuildLogsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeLogsSearch'
+          description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/:
     put:
       operationId: deployComposeStack
@@ -1293,6 +1504,221 @@ paths:
               schema:
                 $ref: '#/components/schemas/ComposeStackDeployment'
           description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/metrics/:
+    get:
+      operationId: compose_stacks_metrics_retrieve
+      summary: Get stack metrics
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: service_names
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: time_range
+        schema:
+          enum:
+          - LAST_HOUR
+          - LAST_6HOURS
+          - LAST_DAY
+          - LAST_WEEK
+          - LAST_MONTH
+          type: string
+          default: LAST_HOUR
+          minLength: 1
+        description: |-
+          * `LAST_HOUR` - LAST_HOUR
+          * `LAST_6HOURS` - LAST_6HOURS
+          * `LAST_DAY` - LAST_DAY
+          * `LAST_WEEK` - LAST_WEEK
+          * `LAST_MONTH` - LAST_MONTH
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStacksMetricsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStackMetricsResponse'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/regenerate-deploy-token/:
+    put:
+      operationId: regenerateComposeStackDeployToken
+      summary: Regenerate a compose stack deploy token
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComposeStackRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ComposeStackRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ComposeStackRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegenerateComposeStackDeployTokenErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStack'
+          description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/request-changes/:
     put:
       operationId: requestComposeStackUpdate
@@ -1392,6 +1818,248 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ComposeStackChange'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/runtime-logs/:
+    get:
+      operationId: compose_stacks_runtime_logs_retrieve
+      summary: Get stack runtime logs
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+          minLength: 1
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: level
+        schema:
+          type: array
+          items:
+            enum:
+            - INFO
+            - ERROR
+            type: string
+            description: |-
+              * `INFO` - INFO
+              * `ERROR` - ERROR
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: query
+        schema:
+          type: string
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: stack_service_names
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+      - in: query
+        name: time_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: time_before
+        schema:
+          type: string
+          format: date-time
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStacksRuntimeLogsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeLogsSearch'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/runtime-logs/with-context/{time}/:
+    get:
+      operationId: compose_stacks_runtime_logs_with_context_retrieve
+      summary: Get stack runtime logs with context
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: lines
+        schema:
+          type: integer
+          minimum: 5
+          default: 20
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: stack_service_names
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+      - in: path
+        name: time
+        schema:
+          type: string
+          pattern: ^[0-9]+$
+        required: true
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStacksRuntimeLogsWithContextRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeLogsContext'
           description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/toggle/:
     put:
@@ -3268,6 +3936,380 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DockerImageSearchResponse'
+          description: ''
+  /api/http-logs/:
+    get:
+      operationId: http_logs_list
+      summary: Get HTTP logs
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: deployment_id
+        schema:
+          type: string
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: request_host
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: request_ip
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: request_method
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - DELETE
+            - GET
+            - HEAD
+            - OPTIONS
+            - PATCH
+            - POST
+            - PUT
+        description: |-
+          * `GET` - GET
+          * `POST` - POST
+          * `PUT` - PUT
+          * `DELETE` - DELETE
+          * `PATCH` - PATCH
+          * `OPTIONS` - OPTIONS
+          * `HEAD` - HEAD
+        explode: true
+        style: form
+      - in: query
+        name: request_path
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: request_query
+        schema:
+          type: string
+      - in: query
+        name: request_user_agent
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: service_id
+        schema:
+          type: string
+      - in: query
+        name: sort_by
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - -request_duration_ns
+            - -time
+            - request_duration_ns
+            - time
+        description: |-
+          Ordering
+
+          * `time` - Time
+          * `-time` - Time (descending)
+          * `request_duration_ns` - Request duration ns
+          * `-request_duration_ns` - Request duration ns (descending)
+        explode: false
+        style: form
+      - in: query
+        name: stack_id
+        schema:
+          type: string
+      - in: query
+        name: stack_service_name
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: time_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: time_before
+        schema:
+          type: string
+          format: date-time
+      tags:
+      - http-logs
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpLogsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHttpLogList'
+          description: ''
+  /api/http-logs/{request_uuid}/:
+    get:
+      operationId: http_logs_retrieve
+      summary: Get single http log
+      parameters:
+      - in: path
+        name: request_uuid
+        schema:
+          type: string
+          pattern: ^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$
+        required: true
+      tags:
+      - http-logs
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpLogsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpLog'
+          description: ''
+  /api/http-logs/fields/:
+    get:
+      operationId: http_logs_fields_list
+      summary: Get http logs fields values
+      parameters:
+      - in: query
+        name: deployment_hash
+        schema:
+          type: string
+          minLength: 1
+      - in: query
+        name: field
+        schema:
+          enum:
+          - request_host
+          - request_path
+          - request_user_agent
+          - request_ip
+          type: string
+          minLength: 1
+        description: |-
+          * `request_host` - request_host
+          * `request_path` - request_path
+          * `request_user_agent` - request_user_agent
+          * `request_ip` - request_ip
+        required: true
+      - in: query
+        name: service_id
+        schema:
+          type: string
+          minLength: 1
+      - in: query
+        name: stack_id
+        schema:
+          type: string
+          minLength: 1
+      - in: query
+        name: value
+        schema:
+          type: string
+        required: true
+      tags:
+      - http-logs
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpLogsFieldsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
           description: ''
   /api/ping/:
     get:
@@ -5388,439 +6430,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RuntimeLogsSearch'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/:
-    get:
-      operationId: projects_service_details_deployments_http_logs_list
-      summary: Get deployment HTTP logs
-      parameters:
-      - name: cursor
-        required: false
-        in: query
-        description: The pagination cursor value.
-        schema:
-          type: string
-      - in: path
-        name: deployment_hash
-        schema:
-          type: string
-          pattern: ^[a-zA-Z0-9-_]+$
-        required: true
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - name: per_page
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: request_host
-        schema:
-          type: array
-          items:
-            type: string
-        description: Multiple values may be separated by commas.
-        explode: false
-        style: form
-      - in: query
-        name: request_id
-        schema:
-          type: string
-      - in: query
-        name: request_ip
-        schema:
-          type: array
-          items:
-            type: string
-        description: Multiple values may be separated by commas.
-        explode: false
-        style: form
-      - in: query
-        name: request_method
-        schema:
-          type: array
-          items:
-            type: string
-            enum:
-            - DELETE
-            - GET
-            - HEAD
-            - OPTIONS
-            - PATCH
-            - POST
-            - PUT
-        description: |-
-          * `GET` - GET
-          * `POST` - POST
-          * `PUT` - PUT
-          * `DELETE` - DELETE
-          * `PATCH` - PATCH
-          * `OPTIONS` - OPTIONS
-          * `HEAD` - HEAD
-        explode: true
-        style: form
-      - in: query
-        name: request_path
-        schema:
-          type: array
-          items:
-            type: string
-        description: Multiple values may be separated by commas.
-        explode: false
-        style: form
-      - in: query
-        name: request_query
-        schema:
-          type: string
-      - in: query
-        name: request_user_agent
-        schema:
-          type: array
-          items:
-            type: string
-        description: Multiple values may be separated by commas.
-        explode: false
-        style: form
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: sort_by
-        schema:
-          type: array
-          items:
-            type: string
-            enum:
-            - -request_duration_ns
-            - -time
-            - request_duration_ns
-            - time
-        description: |-
-          Ordering
-
-          * `time` - Time
-          * `-time` - Time (descending)
-          * `request_duration_ns` - Request duration ns
-          * `-request_duration_ns` - Request duration ns (descending)
-        explode: false
-        style: form
-      - in: query
-        name: status
-        schema:
-          type: array
-          items:
-            type: string
-        description: Multiple values may be separated by commas.
-        explode: false
-        style: form
-      - in: query
-        name: time_after
-        schema:
-          type: string
-          format: date-time
-      - in: query
-        name: time_before
-        schema:
-          type: string
-          format: date-time
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedHttpLogList'
-          description: ''
-  ? /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/
-  : get:
-      operationId: projects_service_details_deployments_http_logs_retrieve
-      summary: Get single deployment http log
-      parameters:
-      - in: path
-        name: deployment_hash
-        schema:
-          type: string
-          pattern: ^[a-zA-Z0-9-_]+$
-        required: true
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: request_uuid
-        schema:
-          type: string
-          pattern: ^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$
-        required: true
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsRetrieveErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HttpLog'
-          description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/fields/:
-    get:
-      operationId: projects_service_details_deployments_http_logs_fields_list
-      summary: Get deployment http logs fields values
-      parameters:
-      - in: path
-        name: deployment_hash
-        schema:
-          type: string
-          pattern: ^[a-zA-Z0-9-_]+$
-        required: true
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: field
-        schema:
-          enum:
-          - request_host
-          - request_path
-          - request_user_agent
-          - request_ip
-          type: string
-          minLength: 1
-        description: |-
-          * `request_host` - request_host
-          * `request_path` - request_path
-          * `request_user_agent` - request_user_agent
-          * `request_ip` - request_ip
-        required: true
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: value
-        schema:
-          type: string
-        required: true
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsFieldsListErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: string
-          description: ''
   /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/metrics/:
     get:
       operationId: projects_service_details_deployments_metrics_list
@@ -6069,6 +6678,113 @@ paths:
               schema:
                 $ref: '#/components/schemas/RuntimeLogsSearch'
           description: ''
+  ? /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/with-context/{time}
+  : get:
+      operationId: projects_service_details_deployments_runtime_logs_with_context_retrieve
+      summary: Get deployment logs with context
+      parameters:
+      - in: path
+        name: deployment_hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: lines
+        schema:
+          type: integer
+          minimum: 5
+          default: 20
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: time
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsRuntimeLogsWithContextRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeLogsContext'
+          description: ''
   /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/detected-ports/:
     get:
       operationId: projects_service_details_detected_ports_list
@@ -6159,421 +6875,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ServiceDetectedPort'
-          description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/:
-    get:
-      operationId: projects_service_details_http_logs_list
-      summary: Get service HTTP logs
-      parameters:
-      - name: cursor
-        required: false
-        in: query
-        description: The pagination cursor value.
-        schema:
-          type: string
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - name: per_page
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: request_host
-        schema:
-          type: array
-          items:
-            type: string
-        description: Multiple values may be separated by commas.
-        explode: false
-        style: form
-      - in: query
-        name: request_id
-        schema:
-          type: string
-      - in: query
-        name: request_ip
-        schema:
-          type: array
-          items:
-            type: string
-        description: Multiple values may be separated by commas.
-        explode: false
-        style: form
-      - in: query
-        name: request_method
-        schema:
-          type: array
-          items:
-            type: string
-            enum:
-            - DELETE
-            - GET
-            - HEAD
-            - OPTIONS
-            - PATCH
-            - POST
-            - PUT
-        description: |-
-          * `GET` - GET
-          * `POST` - POST
-          * `PUT` - PUT
-          * `DELETE` - DELETE
-          * `PATCH` - PATCH
-          * `OPTIONS` - OPTIONS
-          * `HEAD` - HEAD
-        explode: true
-        style: form
-      - in: query
-        name: request_path
-        schema:
-          type: array
-          items:
-            type: string
-        description: Multiple values may be separated by commas.
-        explode: false
-        style: form
-      - in: query
-        name: request_query
-        schema:
-          type: string
-      - in: query
-        name: request_user_agent
-        schema:
-          type: array
-          items:
-            type: string
-        description: Multiple values may be separated by commas.
-        explode: false
-        style: form
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: sort_by
-        schema:
-          type: array
-          items:
-            type: string
-            enum:
-            - -request_duration_ns
-            - -time
-            - request_duration_ns
-            - time
-        description: |-
-          Ordering
-
-          * `time` - Time
-          * `-time` - Time (descending)
-          * `request_duration_ns` - Request duration ns
-          * `-request_duration_ns` - Request duration ns (descending)
-        explode: false
-        style: form
-      - in: query
-        name: status
-        schema:
-          type: array
-          items:
-            type: string
-        description: Multiple values may be separated by commas.
-        explode: false
-        style: form
-      - in: query
-        name: time_after
-        schema:
-          type: string
-          format: date-time
-      - in: query
-        name: time_before
-        schema:
-          type: string
-          format: date-time
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedHttpLogList'
-          description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/{request_uuid}/:
-    get:
-      operationId: projects_service_details_http_logs_retrieve
-      summary: Get single service http log
-      parameters:
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: request_uuid
-        schema:
-          type: string
-          pattern: ^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$
-        required: true
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsRetrieveErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HttpLog'
-          description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/fields/:
-    get:
-      operationId: projects_service_details_http_logs_fields_list
-      summary: Get service http logs fields values
-      parameters:
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: field
-        schema:
-          enum:
-          - request_host
-          - request_path
-          - request_user_agent
-          - request_ip
-          type: string
-          minLength: 1
-        description: |-
-          * `request_host` - request_host
-          * `request_path` - request_path
-          * `request_user_agent` - request_user_agent
-          * `request_ip` - request_ip
-        required: true
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: value
-        schema:
-          type: string
-        required: true
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsFieldsListErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: string
           description: ''
   /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/metrics/:
     get:
@@ -11526,14 +11827,14 @@ components:
       - client_error
       type: string
       description: '* `client_error` - Client Error'
-    CloneEnvironmentDeployServicesErrorComponent:
+    CloneEnvironmentDeployAfterCloneErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - deploy_services
+          - deploy_after_clone
           type: string
-          description: '* `deploy_services` - deploy_services'
+          description: '* `deploy_after_clone` - deploy_after_clone'
         code:
           enum:
           - invalid
@@ -11551,13 +11852,13 @@ components:
     CloneEnvironmentError:
       oneOf:
       - $ref: '#/components/schemas/CloneEnvironmentNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/CloneEnvironmentDeployServicesErrorComponent'
+      - $ref: '#/components/schemas/CloneEnvironmentDeployAfterCloneErrorComponent'
       - $ref: '#/components/schemas/CloneEnvironmentNameErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/CloneEnvironmentNonFieldErrorsErrorComponent'
-          deploy_services: '#/components/schemas/CloneEnvironmentDeployServicesErrorComponent'
+          deploy_after_clone: '#/components/schemas/CloneEnvironmentDeployAfterCloneErrorComponent'
           name: '#/components/schemas/CloneEnvironmentNameErrorComponent'
     CloneEnvironmentErrorResponse400:
       oneOf:
@@ -11622,7 +11923,7 @@ components:
     CloneEnvironmentRequestRequest:
       type: object
       properties:
-        deploy_services:
+        deploy_after_clone:
           type: boolean
           default: false
         name:
@@ -11763,9 +12064,14 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/ComposeStackServiceStatus'
           readOnly: true
+        deploy_token:
+          type: string
+          readOnly: true
+          nullable: true
       required:
       - computed_content
       - configs
+      - deploy_token
       - env_overrides
       - id
       - network_alias_prefix
@@ -11948,6 +12254,45 @@ components:
           type: string
       required:
       - key
+    ComposeStackMetrics:
+      type: object
+      properties:
+        bucket_epoch:
+          type: string
+          format: date-time
+        avg_cpu:
+          type: number
+          format: double
+        avg_memory:
+          type: number
+          format: double
+        total_net_tx:
+          type: integer
+        total_net_rx:
+          type: integer
+        total_disk_read:
+          type: integer
+        total_disk_write:
+          type: integer
+      required:
+      - avg_cpu
+      - avg_memory
+      - bucket_epoch
+      - total_disk_read
+      - total_disk_write
+      - total_net_rx
+      - total_net_tx
+    ComposeStackMetricsResponse:
+      type: object
+      properties:
+        services:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/ComposeStackMetrics'
+      required:
+      - services
     ComposeStackRequest:
       type: object
       properties:
@@ -12226,9 +12571,14 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/ComposeStackServiceStatus'
           readOnly: true
+        deploy_token:
+          type: string
+          readOnly: true
+          nullable: true
       required:
       - computed_content
       - configs
+      - deploy_token
       - env_overrides
       - id
       - network_alias_prefix
@@ -12279,6 +12629,23 @@ components:
       - domain
       - port
       - strip_prefix
+    ComposeStackWebhookDeployRequestRequest:
+      type: object
+      properties:
+        commit_message:
+          type: string
+          minLength: 1
+          default: Update stack
+        user_content:
+          type: string
+          minLength: 1
+    ComposeStacksBuildLogsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ComposeStacksCreateCreateError:
       oneOf:
       - $ref: '#/components/schemas/ComposeStacksCreateCreateNonFieldErrorsErrorComponent'
@@ -12390,7 +12757,89 @@ components:
       required:
       - errors
       - type
+    ComposeStacksListError:
+      oneOf:
+      - $ref: '#/components/schemas/ComposeStacksListSlugErrorComponent'
+      - $ref: '#/components/schemas/ComposeStacksListSortByErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          slug: '#/components/schemas/ComposeStacksListSlugErrorComponent'
+          sort_by: '#/components/schemas/ComposeStacksListSortByErrorComponent'
     ComposeStacksListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ComposeStacksListValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ComposeStacksListValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ComposeStacksListSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ComposeStacksListSortByErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - sort_by
+          type: string
+          description: '* `sort_by` - sort_by'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ComposeStacksListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStacksListError'
+      required:
+      - errors
+      - type
+    ComposeStacksMetricsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ComposeStacksRuntimeLogsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ComposeStacksRuntimeLogsWithContextRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -16264,7 +16713,7 @@ components:
         service_id:
           type: string
           nullable: true
-        request_id:
+        request_uuid:
           type: string
           nullable: true
           maxLength: 255
@@ -16305,23 +16754,242 @@ components:
         request_user_agent:
           type: string
           nullable: true
+        stack_id:
+          type: string
+          nullable: true
+        stack_service_name:
+          type: string
+          nullable: true
       required:
       - deployment_id
       - id
       - request_duration_ns
       - request_headers
       - request_host
-      - request_id
       - request_ip
       - request_method
       - request_path
       - request_protocol
       - request_query
       - request_user_agent
+      - request_uuid
       - response_headers
       - service_id
+      - stack_id
+      - stack_service_name
       - status
       - time
+    HttpLogsFieldsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    HttpLogsListDeploymentIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - deployment_id
+          type: string
+          description: '* `deployment_id` - deployment_id'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    HttpLogsListError:
+      oneOf:
+      - $ref: '#/components/schemas/HttpLogsListTimeErrorComponent'
+      - $ref: '#/components/schemas/HttpLogsListRequestMethodErrorComponent'
+      - $ref: '#/components/schemas/HttpLogsListRequestQueryErrorComponent'
+      - $ref: '#/components/schemas/HttpLogsListStackIdErrorComponent'
+      - $ref: '#/components/schemas/HttpLogsListStackServiceNameErrorComponent'
+      - $ref: '#/components/schemas/HttpLogsListServiceIdErrorComponent'
+      - $ref: '#/components/schemas/HttpLogsListDeploymentIdErrorComponent'
+      - $ref: '#/components/schemas/HttpLogsListSortByErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          time: '#/components/schemas/HttpLogsListTimeErrorComponent'
+          request_method: '#/components/schemas/HttpLogsListRequestMethodErrorComponent'
+          request_query: '#/components/schemas/HttpLogsListRequestQueryErrorComponent'
+          stack_id: '#/components/schemas/HttpLogsListStackIdErrorComponent'
+          stack_service_name: '#/components/schemas/HttpLogsListStackServiceNameErrorComponent'
+          service_id: '#/components/schemas/HttpLogsListServiceIdErrorComponent'
+          deployment_id: '#/components/schemas/HttpLogsListDeploymentIdErrorComponent'
+          sort_by: '#/components/schemas/HttpLogsListSortByErrorComponent'
+    HttpLogsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/HttpLogsListValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/HttpLogsListValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    HttpLogsListRequestMethodErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - request_method
+          type: string
+          description: '* `request_method` - request_method'
+        code:
+          enum:
+          - invalid_choice
+          - invalid_list
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `invalid_list` - invalid_list
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    HttpLogsListRequestQueryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - request_query
+          type: string
+          description: '* `request_query` - request_query'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    HttpLogsListServiceIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_id
+          type: string
+          description: '* `service_id` - service_id'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    HttpLogsListSortByErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - sort_by
+          type: string
+          description: '* `sort_by` - sort_by'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    HttpLogsListStackIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - stack_id
+          type: string
+          description: '* `stack_id` - stack_id'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    HttpLogsListStackServiceNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - stack_service_name
+          type: string
+          description: '* `stack_service_name` - stack_service_name'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    HttpLogsListTimeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - time
+          type: string
+          description: '* `time` - time'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    HttpLogsListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/HttpLogsListError'
+      required:
+      - errors
+      - type
+    HttpLogsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ItemChangeTypeEnum:
       enum:
       - ADD
@@ -16924,6 +17592,15 @@ components:
             default: []
           writeOnly: true
           default: []
+        stacks_to_clone_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            writeOnly: true
+            default: []
+          writeOnly: true
+          default: []
         base_environment_id:
           type: string
           minLength: 1
@@ -17125,6 +17802,11 @@ components:
           items:
             $ref: '#/components/schemas/SimpleTemplateService'
           readOnly: true
+        stacks_to_clone:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimpleComposeStackService'
+          readOnly: true
         base_environment:
           allOf:
           - $ref: '#/components/schemas/Environment'
@@ -17175,6 +17857,7 @@ components:
       - preview_root_domain
       - services_to_clone
       - slug
+      - stacks_to_clone
       - ttl_seconds
       - variables
     PreviewEnvTemplateRequest:
@@ -17186,6 +17869,15 @@ components:
           maxLength: 100
           pattern: ^[-a-zA-Z0-9_]+$
         services_to_clone_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            writeOnly: true
+            default: []
+          writeOnly: true
+          default: []
+        stacks_to_clone_ids:
           type: array
           items:
             type: string
@@ -17613,6 +18305,7 @@ components:
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateSlugErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateStacksToCloneIdsErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent'
@@ -17630,6 +18323,7 @@ components:
           non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent'
           slug: '#/components/schemas/ProjectsPreviewTemplatesCreateSlugErrorComponent'
           services_to_clone_ids: '#/components/schemas/ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent'
+          stacks_to_clone_ids: '#/components/schemas/ProjectsPreviewTemplatesCreateStacksToCloneIdsErrorComponent'
           base_environment_id: '#/components/schemas/ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent'
           clone_strategy: '#/components/schemas/ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent'
           ttl_seconds: '#/components/schemas/ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent'
@@ -17799,6 +18493,32 @@ components:
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateStacksToCloneIdsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - stacks_to_clone_ids
+          type: string
+          description: '* `stacks_to_clone_ids` - stacks_to_clone_ids'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `not_a_list` - not_a_list
+            * `null` - null
         detail:
           type: string
       required:
@@ -18032,6 +18752,7 @@ components:
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateStacksToCloneIdsErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent'
@@ -18049,6 +18770,7 @@ components:
           non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent'
           slug: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent'
           services_to_clone_ids: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent'
+          stacks_to_clone_ids: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateStacksToCloneIdsErrorComponent'
           base_environment_id: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent'
           clone_strategy: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent'
           ttl_seconds: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent'
@@ -18224,6 +18946,32 @@ components:
       - attr
       - code
       - detail
+    ProjectsPreviewTemplatesPartialUpdateStacksToCloneIdsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - stacks_to_clone_ids
+          type: string
+          description: '* `stacks_to_clone_ids` - stacks_to_clone_ids'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent:
       type: object
       properties:
@@ -18270,154 +19018,6 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     ProjectsServiceDetailsDeploymentsBuildLogsRetrieveErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDeploymentsHttpLogsFieldsListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDeploymentsHttpLogsListError:
-      oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListTimeErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestMethodErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestQueryErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestIdErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListSortByErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          time: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListTimeErrorComponent'
-          request_method: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestMethodErrorComponent'
-          request_query: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestQueryErrorComponent'
-          request_id: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestIdErrorComponent'
-          sort_by: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListSortByErrorComponent'
-    ProjectsServiceDetailsDeploymentsHttpLogsListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDeploymentsHttpLogsListRequestIdErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - request_id
-          type: string
-          description: '* `request_id` - request_id'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsDeploymentsHttpLogsListRequestMethodErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - request_method
-          type: string
-          description: '* `request_method` - request_method'
-        code:
-          enum:
-          - invalid_choice
-          - invalid_list
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `invalid_list` - invalid_list
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsDeploymentsHttpLogsListRequestQueryErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - request_query
-          type: string
-          description: '* `request_query` - request_query'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsDeploymentsHttpLogsListSortByErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - sort_by
-          type: string
-          description: '* `sort_by` - sort_by'
-        code:
-          enum:
-          - invalid_choice
-          type: string
-          description: '* `invalid_choice` - invalid_choice'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsDeploymentsHttpLogsListTimeErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - time
-          type: string
-          description: '* `time` - time'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsDeploymentsHttpLogsListValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListError'
-      required:
-      - errors
-      - type
-    ProjectsServiceDetailsDeploymentsHttpLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -18516,155 +19116,14 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsServiceDetailsDeploymentsRuntimeLogsWithContextRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ProjectsServiceDetailsDetectedPortsListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsHttpLogsFieldsListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsHttpLogsListError:
-      oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListTimeErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestMethodErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestQueryErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestIdErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListSortByErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          time: '#/components/schemas/ProjectsServiceDetailsHttpLogsListTimeErrorComponent'
-          request_method: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestMethodErrorComponent'
-          request_query: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestQueryErrorComponent'
-          request_id: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestIdErrorComponent'
-          sort_by: '#/components/schemas/ProjectsServiceDetailsHttpLogsListSortByErrorComponent'
-    ProjectsServiceDetailsHttpLogsListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/ProjectsServiceDetailsHttpLogsListValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsHttpLogsListRequestIdErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - request_id
-          type: string
-          description: '* `request_id` - request_id'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsHttpLogsListRequestMethodErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - request_method
-          type: string
-          description: '* `request_method` - request_method'
-        code:
-          enum:
-          - invalid_choice
-          - invalid_list
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `invalid_list` - invalid_list
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsHttpLogsListRequestQueryErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - request_query
-          type: string
-          description: '* `request_query` - request_query'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsHttpLogsListSortByErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - sort_by
-          type: string
-          description: '* `sort_by` - sort_by'
-        code:
-          enum:
-          - invalid_choice
-          type: string
-          description: '* `invalid_choice` - invalid_choice'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsHttpLogsListTimeErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - time
-          type: string
-          description: '* `time` - time'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsServiceDetailsHttpLogsListValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListError'
-      required:
-      - errors
-      - type
-    ProjectsServiceDetailsHttpLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -19203,6 +19662,117 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    RegenerateComposeStackDeployTokenError:
+      oneOf:
+      - $ref: '#/components/schemas/RegenerateComposeStackDeployTokenNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateComposeStackDeployTokenSlugErrorComponent'
+      - $ref: '#/components/schemas/RegenerateComposeStackDeployTokenUserContentErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/RegenerateComposeStackDeployTokenNonFieldErrorsErrorComponent'
+          slug: '#/components/schemas/RegenerateComposeStackDeployTokenSlugErrorComponent'
+          user_content: '#/components/schemas/RegenerateComposeStackDeployTokenUserContentErrorComponent'
+    RegenerateComposeStackDeployTokenErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/RegenerateComposeStackDeployTokenValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/RegenerateComposeStackDeployTokenValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RegenerateComposeStackDeployTokenNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateComposeStackDeployTokenSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateComposeStackDeployTokenUserContentErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - user_content
+          type: string
+          description: '* `user_content` - user_content'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateComposeStackDeployTokenValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegenerateComposeStackDeployTokenError'
+      required:
+      - errors
+      - type
     RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent:
       type: object
       properties:
@@ -22733,6 +23303,12 @@ components:
         deployment_id:
           type: string
           nullable: true
+        stack_id:
+          type: string
+          nullable: true
+        stack_service_name:
+          type: string
+          nullable: true
         time:
           type: string
           format: date-time
@@ -22755,8 +23331,29 @@ components:
       - level
       - service_id
       - source
+      - stack_id
+      - stack_service_name
       - time
       - timestamp
+    RuntimeLogsContext:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuntimeLog'
+        before_count:
+          type: integer
+        after_count:
+          type: integer
+        query_time_ms:
+          type: number
+          format: double
+      required:
+      - after_count
+      - before_count
+      - query_time_ms
+      - results
     RuntimeLogsSearch:
       type: object
       properties:
@@ -23594,6 +24191,26 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    SimpleComposeStackService:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - slug
+    SimpleComposeStackServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
     SimpleDeployment:
       type: object
       properties:
@@ -23778,7 +24395,6 @@ components:
         slug:
           type: string
           readOnly: true
-          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - id
@@ -25095,6 +25711,113 @@ components:
       required:
       - container_path
       - name
+    WebhookDeployComposeStackCommitMessageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_message
+          type: string
+          description: '* `commit_message` - commit_message'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookDeployComposeStackError:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookDeployComposeStackNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WebhookDeployComposeStackCommitMessageErrorComponent'
+      - $ref: '#/components/schemas/WebhookDeployComposeStackUserContentErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/WebhookDeployComposeStackNonFieldErrorsErrorComponent'
+          commit_message: '#/components/schemas/WebhookDeployComposeStackCommitMessageErrorComponent'
+          user_content: '#/components/schemas/WebhookDeployComposeStackUserContentErrorComponent'
+    WebhookDeployComposeStackErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookDeployComposeStackValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/WebhookDeployComposeStackValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    WebhookDeployComposeStackNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookDeployComposeStackUserContentErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - user_content
+          type: string
+          description: '* `user_content` - user_content'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookDeployComposeStackValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookDeployComposeStackError'
+      required:
+      - errors
+      - type
     WebhookDockerDeployServiceCleanupQueueErrorComponent:
       type: object
       properties:

@@ -1,6 +1,11 @@
 {
   "linter": {
-    "enabled": false
+    "enabled": false,
+    "rules": {
+      "a11y": {
+        "noBlankTarget": "off"
+      }
+    }
   },
   "formatter": {
     "enabled": true,

@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Literal, Optional
 from dataclasses import dataclass
 
 from zane_api.utils import iso_to_ns
+from django.conf import settings
 
 
 class RuntimeLogLevel:
@@ -33,6 +34,7 @@ class RuntimeLogDto:
     service_id: Optional[str] = None
     stack_id: Optional[str] = None
     deployment_id: Optional[str] = None
+    stack_service_name: Optional[str] = None
     content: Optional[str] = None
     content_text: Optional[str] = None
 
@@ -44,6 +46,7 @@ class RuntimeLogDto:
         return {
             "service_id": self.service_id,
             "stack_id": self.stack_id,
+            "stack_service_name": self.stack_service_name,
             "deployment_id": self.deployment_id,
             "time": (
                 int(self.time.timestamp() * 10**9)
@@ -61,24 +64,17 @@ class RuntimeLogDto:
             "source": self.source,
         }
 
-    def to_es_dict(self):
+    @property
+    def loki_labels(self):
         return {
-            "service_id": self.service_id,
-            "deployment_id": self.deployment_id,
-            "time": (
-                self.time.isoformat()
-                if isinstance(self.time, datetime.datetime)
-                else self.time
-            ),
-            "created_at": (
-                self.created_at.isoformat()
-                if isinstance(self.created_at, datetime.datetime)
-                else self.created_at
-            ),
-            "content": {
-                "text": self.content_text,
-                "raw": self.content,
-            },
+            # for managed services
+            "service_id": self.service_id or "unknown",
+            "deployment_id": self.deployment_id or "unknown",
+            # for compose stacks
+            "stack_id": self.stack_id or "unknown",
+            "stack_service_name": self.stack_service_name or "unknown",
+            # common args
             "level": self.level,
             "source": self.source,
+            "app": f"{settings.LOKI_APP_NAME}",
         }

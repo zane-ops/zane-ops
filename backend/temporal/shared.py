@@ -6,7 +6,7 @@ import yaml
 
 
 if TYPE_CHECKING:
-    from zane_api.models import Deployment
+    from zane_api.models import Deployment, Environment
     from compose.models import ComposeStackDeployment
 
 from zane_api.dtos import (
@@ -44,6 +44,7 @@ class ArchivedProjectDetails:
     id: int
     original_id: str
     environments: List["EnvironmentDetails"]
+    compose_stacks: List["ComposeStackArchiveDetails"] = field(default_factory=list)
 
 
 @dataclass
@@ -351,6 +352,19 @@ class EnvironmentDetails:
     id: str
     name: str
     project_id: str
+    compose_stacks: List["ComposeStackArchiveDetails"] = field(default_factory=list)
+
+    @classmethod
+    def from_environment(cls, env: "Environment"):
+        return cls(
+            id=env.id,
+            name=env.name,
+            project_id=env.project_id,  # type: ignore
+            compose_stacks=[
+                ComposeStackArchiveDetails(stack=stack.snapshot)
+                for stack in env.compose_stacks.filter(user_content__isnull=False).all()
+            ],
+        )
 
     @property
     def archive_workflow_id(self) -> str:
@@ -384,14 +398,24 @@ class HealthcheckDeploymentDetails:
 
 
 @dataclass
-class ServiceMetricsResult:
+class ContainerMetrics:
     cpu_percent: float
     memory_bytes: int
     net_tx_bytes: int
     net_rx_bytes: int
     disk_read_bytes: int
     disk_writes_bytes: int
+
+
+@dataclass
+class ServiceMetricsResult(ContainerMetrics):
     deployment: SimpleDeploymentDetails
+
+
+@dataclass
+class ComposeStackMetricsResult:
+    stack: ComposeStackSnapshot
+    services: Dict[str, ContainerMetrics]
 
 
 @dataclass
@@ -410,6 +434,12 @@ class CancelDeploymentSignalInput:
 @dataclass
 class CleanupResult:
     deleted_count: int
+
+
+@dataclass
+class CleanupMetricsResult:
+    service_metrics_deleted_count: int
+    stack_metrics_deleted_count: int
 
 
 @dataclass
@@ -601,8 +631,6 @@ class RegistryHealthCheckResult:
 @dataclass
 class ComposeStackArchiveDetails:
     stack: ComposeStackSnapshot
-    delete_configs: bool = True
-    delete_volumes: bool = True
 
 
 @dataclass
@@ -623,6 +651,10 @@ class ComposeStackArchiveResult:
 class ComposeStackDeploymentDetails:
     hash: str
     stack: ComposeStackSnapshot
+
+    @property
+    def workflow_id(self):
+        return f"deploy-compose-{self.stack.id}"
 
     @classmethod
     def from_deployment(

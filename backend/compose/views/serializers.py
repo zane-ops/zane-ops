@@ -1,9 +1,11 @@
 import base64
 import json
+import secrets
 import subprocess
 import tempfile
 import tomllib
 from typing import Any, cast
+import django_filters
 from rest_framework import serializers
 import yaml
 from ..models import (
@@ -26,6 +28,8 @@ from drf_standardized_errors.formatter import ExceptionFormatter
 from zane_api.serializers import URLDomainField, URLPathField
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
+from search.dtos import RuntimeLogLevel
+from search.serializers import RuntimeLogsContextParamsSerializer
 
 
 class ComposeStackChangeSerializer(serializers.ModelSerializer):
@@ -144,6 +148,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             environment=environment,
             slug=slug,
             network_alias_prefix=f"zn-{slug}",
+            deploy_token=secrets.token_hex(16),
         )
 
         artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
@@ -189,9 +194,11 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             "configs",
             "env_overrides",
             "service_statuses",
+            "deploy_token",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
+            "deploy_token": {"read_only": True},
             "computed_content": {"read_only": True},
             "name": {"read_only": True},
             "network_alias_prefix": {"read_only": True},
@@ -248,9 +255,42 @@ class ComposeStackDeployRequestSerializer(serializers.Serializer):
     commit_message = serializers.CharField(default="Update stack")
 
 
-class ComposeStackArchiveRequestSerializer(serializers.Serializer):
-    delete_configs = serializers.BooleanField(default=True)
-    delete_volumes = serializers.BooleanField(default=True)
+class ComposeStacksListFilterSet(django_filters.FilterSet):
+    sort_by = django_filters.OrderingFilter(
+        fields=["slug", "updated_at"],
+    )
+    slug = django_filters.CharFilter(lookup_expr="icontains")
+
+    class Meta:
+        model = ComposeStack
+        fields = ["slug"]
+
+
+class ComposeStackWebhookDeployRequestSerializer(serializers.Serializer):
+    commit_message = serializers.CharField(default="Update stack")
+    user_content = serializers.CharField(required=False)
+
+    def validate_user_content(self, user_content: str):
+        stack: ComposeStack | None = self.context.get("stack")
+        if stack is None:
+            raise serializers.ValidationError("`stack` is required in context.")
+
+        try:
+            ComposeSpecProcessor.validate_compose_file_syntax(user_content)
+        except ValidationError as e:
+            raise serializers.ValidationError(e.messages)
+
+        # process compose stack to validate URLs
+        computed_spec = ComposeSpecProcessor.process_compose_spec(
+            user_content=user_content,
+            stack=stack,
+        )
+
+        ComposeSpecProcessor.validate_and_extract_service_urls(
+            spec=computed_spec,
+            stack=stack,
+        )
+        return user_content
 
 
 class ComposeStackToggleRequestSerializer(serializers.Serializer):
@@ -673,3 +713,101 @@ class CreateComposeStackFromDokployTemplateObjectRequestSerializer(
             )
 
         return slug
+
+
+# =======================================
+#             Stack metrics             #
+# =======================================
+class ComposeStackMetricsSerializer(serializers.Serializer):
+    bucket_epoch = serializers.DateTimeField()
+    avg_cpu = serializers.FloatField()
+    avg_memory = serializers.FloatField()
+    total_net_tx = serializers.IntegerField()
+    total_net_rx = serializers.IntegerField()
+    total_disk_read = serializers.IntegerField()
+    total_disk_write = serializers.IntegerField()
+
+
+class ComposeStackMetricsResponseSerializer(serializers.Serializer):
+    services = serializers.DictField(child=ComposeStackMetricsSerializer(many=True))
+
+
+class ComposeStackMetricsQuery(serializers.Serializer):
+    time_range = serializers.ChoiceField(
+        choices=["LAST_HOUR", "LAST_6HOURS", "LAST_DAY", "LAST_WEEK", "LAST_MONTH"],
+        required=False,
+        default="LAST_HOUR",
+    )
+    service_names = serializers.ListField(child=serializers.CharField(), required=False)
+
+
+# =======================================
+#           Stack runtime Logs          #
+# =======================================
+
+
+class StackRuntimeLogsQuerySerializer(serializers.Serializer):
+    time_before = serializers.DateTimeField(required=False)
+    time_after = serializers.DateTimeField(required=False)
+    query = serializers.CharField(
+        required=False, allow_blank=True, trim_whitespace=False
+    )
+    level = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=[RuntimeLogLevel.INFO, RuntimeLogLevel.ERROR]
+        ),
+        required=False,
+    )
+    per_page = serializers.IntegerField(
+        required=False, min_value=1, max_value=100, default=50
+    )
+    cursor = serializers.CharField(required=False)
+    stack_service_names = serializers.ListField(
+        child=serializers.CharField(), required=False
+    )
+
+    def validate_cursor(self, cursor: str):
+        try:
+            decoded_data = base64.b64decode(cursor, validate=True)
+            decoded_string = decoded_data.decode("utf-8")
+            serializer = CursorSerializer(data=json.loads(decoded_string))
+            serializer.is_valid(raise_exception=True)
+        except (serializers.ValidationError, ValueError):
+            raise serializers.ValidationError(
+                {
+                    "cursor": "Invalid cursor format, it should be a base64 encoded string of a JSON object."
+                }
+            )
+        return cursor
+
+
+class CursorSerializer(serializers.Serializer):
+    sort = serializers.ListField(required=True, child=serializers.CharField())
+    order = serializers.ChoiceField(choices=["desc", "asc"], required=True)
+
+
+class StackBuildLogsQuerySerializer(serializers.Serializer):
+    cursor = serializers.CharField(required=False)
+    per_page = serializers.IntegerField(
+        required=False, min_value=1, max_value=100, default=50
+    )
+
+    def validate_cursor(self, cursor: str):
+        try:
+            decoded_data = base64.b64decode(cursor, validate=True)
+            decoded_string = decoded_data.decode("utf-8")
+            serializer = CursorSerializer(data=json.loads(decoded_string))
+            serializer.is_valid(raise_exception=True)
+        except (serializers.ValidationError, ValueError):
+            raise serializers.ValidationError(
+                {
+                    "cursor": "Invalid cursor format, it should be a base64 encoded string of a JSON object."
+                }
+            )
+        return cursor
+
+
+class StackRuntimeLogsContextQuerySerializer(RuntimeLogsContextParamsSerializer):
+    stack_service_names = serializers.ListField(
+        child=serializers.CharField(), required=False
+    )

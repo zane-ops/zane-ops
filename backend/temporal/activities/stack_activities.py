@@ -3,7 +3,7 @@ from datetime import timedelta
 import shlex
 import shutil
 from time import monotonic
-from typing import List, cast
+from typing import Any, Dict, List
 from temporalio import activity, workflow
 import tempfile
 from temporalio.exceptions import ApplicationError
@@ -11,7 +11,6 @@ import os
 import os.path
 from temporalio.client import ScheduleAlreadyRunningError
 from temporalio.service import RPCError
-import yaml
 
 
 with workflow.unsafe.imports_passed_through():
@@ -19,17 +18,16 @@ with workflow.unsafe.imports_passed_through():
     from compose.dtos import (
         ComposeStackServiceStatus,
         ComposeStackUrlRouteDto,
-        ComposeStackSpec,
     )
     from django.utils import timezone
     from ..helpers import (
         deployment_log,
         get_docker_client,
         empty_folder,
-        ZaneProxyClient,
         get_compose_stack_swarm_service_status,
         send_regular_heartbeat,
     )
+    from ..proxy import ZaneProxyClient
     from search.dtos import RuntimeLogSource
     from zane_api.utils import (
         Colors,
@@ -40,8 +38,12 @@ with workflow.unsafe.imports_passed_through():
     from django.db.models import Case, F, Value, When
     from docker.models.services import Service as DockerService
     from django.conf import settings
-    from ..schedules import MonitorComposeStackWorkflow
+    from ..schedules import (
+        MonitorComposeStackWorkflow,
+        CollectComposeStacksMetricsWorkflow,
+    )
     from ..semaphore import AsyncSemaphore
+    from search.loki_client import LokiSearchClient
 
 
 from ..constants import DOCKER_BINARY_PATH, STACK_DEPLOY_SEMAPHORE_KEY
@@ -172,6 +174,7 @@ class ComposeStackActivities:
                 "stack",
                 "deploy",
                 "--detach",
+                "--prune",
                 "--compose-file",
                 stack_file_path,
                 "--with-registry-auth",
@@ -267,28 +270,6 @@ class ComposeStackActivities:
             stack_id=stack.id,
             all_urls=stack.urls,
         )
-
-    @activity.defn
-    async def cleanup_old_stack_services(
-        self, deployment: ComposeStackDeploymentDetails
-    ) -> List[str]:
-        stack = deployment.stack
-        spec = ComposeStackSpec.from_dict(yaml.safe_load(stack.computed_content))
-        current_services_in_spec = [service_name for service_name in spec.services]
-
-        all_stack_services: List[DockerService] = self.docker_client.services.list(
-            filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
-        )
-
-        stack_services_deleted = []
-
-        for service in all_stack_services:
-            service_name = cast(str, service.name).removeprefix(f"{stack.name}_")
-
-            if service_name not in current_services_in_spec:
-                service.remove()
-                stack_services_deleted.append(service_name)
-        return stack_services_deleted
 
     @activity.defn
     async def check_stack_health(self, deployment: ComposeStackDeploymentDetails):
@@ -429,15 +410,19 @@ class ComposeStackActivities:
             pass
 
     @activity.defn
-    async def delete_stack_healthcheck_schedule(
-        self, details: ComposeStackArchiveDetails
+    async def create_stack_metrics_schedule(
+        self, deployment: ComposeStackDeploymentDetails
     ):
         try:
-            await TemporalClient.adelete_schedule(
-                id=details.stack.monitor_schedule_id,
+            await TemporalClient.acreate_schedule(
+                workflow=CollectComposeStacksMetricsWorkflow.run,
+                args=deployment.stack,
+                id=deployment.stack.metrics_schedule_id,
+                interval=timedelta(seconds=30),
+                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
             )
-        except RPCError:
-            # the schedule might have already been deleted
+        except ScheduleAlreadyRunningError:
+            # because the schedule already exists and is running, we can ignore it
             pass
 
     @activity.defn
@@ -556,9 +541,10 @@ class ComposeStackActivities:
         print(f"service {service=} is removed, YAY !! 🎉")
 
     @activity.defn
-    async def delete_stack_configs(
+    async def delete_stack_resources(
         self, details: ComposeStackArchiveDetails
-    ) -> List[str]:
+    ) -> Dict[str, Any]:
+        # Delete configs
         stack = details.stack
         configs = self.docker_client.configs.list(
             filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
@@ -567,21 +553,48 @@ class ComposeStackActivities:
         for config in configs:
             config.remove()
         print(f"Deleted {len(configs)} config(s), YAY !! 🎉")
-        return [config.name for config in configs]
+        deleted_configs = [config.name for config in configs]
 
-    @activity.defn
-    async def delete_stack_volumes(
-        self, details: ComposeStackArchiveDetails
-    ) -> List[str]:
-        stack = details.stack
         volumes = self.docker_client.volumes.list(
             filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
         )
 
+        # Delete volumes
         for volume in volumes:
             volume.remove(force=True)
         print(f"Deleted {len(volumes)} volume(s), YAY !! 🎉")
-        return [volume.name for volume in volumes]
+        deleted_volumes = [volume.name for volume in volumes]
+
+        # Delete schedules
+        try:
+            await TemporalClient.adelete_schedule(
+                id=details.stack.monitor_schedule_id,
+            )
+        except RPCError:
+            # the schedule might have already been deleted
+            pass
+        try:
+            await TemporalClient.adelete_schedule(
+                id=details.stack.metrics_schedule_id,
+            )
+        except RPCError:
+            # the schedule might have already been deleted
+            pass
+
+        # Delete logs
+        search_client = LokiSearchClient(
+            host=settings.LOKI_HOST,
+        )
+        search_client.delete(
+            query=dict(stack_id=stack.id),
+        )
+
+        return {
+            "deleted_configs": deleted_configs,
+            "deleted_volumes": deleted_volumes,
+            "deleted_healthcheck_shedule": details.stack.monitor_schedule_id,
+            "deleted_metrics_shedule": details.stack.metrics_schedule_id,
+        }
 
     @activity.defn
     async def remove_stack_with_cli(self, details: ComposeStackArchiveDetails):

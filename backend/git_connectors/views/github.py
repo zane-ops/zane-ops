@@ -37,7 +37,11 @@ from zane_api.models import (
     CloneEnvPreviewPayload,
 )
 from ..models import GitHubApp, GitRepository
-from temporal.shared import DeploymentDetails, EnvironmentDetails
+from temporal.shared import (
+    DeploymentDetails,
+    EnvironmentDetails,
+    ComposeStackDeploymentDetails,
+)
 from temporal.client import TemporalClient, StartWorkflowArg, SignalWorkflowArg
 from temporal.workflows import (
     DeployGitServiceWorkflow,
@@ -46,6 +50,7 @@ from temporal.workflows import (
     CreateEnvNetworkWorkflow,
     DeployDockerServiceWorkflow,
     DelayedArchiveEnvWorkflow,
+    DeployComposeStackWorkflow,
 )
 from ..dtos import GitCommitInfo
 
@@ -338,11 +343,7 @@ class GithubWebhookAPIView(APIView):
                         for environment in matching_preview_envs:
                             environment_delete_payload.append(
                                 (
-                                    EnvironmentDetails(
-                                        id=environment.id,
-                                        project_id=environment.project.id,
-                                        name=environment.name,
-                                    ),
+                                    EnvironmentDetails.from_environment(environment),
                                     environment.archive_workflow_id,
                                 )
                             )
@@ -592,6 +593,27 @@ class GithubWebhookAPIView(APIView):
                                         workflow_id=new_environment.workflow_id,
                                     )
                                 )
+                                for stack in new_environment.compose_stacks.all():
+                                    deployment = stack.deployments.create(
+                                        commit_message="Deploy from pull request",
+                                    )
+                                    stack.apply_pending_changes(deployment)
+
+                                    deployment.stack_snapshot = stack.snapshot.to_dict()  # type: ignore
+                                    deployment.save()
+
+                                    payload = (
+                                        ComposeStackDeploymentDetails.from_deployment(
+                                            deployment
+                                        )
+                                    )
+                                    workflows_to_run.append(
+                                        StartWorkflowArg(
+                                            DeployComposeStackWorkflow.run,
+                                            payload,
+                                            payload.workflow_id,
+                                        )
+                                    )
 
                                 for service in new_environment.services.all():
                                     if (
@@ -748,10 +770,8 @@ class GithubWebhookAPIView(APIView):
                             workflows_to_run.append(
                                 StartWorkflowArg(
                                     workflow=ArchiveEnvWorkflow.run,
-                                    payload=EnvironmentDetails(
-                                        id=environment.id,
-                                        project_id=environment.project.id,
-                                        name=environment.name,
+                                    payload=EnvironmentDetails.from_environment(
+                                        environment
                                     ),
                                     workflow_id=environment.archive_workflow_id,
                                 )

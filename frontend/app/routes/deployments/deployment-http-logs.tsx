@@ -41,11 +41,12 @@ import {
   type HttpLog,
   REQUEST_METHODS,
   deploymentQueries,
-  httpLogSearchSchema
+  httpLogSearchSchema,
+  serviceQueries
 } from "~/lib/queries";
-import { cn, formatLogTime } from "~/lib/utils";
+import { cn, formatLogTime, notFound } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { formatTimeValue } from "~/utils";
+import { formatDuration } from "~/utils";
 import type { Route } from "./+types/deployment-http-logs";
 
 export async function clientLoader({
@@ -107,6 +108,11 @@ export default function DeploymentHttpLogsPage({
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
+  },
+  matches: {
+    2: {
+      loaderData: { deployment }
+    }
   }
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -151,7 +157,7 @@ export default function DeploymentHttpLogsPage({
       nextDirection = "indeterminate";
     }
 
-    let newSortBy = (sort_by ?? []).filter(
+    const newSortBy = (sort_by ?? []).filter(
       (sort_field) => sort_field !== field && sort_field !== `-${field}`
     );
     switch (nextDirection) {
@@ -423,12 +429,12 @@ export default function DeploymentHttpLogsPage({
                   <TableRow
                     className="border-border cursor-pointer"
                     data-state={
-                      log.request_id === search.request_id ? "selected" : null
+                      log.request_uuid === search.request_id ? "selected" : null
                     }
                     key={log.id}
                     onClick={() => {
-                      if (log.request_id) {
-                        searchParams.set("request_id", log.request_id);
+                      if (log.request_uuid) {
+                        searchParams.set("request_id", log.request_uuid);
                         setSearchParams(searchParams);
                       }
                     }}
@@ -481,7 +487,7 @@ type LogTableRowProps = {
 
 function LogTableRowContent({ log }: LogTableRowProps) {
   const logTime = formatLogTime(log.time);
-  let { value: duration, unit } = formatTimeValue(
+  const { value: duration, unit } = formatDuration(
     log.request_duration_ns / 1_000_000 /*from ns to ms*/
   );
 

@@ -320,7 +320,6 @@ export default function ServiceDetailsLayout({
                     className="text-grey text-sm hover:underline inline-flex gap-2 items-center"
                     href={fullRepoBranchURL ?? serviceRepository ?? "#"}
                     target="_blank"
-                    rel="noreferrer"
                   >
                     <span>{repoURL}</span>
                     <span>on</span>
@@ -353,7 +352,6 @@ export default function ServiceDetailsLayout({
                   className="text-grey text-sm hover:underline inline-flex gap-1 items-center"
                   href={preview_metadata.external_url ?? "#"}
                   target="_blank"
-                  rel="noreferrer"
                 >
                   <span>{previewSourceURL}</span>
                 </a>
@@ -404,7 +402,6 @@ export default function ServiceDetailsLayout({
                     href={formatURL(service.urls[0])}
                     target="_blank"
                     className="underline text-link text-sm break-all inline-flex items-center gap-1"
-                    rel="noreferrer"
                   >
                     {formatURL(service.urls[0])}
                   </a>
@@ -447,7 +444,6 @@ export default function ServiceDetailsLayout({
                               href={formatURL(url)}
                               target="_blank"
                               className="underline text-link text-sm inline-block w-full"
-                              rel="noreferrer"
                             >
                               <p className="whitespace-nowrap overflow-x-hidden text-ellipsis">
                                 {formatURL(url)}

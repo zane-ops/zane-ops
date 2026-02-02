@@ -81,7 +81,6 @@ export default function BuildRegistryImageListPage({
           href={`${loaderData.registry.is_secure ? "https" : "http"}://${loaderData.registry.registry_domain}`}
           target="_blank"
           className="underline text-link inline-flex items-center gap-1"
-          rel="noreferrer"
         >
           <span>{`${loaderData.registry.is_secure ? "https" : "http"}://${loaderData.registry.registry_domain}`}</span>
           <ExternalLinkIcon size={16} className="flex-none" />

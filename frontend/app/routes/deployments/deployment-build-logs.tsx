@@ -297,6 +297,7 @@ export default function DeploymentBuildLogsPage({
                 id={log.id}
                 time={log.time}
                 level={log.level}
+                timestamp={log.timestamp}
                 key={log.id}
                 content={(log.content as string) ?? ""}
                 content_text={log.content_text ?? ""}

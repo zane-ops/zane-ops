@@ -33,6 +33,7 @@ from .fixtures import (
     DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES,
     INVALID_COMPOSE_EMPTY,
     INVALID_COMPOSE_EMPTY_SERVICES,
+    INVALID_COMPOSE_VAR_SYNTAX,
     INVALID_COMPOSE_NO_IMAGE,
     INVALID_COMPOSE_NO_SERVICES,
     INVALID_COMPOSE_RELATIVE_BIND_VOLUME,
@@ -41,6 +42,7 @@ from .fixtures import (
     INVALID_COMPOSE_ROUTE_MISSING_PORT,
     INVALID_COMPOSE_SERVICE_NAME_SPECIAL,
     INVALID_COMPOSE_SERVICES_NOT_DICT,
+    INVALID_COMPOSE_DUPLICATE_CONFIG_TARGET,
     INVALID_COMPOSE_WITH_CONFIG_FILE_LOCATION,
     INVALID_COMPOSE_X_ENV_NOT_DICT,
     INVALID_COMPOSE_YAML_SYNTAX,
@@ -78,9 +80,6 @@ class ComposeStackAPITestBase(AuthAPITestCase):
         content: str,
         slug="my-stack",
     ):
-        from typing import cast
-        from zane_api.utils import jprint
-
         project = await self.acreate_project(slug="compose")
 
         create_stack_payload = {
@@ -126,15 +125,43 @@ class ComposeStackAPITestBase(AuthAPITestCase):
 
         return project, stack
 
-    def create_and_deploy_compose_stack(
+    def create_compose_stack(
         self,
         content: str,
         slug="my-stack",
     ):
-        from typing import cast
-        from zane_api.utils import jprint
-
         project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": slug,
+            "user_content": content,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(ComposeStack, ComposeStack.objects.filter(slug=slug).first())
+        self.assertIsNotNone(stack)
+        self.assertIsNone(stack.user_content)
+        self.assertIsNone(stack.computed_content)
+
+        return project, stack
+
+    def create_and_deploy_compose_stack(
+        self, content: str, slug="my-stack", project: Project | None = None
+    ):
+        if not project:
+            project = self.create_project(slug="compose")
 
         create_stack_payload = {
             "slug": slug,
@@ -1485,6 +1512,29 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
 
+    def test_create_compose_stack_with_invalid_variable_syntax_fails(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "empty-compose",
+            "user_content": INVALID_COMPOSE_VAR_SYNTAX,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+
     def test_create_compose_stack_with_no_services_fails(self):
         project = self.create_project()
 
@@ -1537,6 +1587,29 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         create_stack_payload = {
             "slug": "services-list",
             "user_content": INVALID_COMPOSE_SERVICES_NOT_DICT,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+
+    def test_create_compose_stack_with_duplicate_config_target_fails(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "duplicate-config-target",
+            "user_content": INVALID_COMPOSE_DUPLICATE_CONFIG_TARGET,
         }
 
         response = self.client.post(

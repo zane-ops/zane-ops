@@ -705,14 +705,16 @@ class GitActivities:
             stderr=asyncio.subprocess.STDOUT,
         )
         stdout, stderr = await process.communicate()
-        info_lines = stdout.decode()
-        error_lines = stderr.decode()
+        info_lines = (stdout or b"").decode()
+        error_lines = (stderr or b"").decode()
         if info_lines:
             print(info_lines)
         if error_lines:
             print(error_lines)
         if process.returncode != 0:
-            raise Exception("Error when crating the builder for the app")
+            raise Exception(
+                f"Error when deleting the builder for the environment {payload.name}"
+            )
         print(
             f"Builder {Colors.ORANGE}{builder_name}{Colors.ENDC} deleted sucessfully ✅"
         )

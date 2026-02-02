@@ -29,6 +29,24 @@ services:
         zane.http.routes.0.base_path: "/"
 """
 
+DOCKER_COMPOSE_MULTIPLE_WEB_SERVICES = """
+services:
+  frontend:
+    image: nginxdemos/hello:latest
+    deploy:
+      labels:
+        zane.http.routes.0.port: "80"
+        zane.http.routes.0.domain: "frontend.127-0-0-1.sslip.io"
+        zane.http.routes.0.base_path: "/"
+  api:
+    image: nginxdemos/hello:latest
+    deploy:
+      labels:
+        zane.http.routes.0.port: "80"
+        zane.http.routes.0.domain: "api.127-0-0-1.sslip.io"
+        zane.http.routes.0.base_path: "/"
+"""
+
 DOCKER_COMPOSE_MULTIPLE_ROUTES = """
 services:
   api:
@@ -225,6 +243,12 @@ DOCKER_COMPOSE_MINIMAL = """
 services:
   redis:
     image: valkey/valkey:alpine
+"""
+
+INVALID_COMPOSE_VAR_SYNTAX = """
+services:
+  redis:
+    image: valkey/valkey:$${ IMAGE_VERSION:-alpine}
 """
 
 
@@ -1359,4 +1383,65 @@ services:
     image: myapp:latest
     environment:
       CONFIG: ${__CONFIG_VALUE}
+"""
+
+# For shared env variables tests
+# This compose file references shared env variables from the environment in x-zane-env section
+DOCKER_COMPOSE_WITH_SHARED_ENV_REFERENCES = """
+x-zane-env:
+  GITHUB_CLIENT_ID: "{{env.GITHUB_CLIENT_ID}}"
+  GITHUB_TOKEN: "{{env.GITHUB_TOKEN}}"
+  DATABASE_URL: "postgres://user:pass@db:5432/{{env.DB_NAME}}"
+
+services:
+  app:
+    image: myapp:latest
+    environment:
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      DATABASE_URL: ${DATABASE_URL}
+"""
+
+# This compose file does NOT reference any shared env variables
+DOCKER_COMPOSE_WITHOUT_SHARED_ENV_REFERENCES = """
+x-zane-env:
+  APP_SECRET: "{{ generate_password | 32 }}"
+
+services:
+  app:
+    image: myapp:latest
+    environment:
+      APP_NAME: "my-application"
+      DEBUG: "false"
+      APP_SECRET: ${APP_SECRET}
+"""
+
+INVALID_COMPOSE_DUPLICATE_CONFIG_TARGET = """
+services:
+  web:
+    image: nginx:alpine
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf
+      - source: nginx_config_override
+        target: /etc/nginx/nginx.conf
+
+configs:
+  nginx_config:
+    content: |
+      user nginx;
+      worker_processes auto;
+  nginx_config_override:
+    content: |
+      user nginx;
+      worker_processes 2;
+"""
+
+# This compose file has shared env reference outside x-zane-env (should not be expanded)
+DOCKER_COMPOSE_WITH_SHARED_ENV_OUTSIDE_X_ZANE_ENV = """
+services:
+  app:
+    image: myapp:latest
+    environment:
+      GITHUB_CLIENT_ID: "{{env.GITHUB_CLIENT_ID}}"
 """

@@ -19,7 +19,7 @@ from ...serializers import EnvironmentSerializer
 from django.db import IntegrityError
 from ..base import ResourceConflict
 from .common import EnvRequestSerializer
-
+from compose.models import ComposeStack
 # ==========================================
 #               Environments               #
 # ==========================================
@@ -41,7 +41,7 @@ class UpdateEnvironmentRequestSerializer(serializers.Serializer):
 
 
 class CloneEnvironmentRequestSerializer(serializers.Serializer):
-    deploy_services = serializers.BooleanField(default=False, required=False)
+    deploy_after_clone = serializers.BooleanField(default=False, required=False)
     name = serializers.SlugField(max_length=255)
 
     def validate_name(self, name: str):
@@ -231,11 +231,14 @@ class SimpleTemplateService(serializers.ModelSerializer):
     class Meta:
         model = Service
         fields = ["id", "slug"]
+        extra_kwargs = {"slug": {"read_only": True}}
 
-    def get_fields(self):
-        fields = super().get_fields()
-        fields["slug"].read_only = True
-        return fields
+
+class SimpleComposeStackService(serializers.ModelSerializer):
+    class Meta:
+        model = ComposeStack
+        fields = ["id", "slug"]
+        extra_kwargs = {"slug": {"read_only": True}}
 
 
 class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
@@ -247,9 +250,15 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         many=True,
         read_only=True,
     )
+    stacks_to_clone_ids = serializers.PrimaryKeyRelatedField(
+        many=True, write_only=True, queryset=ComposeStack.objects.all(), default=[]
+    )
+    stacks_to_clone = SimpleComposeStackService(
+        many=True,
+        read_only=True,
+    )
     base_environment_id = serializers.PrimaryKeyRelatedField(
-        queryset=Environment.objects.all(),
-        write_only=True,
+        queryset=Environment.objects.all(), write_only=True
     )
     base_environment = EnvironmentSerializer(read_only=True)
     env_variables = serializers.CharField(
@@ -258,8 +267,15 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         required=False,
     )
 
+    def validate_base_environment_id(self, env: Environment):
+        if env.is_preview:
+            raise serializers.ValidationError(
+                "Cannot use a preview environment as a base for templates"
+            )
+        return env
+
     def validate(self, attrs: dict):
-        instance: PreviewEnvTemplate | None = self.context.get("instance")
+        instance: PreviewEnvTemplate | None = self.instance
         if attrs.get("auth_enabled"):
             errors = {}
             if attrs.get("auth_user", instance.auth_user if instance else None) is None:
@@ -271,6 +287,53 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
                 errors["auth_password"] = ["This field may not be blank."]
             if errors:
                 raise serializers.ValidationError(errors)
+
+        base_environment = cast(
+            Environment,
+            attrs.get("base_environment_id")
+            or cast(PreviewEnvTemplate, self.instance).base_environment,
+        )
+
+        services_to_clone: list[Service] = attrs.get("services_to_clone_ids", [])
+        for service in services_to_clone:
+            if service.environment_id != base_environment.id:
+                raise serializers.ValidationError(
+                    {
+                        "services_to_clone_ids": (
+                            "All selected services should be apart of the base environment"
+                            f"service `{service.slug}` not found in `{base_environment.name}`"
+                        )
+                    }
+                )
+        stacks_to_clone: list[ComposeStack] = attrs.get("stacks_to_clone_ids", [])
+        for stack in stacks_to_clone:
+            if stack.environment_id != base_environment.id:
+                raise serializers.ValidationError(
+                    {
+                        "stacks_to_clone_ids": (
+                            "All selected stacks should be apart of the base environment"
+                            f"service `{stack.slug}` not found in `{base_environment.name}`"
+                        )
+                    }
+                )
+        if self.instance is None:
+            clone_strategy = attrs.get(
+                "clone_strategy", PreviewEnvTemplate.PreviewCloneStrategy.ALL
+            )
+        else:
+            clone_strategy = attrs.get(
+                "clone_strategy", cast(PreviewEnvTemplate, self.instance).clone_strategy
+            )
+
+        if clone_strategy == PreviewEnvTemplate.PreviewCloneStrategy.ONLY:
+            if len(stacks_to_clone) == len(services_to_clone) == 0:
+                raise serializers.ValidationError(
+                    {
+                        "services_to_clone_ids": "At least one service or stack should be selected when `Only selected resources` is selected",
+                        "stacks_to_clone_ids": "At least one service or stack should be selected when `Only selected resources` is selected",
+                    }
+                )
+
         return attrs
 
     def create(self, validated_data: dict):
@@ -281,6 +344,7 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         project: Project = validated_data.pop("project")
         variables_data = validated_data.pop("env_variables", "")
         services_to_clone = validated_data.pop("services_to_clone_ids", [])
+        stacks_to_clone = validated_data.pop("stacks_to_clone_ids", [])
         base_environment = validated_data.pop("base_environment_id")
         auth_enabled: bool = validated_data.pop("auth_enabled", False)
         auth_user = validated_data.pop("auth_user", None)
@@ -291,11 +355,6 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         slug = validated_data["slug"]
 
         is_default: bool = validated_data.get("is_default", False)
-
-        if base_environment.is_preview:
-            raise ResourceConflict(
-                "Cannot create a preview template using a preview environment as a base"
-            )
 
         if is_default:
             project.preview_templates.update(is_default=False)
@@ -316,8 +375,10 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
 
         if clone_strategy == PreviewEnvTemplate.PreviewCloneStrategy.ALL:
             preview_env_template.services_to_clone.set([])
+            preview_env_template.stacks_to_clone.set([])
         else:
             preview_env_template.services_to_clone.set(services_to_clone)
+            preview_env_template.stacks_to_clone.set(stacks_to_clone)
 
         variables = dotenv_values(stream=StringIO(variables_data))
         for key, value in variables.items():
@@ -333,6 +394,9 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         variables_data = validated_data.pop("env_variables", None)
         services_to_clone: list[Service] | None = validated_data.pop(
             "services_to_clone_ids", None
+        )
+        stacks_to_clone: list[ComposeStack] | None = validated_data.pop(
+            "stacks_to_clone_ids", None
         )
         base_environment: Environment | None = validated_data.pop(
             "base_environment_id", None
@@ -360,10 +424,6 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         if base_environment is not None:
-            if base_environment.is_preview:
-                raise ResourceConflict(
-                    "Cannot create a preview template using a preview environment as a base"
-                )
             instance.base_environment = base_environment
 
         if auth_enabled:
@@ -376,11 +436,14 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         if clone_strategy is not None:
             if clone_strategy == PreviewEnvTemplate.PreviewCloneStrategy.ALL:
                 instance.services_to_clone.set([])
-            elif (
-                clone_strategy == PreviewEnvTemplate.PreviewCloneStrategy.ONLY
-                and services_to_clone is not None
+                instance.stacks_to_clone.set([])
+            elif clone_strategy == PreviewEnvTemplate.PreviewCloneStrategy.ONLY and (
+                services_to_clone is not None or stacks_to_clone is not None
             ):
-                instance.services_to_clone.set(services_to_clone)
+                if services_to_clone:
+                    instance.services_to_clone.set(services_to_clone)
+                if stacks_to_clone:
+                    instance.stacks_to_clone.set(stacks_to_clone)
 
         if variables_data is not None:
             instance.variables.all().delete()
@@ -401,6 +464,8 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
             "slug",
             "services_to_clone",  # read
             "services_to_clone_ids",  # write
+            "stacks_to_clone",  # read
+            "stacks_to_clone_ids",  # write
             "base_environment",  # read
             "base_environment_id",  # write
             "variables",
