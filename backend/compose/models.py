@@ -26,6 +26,7 @@ class ComposeStack(TimestampedModel):
         changes: RelatedManager["ComposeStackChange"]
         env_overrides: RelatedManager["ComposeStackEnvOverride"]
         deployments: RelatedManager["ComposeStackDeployment"]
+        metrics: RelatedManager["ComposeStackMetrics"]
 
     id = ShortUUIDField(
         length=8,
@@ -429,3 +430,25 @@ class ComposeStackChange(TimestampedModel):
     new_value = models.JSONField(null=True)
     applied = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class ComposeStackMetrics(TimestampedModel):
+    cpu_percent = models.FloatField()
+    memory_bytes = models.PositiveBigIntegerField()
+    net_tx_bytes = models.PositiveBigIntegerField()
+    net_rx_bytes = models.PositiveBigIntegerField()
+    disk_read_bytes = models.PositiveBigIntegerField()
+    disk_writes_bytes = models.PositiveBigIntegerField()
+
+    stack = models.ForeignKey(
+        to=ComposeStack,
+        on_delete=models.CASCADE,
+        related_name="metrics",
+    )
+    service_name = models.CharField(blank=False)
+
+    class Meta:  # type: ignore
+        indexes = [
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["service_name"]),
+        ]
