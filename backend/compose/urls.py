@@ -31,6 +31,11 @@ urlpatterns = [
         name="stacks.details",
     ),
     re_path(
+        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/metrics/?$",
+        views.ComposeStackMetricsAPIView.as_view(),
+        name="stacks.metrics",
+    ),
+    re_path(
         rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/regenerate-deploy-token/?$",
         views.ComposeStackRegenerateDeployTokenAPIView.as_view(),
         name="stacks.regenerate_deploy_token",

@@ -716,6 +716,32 @@ class CreateComposeStackFromDokployTemplateObjectRequestSerializer(
 
 
 # =======================================
+#             Stack metrics             #
+# =======================================
+class ComposeStackMetricsSerializer(serializers.Serializer):
+    bucket_epoch = serializers.DateTimeField()
+    avg_cpu = serializers.FloatField()
+    avg_memory = serializers.FloatField()
+    total_net_tx = serializers.IntegerField()
+    total_net_rx = serializers.IntegerField()
+    total_disk_read = serializers.IntegerField()
+    total_disk_write = serializers.IntegerField()
+
+
+class ComposeStackMetricsResponseSerializer(serializers.Serializer):
+    services = serializers.DictField(child=ComposeStackMetricsSerializer(many=True))
+
+
+class ComposeStackMetricsQuery(serializers.Serializer):
+    time_range = serializers.ChoiceField(
+        choices=["LAST_HOUR", "LAST_6HOURS", "LAST_DAY", "LAST_WEEK", "LAST_MONTH"],
+        required=False,
+        default="LAST_HOUR",
+    )
+    service_names = serializers.ListField(child=serializers.CharField(), required=False)
+
+
+# =======================================
 #           Stack runtime Logs          #
 # =======================================
 
