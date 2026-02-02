@@ -586,20 +586,14 @@ class ComposeStackActivities:
             host=settings.LOKI_HOST,
         )
         search_client.delete(
-            query=dict(
-                stack_id=stack.id,
-                source=[
-                    RuntimeLogSource.SERVICE,
-                    RuntimeLogSource.SYSTEM,
-                    RuntimeLogSource.BUILD,
-                ],
-            ),
+            query=dict(stack_id=stack.id),
         )
 
         return {
             "deleted_configs": deleted_configs,
             "deleted_volumes": deleted_volumes,
-            "deleted_healthcheck": details.stack.monitor_schedule_id,
+            "deleted_healthcheck_shedule": details.stack.monitor_schedule_id,
+            "deleted_metrics_shedule": details.stack.metrics_schedule_id,
         }
 
     @activity.defn
