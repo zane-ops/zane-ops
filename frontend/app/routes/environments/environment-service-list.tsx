@@ -49,7 +49,13 @@ export async function clientLoader({
     })
   );
 
-  return { serviceList };
+  const composeStackList = await queryClient.ensureQueryData(
+    environmentQueries.composeStackList(params.projectSlug, params.envSlug, {
+      slug: queryString
+    })
+  );
+
+  return { serviceList, composeStackList };
 }
 
 export default function EnvironmentServiceListPage({
@@ -64,6 +70,13 @@ export default function EnvironmentServiceListPage({
       query
     }),
     initialData: loaderData.serviceList
+  });
+
+  const { data: composeStackList = loaderData.composeStackList } = useQuery({
+    ...environmentQueries.composeStackList(project_slug, env_slug, {
+      slug: query
+    }),
+    initialData: loaderData.composeStackList
   });
 
   const [selectedServiceIds, setSelectedServiceIds] = React.useState<
@@ -244,13 +257,13 @@ export default function EnvironmentServiceListPage({
   return (
     <>
       <section className="py-8 grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 place-content-center  gap-8">
-        {serviceList.length === 0 && (
+        {serviceList.length === 0 && composeStackList.length === 0 && (
           <section className="flex gap-3 h-96 col-span-full flex-col items-center justify-center grow py-20">
             <div className="flex flex-col gap-2 items-center text-center">
               {query.length > 0 ? (
                 <>
                   <h2 className="text-2xl font-medium">
-                    No services match the filter criteria
+                    No services or stacks match the filter criteria
                   </h2>
                   <h3 className="text-lg text-gray-500">
                     Your search for <em>`{query}`</em> did not return any

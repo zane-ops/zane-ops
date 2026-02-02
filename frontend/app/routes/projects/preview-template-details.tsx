@@ -131,7 +131,10 @@ function EditPreviewTemplateForm({
     ...environmentQueries.serviceList(params.projectSlug!, baseEnvironment.name)
   });
   const { data: stackList } = useQuery({
-    ...environmentQueries.stacksList(params.projectSlug!, baseEnvironment.name)
+    ...environmentQueries.composeStackList(
+      params.projectSlug!,
+      baseEnvironment.name
+    )
   });
 
   const serviceListPerEnv = serviceList ?? [];

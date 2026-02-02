@@ -208,7 +208,7 @@ export const environmentQueries = {
       }
     }),
 
-  stacksList: (
+  composeStackList: (
     project_slug: string,
     env_slug: string,
     filters: ProjectSearch = {}
