@@ -18,6 +18,9 @@ export type ProjectCardProps = {
 };
 
 export function ProjectCard({ project }: ProjectCardProps) {
+  const healthy_services =
+    project.healthy_services + project.healthy_stack_services;
+  const total_services = project.total_services + project.total_stack_services;
   return (
     <Card
       className={cn(
@@ -73,16 +76,16 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
       <StatusBadge
         color={
-          project.healthy_services === project.total_services
+          healthy_services === total_services
             ? "green"
-            : project.healthy_services === 0
+            : healthy_services === 0
               ? "red"
               : "yellow"
         }
       >
         <p>
-          {project.healthy_services}/
-          {`${project.total_services} ${pluralize("Service", project.total_services)} healthy`}
+          {healthy_services}/
+          {`${total_services} ${pluralize("Service", total_services)} healthy`}
         </p>
       </StatusBadge>
     </Card>
