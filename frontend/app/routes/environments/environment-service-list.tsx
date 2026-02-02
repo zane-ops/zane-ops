@@ -1,17 +1,33 @@
 import { PopoverContent } from "@radix-ui/react-popover";
 import { useQuery } from "@tanstack/react-query";
 import {
+  BoxesIcon,
+  ChevronDownIcon,
   ChevronUpIcon,
+  ContainerIcon,
   LoaderIcon,
   PauseIcon,
   PlayIcon,
   RocketIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, href, useFetcher, useSearchParams } from "react-router";
+import {
+  Link,
+  href,
+  useFetcher,
+  useNavigate,
+  useSearchParams
+} from "react-router";
 import { toast } from "sonner";
 import { DockerServiceCard, GitServiceCard } from "~/components/service-cards";
 import { Button, SubmitButton } from "~/components/ui/button";
+import {
+  Menubar,
+  MenubarContent,
+  MenubarContentItem,
+  MenubarMenu,
+  MenubarTrigger
+} from "~/components/ui/menubar";
 import { Popover, PopoverTrigger } from "~/components/ui/popover";
 import { environmentQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
@@ -223,6 +239,8 @@ export default function EnvironmentServiceListPage({
     };
   }, []);
 
+  const navigate = useNavigate();
+
   return (
     <>
       <section className="py-8 grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 place-content-center  gap-8">
@@ -247,16 +265,57 @@ export default function EnvironmentServiceListPage({
               ) : (
                 <>
                   <h1 className="text-2xl font-bold">
-                    No services found in this environment
+                    No services or stacks found in this environment
                   </h1>
                   <h2 className="text-lg">
                     Would you like to start by creating one?
                   </h2>
-                  <Button asChild>
-                    <Link to="./create-service" prefetch="intent">
-                      Create a new service
-                    </Link>
-                  </Button>
+                  <Menubar className="border-none w-fit">
+                    <MenubarMenu>
+                      <MenubarTrigger asChild>
+                        <Button className="flex gap-2">
+                          Create new <ChevronDownIcon size={18} />
+                        </Button>
+                      </MenubarTrigger>
+                      <MenubarContent
+                        align="center"
+                        sideOffset={5}
+                        className="border min-w-0 mx-9  border-border"
+                      >
+                        <MenubarContentItem
+                          icon={ContainerIcon}
+                          text="Service"
+                          onClick={() => {
+                            navigate(
+                              href(
+                                "/project/:projectSlug/:envSlug/create-service",
+                                {
+                                  projectSlug: project_slug,
+                                  envSlug: env_slug
+                                }
+                              )
+                            );
+                          }}
+                        />
+
+                        <MenubarContentItem
+                          icon={BoxesIcon}
+                          text="Compose Stack"
+                          onClick={() => {
+                            navigate(
+                              href(
+                                "/project/:projectSlug/:envSlug/create-compose-stack",
+                                {
+                                  projectSlug: project_slug,
+                                  envSlug: env_slug
+                                }
+                              )
+                            );
+                          }}
+                        />
+                      </MenubarContent>
+                    </MenubarMenu>
+                  </Menubar>
                 </>
               )}
             </div>

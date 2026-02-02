@@ -135,6 +135,10 @@ export default [
       ]),
       route("create-service", "./routes/services/create-service.tsx"),
       route(
+        "create-compose-stack",
+        "./routes/compose/create-compose-stack.tsx"
+      ),
+      route(
         "create-service/docker",
         "./routes/services/create-docker-service.tsx"
       ),
