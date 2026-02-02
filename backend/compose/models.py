@@ -120,6 +120,9 @@ class ComposeStack(TimestampedModel):
     def hash_prefix(self) -> str:
         return cast(str, self.id).replace(self.ID_PREFIX, "").lower()
 
+    def get_full_computed_service_name(self, service_name: str):
+        return f"{self.name}_{self.hash_prefix}_{service_name}"
+
     @property
     def name(self) -> str:
         return f"zn-{self.id}"
