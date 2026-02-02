@@ -161,6 +161,7 @@ export function DockerServiceCard({
         {!!url && (
           <a
             href={`//${url}`}
+            target="_blank"
             className="text-sm flex items-center gap-2 text-link z-10 relative hover:underline"
           >
             <LinkIcon className="flex-none" size={15} />
