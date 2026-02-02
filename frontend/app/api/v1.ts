@@ -100,6 +100,10 @@ export interface paths {
     /** Rollback to a previous version of the compose stack */
     put: operations["reDeployComposeStack"];
   };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/metrics/": {
+    /** Get stack metrics */
+    get: operations["compose_stacks_metrics_retrieve"];
+  };
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/regenerate-deploy-token/": {
     /** Regenerate a compose stack deploy token */
     put: operations["regenerateComposeStackDeployToken"];
@@ -1133,6 +1137,23 @@ export interface components {
       key: string;
       value?: string;
     };
+    ComposeStackMetrics: {
+      /** Format: date-time */
+      bucket_epoch: string;
+      /** Format: double */
+      avg_cpu: number;
+      /** Format: double */
+      avg_memory: number;
+      total_net_tx: number;
+      total_net_rx: number;
+      total_disk_read: number;
+      total_disk_write: number;
+    };
+    ComposeStackMetricsResponse: {
+      services: {
+        [key: string]: components["schemas"]["ComposeStackMetrics"][];
+      };
+    };
     ComposeStackRequest: {
       slug?: string;
       user_content: string;
@@ -1353,6 +1374,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ComposeStacksListError"][];
     };
+    ComposeStacksMetricsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksRuntimeLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksRuntimeLogsWithContextRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksUpdateError: components["schemas"]["ComposeStacksUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ComposeStacksUpdateSlugErrorComponent"];
@@ -8315,6 +8337,54 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ReDeployComposeStackErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get stack metrics */
+  compose_stacks_metrics_retrieve: {
+    parameters: {
+      query?: {
+        service_names?: string[];
+        /**
+         * @description * `LAST_HOUR` - LAST_HOUR
+         * * `LAST_6HOURS` - LAST_6HOURS
+         * * `LAST_DAY` - LAST_DAY
+         * * `LAST_WEEK` - LAST_WEEK
+         * * `LAST_MONTH` - LAST_MONTH
+         */
+        time_range?: "LAST_HOUR" | "LAST_6HOURS" | "LAST_DAY" | "LAST_WEEK" | "LAST_MONTH";
+      };
+      path: {
+        env_slug: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ComposeStackMetricsResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ComposeStacksMetricsRetrieveErrorResponse400"];
         };
       };
       401: {
