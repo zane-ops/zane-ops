@@ -6,7 +6,7 @@ import {
   queryOptions,
   type skipToken
 } from "@tanstack/react-query";
-import { optional, preprocess, z } from "zod";
+import { preprocess, z } from "zod";
 import { zfd } from "zod-form-data";
 import type { ApiResponse, RequestParams } from "~/api/client";
 import { apiClient } from "~/api/client";
