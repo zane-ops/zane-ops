@@ -203,11 +203,11 @@ export async function clientAction({
       return renameEnvironment(params.projectSlug, formData);
     }
     case "create_environment": {
-      const clone_from = formData.get("clone_from")?.toString();
-      if (clone_from) {
-        return cloneEnvironment(params.projectSlug, clone_from, formData);
-      }
       return createEnvironment(params.projectSlug, formData);
+    }
+    case "clone_environment": {
+      const clone_from = formData.get("clone_from")?.toString()!;
+      return cloneEnvironment(params.projectSlug, clone_from, formData);
     }
     case "archive_environment": {
       if (
@@ -373,6 +373,22 @@ async function cloneEnvironment(
     deploy_services: formData.get("deploy_services") === "on"
   };
 
+  if (!cloned_environment.trim()) {
+    return {
+      errors: {
+        type: "validation_error",
+        errors: [
+          {
+            code: "required",
+            detail: "Please select one base environment",
+            attr: "clone_from"
+          }
+        ]
+      } satisfies ErrorResponseFromAPI,
+      userData
+    };
+  }
+
   const { error, data } = await apiClient.POST(
     "/api/projects/{slug}/clone-environment/{env_slug}/",
     {
@@ -382,7 +398,7 @@ async function cloneEnvironment(
       params: {
         path: {
           slug: project_slug,
-          env_slug: cloned_environment
+          env_slug: cloned_environment.trim()
         }
       },
       body: userData
@@ -412,15 +428,16 @@ function CreateEnvironmentFormDialog({
   const [isOpen, setIsOpen] = React.useState(false);
   const fetcher = useFetcher<typeof clientAction>();
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
-  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+  const cloneBaseEnvSelectTriggerRef =
+    React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
 
   const [data, setData] = React.useState(fetcher.data);
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(data?.errors);
 
   const [intent, setIntent] = React.useState<
-    "create-environment" | "clone-environment"
-  >("create-environment");
+    "create_environment" | "clone_environment"
+  >("create_environment");
 
   React.useEffect(() => {
     setData(fetcher.data);
@@ -430,6 +447,11 @@ function CreateEnvironmentFormDialog({
       if (fetcher.data.errors) {
         const errors = getFormErrorsFromResponseData(fetcher.data.errors);
         const key = Object.keys(errors ?? {})[0];
+        if (key === "clone_from") {
+          cloneBaseEnvSelectTriggerRef.current?.focus();
+          return;
+        }
+
         const field = formRef.current?.elements.namedItem(
           key
         ) as HTMLInputElement;
@@ -448,7 +470,7 @@ function CreateEnvironmentFormDialog({
         setIsOpen(open);
         if (!open) {
           setData(undefined);
-          setIntent("create-environment");
+          setIntent("create_environment");
         }
       }}
     >
@@ -486,7 +508,7 @@ function CreateEnvironmentFormDialog({
         >
           <FieldSet required name="name" errors={errors.name}>
             <FieldSetLabel>name</FieldSetLabel>
-            <FieldSetInput ref={inputRef} placeholder="ex: staging" />
+            <FieldSetInput placeholder="ex: staging" />
           </FieldSet>
 
           <FieldSet
@@ -495,12 +517,12 @@ function CreateEnvironmentFormDialog({
           >
             <div className="inline-flex gap-2 items-start">
               <FieldSetCheckbox
-                checked={intent === "clone-environment"}
+                checked={intent === "clone_environment"}
                 onCheckedChange={() =>
                   setIntent((prev) =>
-                    prev === "clone-environment"
-                      ? "create-environment"
-                      : "clone-environment"
+                    prev === "clone_environment"
+                      ? "create_environment"
+                      : "clone_environment"
                   )
                 }
                 className="relative top-1"
@@ -519,11 +541,12 @@ function CreateEnvironmentFormDialog({
             </div>
           </FieldSet>
 
-          {intent === "clone-environment" && (
+          {intent === "clone_environment" && (
             <>
               <hr className="border-border border-dashed" />
               <FieldSet
                 name="clone_from"
+                errors={errors.clone_from}
                 className="flex flex-col gap-2 flex-1"
               >
                 <FieldSetLabel htmlFor="clone_from">
@@ -531,7 +554,10 @@ function CreateEnvironmentFormDialog({
                 </FieldSetLabel>
 
                 <FieldSetSelect name="clone_from">
-                  <SelectTrigger id="clone_from">
+                  <SelectTrigger
+                    id="clone_from"
+                    ref={cloneBaseEnvSelectTriggerRef}
+                  >
                     <SelectValue placeholder="Select environment" />
                   </SelectTrigger>
                   <SelectContent className="z-999">
@@ -545,20 +571,21 @@ function CreateEnvironmentFormDialog({
               </FieldSet>
 
               <FieldSet
-                errors={errors.deploy_services}
+                errors={errors.deploy_after_clone}
                 className="flex-1 inline-flex gap-2 flex-col"
               >
                 <div className="inline-flex gap-2 items-start">
                   <FieldSetCheckbox
-                    name="deploy_services"
+                    name="deploy_after_clone"
                     className="relative top-1"
                   />
 
                   <div className="flex flex-col gap-1">
-                    <FieldSetLabel>Deploy services ?</FieldSetLabel>
+                    <FieldSetLabel>Deploy Resources ?</FieldSetLabel>
                     <small className="text-grey">
                       If checked, this will automatically issue a deploy for
-                      each cloned service
+                      each cloned service and compose stack in the new
+                      environment
                     </small>
                   </div>
                 </div>
@@ -571,7 +598,7 @@ function CreateEnvironmentFormDialog({
           <div className="flex items-center gap-4 w-full">
             <SubmitButton
               className={cn("inline-flex gap-1 items-center")}
-              value="create_environment"
+              value={intent}
               name="intent"
               form="create-env-form"
               isPending={isPending}
