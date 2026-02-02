@@ -649,6 +649,7 @@ async def get_compose_stack_swarm_service_status(
         "updated_at": timezone.now().isoformat(),
         "tasks": [
             {
+                "id": task.ID,
                 "status": task.state.value,
                 "image": task.image,
                 "message": task.message,
