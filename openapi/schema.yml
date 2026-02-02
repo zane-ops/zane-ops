@@ -12394,6 +12394,8 @@ components:
       properties:
         status:
           $ref: '#/components/schemas/ComposeStackServiceTaskStatusEnum'
+        id:
+          type: string
         image:
           type: string
         message:
@@ -12403,6 +12405,7 @@ components:
           nullable: true
       required:
       - exit_code
+      - id
       - image
       - message
       - status
@@ -12411,6 +12414,9 @@ components:
       properties:
         status:
           $ref: '#/components/schemas/ComposeStackServiceTaskStatusEnum'
+        id:
+          type: string
+          minLength: 1
         image:
           type: string
           minLength: 1
@@ -12421,6 +12427,7 @@ components:
           type: integer
           nullable: true
       required:
+      - id
       - image
       - message
       - status
@@ -18085,14 +18092,22 @@ components:
         total_services:
           type: integer
           readOnly: true
+        total_stack_services:
+          type: integer
+          readOnly: true
+        healthy_stack_services:
+          type: integer
+          readOnly: true
       required:
       - created_at
       - description
       - environments
       - healthy_services
+      - healthy_stack_services
       - id
       - slug
       - total_services
+      - total_stack_services
       - updated_at
     ProjectCreateRequestRequest:
       type: object

@@ -1197,12 +1197,14 @@ export interface components {
     ComposeStackServiceStatusStatusEnum: "STARTING" | "HEALTHY" | "UNHEALTHY" | "COMPLETE" | "SLEEPING";
     ComposeStackServiceTask: {
       status: components["schemas"]["ComposeStackServiceTaskStatusEnum"];
+      id: string;
       image: string;
       message: string;
       exit_code: number | null;
     };
     ComposeStackServiceTaskRequest: {
       status: components["schemas"]["ComposeStackServiceTaskStatusEnum"];
+      id: string;
       image: string;
       message: string;
       exit_code?: number | null;
@@ -3640,6 +3642,8 @@ export interface components {
       updated_at: string;
       healthy_services: number;
       total_services: number;
+      total_stack_services: number;
+      healthy_stack_services: number;
     };
     ProjectCreateRequestRequest: {
       slug?: string;
