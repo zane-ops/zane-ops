@@ -63,9 +63,11 @@ with workflow.unsafe.imports_passed_through():
         MonitorDockerDeploymentActivities,
         CleanupActivities,
         CleanupAppLogsWorkflow,
+        DockerComposeStackMetricsActivities,
+        CollectComposeStacksMetricsWorkflow,
         MonitorRegistryDeploymentActivites,
         MonitorRegistrySwarmServiceWorkflow,
-        DockerDeploymentStatsActivities,
+        DockerDeploymentMetricsActivities,
         GetDockerDeploymentStatsWorkflow,
         close_faulty_db_connections,
         MonitorComposeStackActivites,
@@ -78,11 +80,12 @@ def get_workflows_and_activities():
     monitor_activities = MonitorDockerDeploymentActivities()
     cleanup_activites = CleanupActivities()
     system_cleanup_activities = SystemCleanupActivities()
-    metrics_activities = DockerDeploymentStatsActivities()
+    metrics_activities = DockerDeploymentMetricsActivities()
     git_activities = GitActivities()
     monitor_registry_activites = MonitorRegistryDeploymentActivites()
     monitor_stack_activites = MonitorComposeStackActivites()
     stack_activites = ComposeStackActivities()
+    stack_metrics_activites = DockerComposeStackMetricsActivities()
 
     return dict(
         workflows=[
@@ -109,6 +112,7 @@ def get_workflows_and_activities():
             MonitorComposeStackWorkflow,
             ArchiveComposeStackWorkflow,
             ToggleComposeStackWorkflow,
+            CollectComposeStacksMetricsWorkflow,
         ],
         activities=[
             git_activities.get_default_build_registry,
@@ -128,8 +132,8 @@ def get_workflows_and_activities():
             git_activities.generate_default_files_for_nixpacks_builder,
             git_activities.generate_default_files_for_railpack_builder,
             git_activities.build_service_with_railpack_dockerfile,
-            metrics_activities.get_deployment_stats,
-            metrics_activities.save_deployment_stats,
+            metrics_activities.collect_deployment_metrics,
+            metrics_activities.save_deployment_metrics,
             swarm_activities.set_cancelling_status,
             swarm_activities.create_environment_network,
             swarm_activities.get_archived_env_services,
@@ -196,8 +200,11 @@ def get_workflows_and_activities():
             stack_activites.scale_down_stack_services,
             stack_activites.scale_up_stack_services,
             stack_activites.delete_stack_resources,
+            stack_activites.create_stack_metrics_schedule,
             monitor_stack_activites.save_stack_health_check_status,
             monitor_stack_activites.run_stack_healthcheck,
+            stack_metrics_activites.collect_compose_stack_metrics,
+            stack_metrics_activites.save_compose_stack_metrics,
             acquire_service_deploy_semaphore,
             lock_deploy_semaphore,
             release_service_deploy_semaphore,

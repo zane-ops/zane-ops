@@ -4,12 +4,13 @@ from temporalio import workflow
 from temporalio.common import RetryPolicy
 
 from .activities import (
-    DockerDeploymentStatsActivities,
+    DockerDeploymentMetricsActivities,
     MonitorDockerDeploymentActivities,
     CleanupActivities,
     close_faulty_db_connections,
     MonitorRegistryDeploymentActivites,
     MonitorComposeStackActivites,
+    DockerComposeStackMetricsActivities,
 )
 from ..shared import (
     HealthcheckDeploymentDetails,
@@ -155,18 +156,53 @@ class GetDockerDeploymentStatsWorkflow:
             start_to_close_timeout=timedelta(seconds=10),
         )
 
-        print("Running activity `get_deployment_stats()`")
+        print("Running activity `collect_deployment_metrics()`")
         metrics_result = await workflow.execute_activity_method(
-            DockerDeploymentStatsActivities.get_deployment_stats,
+            DockerDeploymentMetricsActivities.collect_deployment_metrics,
             payload,
             retry_policy=retry_policy,
             start_to_close_timeout=timedelta(seconds=30),
         )
 
         if metrics_result:
-            print(f"Running activity `save_deployment_stats({metrics_result=})`")
+            print(f"Running activity `save_deployment_metrics({metrics_result=})`")
             await workflow.execute_activity_method(
-                DockerDeploymentStatsActivities.save_deployment_stats,
+                DockerDeploymentMetricsActivities.save_deployment_metrics,
+                metrics_result,
+                retry_policy=retry_policy,
+                start_to_close_timeout=timedelta(seconds=30),
+            )
+
+        return metrics_result
+
+
+@workflow.defn(name="collect-compose-stack-metrics")
+class CollectComposeStacksMetricsWorkflow:
+    @workflow.run
+    async def run(self, payload: ComposeStackSnapshot):
+        print(f"\nRunning workflow CollectComposeStacksMetricsWorkflow with {payload=}")
+        retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+        print("Running activity `monitor_close_faulty_db_connections()`")
+        await workflow.execute_activity(
+            close_faulty_db_connections,
+            retry_policy=retry_policy,
+            start_to_close_timeout=timedelta(seconds=10),
+        )
+
+        print("Running activity `collect_compose_stack_metrics()`")
+        metrics_result = await workflow.execute_activity_method(
+            DockerComposeStackMetricsActivities.collect_compose_stack_metrics,
+            payload,
+            retry_policy=retry_policy,
+            start_to_close_timeout=timedelta(seconds=30),
+        )
+
+        if metrics_result:
+            print(f"Running activity `save_compose_stack_metrics({metrics_result=})`")
+            await workflow.execute_activity_method(
+                DockerComposeStackMetricsActivities.save_compose_stack_metrics,
                 metrics_result,
                 retry_policy=retry_policy,
                 start_to_close_timeout=timedelta(seconds=30),

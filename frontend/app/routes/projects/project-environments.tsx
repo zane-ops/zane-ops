@@ -380,7 +380,7 @@ async function cloneEnvironment(
         errors: [
           {
             code: "required",
-            detail: "Please select one base environment",
+            detail: "This field is required",
             attr: "clone_from"
           }
         ]
@@ -620,6 +620,7 @@ function CreateEnvironmentFormDialog({
               onClick={() => {
                 setIsOpen(false);
                 setData(undefined);
+                setIntent("create_environment");
               }}
             >
               Cancel

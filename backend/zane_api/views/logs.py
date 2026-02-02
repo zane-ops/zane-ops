@@ -56,7 +56,8 @@ from ..models import (
 from ..serializers import HttpLogSerializer
 
 
-from temporal.helpers import ZaneProxyClient
+from temporal.proxy import ZaneProxyClient
+
 from django.db.models import Q
 
 

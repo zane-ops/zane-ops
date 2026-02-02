@@ -225,6 +225,12 @@ class DeployComposeStackWorkflow:
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
+            await workflow.execute_activity_method(
+                ComposeStackActivities.create_stack_metrics_schedule,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
             await workflow.execute_activity_method(
                 ComposeStackActivities.cleanup_old_stack_urls,

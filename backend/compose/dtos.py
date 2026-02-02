@@ -482,13 +482,24 @@ class ComposeStackSnapshot:
     hash_prefix: str
     name: str
     slug: str
-    monitor_schedule_id: str
     network_alias_prefix: str
     user_content: str
     computed_content: str
     urls: Dict[str, List[ComposeStackUrlRouteDto]] = field(default_factory=dict)
     configs: Dict[str, ComposeVersionedConfig] = field(default_factory=dict)
     env_overrides: List[ComposeStackEnvOverrideDto] = field(default_factory=list)
+
+    @property
+    def monitor_schedule_id(self) -> str:
+        return f"monitor-{self.id}"
+
+    @property
+    def toggle_workflow_id(self) -> str:
+        return f"toggle-compose-{self.id}"
+
+    @property
+    def metrics_schedule_id(self) -> str:
+        return f"metrics-compose-{self.id}"
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> Self:
@@ -501,7 +512,6 @@ class ComposeStackSnapshot:
         return cls(
             id=data["id"],
             name=data["name"],
-            monitor_schedule_id=data["monitor_schedule_id"],
             hash_prefix=data["hash_prefix"],
             slug=data["slug"],
             network_alias_prefix=data["network_alias_prefix"],
@@ -523,7 +533,6 @@ class ComposeStackSnapshot:
             "id": self.id,
             "name": self.name,
             "slug": self.slug,
-            "monitor_schedule_id": self.monitor_schedule_id,
             "network_alias_prefix": self.network_alias_prefix,
             "hash_prefix": self.hash_prefix,
             "user_content": self.user_content,

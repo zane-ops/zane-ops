@@ -25,7 +25,8 @@ from .stacks import ComposeStackAPITestBase
 import responses
 from django.conf import settings
 import requests
-from temporal.helpers import ZaneProxyClient
+from temporal.proxy import ZaneProxyClient
+
 from compose.dtos import ComposeStackUrlRouteDto
 
 

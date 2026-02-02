@@ -57,9 +57,9 @@ with workflow.unsafe.imports_passed_through():
         replace_placeholders,
     )
     from ..semaphore import AsyncSemaphore
+    from ..proxy import ZaneProxyClient
     from ..helpers import (
         deployment_log,
-        ZaneProxyClient,
         get_docker_client,
         get_config_resource_name,
         get_env_network_resource_name,

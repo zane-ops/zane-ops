@@ -131,7 +131,6 @@ class ComposeStack(TimestampedModel):
             hash_prefix=self.hash_prefix,
             name=self.name,
             slug=self.slug,
-            monitor_schedule_id=self.monitor_schedule_id,
             network_alias_prefix=self.network_alias_prefix,
             user_content=cast(str, self.user_content),
             computed_content=cast(str, self.computed_content),
@@ -166,6 +165,10 @@ class ComposeStack(TimestampedModel):
     @property
     def toggle_workflow_id(self) -> str:
         return f"toggle-compose-{self.id}"
+
+    @property
+    def metrics_schedule_id(self) -> str:
+        return f"metrics-compose-{self.id}"
 
     @property
     def unapplied_changes(self):

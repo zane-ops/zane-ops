@@ -20,7 +20,8 @@ with workflow.unsafe.imports_passed_through():
         Mount,
     )
     from django.conf import settings
-    from ..helpers import get_docker_client, ZaneProxyClient
+    from ..helpers import get_docker_client
+    from ..proxy import ZaneProxyClient
     from ..semaphore import AsyncSemaphore
     from ..schedules import MonitorRegistrySwarmServiceWorkflow
     from container_registry.models import BuildRegistry

@@ -398,14 +398,23 @@ class HealthcheckDeploymentDetails:
 
 
 @dataclass
-class ServiceMetricsResult:
+class ContainerMetrics:
     cpu_percent: float
     memory_bytes: int
     net_tx_bytes: int
     net_rx_bytes: int
     disk_read_bytes: int
     disk_writes_bytes: int
+
+
+@dataclass
+class ServiceMetricsResult(ContainerMetrics):
     deployment: SimpleDeploymentDetails
+
+
+@dataclass
+class ComposeStackMetricsResult:
+    services: Dict[str, ContainerMetrics]
 
 
 @dataclass

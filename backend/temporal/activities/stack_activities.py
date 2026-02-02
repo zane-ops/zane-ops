@@ -24,10 +24,10 @@ with workflow.unsafe.imports_passed_through():
         deployment_log,
         get_docker_client,
         empty_folder,
-        ZaneProxyClient,
         get_compose_stack_swarm_service_status,
         send_regular_heartbeat,
     )
+    from ..proxy import ZaneProxyClient
     from search.dtos import RuntimeLogSource
     from zane_api.utils import (
         Colors,
@@ -38,7 +38,10 @@ with workflow.unsafe.imports_passed_through():
     from django.db.models import Case, F, Value, When
     from docker.models.services import Service as DockerService
     from django.conf import settings
-    from ..schedules import MonitorComposeStackWorkflow
+    from ..schedules import (
+        MonitorComposeStackWorkflow,
+        CollectComposeStacksMetricsWorkflow,
+    )
     from ..semaphore import AsyncSemaphore
     from search.loki_client import LokiSearchClient
 
@@ -407,6 +410,22 @@ class ComposeStackActivities:
             pass
 
     @activity.defn
+    async def create_stack_metrics_schedule(
+        self, deployment: ComposeStackDeploymentDetails
+    ):
+        try:
+            await TemporalClient.acreate_schedule(
+                workflow=CollectComposeStacksMetricsWorkflow.run,
+                args=deployment.stack,
+                id=deployment.stack.metrics_schedule_id,
+                interval=timedelta(seconds=30),
+                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
+            )
+        except ScheduleAlreadyRunningError:
+            # because the schedule already exists and is running, we can ignore it
+            pass
+
+    @activity.defn
     async def finalize_stack_deployment(self, result: ComposeStackMonitorPayload):
         deployment = result.deployment
 
@@ -546,10 +565,17 @@ class ComposeStackActivities:
         print(f"Deleted {len(volumes)} volume(s), YAY !! 🎉")
         deleted_volumes = [volume.name for volume in volumes]
 
-        # Delete schedule
+        # Delete schedules
         try:
             await TemporalClient.adelete_schedule(
                 id=details.stack.monitor_schedule_id,
+            )
+        except RPCError:
+            # the schedule might have already been deleted
+            pass
+        try:
+            await TemporalClient.adelete_schedule(
+                id=details.stack.metrics_schedule_id,
             )
         except RPCError:
             # the schedule might have already been deleted

@@ -16,7 +16,8 @@ from ...models import (
 from ...utils import Colors
 
 from search.dtos import RuntimeLogLevel
-from temporal.helpers import ZaneProxyClient
+from temporal.proxy import ZaneProxyClient
+
 
 # ==============================
 #       Collect Logs           #

@@ -16,6 +16,7 @@ from ..shared import (
     ComposeStackSnapshot,
     RegistryHealthCheckResult,
     ComposeStackHealthcheckResult,
+    ComposeStackMetricsResult,
 )
 
 with workflow.unsafe.imports_passed_through():
@@ -307,12 +308,36 @@ class MonitorDockerDeploymentActivities:
         )
 
 
-class DockerDeploymentStatsActivities:
+class DockerComposeStackMetricsActivities:
+    def __init__(self):
+        self.docker = get_docker_client()
+
+    @activity.defn
+    async def collect_compose_stack_metrics(
+        self, stack: ComposeStackSnapshot
+    ) -> ComposeStackMetricsResult | None:
+        try:
+            db_stack = await ComposeStack.objects.aget(id=stack.id)
+        except ComposeStack.DoesNotExist:
+            raise ApplicationError("Cannot collect metrics for non existing stack")
+
+        services: List[DockerService] = self.docker.services.list(
+            filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
+            status=True,
+        )
+        pass
+
+    @activity.defn
+    async def save_compose_stack_metrics(self, metrics: ComposeStackMetricsResult):
+        pass
+
+
+class DockerDeploymentMetricsActivities:
     def __init__(self):
         self.docker_client = get_docker_client()
 
     @activity.defn
-    async def get_deployment_stats(
+    async def collect_deployment_metrics(
         self, details: SimpleDeploymentDetails
     ) -> ServiceMetricsResult | None:
         try:
@@ -426,7 +451,7 @@ class DockerDeploymentStatsActivities:
                         )
 
     @activity.defn
-    async def save_deployment_stats(self, metrics: ServiceMetricsResult):
+    async def save_deployment_metrics(self, metrics: ServiceMetricsResult):
         deployment = (
             await Deployment.objects.filter(
                 hash=metrics.deployment.hash,

@@ -24,17 +24,17 @@ from typing import cast
 from zane_api.utils import jprint
 from ..dtos import ComposeStackServiceStatus
 import requests
-from temporal.helpers import ZaneProxyClient
+from temporal.proxy import ZaneProxyClient
 from django.conf import settings
 from temporal.schedules import MonitorComposeStackWorkflow
 from temporal.activities import ComposeStackActivities
-from compose.dtos import ComposeStackSnapshot
 from temporalio import activity
 from temporal.shared import ComposeStackBuildDetails
 from compose.dtos import ComposeStackUrlRouteDto
 
 
 from .stacks import ComposeStackAPITestBase
+from asgiref.sync import sync_to_async
 
 
 class DeployComposeStackViewTests(ComposeStackAPITestBase):
@@ -588,20 +588,13 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             self.assertEqual({}, stack.service_statuses)
 
             # Run the monitor workflow directly
-            snapshot = ComposeStackSnapshot(
-                id=stack.id,
-                name=stack.name,
-                slug=stack.slug,
-                hash_prefix=stack.hash_prefix,
-                monitor_schedule_id=stack.monitor_schedule_id,
-                network_alias_prefix=stack.network_alias_prefix,
-                user_content=stack.user_content or "",
-                computed_content=stack.computed_content or "",
-            )
+            @sync_to_async
+            def get_snapshot():
+                return stack.snapshot
 
             healthcheck = await env.client.execute_workflow(
                 workflow=MonitorComposeStackWorkflow.run,
-                arg=snapshot,
+                arg=await get_snapshot(),
                 id=stack.monitor_schedule_id,
                 task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                 execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
@@ -1170,6 +1163,75 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
 
         # Verify monitor schedule is deleted
         self.assertIsNone(self.get_workflow_schedule_by_id(monitor_schedule_id))
+
+    @responses.activate()
+    async def test_archive_compose_stack_deletes_metrics_schedule(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        project = await self.acreate_project()
+
+        # Create and deploy a stack
+        create_stack_payload = {
+            "slug": "monitor-stack",
+            "user_content": DOCKER_COMPOSE_MINIMAL,
+        }
+
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack,
+            await ComposeStack.objects.filter(slug="monitor-stack").afirst(),
+        )
+        self.assertIsNotNone(stack)
+        stack_id = stack.id
+        metrics_schedule_id = stack.metrics_schedule_id
+
+        # Deploy the stack
+        response = await self.async_client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Verify metrics schedule was created
+        schedule_handle = self.get_workflow_schedule_by_id(metrics_schedule_id)
+        self.assertIsNotNone(schedule_handle)
+
+        # Archive the stack
+        response = await self.async_client.delete(
+            reverse(
+                "compose:stacks.archive",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify stack is deleted
+        self.assertIsNone(await ComposeStack.objects.filter(id=stack_id).afirst())
+
+        # Verify metrics schedule is deleted
+        self.assertIsNone(self.get_workflow_schedule_by_id(metrics_schedule_id))
 
     def test_archive_stack_without_deployment_deletes_stack(self):
         project = self.create_project()
