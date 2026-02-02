@@ -1,4 +1,5 @@
 import asyncio
+import dataclasses
 from datetime import timedelta
 from typing import Any, Dict, List, cast
 from rest_framework import status
@@ -17,6 +18,7 @@ from ..shared import (
     RegistryHealthCheckResult,
     ComposeStackHealthcheckResult,
     ComposeStackMetricsResult,
+    ContainerMetrics,
 )
 
 with workflow.unsafe.imports_passed_through():
@@ -38,10 +40,13 @@ with workflow.unsafe.imports_passed_through():
     from search.loki_client import LokiSearchClient
     from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
     from container_registry.models import BuildRegistry
-    from compose.models import ComposeStack
+    from compose.models import ComposeStack, ComposeStackMetrics
     from compose.dtos import ComposeStackServiceStatus, ComposeStackServiceStatusDto
     from docker.models.services import Service as DockerService
-    from ..helpers import get_compose_stack_swarm_service_status
+    from ..helpers import (
+        get_compose_stack_swarm_service_status,
+        collect_swarm_service_metrics,
+    )
 
 docker_client: docker.DockerClient | None = None
 
@@ -315,21 +320,73 @@ class DockerComposeStackMetricsActivities:
     @activity.defn
     async def collect_compose_stack_metrics(
         self, stack: ComposeStackSnapshot
-    ) -> ComposeStackMetricsResult | None:
+    ) -> ComposeStackMetricsResult:
         try:
-            db_stack = await ComposeStack.objects.aget(id=stack.id)
+            await ComposeStack.objects.aget(id=stack.id)
         except ComposeStack.DoesNotExist:
-            raise ApplicationError("Cannot collect metrics for non existing stack")
+            raise ApplicationError(
+                "Cannot collect metrics of non existing stack",
+                non_retryable=True,
+            )
 
         services: List[DockerService] = self.docker.services.list(
             filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
             status=True,
         )
-        pass
+
+        all_metrics = await asyncio.gather(
+            *[
+                collect_swarm_service_metrics(
+                    service,
+                    self.docker,
+                )
+                for service in services
+            ]
+        )
+
+        metrics_per_service: Dict[str, ContainerMetrics] = {}
+
+        for i, metrics in enumerate(all_metrics):
+            if metrics is None:
+                continue
+
+            service = services[i]
+
+            name = (
+                cast(str, service.name)
+                .removeprefix(f"{stack.name}_")
+                .removeprefix(f"{stack.hash_prefix}_")
+            )
+            metrics_per_service[name] = metrics
+
+        return ComposeStackMetricsResult(services=metrics_per_service, stack=stack)
 
     @activity.defn
     async def save_compose_stack_metrics(self, metrics: ComposeStackMetricsResult):
-        pass
+        try:
+            stack = await ComposeStack.objects.aget(id=metrics.stack.id)
+        except ComposeStack.DoesNotExist:
+            raise ApplicationError(
+                "Cannot save metrics of non existing stack",
+                non_retryable=True,
+            )
+
+        metrics_to_add: List[ComposeStackMetrics] = []
+        for service_name, metric in metrics.services.items():
+            metrics_to_add.append(
+                ComposeStackMetrics(
+                    service_name=service_name,
+                    cpu_percent=metric.cpu_percent,
+                    memory_bytes=metric.memory_bytes,
+                    net_tx_bytes=metric.net_tx_bytes,
+                    net_rx_bytes=metric.net_rx_bytes,
+                    disk_read_bytes=metric.disk_read_bytes,
+                    disk_writes_bytes=metric.disk_writes_bytes,
+                    stack=stack,
+                )
+            )
+
+        await ComposeStackMetrics.objects.abulk_create(metrics_to_add)
 
 
 class DockerDeploymentMetricsActivities:
@@ -360,106 +417,29 @@ class DockerDeploymentMetricsActivities:
             if docker_deployment.status == Deployment.DeploymentStatus.SLEEPING:
                 return None
 
-            task_list = swarm_service.tasks(
-                filters={
-                    "label": f"deployment_hash={details.hash}",
-                    "desired-state": "running",
-                }
+            metrics = await collect_swarm_service_metrics(
+                swarm_service,
+                self.docker_client,
+                single_replica=True,
             )
-            if len(task_list) == 0:
+            if metrics is None:
                 return None
-            else:
-                most_recent_swarm_task = DockerSwarmTask.from_dict(
-                    max(
-                        task_list,
-                        key=lambda task: task["Version"]["Index"],
-                    )
-                )
 
-                if most_recent_swarm_task.container_id is not None:
-                    try:
-                        container = self.docker_client.containers.get(
-                            most_recent_swarm_task.container_id
-                        )
-                    except docker.errors.NotFound:
-                        return None  # this container may have been deleted already
-                    else:
-                        if container.status != "running":
-                            return  # we cannot get the stats of a dead container
-
-                        stats = container.stats(stream=False)
-
-                        # Calculate CPU usage percentage
-                        cpu_delta = (
-                            stats["cpu_stats"]["cpu_usage"]["total_usage"]
-                            - stats["precpu_stats"]["cpu_usage"]["total_usage"]
-                        )
-                        system_delta = (
-                            stats["cpu_stats"]["system_cpu_usage"]
-                            - stats["precpu_stats"]["system_cpu_usage"]
-                        )
-                        cpu_percent: float = (
-                            (cpu_delta / system_delta)
-                            * stats["cpu_stats"]["online_cpus"]
-                            * 100
-                        )
-
-                        # Memory usage
-                        memory_usage: int = stats["memory_stats"]["usage"]
-
-                        # Network usage
-                        rx_bytes: int = sum(
-                            network["rx_bytes"]
-                            for network in stats["networks"].values()
-                        )
-                        tx_bytes: int = sum(
-                            network["tx_bytes"]
-                            for network in stats["networks"].values()
-                        )
-
-                        # Disk I/O usage
-                        read_bytes: int = sum(
-                            io.get("value", 0)
-                            for io in (
-                                stats.get("blkio_stats", {}).get(
-                                    "io_service_bytes_recursive", []
-                                )
-                                or []
-                            )
-                            if io.get("op") == "read"
-                        )
-
-                        write_bytes: int = sum(
-                            io["value"]
-                            for io in (
-                                stats.get("blkio_stats", {}).get(
-                                    "io_service_bytes_recursive", []
-                                )
-                                or []
-                            )
-                            if io["op"] == "write"
-                        )
-
-                        return ServiceMetricsResult(
-                            cpu_percent=cpu_percent,
-                            memory_bytes=memory_usage,
-                            disk_read_bytes=read_bytes,
-                            disk_writes_bytes=write_bytes,
-                            net_rx_bytes=rx_bytes,
-                            net_tx_bytes=tx_bytes,
-                            deployment=details,
-                        )
+            return ServiceMetricsResult(
+                **dataclasses.asdict(metrics), deployment=details
+            )
 
     @activity.defn
     async def save_deployment_metrics(self, metrics: ServiceMetricsResult):
-        deployment = (
-            await Deployment.objects.filter(
-                hash=metrics.deployment.hash,
+        try:
+            deployment = (
+                await Deployment.objects.filter(
+                    hash=metrics.deployment.hash,
+                )
+                .select_related("service")
+                .aget()
             )
-            .select_related("service")
-            .afirst()
-        )
-        if deployment is None:
+        except Deployment.DoesNotExist:
             raise ApplicationError(
                 "Cannot save metrics for a non existent deployment.",
                 non_retryable=True,
@@ -479,12 +459,20 @@ class DockerDeploymentMetricsActivities:
 
 class CleanupActivities:
     @activity.defn
-    async def cleanup_service_metrics(self) -> CleanupResult:
+    async def cleanup_service_metrics(self):
         today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
         deleted = await ServiceMetrics.objects.filter(
             created_at__lt=today - timedelta(days=30)
         ).adelete()
-        return CleanupResult(deleted_count=deleted[0])
+        return deleted[0]
+
+    @activity.defn
+    async def cleanup_compose_stack_metrics(self):
+        today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        deleted = await ComposeStackMetrics.objects.filter(
+            created_at__lt=today - timedelta(days=30)
+        ).adelete()
+        return deleted[0]
 
 
 class MonitorRegistryDeploymentActivites:

@@ -15,7 +15,7 @@ from .activities import (
 from ..shared import (
     HealthcheckDeploymentDetails,
     DeploymentResult,
-    CleanupResult,
+    CleanupMetricsResult,
     SimpleDeploymentDetails,
     RegistrySnaphot,
     ComposeStackSnapshot,
@@ -214,14 +214,22 @@ class CollectComposeStacksMetricsWorkflow:
 @workflow.defn(name="cleanup-app-logs")
 class CleanupAppLogsWorkflow:
     @workflow.run
-    async def run(self) -> CleanupResult:
+    async def run(self) -> CleanupMetricsResult:
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
-        result = await workflow.execute_activity_method(
+        service_metrics_deleted_count = await workflow.execute_activity_method(
             CleanupActivities.cleanup_service_metrics,
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=retry_policy,
         )
+        stack_metrics_deleted_count = await workflow.execute_activity_method(
+            CleanupActivities.cleanup_compose_stack_metrics,
+            start_to_close_timeout=timedelta(seconds=5),
+            retry_policy=retry_policy,
+        )
 
-        return result
+        return CleanupMetricsResult(
+            service_metrics_deleted_count=service_metrics_deleted_count,
+            stack_metrics_deleted_count=stack_metrics_deleted_count,
+        )

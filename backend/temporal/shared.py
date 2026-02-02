@@ -414,6 +414,7 @@ class ServiceMetricsResult(ContainerMetrics):
 
 @dataclass
 class ComposeStackMetricsResult:
+    stack: ComposeStackSnapshot
     services: Dict[str, ContainerMetrics]
 
 
@@ -433,6 +434,12 @@ class CancelDeploymentSignalInput:
 @dataclass
 class CleanupResult:
     deleted_count: int
+
+
+@dataclass
+class CleanupMetricsResult:
+    service_metrics_deleted_count: int
+    stack_metrics_deleted_count: int
 
 
 @dataclass

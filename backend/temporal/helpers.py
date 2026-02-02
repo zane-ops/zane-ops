@@ -659,90 +659,140 @@ async def get_compose_stack_swarm_service_status(
     }
 
 
-async def collect_service_metrics(
-    swarm_service: DockerService, docker: docker.DockerClient
+async def collect_swarm_service_metrics(
+    service: DockerService,
+    docker_client: docker.DockerClient,
+    single_replica: bool = False,
 ):
-    task_list = swarm_service.tasks(
-        filters={
-            "desired-state": "running",
-        }
-    )
+    service_mode = service.attrs["Spec"]["Mode"]
+
+    # Determine mode type
+    if "Global" in service_mode:
+        mode_type = "global"
+    elif "ReplicatedJob" in service_mode:
+        mode_type = "replicated-job"
+    elif "GlobalJob" in service_mode:
+        mode_type = "global-job"
+    else:
+        # default is replicated
+        mode_type = "replicated"
+
+    # ignore collecting metrics from jobs as they are not long running
+    if mode_type.endswith("job"):
+        return None
+
+    task_list = [
+        DockerSwarmTask.from_dict(task)
+        for task in service.tasks(filters={"desired-state": "running"})
+    ]
     if len(task_list) == 0:
         return None
     else:
-        most_recent_swarm_task = DockerSwarmTask.from_dict(
-            max(
+        if single_replica:
+            most_recent_swarm_task = max(
                 task_list,
-                key=lambda task: task["Version"]["Index"],
+                key=lambda task: task.Version.Index,
             )
+
+            if most_recent_swarm_task.container_id is not None:
+                return await collect_container_metrics(
+                    most_recent_swarm_task.container_id, docker_client
+                )
+        else:
+            metrics = await asyncio.gather(
+                *[
+                    collect_container_metrics(task.container_id, docker_client)
+                    for task in task_list
+                    if task.container_id is not None
+                ]
+            )
+            filtered_metrics = [metric for metric in metrics if metric is not None]
+
+            if len(filtered_metrics) == 0:
+                return None
+
+            total_metrics = ContainerMetrics(
+                cpu_percent=0,
+                memory_bytes=0,
+                net_tx_bytes=0,
+                net_rx_bytes=0,
+                disk_read_bytes=0,
+                disk_writes_bytes=0,
+            )
+
+            for metric in filtered_metrics:
+                total_metrics.cpu_percent += metric.cpu_percent
+                total_metrics.memory_bytes += metric.memory_bytes
+                total_metrics.net_tx_bytes += metric.net_tx_bytes
+                total_metrics.net_rx_bytes += metric.net_rx_bytes
+                total_metrics.disk_read_bytes += metric.disk_read_bytes
+                total_metrics.disk_writes_bytes += metric.disk_writes_bytes
+
+            return total_metrics
+
+
+async def collect_container_metrics(
+    container_id: str, docker_client: docker.DockerClient
+):
+    try:
+        container = docker_client.containers.get(container_id)
+    except docker.errors.NotFound:
+        return None  # this container may have been deleted already
+    else:
+        if container.status != "running":
+            return  # we cannot get the stats of a dead container
+
+        stats = container.stats(stream=False)
+
+        # Calculate CPU usage percentage
+        cpu_delta = (
+            stats["cpu_stats"]["cpu_usage"]["total_usage"]
+            - stats["precpu_stats"]["cpu_usage"]["total_usage"]
+        )
+        system_delta = (
+            stats["cpu_stats"]["system_cpu_usage"]
+            - stats["precpu_stats"]["system_cpu_usage"]
+        )
+        cpu_percent: float = (
+            (cpu_delta / system_delta) * stats["cpu_stats"]["online_cpus"] * 100
         )
 
-        if most_recent_swarm_task.container_id is not None:
-            try:
-                container = docker.containers.get(most_recent_swarm_task.container_id)
-            except docker.errors.NotFound:
-                return None  # this container may have been deleted already
-            else:
-                if container.status != "running":
-                    return  # we cannot get the stats of a dead container
+        # Memory usage
+        memory_usage: int = stats["memory_stats"]["usage"]
 
-                stats = container.stats(stream=False)
+        # Network usage
+        rx_bytes: int = sum(
+            network["rx_bytes"] for network in stats["networks"].values()
+        )
+        tx_bytes: int = sum(
+            network["tx_bytes"] for network in stats["networks"].values()
+        )
 
-                # Calculate CPU usage percentage
-                cpu_delta = (
-                    stats["cpu_stats"]["cpu_usage"]["total_usage"]
-                    - stats["precpu_stats"]["cpu_usage"]["total_usage"]
-                )
-                system_delta = (
-                    stats["cpu_stats"]["system_cpu_usage"]
-                    - stats["precpu_stats"]["system_cpu_usage"]
-                )
-                cpu_percent: float = (
-                    (cpu_delta / system_delta) * stats["cpu_stats"]["online_cpus"] * 100
-                )
+        # Disk I/O usage
+        read_bytes: int = sum(
+            io.get("value", 0)
+            for io in (
+                stats.get("blkio_stats", {}).get("io_service_bytes_recursive", []) or []
+            )
+            if io.get("op") == "read"
+        )
 
-                # Memory usage
-                memory_usage: int = stats["memory_stats"]["usage"]
+        write_bytes: int = sum(
+            io["value"]
+            for io in (
+                stats.get("blkio_stats", {}).get("io_service_bytes_recursive", []) or []
+            )
+            if io["op"] == "write"
+        )
 
-                # Network usage
-                rx_bytes: int = sum(
-                    network["rx_bytes"] for network in stats["networks"].values()
-                )
-                tx_bytes: int = sum(
-                    network["tx_bytes"] for network in stats["networks"].values()
-                )
-
-                # Disk I/O usage
-                read_bytes: int = sum(
-                    io.get("value", 0)
-                    for io in (
-                        stats.get("blkio_stats", {}).get(
-                            "io_service_bytes_recursive", []
-                        )
-                        or []
-                    )
-                    if io.get("op") == "read"
-                )
-
-                write_bytes: int = sum(
-                    io["value"]
-                    for io in (
-                        stats.get("blkio_stats", {}).get(
-                            "io_service_bytes_recursive", []
-                        )
-                        or []
-                    )
-                    if io["op"] == "write"
-                )
-
-                return ContainerMetrics(
-                    cpu_percent=cpu_percent,
-                    memory_bytes=memory_usage,
-                    disk_read_bytes=read_bytes,
-                    disk_writes_bytes=write_bytes,
-                    net_rx_bytes=rx_bytes,
-                    net_tx_bytes=tx_bytes,
-                )
+        return ContainerMetrics(
+            cpu_percent=cpu_percent,
+            memory_bytes=memory_usage,
+            disk_read_bytes=read_bytes,
+            disk_writes_bytes=write_bytes,
+            net_rx_bytes=rx_bytes,
+            net_tx_bytes=tx_bytes,
+        )
 
 
 async def send_regular_heartbeat(name: str):
