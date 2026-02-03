@@ -36,27 +36,28 @@ export function ComposeStackCard({
   service_statuses,
   urls
 }: ComposeStackCardProps) {
-  // Sort starting & unhealthy services at the top as they need attention
   const services = Object.entries(service_statuses)
     .map(([name, service]) => [name, service] as const)
     .toSorted(([nameA, serviceA], [nameB, serviceB]) => {
+      // Sort starting & unhealthy services at the top as they need attention
+      if (serviceA.status === "STARTING" || serviceA.status === "UNHEALTHY") {
+        return -1;
+      }
+      if (serviceB.status === "STARTING" || serviceB.status === "UNHEALTHY") {
+        return 1;
+      }
+
+      // Sort services with URLs at the top
       const serviceUrlsA = urls[nameA];
       const serviceUrlsB = urls[nameB];
 
-      if (
-        serviceA.status === "STARTING" ||
-        serviceA.status === "UNHEALTHY" ||
-        typeof serviceUrlsA !== "undefined"
-      ) {
+      if (typeof serviceUrlsA !== "undefined") {
         return -1;
       }
-      if (
-        serviceB.status === "STARTING" ||
-        serviceB.status === "UNHEALTHY" ||
-        typeof serviceUrlsB !== "undefined"
-      ) {
+      if (typeof serviceUrlsB !== "undefined") {
         return 1;
       }
+
       return 0;
     });
 
