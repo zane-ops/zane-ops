@@ -678,6 +678,9 @@ export function Log({
 
   const logTime = formatLogTime(date);
 
+  const isSelectedContext =
+    searchParams.get("context") === timestamp.toString();
+
   return (
     <div
       id={`log-item-${id}`}
@@ -685,10 +688,13 @@ export function Log({
         "w-full flex gap-2 hover:bg-slate-400/20 relative group",
         "py-0 px-4 border-none border-0 ring-0",
         level === "ERROR" && "bg-red-400/20",
-        searchParams.get("context") === timestamp.toString() &&
-          "bg-yellow-400/20"
+        isSelectedContext && "bg-yellow-400/20"
       )}
     >
+      {isSelectedContext && (
+        <div className="w-0.5 bg-yellow-400 absolute top-0 bottom-0 left-0" />
+      )}
+
       <span className="inline-flex items-start select-none min-w-fit flex-none relative ">
         <time className="text-grey" dateTime={date.toISOString()}>
           <span className="sr-only sm:not-sr-only">
