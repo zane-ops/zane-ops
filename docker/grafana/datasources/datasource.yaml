@@ -4,6 +4,6 @@ datasources:
   - name: Loki
     type: loki
     access: proxy
-    url: http://loki:3100
+    url: http://zane.loki:3100
     isDefault: true
     editable: true

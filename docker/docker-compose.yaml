@@ -9,7 +9,7 @@ x-backend-vars: &env-vars
   ZANE_APP_DOMAIN: ${ZANE_APP_DOMAIN:-127-0-0-1.sslip.io}
 
 services:
-  loki:
+  zane-loki:
     image: grafana/loki:3.4
     ports:
       - "3100:3100"
@@ -21,12 +21,12 @@ services:
       zane:
         aliases:
           - zane.loki
-  grafana:
+  zane-grafana:
     image: grafana/grafana:latest
     ports:
       - "3004:3000"
     depends_on:
-      - loki
+      - zane-loki
     environment:
       - GF_USERS_DEFAULT_THEME=system
       # Basic Configuration
@@ -39,12 +39,12 @@ services:
     networks:
       - zane
 
-  drizzle-gateway:
+  zane-drizzle-gateway:
     image: ghcr.io/drizzle-team/gateway:latest
     ports:
       - "4983:4983"
     depends_on:
-      - db
+      - zane-db
     environment:
       - STORE_PATH=/app
       - DATABASE_URL=postgresql://postgres:password@zane.db:5432/zane
@@ -53,14 +53,14 @@ services:
     networks:
       - zane
 
-  proxy-test:
+  zane-proxy-test:
     image: ghcr.io/zane-ops/proxy:canary
     command: caddy run --resume
     ports:
       - "2020:2020"
     environment:
       CADDY_ADMIN: 0.0.0.0:2020
-  temporal-server:
+  zane-temporal-server:
     entrypoint: ["/etc/temporal/entrypoint.sh"]
     environment:
       - DB=postgres12
@@ -88,9 +88,9 @@ services:
       labels:
         zane.role: "temporal"
     depends_on:
-      - db
+      - zane-db
     restart: always
-  api:
+  zane-api:
     build:
       context: ../backend
       dockerfile: ../backend/Dockerfile
@@ -106,9 +106,9 @@ services:
       - docker-buildx-store:/root/.docker/buildx
       - docker-data:/root/.docker
     depends_on:
-      - db
-      - redis
-      - temporal-server
+      - zane-db
+      - zane-redis
+      - zane-temporal-server
     restart: always
     environment:
       <<: *env-vars
@@ -127,7 +127,7 @@ services:
           - zane.api.zaneops.internal
           - zane.frontend
           - zane.front.zaneops.internal
-  temporal-main-worker:
+  zane-temporal-main-worker:
     build:
       context: ../backend
       dockerfile: ../backend/Dockerfile
@@ -142,15 +142,15 @@ services:
       - docker-buildx-store:/root/.docker/buildx
       - docker-data:/root/.docker
     depends_on:
-      - db
-      - redis
-      - temporal-server
+      - zane-db
+      - zane-redis
+      - zane-temporal-server
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
     networks:
       - zane
-  temporal-schedule-worker:
+  zane-temporal-schedule-worker:
     build:
       context: ../backend
       dockerfile: ../backend/Dockerfile
@@ -165,16 +165,16 @@ services:
       - docker-buildx-store:/root/.docker/buildx
       - docker-data:/root/.docker
     depends_on:
-      - db
-      - redis
-      - temporal-server
+      - zane-db
+      - zane-redis
+      - zane-temporal-server
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
       TEMPORALIO_WORKER_TASK_QUEUE: schedule-task-queue
     networks:
       - zane
-  redis:
+  zane-redis:
     image: valkey/valkey:7.2.5-alpine
     container_name: zane-redis
     volumes:
@@ -185,7 +185,7 @@ services:
       zane:
         aliases:
           - zane.valkey
-  db:
+  zane-db:
     image: postgres:16-alpine
     container_name: zane-db
     restart: unless-stopped
@@ -201,7 +201,7 @@ services:
       zane:
         aliases:
           - zane.db
-  redis-gui:
+  zane-redis-gui:
     image: redis/redisinsight
     container_name: zane-redis-gui
     environment:
@@ -212,7 +212,7 @@ services:
       - redisinsight:/data
     networks:
       - zane
-  fluentd:
+  zane-fluentd:
     image: fluentd:v1.16.2-1.1
     volumes:
       - "./fluentd/fluent.conf:/fluentd/etc/fluent.conf"
@@ -226,9 +226,9 @@ services:
       DJANGO_SECRET_KEY: "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx" # default value set in `settings.py`
     deploy:
       mode: global
-  temporal-ui:
+  zane-temporal-ui:
     depends_on:
-      - temporal-server
+      - zane-temporal-server
     environment:
       - TEMPORAL_ADDRESS=zane.temporal:7233
       - TEMPORAL_CORS_ORIGINS=http://localhost:3000
