@@ -155,6 +155,10 @@ export default [
         "./routes/services/create-git-service-from-gitapp.tsx"
       ),
 
+      ...prefix("compose-stacks/:composeStackSlug", [
+        route("", "./routes/compose/compose-stack-details.tsx")
+      ]),
+
       ...prefix("services/:serviceSlug", [
         route("", "./routes/layouts/service-layout.tsx", [
           index("./routes/services/services-deployment-list.tsx"),

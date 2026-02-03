@@ -9,6 +9,7 @@ import {
   PauseIcon,
   RefreshCwOffIcon,
   RotateCcwIcon,
+  SquareCheckBig,
   Trash2Icon,
   TriangleAlertIcon,
   XIcon
@@ -30,20 +31,23 @@ const DEPLOYMENT_STATUS_COLOR_MAP = {
   REMOVED: "gray",
   CANCELLED: "gray",
   QUEUED: "gray",
-  SLEEPING: "yellow"
+  SLEEPING: "yellow",
+  COMPLETE: "green"
 } as const satisfies Record<
-  (typeof DEPLOYMENT_STATUSES)[number],
+  (typeof DEPLOYMENT_STATUSES)[number] | "COMPLETE",
   StatusBadgeColor
 >;
 
 type DeploymentStatusBadgeProps = {
   status: keyof typeof DEPLOYMENT_STATUS_COLOR_MAP;
   className?: string;
+  variant?: "outline" | "ghost";
 };
 
 export function DeploymentStatusBadge({
   status,
-  className
+  className,
+  variant = "ghost"
 }: DeploymentStatusBadgeProps) {
   const color = DEPLOYMENT_STATUS_COLOR_MAP[status];
 
@@ -59,7 +63,8 @@ export function DeploymentStatusBadge({
     STARTING: FastForwardIcon,
     BUILDING: HammerIcon,
     PREPARING: HourglassIcon,
-    CANCELLING: RefreshCwOffIcon
+    CANCELLING: RefreshCwOffIcon,
+    COMPLETE: SquareCheckBig
   } as const satisfies Record<typeof status, React.ComponentType<any>>;
 
   const Icon = icons[status];
@@ -86,10 +91,11 @@ export function DeploymentStatusBadge({
           "bg-gray-600/20 dark:bg-gray-600/60 text-gray": color === "gray",
           "bg-link/20 text-link": color === "blue"
         },
+        variant === "outline" && "!bg-transparent",
         className
       )}
     >
-      <div className="relative ">
+      <div className="relative">
         {isActive && (
           <Icon
             size={15}

@@ -1,19 +1,28 @@
-import { BoxIcon, BoxesIcon } from "lucide-react";
+import {
+  BoxIcon,
+  BoxesIcon,
+  Layers2Icon,
+  LinkIcon,
+  TagIcon
+} from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router";
 import type { ComposeStack } from "~/api/types";
+import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
 import { Ping, type PingProps } from "~/components/ping";
 import type { StatusBadgeColor } from "~/components/status-badge";
+import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
   Popover,
+  PopoverArrow,
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
 import { Separator } from "~/components/ui/separator";
 import type { ValueOf } from "~/lib/types";
 import { cn } from "~/lib/utils";
-import { getDockerImageIconURL, pluralize } from "~/utils";
+import { formatURL, getDockerImageIconURL, pluralize } from "~/utils";
 
 export type ComposeStackCardProps = Pick<
   ComposeStack,
@@ -27,14 +36,6 @@ export function ComposeStackCard({
   service_statuses,
   urls
 }: ComposeStackCardProps) {
-  const total_services = Object.values(service_statuses).length;
-  const healthy_services = Object.values(service_statuses).filter(
-    (status) =>
-      status.status === "HEALTHY" ||
-      status.status === "COMPLETE" ||
-      status.status === "SLEEPING"
-  ).length;
-
   // Sort starting & unhealthy services at the top as they need attention
   const services = Object.entries(service_statuses)
     .map(([name, service]) => [name, service] as const)
@@ -48,11 +49,21 @@ export function ComposeStackCard({
       return 0;
     });
 
+  const total_services = services.length;
+  const healthy_services = services.filter(
+    ([, service]) =>
+      service.status === "HEALTHY" ||
+      service.status === "COMPLETE" ||
+      service.status === "SLEEPING"
+  ).length;
+
   let pingColor: StatusBadgeColor;
   let pingState: PingProps["state"] = "static";
 
   if (total_services === 0) {
     pingColor = "gray";
+  } else if (healthy_services <= 0) {
+    pingColor = "red";
   } else if (healthy_services < total_services) {
     pingColor = "yellow";
   } else {
@@ -95,25 +106,25 @@ export function ComposeStackCard({
           <div className="flex items-center gap-3  relative z-10 px-2">
             {services.slice(0, MAX_SERVICES_SHOWN).map(([name, service]) => (
               <ComposeStackService
+                key={name}
                 name={name}
-                status={service.status}
-                image={service.image}
-                running_replicas={service.running_replicas}
-                desired_replicas={service.desired_replicas}
+                {...service}
                 urls={urls[name] ?? []}
               />
             ))}
             {services.length > MAX_SERVICES_SHOWN && (
-              <Link
-                to={`compose-stacks/${slug}`}
-                className={cn(
-                  "size-10 border border-border rounded-md dark:bg-card bg-white",
-                  "inline-flex items-center justify-center",
-                  "relative z-10 cursor-pointer"
-                )}
-              >
-                +{services.length - MAX_SERVICES_SHOWN}
-              </Link>
+              <Button asChild variant="outline">
+                <Link
+                  to={`compose-stacks/${slug}`}
+                  className={cn(
+                    "size-10 border border-border rounded-md dark:bg-card bg-white",
+                    "inline-flex items-center justify-center",
+                    "relative z-10 cursor-pointer"
+                  )}
+                >
+                  +{services.length - MAX_SERVICES_SHOWN}
+                </Link>
+              </Button>
             )}
           </div>
         </div>
@@ -132,10 +143,7 @@ export function ComposeStackCard({
   );
 }
 
-type ComposeStackServiceProps = Pick<
-  ValueOf<ComposeStack["service_statuses"]>,
-  "running_replicas" | "image" | "status" | "desired_replicas"
-> & {
+type ComposeStackServiceProps = ValueOf<ComposeStack["service_statuses"]> & {
   name: string;
   urls: ValueOf<ComposeStack["urls"]>;
 };
@@ -143,46 +151,40 @@ type ComposeStackServiceProps = Pick<
 function ComposeStackService({
   name,
   status,
+  desired_replicas,
+  running_replicas,
   urls,
-  image
+  image,
+  mode,
+  tasks
 }: ComposeStackServiceProps) {
   const [imageNotFound, setImageNotFound] = React.useState(false);
   const iconSrc = getDockerImageIconURL(image);
+
+  const total_completed = tasks.filter(
+    (task) => task.status === "complete"
+  ).length;
+  const is_job = mode === "global-job" || mode === "replicated-job";
+
+  let serviceImage = image;
+  if (serviceImage && !serviceImage.includes(":")) {
+    serviceImage += ":latest";
+  }
+
   return (
     <div className="relative">
-      <span
-        tabIndex={0}
-        className="absolute cursor-pointer flex size-2.5 -top-1 -right-1 z-20"
-      >
+      {status === "UNHEALTHY" && (
         <span
-          className={cn(
-            "absolute inline-flex h-full w-full rounded-full  opacity-75",
-            {
-              "animate-ping bg-green-400":
-                status === "HEALTHY" || status == "COMPLETE",
-              "bg-red-400": status === "UNHEALTHY",
-              "bg-yellow-400": status === "SLEEPING",
-              "bg-secondary/60": status === "STARTING"
-            }
-          )}
-        />
-
-        <span
-          className={cn(
-            "relative inline-flex rounded-full size-2.5 bg-green-500",
-            {
-              "bg-green-500": status === "HEALTHY" || status == "COMPLETE",
-              "bg-red-500": status === "UNHEALTHY",
-              "bg-yellow-500": status === "SLEEPING",
-              "bg-secondary": status === "STARTING"
-            }
-          )}
-        ></span>
-      </span>
+          tabIndex={0}
+          className="absolute cursor-pointer flex size-2.5 -top-1 -right-1 z-20"
+        >
+          <Ping color="red" />
+        </span>
+      )}
 
       <Popover>
         <PopoverTrigger asChild>
-          <button className="rounded-md relative z-10 dark:bg-card bg-white p-1 border border-border">
+          <Button className="relative z-10 p-1" variant="outline">
             {iconSrc && !imageNotFound ? (
               <img
                 src={iconSrc}
@@ -202,10 +204,74 @@ function ComposeStackService({
                 )}
               />
             )}
-          </button>
+          </Button>
         </PopoverTrigger>
-        <PopoverContent align="center" className="w-40 text-sm">
-          {name}
+        <PopoverContent
+          align="center"
+          className="w-60 text-sm flex flex-col gap-1.5 px-0 pt-1.5"
+        >
+          <PopoverArrow className="fill-popover stroke-border stroke-2" />
+          <div className="px-3">
+            <strong
+              className={cn(
+                "whitespace-nowrap overflow-x-hidden text-ellipsis",
+                "text-card-foreground font-medium",
+                "inline-flex justify-between gap-0.5 items-center"
+              )}
+            >
+              <span className="relative top-0.5">{name}</span>
+              <span className="ml-1 inline-block rounded-full size-0.5 bg-foreground relative top-0.5" />
+              <DeploymentStatusBadge
+                status={status}
+                variant="outline"
+                className="my-1"
+              />
+            </strong>
+          </div>
+          <Separator />
+
+          <div className="flex flex-col gap-1 px-3">
+            <div className="col-span-2 flex items-start gap-1">
+              <TagIcon className="dark:text-foreground text-grey flex-none size-4 relative top-1" />
+              <span className="whitespace-nowrap overflow-x-hidden text-ellipsis text-grey dark:text-foreground">
+                {serviceImage}
+              </span>
+            </div>
+
+            {urls.length > 0 && (
+              <ul className="w-full">
+                {urls.map((url) => (
+                  <li
+                    key={url.domain + url.base_path}
+                    className="w-full flex items-center gap-1"
+                  >
+                    <LinkIcon className="flex-none size-4 text-link" />
+                    <a
+                      href={formatURL(url)}
+                      target="_blank"
+                      className="underline text-link text-sm inline-block w-[calc(100%_-calc(var(--spacing)_*_4))]"
+                    >
+                      <p className="whitespace-nowrap overflow-x-hidden text-ellipsis">
+                        {formatURL(url)}
+                      </p>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="text-card-foreground col-span-2 flex items-start gap-1">
+              <Layers2Icon className="flex-none dark:text-foreground text-grey size-4 relative top-1" />
+              {is_job ? (
+                <span className="text-grey dark:text-foreground">
+                  {total_completed}/{desired_replicas} tasks completed
+                </span>
+              ) : (
+                <span className="text-grey dark:text-foreground">
+                  {running_replicas}/{desired_replicas} replicas running
+                </span>
+              )}
+            </div>
+          </div>
         </PopoverContent>
       </Popover>
     </div>
