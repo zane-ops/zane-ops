@@ -94,6 +94,7 @@ class ComposeStackListAPIView(ListAPIView):
             )
             .prefetch_related("changes", "env_overrides")
             .all()
+            .order_by("created_at")
         )
 
 
