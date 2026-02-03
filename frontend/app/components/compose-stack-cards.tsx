@@ -129,8 +129,7 @@ export function ComposeStackCard({
                 <Link
                   to={`compose-stacks/${slug}`}
                   className={cn(
-                    "size-10 border border-border rounded-md dark:bg-card bg-white",
-                    "inline-flex items-center justify-center",
+                    "size-10 inline-flex items-center justify-center",
                     "relative z-10 cursor-pointer"
                   )}
                 >
