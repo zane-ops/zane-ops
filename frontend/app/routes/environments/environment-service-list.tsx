@@ -257,7 +257,7 @@ export default function EnvironmentServiceListPage({
 
   return (
     <>
-      <section className="py-8 grid lg:grid-cols-3 xl:grid-cols-4 md:grid-cols-2 grid-cols-1 place-content-center  gap-8">
+      <section className="py-8 grid lg:grid-cols-3 xl:grid-cols-4 md:grid-cols-2 grid-cols-1 place-content-center gap-8 xl:gap-6">
         {serviceList.length === 0 && composeStackList.length === 0 && (
           <section className="flex gap-3 h-96 col-span-full flex-col items-center justify-center grow py-20">
             <div className="flex flex-col gap-2 items-center text-center">

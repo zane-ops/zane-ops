@@ -1,4 +1,4 @@
-import { BoxIcon, BoxesIcon, ContainerIcon } from "lucide-react";
+import { BoxIcon, BoxesIcon } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router";
 import type { ComposeStack } from "~/api/types";
@@ -11,12 +11,6 @@ import {
   PopoverTrigger
 } from "~/components/ui/popover";
 import { Separator } from "~/components/ui/separator";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
 import type { ValueOf } from "~/lib/types";
 import { cn } from "~/lib/utils";
 import { getDockerImageIconURL, pluralize } from "~/utils";
@@ -26,26 +20,38 @@ export type ComposeStackCardProps = Pick<
   "slug" | "service_statuses" | "urls"
 >;
 
+const MAX_SERVICES_SHOWN = 3;
+
 export function ComposeStackCard({
   slug,
   service_statuses,
   urls
 }: ComposeStackCardProps) {
-  const total_services = Object.values(service_statuses).filter(
-    (service) => service.status !== "SLEEPING"
-  ).length;
+  const total_services = Object.values(service_statuses).length;
   const healthy_services = Object.values(service_statuses).filter(
-    (status) => status.status == "HEALTHY" || status.status == "COMPLETE"
+    (status) =>
+      status.status === "HEALTHY" ||
+      status.status === "COMPLETE" ||
+      status.status === "SLEEPING"
   ).length;
 
+  // Sort starting & unhealthy services at the top as they need attention
   const services = Object.entries(service_statuses)
-    .slice(0, 6)
-    .map(([name, service]) => [name, service] as const);
+    .map(([name, service]) => [name, service] as const)
+    .toSorted(([, serviceA], [, serviceB]) => {
+      if (serviceA.status === "STARTING" || serviceA.status === "UNHEALTHY") {
+        return -1;
+      }
+      if (serviceB.status === "STARTING" || serviceB.status === "UNHEALTHY") {
+        return 1;
+      }
+      return 0;
+    });
 
   let pingColor: StatusBadgeColor;
   let pingState: PingProps["state"] = "static";
 
-  if (total_services == 0) {
+  if (total_services === 0) {
     pingColor = "gray";
   } else if (healthy_services < total_services) {
     pingColor = "yellow";
@@ -87,7 +93,7 @@ export function ComposeStackCard({
       >
         <div className="flex-1 flex items-center justify-center pb-2">
           <div className="flex items-center gap-3  relative z-10 px-2">
-            {services.slice(0, 6).map(([name, service]) => (
+            {services.slice(0, MAX_SERVICES_SHOWN).map(([name, service]) => (
               <ComposeStackService
                 name={name}
                 status={service.status}
@@ -97,7 +103,7 @@ export function ComposeStackCard({
                 urls={urls[name] ?? []}
               />
             ))}
-            {services.length > 6 && (
+            {services.length > MAX_SERVICES_SHOWN && (
               <Link
                 to={`compose-stacks/${slug}`}
                 className={cn(
@@ -106,17 +112,20 @@ export function ComposeStackCard({
                   "relative z-10 cursor-pointer"
                 )}
               >
-                +{services.length - 6}
+                +{services.length - MAX_SERVICES_SHOWN}
               </Link>
             )}
           </div>
         </div>
         <div className="bg-toggle inline-flex items-center gap-2 rounded-md self-start px-2">
           <Ping color={pingColor} state={pingState} />
-          <p className="text-card-foreground dark:text-foreground">
-            {healthy_services}/
-            {`${total_services} ${pluralize("service", total_services)} healthy`}
-          </p>
+          {total_services === 0 && <span>No services yet</span>}
+          {total_services > 0 && (
+            <p className="text-card-foreground dark:text-foreground">
+              {healthy_services}/
+              {`${total_services} ${pluralize("service", total_services)} healthy`}
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -186,11 +195,16 @@ function ComposeStackService({
                 )}
               />
             ) : (
-              <BoxIcon className={cn("flex-none size-8", "rounded-md p-0.5")} />
+              <BoxIcon
+                className={cn(
+                  "flex-none size-8 text-card-foreground",
+                  "rounded-md p-0.5"
+                )}
+              />
             )}
           </button>
         </PopoverTrigger>
-        <PopoverContent align="center" className="w-40">
+        <PopoverContent align="center" className="w-40 text-sm">
           {name}
         </PopoverContent>
       </Popover>
