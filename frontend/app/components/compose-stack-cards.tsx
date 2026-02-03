@@ -185,12 +185,12 @@ function ComposeStackService({
 
   return (
     <div className="relative">
-      {status === "UNHEALTHY" && (
+      {(status === "UNHEALTHY" || status === "STARTING") && (
         <span
           tabIndex={0}
           className="absolute cursor-pointer flex size-2.5 -top-1 -right-1 z-20"
         >
-          <Ping color="red" />
+          <Ping color={status === "UNHEALTHY" ? "red" : "blue"} />
         </span>
       )}
 
