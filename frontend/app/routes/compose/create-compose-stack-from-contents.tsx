@@ -331,7 +331,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
       method="post"
       className="flex my-10 grow justify-center items-center"
     >
-      <div className="card flex  lg:w-1/2 md:w-2/3 w-full flex-col gap-5 items-stretch">
+      <div className="card flex  xl:w-1/2 lg:w-[60%] md:w-2/3 w-full flex-col gap-5 items-stretch">
         <h1 className="text-3xl font-bold">New Compose stack</h1>
 
         {errors.non_field_errors && (
@@ -434,7 +434,7 @@ function StackCreatedStep({
         method="post"
         className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full"
       >
-        <input type="hidden" name="service_slug" value={composeStackSlug} />
+        <input type="hidden" name="stack_slug" value={composeStackSlug} />
         <Alert variant="success">
           <CheckIcon className="h-5 w-5" />
           <AlertTitle className="text-lg">Success</AlertTitle>
