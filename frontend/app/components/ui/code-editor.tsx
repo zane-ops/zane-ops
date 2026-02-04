@@ -33,6 +33,8 @@ export function CodeEditor({
     <div
       className={cn(
         "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
+        "border border-border",
+        "ring-offset-background focus-within:ring-2 focus-within:ring-ring/60 focus-within:ring-offset-2 outline-hidden",
         containerClassName
       )}
     >
