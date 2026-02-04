@@ -22,7 +22,7 @@ export function Ping({
               "bg-red-500": color === "red",
               "bg-yellow-500": color === "yellow",
               "bg-gray-500": color === "gray",
-              "bg-link": color === "blue"
+              "bg-secondary": color === "blue"
             }
           )}
         />
@@ -34,7 +34,7 @@ export function Ping({
           "bg-red-500": color === "red",
           "bg-yellow-500": color === "yellow",
           "bg-gray-500": color === "gray",
-          "bg-link": color === "blue"
+          "bg-secondary": color === "blue"
         })}
       ></span>
     </span>
