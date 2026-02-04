@@ -69,6 +69,10 @@ export function ComposeStackCard({
       service.status === "SLEEPING"
   ).length;
 
+  const sleeping_services = services.filter(
+    ([, service]) => service.status === "SLEEPING"
+  ).length;
+
   let pingColor: StatusBadgeColor;
   let pingState: PingProps["state"] = "static";
 
@@ -146,6 +150,7 @@ export function ComposeStackCard({
             <p className="text-card-foreground dark:text-foreground">
               {healthy_services}/
               {`${total_services} ${pluralize("service", total_services)} healthy`}
+              {sleeping_services > 0 && ` (${sleeping_services} sleeping)`}
             </p>
           )}
         </div>
