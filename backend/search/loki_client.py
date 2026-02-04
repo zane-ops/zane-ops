@@ -125,6 +125,7 @@ class LokiSearchClient:
                 "created_at": log_data["created_at"],
                 "stack_service_name": log_data.get("stack_service_name"),
                 "stack_id": log_data.get("stack_id"),
+                "container_id": log_data.get("container_id"),
                 "timestamp": int(float(log_data["time"])),  # timestamp for pagination
             }
             hits.append(hit)
@@ -205,6 +206,7 @@ class LokiSearchClient:
                     "level": hit["level"],
                     "source": hit["source"],
                     "service_id": hit.get("service_id"),
+                    "container_id": hit.get("container_id"),
                     "deployment_id": hit.get("deployment_id"),
                     "stack_id": hit.get("stack_id"),
                     "stack_service_name": hit.get("stack_service_name"),
@@ -335,6 +337,7 @@ class LokiSearchClient:
                     "time": int(float(log_data["time"])),
                     "level": log_data["level"],
                     "source": log_data["source"],
+                    "container_id": log_data.get("container_id"),
                     "service_id": log_data.get("service_id"),
                     "deployment_id": log_data.get("deployment_id"),
                     "stack_id": log_data.get("stack_id"),
@@ -356,6 +359,7 @@ class LokiSearchClient:
                     "time": int(float(log_data["time"])),
                     "level": log_data["level"],
                     "source": log_data["source"],
+                    "container_id": log_data.get("container_id"),
                     "service_id": log_data.get("service_id"),
                     "deployment_id": log_data.get("deployment_id"),
                     "stack_id": log_data.get("stack_id"),
@@ -388,6 +392,7 @@ class LokiSearchClient:
                     ).isoformat(),
                     "level": hit["level"],
                     "source": hit["source"],
+                    "container_id": hit.get("container_id"),
                     "service_id": hit.get("service_id"),
                     "deployment_id": hit.get("deployment_id"),
                     "stack_id": hit.get("stack_id"),
