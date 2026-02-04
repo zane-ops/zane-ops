@@ -133,30 +133,19 @@ export default [
         route("variables", "./routes/environments/environment-variables.tsx"),
         route("settings", "./routes/environments/environments-settings.tsx")
       ]),
-      route("create-service", "./routes/services/create-service.tsx"),
-      route(
-        "create-compose-stack",
-        "./routes/compose/create-compose-stack.tsx"
-      ),
-      route(
-        "create-service/docker",
-        "./routes/services/create-docker-service.tsx"
-      ),
-      route(
-        "create-service/git-public",
-        "./routes/services/create-public-git-service.tsx"
-      ),
-      route(
-        "create-service/git-private",
-        "./routes/services/create-private-git-service.tsx"
-      ),
-      route(
-        "create-service/git-private/:gitAppId",
-        "./routes/services/create-git-service-from-gitapp.tsx"
-      ),
 
-      ...prefix("compose-stacks/:composeStackSlug", [
-        route("", "./routes/compose/compose-stack-details.tsx")
+      ...prefix("create-service", [
+        route("", "./routes/services/create-service.tsx"),
+        route("docker", "./routes/services/create-docker-service.tsx"),
+        route("git-public", "./routes/services/create-public-git-service.tsx"),
+        route(
+          "git-private",
+          "./routes/services/create-private-git-service.tsx"
+        ),
+        route(
+          "git-private/:gitAppId",
+          "./routes/services/create-git-service-from-gitapp.tsx"
+        )
       ]),
 
       ...prefix("services/:serviceSlug", [
@@ -195,6 +184,22 @@ export default [
             route("cancel", "./routes/deployments/cancel-deployment.tsx")
           ]
         )
+      ]),
+
+      ...prefix("create-compose-stack", [
+        route("", "./routes/compose/create-compose-stack.tsx"),
+        route(
+          "compose-contents",
+          "./routes/compose/create-compose-stack-from-contents.tsx"
+        ),
+        route(
+          "dokploy",
+          "./routes/compose/create-compose-stack-from-dokploy.tsx"
+        )
+      ]),
+
+      ...prefix("compose-stacks/:composeStackSlug", [
+        route("", "./routes/compose/compose-stack-details.tsx")
       ])
     ])
   ])

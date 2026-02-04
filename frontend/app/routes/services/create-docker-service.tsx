@@ -140,7 +140,7 @@ export default function CreateServicePage({
 
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Docker</BreadcrumbPage>
+            <BreadcrumbPage>From Docker Image</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>

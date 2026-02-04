@@ -122,7 +122,7 @@ export default function CreateComposeStackPage({
               variant="secondary"
               className="flex gap-2.5 items-center  font-semibold  justify-center p-10"
             >
-              <Link to="./file" prefetch="intent">
+              <Link to="./compose-contents" prefetch="intent">
                 <FileTextIcon className="flex-none" />
                 <span>From compose file contents</span>
                 <ArrowRightIcon className="flex-none" />
