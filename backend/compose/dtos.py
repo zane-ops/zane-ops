@@ -555,6 +555,7 @@ class ComposeStackServiceTaskDto:
     id: str
     message: str
     exit_code: Optional[int] = None
+    container_id: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> Self:
@@ -564,6 +565,7 @@ class ComposeStackServiceTaskDto:
             image=data["image"],
             message=data["message"],
             exit_code=data.get("exit_code"),
+            container_id=data.get("container_id"),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -575,6 +577,8 @@ class ComposeStackServiceTaskDto:
         }
         if self.exit_code is not None:
             result["exit_code"] = self.exit_code
+        if self.container_id is not None:
+            result["container_id"] = self.container_id
         return result
 
 

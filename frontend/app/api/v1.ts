@@ -1202,6 +1202,7 @@ export interface components {
     ComposeStackServiceTask: {
       status: components["schemas"]["ComposeStackServiceTaskStatusEnum"];
       id: string;
+      container_id: string | null;
       image: string;
       message: string;
       exit_code: number | null;
@@ -1209,6 +1210,7 @@ export interface components {
     ComposeStackServiceTaskRequest: {
       status: components["schemas"]["ComposeStackServiceTaskStatusEnum"];
       id: string;
+      container_id?: string | null;
       image: string;
       message: string;
       exit_code?: number | null;

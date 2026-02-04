@@ -652,6 +652,7 @@ async def get_compose_stack_swarm_service_status(
         "tasks": [
             {
                 "id": task.ID,
+                "container_id": task.container_id,
                 "status": task.state.value,
                 "image": task.image,
                 "message": task.message,

@@ -12410,6 +12410,9 @@ components:
           $ref: '#/components/schemas/ComposeStackServiceTaskStatusEnum'
         id:
           type: string
+        container_id:
+          type: string
+          nullable: true
         image:
           type: string
         message:
@@ -12418,6 +12421,7 @@ components:
           type: integer
           nullable: true
       required:
+      - container_id
       - exit_code
       - id
       - image
@@ -12430,6 +12434,10 @@ components:
           $ref: '#/components/schemas/ComposeStackServiceTaskStatusEnum'
         id:
           type: string
+          minLength: 1
+        container_id:
+          type: string
+          nullable: true
           minLength: 1
         image:
           type: string
