@@ -1,7 +1,7 @@
 import { ArrowRightIcon, FileTextIcon } from "lucide-react";
 import { Link } from "react-router";
 import { DokployLogo } from "~/components/dokploy-logo";
-import { LogoSvg } from "~/components/logo";
+import { ZaneOpsLogo } from "~/components/logo";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -95,20 +95,20 @@ export default function CreateComposeStackPage({
                     className="flex gap-2.5 items-center font-semibold justify-center p-10"
                   >
                     <Link to="#">
-                      <LogoSvg className="flex-none size-8" />
+                      <ZaneOpsLogo className="flex-none size-8" />
                       <span>From ZaneOps template</span>
                       <ArrowRightIcon className="flex-none" />
                     </Link>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="left">Coming soon</TooltipContent>
+                <TooltipContent side="left">Coming soon ✨</TooltipContent>
               </Tooltip>
             </TooltipProvider>
 
             <Button
               asChild
               variant="secondary"
-              className="flex gap-2.5  font-semibold items-center justify-center p-10"
+              className="flex gap-2.5 font-semibold items-center justify-center p-10"
             >
               <Link to="./dokploy" prefetch="intent">
                 <DokployLogo className="flex-none size-8" />

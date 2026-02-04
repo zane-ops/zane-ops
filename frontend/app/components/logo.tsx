@@ -57,7 +57,7 @@ export function Logo({ className }: { className?: string }) {
   );
 }
 
-export function LogoSvg(props: React.SVGProps<SVGSVGElement>) {
+export function ZaneOpsLogo(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
