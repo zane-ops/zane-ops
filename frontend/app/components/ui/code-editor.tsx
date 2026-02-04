@@ -11,6 +11,7 @@ export type CodeEditorProps = {
   className?: string;
   containerClassName?: string;
   fontSize?: number;
+  hasError?: boolean;
 } & Pick<EditorProps, "options">;
 
 export function CodeEditor({
@@ -21,7 +22,8 @@ export function CodeEditor({
   className,
   containerClassName,
   fontSize,
-  options
+  options,
+  hasError
 }: CodeEditorProps) {
   const { theme } = useTheme();
   const isDark = useMediaQuery("(prefers-color-scheme: dark)");
@@ -35,6 +37,7 @@ export function CodeEditor({
         "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
         "border border-border",
         "ring-offset-background focus-within:ring-2 focus-within:ring-ring/60 focus-within:ring-offset-2 outline-hidden",
+        hasError && "border-red-500 focus-within:ring-red-500/50",
         containerClassName
       )}
     >
