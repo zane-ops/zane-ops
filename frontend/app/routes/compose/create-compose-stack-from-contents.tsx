@@ -1,6 +1,14 @@
-import { LoaderIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  ArrowRightIcon,
+  CheckIcon,
+  ClockArrowUpIcon,
+  LoaderIcon
+} from "lucide-react";
 import * as React from "react";
-import { Form, Link, href, useNavigation } from "react-router";
+import { Form, Link, href, useFetcher, useNavigation } from "react-router";
+import { type RequestInput, apiClient } from "~/api/client";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,7 +17,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
-import { SubmitButton } from "~/components/ui/button";
+import { Button, SubmitButton } from "~/components/ui/button";
 import { CodeEditor } from "~/components/ui/code-editor";
 import {
   FieldSet,
@@ -18,8 +26,8 @@ import {
   FieldSetTextarea
 } from "~/components/ui/fieldset";
 import { useLocalStorage } from "~/lib/use-local-storage";
-import { cn } from "~/lib/utils";
-import { metaTitle } from "~/utils";
+import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-compose-stack-from-contents";
 
 export function meta() {
@@ -40,7 +48,10 @@ export default function CreateComposeStackFromContentsPage({
 
   const [composeStackSlug, setComposeStackSlug] = React.useState("");
   const [deploymentHash, setDeploymentHash] = React.useState("");
-  const [, setUserContents] = useLocalStorage(SAVED_COMPOSE_CONTENTS_KEY, "");
+  const [, setSavedUserContents] = useLocalStorage(
+    SAVED_COMPOSE_CONTENTS_KEY,
+    ""
+  );
 
   return (
     <>
@@ -115,11 +126,120 @@ export default function CreateComposeStackFromContentsPage({
           onSuccess={(slug) => {
             setCurrentStep("CREATED");
             setComposeStackSlug(slug);
+            setSavedUserContents("");
           }}
+        />
+      )}
+
+      {currentStep === "CREATED" && (
+        <StackCreatedStep
+          projectSlug={params.projectSlug}
+          envSlug={params.envSlug}
+          composeStackSlug={composeStackSlug}
+          onSuccess={(hash) => {
+            setCurrentStep("DEPLOYED");
+            setDeploymentHash(hash);
+          }}
+        />
+      )}
+
+      {currentStep === "DEPLOYED" && (
+        <StackDeployedStep
+          projectSlug={params.projectSlug}
+          envSlug={params.envSlug}
+          composeStackSlug={composeStackSlug}
+          deploymentHash={deploymentHash}
         />
       )}
     </>
   );
+}
+
+async function createStack(
+  projectSlug: string,
+  envSlug: string,
+  formData: FormData
+) {
+  const userData = {
+    slug: formData.get("slug")?.toString().trim() ?? "",
+    user_content: formData.get("user_content")?.toString() ?? ""
+  } satisfies RequestInput<
+    "post",
+    "/api/compose/stacks/{project_slug}/{env_slug}/create/"
+  >;
+
+  const { error: errors, data } = await apiClient.POST(
+    "/api/compose/stacks/{project_slug}/{env_slug}/create/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          project_slug: projectSlug,
+          env_slug: envSlug
+        }
+      },
+      body: userData
+    }
+  );
+
+  return {
+    errors,
+    stackSlug: data?.slug,
+    deploymentHash: undefined,
+    userData
+  };
+}
+
+async function deployStack(
+  projectSlug: string,
+  envSlug: string,
+  formData: FormData
+) {
+  const stackSlug = formData.get("stack_slug")?.toString()!;
+  const { error: errors, data } = await apiClient.PUT(
+    "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          project_slug: projectSlug,
+          env_slug: envSlug,
+          slug: stackSlug
+        }
+      }
+    }
+  );
+
+  return {
+    errors,
+    stackSlug,
+    deploymentHash: data?.hash,
+    userData: undefined
+  };
+}
+
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
+  const formData = await request.formData();
+
+  const step = formData.get("step")?.toString();
+  switch (step) {
+    case "create-stack": {
+      return createStack(params.projectSlug, params.envSlug, formData);
+    }
+    case "deploy-stack": {
+      return deployStack(params.projectSlug, params.envSlug, formData);
+    }
+    default: {
+      throw new Error("Unexpected step");
+    }
+  }
 }
 
 type FormStepProps = {
@@ -137,6 +257,18 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
     ""
   );
 
+  const errors = getFormErrorsFromResponseData(actionData?.errors);
+
+  React.useEffect(() => {
+    const key = Object.keys(errors ?? {})[0] as keyof typeof errors;
+    const field = formRef.current?.elements.namedItem(key) as HTMLInputElement;
+    field?.focus();
+  }, [errors]);
+
+  if (actionData?.stackSlug) {
+    onSuccess(actionData.stackSlug);
+  }
+
   return (
     <Form
       ref={formRef}
@@ -146,10 +278,18 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
       <div className="card flex  md:w-[50%] w-full flex-col gap-5 items-stretch">
         <h1 className="text-3xl font-bold">New Compose stack</h1>
 
+        {errors.non_field_errors && (
+          <Alert variant="destructive">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{errors.non_field_errors}</AlertDescription>
+          </Alert>
+        )}
+
         <FieldSet
           name="slug"
           className="my-2 flex flex-col gap-1"
-          // errors={errors.slug}
+          errors={errors.slug}
           required
         >
           <FieldSetLabel className="dark:text-card-foreground">
@@ -160,14 +300,14 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
             className="p-3"
             placeholder="ex: immich"
             type="text"
-            // defaultValue={actionData?.userData?.slug}
+            defaultValue={actionData?.userData?.slug}
           />
         </FieldSet>
 
         <FieldSet
-          name="user_contents"
+          name="user_content"
           required
-          // errors={errors.new_value?.contents}
+          errors={errors.user_content}
           className="flex flex-col gap-1.5 flex-1"
         >
           <FieldSetLabel className="dark:text-card-foreground">
@@ -200,5 +340,141 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
         </SubmitButton>
       </div>
     </Form>
+  );
+}
+
+type StackCreatedStepProps = {
+  composeStackSlug: string;
+  projectSlug: string;
+  envSlug: string;
+  onSuccess: (deploymentHash: string) => void;
+};
+
+function StackCreatedStep({
+  composeStackSlug,
+  projectSlug,
+  envSlug,
+  onSuccess
+}: StackCreatedStepProps) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+  const isPending = fetcher.state !== "idle";
+
+  if (fetcher.data?.deploymentHash) {
+    onSuccess(fetcher.data.deploymentHash);
+  }
+  return (
+    <div className="flex flex-col h-[70vh] justify-center items-center">
+      {errors.non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errors.non_field_errors}</AlertDescription>
+        </Alert>
+      )}
+
+      <fetcher.Form
+        method="post"
+        className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full"
+      >
+        <input type="hidden" name="service_slug" value={composeStackSlug} />
+        <Alert variant="success">
+          <CheckIcon className="h-5 w-5" />
+          <AlertTitle className="text-lg">Success</AlertTitle>
+
+          <AlertDescription>
+            Compose Stack `<strong>{composeStackSlug}</strong>` Created
+            Successfuly
+          </AlertDescription>
+        </Alert>
+
+        <div className="flex gap-3 md:flex-row flex-col items-stretch">
+          <SubmitButton
+            className="p-3 rounded-lg gap-2 flex-1"
+            isPending={isPending}
+            name="step"
+            value="deploy-stack"
+          >
+            {isPending ? (
+              <>
+                <span>Deploying stack...</span>
+                <LoaderIcon className="animate-spin" size={15} />
+              </>
+            ) : (
+              "Deploy Now"
+            )}
+          </SubmitButton>
+
+          <Button asChild className="flex-1" variant="outline">
+            <Link
+              to={href(
+                "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+                {
+                  composeStackSlug,
+                  envSlug,
+                  projectSlug
+                }
+              )}
+              className="flex gap-2  items-center"
+            >
+              Go to stack details <ArrowRightIcon size={20} />
+            </Link>
+          </Button>
+        </div>
+      </fetcher.Form>
+    </div>
+  );
+}
+
+type StackDeployedStepProps = {
+  projectSlug: string;
+  composeStackSlug: string;
+  envSlug: string;
+  deploymentHash: string;
+};
+
+function StackDeployedStep({
+  projectSlug,
+  composeStackSlug,
+  envSlug,
+  deploymentHash
+}: StackDeployedStepProps) {
+  const navigation = useNavigation();
+  return (
+    <div className="flex  flex-col h-[70vh] justify-center items-center">
+      <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
+        <Alert variant="info">
+          <ClockArrowUpIcon className="h-5 w-5" />
+          <AlertTitle className="text-lg">Queued</AlertTitle>
+
+          <AlertDescription>
+            Deployment queued for stack&nbsp; `
+            <strong>{composeStackSlug}</strong>`
+          </AlertDescription>
+        </Alert>
+
+        <div className="flex gap-3 md:flex-row flex-col items-stretch">
+          <Button asChild className="flex-1">
+            {/* TODO: change for build-logs page */}
+            <Link
+              to={href(
+                "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+                {
+                  composeStackSlug,
+                  envSlug,
+                  projectSlug
+                }
+              )}
+              className="flex gap-2  items-center"
+            >
+              {navigation.state !== "idle" && (
+                <LoaderIcon className="animate-spin" size={15} />
+              )}
+              Inspect deployment <ArrowRightIcon size={20} />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
