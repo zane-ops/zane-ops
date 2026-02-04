@@ -37,6 +37,62 @@ export function meta() {
 }
 
 const SAVED_COMPOSE_CONTENTS_KEY = "compose:last-user-contents";
+const DEFAULT_COMPOSE_CONTENTS = `# ZaneOps Compose Stack Example
+# ==============================
+# This is a complete example showing how to deploy a web app with a database.
+# Delete this and paste your own compose file, or modify it to fit your needs.
+
+# Environment variables (x-zane-env)
+# ----------------------------------
+# Define shared variables here. ZaneOps supports these template functions:
+#   {{ generate_domain }}        - generates a unique domain for your app
+#   {{ generate_password | N }}  - generates a secure password of N characters (N must be even)
+#   {{ generate_username }}      - generates a random username
+#   {{ generate_slug }}          - generates a URL-safe slug
+#   {{ generate_uuid }}          - generates a UUID
+#   {{ network_alias | 'svc' }}  - resolves to the service's network alias
+#   {{ global_alias | 'svc' }}   - resolves to the service's global alias
+
+x-zane-env:
+  APP_DOMAIN: "{{ generate_domain }}"
+  DB_PORT: 5432
+  DB_USER: "{{ generate_username }}"
+  DB_NAME: app
+  DB_HOST: db
+  DB_PASSWORD: "{{ generate_password | 32 }}"
+
+services:
+  app:
+    image: nginxdemos/hello:latest
+    environment:
+      # Reference x-zane-env variables with \${VAR_NAME}
+      DATABASE_URL: "postgres://\${DB_USER}:\${DB_PASSWORD}@\${DB_HOST}:\${DB_PORT}/\${DB_NAME}"
+    depends_on:
+      - db
+    deploy:
+      # Expose your service to the internet with labels
+      labels:
+        zane.http.routes.0.port: "80"
+        zane.http.routes.0.domain: "\${APP_DOMAIN}"
+        zane.http.routes.0.base_path: "/"
+
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: \${DB_USER}
+      POSTGRES_PASSWORD: \${DB_PASSWORD}
+      POSTGRES_DB: \${DB_NAME}
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "\$\$DB_USER", "-d", "\$\$DB_NAME"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data:
+`;
 
 export default function CreateComposeStackFromContentsPage({
   params,
@@ -50,7 +106,7 @@ export default function CreateComposeStackFromContentsPage({
   const [deploymentHash, setDeploymentHash] = React.useState("");
   const [, setSavedUserContents] = useLocalStorage(
     SAVED_COMPOSE_CONTENTS_KEY,
-    ""
+    DEFAULT_COMPOSE_CONTENTS
   );
 
   return (
@@ -126,7 +182,7 @@ export default function CreateComposeStackFromContentsPage({
           onSuccess={(slug) => {
             setCurrentStep("CREATED");
             setComposeStackSlug(slug);
-            setSavedUserContents("");
+            setSavedUserContents(DEFAULT_COMPOSE_CONTENTS);
           }}
         />
       )}
@@ -254,7 +310,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
 
   const [userContents, setUserContents] = useLocalStorage(
     SAVED_COMPOSE_CONTENTS_KEY,
-    ""
+    DEFAULT_COMPOSE_CONTENTS
   );
 
   const errors = getFormErrorsFromResponseData(actionData?.errors);
@@ -275,7 +331,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
       method="post"
       className="flex my-10 grow justify-center items-center"
     >
-      <div className="card flex  md:w-[50%] w-full flex-col gap-5 items-stretch">
+      <div className="card flex  lg:w-1/2 md:w-2/3 w-full flex-col gap-5 items-stretch">
         <h1 className="text-3xl font-bold">New Compose stack</h1>
 
         {errors.non_field_errors && (
@@ -316,6 +372,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
           <FieldSetTextarea className="sr-only" value={userContents} readOnly />
 
           <CodeEditor
+            hasError={!!errors.user_content}
             containerClassName="w-full h-100"
             language="yaml"
             value={userContents}
