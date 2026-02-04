@@ -769,6 +769,7 @@ class StackRuntimeLogsQuerySerializer(serializers.Serializer):
     stack_service_names = serializers.ListField(
         child=serializers.CharField(), required=False
     )
+    container_id = serializers.CharField(required=False)
 
     def validate_cursor(self, cursor: str):
         try:

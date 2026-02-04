@@ -213,6 +213,7 @@ class LogIngestAPIView(APIView):
                                     source=RuntimeLogSource.SERVICE,
                                     service_id=service_id,
                                     deployment_id=deployment_id,
+                                    container_id=log["container_id"],
                                     content=log["log"],
                                     content_text=escape_ansi(log["log"]),
                                 )
@@ -233,6 +234,7 @@ class LogIngestAPIView(APIView):
                                 source=RuntimeLogSource.SERVICE,
                                 stack_id=stack_id,
                                 stack_service_name=stack_service_name,
+                                container_id=log["container_id"],
                                 content=log["log"],
                                 content_text=escape_ansi(log["log"]),
                             )

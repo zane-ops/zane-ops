@@ -14,6 +14,7 @@ class RuntimeLogSerializer(serializers.Serializer):
     stack_id = serializers.CharField(allow_null=True, required=False)
     stack_service_name = serializers.CharField(allow_null=True, required=False)
     # common args
+    container_id = serializers.CharField(allow_null=True, required=False)
     time = serializers.DateTimeField()
     timestamp = serializers.IntegerField()
     content = serializers.JSONField(allow_null=True)
@@ -46,6 +47,7 @@ class RuntimeLogsContextSerializer(serializers.Serializer):
 
 
 class RuntimeLogsQuerySerializer(serializers.Serializer):
+    container_id = serializers.CharField(required=False)
     deployment_id = serializers.CharField(required=False)
     service_id = serializers.CharField(required=False)
     stack_id = serializers.CharField(required=False)

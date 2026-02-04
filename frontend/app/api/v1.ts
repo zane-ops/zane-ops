@@ -6391,6 +6391,7 @@ export interface components {
       deployment_id: string | null;
       stack_id: string | null;
       stack_service_name: string | null;
+      container_id: string | null;
       /** Format: date-time */
       time: string;
       timestamp: number;
@@ -8506,6 +8507,7 @@ export interface operations {
   compose_stacks_runtime_logs_retrieve: {
     parameters: {
       query?: {
+        container_id?: string;
         cursor?: string;
         level?: ("INFO" | "ERROR")[];
         per_page?: number;

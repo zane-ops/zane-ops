@@ -1825,6 +1825,11 @@ paths:
       summary: Get stack runtime logs
       parameters:
       - in: query
+        name: container_id
+        schema:
+          type: string
+          minLength: 1
+      - in: query
         name: cursor
         schema:
           type: string
@@ -23346,6 +23351,9 @@ components:
         stack_service_name:
           type: string
           nullable: true
+        container_id:
+          type: string
+          nullable: true
         time:
           type: string
           format: date-time
@@ -23361,6 +23369,7 @@ components:
         source:
           $ref: '#/components/schemas/SourceEnum'
       required:
+      - container_id
       - content
       - content_text
       - deployment_id
