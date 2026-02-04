@@ -220,7 +220,7 @@ class ComposeStackCreateFromDokployObjectAPIView(APIView):
             network_alias_prefix=f"zn-{data['slug']}",
         )
 
-        template = DokployTemplate(**data)
+        template = DokployTemplate(compose=data["compose"], config=data["config"])
 
         user_content = DokployComposeAdapter.to_zaneops(template=template.base64)
 

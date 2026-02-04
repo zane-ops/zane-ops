@@ -641,9 +641,7 @@ class DokployTemplateObjectRequestSerializer(serializers.Serializer):
                 )
 
                 if result.returncode != 0:
-                    raise serializers.ValidationError(
-                        {"compose": result.stderr.strip()}
-                    )
+                    raise serializers.ValidationError(result.stderr.strip())
 
         return content
 
@@ -674,10 +672,18 @@ class CreateComposeStackFromDokployTemplateRequestSerializer(serializers.Seriali
             serializer.is_valid(raise_exception=True)
         except ValueError:
             raise serializers.ValidationError(
-                {
-                    "user_content": "Invalid format, it should be a base64 encoded string of a JSON object."
-                }
+                "Invalid format: it should be a base64 encoded string of a JSON object."
             )
+        except serializers.ValidationError as e:
+            formated: dict[str, Any] = ExceptionFormatter(e, self.context, e).run()  # type: ignore
+            errors = ["Could not parse Dokploy template:"]
+            errors.extend(
+                [f"{error['attr']}: {error['detail']}" for error in formated["errors"]]
+            )
+            errors.append(
+                "Please verify the template is valid on templates.dokploy.com"
+            )
+            raise serializers.ValidationError(errors)
         return user_content
 
     def validate_slug(self, slug: str):
