@@ -43,13 +43,13 @@
 	--color-toggle: hsl(var(--toggle));
 	--color-toggle-light: hsl(var(--light));
 
-	--color-status-success: hsl(var(--status-success));
+	--color-status-success: var(--status-success);
 	--color-status-success-light: hsl(var(--light));
 
-	--color-status-error: hsl(var(--status-error));
+	--color-status-error: var(--status-error);
 	--color-status-error-light: hsl(var(--light));
 
-	--color-status-warning: hsl(var(--status-warning));
+	--color-status-warning: var(--status-warning);
 	--color-status-warning-light: hsl(var(--light));
 
 	--radius-lg: var(--radius);
@@ -180,7 +180,7 @@
 		--loader: #003c57;
 		--status-success: #bbf7d0;
 		--status-error: #fecaca;
-		--status-warning: #fef08a;
+		--status-warning: #fee18a;
 		--link: 221.21 83.19% 53.33%;
 		--grey: 220 8.94% 46.08%;
 

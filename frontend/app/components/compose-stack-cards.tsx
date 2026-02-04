@@ -75,6 +75,7 @@ export function ComposeStackCard({
 
   let pingColor: StatusBadgeColor;
   let pingState: PingProps["state"] = "static";
+  let textStatusColorClass = "text-status-warning";
 
   if (total_services === 0) {
     pingColor = "gray";
@@ -84,9 +85,11 @@ export function ComposeStackCard({
     pingColor = "yellow";
   } else if (total_services > 0 && sleeping_services === total_services) {
     pingColor = "gray";
+    textStatusColorClass = "text-status-success";
   } else {
     pingColor = "green";
     pingState = "animated";
+    textStatusColorClass = "text-status-success";
   }
 
   return (
@@ -147,14 +150,18 @@ export function ComposeStackCard({
         </div>
         <div className="bg-toggle inline-flex items-center gap-2 rounded-md self-start px-2">
           <Ping color={pingColor} state={pingState} />
-          {total_services === 0 && <span>No services yet</span>}
+          {total_services === 0 && (
+            <span className="text-grey dark:text-foreground">
+              No services running
+            </span>
+          )}
           {total_services > 0 &&
             (sleeping_services === total_services ? (
               <span className="text-grey dark:text-foreground">
-                All services sleeping 🌙
+                All services sleeping
               </span>
             ) : (
-              <p className="text-card-foreground dark:text-foreground">
+              <p className="text-card-foreground">
                 {healthy_services}/
                 {`${total_services} ${pluralize("service", total_services)} healthy`}
                 {sleeping_services > 0 && (
