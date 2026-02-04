@@ -76,6 +76,8 @@ class ComposeStackServiceStatusSerializer(serializers.Serializer):
     status = serializers.ChoiceField(
         choices=[state for state in ComposeStackServiceStatus.values()]
     )
+    network_alias = serializers.CharField()
+    global_alias = serializers.CharField()
     running_replicas = serializers.IntegerField()
     desired_replicas = serializers.IntegerField()
     updated_at = serializers.DateTimeField()

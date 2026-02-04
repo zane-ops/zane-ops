@@ -1160,6 +1160,8 @@ export interface components {
     };
     ComposeStackServiceStatus: {
       status: components["schemas"]["ComposeStackServiceStatusStatusEnum"];
+      network_alias: string;
+      global_alias: string;
       running_replicas: number;
       desired_replicas: number;
       /** Format: date-time */
@@ -1178,6 +1180,8 @@ export interface components {
     ComposeStackServiceStatusModeEnum: "replicated" | "global" | "replicated-job" | "global-job";
     ComposeStackServiceStatusRequest: {
       status: components["schemas"]["ComposeStackServiceStatusStatusEnum"];
+      network_alias: string;
+      global_alias: string;
       running_replicas: number;
       desired_replicas: number;
       /** Format: date-time */

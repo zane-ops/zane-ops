@@ -644,6 +644,8 @@ async def get_compose_stack_swarm_service_status(
         "image": image,
         "mode": mode_type,
         "status": status,
+        "network_alias": f"{stack.network_alias_prefix}-{service_name}",
+        "global_alias": f"{stack.hash_prefix}_{service_name}",
         "desired_replicas": desired_replicas,
         "running_replicas": running_replicas,
         "updated_at": timezone.now().isoformat(),

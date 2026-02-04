@@ -585,6 +585,8 @@ class ComposeStackServiceStatusDto:
     running_replicas: int
     desired_replicas: int
     updated_at: str
+    network_alias: str
+    global_alias: str
     mode: Literal["replicated", "global", "replicated-job", "global-job"]
     tasks: List[ComposeStackServiceTaskDto] = field(default_factory=list)
 
@@ -601,6 +603,8 @@ class ComposeStackServiceStatusDto:
                 ComposeStackServiceTaskDto.from_dict(task)
                 for task in data.get("tasks", [])
             ],
+            network_alias=data["network_alias"],
+            global_alias=data["global_alias"],
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -612,6 +616,8 @@ class ComposeStackServiceStatusDto:
             "updated_at": self.updated_at,
             "mode": self.mode,
             "tasks": [task.to_dict() for task in self.tasks],
+            "network_alias": self.network_alias,
+            "global_alias": self.global_alias,
         }
 
 

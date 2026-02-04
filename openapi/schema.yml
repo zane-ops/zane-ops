@@ -12311,6 +12311,10 @@ components:
       properties:
         status:
           $ref: '#/components/schemas/ComposeStackServiceStatusStatusEnum'
+        network_alias:
+          type: string
+        global_alias:
+          type: string
         running_replicas:
           type: integer
         desired_replicas:
@@ -12328,8 +12332,10 @@ components:
           $ref: '#/components/schemas/ComposeStackServiceStatusModeEnum'
       required:
       - desired_replicas
+      - global_alias
       - image
       - mode
+      - network_alias
       - running_replicas
       - status
       - tasks
@@ -12351,6 +12357,12 @@ components:
       properties:
         status:
           $ref: '#/components/schemas/ComposeStackServiceStatusStatusEnum'
+        network_alias:
+          type: string
+          minLength: 1
+        global_alias:
+          type: string
+          minLength: 1
         running_replicas:
           type: integer
         desired_replicas:
@@ -12369,8 +12381,10 @@ components:
           $ref: '#/components/schemas/ComposeStackServiceStatusModeEnum'
       required:
       - desired_replicas
+      - global_alias
       - image
       - mode
+      - network_alias
       - running_replicas
       - status
       - tasks
