@@ -12073,9 +12073,14 @@ components:
           type: string
           readOnly: true
           nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
       required:
       - computed_content
       - configs
+      - created_at
       - deploy_token
       - env_overrides
       - id
@@ -12609,9 +12614,14 @@ components:
           type: string
           readOnly: true
           nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
       required:
       - computed_content
       - configs
+      - created_at
       - deploy_token
       - env_overrides
       - id

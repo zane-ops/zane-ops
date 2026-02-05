@@ -199,9 +199,11 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             "env_overrides",
             "service_statuses",
             "deploy_token",
+            "created_at",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
+            "created_at": {"read_only": True},
             "deploy_token": {"read_only": True},
             "computed_content": {"read_only": True},
             "name": {"read_only": True},

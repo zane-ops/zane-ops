@@ -1068,6 +1068,8 @@ export interface components {
         [key: string]: components["schemas"]["ComposeStackServiceStatus"];
       };
       deploy_token: string | null;
+      /** Format: date-time */
+      created_at: string;
     };
     ComposeStackChange: {
       id: string;
@@ -1273,6 +1275,8 @@ export interface components {
         [key: string]: components["schemas"]["ComposeStackServiceStatus"];
       };
       deploy_token: string | null;
+      /** Format: date-time */
+      created_at: string;
     };
     ComposeStackUpdateRequest: {
       slug?: string;
