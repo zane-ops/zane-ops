@@ -199,7 +199,9 @@ export default [
       ]),
 
       ...prefix("compose-stacks/:composeStackSlug", [
-        route("", "./routes/compose/compose-stack-details.tsx")
+        route("", "./routes/layouts/compose-stack-layout.tsx", [
+          index("./routes/compose/compose-stack-details.tsx")
+        ])
       ])
     ])
   ])

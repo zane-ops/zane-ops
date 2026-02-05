@@ -319,6 +319,54 @@ export const metrisSearch = z.object({
 
 export type MetricsFilters = z.TypeOf<typeof metrisSearch>;
 
+export const composeStackQueries = {
+  single: ({
+    project_slug,
+    stack_slug,
+    env_slug
+  }: {
+    project_slug: string;
+    env_slug: string;
+    stack_slug: string;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...projectQueries.single(project_slug).queryKey,
+        env_slug,
+        "COMPOSE_STACK_DETAILS",
+        stack_slug
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/",
+          {
+            params: {
+              path: {
+                project_slug,
+                slug: stack_slug,
+                env_slug
+              }
+            },
+            signal
+          }
+        );
+
+        if (!data) {
+          throw notFound(
+            `The compose stack \`${stack_slug}\` doesn't exist in this project.`
+          );
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    })
+};
+
 export const serviceQueries = {
   single: ({
     project_slug,

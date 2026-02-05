@@ -1,6 +1,7 @@
 import {
   BanIcon,
   ClockArrowUpIcon,
+  ClockIcon,
   FastForwardIcon,
   HammerIcon,
   HeartPulseIcon,
@@ -32,9 +33,10 @@ const DEPLOYMENT_STATUS_COLOR_MAP = {
   CANCELLED: "gray",
   QUEUED: "gray",
   SLEEPING: "yellow",
-  COMPLETE: "green"
+  COMPLETE: "green",
+  NOT_DEPLOYED_YET: "gray"
 } as const satisfies Record<
-  (typeof DEPLOYMENT_STATUSES)[number] | "COMPLETE",
+  (typeof DEPLOYMENT_STATUSES)[number] | "COMPLETE" | "NOT_DEPLOYED_YET",
   StatusBadgeColor
 >;
 
@@ -64,7 +66,8 @@ export function DeploymentStatusBadge({
     BUILDING: HammerIcon,
     PREPARING: HourglassIcon,
     CANCELLING: RefreshCwOffIcon,
-    COMPLETE: SquareCheckBig
+    COMPLETE: SquareCheckBig,
+    NOT_DEPLOYED_YET: ClockIcon
   } as const satisfies Record<typeof status, React.ComponentType<any>>;
 
   const Icon = icons[status];
@@ -104,7 +107,7 @@ export function DeploymentStatusBadge({
         )}
         <Icon size={15} className="flex-none" />
       </div>
-      <p>{capitalizeText(status)}</p>
+      <p>{capitalizeText(status.replaceAll("_", " "))}</p>
       {isLoading && <LoaderIcon className="animate-spin flex-none" size={15} />}
     </div>
   );
