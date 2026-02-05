@@ -73,9 +73,12 @@ export function ComposeStackCard({
     ([, service]) => service.status === "SLEEPING"
   ).length;
 
+  const complete_services = services.filter(
+    ([, service]) => service.status === "COMPLETE"
+  ).length;
+
   let pingColor: StatusBadgeColor;
   let pingState: PingProps["state"] = "static";
-  let textStatusColorClass = "text-status-warning";
 
   if (total_services === 0) {
     pingColor = "gray";
@@ -83,13 +86,15 @@ export function ComposeStackCard({
     pingColor = "red";
   } else if (healthy_services < total_services) {
     pingColor = "yellow";
-  } else if (total_services > 0 && sleeping_services === total_services) {
+  } else if (
+    total_services > 0 &&
+    (sleeping_services === total_services ||
+      sleeping_services + complete_services === total_services)
+  ) {
     pingColor = "gray";
-    textStatusColorClass = "text-status-success";
   } else {
     pingColor = "green";
     pingState = "animated";
-    textStatusColorClass = "text-status-success";
   }
 
   return (
@@ -156,7 +161,8 @@ export function ComposeStackCard({
             </span>
           )}
           {total_services > 0 &&
-            (sleeping_services === total_services ? (
+            (sleeping_services === total_services ||
+            sleeping_services + complete_services === total_services ? (
               <span className="text-grey dark:text-foreground">
                 All services sleeping
               </span>

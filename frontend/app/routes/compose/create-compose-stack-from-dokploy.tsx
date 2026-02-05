@@ -335,7 +335,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
       method="post"
       className="flex my-10 grow justify-center items-center"
     >
-      <div className="card flex lg:w-1/2 md:w-2/3 w-full flex-col gap-5 items-stretch">
+      <div className="card flex xl:w-[40%] lg:w-1/2 md:w-2/3 w-full flex-col gap-5 items-stretch">
         <h1 className="text-3xl font-bold">New Dokploy Compose stack</h1>
 
         <p className="text-grey">
@@ -388,7 +388,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
               className="peer"
             />
             <Label htmlFor="base-64" className="peer-disabled:text-grey">
-              <span>From base64 config</span>
+              <span>Base64 config</span>
             </Label>
             <TooltipProvider>
               <Tooltip delayDuration={0}>
@@ -404,16 +404,14 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
 
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="create-stack-from-object" id="object" />
-            <Label htmlFor="object">
-              From compose file contents + TOML config
-            </Label>
+            <Label htmlFor="object">Compose file contents + TOML config</Label>
             <TooltipProvider>
               <Tooltip delayDuration={0}>
                 <TooltipTrigger>
                   <InfoIcon size={15} className="text-grey" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-70 dark:bg-card ">
-                  Copy the contents of the{" "}
+                  Copy the contents of{" "}
                   <span className="text-grey dark:text-card-foreground">
                     `docker-compose.yml`
                   </span>
