@@ -87,10 +87,7 @@ export default function ComposeStackLayoutPage({
   const services = Object.values(stack.service_statuses);
   const total_services = services.length;
   const healthy_services = services.filter(
-    (s) =>
-      s.status === "HEALTHY" ||
-      s.status === "COMPLETE" ||
-      s.status === "SLEEPING"
+    (s) => s.status === "HEALTHY" || s.status === "SLEEPING"
   ).length;
   const sleeping_services = services.filter(
     (s) => s.status === "SLEEPING"
@@ -105,15 +102,12 @@ export default function ComposeStackLayoutPage({
   let stackStatus: keyof typeof status_emoji_map;
   if (total_services === 0) {
     stackStatus = "NOT_DEPLOYED_YET";
-  } else if (
-    sleeping_services === total_services ||
-    sleeping_services + complete_services === total_services
-  ) {
-    stackStatus = "SLEEPING";
   } else if (starting_services > 0) {
     stackStatus = "STARTING";
-  } else if (healthy_services < total_services) {
+  } else if (healthy_services + complete_services < total_services) {
     stackStatus = "UNHEALTHY";
+  } else if (sleeping_services + complete_services === total_services) {
+    stackStatus = "SLEEPING";
   } else {
     stackStatus = "HEALTHY";
   }

@@ -33,7 +33,7 @@ const DEPLOYMENT_STATUS_COLOR_MAP = {
   CANCELLED: "gray",
   QUEUED: "gray",
   SLEEPING: "yellow",
-  COMPLETE: "green",
+  COMPLETE: "yellow",
   NOT_DEPLOYED_YET: "gray"
 } as const satisfies Record<
   (typeof DEPLOYMENT_STATUSES)[number] | "COMPLETE" | "NOT_DEPLOYED_YET",

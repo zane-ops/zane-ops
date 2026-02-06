@@ -40,10 +40,18 @@ export function ComposeStackCard({
     .map(([name, service]) => [name, service] as const)
     .toSorted(([nameA, serviceA], [nameB, serviceB]) => {
       // Sort starting & unhealthy services at the top as they need attention
-      if (serviceA.status === "STARTING" || serviceA.status === "UNHEALTHY") {
+      if (
+        serviceA.status === "STARTING" ||
+        serviceA.status === "UNHEALTHY" ||
+        serviceA.status === "COMPLETE"
+      ) {
         return -1;
       }
-      if (serviceB.status === "STARTING" || serviceB.status === "UNHEALTHY") {
+      if (
+        serviceB.status === "STARTING" ||
+        serviceB.status === "UNHEALTHY" ||
+        serviceB.status === "COMPLETE"
+      ) {
         return 1;
       }
 
@@ -64,9 +72,7 @@ export function ComposeStackCard({
   const total_services = services.length;
   const healthy_services = services.filter(
     ([, service]) =>
-      service.status === "HEALTHY" ||
-      service.status === "COMPLETE" ||
-      service.status === "SLEEPING"
+      service.status === "HEALTHY" || service.status === "SLEEPING"
   ).length;
 
   const sleeping_services = services.filter(
@@ -82,15 +88,9 @@ export function ComposeStackCard({
 
   if (total_services === 0) {
     pingColor = "gray";
-  } else if (healthy_services <= 0) {
+  } else if (healthy_services + complete_services < total_services) {
     pingColor = "red";
-  } else if (healthy_services < total_services) {
-    pingColor = "yellow";
-  } else if (
-    total_services > 0 &&
-    (sleeping_services === total_services ||
-      sleeping_services + complete_services === total_services)
-  ) {
+  } else if (sleeping_services + complete_services === total_services) {
     pingColor = "gray";
   } else {
     pingColor = "green";
@@ -161,8 +161,7 @@ export function ComposeStackCard({
             </span>
           )}
           {total_services > 0 &&
-            (sleeping_services === total_services ||
-            sleeping_services + complete_services === total_services ? (
+            (sleeping_services + complete_services === total_services ? (
               <span className="text-grey dark:text-foreground relative z-10">
                 All services sleeping
               </span>
@@ -214,7 +213,7 @@ function ComposeStackService({
   const STATUS_COLOR_MAP = {
     STARTING: "blue",
     HEALTHY: "green",
-    COMPLETE: "green",
+    COMPLETE: "yellow",
     UNHEALTHY: "red",
     SLEEPING: "yellow"
   } satisfies Record<typeof status, PingProps["color"]>;
@@ -225,10 +224,7 @@ function ComposeStackService({
         tabIndex={0}
         className="absolute cursor-pointer flex size-2.5 -top-1 -right-1 z-20"
       >
-        <Ping
-          color={STATUS_COLOR_MAP[status]}
-          static={status !== "HEALTHY" && status !== "COMPLETE"}
-        />
+        <Ping color={STATUS_COLOR_MAP[status]} static={status !== "HEALTHY"} />
       </span>
 
       <Popover>
