@@ -4,16 +4,16 @@ import { cn } from "~/lib/utils";
 export type PingProps = {
   className?: string;
   color?: StatusBadgeColor;
-  state?: "animated" | "static";
+  static?: boolean;
 };
 export function Ping({
   className,
   color = "green",
-  state = "animated"
+  static: status = false
 }: PingProps) {
   return (
     <span className={cn("relative inline-flex h-2 w-2", className)}>
-      {state === "animated" && (
+      {!status && (
         <span
           className={cn(
             "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",

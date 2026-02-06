@@ -78,7 +78,7 @@ export function ComposeStackCard({
   ).length;
 
   let pingColor: StatusBadgeColor;
-  let pingState: PingProps["state"] = "static";
+  let pingStatic: PingProps["static"] = true;
 
   if (total_services === 0) {
     pingColor = "gray";
@@ -94,7 +94,7 @@ export function ComposeStackCard({
     pingColor = "gray";
   } else {
     pingColor = "green";
-    pingState = "animated";
+    pingStatic = false;
   }
 
   return (
@@ -154,7 +154,7 @@ export function ComposeStackCard({
           </div>
         </div>
         <div className="bg-toggle inline-flex items-center gap-2 rounded-md self-start px-2">
-          <Ping color={pingColor} state={pingState} />
+          <Ping color={pingColor} static={pingStatic} />
           {total_services === 0 && (
             <span className="text-grey dark:text-foreground">
               No services running
@@ -211,16 +211,25 @@ function ComposeStackService({
     serviceImage += ":latest";
   }
 
+  const STATUS_COLOR_MAP = {
+    STARTING: "blue",
+    HEALTHY: "green",
+    COMPLETE: "green",
+    UNHEALTHY: "red",
+    SLEEPING: "yellow"
+  } satisfies Record<typeof status, PingProps["color"]>;
+
   return (
     <div className="relative">
-      {(status === "UNHEALTHY" || status === "STARTING") && (
-        <span
-          tabIndex={0}
-          className="absolute cursor-pointer flex size-2.5 -top-1 -right-1 z-20"
-        >
-          <Ping color={status === "UNHEALTHY" ? "red" : "blue"} />
-        </span>
-      )}
+      <span
+        tabIndex={0}
+        className="absolute cursor-pointer flex size-2.5 -top-1 -right-1 z-20"
+      >
+        <Ping
+          color={STATUS_COLOR_MAP[status]}
+          static={status !== "HEALTHY" && status !== "COMPLETE"}
+        />
+      </span>
 
       <Popover>
         <PopoverTrigger asChild>
