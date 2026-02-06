@@ -1,7 +1,7 @@
 import {
   BanIcon,
   ClockArrowUpIcon,
-  ClockIcon,
+  CloudOffIcon,
   FastForwardIcon,
   HammerIcon,
   HeartPulseIcon,
@@ -67,7 +67,7 @@ export function DeploymentStatusBadge({
     PREPARING: HourglassIcon,
     CANCELLING: RefreshCwOffIcon,
     COMPLETE: SquareCheckBig,
-    NOT_DEPLOYED_YET: ClockIcon
+    NOT_DEPLOYED_YET: CloudOffIcon
   } as const satisfies Record<typeof status, React.ComponentType<any>>;
 
   const Icon = icons[status];
