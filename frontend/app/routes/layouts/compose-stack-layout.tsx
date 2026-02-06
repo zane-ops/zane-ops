@@ -110,10 +110,10 @@ export default function ComposeStackLayoutPage({
     sleeping_services + complete_services === total_services
   ) {
     stackStatus = "SLEEPING";
-  } else if (healthy_services < total_services) {
-    stackStatus = "UNHEALTHY";
   } else if (starting_services > 0) {
     stackStatus = "STARTING";
+  } else if (healthy_services < total_services) {
+    stackStatus = "UNHEALTHY";
   } else {
     stackStatus = "HEALTHY";
   }
