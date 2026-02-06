@@ -7,10 +7,12 @@ import {
   GlobeIcon,
   RocketIcon,
   SettingsIcon,
+  TerminalIcon,
   TextSearchIcon
 } from "lucide-react";
 import { Link, Outlet, href, useParams } from "react-router";
 import type { ComposeStack } from "~/api/types";
+import { getComposeStackStatus } from "~/components/compose-stack-cards";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
 import { NavLink } from "~/components/nav-link";
 import {
@@ -84,33 +86,7 @@ export default function ComposeStackLayoutPage({
     STARTING: "▶️"
   } as const;
 
-  const services = Object.values(stack.service_statuses);
-  const total_services = services.length;
-  const healthy_services = services.filter(
-    (s) => s.status === "HEALTHY" || s.status === "SLEEPING"
-  ).length;
-  const sleeping_services = services.filter(
-    (s) => s.status === "SLEEPING"
-  ).length;
-  const complete_services = services.filter(
-    (s) => s.status === "COMPLETE"
-  ).length;
-  const starting_services = services.filter(
-    (s) => s.status === "STARTING"
-  ).length;
-
-  let stackStatus: keyof typeof status_emoji_map;
-  if (total_services === 0) {
-    stackStatus = "NOT_DEPLOYED_YET";
-  } else if (starting_services > 0) {
-    stackStatus = "STARTING";
-  } else if (healthy_services + complete_services < total_services) {
-    stackStatus = "UNHEALTHY";
-  } else if (sleeping_services + complete_services === total_services) {
-    stackStatus = "SLEEPING";
-  } else {
-    stackStatus = "HEALTHY";
-  }
+  const stackStatus = getComposeStackStatus(stack);
 
   const { title } = metaTitle(`${status_emoji_map[stackStatus]} ${stack.slug}`);
 
@@ -219,7 +195,12 @@ export default function ComposeStackLayoutPage({
               <BoxIcon size={15} className="flex-none" />
             </NavLink>
           </li>
-
+          <li>
+            <NavLink to="./settings">
+              <span>Settings</span>
+              <SettingsIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
           <li>
             <NavLink to="./http-logs" prefetch="viewport">
               <span>Runtime logs</span>
@@ -228,9 +209,9 @@ export default function ComposeStackLayoutPage({
           </li>
 
           <li>
-            <NavLink to="./settings">
-              <span>Settings</span>
-              <SettingsIcon size={15} className="flex-none" />
+            <NavLink to="./terminal" prefetch="viewport">
+              <span>Terminal</span>
+              <TerminalIcon size={15} className="flex-none" />
             </NavLink>
           </li>
 

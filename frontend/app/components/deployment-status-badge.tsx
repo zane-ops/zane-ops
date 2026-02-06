@@ -40,8 +40,10 @@ const DEPLOYMENT_STATUS_COLOR_MAP = {
   StatusBadgeColor
 >;
 
+export type DeploymentStatus = keyof typeof DEPLOYMENT_STATUS_COLOR_MAP;
+
 type DeploymentStatusBadgeProps = {
-  status: keyof typeof DEPLOYMENT_STATUS_COLOR_MAP;
+  status: DeploymentStatus;
   className?: string;
   variant?: "outline" | "ghost";
 };

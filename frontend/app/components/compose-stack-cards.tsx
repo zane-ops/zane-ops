@@ -8,7 +8,10 @@ import {
 import * as React from "react";
 import { Link } from "react-router";
 import type { ComposeStack } from "~/api/types";
-import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
+import {
+  type DeploymentStatus,
+  DeploymentStatusBadge
+} from "~/components/deployment-status-badge";
 import { Ping, type PingProps } from "~/components/ping";
 import type { StatusBadgeColor } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
@@ -31,6 +34,43 @@ export type ComposeStackCardProps = Pick<
 
 const MAX_SERVICES_SHOWN = 3;
 
+export function getComposeStackStatus(
+  stack: Pick<ComposeStack, "service_statuses">
+) {
+  const services = Object.values(stack.service_statuses);
+  const total_services = services.length;
+  const healthy_services = services.filter(
+    (s) => s.status === "HEALTHY" || s.status === "SLEEPING"
+  ).length;
+  const sleeping_services = services.filter(
+    (s) => s.status === "SLEEPING"
+  ).length;
+  const complete_services = services.filter(
+    (s) => s.status === "COMPLETE"
+  ).length;
+  const starting_services = services.filter(
+    (s) => s.status === "STARTING"
+  ).length;
+
+  let stackStatus: Extract<
+    DeploymentStatus,
+    "NOT_DEPLOYED_YET" | "STARTING" | "HEALTHY" | "UNHEALTHY" | "SLEEPING"
+  >;
+  if (total_services === 0) {
+    stackStatus = "NOT_DEPLOYED_YET";
+  } else if (starting_services > 0) {
+    stackStatus = "STARTING";
+  } else if (healthy_services + complete_services < total_services) {
+    stackStatus = "UNHEALTHY";
+  } else if (sleeping_services + complete_services === total_services) {
+    stackStatus = "SLEEPING";
+  } else {
+    stackStatus = "HEALTHY";
+  }
+
+  return stackStatus;
+}
+
 export function ComposeStackCard({
   slug,
   service_statuses,
@@ -40,18 +80,10 @@ export function ComposeStackCard({
     .map(([name, service]) => [name, service] as const)
     .toSorted(([nameA, serviceA], [nameB, serviceB]) => {
       // Sort starting & unhealthy services at the top as they need attention
-      if (
-        serviceA.status === "STARTING" ||
-        serviceA.status === "UNHEALTHY" ||
-        serviceA.status === "COMPLETE"
-      ) {
+      if (serviceA.status === "STARTING" || serviceA.status === "UNHEALTHY") {
         return -1;
       }
-      if (
-        serviceB.status === "STARTING" ||
-        serviceB.status === "UNHEALTHY" ||
-        serviceB.status === "COMPLETE"
-      ) {
+      if (serviceB.status === "STARTING" || serviceB.status === "UNHEALTHY") {
         return 1;
       }
 
@@ -84,17 +116,25 @@ export function ComposeStackCard({
   ).length;
 
   let pingColor: StatusBadgeColor;
-  let pingStatic: PingProps["static"] = true;
+  let pingStatic: PingProps["static"] = false;
 
-  if (total_services === 0) {
-    pingColor = "gray";
-  } else if (healthy_services + complete_services < total_services) {
-    pingColor = "red";
-  } else if (sleeping_services + complete_services === total_services) {
-    pingColor = "gray";
-  } else {
-    pingColor = "green";
-    pingStatic = false;
+  const stackStatus = getComposeStackStatus({ service_statuses });
+
+  switch (stackStatus) {
+    case "NOT_DEPLOYED_YET":
+    case "SLEEPING":
+      pingColor = "gray";
+      pingStatic = true;
+      break;
+    case "UNHEALTHY":
+      pingColor = "gray";
+      break;
+    case "STARTING":
+      pingColor = "blue";
+      break;
+    default:
+      pingColor = "green";
+      break;
   }
 
   return (
@@ -155,27 +195,30 @@ export function ComposeStackCard({
         </div>
         <div className="bg-toggle inline-flex items-center gap-2 rounded-md self-start px-2">
           <Ping color={pingColor} static={pingStatic} />
-          {total_services === 0 && (
+          {stackStatus === "NOT_DEPLOYED_YET" && (
             <span className="text-grey dark:text-foreground">
               No services running
             </span>
           )}
-          {total_services > 0 &&
-            (sleeping_services + complete_services === total_services ? (
-              <span className="text-grey dark:text-foreground relative z-10">
-                All services sleeping
-              </span>
-            ) : (
-              <p className="text-card-foreground relative z-10">
-                {healthy_services}/
-                {`${total_services} ${pluralize("service", total_services)} healthy`}
-                {sleeping_services > 0 && (
-                  <span className="text-grey dark:text-foreground">
-                    &nbsp;&middot;&nbsp;({sleeping_services} sleeping)
-                  </span>
-                )}
-              </p>
-            ))}
+
+          {stackStatus === "SLEEPING" && (
+            <span className="text-grey dark:text-foreground relative z-10">
+              All services sleeping
+            </span>
+          )}
+
+          {stackStatus !== "SLEEPING" && stackStatus !== "NOT_DEPLOYED_YET" && (
+            <p className="text-card-foreground relative z-10">
+              {healthy_services}/
+              {`${total_services} ${pluralize("service", total_services)} healthy`}
+              {sleeping_services + complete_services > 0 && (
+                <span className="text-grey dark:text-foreground">
+                  &nbsp;&middot;&nbsp;({sleeping_services + complete_services}{" "}
+                  sleeping)
+                </span>
+              )}
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>
