@@ -163,11 +163,11 @@ export function ComposeStackCard({
           {total_services > 0 &&
             (sleeping_services === total_services ||
             sleeping_services + complete_services === total_services ? (
-              <span className="text-grey dark:text-foreground">
+              <span className="text-grey dark:text-foreground relative z-10">
                 All services sleeping
               </span>
             ) : (
-              <p className="text-card-foreground">
+              <p className="text-card-foreground relative z-10">
                 {healthy_services}/
                 {`${total_services} ${pluralize("service", total_services)} healthy`}
                 {sleeping_services > 0 && (
