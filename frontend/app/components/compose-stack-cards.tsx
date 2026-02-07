@@ -123,7 +123,7 @@ export function ComposeStackCard({
   switch (stackStatus) {
     case "NOT_DEPLOYED_YET":
     case "SLEEPING":
-      pingColor = "gray";
+      pingColor = "yellow";
       pingStatic = true;
       break;
     case "UNHEALTHY":
