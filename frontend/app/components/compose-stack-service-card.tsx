@@ -68,8 +68,8 @@ export function ComposeStackServiceCard({
     <Card
       className={cn(
         "group p-3 relative",
-        "flex items-center justify-between",
-        "bg-toggle",
+        "flex items-center justify-between w-full gap-4",
+        "bg-toggle text-grey dark:text-foreground text-sm min-w-0",
         "transition-colors duration-300",
         "shadow-sm border-l-2",
         "rounded-l-none",
@@ -83,7 +83,8 @@ export function ComposeStackServiceCard({
         className
       )}
     >
-      <div className="flex flex-col gap-2">
+      {/* Service name & status */}
+      <div className="flex flex-col gap-2 w-full items-start shrink min-w-0">
         <div className="flex items-center gap-x-0 flex-wrap">
           {iconSrc && !iconNotFound ? (
             <img
@@ -98,7 +99,7 @@ export function ComposeStackServiceCard({
           ) : (
             <BoxIcon className="flex-none size-4 mr-1" />
           )}
-          <h3 className="text-lg">{name}</h3>
+          <h3 className="text-lg text-card-foreground">{name}</h3>
           <span className="ml-2 inline-block rounded-full size-0.5 bg-foreground relative " />
           <DeploymentStatusBadge
             status={service.status}
@@ -106,19 +107,22 @@ export function ComposeStackServiceCard({
             className="self-start"
           />
         </div>
-        <div className="flex gap-1 items-center">
-          <TagIcon className="flex-none size-4 text-grey dark:text-foreground " />
-          <span className="text-grey dark:text-foreground text-sm">
+
+        {/* Service image */}
+        <div className="inline-flex gap-1 items-center max-w-[calc(100%_-_2.5rem)]">
+          <TagIcon className="flex-none size-4" />
+          <span className="whitespace-nowrap overflow-x-hidden text-ellipsis">
             {serviceImage}
           </span>
         </div>
 
+        {/* URLS */}
         {urls.length > 0 && (
-          <ul>
+          <ul className="w-full max-w-[calc(100%_-_6rem)] md:max-w-[calc(100%_-_5rem)]">
             {urls.map((url) => (
               <li
                 key={url.domain + url.base_path}
-                className="w-full flex items-center gap-1 text-grey dark:text-foreground"
+                className="flex items-center gap-1 w-full"
               >
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>
@@ -127,7 +131,7 @@ export function ComposeStackServiceCard({
                         value={url.domain + url.base_path}
                         label="Copy url"
                         size="icon"
-                        className="hover:bg-transparent !opacity-100 size-4 text-grey dark:text-foreground p-0"
+                        className="hover:bg-transparent !opacity-100 size-4 p-0"
                       />
                     </TooltipTrigger>
                     <TooltipContent>Copy URL</TooltipContent>
@@ -136,7 +140,7 @@ export function ComposeStackServiceCard({
                 <a
                   href={formatURL(url)}
                   target="_blank"
-                  className="underline text-link text-sm inline-block w-fit"
+                  className="underline text-link text-sm inline-block w-fit max-w-[calc(100%_-_1rem)]"
                 >
                   <p className="whitespace-nowrap overflow-x-hidden text-ellipsis">
                     {stripSlashIfExists(`${url.domain}${url.base_path}`)}
@@ -150,14 +154,14 @@ export function ComposeStackServiceCard({
           </ul>
         )}
 
-        <div className="text-grey dark:text-foreground col-span-2 flex items-center gap-1 text-sm">
-          <Layers2Icon className="flex-none  text-grey dark:text-foreground size-4" />
+        <div className=" col-span-2 flex items-center gap-1 text-sm">
+          <Layers2Icon className="flex-none   size-4" />
           {is_job ? (
-            <span className="text-grey dark:text-foreground">
+            <span>
               {total_completed}/{service.desired_replicas} tasks completed
             </span>
           ) : (
-            <span className="text-grey dark:text-foreground">
+            <span>
               {service.running_replicas}/{service.desired_replicas} replicas
               running
             </span>
@@ -166,11 +170,20 @@ export function ComposeStackServiceCard({
       </div>
 
       {/* View logs button & triple dot */}
-      <div className="flex items-center gap-1 absolute right-4 z-10 md:relative md:right-auto">
+      <div
+        className={cn(
+          "flex items-center gap-1",
+          "md:relative md:top-auto md:right-auto",
+          "absolute top-3 right-4 z-10"
+        )}
+      >
         <Button
           asChild
           variant="ghost"
-          className="bg-muted !border border-card/20 dark:border-grey/20  text-sm"
+          className={cn(
+            "!border border-card/20 dark:border-grey/20",
+            "bg-muted text-sm text-card-foreground hidden md:inline-flex"
+          )}
           size="sm"
         >
           <Link to={`./services/${name}/runtime-logs`}>View logs</Link>
