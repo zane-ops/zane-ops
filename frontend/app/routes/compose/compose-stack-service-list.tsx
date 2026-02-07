@@ -29,7 +29,7 @@ export default function ComposeStackServicesPage({
     <>
       {services.length === 0 ? (
         <div className="flex justify-center items-center">
-          <div className="flex gap-2 flex-col items-center my-40">
+          <div className="flex gap-2 flex-col items-center my-20">
             <h1 className="text-2xl font-bold">No services running</h1>
             <h2 className="text-lg text-grey">
               Your stack has not been deployed yet

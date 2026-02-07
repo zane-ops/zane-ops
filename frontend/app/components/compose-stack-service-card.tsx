@@ -1,20 +1,12 @@
-import type { hash } from "crypto";
-import { url } from "inspector";
 import {
   ArrowRightIcon,
-  Ban,
   BoxIcon,
   ChartNoAxesColumnIcon,
-  ChevronRight,
-  ContainerIcon,
-  EllipsisVertical,
+  ChartNoAxesCombinedIcon,
   EllipsisVerticalIcon,
   Eye,
   GlobeIcon,
   Layers2Icon,
-  LinkIcon,
-  Redo2,
-  ScanTextIcon,
   ScrollText,
   TagIcon,
   TerminalIcon
@@ -24,7 +16,6 @@ import { Link, useNavigate } from "react-router";
 import type { ComposeStack } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
-import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import {
@@ -35,11 +26,6 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from "~/components/ui/popover";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -47,12 +33,7 @@ import {
 } from "~/components/ui/tooltip";
 import type { ValueOf } from "~/lib/types";
 import { cn } from "~/lib/utils";
-import {
-  formatURL,
-  getDockerImageIconURL,
-  pluralize,
-  stripSlashIfExists
-} from "~/utils";
+import { formatURL, getDockerImageIconURL, stripSlashIfExists } from "~/utils";
 
 export type ComposeStackServiceCardProps = {
   service: ValueOf<ComposeStack["service_statuses"]>;
@@ -124,58 +105,6 @@ export function ComposeStackServiceCard({
             variant="outline"
             className="self-start"
           />
-
-          {/* {urls.length > 0 && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <button>
-                  <StatusBadge
-                    className="relative rounded-md top-0.5 text-xs pl-3 pr-2 inline-flex items-center gap-1 cursor-pointer"
-                    color="gray"
-                    pingState="hidden"
-                  >
-                    <LinkIcon className="size-3.5 flex-none" />
-                    <span>
-                      {`${urls.length} ${pluralize("url", urls.length)}`}
-                    </span>
-                    <ChevronRight className="size-[15px] flex-none" />
-                  </StatusBadge>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                align="start"
-                side="bottom"
-                className="px-4 pt-3 pb-2 max-w-[300px] md:max-w-[500px] lg:max-w-[600px] w-auto"
-              >
-                <ul className="w-full">
-                  {urls.map((url) => (
-                    <li
-                      key={url.domain + url.base_path}
-                      className="w-full flex items-center gap-0.5"
-                    >
-                      <CopyButton
-                        value={url.domain + url.base_path}
-                        label="Copy url"
-                        size="icon"
-                        className="hover:bg-transparent !opacity-100 size-4"
-                      />
-                      <a
-                        href={formatURL(url)}
-                        target="_blank"
-                        className="underline text-link text-sm inline-block w-full"
-                      >
-                        <p className="whitespace-nowrap overflow-x-hidden text-ellipsis">
-                          {stripSlashIfExists(formatURL(url))}
-                        </p>
-                      </a>
-                      <ArrowRightIcon className="size-4 flex-none" />
-                      <small className="text-card-foreground">{url.port}</small>
-                    </li>
-                  ))}
-                </ul>
-              </PopoverContent>
-            </Popover>
-          )} */}
         </div>
         <div className="flex gap-1 items-center">
           <TagIcon className="flex-none size-4 text-grey dark:text-foreground " />
@@ -244,7 +173,7 @@ export function ComposeStackServiceCard({
           className="bg-muted !border border-card/20 dark:border-grey/20  text-sm"
           size="sm"
         >
-          <Link to={`./runtime-logs`}>View logs</Link>
+          <Link to={`./services/${name}/runtime-logs`}>View logs</Link>
         </Button>
 
         <Menubar className="border-none h-auto w-fit">
@@ -259,32 +188,42 @@ export function ComposeStackServiceCard({
             </MenubarTrigger>
             <MenubarContent
               side="bottom"
-              align="start"
+              align="center"
               className="border min-w-0 mx-9 border-border"
             >
               <MenubarContentItem
+                icon={ChartNoAxesCombinedIcon}
+                text="Tasks"
+                onClick={() => navigate(`./services/${name}/details`)}
+              />
+              <MenubarContentItem
+                icon={Eye}
+                text="Details"
+                onClick={() => navigate(`./services/${name}/details`)}
+              />
+              <MenubarContentItem
                 icon={TerminalIcon}
                 text="Terminal"
-                onClick={() => navigate(`./terminal`)}
+                onClick={() => navigate(`./services/${name}/terminal`)}
               />
               <MenubarContentItem
                 icon={ScrollText}
                 text="View runtime logs"
-                onClick={() => navigate(`./runtime-logs`)}
+                onClick={() => navigate(`./services/${name}/runtime-logs`)}
               />
               {urls?.length > 0 && (
                 <>
                   <MenubarContentItem
                     icon={GlobeIcon}
                     text="View http logs"
-                    onClick={() => navigate(`./http-logs`)}
+                    onClick={() => navigate(`./services/${name}/http-logs`)}
                   />
                 </>
               )}
               <MenubarContentItem
                 icon={ChartNoAxesColumnIcon}
                 text="View metrics"
-                onClick={() => navigate(`./metrics`)}
+                onClick={() => navigate(`./services/${name}/metrics`)}
               />
             </MenubarContent>
           </MenubarMenu>
