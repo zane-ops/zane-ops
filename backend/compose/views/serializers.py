@@ -110,7 +110,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
     configs = serializers.DictField(
         child=ComposeConfigVersionSerializer(), read_only=True
     )
-    service_statuses = serializers.DictField(
+    services = serializers.DictField(
         child=ComposeStackServiceStatusSerializer(),
         read_only=True,
     )
@@ -197,7 +197,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             "urls",
             "configs",
             "env_overrides",
-            "service_statuses",
+            "services",
             "deploy_token",
             "created_at",
         ]

@@ -1064,7 +1064,7 @@ export interface components {
         [key: string]: components["schemas"]["ComposeConfigVersion"];
       };
       env_overrides: readonly components["schemas"]["ComposeStackEnvOverride"][];
-      service_statuses: {
+      services: {
         [key: string]: components["schemas"]["ComposeStackServiceStatus"];
       };
       deploy_token: string | null;
@@ -1271,7 +1271,7 @@ export interface components {
         [key: string]: components["schemas"]["ComposeConfigVersion"];
       };
       env_overrides: readonly components["schemas"]["ComposeStackEnvOverride"][];
-      service_statuses: {
+      services: {
         [key: string]: components["schemas"]["ComposeStackServiceStatus"];
       };
       deploy_token: string | null;

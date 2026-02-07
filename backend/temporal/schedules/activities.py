@@ -591,7 +591,7 @@ class MonitorComposeStackActivites:
         self, healthcheck: ComposeStackHealthcheckResult
     ):
         await ComposeStack.objects.filter(pk=healthcheck.id).aupdate(
-            service_statuses={
+            services={
                 name: service.to_dict()
                 for name, service in healthcheck.services.items()
             }

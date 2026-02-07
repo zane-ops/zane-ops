@@ -12064,7 +12064,7 @@ components:
           items:
             $ref: '#/components/schemas/ComposeStackEnvOverride'
           readOnly: true
-        service_statuses:
+        services:
           type: object
           additionalProperties:
             $ref: '#/components/schemas/ComposeStackServiceStatus'
@@ -12085,7 +12085,7 @@ components:
       - env_overrides
       - id
       - network_alias_prefix
-      - service_statuses
+      - services
       - slug
       - unapplied_changes
       - urls
@@ -12605,7 +12605,7 @@ components:
           items:
             $ref: '#/components/schemas/ComposeStackEnvOverride'
           readOnly: true
-        service_statuses:
+        services:
           type: object
           additionalProperties:
             $ref: '#/components/schemas/ComposeStackServiceStatus'
@@ -12626,7 +12626,7 @@ components:
       - env_overrides
       - id
       - network_alias_prefix
-      - service_statuses
+      - services
       - slug
       - unapplied_changes
       - urls

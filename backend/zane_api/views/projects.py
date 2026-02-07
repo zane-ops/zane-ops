@@ -129,7 +129,7 @@ class ProjectsListAPIView(ListCreateAPIView):
             total_stack_services=RawSQL(
                 """
             (SELECT COALESCE(SUM(
-                (SELECT COUNT(*) FROM jsonb_each(cs.service_statuses) AS x(key, val) 
+                (SELECT COUNT(*) FROM jsonb_each(cs.services) AS x(key, val) 
                 WHERE val->>'status' != 'SLEEPING')
             ), 0)
             FROM compose_composestack cs
@@ -141,7 +141,7 @@ class ProjectsListAPIView(ListCreateAPIView):
             healthy_stack_services=RawSQL(
                 """
             (SELECT COALESCE(SUM(
-                (SELECT COUNT(*) FROM jsonb_each(cs.service_statuses) AS x(key, val) 
+                (SELECT COUNT(*) FROM jsonb_each(cs.services) AS x(key, val) 
                 WHERE val->>'status' = 'HEALTHY' or val->>'status' = 'COMPLETE')
             ), 0)
             FROM compose_composestack cs

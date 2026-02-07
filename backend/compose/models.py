@@ -92,7 +92,7 @@ class ComposeStack(TimestampedModel):
     configs = models.JSONField(null=True)
 
     # Per-service status (JSON)
-    service_statuses = models.JSONField(default=dict)
+    services = models.JSONField(default=dict)
     # Example:
     # {
     #     "web": {

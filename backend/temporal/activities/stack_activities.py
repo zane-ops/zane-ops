@@ -328,7 +328,7 @@ class ComposeStackActivities:
                     service_statuses[name] = service_status
 
                 await ComposeStack.objects.filter(id=deployment.stack.id).aupdate(
-                    service_statuses=service_statuses,
+                    services=service_statuses,
                     updated_at=timezone.now(),
                 )
 
