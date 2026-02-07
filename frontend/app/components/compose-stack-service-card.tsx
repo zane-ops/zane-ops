@@ -36,7 +36,7 @@ import { cn } from "~/lib/utils";
 import { formatURL, getDockerImageIconURL, stripSlashIfExists } from "~/utils";
 
 export type ComposeStackServiceCardProps = {
-  service: ValueOf<ComposeStack["service_statuses"]>;
+  service: ValueOf<ComposeStack["services"]>;
   urls: ValueOf<ComposeStack["urls"]>;
   name: string;
   className?: string;

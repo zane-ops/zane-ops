@@ -396,7 +396,7 @@ export default function EnvironmentServiceListPage({
         {composeStackList.map((stack) => (
           <ComposeStackCard
             key={stack.id}
-            service_statuses={stack.service_statuses}
+            services={stack.services}
             slug={stack.slug}
             urls={stack.urls}
           />

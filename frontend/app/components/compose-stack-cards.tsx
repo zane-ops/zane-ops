@@ -29,15 +29,13 @@ import { formatURL, getDockerImageIconURL, pluralize } from "~/utils";
 
 export type ComposeStackCardProps = Pick<
   ComposeStack,
-  "slug" | "service_statuses" | "urls"
+  "slug" | "services" | "urls"
 >;
 
 const MAX_SERVICES_SHOWN = 3;
 
-export function getComposeStackStatus(
-  stack: Pick<ComposeStack, "service_statuses">
-) {
-  const services = Object.values(stack.service_statuses);
+export function getComposeStackStatus(stack: Pick<ComposeStack, "services">) {
+  const services = Object.values(stack.services);
   const total_services = services.length;
   const healthy_services = services.filter(
     (s) => s.status === "HEALTHY" || s.status === "SLEEPING"
@@ -73,7 +71,7 @@ export function getComposeStackStatus(
 
 export function ComposeStackCard({
   slug,
-  service_statuses,
+  services: service_statuses,
   urls
 }: ComposeStackCardProps) {
   const services = Object.entries(service_statuses)
@@ -118,7 +116,7 @@ export function ComposeStackCard({
   let pingColor: StatusBadgeColor;
   let pingStatic: PingProps["static"] = false;
 
-  const stackStatus = getComposeStackStatus({ service_statuses });
+  const stackStatus = getComposeStackStatus({ services: service_statuses });
 
   switch (stackStatus) {
     case "NOT_DEPLOYED_YET":
@@ -225,7 +223,7 @@ export function ComposeStackCard({
   );
 }
 
-type ComposeStackServiceProps = ValueOf<ComposeStack["service_statuses"]> & {
+type ComposeStackServiceProps = ValueOf<ComposeStack["services"]> & {
   name: string;
   urls: ValueOf<ComposeStack["urls"]>;
 };

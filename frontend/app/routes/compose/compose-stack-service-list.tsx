@@ -21,7 +21,7 @@ export default function ComposeStackServicesPage({
     initialData: loaderData.stack
   });
 
-  const services = Object.entries(stack.service_statuses).map(
+  const services = Object.entries(stack.services).map(
     ([name, service]) => [name, service] as const
   );
 
