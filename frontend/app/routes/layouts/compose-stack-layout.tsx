@@ -201,19 +201,6 @@ export default function ComposeStackLayoutPage({
               <SettingsIcon size={15} className="flex-none" />
             </NavLink>
           </li>
-          <li>
-            <NavLink to="./http-logs" prefetch="viewport">
-              <span>Runtime logs</span>
-              <TextSearchIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-
-          <li>
-            <NavLink to="./terminal" prefetch="viewport">
-              <span>Terminal</span>
-              <TerminalIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
 
           <li>
             <NavLink to="./env-variables">
