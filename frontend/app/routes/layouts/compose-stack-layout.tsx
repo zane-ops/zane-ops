@@ -6,10 +6,11 @@ import {
   ClockIcon,
   GlobeIcon,
   HashIcon,
+  LoaderIcon,
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
-import { Link, Outlet, href, useParams } from "react-router";
+import { Link, Outlet, href, useFetcher, useParams } from "react-router";
 import type { ComposeStack } from "~/api/types";
 import { getComposeStackStatus } from "~/components/compose-stack-cards";
 import { CopyButton } from "~/components/copy-button";
@@ -23,6 +24,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
+import { SubmitButton } from "~/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -174,7 +176,7 @@ export default function ComposeStackLayoutPage({
           </div>
         </div>
 
-        <DeployStackForm stack={stack} />
+        <DeployStackForm stack={stack} params={params} />
       </section>
 
       <nav className="mt-5">
@@ -229,10 +231,12 @@ export default function ComposeStackLayoutPage({
 type DeployStackFormProps = {
   className?: string;
   stack: ComposeStack;
+  params: Route.ComponentProps["params"];
 };
 
-function DeployStackForm({ className, stack }: DeployStackFormProps) {
-  const params = useParams<Route.ComponentProps["params"]>();
+function DeployStackForm({ className, stack, params }: DeployStackFormProps) {
+  const fetcher = useFetcher();
+  const isDeploying = fetcher.state !== "idle";
 
   return (
     <div
@@ -242,6 +246,28 @@ function DeployStackForm({ className, stack }: DeployStackFormProps) {
         "md:flex-row md:items-center gap-1",
         className
       )}
-    ></div>
+    >
+      <fetcher.Form
+        method="post"
+        action={href(
+          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deploy",
+          params
+        )}
+      >
+        <SubmitButton isPending={isDeploying} variant="secondary">
+          {isDeploying ? (
+            <>
+              <LoaderIcon className="animate-spin" size={15} />
+              <span>Deploying</span>
+            </>
+          ) : (
+            <>
+              <RocketIcon size={15} />
+              <span>Deploy now</span>
+            </>
+          )}
+        </SubmitButton>
+      </fetcher.Form>
+    </div>
   );
 }
