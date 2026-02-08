@@ -5,14 +5,14 @@ import {
   ChartNoAxesColumn,
   ClockIcon,
   GlobeIcon,
+  HashIcon,
   RocketIcon,
-  SettingsIcon,
-  TerminalIcon,
-  TextSearchIcon
+  SettingsIcon
 } from "lucide-react";
 import { Link, Outlet, href, useParams } from "react-router";
 import type { ComposeStack } from "~/api/types";
 import { getComposeStackStatus } from "~/components/compose-stack-cards";
+import { CopyButton } from "~/components/copy-button";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
 import { NavLink } from "~/components/nav-link";
 import {
@@ -32,8 +32,6 @@ import {
 import { composeStackQueries } from "~/lib/queries";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { ServiceActionsPopover } from "~/routes/services/components/service-actions-popover";
-import { ServiceChangesModal } from "~/routes/services/components/service-changes-modal";
 import {
   capitalizeText,
   formattedTime,
@@ -158,25 +156,22 @@ export default function ComposeStackLayoutPage({
             <DeploymentStatusBadge status={stackStatus} />
           </div>
 
-          <TooltipProvider>
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger className="self-start">
-                <p className="inline-flex gap-1 items-center">
-                  <ClockIcon size={15} />
-                  <span className="sr-only">Deployed at :</span>
-                  <time
-                    dateTime={stack.created_at}
-                    className="text-grey text-sm"
-                  >
-                    {capitalizeText(timeAgoFormatter(stack.created_at))}
-                  </time>
-                </p>
-              </TooltipTrigger>
-              <TooltipContent align="start">
-                {formattedTime(stack.created_at)}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div className="inline-flex gap-1 items-center text-grey text-sm">
+            <HashIcon className="size-4 flex-none" />
+            <span>{stack.id}</span>
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <CopyButton
+                    label="Copy compose stack ID"
+                    value={stack.id}
+                    className="size-4 !opacity-100"
+                  />
+                </TooltipTrigger>
+                <TooltipContent>Copy compose stack ID</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
 
         <DeployStackForm stack={stack} />

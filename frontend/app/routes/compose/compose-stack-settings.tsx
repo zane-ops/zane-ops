@@ -1,13 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  CableIcon,
-  ContainerIcon,
-  FileSlidersIcon,
   FlameIcon,
-  GitBranchIcon,
   HammerIcon,
-  HardDriveDownloadIcon,
-  HardDriveIcon,
   InfoIcon,
   KeyRoundIcon,
   ScrollTextIcon
@@ -17,29 +11,11 @@ import { type RequestInput, apiClient } from "~/api/client";
 import {
   composeStackQueries,
   environmentQueries,
-  resourceQueries,
-  serviceQueries
+  resourceQueries
 } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { ComposeStackSlugForm } from "~/routes/compose/components/compose-stack-slug-form";
-import { ServiceAutoDeployForm } from "~/routes/services/components/service-auto-deploy-form";
-import { ServiceBuilderForm } from "~/routes/services/components/service-builder-form";
-import { ServiceCommandForm } from "~/routes/services/components/service-command-form";
-import { ServiceConfigsForm } from "~/routes/services/components/service-configs-form";
-import { ServiceDangerZoneForm } from "~/routes/services/components/service-danger-zone-form";
-import {
-  ServiceDeployURLForm,
-  ServicePreviewDeployURLForm
-} from "~/routes/services/components/service-deploy-url-form";
-import { ServiceGitSourceForm } from "~/routes/services/components/service-git-source-form";
-import { ServiceHealthcheckForm } from "~/routes/services/components/service-healthcheck-form";
-import { ServicePortsForm } from "~/routes/services/components/service-ports-form";
-import { ServiceResourceLimits } from "~/routes/services/components/service-resource-limits-form";
-import { ServiceSharedVolumesForm } from "~/routes/services/components/service-shared-volumes-form";
-import { ServiceSlugForm } from "~/routes/services/components/service-slug-form";
-import { ServiceSourceForm } from "~/routes/services/components/service-source-form";
-import { ServiceURLsForm } from "~/routes/services/components/service-urls-form";
-import { ServiceVolumesForm } from "~/routes/services/components/service-volumes-form";
+import { ComposeStackUserContentForm } from "~/routes/compose/components/compose-stack-user-content-form";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/compose-stack-settings";
 
@@ -60,7 +36,7 @@ export default function ComposeStackSettingsPage({
 
   return (
     <div className="mt-8">
-      <div className="lg:col-span-10 flex flex-col max-w-full">
+      <div className="flex flex-col lg:max-w-4xl">
         <section id="details" className="flex gap-1 scroll-mt-24">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
@@ -87,12 +63,8 @@ export default function ComposeStackSettingsPage({
             <div className="h-full border border-grey/50"></div>
           </div>
           <div className="w-full flex flex-col gap-5 pt-1 pb-14">
-            <h2 className="text-lg text-grey">User content</h2>
-            {/* <ServiceConfigsForm
-              project_slug={project_slug}
-              service_slug={service_slug}
-              env_slug={env_slug}
-            /> */}
+            <h2 className="text-lg text-grey">Content</h2>
+            <ComposeStackUserContentForm stack={stack} />
           </div>
         </section>
 
@@ -164,6 +136,14 @@ export async function clientAction({
   switch (intent) {
     case "update-slug": {
       return updateStackSlug({
+        project_slug: params.projectSlug,
+        stack_slug: params.composeStackSlug,
+        env_slug: params.envSlug,
+        formData
+      });
+    }
+    case "request-stack-change": {
+      return requestStackChange({
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -257,5 +237,128 @@ async function updateStackSlug({
   }
   return {
     data
+  };
+}
+
+type ChangeRequestBody = RequestInput<
+  "put",
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/request-changes/"
+>;
+type FindByType<Union, Type> = Union extends { field: Type } ? Union : never;
+type BodyOf<Type extends ChangeRequestBody["field"]> = FindByType<
+  ChangeRequestBody,
+  Type
+>;
+
+async function requestStackChange({
+  project_slug,
+  stack_slug,
+  env_slug,
+  formData
+}: {
+  project_slug: string;
+  stack_slug: string;
+  env_slug: string;
+  formData: FormData;
+}) {
+  const field = formData
+    .get("change_field")
+    ?.toString() as ChangeRequestBody["field"];
+  const type = formData
+    .get("change_type")
+    ?.toString() as ChangeRequestBody["type"];
+  const item_id = formData.get("item_id")?.toString();
+
+  let userData = null;
+  switch (field) {
+    // case "env_overrides": {
+    //   const isRedirect = formData.get("is_redirect")?.toString() === "on";
+
+    //   const domain = formData.get("domain")?.toString();
+    //   userData = {
+    //     domain: domain ? domain : undefined,
+    //     base_path: formData.get("base_path")?.toString(),
+    //     strip_prefix: formData.get("strip_prefix")?.toString() === "on",
+    //     associated_port: isRedirect
+    //       ? undefined
+    //       : Number(formData.get("associated_port")?.toString().trim()),
+    //     redirect_to: !isRedirect
+    //       ? undefined
+    //       : {
+    //           url: formData.get("redirect_to_url")?.toString() ?? "",
+    //           permanent:
+    //             formData.get("redirect_to_permanent")?.toString() === "on"
+    //         }
+    //   } satisfies BodyOf<typeof field>["new_value"];
+    //   break;
+    // }
+    case "compose_content": {
+      const cmd = formData.get("command")?.toString().trim() ?? "";
+      userData = cmd.length === 0 ? null : cmd;
+      break;
+    }
+
+    default: {
+      throw new Error(`Unexpected field \`${field}\``);
+    }
+  }
+
+  let toastId: string | number | undefined;
+  if (type === "DELETE") {
+    toastId = toast.loading("Sending change request...");
+    userData = undefined;
+  }
+  const { error: errors, data } = await apiClient.PUT(
+    "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/request-changes/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          project_slug,
+          slug: stack_slug,
+          env_slug
+        }
+      },
+      body: {
+        field,
+        type,
+        new_value: userData,
+        item_id
+      } as BodyOf<typeof field>
+    }
+  );
+  if (errors) {
+    if (toastId) {
+      const fullErrorMessage = errors.errors.map((err) => err.detail).join(" ");
+
+      toast.error("Failed to send change request", {
+        description: fullErrorMessage,
+        id: toastId,
+        closeButton: true
+      });
+    }
+    return {
+      errors,
+      userData
+    };
+  }
+
+  await queryClient.invalidateQueries({
+    ...composeStackQueries.single({
+      project_slug,
+      stack_slug,
+      env_slug
+    }),
+    exact: true
+  });
+
+  if (toastId) {
+    toast.success("Change request sent", { id: toastId, closeButton: true });
+  }
+
+  return {
+    data: { ...data, slug: stack_slug }
   };
 }

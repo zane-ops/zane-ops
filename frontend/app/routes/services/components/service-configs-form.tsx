@@ -249,6 +249,7 @@ function ServiceConfigItem({
           )}
         </TooltipProvider>
       </div>
+
       <Accordion
         type="single"
         collapsible
