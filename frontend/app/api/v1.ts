@@ -1160,6 +1160,21 @@ export interface components {
       slug?: string;
       user_content: string;
     };
+    ComposeStackSearchResponse: {
+      id: string;
+      project_slug: string;
+      slug: string;
+      /** Format: date-time */
+      created_at: string;
+      /** @default compose_stack */
+      type: components["schemas"]["ComposeStackSearchResponseTypeEnum"];
+      environment: string;
+    };
+    /**
+     * @description * `compose_stack` - compose_stack
+     * @enum {string}
+     */
+    ComposeStackSearchResponseTypeEnum: "compose_stack";
     ComposeStackServiceStatus: {
       status: components["schemas"]["ComposeStackServiceStatusStatusEnum"];
       network_alias: string;
@@ -6351,7 +6366,7 @@ export interface components {
       cpus?: number;
       memory?: components["schemas"]["MemoryLimitRequestRequest"];
     };
-    ResourceResponse: components["schemas"]["EnvironmentSearchResponse"] | components["schemas"]["ServiceSearchResponse"] | components["schemas"]["ProjectSearchResponse"];
+    ResourceResponse: components["schemas"]["EnvironmentSearchResponse"] | components["schemas"]["ServiceSearchResponse"] | components["schemas"]["ProjectSearchResponse"] | components["schemas"]["ComposeStackSearchResponse"];
     ReviewPreviewEnvDeployDecisionErrorComponent: {
       /**
        * @description * `decision` - decision

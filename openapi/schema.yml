@@ -12319,6 +12319,38 @@ components:
           minLength: 1
       required:
       - user_content
+    ComposeStackSearchResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        project_slug:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        slug:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        created_at:
+          type: string
+          format: date-time
+        type:
+          allOf:
+          - $ref: '#/components/schemas/ComposeStackSearchResponseTypeEnum'
+          default: compose_stack
+        environment:
+          type: string
+      required:
+      - created_at
+      - environment
+      - id
+      - project_slug
+      - slug
+      - type
+    ComposeStackSearchResponseTypeEnum:
+      enum:
+      - compose_stack
+      type: string
+      description: '* `compose_stack` - compose_stack'
     ComposeStackServiceStatus:
       type: object
       properties:
@@ -23268,10 +23300,11 @@ components:
       - $ref: '#/components/schemas/EnvironmentSearchResponse'
       - $ref: '#/components/schemas/ServiceSearchResponse'
       - $ref: '#/components/schemas/ProjectSearchResponse'
+      - $ref: '#/components/schemas/ComposeStackSearchResponse'
       discriminator:
         propertyName: type
         mapping:
-          null: '#/components/schemas/ProjectSearchResponse'
+          null: '#/components/schemas/ComposeStackSearchResponse'
     ReviewPreviewEnvDeployDecisionErrorComponent:
       type: object
       properties:

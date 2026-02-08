@@ -85,6 +85,15 @@ class ServiceSearchResponseSerializer(serializers.Serializer):
     environment = serializers.CharField(required=True)
 
 
+class ComposeStackSearchResponseSerializer(serializers.Serializer):
+    id = serializers.CharField(required=True)
+    project_slug = serializers.SlugField(required=True)
+    slug = serializers.SlugField(required=True)
+    created_at = serializers.DateTimeField(required=True)
+    type = serializers.ChoiceField(choices=["compose_stack"], default="compose_stack")
+    environment = serializers.CharField(required=True)
+
+
 # ==============================
 #     Project Service List     #
 # ==============================

@@ -23,7 +23,9 @@ from .serializers import (
     ProjectSearchResponseSerializer,
     ServiceSearchResponseSerializer,
     EnvironmentSearchResponseSerializer,
+    ComposeStackSearchResponseSerializer,
 )
+from compose.models import ComposeStack
 
 
 class ResouceSearchAPIView(APIView):
@@ -38,6 +40,7 @@ class ResouceSearchAPIView(APIView):
                     EnvironmentSearchResponseSerializer,
                     ServiceSearchResponseSerializer,
                     ProjectSearchResponseSerializer,
+                    ComposeStackSearchResponseSerializer,
                 ],
                 resource_type_field_name="type",
                 many=True,
@@ -98,9 +101,36 @@ class ResouceSearchAPIView(APIView):
             for service in services
         ]
 
+        compose_stacks = (
+            ComposeStack.objects.filter(slug__istartswith=query)
+            .select_related("project", "environment")
+            .annotate(
+                is_production_stack=Case(
+                    When(
+                        environment__name=Environment.PRODUCTION_ENV_NAME,
+                        then=Value(0),
+                    ),
+                    default=Value(1),
+                    output_field=IntegerField(),
+                ),
+            )
+            .order_by("is_production_stack", "slug")[:5]
+        )
+
+        stacks_list = [
+            {
+                "id": stack.id,
+                "slug": stack.slug,
+                "created_at": stack.created_at,
+                "project_slug": stack.project.slug,
+                "environment": stack.environment.name,
+            }
+            for stack in compose_stacks
+        ]
+
         environments = Environment.objects.filter(
             Q(name__istartswith=query) & ~Q(name=Environment.PRODUCTION_ENV_NAME)
-        ).select_related("project",)[:5]
+        ).select_related("project")[:5]
 
         environments_list = [
             {
@@ -117,6 +147,7 @@ class ResouceSearchAPIView(APIView):
                 *ServiceSearchResponseSerializer(services_list, many=True).data,
                 *ProjectSearchResponseSerializer(projects_list, many=True).data,
                 *EnvironmentSearchResponseSerializer(environments_list, many=True).data,
+                *ComposeStackSearchResponseSerializer(stacks_list, many=True).data,
             ],
             status=status.HTTP_200_OK,
         )
