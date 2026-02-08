@@ -899,6 +899,17 @@ class ComposeSpecProcessor:
             non_escaped_single_slash, r"\\\\\2", expanded
         )  # `\\` is one slash and \2 is the character after the single slash
 
+        all_quoted_strings = re.compile(r"(?:\:\s*)\"(.*)\"", re.MULTILINE)
+        non_escaped_quotes = re.compile(r"(?<!\\)(\")", re.MULTILINE)
+
+        def escape_inner_quotes(match: re.Match) -> str:
+            full = match.group(0)
+            inner = match.group(1)
+            escaped_inner = non_escaped_quotes.sub(r'\\"', inner)
+            return full[: match.start(1) - match.start(0)] + escaped_inner + '"'
+
+        expanded = re.sub(all_quoted_strings, escape_inner_quotes, expanded)
+
         print("=== expanded reformatted ===")
         print(expanded)
 
