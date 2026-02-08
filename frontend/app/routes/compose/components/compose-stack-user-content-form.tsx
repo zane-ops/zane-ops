@@ -62,7 +62,6 @@ export function ComposeStackUserContentForm({
   const isPending = fetcher.state !== "idle";
 
   const [userContent, setUserContent] = React.useState(contents);
-  const [accordionValue, setAccordionValue] = React.useState<string[]>([]);
 
   return (
     <fetcher.Form
