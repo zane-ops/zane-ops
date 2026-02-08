@@ -57,6 +57,8 @@ from ..processor import ComposeSpecProcessor
 from rest_framework import permissions
 from rest_framework.throttling import ScopedRateThrottle
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import serializers
+from drf_standardized_errors.formatter import ExceptionFormatter
 
 
 class ComposeStackListAPIView(ListAPIView):
@@ -153,10 +155,21 @@ class ComposeStackCreateFromDokployBase64APIView(APIView):
             )
         ]
 
-        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
-            user_content=user_content,
-            stack=stack,
-        )
+        try:
+            artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+                user_content=user_content,
+                stack=stack,
+            )
+        except serializers.ValidationError as e:
+            formated: dict[str, Any] = ExceptionFormatter(e, {}, e).run()  # type: ignore
+            errors = ["Could not parse Dokploy template:"]
+            errors.extend(
+                [f"{error['attr']}: {error['detail']}" for error in formated["errors"]]
+            )
+            errors.append(
+                "Please verify the template is valid on templates.dokploy.com"
+            )
+            raise serializers.ValidationError({"user_content": errors})
 
         changes.extend(
             [
@@ -233,10 +246,21 @@ class ComposeStackCreateFromDokployObjectAPIView(APIView):
             )
         ]
 
-        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
-            user_content=user_content,
-            stack=stack,
-        )
+        try:
+            artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+                user_content=user_content,
+                stack=stack,
+            )
+        except serializers.ValidationError as e:
+            formated: dict[str, Any] = ExceptionFormatter(e, {}, e).run()  # type: ignore
+            errors = ["Could not parse Dokploy template:"]
+            errors.extend(
+                [f"{error['attr']}: {error['detail']}" for error in formated["errors"]]
+            )
+            errors.append(
+                "Please verify the template is valid on templates.dokploy.com"
+            )
+            raise serializers.ValidationError({"non_field_errors": errors})
 
         changes.extend(
             [

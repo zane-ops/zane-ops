@@ -315,7 +315,8 @@ class ComposeSpecProcessor:
                 if retry_error:
                     raise ValidationError(f"Invalid compose file: {retry_error}")
             else:
-                raise ValidationError(f"Invalid compose file: {error}")
+                last_error = error.splitlines()[-1]
+                raise ValidationError(f"Invalid compose file: {last_error}")
 
         # Parse and validate YAML structure
         user_spec_dict = cls.parse_user_yaml(user_content)
@@ -651,7 +652,10 @@ class ComposeSpecProcessor:
             # Add environment network with stable alias for cross-env communication
             # using the original service name and the stack alias prefix, for better UX
             service.networks[env_network_name] = {
-                "aliases": [f"{stack.network_alias_prefix}-{original_service_name}"]
+                "aliases": [
+                    f"{stack.network_alias_prefix}-{original_service_name}",
+                    f"{stack.network_alias_prefix}-{original_service_name}.{settings.ZANE_INTERNAL_DOMAIN}",
+                ]
             }
 
             if service.networks.get("default") is None:

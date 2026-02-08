@@ -432,7 +432,7 @@ class ComposeContentFieldChangeSerializer(BaseFieldChangeSerializer):
         try:
             ComposeSpecProcessor.validate_compose_file_syntax(user_content)
         except ValidationError as e:
-            raise serializers.ValidationError({"user_content": e.messages})
+            raise serializers.ValidationError({"new_value": e.messages})
 
         stack = self.get_stack()
 
