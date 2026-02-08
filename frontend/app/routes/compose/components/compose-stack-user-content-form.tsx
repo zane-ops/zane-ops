@@ -63,7 +63,7 @@ export function ComposeStackUserContentForm({
 
   const computedContents =
     stack.computed_content ??
-    "# will be generated once the stack if first deployed";
+    "# will be generated once the stack is first deployed";
 
   const errors = getFormErrorsFromResponseData(data?.errors);
   const isPending = fetcher.state !== "idle";
