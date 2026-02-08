@@ -117,14 +117,14 @@ export function ComposeStackUserContentForm({
           errors={errors.new_value}
           className="w-full flex flex-col gap-2"
         >
-          <FieldSetLabel className="dark:text-card-foreground">
+          <FieldSetLabel className="dark:text-card-foreground text-lg">
             Compose stack file contents
           </FieldSetLabel>
 
-          <small className="text-grey">
+          <p className="text-grey ">
             Your docker compose file, ZaneOps will process it and add the
             necessary configurations for deployment.
-          </small>
+          </p>
 
           <CodeEditor
             hasError={!!errors.new_value}

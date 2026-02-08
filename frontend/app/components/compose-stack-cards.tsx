@@ -302,15 +302,16 @@ function ComposeStackService({
               className={cn(
                 "whitespace-nowrap overflow-x-hidden text-ellipsis",
                 "text-card-foreground font-medium",
-                "inline-flex justify-between gap-0.5 items-center"
+                "inline-flex gap-1.5 items-center",
+                "flex-wrap"
               )}
             >
-              <span className="relative top-0.5">{name}</span>
-              <span className="ml-1 inline-block rounded-full size-0.5 bg-foreground relative top-0.5" />
+              <span className="relative top-0.5 break-all">{name}</span>
+              <span className="inline-block rounded-full size-0.5 bg-foreground relative top-0.5" />
               <DeploymentStatusBadge
                 status={status}
                 variant="outline"
-                className="my-1"
+                className="my-1 px-0"
               />
             </strong>
           </div>

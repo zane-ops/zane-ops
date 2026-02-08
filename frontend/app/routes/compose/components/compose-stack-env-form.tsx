@@ -41,8 +41,9 @@ export function ComposeStackEnvForm({ stack }: ComposeStackEnvFormProps) {
   return (
     <div className="w-full max-w-4xl flex flex-col gap-5">
       <p className="text-gray-400">
-        Override environment variables declared in the <code>x-zane-env</code>{" "}
-        section of your docker-compose.yml. More info in{" "}
+        Override environment variables declared in the{" "}
+        <Code className="text-sm">x-zane-env</Code> section of your
+        docker-compose.yml. More info in{" "}
         <a
           href="#"
           target="_blank"
