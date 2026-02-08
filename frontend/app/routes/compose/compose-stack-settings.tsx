@@ -36,8 +36,8 @@ export default function ComposeStackSettingsPage({
   });
 
   return (
-    <div className="mt-8">
-      <div className="flex flex-col lg:max-w-4xl">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 relative mt-8 max-w-full">
+      <div className="flex flex-col w-full max-w-full lg:col-span-10">
         <section id="details" className="flex gap-1 scroll-mt-24">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
@@ -294,8 +294,8 @@ async function requestStackChange({
     //   break;
     // }
     case "compose_content": {
-      const cmd = formData.get("command")?.toString().trim() ?? "";
-      userData = cmd.length === 0 ? null : cmd;
+      const content = formData.get("user_content")?.toString().trim() ?? "";
+      userData = content satisfies BodyOf<typeof field>["new_value"];
       break;
     }
 

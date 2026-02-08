@@ -157,7 +157,7 @@ export function ComposeStackUserContentForm({
               isPending={isPending}
               variant="secondary"
               name="intent"
-              value="request-service-change"
+              value="request-stack-change"
             >
               {isPending ? (
                 <>
