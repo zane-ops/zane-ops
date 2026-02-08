@@ -15,6 +15,7 @@ import {
   resourceQueries
 } from "~/lib/queries";
 import { queryClient } from "~/root";
+import { ComposeStackEnvForm } from "~/routes/compose/components/compose-stack-env-form";
 import { ComposeStackSlugForm } from "~/routes/compose/components/compose-stack-slug-form";
 import { ComposeStackUserContentForm } from "~/routes/compose/components/compose-stack-user-content-form";
 import { getCsrfTokenHeader } from "~/utils";
@@ -80,11 +81,7 @@ export default function ComposeStackSettingsPage({
             <div className="flex flex-col gap-6">
               <h2 className="text-lg text-grey">Environment overrides</h2>
 
-              {/* <ServicePortsForm
-              service_slug={service_slug}
-              project_slug={project_slug}
-              env_slug={env_slug}
-            /> */}
+              <ComposeStackEnvForm stack={stack} />
             </div>
           </div>
         </section>

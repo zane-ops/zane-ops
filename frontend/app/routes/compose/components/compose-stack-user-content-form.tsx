@@ -108,7 +108,7 @@ export function ComposeStackUserContentForm({
       <div
         className={cn(
           "flex flex-col gap-4 w-full rounded-md p-2",
-          composeContentChange && "bg-secondary-foreground"
+          composeContentChange && "dark:bg-secondary-foreground bg-secondary/60"
         )}
       >
         <FieldSet
