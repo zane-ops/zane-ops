@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  FileTextIcon,
   FlameIcon,
   HammerIcon,
   InfoIcon,
@@ -58,12 +59,12 @@ export default function ComposeStackSettingsPage({
         <section id="configs" className="flex gap-1 scroll-mt-24 max-w-full">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
-              <ScrollTextIcon size={15} className="flex-none text-grey" />
+              <FileTextIcon size={15} className="flex-none text-grey" />
             </div>
             <div className="h-full border border-grey/50"></div>
           </div>
           <div className="w-full flex flex-col gap-5 pt-1 pb-14">
-            <h2 className="text-lg text-grey">Content</h2>
+            <h2 className="text-lg text-grey">Compose file</h2>
             <ComposeStackUserContentForm stack={stack} />
           </div>
         </section>
