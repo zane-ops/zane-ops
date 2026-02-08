@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  BoxesIcon,
   ChevronRight,
   CommandIcon,
   ContainerIcon,
@@ -126,25 +127,43 @@ export function CommandMenuSearchbar({ onSelect }: CommandMenuSearchbarProps) {
             {resourceList.map((resource) => (
               <CommandItem
                 onSelect={() => {
-                  const targetUrl =
-                    resource.type === "project"
-                      ? href("/project/:projectSlug/:envSlug", {
-                          projectSlug: resource.slug,
-                          envSlug: "production"
-                        })
-                      : resource.type === "environment"
-                        ? href("/project/:projectSlug/:envSlug", {
-                            projectSlug: resource.project_slug,
-                            envSlug: resource.name
-                          })
-                        : href(
-                            "/project/:projectSlug/:envSlug/services/:serviceSlug",
-                            {
-                              projectSlug: resource.project_slug,
-                              envSlug: resource.environment,
-                              serviceSlug: resource.slug
-                            }
-                          );
+                  let targetUrl: string;
+
+                  switch (resource.type) {
+                    case "project":
+                      targetUrl = href("/project/:projectSlug/:envSlug", {
+                        projectSlug: resource.slug,
+                        envSlug: "production"
+                      });
+                      break;
+                    case "environment":
+                      targetUrl = href("/project/:projectSlug/:envSlug", {
+                        projectSlug: resource.project_slug,
+                        envSlug: resource.name
+                      });
+                      break;
+                    case "service":
+                      targetUrl = href(
+                        "/project/:projectSlug/:envSlug/services/:serviceSlug",
+                        {
+                          projectSlug: resource.project_slug,
+                          envSlug: resource.environment,
+                          serviceSlug: resource.slug
+                        }
+                      );
+                      break;
+                    case "compose_stack":
+                      targetUrl = href(
+                        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+                        {
+                          projectSlug: resource.project_slug,
+                          envSlug: resource.environment,
+                          composeStackSlug: resource.slug
+                        }
+                      );
+                      break;
+                  }
+
                   navigate(targetUrl);
                   setOpen(false);
                   onSelect?.();
@@ -167,6 +186,9 @@ export function CommandMenuSearchbar({ onSelect }: CommandMenuSearchbarProps) {
                   {resource.type === "environment" && (
                     <NetworkIcon size={15} className="flex-none" />
                   )}
+                  {resource.type === "compose_stack" && (
+                    <BoxesIcon size={15} className="flex-none" />
+                  )}
                   <p>
                     {resource.type === "environment"
                       ? resource.name
@@ -174,9 +196,9 @@ export function CommandMenuSearchbar({ onSelect }: CommandMenuSearchbarProps) {
                   </p>
                 </div>
                 <div className="text-link text-xs w-full flex items-center flex-wrap">
-                  {resource.type === "project" ? (
-                    "projects"
-                  ) : resource.type === "service" ? (
+                  {resource.type === "project" && "projects"}
+                  {(resource.type === "service" ||
+                    resource.type === "compose_stack") && (
                     <div className="flex gap-0.5 items-center max-w-full">
                       <span className="flex-none">projects</span>
                       <ChevronRight size={13} />
@@ -196,9 +218,14 @@ export function CommandMenuSearchbar({ onSelect }: CommandMenuSearchbarProps) {
                         </p>
                       </div>
                       <ChevronRight className="flex-none" size={13} />
-                      <span className="flex-none">services</span>
+                      {resource.type === "service" ? (
+                        <span className="flex-none">services</span>
+                      ) : (
+                        <span className="flex-none">compose stacks</span>
+                      )}
                     </div>
-                  ) : (
+                  )}
+                  {resource.type === "environment" && (
                     <div className="flex gap-0.5 items-center">
                       <span className="flex-none">projects</span>
                       <ChevronRight size={13} />
