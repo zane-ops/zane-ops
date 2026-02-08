@@ -57,7 +57,7 @@ export function ComposeStackUserContentForm({
     composeContentChange !== undefined &&
     composeContentChange.new_value === null;
 
-  const contents = isEmptyChange
+  const defaultContents = isEmptyChange
     ? ""
     : ((composeContentChange?.new_value as string) ?? stack?.user_content);
 
@@ -68,7 +68,7 @@ export function ComposeStackUserContentForm({
   const errors = getFormErrorsFromResponseData(data?.errors);
   const isPending = fetcher.state !== "idle";
 
-  const [userContent, setUserContent] = React.useState(contents);
+  const [userContent, setUserContent] = React.useState(defaultContents);
   const [accordionValue, setAccordionValue] = React.useState("");
 
   return (
@@ -180,7 +180,10 @@ export function ComposeStackUserContentForm({
             </SubmitButton>
             <Button
               variant="outline"
-              onClick={() => setData(undefined)}
+              onClick={() => {
+                setData(undefined);
+                setUserContent(defaultContents);
+              }}
               type="reset"
               className="flex-1 md:flex-none"
             >
