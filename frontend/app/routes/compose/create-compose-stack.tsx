@@ -101,7 +101,7 @@ export default function CreateComposeStackPage({
                     </Link>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="left">Coming soon ✨</TooltipContent>
+                <TooltipContent side="top">Coming soon ✨</TooltipContent>
               </Tooltip>
             </TooltipProvider>
 

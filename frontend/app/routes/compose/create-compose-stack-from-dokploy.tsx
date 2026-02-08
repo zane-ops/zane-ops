@@ -351,14 +351,6 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
           . ZaneOps will automatically convert it to a compatible format.
         </p>
 
-        {errors.non_field_errors && (
-          <Alert variant="destructive">
-            <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{errors.non_field_errors}</AlertDescription>
-          </Alert>
-        )}
-
         <FieldSet
           name="slug"
           className="my-2 flex flex-col gap-1"
@@ -426,6 +418,13 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
           </div>
         </RadioGroup>
 
+        {errors.non_field_errors && (
+          <Alert variant="destructive">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{errors.non_field_errors}</AlertDescription>
+          </Alert>
+        )}
         {intent === "create-stack-from-base-64" ? (
           <FieldSet
             name="user_content"
