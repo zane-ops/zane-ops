@@ -12027,6 +12027,7 @@ components:
         id:
           type: string
           readOnly: true
+          maxLength: 255
         slug:
           type: string
           maxLength: 255
@@ -12034,6 +12035,7 @@ components:
         network_alias_prefix:
           type: string
           readOnly: true
+          maxLength: 40
           pattern: ^[-a-zA-Z0-9_]+$
         user_content:
           type: string
@@ -12073,6 +12075,7 @@ components:
           type: string
           readOnly: true
           nullable: true
+          maxLength: 35
         created_at:
           type: string
           format: date-time
@@ -12501,6 +12504,7 @@ components:
         id:
           type: string
           readOnly: true
+          maxLength: 255
         hash_prefix:
           type: string
           readOnly: true
@@ -12517,6 +12521,7 @@ components:
         network_alias_prefix:
           type: string
           readOnly: true
+          maxLength: 40
           pattern: ^[-a-zA-Z0-9_]+$
         user_content:
           type: string
@@ -12567,6 +12572,7 @@ components:
         id:
           type: string
           readOnly: true
+          maxLength: 255
         slug:
           type: string
           maxLength: 255
@@ -12574,6 +12580,7 @@ components:
         network_alias_prefix:
           type: string
           readOnly: true
+          maxLength: 40
           pattern: ^[-a-zA-Z0-9_]+$
         user_content:
           type: string
@@ -12614,6 +12621,7 @@ components:
           type: string
           readOnly: true
           nullable: true
+          maxLength: 35
         created_at:
           type: string
           format: date-time

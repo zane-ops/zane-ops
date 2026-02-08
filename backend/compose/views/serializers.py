@@ -185,6 +185,13 @@ class ComposeStackSerializer(serializers.ModelSerializer):
 
         return stack
 
+    def get_fields(self):
+        fields = super().get_fields()
+        writable = ["slug", "user_content"]
+        for field_name, field in fields.items():
+            field.read_only = field_name not in writable
+        return fields
+
     class Meta:
         model = ComposeStack
         fields = [
@@ -201,18 +208,19 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             "deploy_token",
             "created_at",
         ]
-        extra_kwargs = {
-            "id": {"read_only": True},
-            "created_at": {"read_only": True},
-            "deploy_token": {"read_only": True},
-            "computed_content": {"read_only": True},
-            "name": {"read_only": True},
-            "network_alias_prefix": {"read_only": True},
-        }
 
 
 class ComposeStackUpdateSerializer(ComposeStackSerializer):
-    user_content = serializers.CharField(read_only=True)
+    def get_fields(self):
+        fields = super().get_fields()
+        for field_name, field in fields.items():
+            if field_name == "slug":
+                field.read_only = (
+                    False  # only `slug` should be writable here, rest is read-only
+                )
+            else:
+                field.read_only = True
+        return fields
 
 
 class ComposeStackSnapshotSerializer(ComposeStackSerializer):
