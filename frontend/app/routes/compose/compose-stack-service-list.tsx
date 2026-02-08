@@ -57,7 +57,7 @@ function DeployForm() {
   const fetcher = useFetcher();
   const isDeploying = fetcher.state !== "idle";
   return (
-    <fetcher.Form method="post" action="./deploy-compose-stack">
+    <fetcher.Form method="post" action="./deploy">
       <SubmitButton isPending={isDeploying}>
         {isDeploying ? (
           <>
