@@ -99,7 +99,7 @@ export function ComposeStackServiceCard({
           ) : (
             <BoxIcon className="flex-none size-4 mr-1" />
           )}
-          <h3 className="text-lg text-card-foreground">{name}</h3>
+          <h3 className="text-lg text-card-foreground break-all">{name}</h3>
           <span className="ml-2 inline-block rounded-full size-0.5 bg-foreground relative " />
           <DeploymentStatusBadge
             status={service.status}
