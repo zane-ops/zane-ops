@@ -146,7 +146,6 @@ export function ComposeStackUserContentForm({
             variant="outline"
             name="intent"
             value="cancel-stack-change"
-            disabled // TODO: remove
           >
             {isPending ? (
               <>

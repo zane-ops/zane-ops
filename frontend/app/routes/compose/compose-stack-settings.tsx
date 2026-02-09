@@ -209,6 +209,14 @@ export async function clientAction({
         formData
       });
     }
+    case "cancel-stack-change": {
+      return cancelStackChange({
+        project_slug: params.projectSlug,
+        stack_slug: params.composeStackSlug,
+        env_slug: params.envSlug,
+        formData
+      });
+    }
     default: {
       throw new Error(`Unexpected intent \`${intent}\``);
     }
@@ -405,5 +413,72 @@ async function requestStackChange({
 
   return {
     data: { ...data, slug: stack_slug }
+  };
+}
+
+async function cancelStackChange({
+  project_slug,
+  stack_slug,
+  env_slug,
+  formData
+}: {
+  project_slug: string;
+  stack_slug: string;
+  env_slug: string;
+  formData: FormData;
+}) {
+  const change_id = formData.get("change_id")?.toString() ?? "";
+
+  const toastId = toast.loading("Discarding change request...");
+
+  const { error: errors, data } = await apiClient.DELETE(
+    "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/cancel-changes/{change_id}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          project_slug,
+          slug: stack_slug,
+          env_slug,
+          change_id
+        }
+      }
+    }
+  );
+  if (errors) {
+    if (toastId) {
+      const fullErrorMessage = errors.errors.map((err) => err.detail).join(" ");
+
+      toast.error("Failed to discard change", {
+        description: fullErrorMessage,
+        id: toastId,
+        closeButton: true
+      });
+    }
+    return {
+      errors
+    };
+  }
+
+  await queryClient.invalidateQueries({
+    ...composeStackQueries.single({
+      project_slug,
+      stack_slug,
+      env_slug
+    }),
+    exact: true
+  });
+
+  if (toastId) {
+    toast.success("Change discard succesfully", {
+      id: toastId,
+      closeButton: true
+    });
+  }
+
+  return {
+    data: { slug: stack_slug }
   };
 }
