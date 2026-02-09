@@ -21,6 +21,7 @@ import { ComposeStackSlugForm } from "~/routes/compose/components/compose-stack-
 import { ComposeStackUserContentForm } from "~/routes/compose/components/compose-stack-user-content-form";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/compose-stack-settings";
+import { ComposeStackDangerZoneForm } from "~/routes/compose/components/compose-stack-danger-zone-form";
 
 export default function ComposeStackSettingsPage({
   params,
@@ -109,11 +110,11 @@ export default function ComposeStackSettingsPage({
           </div>
           <div className="w-full flex flex-col gap-5 pt-1 pb-14">
             <h2 className="text-lg text-red-400">Danger Zone</h2>
-            {/* <ServiceDangerZoneForm
-              project_slug={project_slug}
-              service_slug={service_slug}
-              env_slug={env_slug}
-            /> */}
+            <ComposeStackDangerZoneForm
+              projectSlug={params.projectSlug}
+              envSlug={params.envSlug}
+              stackSlug={params.composeStackSlug}
+            />
           </div>
         </section>
       </div>

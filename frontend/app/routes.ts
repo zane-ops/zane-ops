@@ -204,6 +204,7 @@ export default [
           route("settings", "./routes/compose/compose-stack-settings.tsx"),
           route("deploy", "./routes/compose/deploy-compose-stack.tsx"),
           route("toggle", "./routes/compose/toggle-compose-stack.tsx"),
+          route("archive", "./routes/compose/archive-compose-stack.tsx"),
           route(
             "regenerate-token",
             "./routes/compose/regenerate-compose-stack-deploy-token.tsx"
