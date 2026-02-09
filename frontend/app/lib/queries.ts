@@ -363,7 +363,8 @@ export const composeStackQueries = {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
-      }
+      },
+      refetchIntervalInBackground: true
     })
 };
 
