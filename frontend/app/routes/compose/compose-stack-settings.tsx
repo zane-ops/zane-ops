@@ -269,27 +269,13 @@ async function requestStackChange({
 
   let userData = null;
   switch (field) {
-    // case "env_overrides": {
-    //   const isRedirect = formData.get("is_redirect")?.toString() === "on";
-
-    //   const domain = formData.get("domain")?.toString();
-    //   userData = {
-    //     domain: domain ? domain : undefined,
-    //     base_path: formData.get("base_path")?.toString(),
-    //     strip_prefix: formData.get("strip_prefix")?.toString() === "on",
-    //     associated_port: isRedirect
-    //       ? undefined
-    //       : Number(formData.get("associated_port")?.toString().trim()),
-    //     redirect_to: !isRedirect
-    //       ? undefined
-    //       : {
-    //           url: formData.get("redirect_to_url")?.toString() ?? "",
-    //           permanent:
-    //             formData.get("redirect_to_permanent")?.toString() === "on"
-    //         }
-    //   } satisfies BodyOf<typeof field>["new_value"];
-    //   break;
-    // }
+    case "env_overrides": {
+      userData = {
+        key: formData.get("key")?.toString() ?? "",
+        value: formData.get("value")?.toString() ?? ""
+      } satisfies BodyOf<typeof field>["new_value"];
+      break;
+    }
     case "compose_content": {
       const content = formData.get("user_content")?.toString().trim() ?? "";
       userData = content satisfies BodyOf<typeof field>["new_value"];
