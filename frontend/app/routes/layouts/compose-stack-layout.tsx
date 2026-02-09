@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  ArrowUpIcon,
   BoxIcon,
   BoxesIcon,
   ChartNoAxesColumn,
@@ -12,7 +13,14 @@ import {
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
-import { Link, Outlet, href, useFetcher, useParams } from "react-router";
+import {
+  Link,
+  Outlet,
+  href,
+  useFetcher,
+  useLocation,
+  useParams
+} from "react-router";
 import type { ComposeStack } from "~/api/types";
 import { getComposeStackStatus } from "~/components/compose-stack-cards";
 import { CopyButton } from "~/components/copy-button";
@@ -26,7 +34,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
-import { SubmitButton } from "~/components/ui/button";
+import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -36,6 +44,7 @@ import {
 import { composeStackQueries } from "~/lib/queries";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
 import { queryClient } from "~/root";
+import { ComposeStackActionsPopover } from "~/routes/compose/components/compose-stack-actions-popover";
 import {
   capitalizeText,
   formattedTime,
@@ -91,6 +100,15 @@ export default function ComposeStackLayoutPage({
   const stackStatus = getComposeStackStatus(stack);
 
   const { title } = metaTitle(`${status_emoji_map[stackStatus]} ${stack.slug}`);
+
+  const location = useLocation();
+
+  const isInServicesTab =
+    location.pathname ===
+    href(
+      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+      params
+    );
 
   return (
     <>
@@ -223,6 +241,26 @@ export default function ComposeStackLayoutPage({
           </li>
         </ul>
       </nav>
+
+      {!isInServicesTab && (
+        <Button
+          variant="outline"
+          className={cn(
+            "inline-flex gap-2 fixed bottom-10 right-5 md:right-10 z-30",
+            "bg-grey text-white dark:text-black"
+          )}
+          onClick={() => {
+            const main = document.querySelector("main");
+            main?.scrollIntoView({
+              behavior: "smooth",
+              block: "start"
+            });
+          }}
+        >
+          <span>Back to top</span> <ArrowUpIcon size={15} />
+        </Button>
+      )}
+
       <section className="mt-2">
         <Outlet />
       </section>
@@ -250,73 +288,11 @@ function DeployStackForm({ className, stack, params }: DeployStackFormProps) {
         className
       )}
     >
-      <fetcher.Form
-        method="post"
-        action={href(
-          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deploy",
-          params
-        )}
-      >
-        <SubmitButton isPending={isDeploying} variant="secondary">
-          {isDeploying ? (
-            <>
-              <LoaderIcon className="animate-spin" size={15} />
-              <span>Deploying</span>
-            </>
-          ) : (
-            <>
-              <RocketIcon size={15} />
-              <span>Deploy now</span>
-            </>
-          )}
-        </SubmitButton>
-      </fetcher.Form>
-
-      {stackStatus !== "NOT_DEPLOYED_YET" && (
-        <fetcher.Form
-          method="post"
-          action={href(
-            "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
-            params
-          )}
-        >
-          <input
-            type="hidden"
-            name="desired_state"
-            value={stackStatus === "SLEEPING" ? "start" : "stop"}
-          />
-
-          {stackStatus === "SLEEPING" ? (
-            <SubmitButton isPending={isDeploying} variant="outline">
-              {isDeploying ? (
-                <>
-                  <LoaderIcon className="animate-spin" size={15} />
-                  <span>Restarting stack...</span>
-                </>
-              ) : (
-                <>
-                  <PlayIcon size={15} />
-                  <span>Restart stack </span>
-                </>
-              )}
-            </SubmitButton>
-          ) : (
-            <SubmitButton isPending={isDeploying} variant="warning">
-              {isDeploying ? (
-                <>
-                  <LoaderIcon className="animate-spin" size={15} />
-                  <span>Stopping stack...</span>
-                </>
-              ) : (
-                <>
-                  <PauseIcon size={15} />
-                  <span>Stop stack </span>
-                </>
-              )}
-            </SubmitButton>
-          )}
-        </fetcher.Form>
-      )}
+      <ComposeStackActionsPopover
+        stack={stack}
+        projectSlug={params.projectSlug}
+        envSlug={params.envSlug}
+      />
     </div>
   );
 }

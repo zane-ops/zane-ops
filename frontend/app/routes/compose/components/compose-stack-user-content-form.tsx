@@ -1,7 +1,6 @@
 import {
   CheckIcon,
   ExternalLinkIcon,
-  FileSlidersIcon,
   LoaderIcon,
   LockKeyholeIcon,
   Undo2Icon

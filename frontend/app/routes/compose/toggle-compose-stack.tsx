@@ -1,6 +1,6 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
-import { apiClient } from "~/api/client";
+import { type RequestInput, apiClient } from "~/api/client";
 import { composeStackQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
@@ -14,6 +14,11 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     )
   );
 }
+
+export type ToggleStackState = RequestInput<
+  "put",
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/toggle/"
+>["desired_state"];
 
 export async function clientAction({
   request,
