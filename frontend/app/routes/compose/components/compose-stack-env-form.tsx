@@ -83,8 +83,8 @@ export function ComposeStackEnvForm({ stack }: ComposeStackEnvFormProps) {
         Override environment variables declared in the{" "}
         <Code className="text-sm">x-zane-env</Code> section of your
         docker-compose.yml. Variables defined as{" "}
-        <Code className="text-sm">{"{{ }}"}</Code> expressions are
-        automatically regenerated. More info in{" "}
+        <Code className="text-sm">{"{{ }}"}</Code> expressions are automatically
+        regenerated. More info in{" "}
         <a
           href="#"
           target="_blank"
