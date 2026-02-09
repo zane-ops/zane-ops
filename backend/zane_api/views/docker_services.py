@@ -734,7 +734,7 @@ class CancelServiceChangesAPIView(APIView):
                     "configs",
                 )
             ).get()
-
+            found_change = service.unapplied_changes.get(id=change_id)
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -748,8 +748,6 @@ class CancelServiceChangesAPIView(APIView):
                 detail=f"A service with the slug `{service_slug}`"
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-        try:
-            found_change = service.unapplied_changes.get(id=change_id)
         except DeploymentChange.DoesNotExist:
             raise exceptions.NotFound(
                 f"A pending change with id `{change_id}` does not exist in this service."

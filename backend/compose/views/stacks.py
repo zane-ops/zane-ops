@@ -793,6 +793,68 @@ class ComposeStackDeployAPIView(APIView):
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 
+class ComposeStackCancelChangesAPIView(APIView):
+    @extend_schema(
+        responses={
+            409: ErrorResponse409Serializer,
+            204: None,
+        },
+        operation_id="cancelStackChanges",
+        summary="Cancel stack change",
+    )
+    def delete(
+        self,
+        request: Request,
+        project_slug: str,
+        slug: str,
+        change_id: str,
+        env_slug: str,
+    ):
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=self.request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = (
+                ComposeStack.objects.filter(
+                    environment=environment,
+                    project=project,
+                    slug=slug,
+                )
+                .prefetch_related("changes", "env_overrides")
+                .get()
+            )
+            found_change = stack.unapplied_changes.get(id=change_id)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+        except ComposeStackChange.DoesNotExist:
+            raise exceptions.NotFound(
+                f"A pending change with id `{change_id}` does not exist in this stack."
+            )
+
+        if found_change.field == ComposeStackChange.ChangeField.COMPOSE_CONTENT:
+            if stack.user_content is None:
+                raise ResourceConflict(
+                    "Cannot revert this change because the stack has no previous compose file content to restore."
+                )
+
+        found_change.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class ComposeStackRequestChangesAPIView(APIView):
     serializer_class = ComposeStackChangeSerializer
 

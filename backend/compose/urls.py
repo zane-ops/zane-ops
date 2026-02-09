@@ -51,6 +51,11 @@ urlpatterns = [
         name="stacks.request_changes",
     ),
     re_path(
+        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/cancel-changes/(?P<change_id>[a-zA-Z0-9]+(?:_[a-zA-Z0-9]+)*)/?$",
+        views.ComposeStackCancelChangesAPIView.as_view(),
+        name="stacks.cancel_request_changes",
+    ),
+    re_path(
         rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/deploy/?$",
         views.ComposeStackDeployAPIView.as_view(),
         name="stacks.deploy",
