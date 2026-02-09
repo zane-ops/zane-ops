@@ -4432,61 +4432,7 @@ export interface components {
     };
     RecentDeploymentsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    RegenerateComposeStackDeployTokenError: components["schemas"]["RegenerateComposeStackDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateComposeStackDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateComposeStackDeployTokenUserContentErrorComponent"];
-    RegenerateComposeStackDeployTokenErrorResponse400: components["schemas"]["RegenerateComposeStackDeployTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
-    RegenerateComposeStackDeployTokenNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    RegenerateComposeStackDeployTokenSlugErrorComponent: {
-      /**
-       * @description * `slug` - slug
-       * @enum {string}
-       */
-      attr: "slug";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateComposeStackDeployTokenUserContentErrorComponent: {
-      /**
-       * @description * `user_content` - user_content
-       * @enum {string}
-       */
-      attr: "user_content";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateComposeStackDeployTokenValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["RegenerateComposeStackDeployTokenError"][];
-    };
+    RegenerateComposeStackDeployTokenErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent: {
       /**
        * @description * `auto_deploy_enabled` - auto_deploy_enabled
@@ -8441,13 +8387,6 @@ export interface operations {
         env_slug: string;
         project_slug: string;
         slug: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ComposeStackRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["ComposeStackRequest"];
-        "multipart/form-data": components["schemas"]["ComposeStackRequest"];
       };
     };
     responses: {

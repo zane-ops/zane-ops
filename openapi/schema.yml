@@ -1643,18 +1643,6 @@ paths:
         required: true
       tags:
       - compose
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ComposeStackRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ComposeStackRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ComposeStackRequest'
-        required: true
       security:
       - cookieAuth: []
       responses:
@@ -19754,117 +19742,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    RegenerateComposeStackDeployTokenError:
-      oneOf:
-      - $ref: '#/components/schemas/RegenerateComposeStackDeployTokenNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateComposeStackDeployTokenSlugErrorComponent'
-      - $ref: '#/components/schemas/RegenerateComposeStackDeployTokenUserContentErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          non_field_errors: '#/components/schemas/RegenerateComposeStackDeployTokenNonFieldErrorsErrorComponent'
-          slug: '#/components/schemas/RegenerateComposeStackDeployTokenSlugErrorComponent'
-          user_content: '#/components/schemas/RegenerateComposeStackDeployTokenUserContentErrorComponent'
     RegenerateComposeStackDeployTokenErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/RegenerateComposeStackDeployTokenValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/RegenerateComposeStackDeployTokenValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    RegenerateComposeStackDeployTokenNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - non_field_errors
-          type: string
-          description: '* `non_field_errors` - non_field_errors'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateComposeStackDeployTokenSlugErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - slug
-          type: string
-          description: '* `slug` - slug'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateComposeStackDeployTokenUserContentErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - user_content
-          type: string
-          description: '* `user_content` - user_content'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateComposeStackDeployTokenValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/RegenerateComposeStackDeployTokenError'
-      required:
-      - errors
-      - type
     RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent:
       type: object
       properties:

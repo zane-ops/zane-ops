@@ -366,6 +366,7 @@ class ComposeStackRegenerateDeployTokenAPIView(APIView):
     serializer_class = ComposeStackSerializer
 
     @extend_schema(
+        request=None,
         operation_id="regenerateComposeStackDeployToken",
         summary="Regenerate a compose stack deploy token",
     )
