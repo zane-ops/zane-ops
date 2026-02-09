@@ -202,7 +202,8 @@ export default [
         route("", "./routes/layouts/compose-stack-layout.tsx", [
           index("./routes/compose/compose-stack-service-list.tsx"),
           route("settings", "./routes/compose/compose-stack-settings.tsx"),
-          route("deploy", "./routes/compose/deploy-compose-stack.tsx")
+          route("deploy", "./routes/compose/deploy-compose-stack.tsx"),
+          route("toggle", "./routes/compose/toggle-compose-stack.tsx")
         ])
       ])
     ])

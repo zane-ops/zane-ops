@@ -7,6 +7,8 @@ import {
   GlobeIcon,
   HashIcon,
   LoaderIcon,
+  PauseIcon,
+  PlayIcon,
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
@@ -237,6 +239,7 @@ type DeployStackFormProps = {
 function DeployStackForm({ className, stack, params }: DeployStackFormProps) {
   const fetcher = useFetcher();
   const isDeploying = fetcher.state !== "idle";
+  const stackStatus = getComposeStackStatus(stack);
 
   return (
     <div
@@ -268,6 +271,52 @@ function DeployStackForm({ className, stack, params }: DeployStackFormProps) {
           )}
         </SubmitButton>
       </fetcher.Form>
+
+      {stackStatus !== "NOT_DEPLOYED_YET" && (
+        <fetcher.Form
+          method="post"
+          action={href(
+            "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
+            params
+          )}
+        >
+          <input
+            type="hidden"
+            name="desired_state"
+            value={stackStatus === "SLEEPING" ? "start" : "stop"}
+          />
+
+          {stackStatus === "SLEEPING" ? (
+            <SubmitButton isPending={isDeploying} variant="outline">
+              {isDeploying ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span>Restarting stack...</span>
+                </>
+              ) : (
+                <>
+                  <PlayIcon size={15} />
+                  <span>Restart stack </span>
+                </>
+              )}
+            </SubmitButton>
+          ) : (
+            <SubmitButton isPending={isDeploying} variant="warning">
+              {isDeploying ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span>Stopping stack...</span>
+                </>
+              ) : (
+                <>
+                  <PauseIcon size={15} />
+                  <span>Stop stack </span>
+                </>
+              )}
+            </SubmitButton>
+          )}
+        </fetcher.Form>
+      )}
     </div>
   );
 }
