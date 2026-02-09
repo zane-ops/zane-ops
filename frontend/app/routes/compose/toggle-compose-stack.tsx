@@ -1,9 +1,10 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
+import { getComposeStackStatus } from "~/components/compose-stack-cards";
 import { composeStackQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
+import { durationToMs, getCsrfTokenHeader, wait } from "~/utils";
 import type { Route } from "./+types/toggle-compose-stack";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
@@ -30,9 +31,12 @@ export async function clientAction({
 }: Route.ClientActionArgs) {
   const formData = await request.formData();
 
-  const desired_state = formData.get("desired_state")?.toString() as
-    | "start"
-    | "stop";
+  const userData = {
+    desired_state: formData.get("desired_state")?.toString() as "start" | "stop"
+  } satisfies RequestInput<
+    "put",
+    "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/toggle/"
+  >;
 
   const { error, data } = await apiClient.PUT(
     "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/toggle/",
@@ -40,9 +44,7 @@ export async function clientAction({
       headers: {
         ...(await getCsrfTokenHeader())
       },
-      body: {
-        desired_state
-      },
+      body: userData,
       params: {
         path: {
           project_slug,
@@ -68,12 +70,15 @@ export async function clientAction({
   await queryClient.invalidateQueries(
     composeStackQueries.single({ project_slug, stack_slug, env_slug })
   );
-  toast.success("Success", {
-    description:
-      desired_state === "start"
-        ? "Stack is being restarted"
-        : "Stack is being stopped",
-    closeButton: true
-  });
+
+  toast.info(
+    userData.desired_state === "start"
+      ? "Starting stack..."
+      : "Stopping stack...",
+    {
+      description: "This may take a moment to be reflected in the UI.",
+      closeButton: true
+    }
+  );
   return { data };
 }

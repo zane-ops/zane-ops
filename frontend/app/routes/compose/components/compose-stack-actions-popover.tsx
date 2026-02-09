@@ -207,7 +207,7 @@ function StopStackConfirmationDialog() {
 
         <DialogFooter className="-mx-6 px-6">
           <fetcher.Form
-            action="./toggle-service-state"
+            action="./toggle"
             method="post"
             className="flex items-center gap-4 w-full"
           >

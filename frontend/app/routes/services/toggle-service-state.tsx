@@ -107,13 +107,15 @@ export async function clientAction({
     }
   }
 
-  toast.success("Success", {
-    closeButton: true,
-    description:
-      userData.desired_state === "stop"
-        ? "The service being put to sleep. It will take a few seconds to update."
-        : "The service being restarted. It will take a few seconds to update."
-  });
+  toast.info(
+    userData.desired_state === "stop"
+      ? "Stopping service..."
+      : "Starting service...",
+    {
+      description: "This may take a moment to be reflected in the UI.",
+      closeButton: true
+    }
+  );
   return {
     success: true
   };
