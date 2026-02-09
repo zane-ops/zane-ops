@@ -17,6 +17,7 @@ import * as React from "react";
 import { useFetcher } from "react-router";
 import type { ComposeStack } from "~/api/types";
 import { Code } from "~/components/code";
+import { CopyButton } from "~/components/copy-button";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
@@ -39,7 +40,7 @@ import {
 } from "~/components/ui/tooltip";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import type { clientAction } from "~/routes/compose/compose-stack-settings";
-import { wait } from "~/utils";
+import { pluralize, wait } from "~/utils";
 
 export type ComposeStackEnvFormProps = {
   stack: ComposeStack;
@@ -82,9 +83,7 @@ export function ComposeStackEnvForm({ stack }: ComposeStackEnvFormProps) {
       <p className="text-gray-400">
         Override environment variables declared in the{" "}
         <Code className="text-sm">x-zane-env</Code> section of your
-        docker-compose.yml. Variables defined as{" "}
-        <Code className="text-sm">{"{{ }}"}</Code> expressions are automatically
-        regenerated. More info in{" "}
+        docker-compose.yml. More info in{" "}
         <a
           href="#"
           target="_blank"
@@ -95,6 +94,28 @@ export function ComposeStackEnvForm({ stack }: ComposeStackEnvFormProps) {
       </p>
 
       <section className="flex flex-col gap-4">
+        {env_variables.size > 0 && (
+          <>
+            <hr className="border-border" />
+            <h3 className="text-lg inline-flex gap-2 items-center">
+              <>
+                <span>
+                  {env_variables.size}&nbsp;
+                  {pluralize("override", env_variables.size)}
+                </span>
+                <CopyButton
+                  variant="outline"
+                  size="sm"
+                  showLabel
+                  label={(hasCopied) => (hasCopied ? "Copied" : "Copy as .env")}
+                  value={Array.from(env_variables.values())
+                    .map((env) => `${env.name}="${env.value}"`)
+                    .join("\n")}
+                />
+              </>
+            </h3>
+          </>
+        )}
         {env_variables.size > 0 && (
           <>
             <hr className="border-border" />
@@ -111,9 +132,10 @@ export function ComposeStackEnvForm({ stack }: ComposeStackEnvFormProps) {
                 </li>
               ))}
             </ul>
-            <hr className="border-border" />
           </>
         )}
+        <hr className="border-border" />
+
         <h3 className="">Add new variable</h3>
         <p className="text-grey">
           Use <Code className="text-sm">{"{{env.VARIABLE_NAME}}"}</Code> to
