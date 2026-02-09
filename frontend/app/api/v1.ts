@@ -92,6 +92,10 @@ export interface paths {
     /** Get stack build logs */
     get: operations["compose_stacks_build_logs_retrieve"];
   };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/cancel-changes/{change_id}/": {
+    /** Cancel stack change */
+    delete: operations["cancelStackChanges"];
+  };
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/": {
     /** Queue a new deployment for the compose stack */
     put: operations["deployComposeStack"];
@@ -833,6 +837,7 @@ export interface components {
     CancelComposeStackDeploymentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CancelServiceChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CancelServiceDeploymentErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    CancelStackChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ChangePasswordConfirmPasswordErrorComponent: {
       /**
        * @description * `confirm_password` - confirm_password
@@ -8241,6 +8246,48 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Cancel stack change */
+  cancelStackChanges: {
+    parameters: {
+      path: {
+        change_id: string;
+        env_slug: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CancelStackChangesErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
         };
       };
       429: {
