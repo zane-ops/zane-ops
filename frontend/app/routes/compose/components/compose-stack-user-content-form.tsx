@@ -128,7 +128,10 @@ export function ComposeStackUserContentForm({
 
           <CodeEditor
             hasError={!!errors.new_value}
-            containerClassName="w-full h-100"
+            containerClassName={cn(
+              "w-full h-100",
+              "w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[73dvw] xl:w-[890px]"
+            )}
             language="yaml"
             value={userContent}
             readOnly={!!composeContentChange}
@@ -235,7 +238,10 @@ export function ComposeStackUserContentForm({
             <div className={cn("flex flex-col gap-4 w-full")}>
               <FieldSet className="flex flex-col gap-1.5 flex-1">
                 <CodeEditor
-                  containerClassName="w-full h-100"
+                  containerClassName={cn(
+                    "w-full h-100",
+                    "w-[80dvw] sm:w-[88dvw] md:w-[85dvw] lg:w-[73dvw] xl:w-[860px]"
+                  )}
                   language="yaml"
                   value={computedContents}
                   readOnly

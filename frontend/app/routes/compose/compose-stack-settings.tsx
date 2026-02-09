@@ -7,6 +7,7 @@ import {
   KeyRoundIcon,
   ScrollTextIcon
 } from "lucide-react";
+import { Link } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import {
@@ -15,13 +16,13 @@ import {
   resourceQueries
 } from "~/lib/queries";
 import { queryClient } from "~/root";
+import { ComposeStackDangerZoneForm } from "~/routes/compose/components/compose-stack-danger-zone-form";
 import { ComposeStackDeployURLForm } from "~/routes/compose/components/compose-stack-deploy-url-form";
 import { ComposeStackEnvForm } from "~/routes/compose/components/compose-stack-env-form";
 import { ComposeStackSlugForm } from "~/routes/compose/components/compose-stack-slug-form";
 import { ComposeStackUserContentForm } from "~/routes/compose/components/compose-stack-user-content-form";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/compose-stack-settings";
-import { ComposeStackDangerZoneForm } from "~/routes/compose/components/compose-stack-danger-zone-form";
 
 export default function ComposeStackSettingsPage({
   params,
@@ -59,7 +60,10 @@ export default function ComposeStackSettingsPage({
           </div>
         </section>
 
-        <section id="configs" className="flex gap-1 scroll-mt-24 max-w-full">
+        <section
+          id="compose-file"
+          className="flex gap-1 scroll-mt-24 max-w-full"
+        >
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <FileTextIcon size={15} className="flex-none text-grey" />
@@ -72,7 +76,7 @@ export default function ComposeStackSettingsPage({
           </div>
         </section>
 
-        <section id="networking" className="flex gap-1 scroll-mt-24">
+        <section id="env-overrides" className="flex gap-1 scroll-mt-24">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <KeyRoundIcon size={15} className="flex-none text-grey" />
@@ -118,7 +122,66 @@ export default function ComposeStackSettingsPage({
           </div>
         </section>
       </div>
+
+      <StackSettingsSideNav />
     </div>
+  );
+}
+
+function StackSettingsSideNav() {
+  return (
+    <aside className="col-span-2 hidden lg:flex flex-col h-full">
+      <nav className="sticky top-20 flex flex-col gap-4">
+        <ul className="flex flex-col gap-2 text-grey">
+          <li>
+            <Link
+              to={{
+                hash: "#main"
+              }}
+            >
+              Details
+            </Link>
+          </li>
+          <li>
+            <Link
+              to={{
+                hash: "#compose-file"
+              }}
+            >
+              Compose file
+            </Link>
+          </li>
+          <li>
+            <Link
+              to={{
+                hash: "#env-overrides"
+              }}
+            >
+              Environment overrides
+            </Link>
+          </li>
+          <li>
+            <Link
+              to={{
+                hash: "#deploy"
+              }}
+            >
+              Deploy
+            </Link>
+          </li>
+
+          <li className="text-red-400">
+            <Link
+              to={{
+                hash: "#danger"
+              }}
+            >
+              Danger Zone
+            </Link>
+          </li>
+        </ul>
+      </nav>
+    </aside>
   );
 }
 
