@@ -15,6 +15,7 @@ import {
   resourceQueries
 } from "~/lib/queries";
 import { queryClient } from "~/root";
+import { ComposeStackDeployURLForm } from "~/routes/compose/components/compose-stack-deploy-url-form";
 import { ComposeStackEnvForm } from "~/routes/compose/components/compose-stack-env-form";
 import { ComposeStackSlugForm } from "~/routes/compose/components/compose-stack-slug-form";
 import { ComposeStackUserContentForm } from "~/routes/compose/components/compose-stack-user-content-form";
@@ -96,11 +97,7 @@ export default function ComposeStackSettingsPage({
           <div className="w-full flex flex-col gap-12 pt-1 pb-14">
             <h2 className="text-lg text-grey">Deploy</h2>
 
-            {/* <ServiceDeployURLForm
-              project_slug={project_slug}
-              service_slug={service_slug}
-              env_slug={env_slug}
-            /> */}
+            <ComposeStackDeployURLForm stack={stack} />
           </div>
         </section>
 
