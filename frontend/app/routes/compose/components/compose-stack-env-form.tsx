@@ -244,7 +244,7 @@ function EnVariableRow({
               id={`${idPrefix}-cancel-form`}
               className="hidden"
             >
-              <input type="hidden" name="intent" value="cancel-stack-changes" />
+              <input type="hidden" name="intent" value="cancel-stack-change" />
               <input type="hidden" name="change_id" value={change_id} />
             </cancelFetcher.Form>
           )}
@@ -291,7 +291,6 @@ function EnVariableRow({
                         icon={Undo2Icon}
                         text="Discard change"
                         className="text-red-400"
-                        disabled
                       />
                     </button>
                   </>
