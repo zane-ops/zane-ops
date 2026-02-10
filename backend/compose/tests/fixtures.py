@@ -1281,6 +1281,72 @@ services:
         zane.http.routes.0.base_path: "/"
 """
 
+DOKPLOY_DOCMOST_TEMPLATE = DokployTemplate(
+    compose="""
+version: "3"
+
+services:
+  docmost:
+    image: docmost/docmost:0.4.1
+    depends_on:
+      - db
+      - redis
+    environment:
+      - APP_URL
+      - APP_SECRET
+      - APP_WHATEVER
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      - REDIS_URL=redis://redis:6379
+    restart: unless-stopped
+
+    volumes:
+      - docmost:/app/data/storage
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+    restart: unless-stopped
+
+    volumes:
+      - db_docmost_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+
+    volumes:
+      - redis_docmost_data:/data
+
+volumes:
+  docmost:
+  db_docmost_data:
+  redis_docmost_data:
+""",
+    config="""
+[variables]
+main_domain = "${domain}"
+postgres_password = "${password}"
+app_secret = "${password}"
+
+[config]
+env = [
+  "POSTGRES_DB=docmost",
+  "POSTGRES_USER=docmost",
+  "POSTGRES_PASSWORD=${postgres_password}",
+  "APP_URL=http://${main_domain}:3000",
+  "APP_SECRET=${app_secret}",
+]
+mounts = []
+
+[[config.domains]]
+serviceName = "docmost"
+port = 3_000
+host = "${main_domain}"
+""",
+)
 DOKPLOY_POSTGRES_TEMPLATE = DokployTemplate(
     compose="""
 version: "3.8"

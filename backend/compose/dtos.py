@@ -160,15 +160,17 @@ class ComposeServiceSpec:
     healthcheck: Optional[Dict[str, Any]] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ComposeServiceSpec":
+    def extract_service_environment(cls, data: Dict[str, Any]):
         # handle envs
-        envs: Dict[str, ComposeEnvVarSpec] = {}
+        envs: Dict[str, ComposeEnvVarSpec | None] = {}
         original_env = data.get("environment", [])
         if isinstance(original_env, list):
             for env in original_env:
                 if "=" not in env:
                     # format: ENV (value is null)
                     # this should be ignored and not passed to env variables
+                    key = cast(str, env)
+                    envs[key] = None
                     continue
                 else:
                     # format: ENV=VALUE
@@ -178,6 +180,15 @@ class ComposeServiceSpec:
         elif isinstance(original_env, dict):
             for key, value in original_env.items():
                 envs[key] = ComposeEnvVarSpec(key=key, value=value)
+        return envs
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ComposeServiceSpec":
+        # handle envs
+        extracted_envs = cls.extract_service_environment(data)
+        envs: Dict[str, ComposeEnvVarSpec] = {
+            key: env for key, env in extracted_envs.items() if env is not None
+        }
 
         # handle networks - convert to dict format
         networks: Dict[str, Any] = {}

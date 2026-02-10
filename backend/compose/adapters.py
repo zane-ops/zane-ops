@@ -8,7 +8,12 @@ from typing import Dict, Any
 
 
 from zane_api.utils import jprint
-from .dtos import DokployConfigMount, DokployConfigObject, ComposeServiceSpec
+from .dtos import (
+    DokployConfigMount,
+    DokployConfigObject,
+    ComposeServiceSpec,
+    ComposeEnvVarSpec,
+)
 from abc import ABC, abstractmethod
 import tempfile
 
@@ -142,7 +147,7 @@ class DokployComposeAdapter(BaseComposeAdapter):
         if x_env:
             compose_dict["x-zane-env"] = x_env
 
-        # handle domains
+        # handle domains & env
         for service_name, domains in config.domains.items():
             compose_service = compose_dict["services"].get(service_name)
             service = ComposeServiceSpec.from_dict(
@@ -150,6 +155,7 @@ class DokployComposeAdapter(BaseComposeAdapter):
             )
 
             if compose_service is not None:
+                # Handle domains
                 deploy = compose_service.get("deploy", {})
                 deploy["labels"] = deploy.get("labels", {})
 
@@ -168,6 +174,23 @@ class DokployComposeAdapter(BaseComposeAdapter):
                 compose_service.pop("expose", None)
                 # Remove `restart` property as it is also ignored
                 compose_service.pop("restart", None)
+
+        # Handle envs
+        for service_name, compose_service in compose_dict["services"].items():
+            service = ComposeServiceSpec.from_dict(
+                {**compose_service, "name": service_name}
+            )
+            envs = ComposeServiceSpec.extract_service_environment(compose_service)
+            for key, env in envs.items():
+                if env is None:
+                    exist_in_x_env = x_env.get(key)
+                    if exist_in_x_env:
+                        service.environment[key] = ComposeEnvVarSpec(
+                            key=key, value=f"${{{key}}}"
+                        )
+
+            if envs:
+                compose_service["environment"] = service.to_dict()["environment"]
 
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmpdir:
             """
