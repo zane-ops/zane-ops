@@ -654,7 +654,6 @@ class ComposeSpecProcessor:
             service.networks[env_network_name] = {
                 "aliases": [
                     f"{stack.network_alias_prefix}-{original_service_name}",
-                    f"{stack.network_alias_prefix}-{original_service_name}.{settings.ZANE_INTERNAL_DOMAIN}",
                 ]
             }
 
@@ -1076,8 +1075,10 @@ class ComposeSpecProcessor:
                 route_dict[key] = route
 
                 existing_exact = find_item_in_sequence(
-                    lambda r: (r["domain"] == route["domain"])
-                    and r["base_path"] == route["base_path"],
+                    lambda r: (
+                        (r["domain"] == route["domain"])
+                        and r["base_path"] == route["base_path"]
+                    ),
                     all_routes,
                 )
                 if existing_exact:
