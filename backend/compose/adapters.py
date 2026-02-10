@@ -57,7 +57,9 @@ class DokployComposeAdapter(BaseComposeAdapter):
         # Check password-like patterns (password, base64, hash, jwt) with optional length
         password_like_match = cls.DOKPLOY_PASSWORD_LIKE_PATTERN.match(value)
         if password_like_match:
-            length = int(password_like_match.group(1))
+            matched_length = password_like_match.group(1)  # this can be nullable
+
+            length = int(matched_length or 32)
 
             if length % 2 != 0:
                 length += 1  # just adding 1 will make it divisible by 2
