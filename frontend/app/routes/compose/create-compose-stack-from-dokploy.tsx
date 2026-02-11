@@ -351,6 +351,27 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
           . ZaneOps will automatically convert it to a compatible format.
         </p>
 
+        <Alert
+          variant="warning"
+          className="dark:bg-yellow-800 dark:text-white dark:border-transparent"
+        >
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Important</AlertTitle>
+          <AlertDescription>
+            Not all Dokploy templates are compatible with ZaneOps. Some may
+            contain syntax errors or reference outdated configurations. If you
+            encounter an issue, please verify the template works on{" "}
+            <a
+              href="https://github.com/Dokploy/dokploy"
+              target="_blank"
+              className="underline font-medium text-link inline-flex gap-1 items-center"
+            >
+              Dokploy <ExternalLinkIcon className="size-4 flex-none" />
+            </a>{" "}
+            first before opening an issue on ZaneOps.
+          </AlertDescription>
+        </Alert>
+
         <FieldSet
           name="slug"
           className="my-2 flex flex-col gap-1"
