@@ -117,6 +117,5 @@ Interested in contributing? Check out the [contribution guidelines](./CONTRIBUTI
 
 ## 🙏 Credits
 
-- [Plane](https://github.com/makeplane/plane): for giving us content for the contributions templates (contribution
-  guidelines).
-- [Coolify](https://github.com/coollabsio/coolify) and [Dokploy](https://github.com/dokploy/dokploy) which we used inspired ourselves from a lot.
+- [Plane](https://github.com/makeplane/plane): for inspiring our contribution guidelines.
+- [Coolify](https://github.com/coollabsio/coolify) and [Dokploy](https://github.com/dokploy/dokploy): for being a great source of inspiration.
