@@ -278,6 +278,7 @@ function EnVariableRow({
               id={`${idPrefix}-delete-form`}
               className="hidden"
             >
+              <input type="hidden" name="intent" value="request-stack-change" />
               <input type="hidden" name="item_id" value={id} />
               <input type="hidden" name="change_field" value="env_overrides" />
               <input type="hidden" name="change_type" value="DELETE" />
