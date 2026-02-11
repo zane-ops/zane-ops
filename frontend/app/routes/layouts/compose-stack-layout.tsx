@@ -4,23 +4,12 @@ import {
   BoxIcon,
   BoxesIcon,
   ChartNoAxesColumn,
-  ClockIcon,
   GlobeIcon,
   HashIcon,
-  LoaderIcon,
-  PauseIcon,
-  PlayIcon,
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
-import {
-  Link,
-  Outlet,
-  href,
-  useFetcher,
-  useLocation,
-  useParams
-} from "react-router";
+import { Link, Outlet, href, useFetcher, useLocation } from "react-router";
 import type { ComposeStack } from "~/api/types";
 import { getComposeStackStatus } from "~/components/compose-stack-cards";
 import { CopyButton } from "~/components/copy-button";
@@ -34,7 +23,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
-import { Button, SubmitButton } from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -45,12 +34,7 @@ import { composeStackQueries } from "~/lib/queries";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { ComposeStackActionsPopover } from "~/routes/compose/components/compose-stack-actions-popover";
-import {
-  capitalizeText,
-  formattedTime,
-  metaTitle,
-  timeAgoFormatter
-} from "~/utils";
+import { metaTitle } from "~/utils";
 import type { Route } from "./+types/compose-stack-layout";
 
 export function meta({ params, error }: Route.MetaArgs) {
@@ -220,7 +204,7 @@ export default function ComposeStackLayoutPage({
           </li>
 
           <li>
-            <NavLink to="./env-variables">
+            <NavLink to="./deployments">
               <span>Deployments</span>
               <RocketIcon size={15} className="flex-none" />
             </NavLink>

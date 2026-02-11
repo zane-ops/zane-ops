@@ -319,6 +319,23 @@ export const metrisSearch = z.object({
 
 export type MetricsFilters = z.TypeOf<typeof metrisSearch>;
 
+export const stackDeploymentListFilters = zfd.formData({
+  page: zfd.numeric().optional().catch(1).optional(),
+  per_page: zfd.numeric().optional().catch(10).optional(),
+  status: zfd.repeatable(
+    z
+      .array(z.enum(["QUEUED", "DEPLOYING", "FINISHED", "FAILED", "CANCELLED"]))
+      .optional()
+      .catch(undefined)
+  ),
+  queued_at_before: z.coerce.date().optional().catch(undefined),
+  queued_at_after: z.coerce.date().optional().catch(undefined)
+});
+
+export type StackDeploymentListFilters = z.infer<
+  typeof stackDeploymentListFilters
+>;
+
 export const composeStackQueries = {
   single: ({
     project_slug,
@@ -365,6 +382,53 @@ export const composeStackQueries = {
         return false;
       },
       refetchIntervalInBackground: true
+    }),
+  deploymentList: ({
+    project_slug,
+    stack_slug,
+    env_slug,
+    filters = {}
+  }: {
+    project_slug: string;
+    env_slug: string;
+    stack_slug: string;
+    filters?: StackDeploymentListFilters;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...composeStackQueries.single({ project_slug, env_slug, stack_slug })
+          .queryKey,
+        "DEPLOYMENT_LIST",
+        filters
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deployments/",
+          {
+            params: {
+              path: {
+                project_slug,
+                slug: stack_slug,
+                env_slug
+              }
+            },
+            signal
+          }
+        );
+
+        if (!data) {
+          throw notFound(
+            `The compose stack \`${stack_slug}\` doesn't exist in this project.`
+          );
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
     })
 };
 

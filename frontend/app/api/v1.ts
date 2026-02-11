@@ -73,17 +73,6 @@ export interface paths {
     get: operations["getComposeStackDetails"];
     put: operations["compose_stacks_update"];
   };
-  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/{hash}/": {
-    /** Get a compose stack deployment details */
-    get: operations["getComposeStackDeploymentDetails"];
-  };
-  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/{hash}/cancel/": {
-    /**
-     * Cancel compose stack deployment
-     * @description Cancel a compose stack deployment in progress.
-     */
-    put: operations["cancelComposeStackDeployment"];
-  };
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/archive/": {
     /** Archive a compose stack */
     delete: operations["archiveComposeStack"];
@@ -103,6 +92,21 @@ export interface paths {
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/{hash}/": {
     /** Rollback to a previous version of the compose stack */
     put: operations["reDeployComposeStack"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deployments/": {
+    /** Get a list of all the deployments for a compose stack */
+    get: operations["listComposeStackDeployments"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deployments/{hash}/": {
+    /** Get a compose stack deployment details */
+    get: operations["getComposeStackDeploymentDetails"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deployments/{hash}/cancel/": {
+    /**
+     * Cancel compose stack deployment
+     * @description Cancel a compose stack deployment in progress.
+     */
+    put: operations["cancelComposeStackDeployment"];
   };
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/metrics/": {
     /** Get stack metrics */
@@ -3278,6 +3282,39 @@ export interface components {
      */
     LevelEnum: "ERROR" | "INFO";
     ListAvailableVolumesErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ListComposeStackDeploymentsError: components["schemas"]["ListComposeStackDeploymentsStatusErrorComponent"] | components["schemas"]["ListComposeStackDeploymentsQueuedAtErrorComponent"];
+    ListComposeStackDeploymentsErrorResponse400: components["schemas"]["ListComposeStackDeploymentsValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ListComposeStackDeploymentsQueuedAtErrorComponent: {
+      /**
+       * @description * `queued_at` - queued_at
+       * @enum {string}
+       */
+      attr: "queued_at";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ListComposeStackDeploymentsStatusErrorComponent: {
+      /**
+       * @description * `status` - status
+       * @enum {string}
+       */
+      attr: "status";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `invalid_list` - invalid_list
+       * @enum {string}
+       */
+      code: "invalid_choice" | "invalid_list";
+      detail: string;
+    };
+    ListComposeStackDeploymentsValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ListComposeStackDeploymentsError"][];
+    };
     ListGitAppRepositoriesError: components["schemas"]["ListGitAppRepositoriesQueryErrorComponent"];
     ListGitAppRepositoriesErrorResponse400: components["schemas"]["ListGitAppRepositoriesValidationError"] | components["schemas"]["ParseErrorResponse"];
     ListGitAppRepositoriesPaginatedError: components["schemas"]["ListGitAppRepositoriesPaginatedQueryErrorComponent"];
@@ -3444,6 +3481,21 @@ export interface components {
        */
       previous: string | null;
       results: components["schemas"]["BuildRegistryListCreate"][];
+    };
+    PaginatedComposeStackDeploymentList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["ComposeStackDeployment"][];
     };
     PaginatedGitRepositoryList: {
       /** @example 123 */
@@ -8094,90 +8146,6 @@ export interface operations {
       };
     };
   };
-  /** Get a compose stack deployment details */
-  getComposeStackDeploymentDetails: {
-    parameters: {
-      path: {
-        env_slug: string;
-        hash: string;
-        project_slug: string;
-        slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["ComposeStackDeployment"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["GetComposeStackDeploymentDetailsErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /**
-   * Cancel compose stack deployment
-   * @description Cancel a compose stack deployment in progress.
-   */
-  cancelComposeStackDeployment: {
-    parameters: {
-      path: {
-        env_slug: string;
-        hash: string;
-        project_slug: string;
-        slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["ComposeStackDeployment"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["CancelComposeStackDeploymentErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      409: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse409"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
   /** Archive a compose stack */
   archiveComposeStack: {
     parameters: {
@@ -8370,6 +8338,143 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get a list of all the deployments for a compose stack */
+  listComposeStackDeployments: {
+    parameters: {
+      query?: {
+        /** @description A page number within the paginated result set. */
+        page?: number;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+        queued_at_after?: string;
+        queued_at_before?: string;
+        /**
+         * @description * `QUEUED` - Queued
+         * * `DEPLOYING` - Deploying
+         * * `FINISHED` - Finished
+         * * `FAILED` - Failed
+         * * `CANCELLED` - Cancelled
+         */
+        status?: ("CANCELLED" | "DEPLOYING" | "FAILED" | "FINISHED" | "QUEUED")[];
+      };
+      path: {
+        env_slug: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedComposeStackDeploymentList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ListComposeStackDeploymentsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get a compose stack deployment details */
+  getComposeStackDeploymentDetails: {
+    parameters: {
+      path: {
+        env_slug: string;
+        hash: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ComposeStackDeployment"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetComposeStackDeploymentDetailsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Cancel compose stack deployment
+   * @description Cancel a compose stack deployment in progress.
+   */
+  cancelComposeStackDeployment: {
+    parameters: {
+      path: {
+        env_slug: string;
+        hash: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ComposeStackDeployment"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CancelComposeStackDeploymentErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
         };
       };
       429: {

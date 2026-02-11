@@ -23,6 +23,8 @@ from .serializers import (
     ComposeStackToggleRequestSerializer,
     ComposeStackWebhookDeployRequestSerializer,
     ComposeStacksListFilterSet,
+    ComposeStackDeploymentListFilterSet,
+    ComposeStackDeploymentListPagination,
 )
 from ..models import ComposeStack, ComposeStackDeployment, ComposeStackChange
 from django.db.models import QuerySet
@@ -461,6 +463,58 @@ class ComposeStackArchiveAPIView(APIView):
         stack.name
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ComposeStackDeploymentListAPIView(ListAPIView):
+    serializer_class = ComposeStackDeploymentSerializer
+    queryset = ComposeStackDeployment.objects.all()
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ComposeStackDeploymentListFilterSet
+    pagination_class = ComposeStackDeploymentListPagination
+
+    @extend_schema(
+        operation_id="listComposeStackDeployments",
+        summary="Get a list of all the deployments for a compose stack",
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self) -> QuerySet[ComposeStackDeployment]:  # type: ignore
+        project_slug = self.kwargs["project_slug"]
+        env_slug = self.kwargs["env_slug"]
+        slug = self.kwargs["slug"]
+
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=self.request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = ComposeStack.objects.filter(
+                environment=environment,
+                project=project,
+                slug=slug,
+            ).get()
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+        except ComposeStackDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack deployment with the hash `{hash}` does not exist in this stack"
+            )
+
+        return stack.deployments
 
 
 class ComposeStackDeploymentDetailsAPIView(RetrieveAPIView):

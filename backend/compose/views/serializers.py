@@ -30,6 +30,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from search.dtos import RuntimeLogLevel
 from search.serializers import RuntimeLogsContextParamsSerializer
+from rest_framework import pagination
 
 
 class ComposeStackChangeSerializer(serializers.ModelSerializer):
@@ -733,6 +734,28 @@ class CreateComposeStackFromDokployTemplateObjectRequestSerializer(
             )
 
         return slug
+
+
+# =======================================
+#         Stack deployment list         #
+# =======================================
+
+
+class ComposeStackDeploymentListFilterSet(django_filters.FilterSet):
+    status = django_filters.MultipleChoiceFilter(
+        choices=ComposeStackDeployment.DeploymentStatus.choices
+    )
+    queued_at = django_filters.DateTimeFromToRangeFilter()
+
+    class Meta:
+        model = ComposeStackDeployment
+        fields = ["status", "queued_at"]
+
+
+class ComposeStackDeploymentListPagination(pagination.PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "per_page"
+    page_query_param = "page"
 
 
 # =======================================

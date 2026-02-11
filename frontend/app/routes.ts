@@ -208,6 +208,12 @@ export default [
           route(
             "regenerate-token",
             "./routes/compose/regenerate-compose-stack-deploy-token.tsx"
+          ),
+          route("http-logs", "./routes/compose/compose-stack-http-logs.tsx"),
+          route("metrics", "./routes/compose/compose-stack-metrics.tsx"),
+          route(
+            "deployments",
+            "./routes/compose/compose-stack-deployment-list.tsx"
           )
         ])
       ])

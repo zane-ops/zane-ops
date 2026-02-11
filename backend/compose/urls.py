@@ -91,12 +91,17 @@ urlpatterns = [
         name="stacks.redeploy",
     ),
     re_path(
-        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/(?P<hash>[a-zA-Z0-9-_]+)/?$",
+        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/deployments/?$",
+        views.ComposeStackDeploymentListAPIView.as_view(),
+        name="stacks.deployments.list",
+    ),
+    re_path(
+        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/deployments/(?P<hash>[a-zA-Z0-9-_]+)/?$",
         views.ComposeStackDeploymentDetailsAPIView.as_view(),
         name="stacks.deployments.details",
     ),
     re_path(
-        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/(?P<hash>[a-zA-Z0-9-_]+)/cancel/?$",
+        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/deployments/(?P<hash>[a-zA-Z0-9-_]+)/cancel/?$",
         views.CancelComposeStackDeploymentAPIView.as_view(),
         name="stacks.deployments.cancel",
     ),
