@@ -14,12 +14,7 @@ import {
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
 import { flushSync } from "react-dom";
-import {
-  useLoaderData,
-  useMatches,
-  useParams,
-  useSearchParams
-} from "react-router";
+import { useLoaderData, useParams, useSearchParams } from "react-router";
 import { useDebouncedCallback } from "use-debounce";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { HttpLogRequestDetails } from "~/components/http-log-request-details";
