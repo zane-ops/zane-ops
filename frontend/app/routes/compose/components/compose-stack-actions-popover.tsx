@@ -53,7 +53,7 @@ export function ComposeStackActionsPopover({
       if (!deployFetcher.data.errors) {
         navigate(
           href(
-            "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+            "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
             {
               projectSlug,
               envSlug,

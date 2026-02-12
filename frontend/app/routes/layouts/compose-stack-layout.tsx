@@ -204,7 +204,7 @@ export default function ComposeStackLayoutPage({
           </li>
 
           <li>
-            <NavLink to="./deployments">
+            <NavLink to="./deployments/">
               <span>Deployments</span>
               <RocketIcon size={15} className="flex-none" />
             </NavLink>

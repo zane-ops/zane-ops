@@ -56,9 +56,14 @@ export async function clientAction({
     };
   }
 
-  await queryClient.invalidateQueries(
-    composeStackQueries.single({ project_slug, stack_slug, env_slug })
-  );
+  await Promise.all([
+    queryClient.invalidateQueries(
+      composeStackQueries.single({ project_slug, stack_slug, env_slug })
+    ),
+    queryClient.invalidateQueries(
+      composeStackQueries.deploymentList({ project_slug, stack_slug, env_slug })
+    )
+  ]);
   toast.success("Success", {
     description: "Deployment queued sucesfully !",
     closeButton: true

@@ -8,6 +8,7 @@ import { GitlabLogo } from "~/components/gitlab-logo";
 import { GoogleArtifactLogo } from "~/components/google-artifact-logo";
 import { cn } from "~/lib/utils";
 import { durationToMs } from "~/utils";
+
 export const DEPLOYMENT_STATUSES = [
   "QUEUED",
   "BUILDING",

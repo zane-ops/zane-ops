@@ -410,6 +410,11 @@ export const composeStackQueries = {
                 project_slug,
                 slug: stack_slug,
                 env_slug
+              },
+              query: {
+                ...filters,
+                queued_at_after: filters.queued_at_after?.toISOString(),
+                queued_at_before: filters.queued_at_before?.toISOString()
               }
             },
             signal

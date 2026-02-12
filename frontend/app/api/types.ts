@@ -29,11 +29,6 @@ export type Service = ApiResponse<
 >;
 export type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
 
-export type ComposeStack = ApiResponse<
-  "get",
-  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/"
->;
-
 export type Project = ApiResponse<"get", "/api/projects/{slug}/">;
 export type Deployment = ApiResponse<
   "get",
@@ -49,4 +44,13 @@ export type PreviewTemplate = NonNullable<
     "get",
     "/api/projects/{project_slug}/preview-templates/{template_slug}/"
   >
+>;
+export type ComposeStack = ApiResponse<
+  "get",
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/"
+>;
+
+export type ComposeStackDeployment = ApiResponse<
+  "get",
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deployments/{hash}/"
 >;
