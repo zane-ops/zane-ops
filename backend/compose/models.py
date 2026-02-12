@@ -377,6 +377,10 @@ class ComposeStackDeployment(TimestampedModel):
     def workflow_id(self):
         return f"deploy-compose-{self.stack.id}"
 
+    class Meta:  # type: ignore
+        ordering = ["-queued_at"]
+        indexes = [models.Index(fields=["queued_at"]), models.Index(fields=["status"])]
+
 
 class ComposeStackEnvOverride(BaseEnvVariable):
     """Environment variable overrides at stack level"""
