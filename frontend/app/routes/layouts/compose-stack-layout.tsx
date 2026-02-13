@@ -87,13 +87,6 @@ export default function ComposeStackLayoutPage({
 
   const location = useLocation();
 
-  const isInServicesTab =
-    location.pathname ===
-    href(
-      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
-      params
-    );
-
   return (
     <>
       <title>{title}</title>
@@ -225,25 +218,6 @@ export default function ComposeStackLayoutPage({
           </li>
         </ul>
       </nav>
-
-      {!isInServicesTab && (
-        <Button
-          variant="outline"
-          className={cn(
-            "inline-flex gap-2 fixed bottom-10 right-5 md:right-10 z-30",
-            "bg-grey text-white dark:text-black"
-          )}
-          onClick={() => {
-            const main = document.querySelector("main");
-            main?.scrollIntoView({
-              behavior: "smooth",
-              block: "start"
-            });
-          }}
-        >
-          <span>Back to top</span> <ArrowUpIcon size={15} />
-        </Button>
-      )}
 
       <section className="mt-2">
         <Outlet />

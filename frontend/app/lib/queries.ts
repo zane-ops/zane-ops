@@ -319,6 +319,10 @@ export const metrisSearch = z.object({
 
 export type MetricsFilters = z.TypeOf<typeof metrisSearch>;
 
+/**
+ * Stack Queries
+ */
+
 export const stackDeploymentListFilters = zfd.formData({
   page: zfd.numeric().optional().catch(1).optional(),
   per_page: zfd.numeric().optional().catch(10).optional(),
@@ -335,6 +339,17 @@ export const stackDeploymentListFilters = zfd.formData({
 export type StackDeploymentListFilters = z.infer<
   typeof stackDeploymentListFilters
 >;
+
+export const stackMetrisSearch = z.object({
+  time_range: z
+    .enum(METRICS_TIME_RANGES)
+    .optional()
+    .default("LAST_HOUR")
+    .catch("LAST_HOUR"),
+  service_names: zfd.repeatable(z.array(z.string()))
+});
+
+export type StackMetricsFilters = z.TypeOf<typeof stackMetrisSearch>;
 
 export const composeStackQueries = {
   single: ({
@@ -570,20 +585,20 @@ export const composeStackQueries = {
     }),
   metrics: ({
     project_slug,
-    service_slug,
+    stack_slug,
     env_slug,
     filters
   }: {
     project_slug: string;
-    service_slug: string;
+    stack_slug: string;
     env_slug: string;
-    filters?: MetricsFilters;
+    filters?: StackMetricsFilters;
   }) =>
     queryOptions({
       queryKey: [
-        ...serviceQueries.single({
+        ...composeStackQueries.single({
           project_slug,
-          service_slug,
+          stack_slug,
           env_slug
         }).queryKey,
         "METRICS",
@@ -591,12 +606,12 @@ export const composeStackQueries = {
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/metrics/",
+          "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/metrics/",
           {
             params: {
               path: {
                 project_slug,
-                service_slug,
+                slug: stack_slug,
                 env_slug
               },
               query: {

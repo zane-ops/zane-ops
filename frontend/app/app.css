@@ -202,11 +202,14 @@
 		--ansi-bright-white: #bfbfbf;
 		background-color: hsl(164 62% 99%);
 
-		--chart-1: hsl(220 70% 50%);
-		--chart-2: hsl(173 58% 39%);
-		--chart-3: hsl(197 37% 24%);
-		--chart-4: hsl(280 65% 60%);
-		--chart-5: hsl(340 75% 55%);
+		--chart-1: oklch(0.5292 0.1931 262.13);
+		--chart-2: oklch(0.6309 0.1013 183.49);
+		--chart-3: oklch(0.3787 0.044 225.54);
+		--chart-4: oklch(0.6192 0.2037 312.73);
+		--chart-5: oklch(0.6123 0.2093 6.39);
+		--chart-6: oklch(0.646 0.222 41.116);
+		--chart-7: oklch(0.828 0.189 84.429);
+		--chart-8: oklch(0.769 0.188 70.08);
 	}
 
 	:root[data-theme="dark"] {

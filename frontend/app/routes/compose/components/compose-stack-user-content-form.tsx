@@ -129,7 +129,7 @@ export function ComposeStackUserContentForm({
             hasError={!!errors.new_value}
             containerClassName={cn(
               "w-full h-100",
-              "w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[73dvw] xl:w-[890px]"
+              "w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[73dvw] xl:w-[882px]"
             )}
             language="yaml"
             value={userContent}

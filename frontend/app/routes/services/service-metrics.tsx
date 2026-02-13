@@ -173,7 +173,6 @@ export default function ServiceMetricsPage({
                   />
 
                   <ChartTooltip
-                    cursor={false}
                     content={
                       <ChartTooltipContent
                         hideLabel
@@ -284,7 +283,6 @@ export default function ServiceMetricsPage({
                   />
 
                   <ChartTooltip
-                    cursor={false}
                     content={
                       <ChartTooltipContent
                         hideLabel
@@ -374,9 +372,10 @@ export default function ServiceMetricsPage({
                     domain={[
                       0,
                       Math.max(
-                        ...metrics
-                          .map((m) => [m.total_net_rx, m.total_net_tx])
-                          .flat()
+                        ...metrics.flatMap((m) => [
+                          m.total_net_rx,
+                          m.total_net_tx
+                        ])
                       ) + convertValueToBytes(10, "MEGABYTES")
                     ]}
                     tickFormatter={(value) => {
@@ -402,7 +401,6 @@ export default function ServiceMetricsPage({
                   />
 
                   <ChartTooltip
-                    cursor={false}
                     content={
                       <ChartTooltipContent
                         hideLabel
@@ -512,9 +510,10 @@ export default function ServiceMetricsPage({
                     domain={[
                       0,
                       Math.max(
-                        ...metrics
-                          .map((m) => [m.total_disk_write, m.total_disk_read])
-                          .flat()
+                        ...metrics.flatMap((m) => [
+                          m.total_disk_write,
+                          m.total_disk_read
+                        ])
                       ) + convertValueToBytes(10, "MEGABYTES")
                     ]}
                     tickFormatter={(value) => {
@@ -540,7 +539,6 @@ export default function ServiceMetricsPage({
                   />
 
                   <ChartTooltip
-                    cursor={false}
                     content={
                       <ChartTooltipContent
                         hideLabel
