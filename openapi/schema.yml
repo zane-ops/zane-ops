@@ -1734,7 +1734,7 @@ paths:
           description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/metrics/:
     get:
-      operationId: compose_stacks_metrics_retrieve
+      operationId: compose_stacks_metrics_list
       summary: Get stack metrics
       parameters:
       - in: path
@@ -1789,7 +1789,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ComposeStacksMetricsRetrieveErrorResponse400'
+                $ref: '#/components/schemas/ComposeStacksMetricsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -1844,7 +1844,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ComposeStackMetricsResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/ComposeStackMetrics'
           description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/regenerate-deploy-token/:
     put:
@@ -12510,25 +12512,17 @@ components:
           type: integer
         total_disk_write:
           type: integer
+        service_name:
+          type: string
       required:
       - avg_cpu
       - avg_memory
       - bucket_epoch
+      - service_name
       - total_disk_read
       - total_disk_write
       - total_net_rx
       - total_net_tx
-    ComposeStackMetricsResponse:
-      type: object
-      properties:
-        services:
-          type: object
-          additionalProperties:
-            type: array
-            items:
-              $ref: '#/components/schemas/ComposeStackMetrics'
-      required:
-      - services
     ComposeStackRequest:
       type: object
       properties:
@@ -13132,7 +13126,7 @@ components:
       required:
       - errors
       - type
-    ComposeStacksMetricsRetrieveErrorResponse400:
+    ComposeStacksMetricsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:

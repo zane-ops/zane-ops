@@ -110,7 +110,7 @@ export interface paths {
   };
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/metrics/": {
     /** Get stack metrics */
-    get: operations["compose_stacks_metrics_retrieve"];
+    get: operations["compose_stacks_metrics_list"];
   };
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/regenerate-deploy-token/": {
     /** Regenerate a compose stack deploy token */
@@ -1159,11 +1159,7 @@ export interface components {
       total_net_rx: number;
       total_disk_read: number;
       total_disk_write: number;
-    };
-    ComposeStackMetricsResponse: {
-      services: {
-        [key: string]: components["schemas"]["ComposeStackMetrics"][];
-      };
+      service_name: string;
     };
     ComposeStackRequest: {
       slug?: string;
@@ -1410,7 +1406,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ComposeStacksListError"][];
     };
-    ComposeStacksMetricsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ComposeStacksMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksRuntimeLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksRuntimeLogsWithContextRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksUpdateError: components["schemas"]["ComposeStacksUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ComposeStacksUpdateSlugErrorComponent"];
@@ -8485,7 +8481,7 @@ export interface operations {
     };
   };
   /** Get stack metrics */
-  compose_stacks_metrics_retrieve: {
+  compose_stacks_metrics_list: {
     parameters: {
       query?: {
         service_names?: string[];
@@ -8507,12 +8503,12 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["ComposeStackMetricsResponse"];
+          "application/json": components["schemas"]["ComposeStackMetrics"][];
         };
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ComposeStacksMetricsRetrieveErrorResponse400"];
+          "application/json": components["schemas"]["ComposeStacksMetricsListErrorResponse400"];
         };
       };
       401: {
