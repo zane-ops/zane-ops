@@ -769,10 +769,11 @@ class ComposeStackMetricsSerializer(serializers.Serializer):
     total_net_rx = serializers.IntegerField()
     total_disk_read = serializers.IntegerField()
     total_disk_write = serializers.IntegerField()
+    service_name = serializers.CharField()
 
 
-class ComposeStackMetricsResponseSerializer(serializers.Serializer):
-    services = serializers.DictField(child=ComposeStackMetricsSerializer(many=True))
+class ComposeStackMetricsResponseSerializer(serializers.ListSerializer):
+    child = ComposeStackMetricsSerializer()
 
 
 class ComposeStackMetricsQuery(serializers.Serializer):

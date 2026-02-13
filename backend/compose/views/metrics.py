@@ -145,15 +145,5 @@ class ComposeStackMetricsAPIView(APIView):
             .order_by("bucket_epoch")
         )
 
-        metrics_per_service: dict[str, list[dict]] = {}
-        for metric in aggregated:
-            service_name = metric["service_name"]
-            metrics_per_service[service_name] = metrics_per_service.get(
-                service_name, []
-            )
-            metrics_per_service[service_name].append(metric)
-
-        serializer = ComposeStackMetricsResponseSerializer(
-            {"services": metrics_per_service}
-        )
+        serializer = ComposeStackMetricsResponseSerializer(aggregated)
         return Response(data=serializer.data)
