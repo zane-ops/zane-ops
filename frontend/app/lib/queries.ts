@@ -467,7 +467,7 @@ export const composeStackQueries = {
     filters?: Omit<HTTPLogFilters, "isMaximized">;
     queryClient: QueryClient;
     autoRefetchEnabled?: boolean;
-    stack_service_name?: string;
+    stack_service_name?: string[];
   }) =>
     infiniteQueryOptions({
       queryKey: [
@@ -478,6 +478,7 @@ export const composeStackQueries = {
         }).queryKey,
         "HTTP_LOGS",
         stack_id,
+        stack_service_name,
         filters
       ] as const,
       queryFn: async ({ pageParam, signal, queryKey }) => {
@@ -513,7 +514,10 @@ export const composeStackQueries = {
               ...filters,
               cursor,
               stack_id,
-              stack_service_name,
+              stack_service_name:
+                (stack_service_name ?? []).length === 0
+                  ? undefined
+                  : stack_service_name,
               per_page: DEFAULT_LOGS_PER_PAGE,
               time_before: filters.time_before?.toISOString(),
               time_after: filters.time_after?.toISOString()
@@ -553,7 +557,10 @@ export const composeStackQueries = {
               query: {
                 ...filters,
                 stack_id,
-                stack_service_name,
+                stack_service_name:
+                  (stack_service_name ?? []).length === 0
+                    ? undefined
+                    : stack_service_name,
                 per_page: DEFAULT_LOGS_PER_PAGE,
                 cursor: apiData.next,
                 time_before: filters.time_before?.toISOString(),
@@ -582,6 +589,80 @@ export const composeStackQueries = {
       initialPageParam: null as string | null,
       placeholderData: keepPreviousData,
       staleTime: Number.POSITIVE_INFINITY
+    }),
+  singleHttpLog: ({
+    project_slug,
+    stack_slug,
+    env_slug,
+    request_uuid
+  }: {
+    project_slug: string;
+    stack_slug: string;
+    env_slug: string;
+    request_uuid: string;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...composeStackQueries.single({
+          project_slug,
+          stack_slug,
+          env_slug
+        }).queryKey,
+        "HTTP_LOGS",
+        request_uuid
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/http-logs/{request_uuid}/", {
+          params: {
+            path: {
+              request_uuid
+            }
+          },
+          signal
+        });
+        return data;
+      }
+    }),
+  filterHttpLogFields: ({
+    project_slug,
+    env_slug,
+    stack_id,
+    stack_slug,
+    field,
+    value
+  }: {
+    project_slug: string;
+    stack_id: string;
+    stack_slug: string;
+    env_slug: string;
+    field: RequestParams<"get", "/api/http-logs/fields/">["field"];
+    value: string;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...composeStackQueries.single({
+          project_slug,
+          stack_slug,
+          env_slug
+        }).queryKey,
+        stack_id,
+        "HTTP_LOG_FIELDS",
+        field,
+        value
+      ],
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/http-logs/fields/", {
+          signal,
+          params: {
+            query: {
+              field,
+              value,
+              stack_id
+            }
+          }
+        });
+        return data ?? [];
+      }
     }),
   metrics: ({
     project_slug,

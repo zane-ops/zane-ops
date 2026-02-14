@@ -3165,7 +3165,7 @@ export interface components {
       code: "null_characters_not_allowed";
       detail: string;
     };
-    HttpLogsListError: components["schemas"]["HttpLogsListTimeErrorComponent"] | components["schemas"]["HttpLogsListRequestMethodErrorComponent"] | components["schemas"]["HttpLogsListRequestQueryErrorComponent"] | components["schemas"]["HttpLogsListStackIdErrorComponent"] | components["schemas"]["HttpLogsListStackServiceNameErrorComponent"] | components["schemas"]["HttpLogsListServiceIdErrorComponent"] | components["schemas"]["HttpLogsListDeploymentIdErrorComponent"] | components["schemas"]["HttpLogsListSortByErrorComponent"];
+    HttpLogsListError: components["schemas"]["HttpLogsListTimeErrorComponent"] | components["schemas"]["HttpLogsListRequestMethodErrorComponent"] | components["schemas"]["HttpLogsListRequestQueryErrorComponent"] | components["schemas"]["HttpLogsListStackIdErrorComponent"] | components["schemas"]["HttpLogsListServiceIdErrorComponent"] | components["schemas"]["HttpLogsListDeploymentIdErrorComponent"] | components["schemas"]["HttpLogsListSortByErrorComponent"];
     HttpLogsListErrorResponse400: components["schemas"]["HttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     HttpLogsListRequestMethodErrorComponent: {
       /**
@@ -3226,19 +3226,6 @@ export interface components {
        * @enum {string}
        */
       attr: "stack_id";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    HttpLogsListStackServiceNameErrorComponent: {
-      /**
-       * @description * `stack_service_name` - stack_service_name
-       * @enum {string}
-       */
-      attr: "stack_service_name";
       /**
        * @description * `null_characters_not_allowed` - null_characters_not_allowed
        * @enum {string}
@@ -9614,7 +9601,8 @@ export interface operations {
          */
         sort_by?: ("-request_duration_ns" | "-time" | "request_duration_ns" | "time")[];
         stack_id?: string;
-        stack_service_name?: string;
+        /** @description Multiple values may be separated by commas. */
+        stack_service_name?: string[];
         /** @description Multiple values may be separated by commas. */
         status?: string[];
         time_after?: string;

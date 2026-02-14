@@ -1,4 +1,3 @@
-import { index } from "@react-router/dev/routes";
 import { useQuery } from "@tanstack/react-query";
 import {
   CpuIcon,
@@ -6,9 +5,8 @@ import {
   MicrochipIcon,
   NetworkIcon
 } from "lucide-react";
-import type { i } from "node_modules/@react-router/dev/dist/routes-CZR-bKRt";
 import { Form, useSearchParams } from "react-router";
-import { Area, AreaChart, CartesianGrid, Line, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { MultiSelect } from "~/components/multi-select";
 import {
   Card,
@@ -38,7 +36,6 @@ import {
 } from "~/lib/queries";
 import { queryClient } from "~/root";
 import {
-  convertValueToBytes,
   formatStorageValue,
   getMaxDomainForStorageValue,
   timeAgoFormatter

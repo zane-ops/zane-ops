@@ -4276,7 +4276,12 @@ paths:
       - in: query
         name: stack_service_name
         schema:
-          type: string
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
       - in: query
         name: status
         schema:
@@ -17112,7 +17117,6 @@ components:
       - $ref: '#/components/schemas/HttpLogsListRequestMethodErrorComponent'
       - $ref: '#/components/schemas/HttpLogsListRequestQueryErrorComponent'
       - $ref: '#/components/schemas/HttpLogsListStackIdErrorComponent'
-      - $ref: '#/components/schemas/HttpLogsListStackServiceNameErrorComponent'
       - $ref: '#/components/schemas/HttpLogsListServiceIdErrorComponent'
       - $ref: '#/components/schemas/HttpLogsListDeploymentIdErrorComponent'
       - $ref: '#/components/schemas/HttpLogsListSortByErrorComponent'
@@ -17123,7 +17127,6 @@ components:
           request_method: '#/components/schemas/HttpLogsListRequestMethodErrorComponent'
           request_query: '#/components/schemas/HttpLogsListRequestQueryErrorComponent'
           stack_id: '#/components/schemas/HttpLogsListStackIdErrorComponent'
-          stack_service_name: '#/components/schemas/HttpLogsListStackServiceNameErrorComponent'
           service_id: '#/components/schemas/HttpLogsListServiceIdErrorComponent'
           deployment_id: '#/components/schemas/HttpLogsListDeploymentIdErrorComponent'
           sort_by: '#/components/schemas/HttpLogsListSortByErrorComponent'
@@ -17223,25 +17226,6 @@ components:
           - stack_id
           type: string
           description: '* `stack_id` - stack_id'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    HttpLogsListStackServiceNameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - stack_service_name
-          type: string
-          description: '* `stack_service_name` - stack_service_name'
         code:
           enum:
           - null_characters_not_allowed
