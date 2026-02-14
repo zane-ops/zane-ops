@@ -467,7 +467,7 @@ export const composeStackQueries = {
     filters?: Omit<HTTPLogFilters, "isMaximized">;
     queryClient: QueryClient;
     autoRefetchEnabled?: boolean;
-    stack_service_name: string;
+    stack_service_name?: string;
   }) =>
     infiniteQueryOptions({
       queryKey: [
@@ -476,8 +476,8 @@ export const composeStackQueries = {
           stack_slug,
           env_slug
         }).queryKey,
-        stack_id,
         "HTTP_LOGS",
+        stack_id,
         filters
       ] as const,
       queryFn: async ({ pageParam, signal, queryKey }) => {

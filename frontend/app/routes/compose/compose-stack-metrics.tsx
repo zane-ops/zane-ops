@@ -40,6 +40,7 @@ import { queryClient } from "~/root";
 import {
   convertValueToBytes,
   formatStorageValue,
+  getMaxDomainForStorageValue,
   timeAgoFormatter
 } from "~/utils";
 import type { Route } from "./+types/compose-stack-metrics";
@@ -262,27 +263,6 @@ export default function ComposeStackMetricsPage({
     });
   }
 
-  function getMaxDomainForStorageValue(maxValueInBytes: number) {
-    const _100Kb = convertValueToBytes(100, "KILOBYTES");
-    const _10Mb = convertValueToBytes(10, "MEGABYTES");
-    const _100Mb = convertValueToBytes(100, "MEGABYTES");
-    const _500Mb = convertValueToBytes(500, "MEGABYTES");
-    const _1GB = convertValueToBytes(1, "GIGABYTES");
-
-    return (
-      maxValueInBytes +
-      (maxValueInBytes > _1GB
-        ? _1GB
-        : maxValueInBytes > _500Mb
-          ? _500Mb
-          : maxValueInBytes > _100Mb
-            ? _100Mb
-            : maxValueInBytes > _10Mb
-              ? _10Mb
-              : _100Kb)
-    );
-  }
-
   return (
     <div className="flex flex-col gap-4 py-4">
       <Form className="flex items-center gap-4">
@@ -354,17 +334,7 @@ export default function ComposeStackMetricsPage({
                   <YAxis
                     tickLine={false}
                     axisLine={false}
-                    domain={[
-                      0,
-                      maxCPU +
-                        (maxCPU > 1
-                          ? 1
-                          : maxCPU > 0.5
-                            ? 0.5
-                            : maxCPU > 0.1
-                              ? 0.1
-                              : 0.05)
-                    ]}
+                    domain={[0, loaderData.limits.no_of_cpus]}
                     allowDataOverflow
                     type="number"
                     tickFormatter={(value) => {
@@ -489,13 +459,7 @@ export default function ComposeStackMetricsPage({
                   <YAxis
                     tickLine={false}
                     axisLine={false}
-                    domain={[
-                      0,
-                      Math.min(
-                        getMaxDomainForStorageValue(maxMemory),
-                        loaderData.limits.max_memory_in_bytes
-                      )
-                    ]}
+                    domain={[0, loaderData.limits.max_memory_in_bytes]}
                     tickFormatter={(value) => {
                       const { value: value_str, unit } = formatStorageValue(
                         Number(value)

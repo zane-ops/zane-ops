@@ -393,3 +393,24 @@ export function getDockerImageIconURL(image: string) {
   // Other registries are ignored
   return iconSrc;
 }
+
+export function getMaxDomainForStorageValue(maxValueInBytes: number) {
+  const _100Kb = convertValueToBytes(100, "KILOBYTES");
+  const _10Mb = convertValueToBytes(10, "MEGABYTES");
+  const _100Mb = convertValueToBytes(100, "MEGABYTES");
+  const _500Mb = convertValueToBytes(500, "MEGABYTES");
+  const _1GB = convertValueToBytes(1, "GIGABYTES");
+
+  return (
+    maxValueInBytes +
+    (maxValueInBytes > _1GB
+      ? _1GB
+      : maxValueInBytes > _500Mb
+        ? _500Mb
+        : maxValueInBytes > _100Mb
+          ? _100Mb
+          : maxValueInBytes > _10Mb
+            ? _10Mb
+            : _100Kb)
+  );
+}
