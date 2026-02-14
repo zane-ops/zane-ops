@@ -506,13 +506,8 @@ function LogTableRowContent({ log }: LogTableRowProps) {
   return (
     <>
       <TableCell>
-        <time
-          className="text-grey whitespace-nowrap"
-          dateTime={new Date(log.time).toISOString()}
-        >
-          <span className="sr-only sm:not-sr-only">
-            {logTime.dateFormat},&nbsp;
-          </span>
+        <time className="text-grey" dateTime={new Date(log.time).toISOString()}>
+          <span className="whitespace-nowrap">{logTime.dateFormat},&nbsp;</span>
           <span>{logTime.hourFormat}</span>
         </time>
       </TableCell>
