@@ -1,5 +1,6 @@
 import {
   BanIcon,
+  CheckSquareIcon,
   ClockArrowUpIcon,
   CloudOffIcon,
   FastForwardIcon,
@@ -7,8 +8,10 @@ import {
   HeartPulseIcon,
   HourglassIcon,
   LoaderIcon,
+  type LucideIcon,
   PauseIcon,
   RefreshCwOffIcon,
+  RocketIcon,
   RotateCcwIcon,
   SquareCheckBig,
   Trash2Icon,
@@ -24,9 +27,11 @@ const DEPLOYMENT_STATUS_COLOR_MAP = {
   STARTING: "blue",
   RESTARTING: "blue",
   BUILDING: "blue",
+  DEPLOYING: "blue",
   PREPARING: "blue",
   CANCELLING: "blue",
   HEALTHY: "green",
+  FINISHED: "green",
   UNHEALTHY: "red",
   FAILED: "red",
   REMOVED: "gray",
@@ -36,7 +41,11 @@ const DEPLOYMENT_STATUS_COLOR_MAP = {
   COMPLETE: "yellow",
   NOT_DEPLOYED_YET: "gray"
 } as const satisfies Record<
-  (typeof DEPLOYMENT_STATUSES)[number] | "COMPLETE" | "NOT_DEPLOYED_YET",
+  | (typeof DEPLOYMENT_STATUSES)[number]
+  | "COMPLETE"
+  | "NOT_DEPLOYED_YET"
+  | "DEPLOYING"
+  | "FINISHED",
   StatusBadgeColor
 >;
 
@@ -66,11 +75,13 @@ export function DeploymentStatusBadge({
     SLEEPING: PauseIcon,
     STARTING: FastForwardIcon,
     BUILDING: HammerIcon,
+    DEPLOYING: RocketIcon,
+    FINISHED: CheckSquareIcon,
     PREPARING: HourglassIcon,
     CANCELLING: RefreshCwOffIcon,
     COMPLETE: SquareCheckBig,
     NOT_DEPLOYED_YET: CloudOffIcon
-  } as const satisfies Record<typeof status, React.ComponentType<any>>;
+  } as const satisfies Record<typeof status, LucideIcon>;
 
   const Icon = icons[status];
 
@@ -79,7 +90,8 @@ export function DeploymentStatusBadge({
     "PREPARING",
     "BUILDING",
     "CANCELLING",
-    "RESTARTING"
+    "RESTARTING",
+    "DEPLOYING"
   ].includes(status);
 
   const isActive = ["HEALTHY", "UNHEALTHY"].includes(status);

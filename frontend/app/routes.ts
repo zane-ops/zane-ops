@@ -215,7 +215,13 @@ export default [
             "deployments",
             "./routes/compose/compose-stack-deployment-list.tsx"
           )
-        ])
+        ]),
+
+        route(
+          "deployments/:deploymentHash",
+          "./routes/layouts/compose-stack-deployment-layout.tsx",
+          [index("./routes/compose/compose-stack-deployment-logs.tsx")]
+        )
       ])
     ])
   ])

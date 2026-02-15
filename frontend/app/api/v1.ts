@@ -77,10 +77,6 @@ export interface paths {
     /** Archive a compose stack */
     delete: operations["archiveComposeStack"];
   };
-  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/build-logs/": {
-    /** Get stack build logs */
-    get: operations["compose_stacks_build_logs_retrieve"];
-  };
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/cancel-changes/{change_id}/": {
     /** Cancel stack change */
     delete: operations["cancelStackChanges"];
@@ -100,6 +96,10 @@ export interface paths {
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deployments/{hash}/": {
     /** Get a compose stack deployment details */
     get: operations["getComposeStackDeploymentDetails"];
+  };
+  "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deployments/{hash}/build-logs/": {
+    /** Get stack build logs */
+    get: operations["compose_stacks_deployments_build_logs_retrieve"];
   };
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deployments/{hash}/cancel/": {
     /**
@@ -1318,7 +1318,6 @@ export interface components {
       commit_message?: string;
       user_content?: string;
     };
-    ComposeStacksBuildLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksCreateCreateError: components["schemas"]["ComposeStacksCreateCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ComposeStacksCreateCreateSlugErrorComponent"] | components["schemas"]["ComposeStacksCreateCreateUserContentErrorComponent"];
     ComposeStacksCreateCreateErrorResponse400: components["schemas"]["ComposeStacksCreateCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ComposeStacksCreateCreateNonFieldErrorsErrorComponent: {
@@ -1374,6 +1373,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ComposeStacksCreateCreateError"][];
     };
+    ComposeStacksDeploymentsBuildLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksListError: components["schemas"]["ComposeStacksListSlugErrorComponent"] | components["schemas"]["ComposeStacksListSortByErrorComponent"];
     ComposeStacksListErrorResponse400: components["schemas"]["ComposeStacksListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ComposeStacksListSlugErrorComponent: {
@@ -8165,47 +8165,6 @@ export interface operations {
       };
     };
   };
-  /** Get stack build logs */
-  compose_stacks_build_logs_retrieve: {
-    parameters: {
-      query?: {
-        cursor?: string;
-        per_page?: number;
-      };
-      path: {
-        env_slug: string;
-        project_slug: string;
-        slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["RuntimeLogsSearch"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ComposeStacksBuildLogsRetrieveErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
   /** Cancel stack change */
   cancelStackChanges: {
     parameters: {
@@ -8402,6 +8361,48 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["GetComposeStackDeploymentDetailsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get stack build logs */
+  compose_stacks_deployments_build_logs_retrieve: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        per_page?: number;
+      };
+      path: {
+        env_slug: string;
+        hash: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RuntimeLogsSearch"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ComposeStacksDeploymentsBuildLogsRetrieveErrorResponse400"];
         };
       };
       401: {

@@ -15,7 +15,7 @@ from .serializers import (
     StackBuildLogsQuerySerializer,
     StackRuntimeLogsContextQuerySerializer,
 )
-from ..models import ComposeStack
+from ..models import ComposeStack, ComposeStackDeployment
 from search.dtos import RuntimeLogSource
 
 
@@ -69,7 +69,7 @@ class ComposeStackRuntimeLogsAPIView(APIView):
             return Response(data)
 
 
-class ComposeStackBuildLogsAPIView(APIView):
+class ComposeStackDeploymentBuildLogsAPIView(APIView):
     serializer_class = RuntimeLogsSearchSerializer
 
     @extend_schema(
@@ -81,6 +81,7 @@ class ComposeStackBuildLogsAPIView(APIView):
         project_slug: str,
         env_slug: str,
         slug: str,
+        hash: str,
     ):
         try:
             project = Project.objects.get(
@@ -96,6 +97,7 @@ class ComposeStackBuildLogsAPIView(APIView):
                 project=project,
                 slug=slug,
             )
+            deployment = ComposeStackDeployment.objects.get(stack=stack, hash=hash)
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -108,6 +110,10 @@ class ComposeStackBuildLogsAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
             )
+        except ComposeStackDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack deployment with the hash `{hash}` does not exist in this stack"
+            )
 
         form = StackBuildLogsQuerySerializer(data=request.query_params)
         print(f"{request.query_params=}")
@@ -117,6 +123,7 @@ class ComposeStackBuildLogsAPIView(APIView):
                 query=dict(
                     **form.validated_data,  # type: ignore
                     stack_id=stack.id,
+                    deployment_id=deployment.hash,
                     source=[RuntimeLogSource.BUILD, RuntimeLogSource.SYSTEM],
                 )
             )

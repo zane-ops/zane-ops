@@ -512,14 +512,14 @@ function StackDeployedStep({
 
         <div className="flex gap-3 md:flex-row flex-col items-stretch">
           <Button asChild className="flex-1">
-            {/* TODO: change for build-logs page */}
             <Link
               to={href(
-                "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+                "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
                 {
                   composeStackSlug,
                   envSlug,
-                  projectSlug
+                  projectSlug,
+                  deploymentHash
                 }
               )}
               className="flex gap-2  items-center"

@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowUpIcon,
   BoxIcon,
   BoxesIcon,
   ChartNoAxesColumn,
@@ -23,7 +22,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
-import { Button } from "~/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -157,7 +155,7 @@ export default function ComposeStackLayoutPage({
 
           <div className="inline-flex gap-1 items-center text-grey text-sm">
             <HashIcon className="size-4 flex-none" />
-            <span>{stack.id}</span>
+            <span>ID: {stack.id}</span>
             <TooltipProvider>
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>

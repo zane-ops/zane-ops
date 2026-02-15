@@ -1011,107 +1011,6 @@ paths:
           description: ''
         '204':
           description: No response body
-  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/build-logs/:
-    get:
-      operationId: compose_stacks_build_logs_retrieve
-      summary: Get stack build logs
-      parameters:
-      - in: query
-        name: cursor
-        schema:
-          type: string
-          minLength: 1
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: per_page
-        schema:
-          type: integer
-          maximum: 100
-          minimum: 1
-          default: 50
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      tags:
-      - compose
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ComposeStacksBuildLogsRetrieveErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RuntimeLogsSearch'
-          description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/cancel-changes/{change_id}/:
     delete:
       operationId: cancelStackChanges
@@ -1629,6 +1528,113 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ComposeStackDeployment'
+          description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/deployments/{hash}/build-logs/:
+    get:
+      operationId: compose_stacks_deployments_build_logs_retrieve
+      summary: Get stack build logs
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+          minLength: 1
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStacksDeploymentsBuildLogsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeLogsSearch'
           description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/deployments/{hash}/cancel/:
     put:
@@ -12945,13 +12951,6 @@ components:
         user_content:
           type: string
           minLength: 1
-    ComposeStacksBuildLogsRetrieveErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     ComposeStacksCreateCreateError:
       oneOf:
       - $ref: '#/components/schemas/ComposeStacksCreateCreateNonFieldErrorsErrorComponent'
@@ -13063,6 +13062,13 @@ components:
       required:
       - errors
       - type
+    ComposeStacksDeploymentsBuildLogsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ComposeStacksListError:
       oneOf:
       - $ref: '#/components/schemas/ComposeStacksListSlugErrorComponent'

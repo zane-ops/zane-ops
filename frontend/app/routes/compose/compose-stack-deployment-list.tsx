@@ -50,7 +50,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { DEPLOYMENT_STATUSES } from "~/lib/constants";
 import { composeStackQueries, stackDeploymentListFilters } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
@@ -321,7 +320,6 @@ export function ComposeStackDeploymentCard({
   const isCancellable = cancellableDeploymentsStatuses.includes(status);
   const isRedeployable =
     finished_at || !runningDeploymentsStatuses.includes(status);
-  const isPending = !finished_at && runningDeploymentsStatuses.includes(status);
 
   const redeployFetcher = useFetcher();
   const cancelFetcher = useFetcher();
@@ -332,12 +330,10 @@ export function ComposeStackDeploymentCard({
         "flex flex-col md:flex-row items-start gap-4 md:gap-0 border group  px-3 py-4 rounded-md justify-between md:items-center relative",
         {
           "border-blue-600 bg-blue-600/10": status === "DEPLOYING",
-          //   "border-violet-600 bg-violet-600/10": status === "FINISHED",
           "border-green-600 bg-green-600/10": status === "FINISHED",
           "border-red-600 bg-red-600/10": status === "FAILED",
           "border-gray-600 bg-gray-600/10":
             status === "CANCELLED" || status === "QUEUED"
-          //   "border-yellow-600 bg-yellow-600/10": status === "SLEEPING"
         }
       )}
     >
@@ -383,7 +379,7 @@ export function ComposeStackDeploymentCard({
           <h3 className="inline-flex flex-wrap gap-0.5">
             <Link
               prefetch="viewport"
-              to={`deployments/${hash}/build-logs`}
+              to={`./${hash}`}
               className="whitespace-nowrap after:absolute after:inset-0 overflow-x-hidden text-ellipsis max-w-[300px] sm:max-w-[500px] lg:max-w-[600px] xl:max-w-[800px]"
             >
               {capitalizeText(commit_message.split("\n")[0])}
@@ -442,7 +438,7 @@ export function ComposeStackDeploymentCard({
             }
           )}
         >
-          <Link to={`./${hash}/build-logs`}>View logs</Link>
+          <Link to={`./${hash}`}>View logs</Link>
         </Button>
 
         {isRedeployable && (
@@ -485,7 +481,7 @@ export function ComposeStackDeploymentCard({
               <MenubarContentItem
                 icon={ScanTextIcon}
                 text="View logs"
-                onClick={() => navigate(`./${hash}/build-logs`)}
+                onClick={() => navigate(`./${hash}`)}
               />
 
               {isRedeployable && (

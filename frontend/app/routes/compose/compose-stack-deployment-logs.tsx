@@ -17,25 +17,25 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER } from "~/lib/constants";
-import { deploymentQueries } from "~/lib/queries";
+import { composeStackQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { Log } from "~/routes/deployments/deployment-logs";
-import type { Route } from "./+types/deployment-build-logs";
+import type { Route } from "./+types/compose-stack-deployment-logs";
 
 export async function clientLoader({
   params: {
     projectSlug: project_slug,
-    serviceSlug: service_slug,
+    composeStackSlug: stack_slug,
     envSlug: env_slug,
     deploymentHash: deployment_hash
   }
 }: Route.ClientLoaderArgs) {
   queryClient.prefetchInfiniteQuery(
-    deploymentQueries.buildLogs({
+    composeStackQueries.deploymentLogs({
       deployment_hash,
       project_slug,
-      service_slug,
+      stack_slug,
       env_slug,
       queryClient
     })
@@ -43,24 +43,19 @@ export async function clientLoader({
   return;
 }
 
-export default function DeploymentBuildLogsPage({
-  params: {
-    projectSlug: project_slug,
-    serviceSlug: service_slug,
-    envSlug: env_slug,
-    deploymentHash: deployment_hash
-  }
+export default function ComposeStackDeploymentLogsPage({
+  params
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
 
   const queryClient = useQueryClient();
   const logsQuery = useInfiniteQuery({
-    ...deploymentQueries.buildLogs({
-      deployment_hash,
-      project_slug,
-      service_slug,
-      env_slug,
+    ...composeStackQueries.deploymentLogs({
+      project_slug: params.projectSlug,
+      stack_slug: params.composeStackSlug,
+      env_slug: params.envSlug,
+      deployment_hash: params.deploymentHash,
       queryClient,
       autoRefetchEnabled: isAutoRefetchEnabled
     })

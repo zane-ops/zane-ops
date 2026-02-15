@@ -76,11 +76,6 @@ urlpatterns = [
         name="stack.runtime_logs.with_context",
     ),
     re_path(
-        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/build-logs/?$",
-        views.ComposeStackBuildLogsAPIView.as_view(),
-        name="stack.build_logs",
-    ),
-    re_path(
         rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/toggle/?$",
         views.ToggleComposeStackAPIView.as_view(),
         name="stacks.toggle",
@@ -99,6 +94,11 @@ urlpatterns = [
         rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/deployments/(?P<hash>[a-zA-Z0-9-_]+)/?$",
         views.ComposeStackDeploymentDetailsAPIView.as_view(),
         name="stacks.deployments.details",
+    ),
+    re_path(
+        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/deployments/(?P<hash>[a-zA-Z0-9-_]+)/build-logs/?$",
+        views.ComposeStackDeploymentBuildLogsAPIView.as_view(),
+        name="stack.deployments.build_logs",
     ),
     re_path(
         rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/deployments/(?P<hash>[a-zA-Z0-9-_]+)/cancel/?$",
