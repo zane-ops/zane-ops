@@ -437,7 +437,10 @@ class ComposeStackActivities:
 
         await deployment_log(
             deployment,
-            f"Compose stack deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC} finished with status {status_color}{result.status}{Colors.ENDC}",
+            [
+                "===========================================================================",
+                f"Compose stack deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC} finished with status {status_color}{result.status}{Colors.ENDC}",
+            ],
         )
 
         await deployment_log(
@@ -446,7 +449,10 @@ class ComposeStackActivities:
         )
         await deployment_log(
             deployment,
-            result.status_message.splitlines(),
+            result.status_message.splitlines()
+            + [
+                "===========================================================================",
+            ],
         )
 
         await ComposeStackDeployment.objects.filter(
