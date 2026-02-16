@@ -2058,7 +2058,7 @@ export function EnvVariableChangeItem({
     <div className="flex flex-col gap-2 items-center md:flex-row overflow-x-auto">
       <div
         className={cn(
-          "w-full px-3 py-4 bg-muted rounded-md inline-flex items-start text-start pr-24",
+          "w-full px-3 py-4 bg-muted rounded-md inline-flex items-start text-start pr-8",
           "font-mono",
           {
             "dark:bg-primary-foreground bg-primary/60": change.type === "ADD",
@@ -2116,7 +2116,7 @@ export function EnvVariableChangeItem({
 
           <div
             className={cn(
-              "w-full px-3 py-4 bg-muted rounded-md inline-flex items-start text-start pr-24",
+              "w-full px-3 py-4 bg-muted rounded-md inline-flex items-start text-start pr-8",
               "font-mono",
               "dark:bg-secondary-foreground bg-secondary/60"
             )}
