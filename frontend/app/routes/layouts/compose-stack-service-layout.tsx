@@ -74,8 +74,6 @@ export default function ComposeStackServiceLayoutPage({
   params,
   loaderData
 }: Route.ComponentProps) {
-  const navigate = useNavigate();
-
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
       project_slug: params.projectSlug,

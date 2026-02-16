@@ -220,7 +220,7 @@ export default [
         route(
           "services/:serviceSlug",
           "./routes/layouts/compose-stack-service-layout.tsx",
-          []
+          [index("./routes/compose/compose-stack-service-replicas.tsx")]
         ),
 
         route(
