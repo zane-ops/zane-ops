@@ -469,25 +469,17 @@ class ComposeSpecProcessor:
                 return secrets.token_hex(int(count / 2))
 
             case template_func if template_func.startswith("generate_base64"):
-                # Cryptographically secure hex token
+                # Cryptographically secure base64 token (equivalent to `openssl rand -base64 N`)
                 regex = re.compile(cls.BASE64_REGEX)
                 matched = cast(re.Match[str], regex.match(template_func))
                 count = int(matched.group(1))
 
-                issues = []
                 if count < 8:
-                    issues.append(f"must be at least 8 characters (got {count})")
-                if count % 2 != 0:
-                    issues.append(f"must be an even number (got {count})")
-
-                if issues:
                     raise ValidationError(
-                        f"Invalid `{template_func}`: {', '.join(issues)}"
+                        f"Invalid `{template_func}`: must be at least 8 bytes (got {count})"
                     )
 
-                return base64.b64encode(
-                    secrets.token_hex(int(count / 2)).encode()
-                ).decode()
+                return base64.b64encode(secrets.token_bytes(count)).decode()
 
             case template_func if template_func.startswith("network_alias"):
                 regex = re.compile(cls.NETWORK_ALIAS_REGEX)

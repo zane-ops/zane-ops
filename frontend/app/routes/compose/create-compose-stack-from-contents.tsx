@@ -47,7 +47,7 @@ const DEFAULT_COMPOSE_CONTENTS = `# ZaneOps Compose Stack Example
 # Define shared variables here. ZaneOps supports these template functions:
 #   {{ generate_domain }}        - generates a unique domain for your app
 #   {{ generate_password | N }}  - generates a secure random password of N characters (N must be even, min 8)
-#   {{ generate_base64 | N }}    - generates a base64-encoded random string from N hex chars (N must be even, min 8)
+#   {{ generate_base64 | N }}    - generates a base64-encoded random string of N bytes (min 8)
 #   {{ generate_username }}      - generates a random username
 #   {{ generate_slug }}          - generates a URL-safe slug
 #   {{ generate_uuid }}          - generates a UUID
