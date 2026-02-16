@@ -7,7 +7,7 @@ import {
   RocketIcon
 } from "lucide-react";
 import * as React from "react";
-import { href, useFetcher, useNavigate } from "react-router";
+import { Link, href, useFetcher, useNavigate } from "react-router";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Popover,
@@ -19,6 +19,7 @@ import type {
   clientAction as toggleClientAction
 } from "~/routes/compose/toggle-compose-stack";
 
+import { toast } from "sonner";
 import type { ComposeStack } from "~/api/types";
 import { getComposeStackStatus } from "~/components/compose-stack-cards";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -30,8 +31,11 @@ import {
   DialogTitle,
   DialogTrigger
 } from "~/components/ui/dialog";
+import { composeStackQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
+import { queryClient } from "~/root";
 import type { clientAction as deployClientAction } from "~/routes/compose/deploy-compose-stack";
+import { durationToMs, wait } from "~/utils";
 
 export type ComposeStackActionsPopoverProps = {
   stack: ComposeStack;
@@ -112,7 +116,11 @@ export function ComposeStackActionsPopover({
             <span>Deploy now</span>
           </SubmitButton>
         </deployFetcher.Form>
-        <ToggleStackForm stack={stack} />
+        <ToggleStackForm
+          stack={stack}
+          projectSlug={projectSlug}
+          envSlug={envSlug}
+        />
       </PopoverContent>
     </Popover>
   );
@@ -120,9 +128,15 @@ export function ComposeStackActionsPopover({
 
 type ToggleStackFormProps = {
   stack: ComposeStack;
+  projectSlug: string;
+  envSlug: string;
 };
 
-function ToggleStackForm({ stack }: ToggleStackFormProps) {
+function ToggleStackForm({
+  stack,
+  projectSlug,
+  envSlug
+}: ToggleStackFormProps) {
   const fetcher = useFetcher<typeof toggleClientAction>();
 
   const stackStatus = getComposeStackStatus(stack);
@@ -135,16 +149,52 @@ function ToggleStackForm({ stack }: ToggleStackFormProps) {
         ? "start"
         : "stop";
 
+  const [queuedAction, setQueuedAction] = React.useState<
+    "start" | "stop" | null
+  >(null);
+
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = React.useState(false);
+
+  const [, formAction] = React.useActionState(action, null);
+
+  async function action(_: any, formData: FormData) {
+    if (queuedAction) {
+      toast.info("The stack is already being toggled in the background.");
+      return;
+    }
+
+    await fetcher.submit(formData, {
+      action: "./toggle",
+      method: "POST"
+    });
+
+    const desiredState = formData.get("desired_state") as "stop" | "start";
+    setQueuedAction(desiredState);
+    toggleStateToast({
+      desiredState,
+      projectSlug,
+      stackSlug: stack.slug,
+      envSlug
+    }).finally(() => setQueuedAction(null));
+  }
+
+  React.useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
+      setIsConfirmModalOpen(false);
+    }
+  }, [fetcher.state, fetcher.data]);
+
   return desiredState === "start" ? (
-    <fetcher.Form method="post" action="./toggle">
+    <form method="post" action={formAction}>
+      <input type="hidden" name="desired_state" value="start" />
+
       <SubmitButton
-        isPending={fetcher.state !== "idle"}
+        isPending={isPending}
         variant="ghost"
         size="sm"
         disabled={stackStatus === "NOT_DEPLOYED_YET"}
         className="flex items-center gap-2 justify-start w-full text-link"
       >
-        <input type="hidden" name="desired_state" value="start" />
         {isPending ? (
           <>
             <LoaderIcon className="animate-spin flex-none" size={15} />
@@ -157,27 +207,127 @@ function ToggleStackForm({ stack }: ToggleStackFormProps) {
           </>
         )}
       </SubmitButton>
-    </fetcher.Form>
+    </form>
   ) : (
-    <StopStackConfirmationDialog />
+    <StopStackConfirmationDialog
+      action={formAction}
+      isPending={isPending}
+      isOpen={isConfirmModalOpen}
+      setIsOpen={setIsConfirmModalOpen}
+    />
   );
 }
 
-function StopStackConfirmationDialog() {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const fetcher = useFetcher<typeof toggleClientAction>();
-  const formRef = React.useRef<React.ComponentRef<"form">>(null);
+async function toggleStateToast({
+  desiredState,
+  projectSlug,
+  stackSlug,
+  envSlug
+}: {
+  desiredState: "stop" | "start";
+  projectSlug: string;
+  stackSlug: string;
+  envSlug: string;
+}) {
+  const stackLink = (
+    <Link
+      className="text-link underline inline break-all"
+      to={href(
+        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+        {
+          projectSlug,
+          envSlug,
+          composeStackSlug: stackSlug
+        }
+      )}
+    >
+      {projectSlug}/{envSlug}/{stackSlug}
+    </Link>
+  );
 
-  const isPending = fetcher.state !== "idle";
-
-  React.useEffect(() => {
-    // only focus on the correct input in case of error
-    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
-      formRef.current?.reset();
-      setIsOpen(false);
+  const toastId = toast.loading(
+    desiredState === "start" ? (
+      <span>Starting {stackLink}, this may take up to a minute...</span>
+    ) : (
+      <span>Stopping {stackLink}, this may take up to a minute...</span>
+    ),
+    {
+      closeButton: false
     }
-  }, [fetcher.state, fetcher.data]);
+  );
 
+  const MAX_TRIES = 12; // wait max for `1min` (12*5s = 60s)
+  let total_tries = 0;
+
+  let currentState: ToggleStackState | null = null;
+
+  while (total_tries < MAX_TRIES && currentState !== desiredState) {
+    total_tries++;
+
+    // refetch queries to get fresh data
+    let stack;
+    try {
+      stack = await queryClient.fetchQuery(
+        composeStackQueries.single({
+          project_slug: projectSlug,
+          stack_slug: stackSlug,
+          env_slug: envSlug
+        })
+      );
+    } catch (error) {
+      break;
+    }
+
+    currentState =
+      getComposeStackStatus(stack) === "SLEEPING" ? "stop" : "start";
+
+    if (currentState !== desiredState && total_tries < MAX_TRIES) {
+      await wait(durationToMs(5, "seconds"));
+    }
+  }
+
+  if (currentState === desiredState) {
+    toast.success("Success", {
+      description:
+        desiredState === "start" ? (
+          <>{stackLink} restarted successfully</>
+        ) : (
+          <>{stackLink} stopped successfully</>
+        ),
+      closeButton: true,
+      id: toastId
+    });
+  } else {
+    toast.warning("Warning", {
+      description:
+        desiredState === "start" ? (
+          <>
+            {stackLink} failed to restart within the time limit. Check the
+            service replicas and their logs or try again.
+          </>
+        ) : (
+          <>
+            {stackLink} failed to stop within the time limit. Check the
+            service replicas and their logs or try again.
+          </>
+        ),
+      closeButton: true,
+      id: toastId
+    });
+  }
+}
+
+function StopStackConfirmationDialog({
+  action: formAction,
+  isPending,
+  isOpen,
+  setIsOpen
+}: {
+  action: (payload: FormData) => void;
+  isPending: boolean;
+  isOpen: boolean;
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -206,9 +356,9 @@ function StopStackConfirmationDialog() {
         </DialogHeader>
 
         <DialogFooter className="-mx-6 px-6">
-          <fetcher.Form
-            action="./toggle"
+          <form
             method="post"
+            action={formAction}
             className="flex items-center gap-4 w-full"
           >
             <input type="hidden" name="desired_state" value="stop" />
@@ -240,7 +390,7 @@ function StopStackConfirmationDialog() {
             >
               Close
             </Button>
-          </fetcher.Form>
+          </form>
         </DialogFooter>
       </DialogContent>
     </Dialog>

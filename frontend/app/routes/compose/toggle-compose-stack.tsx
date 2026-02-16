@@ -71,14 +71,5 @@ export async function clientAction({
     composeStackQueries.single({ project_slug, stack_slug, env_slug })
   );
 
-  toast.info(
-    userData.desired_state === "start"
-      ? "Starting stack..."
-      : "Stopping stack...",
-    {
-      description: "This may take a moment to be reflected in the UI.",
-      closeButton: true
-    }
-  );
-  return { data };
+  return { data: { queued: true } };
 }
