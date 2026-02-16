@@ -181,7 +181,10 @@ export default function ComposeStackDeploymentLayoutPage({
               <span>{deployment.hash}</span>
             </h1>
 
-            <DeploymentStatusBadge status={deployment.status} />
+            <DeploymentStatusBadge
+              status={deployment.status}
+              className="py-0.5"
+            />
 
             {isCancellable && <DeploymentCancelForm />}
           </div>

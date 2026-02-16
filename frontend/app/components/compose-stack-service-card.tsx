@@ -102,7 +102,7 @@ export function ComposeStackServiceCard({
           <h3 className="text-lg text-card-foreground break-all">
             <Link
               to={`./services/${name}`}
-              className="after:absolute after:inset-0"
+              className="after:absolute after:inset-0 after:z-1"
             >
               {name}
             </Link>
