@@ -2,15 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BoxIcon,
   ChartNoAxesColumn,
-  ChartNoAxesCombinedIcon,
   ChevronRight,
   ContainerIcon,
   GlobeIcon,
-  HashIcon,
   InfoIcon,
-  RocketIcon,
+  LayersIcon,
   ScrollTextIcon,
-  SettingsIcon,
   TerminalIcon
 } from "lucide-react";
 import * as React from "react";
@@ -328,8 +325,8 @@ export default function ComposeStackServiceLayoutPage({
         >
           <li>
             <NavLink to=".">
-              <span>Tasks</span>
-              <ChartNoAxesCombinedIcon size={15} className="flex-none" />
+              <span>Replicas</span>
+              <LayersIcon size={15} className="flex-none" />
             </NavLink>
           </li>
 

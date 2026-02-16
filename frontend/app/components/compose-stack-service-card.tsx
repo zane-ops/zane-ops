@@ -2,17 +2,17 @@ import {
   ArrowRightIcon,
   BoxIcon,
   ChartNoAxesColumnIcon,
-  ChartNoAxesCombinedIcon,
   EllipsisVerticalIcon,
   Eye,
   GlobeIcon,
   Layers2Icon,
+  LayersIcon,
   ScrollText,
   TagIcon,
   TerminalIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, href, useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import type { ComposeStack } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
@@ -212,25 +212,27 @@ export function ComposeStackServiceCard({
               className="border min-w-0 mx-9 border-border"
             >
               <MenubarContentItem
-                icon={ChartNoAxesCombinedIcon}
-                text="Tasks"
+                icon={LayersIcon}
+                text="Replicas"
                 onClick={() => navigate(`./services/${name}`)}
-              />
-              <MenubarContentItem
-                icon={Eye}
-                text="Details"
-                onClick={() => navigate(`./services/${name}/details`)}
-              />
-              <MenubarContentItem
-                icon={TerminalIcon}
-                text="Terminal"
-                onClick={() => navigate(`./services/${name}/terminal`)}
               />
               <MenubarContentItem
                 icon={ScrollText}
                 text="View runtime logs"
                 onClick={() => navigate(`./services/${name}/runtime-logs`)}
               />
+
+              <MenubarContentItem
+                icon={TerminalIcon}
+                text="Terminal"
+                onClick={() => navigate(`./services/${name}/terminal`)}
+              />
+              <MenubarContentItem
+                icon={Eye}
+                text="Details"
+                onClick={() => navigate(`./services/${name}/details`)}
+              />
+
               {urls?.length > 0 && (
                 <>
                   <MenubarContentItem
