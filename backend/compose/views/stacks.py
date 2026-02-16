@@ -694,7 +694,9 @@ class ComposeStackReDeployAPIView(APIView):
         new_deployment.stack_snapshot = ComposeStackSnapshotSerializer(stack).data  # type: ignore
         new_deployment.save()
 
-        payload = ComposeStackDeploymentDetails.from_deployment(deployment=deployment)
+        payload = ComposeStackDeploymentDetails.from_deployment(
+            deployment=new_deployment
+        )
 
         def commit_callback():
             TemporalClient.start_workflow(
