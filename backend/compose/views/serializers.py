@@ -71,6 +71,7 @@ class ComposeStackServiceTask(serializers.Serializer):
         choices=[state.value for state in DockerSwarmTaskState]
     )
     id = serializers.CharField()
+    version = serializers.IntegerField()
     slot = serializers.IntegerField()
     name = serializers.CharField()
     container_id = serializers.CharField(required=False, allow_null=True)

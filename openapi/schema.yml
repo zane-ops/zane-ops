@@ -12685,6 +12685,8 @@ components:
           $ref: '#/components/schemas/ServiceTaskStatus'
         id:
           type: string
+        version:
+          type: integer
         slot:
           type: integer
         name:
@@ -12709,6 +12711,7 @@ components:
       - name
       - slot
       - status
+      - version
     ComposeStackServiceTaskRequest:
       type: object
       properties:
@@ -12719,6 +12722,8 @@ components:
         id:
           type: string
           minLength: 1
+        version:
+          type: integer
         slot:
           type: integer
         name:
@@ -12745,6 +12750,7 @@ components:
       - name
       - slot
       - status
+      - version
     ComposeStackSnapshot:
       type: object
       properties:

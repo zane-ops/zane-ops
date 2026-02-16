@@ -1225,6 +1225,7 @@ export interface components {
       status: components["schemas"]["ServiceTaskStatus"];
       desired_status: components["schemas"]["ServiceTaskStatus"];
       id: string;
+      version: number;
       slot: number;
       name: string;
       container_id: string | null;
@@ -1236,6 +1237,7 @@ export interface components {
       status: components["schemas"]["ServiceTaskStatus"];
       desired_status: components["schemas"]["ServiceTaskStatus"];
       id: string;
+      version: number;
       slot: number;
       name: string;
       container_id?: string | null;

@@ -568,6 +568,7 @@ class ComposeStackServiceTaskDto:
     message: str
     slot: int
     name: str
+    version: int
     exit_code: Optional[int] = None
     container_id: Optional[str] = None
 
@@ -575,6 +576,7 @@ class ComposeStackServiceTaskDto:
     def from_dict(cls, data: Dict[str, Any]) -> Self:
         return cls(
             id=data["id"],
+            version=data["version"],
             slot=data["slot"],
             name=data["name"],
             status=data["status"],
@@ -590,6 +592,7 @@ class ComposeStackServiceTaskDto:
             "id": self.id,
             "status": self.status,
             "slot": self.slot,
+            "version": self.version,
             "name": self.name,
             "desired_status": self.desired_status,
             "image": self.image,

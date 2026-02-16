@@ -64,19 +64,21 @@ export default function ComposeStackServiceReplicasPage({
 
   const [, service] = serviceFound;
 
-  const running = service.tasks.filter(
+  const tasks = service.tasks.toSorted((tA, tB) => tB.version - tA.version);
+
+  const running = tasks.filter(
     (task) =>
       task.desired_status === "running" || task.desired_status === "complete"
   );
 
-  const old = service.tasks.filter(
+  const old = tasks.filter(
     (task) =>
       task.desired_status !== "running" && task.desired_status !== "complete"
   );
 
   return (
     <section className="mt-8">
-      {service.tasks.length === 0 && (
+      {tasks.length === 0 && (
         <div
           className={cn(
             "flex flex-col gap-2 items-center py-24 bg-muted/20",
@@ -162,7 +164,9 @@ export function ServiceTaskCard({
 
   const [imageVersion, imageSha] = task.image.split("@");
 
-  const [accordionValue, setAccordionValue] = React.useState("");
+  const [accordionValue, setAccordionValue] = React.useState(
+    color === "red" && !isPrevious ? `task-${task.id}` : ""
+  );
 
   return (
     <Card
@@ -250,28 +254,34 @@ export function ServiceTaskCard({
               <div className="flex gap-2">
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>
-                    <TooltipTrigger>
-                      <span className="inline-flex items-center gap-1">
+                    <TooltipTrigger asChild>
+                      <span
+                        tabIndex={0}
+                        className="inline-flex items-center gap-1"
+                      >
                         <HashIcon className="size-4 flex-none text-grey" />
                         <span>{task.id}</span>
                       </span>
                     </TooltipTrigger>
-                    <TooltipContent align="start">Task ID</TooltipContent>
+                    <TooltipContent>Replica ID</TooltipContent>
                   </Tooltip>
 
                   <Tooltip delayDuration={0}>
-                    <TooltipTrigger>
-                      <span className="inline-flex items-center gap-1">
+                    <TooltipTrigger asChild>
+                      <span
+                        tabIndex={0}
+                        className="inline-flex items-center gap-1"
+                      >
                         <Layers2Icon className="size-4 flex-none text-grey" />
                         <span>{task.slot}</span>
                       </span>
                     </TooltipTrigger>
-                    <TooltipContent>Replica Slot</TooltipContent>
+                    <TooltipContent>Replica Number</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
 
-              <div className="inline-flex items-start gap-0.5">
+              <div className="inline-flex items-start gap-1">
                 {iconSrc && !iconNotFound ? (
                   <img
                     src={iconSrc}
@@ -303,9 +313,6 @@ export function ServiceTaskCard({
               }
             )}
           >
-            {/* This is just a spacer to have the task message align with the top */}
-            {/* <div className="min-w-26"></div> */}
-
             <div className="flex flex-col w-full">
               {/* Task message */}
               <div className="text-sm inline-grid items-stretch gap-2 grid-cols-[auto_1fr]">
