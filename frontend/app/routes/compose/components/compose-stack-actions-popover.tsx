@@ -307,8 +307,8 @@ async function toggleStateToast({
           </>
         ) : (
           <>
-            {stackLink} failed to stop within the time limit. Check the
-            service replicas and their logs or try again.
+            {stackLink} failed to stop within the time limit. Check the service
+            replicas and their logs or try again.
           </>
         ),
       closeButton: true,
