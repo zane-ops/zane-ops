@@ -226,7 +226,11 @@ export default [
               "details",
               "./routes/compose/compose-stack-deployment-details.tsx"
             ),
-            route("cancel", "./routes/compose/cancel-compose-deployment.tsx")
+            route("cancel", "./routes/compose/cancel-compose-deployment.tsx"),
+            route(
+              "redeploy",
+              "./routes/compose/redeploy-compose-deployment.tsx"
+            )
           ]
         )
       ])

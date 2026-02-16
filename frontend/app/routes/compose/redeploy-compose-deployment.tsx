@@ -4,7 +4,7 @@ import { apiClient } from "~/api/client";
 import { composeStackQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
-import type { Route } from "./+types/cancel-compose-deployment";
+import type { Route } from "./+types/redeploy-compose-deployment";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
@@ -17,11 +17,11 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 
 export async function clientAction({ params }: Route.ClientActionArgs) {
   const toastId = toast.loading(
-    `Requesting cancellation for deployment #${params.deploymentHash}...`
+    `Queueing redeployment for #${params.deploymentHash}...`
   );
 
   const { error } = await apiClient.PUT(
-    "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deployments/{hash}/cancel/",
+    "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/{hash}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -45,7 +45,12 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
       id: toastId,
       closeButton: true
     });
-    return;
+    throw redirect(
+      href(
+        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
+        params
+      )
+    );
   }
 
   await Promise.all([
@@ -67,7 +72,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     )
   ]);
   toast.success("Success", {
-    description: "Deployment cancel request sent.",
+    description: "Redeployment queued succesfully.",
     id: toastId,
     closeButton: true
   });
