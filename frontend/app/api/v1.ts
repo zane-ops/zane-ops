@@ -1222,39 +1222,27 @@ export interface components {
      */
     ComposeStackServiceStatusStatusEnum: "STARTING" | "HEALTHY" | "UNHEALTHY" | "COMPLETE" | "SLEEPING";
     ComposeStackServiceTask: {
-      status: components["schemas"]["ComposeStackServiceTaskStatusEnum"];
+      status: components["schemas"]["ServiceTaskStatus"];
+      desired_status: components["schemas"]["ServiceTaskStatus"];
       id: string;
+      slot: number;
+      name: string;
       container_id: string | null;
       image: string;
       message: string;
       exit_code: number | null;
     };
     ComposeStackServiceTaskRequest: {
-      status: components["schemas"]["ComposeStackServiceTaskStatusEnum"];
+      status: components["schemas"]["ServiceTaskStatus"];
+      desired_status: components["schemas"]["ServiceTaskStatus"];
       id: string;
+      slot: number;
+      name: string;
       container_id?: string | null;
       image: string;
       message: string;
       exit_code?: number | null;
     };
-    /**
-     * @description * `new` - new
-     * * `pending` - pending
-     * * `assigned` - assigned
-     * * `accepted` - accepted
-     * * `ready` - ready
-     * * `preparing` - preparing
-     * * `starting` - starting
-     * * `running` - running
-     * * `complete` - complete
-     * * `failed` - failed
-     * * `shutdown` - shutdown
-     * * `rejected` - rejected
-     * * `orphaned` - orphaned
-     * * `remove` - remove
-     * @enum {string}
-     */
-    ComposeStackServiceTaskStatusEnum: "new" | "pending" | "assigned" | "accepted" | "ready" | "preparing" | "starting" | "running" | "complete" | "failed" | "shutdown" | "rejected" | "orphaned" | "remove";
     ComposeStackSnapshot: {
       id: string;
       hash_prefix: string;
@@ -6587,6 +6575,24 @@ export interface components {
      * @enum {string}
      */
     ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "FAILED" | "SLEEPING" | "NOT_DEPLOYED_YET" | "DEPLOYING";
+    /**
+     * @description * `new` - new
+     * * `pending` - pending
+     * * `assigned` - assigned
+     * * `accepted` - accepted
+     * * `ready` - ready
+     * * `preparing` - preparing
+     * * `starting` - starting
+     * * `running` - running
+     * * `complete` - complete
+     * * `failed` - failed
+     * * `shutdown` - shutdown
+     * * `rejected` - rejected
+     * * `orphaned` - orphaned
+     * * `remove` - remove
+     * @enum {string}
+     */
+    ServiceTaskStatus: "new" | "pending" | "assigned" | "accepted" | "ready" | "preparing" | "starting" | "running" | "complete" | "failed" | "shutdown" | "rejected" | "orphaned" | "remove";
     /**
      * @description * `DOCKER_REGISTRY` - Docker repository
      * * `GIT_REPOSITORY` - Git repository

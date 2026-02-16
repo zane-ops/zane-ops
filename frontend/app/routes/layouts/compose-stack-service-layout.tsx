@@ -7,6 +7,7 @@ import {
   GlobeIcon,
   InfoIcon,
   LayersIcon,
+  PickaxeIcon,
   ScrollTextIcon,
   TerminalIcon
 } from "lucide-react";
@@ -205,7 +206,11 @@ export default function ComposeStackServiceLayoutPage({
         <div className="mt-10 flex flex-col gap-2">
           <div className="flex items-center gap-x-2">
             <h1 className="text-xl md:text-2xl inline-flex gap-1 items-center">
-              <BoxIcon className="size-6 flex-none" />
+              {service.mode.includes("job") ? (
+                <PickaxeIcon className="size-6 flex-none" />
+              ) : (
+                <BoxIcon className="size-6 flex-none" />
+              )}
               <span className="text-grey sr-only md:not-sr-only flex-none">
                 <Link to={`./../..`} className="hover:underline">
                   {params.composeStackSlug}

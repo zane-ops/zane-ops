@@ -12680,8 +12680,14 @@ components:
       type: object
       properties:
         status:
-          $ref: '#/components/schemas/ComposeStackServiceTaskStatusEnum'
+          $ref: '#/components/schemas/ServiceTaskStatus'
+        desired_status:
+          $ref: '#/components/schemas/ServiceTaskStatus'
         id:
+          type: string
+        slot:
+          type: integer
+        name:
           type: string
         container_id:
           type: string
@@ -12695,17 +12701,27 @@ components:
           nullable: true
       required:
       - container_id
+      - desired_status
       - exit_code
       - id
       - image
       - message
+      - name
+      - slot
       - status
     ComposeStackServiceTaskRequest:
       type: object
       properties:
         status:
-          $ref: '#/components/schemas/ComposeStackServiceTaskStatusEnum'
+          $ref: '#/components/schemas/ServiceTaskStatus'
+        desired_status:
+          $ref: '#/components/schemas/ServiceTaskStatus'
         id:
+          type: string
+          minLength: 1
+        slot:
+          type: integer
+        name:
           type: string
           minLength: 1
         container_id:
@@ -12722,42 +12738,13 @@ components:
           type: integer
           nullable: true
       required:
+      - desired_status
       - id
       - image
       - message
+      - name
+      - slot
       - status
-    ComposeStackServiceTaskStatusEnum:
-      enum:
-      - new
-      - pending
-      - assigned
-      - accepted
-      - ready
-      - preparing
-      - starting
-      - running
-      - complete
-      - failed
-      - shutdown
-      - rejected
-      - orphaned
-      - remove
-      type: string
-      description: |-
-        * `new` - new
-        * `pending` - pending
-        * `assigned` - assigned
-        * `accepted` - accepted
-        * `ready` - ready
-        * `preparing` - preparing
-        * `starting` - starting
-        * `running` - running
-        * `complete` - complete
-        * `failed` - failed
-        * `shutdown` - shutdown
-        * `rejected` - rejected
-        * `orphaned` - orphaned
-        * `remove` - remove
     ComposeStackSnapshot:
       type: object
       properties:
@@ -24230,6 +24217,38 @@ components:
         * `SLEEPING` - Sleeping
         * `NOT_DEPLOYED_YET` - Not deployed yet
         * `DEPLOYING` - Deploying
+    ServiceTaskStatus:
+      enum:
+      - new
+      - pending
+      - assigned
+      - accepted
+      - ready
+      - preparing
+      - starting
+      - running
+      - complete
+      - failed
+      - shutdown
+      - rejected
+      - orphaned
+      - remove
+      type: string
+      description: |-
+        * `new` - new
+        * `pending` - pending
+        * `assigned` - assigned
+        * `accepted` - accepted
+        * `ready` - ready
+        * `preparing` - preparing
+        * `starting` - starting
+        * `running` - running
+        * `complete` - complete
+        * `failed` - failed
+        * `shutdown` - shutdown
+        * `rejected` - rejected
+        * `orphaned` - orphaned
+        * `remove` - remove
     ServiceTypeEnum:
       enum:
       - DOCKER_REGISTRY

@@ -120,12 +120,15 @@ export function ComposeStackCard({
 
   switch (stackStatus) {
     case "NOT_DEPLOYED_YET":
+      pingColor = "gray";
+      pingStatic = true;
+      break;
     case "SLEEPING":
       pingColor = "yellow";
       pingStatic = true;
       break;
     case "UNHEALTHY":
-      pingColor = "gray";
+      pingColor = "red";
       break;
     case "STARTING":
       pingColor = "blue";
@@ -172,6 +175,7 @@ export function ComposeStackCard({
               <ComposeStackService
                 key={name}
                 name={name}
+                stack_slug={slug}
                 {...service}
                 urls={urls[name] ?? []}
               />
@@ -225,6 +229,7 @@ export function ComposeStackCard({
 
 type ComposeStackServiceProps = ValueOf<ComposeStack["services"]> & {
   name: string;
+  stack_slug: string;
   urls: ValueOf<ComposeStack["urls"]>;
 };
 
@@ -236,7 +241,8 @@ function ComposeStackService({
   urls,
   image,
   mode,
-  tasks
+  tasks,
+  stack_slug
 }: ComposeStackServiceProps) {
   const [imageNotFound, setImageNotFound] = React.useState(false);
   const iconSrc = getDockerImageIconURL(image);
@@ -306,7 +312,12 @@ function ComposeStackService({
                 "flex-wrap"
               )}
             >
-              <span className="relative top-0.5 break-all">{name}</span>
+              <Link
+                to={`./compose-stacks/${stack_slug}/services/${name}`}
+                className="relative top-0.5 break-all hover:underline"
+              >
+                {name}
+              </Link>
               <span className="inline-block rounded-full size-0.5 bg-foreground relative top-0.5" />
               <DeploymentStatusBadge
                 status={status}
