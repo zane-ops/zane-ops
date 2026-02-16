@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  ChevronRightIcon,
   ContainerIcon,
   HashIcon,
   Layers2Icon,
@@ -76,6 +77,14 @@ export default function ComposeStackServiceReplicasPage({
       task.desired_status !== "running" && task.desired_status !== "complete"
   );
 
+  const [accordionValue, setAccordionValue] = React.useState(
+    running.length === 0
+      ? "old"
+      : service.desired_replicas === running.length
+        ? ""
+        : "old"
+  );
+
   return (
     <section className="mt-8">
       {tasks.length === 0 && (
@@ -108,14 +117,33 @@ export default function ComposeStackServiceReplicasPage({
         )}
         {old.length > 0 && (
           <section className="flex flex-col gap-2">
-            <h2 className="text-grey text-sm">Previous</h2>
-            <ul className="flex flex-col gap-4">
-              {old.map((task) => (
-                <li key={task.id}>
-                  <ServiceTaskCard task={task} isPrevious />
-                </li>
-              ))}
-            </ul>
+            <Accordion
+              type="single"
+              collapsible
+              value={accordionValue}
+              onValueChange={(state) => {
+                setAccordionValue(state);
+              }}
+              className="border-none"
+            >
+              <AccordionItem value="old" className="border-none">
+                <AccordionTrigger className="data-[state=open]:rounded-b-none [&[data-state=open]_svg]:rotate-90 cursor-pointer">
+                  <h2 className="text-grey text-sm flex items-center gap-1">
+                    <ChevronRightIcon className="size-4 flex-none" />
+                    Previous
+                  </h2>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ul className="flex flex-col gap-4">
+                    {old.map((task) => (
+                      <li key={task.id}>
+                        <ServiceTaskCard task={task} isPrevious />
+                      </li>
+                    ))}
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </section>
         )}
       </div>
@@ -186,7 +214,7 @@ export function ServiceTaskCard({
         size="sm"
         className={cn(
           "border hover:bg-inherit hidden md:inline-flex",
-          "absolute top-5 right-4",
+          "absolute top-4 right-4",
           {
             "border-emerald-500": color === "green",
             "border-gray-600": color === "gray",
@@ -216,11 +244,12 @@ export function ServiceTaskCard({
             className={cn(
               "rounded-md py-2 px-4 flex items-center gap-6 font-normal cursor-pointer data-[state=open]:rounded-b-none",
               {
-                "bg-emerald-400/10 dark:bg-emerald-600/20 ": color === "green",
-                "bg-red-600/10 ": color === "red",
+                "bg-emerald-400/10 dark:bg-emerald-600/20 hover:bg-emerald-300/20":
+                  color === "green",
+                "bg-red-600/10 hover:bg-red-600/20": color === "red",
                 "bg-yellow-400/10 dark:bg-yellow-600/10 ": color === "yellow",
-                "bg-gray-600/10": color === "gray",
-                "bg-link/10": color === "blue"
+                "bg-gray-600/10 hover:bg-gray-600/20": color === "gray",
+                "bg-link/10 hover:bg-link/20": color === "blue"
               }
             )}
           >
