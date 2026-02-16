@@ -80,6 +80,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <ScrollRestoration />
         <Scripts />
 
+        {/* Set theme at the start even before react loads */}
         <script
           defer
           dangerouslySetInnerHTML={{

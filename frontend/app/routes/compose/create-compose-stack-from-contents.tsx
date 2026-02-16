@@ -331,7 +331,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
       method="post"
       className="flex my-10 grow justify-center items-center"
     >
-      <div className="card flex  xl:w-1/2 lg:w-[60%] md:w-2/3 w-full flex-col gap-5 items-stretch">
+      <div className="card flex xl:w-1/2 lg:w-[60%] md:w-2/3 w-full flex-col gap-5 items-stretch">
         <h1 className="text-3xl font-bold">New Compose stack</h1>
 
         {errors.non_field_errors && (
@@ -373,7 +373,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
 
           <CodeEditor
             hasError={!!errors.user_content}
-            containerClassName="w-full h-100"
+            containerClassName="xl:max-w-[48dvw] lg:max-w-[58dvw] md:max-w-[64dvw] w-full h-100"
             language="yaml"
             value={userContents}
             onChange={(value) => setUserContents(value ?? "")}

@@ -83,8 +83,6 @@ export default function ComposeStackLayoutPage({
 
   const { title } = metaTitle(`${status_emoji_map[stackStatus]} ${stack.slug}`);
 
-  const location = useLocation();
-
   return (
     <>
       <title>{title}</title>
@@ -232,8 +230,8 @@ type DeployStackFormProps = {
 
 function DeployStackForm({ className, stack, params }: DeployStackFormProps) {
   const fetcher = useFetcher();
-  const isDeploying = fetcher.state !== "idle";
-  const stackStatus = getComposeStackStatus(stack);
+  // const isDeploying = fetcher.state !== "idle";
+  // const stackStatus = getComposeStackStatus(stack);
 
   return (
     <div

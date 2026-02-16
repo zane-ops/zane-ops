@@ -59,7 +59,7 @@ export function ComposeStackActionsPopover({
               envSlug,
               composeStackSlug: stack.slug
             }
-          )
+          ) + "/"
         );
       }
     }
