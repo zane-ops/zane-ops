@@ -218,9 +218,13 @@ export function ComposeStackUserContentForm({
                 <span>Computed stack file contents</span>
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>
-                    <TooltipTrigger className="relative z-10">
-                      <LockKeyholeIcon className="size-4 flex-none text-grey" />
-                      <span className="sr-only">(This file is read only)</span>
+                    <TooltipTrigger className="relative z-10" asChild>
+                      <div tabIndex={0}>
+                        <LockKeyholeIcon className="size-4 flex-none text-grey" />
+                        <span className="sr-only">
+                          (This file is read only)
+                        </span>
+                      </div>
                     </TooltipTrigger>
                     <TooltipContent>This file is read-only</TooltipContent>
                   </Tooltip>
