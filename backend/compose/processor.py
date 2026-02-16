@@ -34,6 +34,7 @@ from container_registry.models import BuildRegistry
 from django.db.models import Q
 import uuid
 from django.db import connection
+import base64
 
 
 class ComposeStackSpecSerializer(serializers.Serializer):
@@ -237,6 +238,9 @@ class ComposeSpecProcessor:
     PASSWORD_REGEX = (
         r"generate_password[ \t]*\|[ \t]*(\d+)"  # format: generate_password | <number>
     )
+    BASE64_REGEX = (
+        r"generate_base64[ \t]*\|[ \t]*(\d+)"  # format: generate_base64 | <number>
+    )
     NETWORK_ALIAS_REGEX = r"network_alias[ \t]*\|[ \t]*(\".*\"|\'.*\')"  # format: network_alias | 'service_name'
     GLOBAL_ALIAS_REGEX = r"global_alias[ \t]*\|[ \t]*(\".*\"|\'.*\')"  # format: global_alias | 'service_name'
 
@@ -247,6 +251,7 @@ class ComposeSpecProcessor:
         r"generate_uuid",
         r"generate_email",
         PASSWORD_REGEX,
+        BASE64_REGEX,
         NETWORK_ALIAS_REGEX,
         GLOBAL_ALIAS_REGEX,
     ]
@@ -450,8 +455,24 @@ class ComposeSpecProcessor:
                 matched = cast(re.Match[str], regex.match(template_func))
                 count = int(matched.group(1))
 
-                if count >= 8 and count % 2 == 0:
-                    return secrets.token_hex(int(count / 2))
+                issues = []
+                if count < 8:
+                    issues.append(f"must be at least 8 characters (got {count})")
+                if count % 2 != 0:
+                    issues.append(f"must be an even number (got {count})")
+
+                if issues:
+                    raise ValidationError(
+                        f"Invalid `{template_func}`: {', '.join(issues)}"
+                    )
+
+                return secrets.token_hex(int(count / 2))
+
+            case template_func if template_func.startswith("generate_base64"):
+                # Cryptographically secure hex token
+                regex = re.compile(cls.BASE64_REGEX)
+                matched = cast(re.Match[str], regex.match(template_func))
+                count = int(matched.group(1))
 
                 issues = []
                 if count < 8:
@@ -459,7 +480,14 @@ class ComposeSpecProcessor:
                 if count % 2 != 0:
                     issues.append(f"must be an even number (got {count})")
 
-                raise ValidationError(f"Invalid `{template_func}`: {', '.join(issues)}")
+                if issues:
+                    raise ValidationError(
+                        f"Invalid `{template_func}`: {', '.join(issues)}"
+                    )
+
+                return base64.b64encode(
+                    secrets.token_hex(int(count / 2)).encode()
+                ).decode()
 
             case template_func if template_func.startswith("network_alias"):
                 regex = re.compile(cls.NETWORK_ALIAS_REGEX)

@@ -71,11 +71,15 @@ class DokployComposeAdapter(BaseComposeAdapter):
             if length == 0:
                 length = 32
 
+            template_func = (
+                "generate_base64" if "base64" in value else "generate_password"
+            )
+
             if length:
-                return f"{{{{ generate_password | {length} }}}}"
+                return f"{{{{ {template_func} | {length} }}}}"
             else:
                 # Default length is 32
-                return "{{ generate_password | 32 }}"
+                return f"{{{{ {template_func} | 32 }}}}"
 
         # If no pattern matches, return the value as-is
         return value
