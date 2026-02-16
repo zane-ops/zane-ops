@@ -697,6 +697,22 @@ class ComposeStackActivities:
             update_fields=["updated_at", "status", "status_reason", "finished_at"]
         )
 
+        await deployment_log(
+            deployment,
+            [
+                "===========================================================================",
+                f"Compose stack deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC} finished with status {Colors.GREY}{stack_deployment.status}{Colors.ENDC}",
+            ],
+        )
+
+        await deployment_log(
+            deployment,
+            [
+                f"Compose stack deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC} finished with reason {Colors.GREY}{stack_deployment.status_reason}{Colors.ENDC}",
+                "===========================================================================",
+            ],
+        )
+
     @activity.defn
     async def scale_down_stack_services(self, details: ToggleComposeStackDetails):
         stack = details.stack
