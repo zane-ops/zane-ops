@@ -8,7 +8,7 @@ import {
   RocketIcon
 } from "lucide-react";
 import * as React from "react";
-import { href, useFetcher, useNavigate } from "react-router";
+import { Link, href, useFetcher, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
 import {
@@ -22,7 +22,9 @@ import type {
   clientAction as toggleClientAction
 } from "~/routes/services/toggle-service-state";
 
+import { toast } from "sonner";
 import type { Service } from "~/api/types";
+import type { getComposeStackStatus } from "~/components/compose-stack-cards";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Dialog,
@@ -33,8 +35,10 @@ import {
   DialogTrigger
 } from "~/components/ui/dialog";
 import { cn } from "~/lib/utils";
+import { queryClient } from "~/root";
 import { ServiceCleanupQueueConfirmModal } from "~/routes/services/components/service-cleanup-queue-confirm-modal";
 import type { clientAction as deployClientAction } from "~/routes/services/deploy-docker-service";
+import { durationToMs, wait } from "~/utils";
 
 export type ServiceActionsPopoverProps = {
   service: Service;
@@ -161,16 +165,52 @@ function ToggleServiceForm({
       ? "start"
       : "stop";
 
+  const [queuedAction, setQueuedAction] = React.useState<
+    "start" | "stop" | null
+  >(null);
+
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = React.useState(false);
+
+  const [, formAction] = React.useActionState(action, null);
+
+  async function action(_: any, formData: FormData) {
+    if (queuedAction) {
+      toast.info("The service is already being toggled in the background.");
+      return;
+    }
+
+    await fetcher.submit(formData, {
+      action: "./toggle-service-state",
+      method: "POST"
+    });
+
+    const desiredState = formData.get("desired_state") as "stop" | "start";
+    setQueuedAction(desiredState);
+    toggleStateToast({
+      desiredState,
+      projectSlug,
+      serviceSlug,
+      envSlug
+    }).finally(() => setQueuedAction(null));
+  }
+
+  React.useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
+      setIsConfirmModalOpen(false);
+    }
+  }, [fetcher.state, fetcher.data]);
+
   return desiredState === "start" ? (
-    <fetcher.Form method="post" action="./toggle-service-state">
+    <form method="post" action={formAction}>
+      <input type="hidden" name="desired_state" value="start" />
+
       <SubmitButton
-        isPending={fetcher.state !== "idle"}
+        isPending={isPending}
         variant="ghost"
         size="sm"
         disabled={!currentProductionDeployment}
         className="flex items-center gap-2 justify-start dark:text-card-foreground w-full text-link"
       >
-        <input type="hidden" name="desired_state" value="start" />
         {isPending ? (
           <>
             <LoaderIcon className="animate-spin flex-none" size={15} />
@@ -183,27 +223,28 @@ function ToggleServiceForm({
           </>
         )}
       </SubmitButton>
-    </fetcher.Form>
+    </form>
   ) : (
-    <StopServiceConfirmationDialog />
+    <StopServiceConfirmationDialog
+      action={formAction}
+      isPending={isPending}
+      isOpen={isConfirmModalOpen}
+      setIsOpen={setIsConfirmModalOpen}
+    />
   );
 }
 
-function StopServiceConfirmationDialog() {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const fetcher = useFetcher<typeof toggleClientAction>();
-  const formRef = React.useRef<React.ComponentRef<"form">>(null);
-
-  const isPending = fetcher.state !== "idle";
-
-  React.useEffect(() => {
-    // only focus on the correct input in case of error
-    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
-      formRef.current?.reset();
-      setIsOpen(false);
-    }
-  }, [fetcher.state, fetcher.data]);
-
+function StopServiceConfirmationDialog({
+  action: formAction,
+  isPending,
+  isOpen,
+  setIsOpen
+}: {
+  action: (payload: FormData) => void;
+  isPending: boolean;
+  isOpen: boolean;
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -232,9 +273,9 @@ function StopServiceConfirmationDialog() {
         </DialogHeader>
 
         <DialogFooter className="-mx-6 px-6">
-          <fetcher.Form
-            action="./toggle-service-state"
+          <form
             method="post"
+            action={formAction}
             className="flex items-center gap-4 w-full"
           >
             <input type="hidden" name="desired_state" value="stop" />
@@ -266,9 +307,123 @@ function StopServiceConfirmationDialog() {
             >
               Close
             </Button>
-          </fetcher.Form>
+          </form>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+
+async function toggleStateToast({
+  desiredState,
+  projectSlug,
+  serviceSlug,
+  envSlug
+}: {
+  desiredState: "stop" | "start";
+  projectSlug: string;
+  serviceSlug: string;
+  envSlug: string;
+}) {
+  const serviceLink = (
+    <Link
+      className="text-link underline inline break-all"
+      to={href("/project/:projectSlug/:envSlug/services/:serviceSlug", {
+        projectSlug,
+        envSlug,
+        serviceSlug
+      })}
+    >
+      {projectSlug}/{envSlug}/{serviceSlug}
+    </Link>
+  );
+
+  const toastId = toast.loading(
+    desiredState === "start" ? (
+      <span>Restarting {serviceLink}, this may take up to a minute...</span>
+    ) : (
+      <span>Stopping {serviceLink}, this may take up to a minute...</span>
+    ),
+    {
+      closeButton: false
+    }
+  );
+
+  const MAX_TRIES = 12; // wait max for `1min` (12*5s = 60s)
+  let total_tries = 0;
+  const deploymentList =
+    queryClient.getQueryData(
+      serviceQueries.deploymentList({
+        project_slug: projectSlug,
+        service_slug: serviceSlug,
+        env_slug: envSlug
+      }).queryKey
+    )?.results ?? [];
+
+  let currentProductionDeployment =
+    deploymentList.find((dpl) => dpl.is_current_production) ?? null;
+
+  let currentState: ToggleServiceState | null = null;
+
+  while (
+    total_tries < MAX_TRIES &&
+    currentProductionDeployment !== null &&
+    currentState !== desiredState
+  ) {
+    total_tries++;
+
+    // refetch queries to get fresh data
+    const deploymentList =
+      (
+        await queryClient.fetchQuery(
+          serviceQueries.deploymentList({
+            project_slug: projectSlug,
+            service_slug: serviceSlug,
+            env_slug: envSlug
+          })
+        )
+      )?.results ?? [];
+
+    currentProductionDeployment =
+      deploymentList.find((dpl) => dpl.is_current_production) ?? null;
+
+    if (currentProductionDeployment) {
+      currentState =
+        currentProductionDeployment.status === "SLEEPING" ? "stop" : "start";
+    }
+
+    if (currentState !== desiredState && total_tries < MAX_TRIES) {
+      await wait(durationToMs(5, "seconds"));
+    }
+  }
+
+  if (currentState === desiredState) {
+    toast.success("Success", {
+      description:
+        desiredState === "start" ? (
+          <>{serviceLink} restarted successfully</>
+        ) : (
+          <>{serviceLink} stopped successfully</>
+        ),
+      closeButton: true,
+      id: toastId
+    });
+  } else {
+    toast.warning("Warning", {
+      description:
+        desiredState === "start" ? (
+          <>
+            {serviceLink} failed to restart within the time limit. Check the
+            deployment logs or try again.
+          </>
+        ) : (
+          <>
+            {serviceLink} failed to stop within the time limit. Check the
+            deployment logs or try again.
+          </>
+        ),
+      closeButton: true,
+      id: toastId
+    });
+  }
 }
