@@ -7,7 +7,7 @@ import {
   HardDriveDownloadIcon,
   HardDriveIcon
 } from "lucide-react";
-import type { Service } from "~/api/types";
+import type { ComposeStack, Service } from "~/api/types";
 import { Code } from "~/components/code";
 import { Checkbox } from "~/components/ui/checkbox";
 import { CodeEditor } from "~/components/ui/code-editor";
@@ -17,7 +17,9 @@ import { BUILDER_DESCRIPTION_MAP, DEFAULT_REGISTRIES } from "~/lib/constants";
 import { cn } from "~/lib/utils";
 
 export type ChangeItemProps = {
-  change: Service["unapplied_changes"][number];
+  change:
+    | Service["unapplied_changes"][number]
+    | ComposeStack["unapplied_changes"][number];
   unapplied?: boolean;
 };
 
