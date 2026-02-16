@@ -67,7 +67,12 @@ class ComposeStackServiceTask(serializers.Serializer):
     status = serializers.ChoiceField(
         choices=[state.value for state in DockerSwarmTaskState]
     )
+    desired_status = serializers.ChoiceField(
+        choices=[state.value for state in DockerSwarmTaskState]
+    )
     id = serializers.CharField()
+    slot = serializers.IntegerField()
+    name = serializers.CharField()
     container_id = serializers.CharField(required=False, allow_null=True)
     image = serializers.CharField()
     message = serializers.CharField()

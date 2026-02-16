@@ -653,6 +653,9 @@ async def get_compose_stack_swarm_service_status(
             {
                 "id": task.ID,
                 "container_id": task.container_id,
+                "slot": task.Slot,
+                "name": f"{service.name}.{task.Slot}.{task.ID}",
+                "desired_status": task.DesiredState.value,
                 "status": task.state.value,
                 "image": task.image,
                 "message": task.message,

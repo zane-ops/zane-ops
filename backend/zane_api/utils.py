@@ -135,6 +135,7 @@ class TaskSpec:
 @dataclass
 class DockerSwarmTask:
     ID: str
+    Slot: int
     Version: Version
     CreatedAt: str
     UpdatedAt: str
@@ -191,6 +192,7 @@ class DockerSwarmTask:
         )
         return DockerSwarmTask(
             ID=data["ID"],
+            Slot=data.get("Slot", 1),
             Version=version,
             CreatedAt=data["CreatedAt"],
             UpdatedAt=data["UpdatedAt"],

@@ -11,6 +11,7 @@ from temporalio.workflow import ActivityHandle
 
 with workflow.unsafe.imports_passed_through():
     from ..activities import ComposeStackActivities
+    from ..schedules import MonitorComposeStackActivites
     from ..shared import (
         ComposeStackDeploymentDetails,
         ComposeStackBuildDetails,
@@ -391,6 +392,21 @@ class ToggleComposeStackWorkflow:
                     start_to_close_timeout=timedelta(seconds=60),
                     retry_policy=self.retry_policy,
                 )
+
+            # Run the stack healthcheck to automatically get stack data
+            healthcheck = await workflow.execute_activity_method(
+                MonitorComposeStackActivites.run_stack_healthcheck,
+                details.stack,
+                retry_policy=self.retry_policy,
+                start_to_close_timeout=timedelta(seconds=10),
+            )
+
+            await workflow.execute_activity_method(
+                MonitorComposeStackActivites.save_stack_health_check_status,
+                healthcheck,
+                retry_policy=self.retry_policy,
+                start_to_close_timeout=timedelta(seconds=10),
+            )
         finally:
             await workflow.execute_activity_method(
                 ComposeStackActivities.reset_stack_deploy_semaphore,

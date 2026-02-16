@@ -562,9 +562,12 @@ class ComposeStackSnapshot:
 @dataclass
 class ComposeStackServiceTaskDto:
     status: str  # DockerSwarmTaskState value
+    desired_status: str  # DockerSwarmTaskState value
     image: str
     id: str
     message: str
+    slot: int
+    name: str
     exit_code: Optional[int] = None
     container_id: Optional[str] = None
 
@@ -572,7 +575,10 @@ class ComposeStackServiceTaskDto:
     def from_dict(cls, data: Dict[str, Any]) -> Self:
         return cls(
             id=data["id"],
+            slot=data["slot"],
+            name=data["name"],
             status=data["status"],
+            desired_status=data["desired_status"],
             image=data["image"],
             message=data["message"],
             exit_code=data.get("exit_code"),
@@ -583,6 +589,9 @@ class ComposeStackServiceTaskDto:
         result: Dict[str, Any] = {
             "id": self.id,
             "status": self.status,
+            "slot": self.slot,
+            "name": self.name,
+            "desired_status": self.desired_status,
             "image": self.image,
             "message": self.message,
         }
