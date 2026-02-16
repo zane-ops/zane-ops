@@ -12,7 +12,7 @@ import {
   TerminalIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, href, useNavigate } from "react-router";
 import type { ComposeStack } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
@@ -93,13 +93,20 @@ export function ComposeStackServiceCard({
               alt={`Logo for ${serviceImage}`}
               className={cn(
                 "size-4 flex-none object-center object-contain",
-                "rounded-md mr-1"
+                "rounded-sm mr-1"
               )}
             />
           ) : (
             <BoxIcon className="flex-none size-4 mr-1" />
           )}
-          <h3 className="text-lg text-card-foreground break-all">{name}</h3>
+          <h3 className="text-lg text-card-foreground break-all">
+            <Link
+              to={`./services/${name}`}
+              className="after:absolute after:inset-0"
+            >
+              {name}
+            </Link>
+          </h3>
           <span className="ml-2 inline-block rounded-full size-0.5 bg-foreground relative " />
           <DeploymentStatusBadge
             status={service.status}
@@ -109,7 +116,7 @@ export function ComposeStackServiceCard({
         </div>
 
         {/* Service image */}
-        <div className="inline-flex gap-1 items-center max-w-[calc(100%_-_2.5rem)]">
+        <div className="inline-flex gap-1 items-center max-w-[calc(100%_-_2.5rem)] relative z-10">
           <TagIcon className="flex-none size-4" />
           <span className="whitespace-nowrap overflow-x-hidden text-ellipsis">
             {serviceImage}
@@ -122,7 +129,7 @@ export function ComposeStackServiceCard({
             {urls.map((url) => (
               <li
                 key={url.domain + url.base_path}
-                className="flex items-center gap-1 w-full"
+                className="flex items-center gap-1 w-full relative z-10"
               >
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>
@@ -154,8 +161,8 @@ export function ComposeStackServiceCard({
           </ul>
         )}
 
-        <div className=" col-span-2 flex items-center gap-1 text-sm">
-          <Layers2Icon className="flex-none   size-4" />
+        <div className=" col-span-2 flex items-center gap-1 text-sm relative z-10">
+          <Layers2Icon className="flex-none size-4" />
           {is_job ? (
             <span>
               {total_completed}/{service.desired_replicas} tasks completed
@@ -207,7 +214,7 @@ export function ComposeStackServiceCard({
               <MenubarContentItem
                 icon={ChartNoAxesCombinedIcon}
                 text="Tasks"
-                onClick={() => navigate(`./services/${name}/details`)}
+                onClick={() => navigate(`./services/${name}`)}
               />
               <MenubarContentItem
                 icon={Eye}

@@ -218,6 +218,12 @@ export default [
         ]),
 
         route(
+          "services/:serviceSlug",
+          "./routes/layouts/compose-stack-service-layout.tsx",
+          []
+        ),
+
+        route(
           "deployments/:deploymentHash",
           "./routes/layouts/compose-stack-deployment-layout.tsx",
           [

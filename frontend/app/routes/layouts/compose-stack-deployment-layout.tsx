@@ -3,6 +3,7 @@ import {
   HistoryIcon,
   InfoIcon,
   LoaderIcon,
+  RocketIcon,
   SquareChartGanttIcon
 } from "lucide-react";
 import { Link, Outlet, href, useFetcher } from "react-router";
@@ -168,8 +169,9 @@ export default function ComposeStackDeploymentLayoutPage({
         className="flex flex-col md:flex-row md:items-center gap-4 justify-between"
       >
         <div className="md:mt-10 mt-5 flex flex-col gap-2 md:gap-0">
-          <div className="inline-flex flex-wrap gap-1">
-            <h1 className="text-xl md:text-2xl inline-flex gap-1.5">
+          <div className="inline-flex flex-wrap gap-1 items-center">
+            <h1 className="text-xl md:text-2xl inline-flex gap-1 items-center">
+              <RocketIcon className="size-6 flex-none" />
               <span className="text-grey sr-only md:not-sr-only flex-none">
                 <Link to={`./../..`} className="hover:underline">
                   {params.composeStackSlug}
