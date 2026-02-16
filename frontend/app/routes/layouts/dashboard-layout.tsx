@@ -275,7 +275,7 @@ function Header({ user }: HeaderProps) {
       {!import.meta.env.PROD && (
         <div
           className={cn(
-            "py-0.5 bg-red-500 text-white text-center fixed top-0 left-0 right-0  z-100",
+            "py-0.5 bg-red-500 text-white text-center fixed top-0 left-0 right-0  z-49",
             "w-full"
           )}
         >
