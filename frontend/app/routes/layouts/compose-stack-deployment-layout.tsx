@@ -1,13 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  ChartNoAxesColumnIcon,
-  GlobeIcon,
   HistoryIcon,
   InfoIcon,
   LoaderIcon,
-  SquareChartGanttIcon,
-  TerminalIcon,
-  TextSearchIcon
+  SquareChartGanttIcon
 } from "lucide-react";
 import { Link, Outlet, href, useFetcher } from "react-router";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
@@ -24,6 +20,7 @@ import { SubmitButton } from "~/components/ui/button";
 import { composeStackQueries } from "~/lib/queries";
 import { cn, notFound } from "~/lib/utils";
 import { queryClient } from "~/root";
+import type { clientAction as cancelDeploymentAction } from "~/routes/compose/cancel-compose-deployment";
 import { formattedTime, metaTitle } from "~/utils";
 import type { Route } from "./+types/compose-stack-deployment-layout";
 
@@ -227,7 +224,7 @@ export default function ComposeStackDeploymentLayoutPage({
 }
 
 function DeploymentCancelForm() {
-  const fetcher = /* <typeof cancelClientAction> */ useFetcher();
+  const fetcher = useFetcher<typeof cancelDeploymentAction>();
   const isPending = fetcher.state !== "idle";
 
   return (

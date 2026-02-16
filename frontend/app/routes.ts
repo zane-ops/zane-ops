@@ -220,7 +220,14 @@ export default [
         route(
           "deployments/:deploymentHash",
           "./routes/layouts/compose-stack-deployment-layout.tsx",
-          [index("./routes/compose/compose-stack-deployment-logs.tsx")]
+          [
+            index("./routes/compose/compose-stack-deployment-logs.tsx"),
+            route(
+              "details",
+              "./routes/compose/compose-stack-deployment-details.tsx"
+            ),
+            route("cancel", "./routes/compose/cancel-compose-deployment.tsx")
+          ]
         )
       ])
     ])
