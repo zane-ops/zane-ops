@@ -183,7 +183,7 @@ export default function ComposeStackDeploymentLayoutPage({
 
             <DeploymentStatusBadge
               status={deployment.status}
-              className="py-0.5"
+              className="py-1"
             />
 
             {isCancellable && <DeploymentCancelForm />}
