@@ -40,7 +40,7 @@ export const METRICS_TIME_RANGES = [
   "LAST_WEEK",
   "LAST_MONTH"
 ] as const;
-export const REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER = 9_999_999_999;
+export const REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER = 999_999_999_999;
 export const STANDARD_HTTP_STATUS_CODES: { [key: number]: string } = {
   100: "Continue",
   101: "Switching Protocols",

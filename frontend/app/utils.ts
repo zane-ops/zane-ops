@@ -394,6 +394,41 @@ export function getDockerImageIconURL(image: string) {
   return iconSrc;
 }
 
+const CONTAINER_ID_COLORS = [
+  "blue",
+  "emerald",
+  "violet",
+  "orange",
+  "pink",
+  "teal",
+  "amber",
+  "indigo",
+  "green",
+  "red",
+  "cyan",
+  "purple",
+  "lime",
+  "rose",
+  "sky",
+  "fuchsia"
+];
+
+export function stringToColor(str: string): {
+  light: string;
+  dark: string;
+} {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const color =
+    CONTAINER_ID_COLORS[Math.abs(hash) % CONTAINER_ID_COLORS.length];
+  return {
+    light: `var(--color-${color}-700)`,
+    dark: `var(--color-${color}-400)`
+  };
+}
+
 export function getMaxDomainForStorageValue(maxValueInBytes: number) {
   const _100Kb = convertValueToBytes(100, "KILOBYTES");
   const _10Mb = convertValueToBytes(10, "MEGABYTES");

@@ -351,6 +351,32 @@ export const stackMetrisSearch = z.object({
 
 export type StackMetricsFilters = z.TypeOf<typeof stackMetrisSearch>;
 
+export const LOG_LEVELS = ["INFO", "ERROR"] as const;
+
+export const stackRuntimeLogSearchSchema = zfd.formData({
+  level: zfd.repeatable(
+    z
+      .array(z.enum(LOG_LEVELS))
+      .optional()
+      .catch(LOG_LEVELS as Writeable<typeof LOG_LEVELS>)
+  ),
+  time_before: z.coerce.date().optional().catch(undefined),
+  time_after: z.coerce.date().optional().catch(undefined),
+  content: z.string().optional(),
+  query: z.string().optional(),
+  container_id: z.string().optional(),
+  isMaximized: preprocess(
+    (arg) => arg === "true",
+    z.coerce.boolean().optional().catch(false)
+  ),
+  context: z.coerce.number().optional().catch(undefined),
+  context_lines: z.coerce.number().min(5).optional().catch(undefined)
+});
+
+export type ComposeStackRuntimeLogFilters = z.infer<
+  typeof stackRuntimeLogSearchSchema
+>;
+
 export const composeStackQueries = {
   single: ({
     project_slug,
@@ -898,6 +924,201 @@ export const composeStackQueries = {
         }
         return false;
       }
+    }),
+  runtimeLogs: ({
+    project_slug,
+    service_name,
+    stack_slug,
+    env_slug,
+    autoRefetchEnabled = true,
+    filters = {},
+    queryClient
+  }: {
+    project_slug: string;
+    service_name: string;
+    stack_slug: string;
+    env_slug: string;
+    filters?: Omit<ComposeStackRuntimeLogFilters, "isMaximized">;
+    queryClient: QueryClient;
+    autoRefetchEnabled?: boolean;
+  }) =>
+    infiniteQueryOptions({
+      queryKey: [
+        ...composeStackQueries.single({
+          project_slug,
+          stack_slug,
+          env_slug
+        }).queryKey,
+        "RUNTIME_LOGS",
+        service_name,
+        filters
+      ],
+      queryFn: async ({ pageParam, signal, queryKey }) => {
+        const allData = queryClient.getQueryData(queryKey) as InfiniteData<
+          DeploymentLogQueryData,
+          string | null
+        >;
+        const existingData = allData?.pages.find(
+          (_, index) => allData?.pageParams[index] === pageParam
+        );
+
+        /**
+         * We reuse the data in the query as we are sure this page is immutable,
+         * And we don't want to refetch the same logs that we have already fetched.
+         *
+         * However if we have the data in the cache and next is `null`,
+         * it means that that page is the last page with the most recent data
+         * and the next time we fetch it, there might be more data available.
+         * Inspired by: https://github.com/TanStack/query/discussions/5921
+         */
+        if (existingData?.next) {
+          return existingData;
+        }
+
+        /**
+         * when we issue a refetch, for all pages we fetched via `fetchPreviousPage` starting from the second page,
+         * tanstack query will use the `next` page pointer of the previous to refetch them,
+         * so we check if we already have it.
+         * In the docs, it's so that the data the pointers aren't stale, but we don't have that issue
+         * since the log data is immutable.
+         * ref: https://tanstack.com/query/latest/docs/framework/react/guides/infinite-queries#what-happens-when-an-infinite-query-needs-to-be-refetched
+         */
+        const existingDataIndex = allData?.pages.findIndex(
+          (_, index) => allData?.pages[index].next === pageParam
+        );
+        if (!existingData && existingDataIndex > -1) {
+          const nextPage = allData.pages[existingDataIndex + 1];
+          if (nextPage) {
+            return nextPage;
+          }
+        }
+
+        // the actual request
+        const { data } = await apiClient.GET(
+          "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/runtime-logs/",
+          {
+            params: {
+              path: {
+                project_slug,
+                env_slug,
+                slug: stack_slug
+              },
+              query: {
+                stack_service_name: service_name,
+                per_page: DEFAULT_LOGS_PER_PAGE,
+                cursor: pageParam ?? existingData?.cursor ?? undefined,
+                ...filters,
+                time_before: filters.time_before?.toISOString(),
+                time_after: filters.time_after?.toISOString()
+              }
+            },
+            signal
+          }
+        );
+
+        let apiData: DeploymentLogQueryData = {
+          next: null,
+          previous: null,
+          results: [],
+          cursor: null
+        };
+
+        if (data) {
+          // we reverse the results and reverse the page pointers (next/previous) because
+          // the data from the API is in reverse order of traversal and timestamp.
+          // Reversing them allows us to reorder the data in the ascending order as it is shown in the UI
+          apiData = {
+            results: data.results.toReversed(),
+            next: data?.previous ?? null,
+            previous: data?.next ?? null,
+            cursor: existingData?.cursor
+          };
+        }
+
+        // get cursor for initial page as its pageParam is `null`
+        // we want to do that because we don't to always fetch the latest data for the initial page
+        // instead what we want is to fetch from the time it starts
+        if (
+          pageParam === null &&
+          !apiData.cursor &&
+          !apiData.next &&
+          apiData.results.length > 0
+        ) {
+          const oldestLog = apiData.results[0];
+          const cursor = { sort: [oldestLog.timestamp], order: "asc" };
+          apiData.cursor = btoa(JSON.stringify(cursor));
+        }
+
+        return apiData;
+      },
+      getNextPageParam: ({ next }) => next,
+      getPreviousPageParam: ({ previous }) => previous,
+      initialPageParam: null as string | null,
+      refetchInterval: (query) => {
+        if (!query.state.data || !autoRefetchEnabled) {
+          return false;
+        }
+        return LOGS_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData,
+      staleTime: Number.POSITIVE_INFINITY
+    }),
+  logWithContext: ({
+    project_slug,
+    stack_slug,
+    env_slug,
+    service_name,
+    time,
+    context_lines = 20
+  }: {
+    project_slug: string;
+    service_name: string;
+    stack_slug: string;
+    env_slug: string;
+    time: number;
+    context_lines?: number;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...composeStackQueries.single({
+          project_slug,
+          stack_slug,
+          env_slug
+        }).queryKey,
+        "RUNTIME_LOGS",
+        "WITH_CONTEXT",
+        time,
+        context_lines
+      ],
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/runtime-logs/with-context/{time}/",
+          {
+            params: {
+              path: {
+                project_slug,
+                slug: stack_slug,
+                env_slug,
+                time: time.toString()
+              },
+              query: {
+                lines: context_lines,
+                stack_service_name: service_name
+              }
+            },
+            signal
+          }
+        );
+
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (!query.state.data) {
+          return false;
+        }
+        return LOGS_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData
     })
 };
 
@@ -1339,7 +1560,6 @@ export const serviceQueries = {
     })
 };
 
-export const LOG_LEVELS = ["INFO", "ERROR"] as const;
 export const LOG_SOURCES = ["SYSTEM", "SERVICE"] as const;
 export const REQUEST_METHODS = [
   "DELETE",

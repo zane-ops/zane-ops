@@ -220,7 +220,13 @@ export default [
         route(
           "services/:serviceSlug",
           "./routes/layouts/compose-stack-service-layout.tsx",
-          [index("./routes/compose/compose-stack-service-replicas.tsx")]
+          [
+            index("./routes/compose/compose-stack-service-replicas.tsx"),
+            route(
+              "runtime-logs",
+              "./routes/compose/compose-stack-service-runtime-logs.tsx"
+            )
+          ]
         ),
 
         route(
