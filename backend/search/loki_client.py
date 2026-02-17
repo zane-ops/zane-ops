@@ -259,6 +259,7 @@ class LokiSearchClient:
         stack_id: str | None = None,
         stack_service_name: list[str] | None = None,
         deployment_id: str | None = None,
+        container_id: str | None = None,
     ):
         """
         Get context around a single log entry.
@@ -274,6 +275,8 @@ class LokiSearchClient:
             label_selectors.append(f'stack_service_name="{stack_service_name}"')
         if deployment_id:
             label_selectors.append(f'deployment_id="{deployment_id}"')
+        if container_id:
+            label_selectors.append(f'container_id="{container_id}"')
         label_selectors.append(f'source="{RuntimeLogSource.SERVICE}"')
         label_selectors.append(f'app="{settings.LOKI_APP_NAME}"')
 
