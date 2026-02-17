@@ -13,6 +13,7 @@ import * as React from "react";
 import { Link, Navigate, href } from "react-router";
 import type { ComposeStackTask } from "~/api/types";
 import { Code } from "~/components/code";
+import { CopyButton } from "~/components/copy-button";
 import type { StatusBadgeColor } from "~/components/status-badge";
 import {
   Accordion,
@@ -22,12 +23,6 @@ import {
 } from "~/components/ui/accordion";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
 import { composeStackQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { getDockerImageIconURL } from "~/utils";
@@ -196,6 +191,8 @@ export function ServiceTaskCard({
     color === "red" && !isPrevious ? `task-${task.id}` : ""
   );
 
+  const [prefix, slot, taskId] = task.name.split(".");
+
   return (
     <Card
       className={cn("border border-border p-1 shadow-none group relative", {
@@ -244,7 +241,7 @@ export function ServiceTaskCard({
             className={cn(
               "rounded-md py-2 px-4 flex items-center gap-6 font-normal cursor-pointer data-[state=open]:rounded-b-none",
               {
-                "bg-emerald-400/10 dark:bg-emerald-600/20 hover:bg-emerald-300/20":
+                "bg-emerald-400/10 dark:bg-emerald-600/20 hover:bg-emerald-300/30":
                   color === "green",
                 "bg-red-600/10 hover:bg-red-600/20": color === "red",
                 "bg-yellow-400/10 dark:bg-yellow-600/10 ": color === "yellow",
@@ -279,35 +276,14 @@ export function ServiceTaskCard({
             </div>
 
             {/* ID & image */}
-            <div className="flex flex-col gap-2 grow">
+            <div className="flex flex-col gap-2 grow pr-24">
               <div className="flex gap-2">
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <span
-                        tabIndex={0}
-                        className="inline-flex items-center gap-1"
-                      >
-                        <HashIcon className="size-4 flex-none text-grey" />
-                        <span>{task.id}</span>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>Replica ID</TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <span
-                        tabIndex={0}
-                        className="inline-flex items-center gap-1"
-                      >
-                        <Layers2Icon className="size-4 flex-none text-grey" />
-                        <span>{task.slot}</span>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>Replica Number</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <span className="inline text-sm">
+                  <span className="text-grey">
+                    {prefix}.{slot}.
+                  </span>
+                  <span>{taskId}</span>
+                </span>
               </div>
 
               <div className="inline-flex items-start gap-1">
@@ -321,7 +297,7 @@ export function ServiceTaskCard({
                 ) : (
                   <ContainerIcon className="flex-none size-3 relative top-1" />
                 )}
-                <small className="break-all inline whitespace-normal text-start">
+                <small className="break-all inline whitespace-normal text-start text-xs">
                   {imageVersion}
                   <span className="text-grey">:{imageSha}</span>
                 </small>
@@ -351,7 +327,7 @@ export function ServiceTaskCard({
                 </div>
 
                 <div className="flex flex-col gap-0 w-full">
-                  <span>message</span>
+                  <span>Message</span>
                   <span
                     className={cn(
                       "w-full py-2 my-1 break-all rounded-md px-2",
@@ -373,15 +349,33 @@ export function ServiceTaskCard({
                 </div>
               </div>
 
+              {/* Task ID */}
+              <div className="text-sm inline-grid items-start gap-2 grid-cols-[auto_1fr]">
+                <div className="w-4 hidden md:flex flex-col items-center gap-2 relative top-1 h-full self-stretch">
+                  <Layers2Icon className="size-4 flex-none text-grey" />
+                  <div className="min-h-5 h-full bg-grey/50 w-px mb-2"></div>
+                </div>
+
+                <div className="flex flex-col relative top-0.5">
+                  <span>Replica ID</span>
+                  <CopyButton
+                    className="text-grey p-0 inline-flex w-fit bg-inherit hover:bg-inherit"
+                    label={task.id}
+                    value={task.id}
+                    showLabel
+                  />
+                </div>
+              </div>
+
               {/* container ID */}
               <div className="text-sm inline-grid items-start gap-2 grid-cols-[auto_1fr]">
                 <div className="w-4 hidden md:flex flex-col items-center gap-2 relative top-1 h-full self-stretch">
                   <HashIcon className="size-4 flex-none text-grey" />
-                  <div className="min-h-3 h-full bg-grey/50 w-px mb-2"></div>
+                  <div className="min-h-5 h-full bg-grey/50 w-px mb-2"></div>
                 </div>
 
-                <div className="flex flex-col">
-                  <span>container ID</span>
+                <div className="flex flex-col relative top-0.5">
+                  <span>Container ID</span>
                   <p className="text-grey my-1">
                     {task.container_id === null ? (
                       <pre className="font-mono">{`<empty>`}</pre>
@@ -389,6 +383,15 @@ export function ServiceTaskCard({
                       task.container_id
                     )}
                   </p>
+                </div>
+              </div>
+
+              {/* Slot */}
+              <div className="text-sm inline-grid items-center gap-2 grid-cols-[auto_1fr]">
+                <Layers2Icon className="size-4 flex-none text-grey" />
+                <div className="flex items-center gap-2">
+                  <span>Replica number</span>
+                  <Code>{task.slot}</Code>
                 </div>
               </div>
 
