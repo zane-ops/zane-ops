@@ -8608,13 +8608,13 @@ export interface operations {
   /** Get stack runtime logs */
   compose_stacks_runtime_logs_retrieve: {
     parameters: {
-      query?: {
+      query: {
         container_id?: string;
         cursor?: string;
         level?: ("INFO" | "ERROR")[];
         per_page?: number;
         query?: string;
-        stack_service_names?: string[];
+        stack_service_name: string;
         time_after?: string;
         time_before?: string;
       };
@@ -8655,9 +8655,10 @@ export interface operations {
   /** Get stack runtime logs with context */
   compose_stacks_runtime_logs_with_context_retrieve: {
     parameters: {
-      query?: {
+      query: {
+        container_id?: string;
         lines?: number;
-        stack_service_names?: string[];
+        stack_service_name: string;
       };
       path: {
         env_slug: string;

@@ -257,7 +257,7 @@ class LokiSearchClient:
         timestamp_ns: int,
         lines: int = 10,
         stack_id: str | None = None,
-        stack_service_names: list[str] | None = None,
+        stack_service_name: list[str] | None = None,
         deployment_id: str | None = None,
     ):
         """
@@ -270,10 +270,8 @@ class LokiSearchClient:
         label_selectors: list[str] = []
         if stack_id:
             label_selectors.append(f'stack_id="{stack_id}"')
-        if stack_service_names:
-            label_selectors.append(
-                'stack_service_name=~"(' + "|".join(stack_service_names) + ')"'
-            )
+        if stack_service_name:
+            label_selectors.append(f'stack_service_name="{stack_service_name}"')
         if deployment_id:
             label_selectors.append(f'deployment_id="{deployment_id}"')
         label_selectors.append(f'source="{RuntimeLogSource.SERVICE}"')
@@ -438,14 +436,10 @@ class LokiSearchClient:
         label_selectors: list[str] = []
         if search_params.get("stack_id"):
             label_selectors.append(f'stack_id="{search_params["stack_id"]}"')
-        if search_params.get("stack_service_names"):
-            services = search_params["stack_service_names"]
-            if isinstance(services, list):
-                label_selectors.append(
-                    'stack_service_name=~"(' + "|".join(services) + ')"'
-                )
-            else:
-                label_selectors.append(f'stack_service_name="{services}"')
+        if search_params.get("stack_service_name"):
+            label_selectors.append(
+                f'stack_service_name="{search_params["stack_service_name"]}"'
+            )
         if search_params.get("service_id"):
             label_selectors.append(f'service_id="{search_params["service_id"]}"')
         if search_params.get("deployment_id"):

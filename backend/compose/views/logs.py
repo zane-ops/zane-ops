@@ -181,6 +181,6 @@ class ComposeStackRuntimeLogsWithContextAPIView(APIView):
                 timestamp_ns=time_ns,
                 stack_id=stack.id,
                 lines=math.ceil(lines / 2),
-                stack_service_names=form.validated_data.get("stack_service_names"),  # type: ignore
+                stack_service_name=form.validated_data.get("stack_service_name"),  # type: ignore
             )
             return Response(data)

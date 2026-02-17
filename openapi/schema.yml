@@ -2100,12 +2100,11 @@ paths:
           pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: query
-        name: stack_service_names
+        name: stack_service_name
         schema:
-          type: array
-          items:
-            type: string
-            minLength: 1
+          type: string
+          minLength: 1
+        required: true
       - in: query
         name: time_after
         schema:
@@ -2187,6 +2186,11 @@ paths:
       operationId: compose_stacks_runtime_logs_with_context_retrieve
       summary: Get stack runtime logs with context
       parameters:
+      - in: query
+        name: container_id
+        schema:
+          type: string
+          minLength: 1
       - in: path
         name: env_slug
         schema:
@@ -2212,12 +2216,11 @@ paths:
           pattern: ^[-a-zA-Z0-9_]+$
         required: true
       - in: query
-        name: stack_service_names
+        name: stack_service_name
         schema:
-          type: array
-          items:
-            type: string
-            minLength: 1
+          type: string
+          minLength: 1
+        required: true
       - in: path
         name: time
         schema:
