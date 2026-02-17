@@ -1,5 +1,6 @@
 import base64
 import json
+from typing import Any
 from rest_framework import serializers
 from .dtos import RuntimeLogLevel, RuntimeLogSource
 from django.core.exceptions import ValidationError
@@ -51,9 +52,7 @@ class RuntimeLogsQuerySerializer(serializers.Serializer):
     deployment_id = serializers.CharField(required=False)
     service_id = serializers.CharField(required=False)
     stack_id = serializers.CharField(required=False)
-    stack_service_names = serializers.ListField(
-        child=serializers.CharField(), required=False
-    )
+    stack_service_name = serializers.CharField(required=False)
     time_before = serializers.DateTimeField(required=False)
     time_after = serializers.DateTimeField(required=False)
     query = serializers.CharField(
@@ -79,6 +78,16 @@ class RuntimeLogsQuerySerializer(serializers.Serializer):
         required=False, min_value=1, max_value=100, default=50
     )
     cursor = serializers.CharField(required=False, allow_null=True)
+
+    def validate(self, attrs: dict[str, Any]):
+        for attr, value in attrs.items():
+            if (
+                isinstance(value, str) and attr != "cursor"
+            ):  # ignore cursor as it's supposed to be base64 string
+                # escape all backslashes and quotes to prevent query injection and syntax error
+                # in loki
+                attrs[attr] = value.replace("\\", "\\\\").replace('"', '\\"')
+        return attrs
 
     def validate_cursor(self, cursor: str | None):
         if cursor is not None:
