@@ -176,11 +176,15 @@ class ComposeStackRuntimeLogsWithContextAPIView(APIView):
         if form.is_valid(raise_exception=True):
             search_client = LokiSearchClient(host=settings.LOKI_HOST)
             time_ns = int(time)
-            lines = cast(dict, form.validated_data).get("lines", 20)
+
+            data = cast(dict, form.validated_data)
+
+            lines = data.get("lines", 20)
             data = search_client.get_context(
                 timestamp_ns=time_ns,
                 stack_id=stack.id,
                 lines=math.ceil(lines / 2),
-                stack_service_name=form.validated_data.get("stack_service_name"),  # type: ignore
+                stack_service_name=data["stack_service_name"],
+                container_id=data.get("container_id"),
             )
             return Response(data)
