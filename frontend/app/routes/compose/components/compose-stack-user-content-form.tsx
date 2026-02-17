@@ -219,7 +219,7 @@ export function ComposeStackUserContentForm({
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>
                     <TooltipTrigger className="relative z-10" asChild>
-                      <div tabIndex={0}>
+                      <div tabIndex={0} role="button">
                         <LockKeyholeIcon className="size-4 flex-none text-grey" />
                         <span className="sr-only">
                           (This file is read only)

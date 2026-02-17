@@ -72,6 +72,7 @@ export function DockerServiceCard({
           <TooltipTrigger asChild>
             <span
               tabIndex={0}
+              role="button"
               className="absolute cursor-pointer flex h-4 w-4 -top-1 -right-1 z-10"
             >
               {status !== "NOT_DEPLOYED_YET" && status !== "CANCELLED" && (

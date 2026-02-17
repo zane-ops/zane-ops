@@ -1,5 +1,4 @@
 import {
-  Code,
   ContainerIcon,
   Layers2Icon,
   LoaderIcon,
@@ -9,6 +8,7 @@ import {
 import React from "react";
 import { Link } from "react-router";
 import type { ComposeStackTask } from "~/api/types";
+import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
 import type { StatusBadgeColor } from "~/components/status-badge";
 import {
@@ -81,26 +81,28 @@ export function ComposeStackServiceReplicaCard({
       })}
     >
       {/* View logs button */}
-      <Button
-        asChild
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "border hover:bg-inherit hidden md:inline-flex",
-          "absolute top-4 right-4",
-          {
-            "border-emerald-500": color === "green",
-            "border-gray-600": color === "gray",
-            "border-amber-500": color === "yellow",
-            "border-link": color === "blue",
-            "border-red-600": color === "red"
-          }
-        )}
-      >
-        <Link to={`./runtime-logs?container_id=${task.container_id}`}>
-          View logs
-        </Link>
-      </Button>
+      {task.container_id && (
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "border hover:bg-inherit hidden md:inline-flex",
+            "absolute top-4 right-4",
+            {
+              "border-emerald-500": color === "green",
+              "border-gray-600": color === "gray",
+              "border-amber-500": color === "yellow",
+              "border-link": color === "blue",
+              "border-red-600": color === "red"
+            }
+          )}
+        >
+          <Link to={`./runtime-logs?container_id=${task.container_id}`}>
+            View logs
+          </Link>
+        </Button>
+      )}
 
       <Accordion
         type="single"
@@ -140,7 +142,7 @@ export function ComposeStackServiceReplicaCard({
                       color === "red",
                     "bg-yellow-400/30 dark:bg-yellow-600/20 text-amber-700 dark:text-yellow-300":
                       color === "yellow",
-                    "bg-gray-600/20 dark:bg-gray-600/60 text-gray":
+                    "bg-gray-600/20 dark:bg-gray-600/60 text-card-foreground":
                       color === "gray",
                     "bg-link/30 text-link": color === "blue"
                   }

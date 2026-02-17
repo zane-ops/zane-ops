@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowUpIcon,
   FileTextIcon,
   FlameIcon,
   HammerIcon,
@@ -10,13 +9,11 @@ import {
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
-import { Button } from "~/components/ui/button";
 import {
   composeStackQueries,
   environmentQueries,
   resourceQueries
 } from "~/lib/queries";
-import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { ComposeStackDangerZoneForm } from "~/routes/compose/components/compose-stack-danger-zone-form";
 import { ComposeStackDeployURLForm } from "~/routes/compose/components/compose-stack-deploy-url-form";
@@ -126,23 +123,6 @@ export default function ComposeStackSettingsPage({
       </div>
 
       <StackSettingsSideNav />
-
-      <Button
-        variant="outline"
-        className={cn(
-          "inline-flex gap-2 fixed bottom-10 right-5 md:right-10 z-30",
-          "bg-grey text-white dark:text-black"
-        )}
-        onClick={() => {
-          const main = document.querySelector("main");
-          main?.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-          });
-        }}
-      >
-        <span>Back to top</span> <ArrowUpIcon size={15} />
-      </Button>
     </div>
   );
 }
