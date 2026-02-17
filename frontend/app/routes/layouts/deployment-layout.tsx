@@ -247,15 +247,16 @@ export default function DeploymentLayoutPage({
             </li>
 
             <li>
-              <NavLink to="./details">
-                <span>Details</span>
-                <InfoIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
-            <li>
               <NavLink to="./metrics">
                 <span>Metrics</span>
                 <ChartNoAxesColumnIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink to="./details">
+                <span>Details</span>
+                <InfoIcon size={15} className="flex-none" />
               </NavLink>
             </li>
           </ul>
