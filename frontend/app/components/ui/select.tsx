@@ -131,7 +131,10 @@ const SelectLabel = ({
 }) => (
   <SelectPrimitive.Label
     ref={ref}
-    className={cn("py-1.5 pl-8 pr-2 text-sm font-semibold", className)}
+    className={cn(
+      "py-1.5 pl-9 mt-1 pr-2 text-sm text-grey border-t border-border -mx-1",
+      className
+    )}
     {...props}
   />
 );

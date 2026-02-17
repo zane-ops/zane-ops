@@ -36,6 +36,7 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
@@ -597,14 +598,17 @@ const HeaderSection = React.memo(function HeaderSection({
                 className="text-grey"
               />
             </SelectTrigger>
-            <SelectContent className="border border-border text-sm" side="top">
+            <SelectContent className="border border-border text-sm">
               <SelectItem value="<all>">(All replicas)</SelectItem>
               <SelectGroup>
+                <SelectLabel>Current</SelectLabel>
                 {running.map((task) => (
                   <ContainerSelectItem task={task} key={task.id} />
                 ))}
               </SelectGroup>
               <SelectGroup>
+                <SelectLabel>Previous</SelectLabel>
+
                 {old.map((task) => (
                   <ContainerSelectItem task={task} key={task.id} />
                 ))}
@@ -659,7 +663,7 @@ const HeaderSection = React.memo(function HeaderSection({
                 <SelectTrigger className="w-36 [&_[data-label]]:inline">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="border border-border" side="top">
+                <SelectContent className="border border-border">
                   {[10, 20, 30, 40, 50, 100, 500].map((pageSize) => (
                     <SelectItem key={pageSize} value={pageSize.toString()}>
                       <span data-label className="text-grey hidden">
