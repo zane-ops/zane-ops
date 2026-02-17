@@ -292,6 +292,7 @@ def register_zaneops_app_on_proxy(
     zane_api_internal_domain: str,
     zane_front_internal_domain: str,
     internal_tls: bool = False,
+    cloudflare_api_token: str | None = None,
 ):
     url_configurations = [
         {
@@ -376,9 +377,36 @@ def register_zaneops_app_on_proxy(
             print(f"With status code : {Colors.RED}{response.status_code}{Colors.ENDC}")
             print(f"With response data : {Colors.ORANGE}{response.text}{Colors.ENDC}\n")
 
+    has_cloudflare_token = (
+        cloudflare_api_token is not None and len(cloudflare_api_token.strip()) > 0
+    )
+
+    if internal_tls:
+        tls_policy = {"on_demand": True, "issuers": [{"module": "internal"}]}
+    elif has_cloudflare_token:
+        tls_policy = {
+            "on_demand": True,
+            "issuers": [
+                {
+                    "module": "acme",
+                    "challenges": {
+                        "dns": {
+                            "provider": {
+                                "name": "cloudflare",
+                                "api_token": "{env.CLOUDFLARE_API_TOKEN}",
+                            }
+                        }
+                    },
+                },
+                {"module": "acme"},
+            ],
+        }
+    else:
+        tls_policy = {"on_demand": True}
+
     tls_app_config = {
         "automation": {
-            "policies": [{"on_demand": True}],
+            "policies": [tls_policy],
             "on_demand": {
                 "permission": {
                     "@id": "tls-endpoint",
@@ -388,11 +416,6 @@ def register_zaneops_app_on_proxy(
             },
         }
     }
-
-    if internal_tls:
-        tls_app_config["automation"]["policies"][0].update(
-            {"issuers": [{"module": "internal"}]}
-        )
     response = requests.patch(
         f"{proxy_url}/id/root/apps/tls", timeout=5, json=tls_app_config
     )

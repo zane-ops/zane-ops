@@ -390,6 +390,7 @@ CADDY_PROXY_ADMIN_HOST = os.environ.get(
     "CADDY_PROXY_ADMIN_HOST",
     "http://127.0.0.1:2019",
 )
+CLOUDFLARE_API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
 
 ZANE_FRONT_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:5173"
@@ -431,6 +432,7 @@ if BACKEND_COMPONENT == "API" and not TESTING:
         zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
         zane_api_internal_domain=ZANE_API_SERVICE_INTERNAL_DOMAIN,
         internal_tls=DEBUG,
+        cloudflare_api_token=CLOUDFLARE_API_TOKEN,
     )
 
 # Docker image version
