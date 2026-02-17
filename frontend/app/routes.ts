@@ -225,6 +225,10 @@ export default [
             route(
               "runtime-logs",
               "./routes/compose/compose-stack-service-runtime-logs.tsx"
+            ),
+            route(
+              "terminal",
+              "./routes/compose/compose-stack-service-terminal.tsx"
             )
           ]
         ),
