@@ -1,7 +1,8 @@
+import { FitAddon } from "@xterm/addon-fit";
+import { type ITheme, Terminal as XTermTerminal } from "@xterm/xterm";
 import * as React from "react";
-import { type ITheme, Terminal as XTermTerminal } from "xterm";
-import { FitAddon } from "xterm-addon-fit";
-import "xterm/css/xterm.css";
+import "@xterm/xterm/css/xterm.css";
+import { useMediaQuery } from "@uidotdev/usehooks";
 import { useTheme } from "~/components/theme-provider";
 import { cn } from "~/lib/utils";
 
@@ -84,6 +85,8 @@ export function Terminal({
     }
   };
 
+  const isDarkTheme = useMediaQuery("(prefers-color-scheme: dark)");
+
   React.useLayoutEffect(() => {
     // Observe container size changes
     // run in `useLayoutEffect()` because it needs to run after dom mutations
@@ -101,17 +104,15 @@ export function Terminal({
 
   React.useEffect(() => {
     if (!term.current) return;
-    const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
-
     let termTheme: ITheme;
     if (theme === "SYSTEM") {
-      termTheme = darkQuery.matches ? shellDarkTheme : shellLightTheme;
+      termTheme = isDarkTheme ? shellDarkTheme : shellLightTheme;
     } else {
       termTheme = theme === "DARK" ? shellDarkTheme : shellLightTheme;
     }
 
     term.current.options.theme = termTheme;
-  }, [theme]);
+  }, [theme, isDarkTheme]);
 
   React.useEffect(() => {
     if (!terminalRef.current) return;

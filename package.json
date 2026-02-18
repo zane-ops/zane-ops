@@ -23,5 +23,10 @@
   "engines": {
     "node": "20"
   },
-  "packageManager": "pnpm@8.15.9"
+  "packageManager": "pnpm@8.15.9",
+  "pnpm": {
+    "overrides": {
+      "vite": "npm:rolldown-vite@6.3.21"
+    }
+  }
 }
