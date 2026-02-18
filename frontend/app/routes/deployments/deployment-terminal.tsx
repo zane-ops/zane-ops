@@ -1,7 +1,5 @@
-import * as React from "react";
-import type { Route } from "./+types/deployment-terminal";
-import "xterm/css/xterm.css";
 import { Maximize2Icon, Minimize2Icon } from "lucide-react";
+import * as React from "react";
 import { useSearchParams } from "react-router";
 import { Terminal } from "~/components/terminal";
 import { Button } from "~/components/ui/button";
@@ -20,6 +18,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
+import type { Route } from "./+types/deployment-terminal";
 
 export default function DeploymentTerminalPage({
   params
