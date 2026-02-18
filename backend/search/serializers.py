@@ -81,9 +81,10 @@ class RuntimeLogsQuerySerializer(serializers.Serializer):
 
     def validate(self, attrs: dict[str, Any]):
         for attr, value in attrs.items():
-            if (
-                isinstance(value, str) and attr != "cursor"
-            ):  # ignore cursor as it's supposed to be base64 string
+            if isinstance(value, str) and attr not in [
+                "cursor",
+                "query",
+            ]:  # ignore cursor as it's supposed to be base64 string
                 # escape all backslashes and quotes to prevent query injection and syntax error
                 # in loki
                 attrs[attr] = value.replace("\\", "\\\\").replace('"', '\\"')

@@ -587,6 +587,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
             ),
             QUERY_STRING=f"query={url_encoded_query}",
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, len(response.json()["results"]))
 
