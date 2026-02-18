@@ -127,15 +127,15 @@ function EditPreviewTemplateForm({
     template.clone_strategy
   );
 
-  const { data: serviceList } = useQuery({
-    ...environmentQueries.serviceList(params.projectSlug!, baseEnvironment.name)
-  });
-  const { data: stackList } = useQuery({
-    ...environmentQueries.composeStackList(
+  const { data: serviceList } = useQuery(
+    environmentQueries.serviceList(params.projectSlug!, baseEnvironment.name)
+  );
+  const { data: stackList } = useQuery(
+    environmentQueries.composeStackList(
       params.projectSlug!,
       baseEnvironment.name
     )
-  });
+  );
 
   const serviceListPerEnv = serviceList ?? [];
   const stackListPerEnv = stackList ?? [];
