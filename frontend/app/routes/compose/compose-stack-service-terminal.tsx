@@ -61,7 +61,7 @@ export default function ComposeStackServiceTerminalPage({
   const shellCmd = searchParams.get("shellCmd")?.toString() ?? undefined;
   const user = searchParams.get("user")?.toString() ?? undefined;
   const selectedContainerId =
-    searchParams.get("containerId")?.toString() ?? undefined;
+    searchParams.get("container_id")?.toString() ?? undefined;
 
   const isMaximized = searchParams.get("isMaximized") === "true";
   const webSocketScheme = window.location.protocol === "http:" ? "ws" : "wss";
@@ -161,9 +161,9 @@ export default function ComposeStackServiceTerminalPage({
           name="container_id"
           value={taskFound?.container_id ?? "<none>"}
           onValueChange={(value) => {
-            searchParams.delete("containerId");
+            searchParams.delete("container_id");
             if (value !== "<none>") {
-              searchParams.set("containerId", value);
+              searchParams.set("container_id", value);
               if (!shellCmd) {
                 searchParams.set("shellCmd", "/bin/sh");
               }
