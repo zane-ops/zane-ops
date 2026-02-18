@@ -546,6 +546,8 @@ const HeaderSection = React.memo(function HeaderSection({
     Omit<ComposeStackTask, "container_id"> & { container_id: string }
   >;
 
+  const taskFound = tasks.find((t) => t.container_id === search.container_id);
+
   const running = tasks.filter(
     (task) =>
       task.desired_status === "running" || task.desired_status === "complete"
@@ -593,24 +595,35 @@ const HeaderSection = React.memo(function HeaderSection({
             }}
           >
             <SelectTrigger className="w-54 [&_[data-label]]:inline placeholder-shown:text-grey">
-              <SelectValue
-                placeholder="select container"
-                className="text-grey"
-              />
+              <SelectValue placeholder="select replica" className="text-grey" />
             </SelectTrigger>
             <SelectContent className="border border-border text-sm">
               <SelectItem value="<all>">(All replicas)</SelectItem>
+
               <SelectGroup>
                 <SelectLabel>Current</SelectLabel>
                 {running.map((task) => (
-                  <ContainerSelectItem task={task} key={task.id} />
+                  <ContainerSelectItem
+                    container_id={task.container_id}
+                    status={task.status}
+                    key={task.id}
+                  />
                 ))}
               </SelectGroup>
               <SelectGroup>
                 <SelectLabel>Previous</SelectLabel>
-
+                {!taskFound && search.container_id && (
+                  <ContainerSelectItem
+                    container_id={search.container_id}
+                    status={"remove"}
+                  />
+                )}
                 {old.map((task) => (
-                  <ContainerSelectItem task={task} key={task.id} />
+                  <ContainerSelectItem
+                    container_id={task.container_id}
+                    status={task.status}
+                    key={task.id}
+                  />
                 ))}
               </SelectGroup>
             </SelectContent>
@@ -743,19 +756,24 @@ const HeaderSection = React.memo(function HeaderSection({
   );
 });
 
-type TaskWithContainerId = Omit<ComposeStackTask, "container_id"> & {
+type ContainerSelectItemProps = Pick<ComposeStackTask, "status"> & {
   container_id: string;
 };
 
-type ContainerSelectItemProps = {
-  task: TaskWithContainerId;
-};
+function ContainerSelectItem({
+  container_id,
+  status
+}: ContainerSelectItemProps) {
+  const color = TASK_STATUS_COLOR_MAP[status];
+  const containerColor = stringToColor(container_id);
 
-function ContainerSelectItem({ task }: ContainerSelectItemProps) {
-  const color = TASK_STATUS_COLOR_MAP[task.status];
-  const containerColor = stringToColor(task.container_id);
+  let newStatus: string = status;
+  if (status === "remove") {
+    newStatus = "removed";
+  }
+
   return (
-    <SelectItem key={task.id} value={task.container_id}>
+    <SelectItem value={container_id}>
       <div
         className="inline-flex items-center gap-1"
         style={
@@ -769,7 +787,7 @@ function ContainerSelectItem({ task }: ContainerSelectItemProps) {
           data-label
           className="text-[var(--container-color-light)] dark:text-[var(--container-color-dark)]"
         >
-          {task.container_id.substring(0, 12)}
+          {container_id.substring(0, 12)}
         </span>
         <div
           className={cn(
@@ -786,7 +804,7 @@ function ContainerSelectItem({ task }: ContainerSelectItemProps) {
             }
           )}
         >
-          <code className="text-sm">{task.status}</code>
+          <code className="text-sm">{newStatus}</code>
         </div>
       </div>
     </SelectItem>
