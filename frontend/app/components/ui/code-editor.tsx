@@ -1,8 +1,13 @@
 import MonacoEditor, {
+  type DiffEditorProps,
   type EditorProps,
-  DiffEditor as MonacoDiffEditor,
-  type DiffEditorProps
+  DiffEditor as MonacoDiffEditor
 } from "@monaco-editor/react";
+import {
+  type DiffsThemeNames,
+  MultiFileDiff,
+  type SupportedLanguages
+} from "@pierre/diffs/react";
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { Maximize2Icon, Minimize2Icon } from "lucide-react";
 import * as React from "react";
@@ -197,5 +202,49 @@ export function DiffCodeEditor({
         }}
       />
     </div>
+  );
+}
+
+export type PatchCodeEditorProps = {
+  original: string;
+  modified: string;
+  className?: string;
+  filename: string;
+  lang?: SupportedLanguages;
+};
+
+export function PatchCodeEditor({
+  original,
+  modified,
+  className,
+  filename,
+  lang
+}: PatchCodeEditorProps) {
+  const { theme } = useTheme();
+  const isDark = useMediaQuery("(prefers-color-scheme: dark)");
+  const isPhone = useMediaQuery("(max-width: 768px)");
+  const resolvedTheme =
+    theme === "SYSTEM" ? (isDark ? "DARK" : "LIGHT") : theme;
+  const editorTheme: DiffsThemeNames =
+    resolvedTheme === "LIGHT" ? "github-light" : "dark-plus";
+
+  return (
+    <MultiFileDiff
+      oldFile={{
+        name: filename,
+        contents: original,
+        lang
+      }}
+      newFile={{
+        name: filename,
+        contents: modified,
+        lang
+      }}
+      options={{
+        theme: editorTheme,
+        diffStyle: isPhone ? "unified" : "split"
+      }}
+      className={className}
+    />
   );
 }

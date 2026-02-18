@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import hljs from "highlight.js/lib/core";
 import json from "highlight.js/lib/languages/json";
 import "highlight.js/styles/atom-one-dark.css";
-import { DiffEditor } from "@monaco-editor/react";
 import {
   ChevronRightIcon,
   ClockIcon,
@@ -27,7 +26,7 @@ import {
   AccordionItem,
   AccordionTrigger
 } from "~/components/ui/accordion";
-import { DiffCodeEditor } from "~/components/ui/code-editor";
+import { PatchCodeEditor } from "~/components/ui/code-editor";
 import {
   Tooltip,
   TooltipContent,
@@ -36,7 +35,7 @@ import {
 } from "~/components/ui/tooltip";
 import { composeStackQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { capitalizeText, formatElapsedTime, formattedTime } from "~/utils";
+import { formatElapsedTime, formattedTime } from "~/utils";
 import type { Route } from "./+types/compose-stack-deployment-details";
 
 hljs.registerLanguage("json", json);
@@ -103,7 +102,7 @@ export default function ComposeStackDeploymentDetailsPage({
   };
 
   return (
-    <div className="my-6 flex flex-col lg:w-4/5">
+    <div className="my-6 flex flex-col lg:w-5/6">
       <section id="details" className="flex gap-1 scroll-mt-20">
         <div className="w-16 hidden md:flex flex-col items-center">
           <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
@@ -248,15 +247,10 @@ export default function ComposeStackDeploymentDetailsPage({
                       </React.Fragment>
                     ))}
                   {field === "compose_content" && (
-                    <DiffCodeEditor
-                      original={changes[0].old_value as string}
+                    <PatchCodeEditor
+                      original={(changes[0].old_value as string) ?? ""}
                       modified={changes[0].new_value as string}
-                      readOnly
-                      containerClassName={cn(
-                        "w-full h-100",
-                        "w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[73dvw] xl:w-[882px]"
-                      )}
-                      language="yaml"
+                      filename="docker-compose.yml"
                     />
                   )}
                 </div>
