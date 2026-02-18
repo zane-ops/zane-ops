@@ -601,32 +601,36 @@ const HeaderSection = React.memo(function HeaderSection({
             <SelectContent className="border border-border text-sm">
               <SelectItem value="<all>">(All replicas)</SelectItem>
 
-              <SelectGroup>
-                <SelectLabel>Current</SelectLabel>
-                {running.map((task) => (
-                  <TaskWithContainerSelectItem
-                    container_id={task.container_id}
-                    status={task.status}
-                    key={task.id}
-                  />
-                ))}
-              </SelectGroup>
-              <SelectGroup>
-                <SelectLabel>Previous</SelectLabel>
-                {!taskFound && search.container_id && (
-                  <TaskWithContainerSelectItem
-                    container_id={search.container_id}
-                    status={"remove"}
-                  />
-                )}
-                {old.map((task) => (
-                  <TaskWithContainerSelectItem
-                    container_id={task.container_id}
-                    status={task.status}
-                    key={task.id}
-                  />
-                ))}
-              </SelectGroup>
+              {running.length > 0 && (
+                <SelectGroup>
+                  <SelectLabel>Current</SelectLabel>
+                  {running.map((task) => (
+                    <TaskWithContainerSelectItem
+                      container_id={task.container_id}
+                      status={task.status}
+                      key={task.id}
+                    />
+                  ))}
+                </SelectGroup>
+              )}
+              {(old.length > 0 || (!taskFound && search.container_id)) && (
+                <SelectGroup>
+                  <SelectLabel>Previous</SelectLabel>
+                  {!taskFound && search.container_id && (
+                    <TaskWithContainerSelectItem
+                      container_id={search.container_id}
+                      status={"remove"}
+                    />
+                  )}
+                  {old.map((task) => (
+                    <TaskWithContainerSelectItem
+                      container_id={task.container_id}
+                      status={task.status}
+                      key={task.id}
+                    />
+                  ))}
+                </SelectGroup>
+              )}
             </SelectContent>
           </Select>
 

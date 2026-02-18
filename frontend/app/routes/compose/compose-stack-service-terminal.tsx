@@ -181,27 +181,31 @@ export default function ComposeStackServiceTerminalPage({
               <span data-empty>(Select a replica)</span>
             </SelectItem>
 
-            <SelectGroup>
-              <SelectLabel>Current</SelectLabel>
-              {running.map((task) => (
-                <TaskWithContainerSelectItem
-                  container_id={task.container_id}
-                  status={task.status}
-                  key={task.id}
-                />
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>Previous</SelectLabel>
+            {running.length > 0 && (
+              <SelectGroup>
+                <SelectLabel>Current</SelectLabel>
+                {running.map((task) => (
+                  <TaskWithContainerSelectItem
+                    container_id={task.container_id}
+                    status={task.status}
+                    key={task.id}
+                  />
+                ))}
+              </SelectGroup>
+            )}
+            {old.length > 0 && (
+              <SelectGroup>
+                <SelectLabel>Previous</SelectLabel>
 
-              {old.map((task) => (
-                <TaskWithContainerSelectItem
-                  container_id={task.container_id}
-                  status={task.status}
-                  key={task.id}
-                />
-              ))}
-            </SelectGroup>
+                {old.map((task) => (
+                  <TaskWithContainerSelectItem
+                    container_id={task.container_id}
+                    status={task.status}
+                    key={task.id}
+                  />
+                ))}
+              </SelectGroup>
+            )}
           </SelectContent>
         </Select>
 
@@ -239,7 +243,12 @@ export default function ComposeStackServiceTerminalPage({
         </Button>
       </form>
 
-      <div className={cn("flex-1 py-2", shellCmd && "bg-terminal px-2")}>
+      <div
+        className={cn(
+          "flex-1 py-2",
+          shellCmd && taskFound?.container_id && "bg-terminal px-2"
+        )}
+      >
         {shellCmd && taskFound?.container_id ? (
           <Terminal
             baseWebSocketURL={baseWebSocketURL}
