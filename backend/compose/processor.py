@@ -932,8 +932,15 @@ class ComposeSpecProcessor:
         print("=== expanded reformatted ===")
         print(expanded)
 
+        # convert <service>.deploy.replicas to integer (if set)
+        expanded_spec = json.loads(expanded)
+        for service in expanded_spec.get("services", {}).values():
+            deploy = service.get("deploy")
+            if deploy and "replicas" in deploy:
+                deploy["replicas"] = int(deploy["replicas"])
+
         return yaml.safe_dump(
-            json.loads(expanded),
+            expanded_spec,
             default_flow_style=False,
             sort_keys=False,  # Preserve order
             allow_unicode=True,
