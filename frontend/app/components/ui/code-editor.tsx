@@ -244,7 +244,7 @@ export function PatchCodeEditor({
         theme: editorTheme,
         diffStyle: isPhone ? "unified" : "split"
       }}
-      className={className}
+      className={cn("border border-border", className)}
     />
   );
 }
