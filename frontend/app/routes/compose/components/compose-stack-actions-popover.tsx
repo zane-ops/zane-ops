@@ -32,6 +32,7 @@ import {
   DialogTrigger
 } from "~/components/ui/dialog";
 import { composeStackQueries } from "~/lib/queries";
+import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import type { clientAction as deployClientAction } from "~/routes/compose/deploy-compose-stack";
@@ -139,6 +140,9 @@ function ToggleStackForm({
 }: ToggleStackFormProps) {
   const fetcher = useFetcher<typeof toggleClientAction>();
 
+  const { queue, queueToggleItem, dequeueToggleItem } =
+    useToggleStateQueueStore();
+
   const stackStatus = getComposeStackStatus(stack);
 
   const isPending = fetcher.state !== "idle";
@@ -149,16 +153,12 @@ function ToggleStackForm({
         ? "start"
         : "stop";
 
-  const [queuedAction, setQueuedAction] = React.useState<
-    "start" | "stop" | null
-  >(null);
-
   const [isConfirmModalOpen, setIsConfirmModalOpen] = React.useState(false);
 
   const [, formAction] = React.useActionState(action, null);
 
   async function action(_: any, formData: FormData) {
-    if (queuedAction) {
+    if (queue.has(stack.id)) {
       toast.info("The stack is already being toggled in the background.");
       return;
     }
@@ -169,13 +169,13 @@ function ToggleStackForm({
     });
 
     const desiredState = formData.get("desired_state") as "stop" | "start";
-    setQueuedAction(desiredState);
+    queueToggleItem(stack.id);
     toggleStateToast({
       desiredState,
       projectSlug,
       stackSlug: stack.slug,
       envSlug
-    }).finally(() => setQueuedAction(null));
+    }).finally(() => dequeueToggleItem(stack.id));
   }
 
   React.useEffect(() => {

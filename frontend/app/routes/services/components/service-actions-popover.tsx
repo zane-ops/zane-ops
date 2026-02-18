@@ -34,6 +34,7 @@ import {
   DialogTitle,
   DialogTrigger
 } from "~/components/ui/dialog";
+import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { ServiceCleanupQueueConfirmModal } from "~/routes/services/components/service-cleanup-queue-confirm-modal";
@@ -125,7 +126,7 @@ export function ServiceActionsPopover({
         </deployFetcher.Form>
         <ServiceCleanupQueueConfirmModal />
         <ToggleServiceForm
-          serviceSlug={service.slug}
+          service={service}
           projectSlug={projectSlug}
           envSlug={envSlug}
         />
@@ -135,13 +136,13 @@ export function ServiceActionsPopover({
 }
 
 type ToggleServiceFormProps = {
-  serviceSlug: string;
+  service: Service;
   projectSlug: string;
   envSlug: string;
 };
 
 function ToggleServiceForm({
-  serviceSlug,
+  service,
   projectSlug,
   envSlug
 }: ToggleServiceFormProps) {
@@ -149,7 +150,7 @@ function ToggleServiceForm({
   const deploymentListQuery = useQuery(
     serviceQueries.deploymentList({
       project_slug: projectSlug,
-      service_slug: serviceSlug,
+      service_slug: service.slug,
       env_slug: envSlug
     })
   );
@@ -165,16 +166,15 @@ function ToggleServiceForm({
       ? "start"
       : "stop";
 
-  const [queuedAction, setQueuedAction] = React.useState<
-    "start" | "stop" | null
-  >(null);
+  const { queue, queueToggleItem, dequeueToggleItem } =
+    useToggleStateQueueStore();
 
   const [isConfirmModalOpen, setIsConfirmModalOpen] = React.useState(false);
 
   const [, formAction] = React.useActionState(action, null);
 
   async function action(_: any, formData: FormData) {
-    if (queuedAction) {
+    if (queue.has(service.id)) {
       toast.info("The service is already being toggled in the background.");
       return;
     }
@@ -185,13 +185,13 @@ function ToggleServiceForm({
     });
 
     const desiredState = formData.get("desired_state") as "stop" | "start";
-    setQueuedAction(desiredState);
+    queueToggleItem(service.id);
     toggleStateToast({
       desiredState,
       projectSlug,
-      serviceSlug,
+      serviceSlug: service.slug,
       envSlug
-    }).finally(() => setQueuedAction(null));
+    }).finally(() => dequeueToggleItem(service.id));
   }
 
   React.useEffect(() => {
