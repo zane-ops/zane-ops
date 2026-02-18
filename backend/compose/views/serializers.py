@@ -812,7 +812,7 @@ class StackRuntimeLogsQuerySerializer(serializers.Serializer):
         required=False, min_value=1, max_value=100, default=50
     )
     cursor = serializers.CharField(required=False)
-    stack_service_name = serializers.CharField(required=True)
+    stack_service_name = serializers.CharField(required=False)
     container_id = serializers.CharField(required=False)
 
     def validate_cursor(self, cursor: str):

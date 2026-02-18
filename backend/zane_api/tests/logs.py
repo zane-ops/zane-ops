@@ -631,7 +631,6 @@ class RuntimeLogViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
-                    "env_slug": "production",
                     "service_slug": service.slug,
                 },
             ),

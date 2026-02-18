@@ -2104,7 +2104,6 @@ paths:
         schema:
           type: string
           minLength: 1
-        required: true
       - in: query
         name: time_after
         schema:
