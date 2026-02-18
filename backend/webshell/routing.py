@@ -12,7 +12,7 @@ websocket_urlpatterns = [
     re_path(
         rf"ws/compose-stack-terminal/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})"
         rf"/(?P<stack_slug>{DJANGO_SLUG_REGEX})"
-        r"/(?P<service_name>([^\s])+)/(?P<task_id>([\w])+)/?$",
+        r"/(?P<service_name>([^\s])+)/(?P<container_id>([\w])+)/?$",
         consumers.ComposeStackTerminalConsumer.as_asgi(),
     ),
     re_path(

@@ -21,7 +21,7 @@ class ComposeStackTerminalConsumer(GenericContainerTerminalConsumer):
         env_slug = kwargs["env_slug"]
         stack_slug = kwargs["stack_slug"]
         service_name = kwargs["service_name"]
-        task_id = kwargs["task_id"]
+        container_id = kwargs["container_id"]
 
         await self.accept()
 
@@ -84,24 +84,21 @@ class ComposeStackTerminalConsumer(GenericContainerTerminalConsumer):
                 close=True,
             )
 
-        task_list = [
-            DockerSwarmTask.from_dict(task)
-            for task in swarm_service.tasks(filters={"desired-state": "running"})
-        ]
+        task_list = [DockerSwarmTask.from_dict(task) for task in swarm_service.tasks()]
 
         found_task = find_item_in_sequence(
-            lambda t: t.container_id == task_id, task_list
+            lambda t: t.container_id == container_id, task_list
         )
         if found_task is None:
             return await self.send(
-                f"{Colors.RED}Service replica `{task_id}` not found for service `{service_name}`.{Colors.ENDC}\n\r"
+                f"{Colors.RED}Service replica with container ID `{container_id}` not found for service `{service_name}`.{Colors.ENDC}\n\r"
                 f"{Colors.RED}The replica may have been removed or restarted since you last checked.{Colors.ENDC}\n\r"
                 f"{Colors.RED}Refresh the service status to see the current list of replicas.{Colors.ENDC}\n\r",
                 close=True,
             )
         if found_task.container_id is None:
             return await self.send(
-                f"{Colors.RED}Container for replica `{task_id}` is not running.{Colors.ENDC}\n\r"
+                f"{Colors.RED}Replica `{container_id}` does not have a running container yet.{Colors.ENDC}\n\r"
                 f"{Colors.RED}The container may still be starting or may have crashed.{Colors.ENDC}\n\r"
                 f"{Colors.RED}Check the service status and logs for more details.{Colors.ENDC}\n\r",
                 close=True,
@@ -110,9 +107,9 @@ class ComposeStackTerminalConsumer(GenericContainerTerminalConsumer):
             self.container = self.docker_client.containers.get(found_task.container_id)
         except docker.errors.NotFound:
             return await self.send(
-                f"{Colors.RED}Container for replica `{task_id}` is not running.{Colors.ENDC}\n\r"
-                f"{Colors.RED}The container may still be starting or may have crashed.{Colors.ENDC}\n\r"
-                f"{Colors.RED}Check the service status and logs for more details.{Colors.ENDC}\n\r",
+                f"{Colors.RED}Container `{found_task.container_id}` no longer exists.{Colors.ENDC}\n\r"
+                f"{Colors.RED}The container may have been stopped or restarted.{Colors.ENDC}\n\r"
+                f"{Colors.RED}Refresh the service status to see the current list of replicas.{Colors.ENDC}\n\r",
                 close=True,
             )
 
