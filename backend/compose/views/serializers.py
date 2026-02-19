@@ -162,10 +162,21 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             deploy_token=secrets.token_hex(16),
         )
 
-        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
-            user_content=user_content,
-            stack=stack,
-        )
+        try:
+            artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+                user_content=user_content,
+                stack=stack,
+            )
+        except serializers.ValidationError as e:
+            formated: dict[str, Any] = ExceptionFormatter(e, self.context, e).run()  # type: ignore
+            raise serializers.ValidationError(
+                {
+                    "user_content": [
+                        f"Invalid compose file: `{error['attr']}: {error['detail']}`"
+                        for error in formated["errors"]
+                    ]
+                }
+            )
 
         changes = [
             ComposeStackChange(
