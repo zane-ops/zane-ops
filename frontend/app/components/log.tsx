@@ -50,7 +50,7 @@ export function Log({
         <div className="w-0.5 bg-yellow-400 absolute top-0 bottom-0 left-0" />
       )}
 
-      <span className="inline-flex items-start select-none min-w-fit flex-none relative ">
+      <span className="inline-flex items-start select-none min-w-fit flex-none relative group/time">
         <time className="text-grey" dateTime={date.toISOString()}>
           <span className="sr-only sm:not-sr-only">
             {logTime.dateFormat},&nbsp;
@@ -69,7 +69,7 @@ export function Log({
                 variant: "outline"
               }),
               "starting:h-0 starting:scale-90",
-              "absolute bottom-full -left-4 hidden group-hover:inline-flex z-10",
+              "absolute bottom-full left-1/2 -translate-x-1/2 hidden group-hover/time:inline-flex z-10",
               "px-2 py-1 mx-2 h-auto rounded items-center cursor-pointer gap-1",
               "transition-all duration-150 text-xs"
             )}
@@ -107,12 +107,12 @@ export function Log({
                 variant: "outline"
               }),
               "starting:h-0 starting:scale-90",
-              "absolute bottom-full -left-4 hidden group-hover/replica:inline-flex z-10",
+              "absolute bottom-full left-1/2 -translate-x-1/2 hidden group-hover/replica:inline-flex z-10",
               "px-2 py-1 mx-2 h-auto rounded items-center cursor-pointer gap-1",
               "transition-all duration-150 text-xs"
             )}
           >
-            <span className="">Filter by replica</span>
+            <span>Filter by replica</span>
             <FilterIcon
               className={cn("flex-none relative top-0.25")}
               size={12}
