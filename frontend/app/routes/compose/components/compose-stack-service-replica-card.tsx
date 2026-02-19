@@ -106,7 +106,8 @@ export function ComposeStackServiceReplicaCard({
               color === "yellow",
             "bg-gray-600/10 has-data-[logs-link]:hover:bg-gray-600/20":
               color === "gray",
-            "bg-link/10 has-data-[logs-link]:hover:bg-link/20": color === "blue"
+            "bg-blue-500/10 has-data-[logs-link]:hover:bg-blue-500/20":
+              color === "blue"
           }
         )}
       >
@@ -114,7 +115,7 @@ export function ComposeStackServiceReplicaCard({
         <div className="min-w-26">
           <div
             className={cn(
-              "relative top-0.5 rounded-md bg-link/20 text-link px-2  inline-flex gap-1 items-center py-0.5",
+              "relative top-0.5 rounded-md text-link px-2  inline-flex gap-1 items-center py-0.5",
               {
                 "bg-emerald-400/30 dark:bg-emerald-600/20 text-green-600  dark:text-emerald-400":
                   color === "green",
@@ -123,11 +124,16 @@ export function ComposeStackServiceReplicaCard({
                   color === "yellow",
                 "bg-gray-600/20 dark:bg-gray-600/60 text-card-foreground":
                   color === "gray",
-                "bg-link/30 text-link": color === "blue"
+                "bg-blue-500/30 text-link": color === "blue"
               }
             )}
           >
-            <code className="text-sm">{task.status.toUpperCase()}</code>
+            <code className="text-sm">
+              {(task.status === "remove"
+                ? "removed"
+                : task.status
+              ).toUpperCase()}
+            </code>
             {isLoading && (
               <LoaderIcon className="animate-spin flex-none" size={15} />
             )}
@@ -266,7 +272,7 @@ export function ComposeStackServiceReplicaCard({
                 "bg-red-600/10 hover:bg-red-600/20": color === "red",
                 "bg-yellow-400/10 dark:bg-yellow-600/10 ": color === "yellow",
                 "bg-gray-600/10 hover:bg-gray-600/20": color === "gray",
-                "bg-link/10 hover:bg-link/20": color === "blue"
+                "bg-blue-500/10 hover:bg-blue-500/20": color === "blue"
               }
             )}
           >
@@ -285,7 +291,7 @@ export function ComposeStackServiceReplicaCard({
                 "bg-red-600/10 ": color === "red",
                 "bg-yellow-400/10 dark:bg-yellow-600/10 ": color === "yellow",
                 "bg-gray-600/10": color === "gray",
-                "bg-link/10": color === "blue"
+                "bg-blue-500/10": color === "blue"
               }
             )}
           >
@@ -311,7 +317,8 @@ export function ComposeStackServiceReplicaCard({
                           color === "yellow",
                         "bg-gray-600/20 dark:bg-gray-600/60 text-gray":
                           color === "gray",
-                        "bg-link/30 text-link": color === "blue"
+                        "bg-blue-500/30 text-link dark:text-blue-100":
+                          color === "blue"
                       }
                     )}
                   >
