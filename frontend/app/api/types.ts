@@ -53,6 +53,8 @@ export type ComposeStack = ApiResponse<
 export type ComposeStackTask =
   ComposeStack["services"][string]["tasks"][number];
 
+export type ComposeStackService = ComposeStack["services"][string];
+
 export type ComposeStackDeployment = ApiResponse<
   "get",
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deployments/{hash}/"

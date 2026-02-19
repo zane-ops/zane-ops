@@ -7,6 +7,7 @@ import {
   GlobeIcon,
   Layers2Icon,
   LayersIcon,
+  RotateCcwIcon,
   ScrollText,
   TagIcon,
   TerminalIcon
@@ -246,6 +247,13 @@ export function ComposeStackServiceCard({
                 icon={ChartNoAxesColumnIcon}
                 text="View metrics"
                 onClick={() => navigate(`./services/${name}/metrics`)}
+              />
+              <MenubarContentItem
+                icon={RotateCcwIcon}
+                text="Restart service"
+                onClick={() => {
+                  //...
+                }}
               />
             </MenubarContent>
           </MenubarMenu>

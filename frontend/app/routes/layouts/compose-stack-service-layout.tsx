@@ -8,11 +8,13 @@ import {
   InfoIcon,
   LayersIcon,
   PickaxeIcon,
+  RotateCcwIcon,
   ScrollTextIcon,
   TerminalIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, Navigate, Outlet, href, useNavigate } from "react-router";
+import { Link, Navigate, Outlet, href, useFetcher } from "react-router";
+import type { ComposeStackService } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
 import { NavLink } from "~/components/nav-link";
@@ -25,6 +27,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
+import { SubmitButton } from "~/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -317,6 +320,10 @@ export default function ComposeStackServiceLayoutPage({
             )}
           </div>
         </div>
+
+        <div>
+          <RestartServiceForm params={params} />
+        </div>
       </section>
 
       <nav className="mt-5">
@@ -373,5 +380,22 @@ export default function ComposeStackServiceLayoutPage({
         <Outlet />
       </section>
     </>
+  );
+}
+
+type RestartServiceFormProps = {
+  params: Route.ComponentProps["params"];
+};
+
+function RestartServiceForm({ params }: RestartServiceFormProps) {
+  const fetcher = useFetcher();
+  const isPending = fetcher.state !== "idle";
+  return (
+    <fetcher.Form method="post">
+      <SubmitButton isPending={isPending} variant="secondary">
+        <RotateCcwIcon className="size-4 flex-none" />
+        <span>Restart service</span>
+      </SubmitButton>
+    </fetcher.Form>
   );
 }

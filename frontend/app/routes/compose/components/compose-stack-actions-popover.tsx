@@ -198,12 +198,12 @@ function ToggleStackForm({
         {isPending ? (
           <>
             <LoaderIcon className="animate-spin flex-none" size={15} />
-            <span>Restarting...</span>
+            <span>Starting...</span>
           </>
         ) : (
           <>
             <PlayIcon size={15} className="flex-none" />
-            <span>Restart your stack</span>
+            <span>Start your stack</span>
           </>
         )}
       </SubmitButton>
@@ -213,7 +213,13 @@ function ToggleStackForm({
       action={formAction}
       isPending={isPending}
       isOpen={isConfirmModalOpen}
-      setIsOpen={setIsConfirmModalOpen}
+      setIsOpen={(newValue) => {
+        if (queue.has(stack.id)) {
+          toast.info("The stack is already being toggled in the background.");
+          return;
+        }
+        setIsConfirmModalOpen(newValue);
+      }}
     />
   );
 }
