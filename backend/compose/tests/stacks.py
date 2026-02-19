@@ -1671,11 +1671,10 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(
-            self.get_error_from_response(
-                response, "services.web.deploy.labels.zane.http.routes.0.port"
-            )
-        )
+        error = self.get_error_from_response(response, "user_content")
+
+        self.assertIsNotNone(error)
+        self.assertIn("services.web.deploy.labels.zane.http.routes.0.port", error)  # type: ignore
 
     def test_create_compose_stack_with_route_missing_domain_do_not_create_route(self):
         project = self.create_project()
@@ -1741,11 +1740,10 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(
-            self.get_error_from_response(
-                response, "services.web.deploy.labels.zane.http.routes.0.port"
-            )
-        )
+        error = self.get_error_from_response(response, "user_content")
+
+        self.assertIsNotNone(error)
+        self.assertIn("services.web.deploy.labels.zane.http.routes.0.port", error)  # type: ignore
 
     def test_create_compose_stack_with_route_port_negative_fails(self):
         project = self.create_project()
@@ -1768,11 +1766,10 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(
-            self.get_error_from_response(
-                response, "services.web.deploy.labels.zane.http.routes.0.port"
-            )
-        )
+        error = self.get_error_from_response(response, "user_content")
+
+        self.assertIsNotNone(error)
+        self.assertIn("services.web.deploy.labels.zane.http.routes.0.port", error)  # type: ignore
 
     def test_create_compose_stack_with_network_aliases(self):
         project = self.create_project()
