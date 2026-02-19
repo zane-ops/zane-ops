@@ -233,6 +233,10 @@ export default [
             route(
               "http-logs",
               "./routes/compose/compose-stack-service-http-logs.tsx"
+            ),
+            route(
+              "metrics",
+              "./routes/compose/compose-stack-serice-metrics.tsx"
             )
           ]
         ),
