@@ -229,6 +229,10 @@ export default [
             route(
               "terminal",
               "./routes/compose/compose-stack-service-terminal.tsx"
+            ),
+            route(
+              "http-logs",
+              "./routes/compose/compose-stack-service-http-logs.tsx"
             )
           ]
         ),
