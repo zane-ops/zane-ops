@@ -40,7 +40,7 @@ import {
   getMaxDomainForStorageValue,
   timeAgoFormatter
 } from "~/utils";
-import type { Route } from "./+types/compose-stack-serice-metrics";
+import type { Route } from "./+types/compose-stack-service-metrics";
 
 export async function clientLoader({
   request,
@@ -338,7 +338,6 @@ export default function ComposeStackServiceMetricsPage({
                     allowDuplicatedCategory={false}
                   />
 
-                  <ChartLegend content={<ChartLegendContent />} />
                   <ChartTooltip
                     content={
                       <ChartTooltipContent
@@ -373,18 +372,7 @@ export default function ComposeStackServiceMetricsPage({
                               {index === 0 && <span>{formattedDate}</span>}
 
                               <div className="ml-auto flex items-baseline justify-between gap-4 self-stretch w-full font-mono font-medium tabular-nums text-card-foreground text-sm">
-                                <div className="flex items-center gap-1">
-                                  <div
-                                    className="h-2.5 w-2.5 flex-none rounded-[2px] bg-[var(--color-bg)]"
-                                    style={
-                                      {
-                                        "--color-bg": `var(--color-${name})`
-                                      } as React.CSSProperties
-                                    }
-                                  />
-                                  <span className="text-grey">{name}</span>
-                                </div>
-                                <div className="flex gap-0.5">
+                                <div className="flex gap-0.5 justify-end">
                                   <span>{value_str}</span>
                                   <span className="text-foreground">CPUs</span>
                                   <span className="font-normal text-grey">
@@ -465,7 +453,6 @@ export default function ComposeStackServiceMetricsPage({
                     }
                   />
 
-                  <ChartLegend content={<ChartLegendContent />} />
                   <ChartTooltip
                     cursor={false}
                     content={
@@ -491,18 +478,7 @@ export default function ComposeStackServiceMetricsPage({
                             <div className="flex items-start w-full text-sm text-muted-foreground flex-col">
                               {index === 0 && <span>{formattedDate}</span>}
                               <div className="ml-auto flex justify-between self-stretch w-full items-baseline gap-4 font-mono font-medium tabular-nums text-card-foreground text-sm">
-                                <div className="flex items-center gap-1">
-                                  <div
-                                    className="h-2.5 w-2.5 flex-none rounded-[2px] bg-[var(--color-bg)]"
-                                    style={
-                                      {
-                                        "--color-bg": `var(--color-${name})`
-                                      } as React.CSSProperties
-                                    }
-                                  />
-                                  <span className="text-grey">{name}</span>
-                                </div>
-                                <div className="flex gap-0.5 items-baseline">
+                                <div className="flex gap-0.5 justify-end items-baseline">
                                   <span>{value_str}</span>
                                   <span className="font-normal text-grey">
                                     {unit}
@@ -581,7 +557,6 @@ export default function ComposeStackServiceMetricsPage({
                     }
                   />
 
-                  <ChartLegend content={<ChartLegendContent />} />
                   <ChartTooltip
                     cursor={false}
                     content={
@@ -607,18 +582,7 @@ export default function ComposeStackServiceMetricsPage({
                             <div className="flex items-start w-full text-sm text-muted-foreground flex-col">
                               {index === 0 && <span>{formattedDate}</span>}
                               <div className="ml-auto flex justify-between self-stretch w-full items-baseline gap-4 font-mono font-medium tabular-nums text-card-foreground text-sm">
-                                <div className="flex items-center gap-1">
-                                  <div
-                                    className="h-2.5 w-2.5 flex-none rounded-[2px] bg-[var(--color-bg)]"
-                                    style={
-                                      {
-                                        "--color-bg": `var(--color-${name})`
-                                      } as React.CSSProperties
-                                    }
-                                  />
-                                  <span className="text-grey">{name}</span>
-                                </div>
-                                <div className="flex gap-0.5 items-baseline">
+                                <div className="flex gap-0.5 justify-end items-baseline">
                                   <span>{value_str}</span>
                                   <span className="font-normal text-grey">
                                     {unit}
@@ -697,7 +661,6 @@ export default function ComposeStackServiceMetricsPage({
                     }
                   />
 
-                  <ChartLegend content={<ChartLegendContent />} />
                   <ChartTooltip
                     cursor={false}
                     content={
@@ -723,18 +686,7 @@ export default function ComposeStackServiceMetricsPage({
                             <div className="flex items-start w-full text-sm text-muted-foreground flex-col">
                               {index === 0 && <span>{formattedDate}</span>}
                               <div className="ml-auto flex justify-between self-stretch w-full items-baseline gap-4 font-mono font-medium tabular-nums text-card-foreground text-sm">
-                                <div className="flex items-center gap-1">
-                                  <div
-                                    className="h-2.5 w-2.5 flex-none rounded-[2px] bg-[var(--color-bg)]"
-                                    style={
-                                      {
-                                        "--color-bg": `var(--color-${name})`
-                                      } as React.CSSProperties
-                                    }
-                                  />
-                                  <span className="text-grey">{name}</span>
-                                </div>
-                                <div className="flex gap-0.5 items-baseline">
+                                <div className="flex gap-0.5 justify-end items-baseline">
                                   <span>{value_str}</span>
                                   <span className="font-normal text-grey">
                                     {unit}
@@ -813,7 +765,6 @@ export default function ComposeStackServiceMetricsPage({
                     }
                   />
 
-                  <ChartLegend content={<ChartLegendContent />} />
                   <ChartTooltip
                     cursor={false}
                     content={
@@ -839,18 +790,7 @@ export default function ComposeStackServiceMetricsPage({
                             <div className="flex items-start w-full text-sm text-muted-foreground flex-col">
                               {index === 0 && <span>{formattedDate}</span>}
                               <div className="ml-auto flex justify-between self-stretch w-full items-baseline gap-4 font-mono font-medium tabular-nums text-card-foreground text-sm">
-                                <div className="flex items-center gap-1">
-                                  <div
-                                    className="h-2.5 w-2.5 flex-none rounded-[2px] bg-[var(--color-bg)]"
-                                    style={
-                                      {
-                                        "--color-bg": `var(--color-${name})`
-                                      } as React.CSSProperties
-                                    }
-                                  />
-                                  <span className="text-grey">{name}</span>
-                                </div>
-                                <div className="flex gap-0.5 items-baseline">
+                                <div className="flex gap-0.5 justify-end items-baseline">
                                   <span>{value_str}</span>
                                   <span className="font-normal text-grey">
                                     {unit}
@@ -929,7 +869,6 @@ export default function ComposeStackServiceMetricsPage({
                     }
                   />
 
-                  <ChartLegend content={<ChartLegendContent />} />
                   <ChartTooltip
                     cursor={false}
                     content={
@@ -955,18 +894,7 @@ export default function ComposeStackServiceMetricsPage({
                             <div className="flex items-start w-full text-sm text-muted-foreground flex-col">
                               {index === 0 && <span>{formattedDate}</span>}
                               <div className="ml-auto flex justify-between self-stretch w-full items-baseline gap-4 font-mono font-medium tabular-nums text-card-foreground text-sm">
-                                <div className="flex items-center gap-1">
-                                  <div
-                                    className="h-2.5 w-2.5 flex-none rounded-[2px] bg-[var(--color-bg)]"
-                                    style={
-                                      {
-                                        "--color-bg": `var(--color-${name})`
-                                      } as React.CSSProperties
-                                    }
-                                  />
-                                  <span className="text-grey">{name}</span>
-                                </div>
-                                <div className="flex gap-0.5 items-baseline">
+                                <div className="flex gap-0.5 justify-end items-baseline">
                                   <span>{value_str}</span>
                                   <span className="font-normal text-grey">
                                     {unit}
