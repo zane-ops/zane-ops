@@ -237,6 +237,10 @@ export default [
             route(
               "metrics",
               "./routes/compose/compose-stack-service-metrics.tsx"
+            ),
+            route(
+              "details",
+              "./routes/compose/compose-stack-service-details.tsx"
             )
           ]
         ),
