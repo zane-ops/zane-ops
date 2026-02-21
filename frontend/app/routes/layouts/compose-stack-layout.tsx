@@ -34,6 +34,7 @@ import { queryClient } from "~/root";
 import { ComposeStackActionsPopover } from "~/routes/compose/components/compose-stack-actions-popover";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/compose-stack-layout";
+import { ComposeStackChangesModal } from "~/routes/compose/components/compose-stack-changes-modal";
 
 export function meta({ params, error }: Route.MetaArgs) {
   const title = !error
@@ -230,18 +231,21 @@ type DeployStackFormProps = {
 
 function DeployStackForm({ className, stack, params }: DeployStackFormProps) {
   const fetcher = useFetcher();
-  // const isDeploying = fetcher.state !== "idle";
-  // const stackStatus = getComposeStackStatus(stack);
 
   return (
     <div
       className={cn(
         "flex flex-row flex-wrap",
         "sm:flex-col sm:justify-end",
-        "md:flex-row md:items-center gap-1",
+        "md:flex-row md:items-center gap-2",
         className
       )}
     >
+      <ComposeStackChangesModal
+        stack={stack}
+        projectSlug={params.projectSlug}
+        envSlug={params.envSlug}
+      />
       <ComposeStackActionsPopover
         stack={stack}
         projectSlug={params.projectSlug}
