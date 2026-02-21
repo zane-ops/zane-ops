@@ -1180,7 +1180,48 @@ export interface components {
      * @enum {string}
      */
     ComposeStackSearchResponseTypeEnum: "compose_stack";
+    ComposeStackServiceConfig: {
+      source: string;
+      target: string;
+      content: string;
+    };
+    ComposeStackServiceConfigRequest: {
+      source: string;
+      target: string;
+      content: string;
+    };
+    ComposeStackServiceEnvVar: {
+      key: string;
+      value: string;
+    };
+    ComposeStackServiceEnvVarRequest: {
+      key: string;
+      value: string;
+    };
+    ComposeStackServiceHealthCheck: {
+      command: string;
+      retries: number | null;
+      timeout_sec: number | null;
+      interval_sec: number | null;
+    };
+    ComposeStackServiceHealthCheckRequest: {
+      command: string;
+      retries?: number | null;
+      timeout_sec?: number | null;
+      interval_sec?: number | null;
+    };
+    ComposeStackServicePort: {
+      published: number;
+      target: number;
+      protocol: components["schemas"]["ProtocolEnum"];
+    };
+    ComposeStackServicePortRequest: {
+      published: number;
+      target: number;
+      protocol: components["schemas"]["ProtocolEnum"];
+    };
     ComposeStackServiceStatus: {
+      id: string | null;
       status: components["schemas"]["ComposeStackServiceStatusStatusEnum"];
       network_alias: string;
       global_alias: string;
@@ -1191,6 +1232,11 @@ export interface components {
       tasks: components["schemas"]["ComposeStackServiceTask"][];
       image: string;
       mode: components["schemas"]["ComposeStackServiceStatusModeEnum"];
+      environment: components["schemas"]["ComposeStackServiceEnvVar"][];
+      volumes: components["schemas"]["ComposeStackServiceVolume"][];
+      configs: components["schemas"]["ComposeStackServiceConfig"][];
+      ports: components["schemas"]["ComposeStackServicePort"][];
+      healthcheck: components["schemas"]["ComposeStackServiceHealthCheck"] | null;
     };
     /**
      * @description * `replicated` - replicated
@@ -1201,6 +1247,7 @@ export interface components {
      */
     ComposeStackServiceStatusModeEnum: "replicated" | "global" | "replicated-job" | "global-job";
     ComposeStackServiceStatusRequest: {
+      id?: string | null;
       status: components["schemas"]["ComposeStackServiceStatusStatusEnum"];
       network_alias: string;
       global_alias: string;
@@ -1211,6 +1258,11 @@ export interface components {
       tasks: components["schemas"]["ComposeStackServiceTaskRequest"][];
       image: string;
       mode: components["schemas"]["ComposeStackServiceStatusModeEnum"];
+      environment: components["schemas"]["ComposeStackServiceEnvVarRequest"][];
+      volumes: components["schemas"]["ComposeStackServiceVolumeRequest"][];
+      configs: components["schemas"]["ComposeStackServiceConfigRequest"][];
+      ports: components["schemas"]["ComposeStackServicePortRequest"][];
+      healthcheck?: components["schemas"]["ComposeStackServiceHealthCheckRequest"] | null;
     };
     /**
      * @description * `STARTING` - STARTING
@@ -1245,6 +1297,24 @@ export interface components {
       message: string;
       exit_code?: number | null;
     };
+    ComposeStackServiceVolume: {
+      source: string;
+      target: string;
+      read_only: boolean;
+      type: components["schemas"]["ComposeStackServiceVolumeTypeEnum"];
+    };
+    ComposeStackServiceVolumeRequest: {
+      source: string;
+      target: string;
+      read_only: boolean;
+      type: components["schemas"]["ComposeStackServiceVolumeTypeEnum"];
+    };
+    /**
+     * @description * `volume` - volume
+     * * `bind` - bind
+     * @enum {string}
+     */
+    ComposeStackServiceVolumeTypeEnum: "volume" | "bind";
     ComposeStackSnapshot: {
       id: string;
       hash_prefix: string;
@@ -4403,6 +4473,12 @@ export interface components {
       code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
+    /**
+     * @description * `tcp` - tcp
+     * * `udp` - udp
+     * @enum {string}
+     */
+    ProtocolEnum: "tcp" | "udp";
     RailpackBuilderOptions: {
       publish_directory: string;
       is_spa: boolean;

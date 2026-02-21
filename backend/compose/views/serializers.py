@@ -80,7 +80,39 @@ class ComposeStackServiceTask(serializers.Serializer):
     exit_code = serializers.IntegerField(required=False, allow_null=True)
 
 
+class ComposeStackServiceEnvVarSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    value = serializers.CharField()
+
+
+class ComposeStackServiceVolumeSerializer(serializers.Serializer):
+    source = serializers.CharField()
+    target = serializers.CharField()
+    read_only = serializers.BooleanField()
+    type = serializers.ChoiceField(choices=["volume", "bind"])
+
+
+class ComposeStackServiceConfigSerializer(serializers.Serializer):
+    source = serializers.CharField()
+    target = serializers.CharField()
+    content = serializers.CharField()
+
+
+class ComposeStackServicePortSerializer(serializers.Serializer):
+    published = serializers.IntegerField()
+    target = serializers.IntegerField()
+    protocol = serializers.ChoiceField(choices=["tcp", "udp"])
+
+
+class ComposeStackServiceHealthCheckSerializer(serializers.Serializer):
+    command = serializers.CharField()
+    retries = serializers.IntegerField(required=False, allow_null=True)
+    timeout_sec = serializers.IntegerField(required=False, allow_null=True)
+    interval_sec = serializers.IntegerField(required=False, allow_null=True)
+
+
 class ComposeStackServiceStatusSerializer(serializers.Serializer):
+    id = serializers.CharField(required=False, allow_null=True)
     status = serializers.ChoiceField(
         choices=[state for state in ComposeStackServiceStatus.values()]
     )
@@ -99,6 +131,11 @@ class ComposeStackServiceStatusSerializer(serializers.Serializer):
             "global-job",
         ]  # same as docker
     )
+    environment = ComposeStackServiceEnvVarSerializer(many=True)
+    volumes = ComposeStackServiceVolumeSerializer(many=True)
+    configs = ComposeStackServiceConfigSerializer(many=True)
+    ports = ComposeStackServicePortSerializer(many=True)
+    healthcheck = ComposeStackServiceHealthCheckSerializer(required=False, allow_null=True)
 
 
 class ComposeConfigVersionSerializer(serializers.Serializer):

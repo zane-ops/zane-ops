@@ -118,7 +118,7 @@ export default function ComposeStackServiceLayoutPage({
     `${status_emoji_map[service.status]} ${stack.slug} / ${params.serviceSlug}`
   );
 
-  let serviceImage = service.image;
+  let [serviceImage] = service.image.split("@"); // the image is in the format 'image@sha', we just remove the sha
 
   if (serviceImage && !serviceImage.includes(":")) {
     serviceImage += ":latest";

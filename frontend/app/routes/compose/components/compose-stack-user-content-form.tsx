@@ -37,18 +37,6 @@ export function ComposeStackUserContentForm({
   const [data, setData] = React.useState(fetcher.data);
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
-  React.useEffect(() => {
-    if (fetcher.state === "idle" && fetcher.data) {
-      if (!fetcher.data.errors) {
-        formRef.current?.reset();
-      }
-    }
-  }, [fetcher.data, fetcher.state]);
-
-  React.useEffect(() => {
-    setData(fetcher.data);
-  }, [fetcher.data]);
-
   const composeContentChange = stack?.unapplied_changes.find(
     (change) => change.field === "compose_content"
   );
@@ -69,6 +57,19 @@ export function ComposeStackUserContentForm({
 
   const [userContent, setUserContent] = React.useState(defaultContents);
   const [accordionValue, setAccordionValue] = React.useState("");
+
+  React.useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data) {
+      if (!fetcher.data.errors) {
+        formRef.current?.reset();
+        setUserContent(defaultContents);
+      }
+    }
+  }, [fetcher.data, fetcher.state, defaultContents]);
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+  }, [fetcher.data]);
 
   return (
     <fetcher.Form

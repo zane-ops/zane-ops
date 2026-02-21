@@ -312,11 +312,18 @@ class ComposeStackActivities:
                     },
                     status=True,
                 )
+                configs = self.docker_client.configs.list(
+                    filters={
+                        "label": [f"com.docker.stack.namespace={deployment.stack.name}"]
+                    },
+                )
 
                 statuses = await asyncio.gather(
                     *[
                         get_compose_stack_swarm_service_status(
-                            service=service, stack=deployment.stack
+                            service=service,
+                            stack=deployment.stack,
+                            all_configs={config.id: config for config in configs},  # type: ignore
                         )
                         for service in services
                     ]

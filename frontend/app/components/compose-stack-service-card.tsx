@@ -58,7 +58,8 @@ export function ComposeStackServiceCard({
   const is_job =
     service.mode === "global-job" || service.mode === "replicated-job";
 
-  let serviceImage = service.image;
+  let [serviceImage] = service.image.split("@"); // the image is in the format 'image@sha', we just remove the sha
+
   if (serviceImage && !serviceImage.includes(":")) {
     serviceImage += ":latest";
   }

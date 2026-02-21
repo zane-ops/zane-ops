@@ -12581,9 +12581,125 @@ components:
       - compose_stack
       type: string
       description: '* `compose_stack` - compose_stack'
+    ComposeStackServiceConfig:
+      type: object
+      properties:
+        source:
+          type: string
+        target:
+          type: string
+        content:
+          type: string
+      required:
+      - content
+      - source
+      - target
+    ComposeStackServiceConfigRequest:
+      type: object
+      properties:
+        source:
+          type: string
+          minLength: 1
+        target:
+          type: string
+          minLength: 1
+        content:
+          type: string
+          minLength: 1
+      required:
+      - content
+      - source
+      - target
+    ComposeStackServiceEnvVar:
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+      required:
+      - key
+      - value
+    ComposeStackServiceEnvVarRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+        value:
+          type: string
+          minLength: 1
+      required:
+      - key
+      - value
+    ComposeStackServiceHealthCheck:
+      type: object
+      properties:
+        command:
+          type: string
+        retries:
+          type: integer
+          nullable: true
+        timeout_sec:
+          type: integer
+          nullable: true
+        interval_sec:
+          type: integer
+          nullable: true
+      required:
+      - command
+      - interval_sec
+      - retries
+      - timeout_sec
+    ComposeStackServiceHealthCheckRequest:
+      type: object
+      properties:
+        command:
+          type: string
+          minLength: 1
+        retries:
+          type: integer
+          nullable: true
+        timeout_sec:
+          type: integer
+          nullable: true
+        interval_sec:
+          type: integer
+          nullable: true
+      required:
+      - command
+    ComposeStackServicePort:
+      type: object
+      properties:
+        published:
+          type: integer
+        target:
+          type: integer
+        protocol:
+          $ref: '#/components/schemas/ProtocolEnum'
+      required:
+      - protocol
+      - published
+      - target
+    ComposeStackServicePortRequest:
+      type: object
+      properties:
+        published:
+          type: integer
+        target:
+          type: integer
+        protocol:
+          $ref: '#/components/schemas/ProtocolEnum'
+      required:
+      - protocol
+      - published
+      - target
     ComposeStackServiceStatus:
       type: object
       properties:
+        id:
+          type: string
+          nullable: true
         status:
           $ref: '#/components/schemas/ComposeStackServiceStatusStatusEnum'
         network_alias:
@@ -12605,16 +12721,42 @@ components:
           type: string
         mode:
           $ref: '#/components/schemas/ComposeStackServiceStatusModeEnum'
+        environment:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackServiceEnvVar'
+        volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackServiceVolume'
+        configs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackServiceConfig'
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackServicePort'
+        healthcheck:
+          allOf:
+          - $ref: '#/components/schemas/ComposeStackServiceHealthCheck'
+          nullable: true
       required:
+      - configs
       - desired_replicas
+      - environment
       - global_alias
+      - healthcheck
+      - id
       - image
       - mode
       - network_alias
+      - ports
       - running_replicas
       - status
       - tasks
       - updated_at
+      - volumes
     ComposeStackServiceStatusModeEnum:
       enum:
       - replicated
@@ -12630,6 +12772,10 @@ components:
     ComposeStackServiceStatusRequest:
       type: object
       properties:
+        id:
+          type: string
+          nullable: true
+          minLength: 1
         status:
           $ref: '#/components/schemas/ComposeStackServiceStatusStatusEnum'
         network_alias:
@@ -12654,16 +12800,40 @@ components:
           minLength: 1
         mode:
           $ref: '#/components/schemas/ComposeStackServiceStatusModeEnum'
+        environment:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackServiceEnvVarRequest'
+        volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackServiceVolumeRequest'
+        configs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackServiceConfigRequest'
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackServicePortRequest'
+        healthcheck:
+          allOf:
+          - $ref: '#/components/schemas/ComposeStackServiceHealthCheckRequest'
+          nullable: true
       required:
+      - configs
       - desired_replicas
+      - environment
       - global_alias
       - image
       - mode
       - network_alias
+      - ports
       - running_replicas
       - status
       - tasks
       - updated_at
+      - volumes
     ComposeStackServiceStatusStatusEnum:
       enum:
       - STARTING
@@ -12753,6 +12923,48 @@ components:
       - slot
       - status
       - version
+    ComposeStackServiceVolume:
+      type: object
+      properties:
+        source:
+          type: string
+        target:
+          type: string
+        read_only:
+          type: boolean
+        type:
+          $ref: '#/components/schemas/ComposeStackServiceVolumeTypeEnum'
+      required:
+      - read_only
+      - source
+      - target
+      - type
+    ComposeStackServiceVolumeRequest:
+      type: object
+      properties:
+        source:
+          type: string
+          minLength: 1
+        target:
+          type: string
+          minLength: 1
+        read_only:
+          type: boolean
+        type:
+          $ref: '#/components/schemas/ComposeStackServiceVolumeTypeEnum'
+      required:
+      - read_only
+      - source
+      - target
+      - type
+    ComposeStackServiceVolumeTypeEnum:
+      enum:
+      - volume
+      - bind
+      type: string
+      description: |-
+        * `volume` - volume
+        * `bind` - bind
     ComposeStackSnapshot:
       type: object
       properties:
@@ -19876,6 +20088,14 @@ components:
       - attr
       - code
       - detail
+    ProtocolEnum:
+      enum:
+      - tcp
+      - udp
+      type: string
+      description: |-
+        * `tcp` - tcp
+        * `udp` - udp
     RailpackBuilderOptions:
       type: object
       properties:

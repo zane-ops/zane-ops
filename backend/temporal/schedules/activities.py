@@ -566,9 +566,16 @@ class MonitorComposeStackActivites:
             filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
             status=True,
         )
+        configs = self.docker.configs.list(
+            filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
+        )
         statuses = await asyncio.gather(
             *[
-                get_compose_stack_swarm_service_status(service=service, stack=stack)
+                get_compose_stack_swarm_service_status(
+                    service=service,
+                    stack=stack,
+                    all_configs={config.id: config for config in configs},  # type: ignore
+                )
                 for service in services
             ]
         )
