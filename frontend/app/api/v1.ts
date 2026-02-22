@@ -1284,9 +1284,9 @@ export interface components {
       image: string;
       message: string;
       /** Format: date-time */
-      created_at: string | null;
+      created_at: string;
       /** Format: date-time */
-      updated_at: string | null;
+      updated_at: string;
       exit_code: number | null;
     };
     ComposeStackServiceTaskRequest: {
@@ -1300,9 +1300,9 @@ export interface components {
       image: string;
       message: string;
       /** Format: date-time */
-      created_at?: string | null;
+      created_at: string;
       /** Format: date-time */
-      updated_at?: string | null;
+      updated_at: string;
       exit_code?: number | null;
     };
     ComposeStackServiceVolume: {

@@ -4,6 +4,7 @@ import {
   ClockPlusIcon,
   ContainerIcon,
   EllipsisVerticalIcon,
+  HashIcon,
   Layers2Icon,
   LoaderIcon,
   LogOutIcon,
@@ -100,7 +101,8 @@ export function ComposeStackServiceReplicaCard({
     >
       <div
         className={cn(
-          "rounded-md py-2 pl-4 pr-3 flex items-center gap-6 font-normal",
+          "rounded-md py-2 pl-4 pr-3 flex flex-col  items-start gap-0 font-normal",
+          "md:flex-row md:items-center md:gap-6",
           "relative",
           {
             "bg-emerald-400/10 dark:bg-emerald-600/20 has-data-[logs-link]:hover:bg-emerald-300/30":
@@ -117,7 +119,12 @@ export function ComposeStackServiceReplicaCard({
         )}
       >
         {/* Status */}
-        <div className="min-w-26">
+        <div
+          className={cn(
+            "min-w-26 flex flex-row items-end justify-center h-full gap-2 pt-2 pb-6 md:pt-0 md:pb-0",
+            "md:flex-col md:items-start"
+          )}
+        >
           <div
             className={cn(
               "relative top-0.5 rounded-md text-link px-2  inline-flex gap-1 items-center py-0.5",
@@ -143,25 +150,30 @@ export function ComposeStackServiceReplicaCard({
               <LoaderIcon className="animate-spin flex-none" size={15} />
             )}
           </div>
+
+          <time dateTime={task.updated_at} className="text-grey text-sm">
+            {mergeTimeAgoFormatterAndFormattedDate(task.updated_at)}
+          </time>
         </div>
 
         {/* Name & image */}
         <div className="flex flex-col gap-2 grow">
-          <div className="flex gap-2">
+          <div className="flex gap-1 items-center">
+            <HashIcon className="size-4 flex-none text-grey md:hidden" />
             {task.container_id ? (
               <Link
                 to={`./runtime-logs?container_id=${task.container_id}`}
                 data-logs-link
-                className="inline text-sm text-start after:absolute after:inset-0"
+                className="inline break-all text-sm text-start after:absolute after:inset-0"
               >
-                <span className="text-grey">
+                <span className="text-grey hidden md:inline">
                   {prefix}.{slot}.
                 </span>
                 <span>{taskId}</span>
               </Link>
             ) : (
-              <span className="inline text-sm text-start">
-                <span className="text-grey">
+              <span className="inline text-sm text-start break-all">
+                <span className="text-grey hidden md:inline">
                   {prefix}.{slot}.
                 </span>
                 <span>{taskId}</span>
@@ -175,10 +187,10 @@ export function ComposeStackServiceReplicaCard({
                 src={iconSrc}
                 onError={() => setIconNotFound(true)}
                 alt={`Logo for ${image}`}
-                className="size-3 flex-none object-center object-contain rounded-sm relative top-1"
+                className="size-4 md:size-3 flex-none object-center object-contain rounded-sm relative top-1"
               />
             ) : (
-              <ContainerIcon className="flex-none size-3 relative top-1" />
+              <ContainerIcon className="flex-none size-3 relative top-0.5" />
             )}
             <small className="break-all inline whitespace-normal text-start text-xs">
               {imageVersion}
@@ -188,7 +200,7 @@ export function ComposeStackServiceReplicaCard({
         </div>
 
         {task.container_id && (
-          <div className="flex items-center gap-2 relative z-10">
+          <div className="flex items-center gap-2 static md:relative z-10">
             {/* View logs button */}
             <Button
               asChild
@@ -210,7 +222,10 @@ export function ComposeStackServiceReplicaCard({
             <Menubar className="border-none h-auto w-fit">
               <MenubarMenu>
                 <MenubarTrigger
-                  className="flex justify-center items-center gap-2"
+                  className={cn(
+                    "flex justify-center items-center gap-2 md:static",
+                    "absolute z-10 top-2 right-4"
+                  )}
                   asChild
                 >
                   <Button
@@ -374,38 +389,34 @@ export function ComposeStackServiceReplicaCard({
               </div>
 
               {/* Task Created At */}
-              {task.created_at && (
-                <div className="text-sm inline-grid items-start gap-2 grid-cols-[auto_1fr]">
-                  <div className="w-4 hidden md:flex flex-col items-center gap-2 relative top-1 h-full self-stretch">
-                    <ClockPlusIcon className="size-4 flex-none text-grey" />
-                    <div className="min-h-5 h-full bg-grey/50 w-px mb-2"></div>
-                  </div>
-
-                  <div className="flex flex-col relative top-0.5">
-                    <span>Created</span>
-                    <span className="text-grey py-2">
-                      {mergeTimeAgoFormatterAndFormattedDate(task.created_at)}
-                    </span>
-                  </div>
+              <div className="text-sm inline-grid items-start gap-2 grid-cols-[auto_1fr]">
+                <div className="w-4 hidden md:flex flex-col items-center gap-2 relative top-1 h-full self-stretch">
+                  <ClockPlusIcon className="size-4 flex-none text-grey" />
+                  <div className="min-h-5 h-full bg-grey/50 w-px mb-2"></div>
                 </div>
-              )}
+
+                <div className="flex flex-col relative top-0.5">
+                  <span>Created</span>
+                  <span className="text-grey py-2">
+                    {mergeTimeAgoFormatterAndFormattedDate(task.created_at)}
+                  </span>
+                </div>
+              </div>
 
               {/* Task Updated At */}
-              {task.updated_at && (
-                <div className="text-sm inline-grid items-start gap-2 grid-cols-[auto_1fr]">
-                  <div className="w-4 hidden md:flex flex-col items-center gap-2 relative top-1 h-full self-stretch">
-                    <ClockArrowUpIcon className="size-4 flex-none text-grey" />
-                    <div className="min-h-5 h-full bg-grey/50 w-px mb-2"></div>
-                  </div>
-
-                  <div className="flex flex-col relative top-0.5">
-                    <span>Updated</span>
-                    <span className="text-grey py-2">
-                      {mergeTimeAgoFormatterAndFormattedDate(task.updated_at)}
-                    </span>
-                  </div>
+              <div className="text-sm inline-grid items-start gap-2 grid-cols-[auto_1fr]">
+                <div className="w-4 hidden md:flex flex-col items-center gap-2 relative top-1 h-full self-stretch">
+                  <ClockArrowUpIcon className="size-4 flex-none text-grey" />
+                  <div className="min-h-5 h-full bg-grey/50 w-px mb-2"></div>
                 </div>
-              )}
+
+                <div className="flex flex-col relative top-0.5">
+                  <span>Updated</span>
+                  <span className="text-grey py-2">
+                    {mergeTimeAgoFormatterAndFormattedDate(task.updated_at)}
+                  </span>
+                </div>
+              </div>
 
               {/* Slot */}
               <div className="text-sm inline-grid items-center gap-2 grid-cols-[auto_1fr]">

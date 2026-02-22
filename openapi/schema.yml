@@ -12873,11 +12873,9 @@ components:
         created_at:
           type: string
           format: date-time
-          nullable: true
         updated_at:
           type: string
           format: date-time
-          nullable: true
         exit_code:
           type: integer
           nullable: true
@@ -12924,15 +12922,14 @@ components:
         created_at:
           type: string
           format: date-time
-          nullable: true
         updated_at:
           type: string
           format: date-time
-          nullable: true
         exit_code:
           type: integer
           nullable: true
       required:
+      - created_at
       - desired_status
       - id
       - image
@@ -12940,6 +12937,7 @@ components:
       - name
       - slot
       - status
+      - updated_at
       - version
     ComposeStackServiceVolume:
       type: object

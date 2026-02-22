@@ -172,7 +172,7 @@ export function ComposeStackCard({
         <div className="flex-1 flex items-center justify-center pb-2">
           <div className="flex items-center gap-3  relative z-10 px-2">
             {services.slice(0, MAX_SERVICES_SHOWN).map(([name, service]) => (
-              <ComposeStackService
+              <ComposeStackServiceItemCard
                 key={name}
                 name={name}
                 stack_slug={slug}
@@ -233,7 +233,7 @@ type ComposeStackServiceProps = ValueOf<ComposeStack["services"]> & {
   urls: ValueOf<ComposeStack["urls"]>;
 };
 
-function ComposeStackService({
+function ComposeStackServiceItemCard({
   name,
   status,
   desired_replicas,

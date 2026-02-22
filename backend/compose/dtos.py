@@ -577,10 +577,10 @@ class ComposeStackServiceTaskDto:
     slot: int
     name: str
     version: int
+    created_at: str
+    updated_at: str
     exit_code: Optional[int] = None
     container_id: Optional[str] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> Self:

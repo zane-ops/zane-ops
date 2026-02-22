@@ -45,7 +45,9 @@ export default function ComposeStackServiceReplicasPage({
 
   const [, service] = serviceFound;
 
-  const tasks = service.tasks.toSorted((tA, tB) => tB.version - tA.version);
+  const tasks = service.tasks.toSorted((tA, tB) => {
+    return tB.updated_at > tA.updated_at ? 1 : -1;
+  });
 
   const running = tasks.filter(
     (task) =>

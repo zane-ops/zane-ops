@@ -77,8 +77,8 @@ class ComposeStackServiceTask(serializers.Serializer):
     container_id = serializers.CharField(required=False, allow_null=True)
     image = serializers.CharField()
     message = serializers.CharField()
-    created_at = serializers.DateTimeField(required=False, allow_null=True)
-    updated_at = serializers.DateTimeField(required=False, allow_null=True)
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField()
     exit_code = serializers.IntegerField(required=False, allow_null=True)
 
 
@@ -710,7 +710,8 @@ class DokployTemplateObjectRequestSerializer(serializers.Serializer):
                 )
 
                 if result.returncode != 0:
-                    raise serializers.ValidationError(result.stderr.strip())
+                    last_error = result.stderr.strip().splitlines()[-1]
+                    raise serializers.ValidationError(last_error)
 
         return content
 

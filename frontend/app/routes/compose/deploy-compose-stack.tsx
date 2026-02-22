@@ -25,6 +25,8 @@ export async function clientAction({
 }: Route.ClientActionArgs) {
   const formData = await request.formData();
 
+  const commit_message = formData.get("commit_message")?.toString();
+
   const { error, data } = await apiClient.PUT(
     "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/",
     {
@@ -32,7 +34,7 @@ export async function clientAction({
         ...(await getCsrfTokenHeader())
       },
       body: {
-        commit_message: formData.get("commit_message")?.toString()
+        commit_message: commit_message ? commit_message : undefined
       },
       params: {
         path: {
