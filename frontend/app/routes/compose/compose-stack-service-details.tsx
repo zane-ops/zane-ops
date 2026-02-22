@@ -382,7 +382,7 @@ function SideNav() {
                 hash: "#health"
               }}
             >
-              Health
+              Health check
             </Link>
           </li>
           <li>
