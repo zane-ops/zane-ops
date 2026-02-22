@@ -127,7 +127,7 @@ class ProjectUpdateViewTests(AuthAPITestCase):
     def test_sucessfully_update_project_slug(self):
         owner = self.loginUser()
         previous_project = Project.objects.create(slug="gh-next", owner=owner)
-        response = self.client.patch(
+        response = self.client.put(
             reverse(
                 "zane_api:projects.details", kwargs={"slug": previous_project.slug}
             ),
@@ -144,7 +144,7 @@ class ProjectUpdateViewTests(AuthAPITestCase):
     def test_sucessfully_update_project_description(self):
         owner = self.loginUser()
         previous_project = Project.objects.create(slug="gh-next", owner=owner)
-        response = self.client.patch(
+        response = self.client.put(
             reverse(
                 "zane_api:projects.details", kwargs={"slug": previous_project.slug}
             ),
@@ -163,7 +163,7 @@ class ProjectUpdateViewTests(AuthAPITestCase):
     def test_prevent_empy_update(self):
         owner = self.loginUser()
         previous_project = Project.objects.create(slug="gh-next", owner=owner)
-        response = self.client.patch(
+        response = self.client.put(
             reverse(
                 "zane_api:projects.details", kwargs={"slug": previous_project.slug}
             ),
@@ -179,7 +179,7 @@ class ProjectUpdateViewTests(AuthAPITestCase):
                 Project(slug="zane-ops", owner=owner),
             ]
         )
-        response = self.client.patch(
+        response = self.client.put(
             reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}),
             data={"slug": "Zane Ops"},
         )
@@ -187,7 +187,7 @@ class ProjectUpdateViewTests(AuthAPITestCase):
 
     def test_non_existent(self):
         self.loginUser()
-        response = self.client.patch(
+        response = self.client.put(
             reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}),
             data={"name": "zenops"},
         )
@@ -201,7 +201,7 @@ class ProjectUpdateViewTests(AuthAPITestCase):
                 Project(slug="zane-ops", owner=owner),
             ]
         )
-        response = self.client.patch(
+        response = self.client.put(
             reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}),
             data={"slug": "gh-clone"},
             content_type="application/json",
@@ -216,7 +216,7 @@ class ProjectUpdateViewTests(AuthAPITestCase):
                 Project(slug="zane-ops", owner=owner),
             ]
         )
-        response = self.client.patch(
+        response = self.client.put(
             reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"}),
             data={"slug": "zane-ops"},
         )
