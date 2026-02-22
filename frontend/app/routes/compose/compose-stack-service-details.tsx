@@ -5,7 +5,6 @@ import {
   ContainerIcon,
   GlobeIcon,
   GlobeLockIcon,
-  HammerIcon,
   HeartPulseIcon,
   InfoIcon,
   NetworkIcon
@@ -220,87 +219,96 @@ export default function ComposeStackServiceDetailsPage({
               />
             </div>
 
-            {serviceUrls.length > 0 && (
-              <>
-                <hr className="w-full max-w-4xl border-border" />
-                <div className="w-full max-w-4xl flex flex-col gap-5">
-                  <div className="flex flex-col gap-3">
-                    <h3 className="text-lg">URL Routes</h3>
-                    <p className="text-gray-400">
-                      The domains and base path which are associated to this
-                      service.
-                    </p>
-                  </div>
+            <hr className="w-full max-w-4xl border-border" />
+            <div className="w-full max-w-4xl flex flex-col gap-5">
+              <div className="flex flex-col gap-3">
+                <h3 className="text-lg">URL Routes</h3>
+                <p className="text-gray-400">
+                  The domains and base path which are associated to this
+                  service.
+                </p>
+              </div>
 
-                  {serviceUrls.map((url) => (
-                    <div
-                      key={url.domain + url.base_path}
-                      className="flex flex-col gap-2 items-stretch md:flex-row overflow-x-auto"
-                    >
-                      <div
-                        className={cn(
-                          "w-full px-3 bg-muted rounded-md flex flex-col gap-2 items-start text-start flex-wrap pr-24 py-4",
-                          "text-base"
-                        )}
-                      >
-                        <p className="break-all">
-                          {url.domain}
-                          <span className="text-grey">
-                            {url.base_path ?? "/"}
-                          </span>
-                          &nbsp;
-                        </p>
-
-                        {url.port && (
-                          <small className="inline-flex gap-2 items-center">
-                            <ArrowRightIcon
-                              size={15}
-                              className="text-grey flex-none"
-                            />
-                            <span className="text-grey">{url.port}</span>
-                          </small>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+              {serviceUrls.length === 0 && (
+                <div
+                  className={cn(
+                    "flex flex-col gap-2 items-center py-8 bg-muted/20",
+                    "border-border border-dashed rounded-md border-1"
+                  )}
+                >
+                  No url routes in this service
                 </div>
-              </>
-            )}
-
-            {service.ports.length > 0 && (
-              <>
-                <hr className="w-full max-w-4xl border-border" />
-
-                <div className="w-full max-w-4xl flex flex-col gap-5">
-                  <div className="flex flex-col gap-3">
-                    <h3 className="text-lg">Exposed ports</h3>
-                    <p className="text-gray-400">
-                      This makes the service reachable externally via the ports
-                      defined in&nbsp;
-                      <Code>host port</Code>.
+              )}
+              {serviceUrls.map((url) => (
+                <div
+                  key={url.domain + url.base_path}
+                  className="flex flex-col gap-2 items-stretch md:flex-row overflow-x-auto"
+                >
+                  <div
+                    className={cn(
+                      "w-full px-3 bg-muted rounded-md flex flex-col gap-2 items-start text-start flex-wrap pr-24 py-4",
+                      "text-base"
+                    )}
+                  >
+                    <p className="break-all">
+                      {url.domain}
+                      <span className="text-grey">{url.base_path ?? "/"}</span>
+                      &nbsp;
                     </p>
-                  </div>
 
-                  {service.ports.map((port) => (
-                    <div
-                      key={`${port.published}:${port.target}/${port.protocol}`}
-                      className="flex flex-col gap-2 items-center md:flex-row overflow-x-auto"
-                    >
-                      <div
-                        className={cn(
-                          "w-full px-3 py-4 bg-muted rounded-md inline-flex gap-1 items-center text-start flex-wrap pr-24"
-                        )}
-                      >
-                        <span>{port.published}</span>
-                        <ArrowRightIcon size={15} className="text-grey" />
-                        <span className="text-grey">{port.target}</span>
-                        <Code className="ml-1">{port.protocol}</Code>
-                      </div>
-                    </div>
-                  ))}
+                    {url.port && (
+                      <small className="inline-flex gap-2 items-center">
+                        <ArrowRightIcon
+                          size={15}
+                          className="text-grey flex-none"
+                        />
+                        <span className="text-grey">{url.port}</span>
+                      </small>
+                    )}
+                  </div>
                 </div>
-              </>
-            )}
+              ))}
+            </div>
+
+            <hr className="w-full max-w-4xl border-border" />
+
+            <div className="w-full max-w-4xl flex flex-col gap-5">
+              <div className="flex flex-col gap-3">
+                <h3 className="text-lg">Exposed ports</h3>
+                <p className="text-gray-400">
+                  This makes the service reachable externally via the ports
+                  defined in&nbsp;
+                  <Code>host port</Code>.
+                </p>
+              </div>
+              {service.ports.length === 0 && (
+                <div
+                  className={cn(
+                    "flex flex-col gap-2 items-center py-8 bg-muted/20",
+                    "border-border border-dashed rounded-md border-1"
+                  )}
+                >
+                  No exposed in this service
+                </div>
+              )}
+              {service.ports.map((port) => (
+                <div
+                  key={`${port.published}:${port.target}/${port.protocol}`}
+                  className="flex flex-col gap-2 items-center md:flex-row overflow-x-auto"
+                >
+                  <div
+                    className={cn(
+                      "w-full px-3 py-4 bg-muted rounded-md inline-flex gap-1 items-center text-start flex-wrap pr-24"
+                    )}
+                  >
+                    <span>{port.published}</span>
+                    <ArrowRightIcon size={15} className="text-grey" />
+                    <span className="text-grey">{port.target}</span>
+                    <Code className="ml-1">{port.protocol}</Code>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -312,22 +320,20 @@ export default function ComposeStackServiceDetailsPage({
             <div className="h-full border border-grey/50"></div>
           </div>
           <div className="w-full flex flex-col gap-12 pt-1 pb-14">
-            <h2 className="text-lg text-grey">Health check</h2>
-            {/* <ServiceCommandForm
-              project_slug={project_slug}
-              service_slug={service_slug}
-              env_slug={env_slug}
-            />
-            <ServiceHealthcheckForm
-              project_slug={project_slug}
-              service_slug={service_slug}
-              env_slug={env_slug}
-            />
-            <ServiceResourceLimits
-              project_slug={project_slug}
-              service_slug={service_slug}
-              env_slug={env_slug}
-            /> */}
+            <h2 className="text-lg text-grey">Health checks</h2>
+
+            {!service.healthcheck && (
+              <div
+                className={cn(
+                  "flex flex-col gap-2 items-center py-8 bg-muted/20",
+                  "border-border border-dashed rounded-md border-1"
+                )}
+              >
+                No health check
+              </div>
+            )}
+
+            {service.healthcheck && <dl></dl>}
           </div>
         </section>
       </div>

@@ -696,21 +696,26 @@ async def get_compose_stack_swarm_service_status(
     healthcheck = None
     health = container_spec.get("Healthcheck")
     if health:
-        cmd = health["Test"]
+        cmd: list[str] = health["Test"]
         if cmd != ["NONE"]:  # healthcheck disabled
+            cmd.pop(0)
             healthcheck = {
-                "command": shlex.join(cmd),
+                "command": " ".join(cmd),
             }
             if health.get("Interval"):
                 healthcheck["interval_sec"] = (
-                    health["Interval"] // 5e9
+                    health["Interval"] // 1e9
                 )  # the time is in nanoseconds
             if health.get("Timeout"):
                 healthcheck["timeout_sec"] = (
-                    health["Timeout"] // 5e9
+                    health["Timeout"] // 1e9
                 )  # the time is in nanoseconds
             if health.get("Retries"):
                 healthcheck["retries"] = health["Retries"]
+            if health.get("StartPeriod"):
+                healthcheck["start_period"] = health["StartPeriod"] // 1e9
+            if health.get("StartInterval"):
+                healthcheck["start_interval"] = health["StartInterval"] // 1e9
 
     return {
         "name": service_name,

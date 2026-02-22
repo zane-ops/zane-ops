@@ -111,6 +111,8 @@ class ComposeStackServiceHealthCheckSerializer(serializers.Serializer):
     retries = serializers.IntegerField(required=False, allow_null=True)
     timeout_sec = serializers.IntegerField(required=False, allow_null=True)
     interval_sec = serializers.IntegerField(required=False, allow_null=True)
+    start_period = serializers.IntegerField(required=False, allow_null=True)
+    start_interval = serializers.IntegerField(required=False, allow_null=True)
 
 
 class ComposeStackServiceStatusSerializer(serializers.Serializer):

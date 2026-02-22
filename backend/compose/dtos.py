@@ -653,6 +653,8 @@ class ComposeStackHealthCheck:
     retries: Optional[int] = None
     timeout_sec: Optional[int] = None
     interval_sec: Optional[int] = None
+    start_period: Optional[int] = None
+    start_interval: Optional[int] = None
 
 
 @dataclass
@@ -722,6 +724,8 @@ class ComposeStackServiceStatusDto:
                 interval_sec=healthcheck_data.get("interval_sec"),
                 timeout_sec=healthcheck_data.get("timeout_sec"),
                 retries=healthcheck_data.get("retries"),
+                start_period=healthcheck_data.get("start_period"),
+                start_interval=healthcheck_data.get("start_interval"),
             )
             if healthcheck_data is not None
             else None,
@@ -764,6 +768,8 @@ class ComposeStackServiceStatusDto:
                 "interval_sec": self.healthcheck.interval_sec,
                 "timeout_sec": self.healthcheck.timeout_sec,
                 "retries": self.healthcheck.retries,
+                "start_period": self.healthcheck.start_period,
+                "start_interval": self.healthcheck.start_interval,
             }
         return result
 
