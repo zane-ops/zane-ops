@@ -618,13 +618,17 @@ async def get_compose_stack_swarm_service_status(
                 DockerSwarmTaskState.ORPHANED,
             ]
 
-            has_failed_tasks = any(t.state in unhealthy_states for t in tasks)
+            expected_tasks = [
+                t for t in tasks if t.DesiredState == DockerSwarmTaskState.RUNNING
+            ]
+
+            has_failed_tasks = any(t.state in unhealthy_states for t in expected_tasks)
 
             # Check for shutdown tasks with non-zero exit codes
             has_errored_shutdown = any(
                 t.state == DockerSwarmTaskState.SHUTDOWN
                 and (t.exit_code is not None and t.exit_code != 0)
-                for t in tasks
+                for t in expected_tasks
             )
 
             if has_failed_tasks or has_errored_shutdown:
