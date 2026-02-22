@@ -114,7 +114,7 @@ class ComposeStackServiceHealthCheckSerializer(serializers.Serializer):
 
 
 class ComposeStackServiceStatusSerializer(serializers.Serializer):
-    id = serializers.CharField(required=False, allow_null=True)
+    id = serializers.CharField()
     status = serializers.ChoiceField(
         choices=[state for state in ComposeStackServiceStatus.values()]
     )
@@ -266,6 +266,8 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             "services",
             "deploy_token",
             "created_at",
+            "name",
+            "hash_prefix",
         ]
 
 

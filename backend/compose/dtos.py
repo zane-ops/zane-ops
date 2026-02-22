@@ -664,13 +664,13 @@ class ComposeStackServiceStatusDto:
     updated_at: str
     network_alias: str
     global_alias: str
+    id: str
     mode: Literal["replicated", "global", "replicated-job", "global-job"]
     tasks: List[ComposeStackServiceTaskDto] = field(default_factory=list)
     environment: List[ComposeStackEnvVarSpec] = field(default_factory=list)
     volumes: List[ComposeStackVolumeSpec] = field(default_factory=list)
     configs: List[ComposeStackConfigSpec] = field(default_factory=list)
     ports: List[ComposeStackPortSpec] = field(default_factory=list)
-    id: Optional[str] = None
     healthcheck: Optional[ComposeStackHealthCheck] = None
 
     @classmethod
@@ -689,7 +689,7 @@ class ComposeStackServiceStatusDto:
             ],
             network_alias=data["network_alias"],
             global_alias=data["global_alias"],
-            id=data.get("id"),
+            id=data["id"],
             environment=[
                 ComposeStackEnvVarSpec(key=e["key"], value=e["value"])
                 for e in data.get("environment", [])
@@ -735,6 +735,7 @@ class ComposeStackServiceStatusDto:
             "desired_replicas": self.desired_replicas,
             "updated_at": self.updated_at,
             "mode": self.mode,
+            "id": self.id,
             "tasks": [task.to_dict() for task in self.tasks],
             "network_alias": self.network_alias,
             "global_alias": self.global_alias,
@@ -757,8 +758,6 @@ class ComposeStackServiceStatusDto:
                 for p in self.ports
             ],
         }
-        if self.id is not None:
-            result["id"] = self.id
         if self.healthcheck is not None:
             result["healthcheck"] = {
                 "command": self.healthcheck.command,
