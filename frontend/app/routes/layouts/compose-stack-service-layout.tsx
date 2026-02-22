@@ -7,6 +7,7 @@ import {
   GlobeIcon,
   InfoIcon,
   LayersIcon,
+  PauseIcon,
   PickaxeIcon,
   RotateCcwIcon,
   ScrollTextIcon,
@@ -14,8 +15,10 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { Link, Navigate, Outlet, href, useFetcher } from "react-router";
+import { toast } from "sonner";
 import type { ComposeStackService } from "~/api/types";
 import { Code } from "~/components/code";
+import { getComposeStackStatus } from "~/components/compose-stack-cards";
 import { CopyButton } from "~/components/copy-button";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
 import { NavLink } from "~/components/nav-link";
@@ -41,13 +44,17 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { composeStackQueries } from "~/lib/queries";
+import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import { cn, notFound } from "~/lib/utils";
 import { queryClient } from "~/root";
+import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 import {
+  durationToMs,
   formatURL,
   getDockerImageIconURL,
   metaTitle,
-  pluralize
+  pluralize,
+  wait
 } from "~/utils";
 import type { Route } from "./+types/compose-stack-service-layout";
 
@@ -340,7 +347,11 @@ export default function ComposeStackServiceLayoutPage({
 
         {!is_job && (
           <div>
-            <RestartServiceForm params={params} />
+            <RestartServiceForm
+              params={params}
+              current_state={service.status}
+              stack_id={stack.id}
+            />
           </div>
         )}
       </section>
@@ -404,17 +415,166 @@ export default function ComposeStackServiceLayoutPage({
 
 type RestartServiceFormProps = {
   params: Route.ComponentProps["params"];
+  current_state: ComposeStackService["status"];
+  stack_id: string;
 };
 
-function RestartServiceForm({ params }: RestartServiceFormProps) {
+function RestartServiceForm({
+  params,
+  current_state,
+  stack_id
+}: RestartServiceFormProps) {
   const fetcher = useFetcher();
   const isPending = fetcher.state !== "idle";
+
+  const { queue, queueToggleItem, dequeueToggleItem } =
+    useToggleStateQueueStore();
+
+  const [, formAction] = React.useActionState(action, null);
+
+  async function action(_: any, formData: FormData) {
+    const queue_id = `${stack_id}-${params.serviceSlug}`;
+    if (queue.has(queue_id)) {
+      toast.info("The service is already being toggled in the background.");
+      return;
+    }
+
+    await fetcher.submit(formData, {
+      action: href(
+        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
+        params
+      ),
+      method: "POST"
+    });
+
+    const desiredState = formData.get("desired_state") as "stop" | "start";
+    queueToggleItem(queue_id);
+    toggleStateToast({
+      desiredState,
+      ...params
+    }).finally(() => dequeueToggleItem(queue_id));
+  }
+
   return (
-    <fetcher.Form method="post">
-      <SubmitButton isPending={isPending} variant="secondary">
-        <RotateCcwIcon className="size-4 flex-none" />
-        <span>Restart service</span>
+    <form method="post" action={formAction}>
+      <input type="hidden" name="service_name" value={params.serviceSlug} />
+      <input
+        type="hidden"
+        name="desired_state"
+        value={current_state === "SLEEPING" ? "start" : "stop"}
+      />
+      <SubmitButton
+        isPending={isPending}
+        variant={current_state === "SLEEPING" ? "secondary" : "warning"}
+      >
+        {current_state === "SLEEPING" ? (
+          <>
+            <RotateCcwIcon className="size-4 flex-none" />
+            <span>Restart service</span>
+          </>
+        ) : (
+          <>
+            <PauseIcon className="size-4 flex-none" />
+            <span>Put service to sleep</span>
+          </>
+        )}
       </SubmitButton>
-    </fetcher.Form>
+    </form>
   );
+}
+
+async function toggleStateToast({
+  desiredState,
+  ...params
+}: {
+  desiredState: "stop" | "start";
+} & Route.ComponentProps["params"]) {
+  const stackLink = (
+    <Link
+      className="text-link underline inline break-all"
+      to={href(
+        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/services/:serviceSlug",
+        params
+      )}
+    >
+      {params.projectSlug}/{params.envSlug}/{params.composeStackSlug}/
+      {params.serviceSlug}
+    </Link>
+  );
+
+  const toastId = toast.loading(
+    desiredState === "start" ? (
+      <span>Starting {stackLink}, this may take up to a minute...</span>
+    ) : (
+      <span>Stopping {stackLink}, this may take up to a minute...</span>
+    ),
+    {
+      closeButton: false
+    }
+  );
+
+  const MAX_TRIES = 12; // wait max for `1min` (12*5s = 60s)
+  let total_tries = 0;
+
+  let currentState: ToggleStackState | null = null;
+
+  while (total_tries < MAX_TRIES && currentState !== desiredState) {
+    total_tries++;
+
+    // refetch queries to get fresh data
+    let stack;
+    try {
+      stack = await queryClient.fetchQuery(
+        composeStackQueries.single({
+          project_slug: params.projectSlug,
+          stack_slug: params.composeStackSlug,
+          env_slug: params.envSlug
+        })
+      );
+    } catch (error) {
+      break;
+    }
+
+    const currentService = stack.services[params.serviceSlug];
+
+    if (!currentService) {
+      break;
+    }
+
+    currentState = currentService.status === "SLEEPING" ? "stop" : "start";
+
+    if (currentState !== desiredState && total_tries < MAX_TRIES) {
+      await wait(durationToMs(5, "seconds"));
+    }
+  }
+
+  if (currentState === desiredState) {
+    toast.success("Success", {
+      description:
+        desiredState === "start" ? (
+          <>{stackLink} restarted successfully</>
+        ) : (
+          <>{stackLink} stopped successfully</>
+        ),
+      closeButton: true,
+      id: toastId
+    });
+  } else {
+    toast.warning("Warning", {
+      description:
+        desiredState === "start" ? (
+          <>
+            {stackLink} failed to restart within the time limit. Check the
+            service replicas and their logs or try again.
+          </>
+        ) : (
+          <>
+            {stackLink} failed to stop within the time limit. Check the service
+            replicas and their logs or try again.
+          </>
+        ),
+      closeButton: true,
+      id: toastId
+    });
+  }
 }

@@ -1343,6 +1343,7 @@ export interface components {
     };
     ComposeStackToggleRequestRequest: {
       desired_state: components["schemas"]["DesiredStateEnum"];
+      service_name?: string;
     };
     ComposeStackUpdate: {
       id: string;
@@ -6913,7 +6914,7 @@ export interface components {
       code: "invalid_choice" | "null" | "required";
       detail: string;
     };
-    ToggleComposeStackError: components["schemas"]["ToggleComposeStackNonFieldErrorsErrorComponent"] | components["schemas"]["ToggleComposeStackDesiredStateErrorComponent"];
+    ToggleComposeStackError: components["schemas"]["ToggleComposeStackNonFieldErrorsErrorComponent"] | components["schemas"]["ToggleComposeStackDesiredStateErrorComponent"] | components["schemas"]["ToggleComposeStackServiceNameErrorComponent"];
     ToggleComposeStackErrorResponse400: components["schemas"]["ToggleComposeStackValidationError"] | components["schemas"]["ParseErrorResponse"];
     ToggleComposeStackNonFieldErrorsErrorComponent: {
       /**
@@ -6926,6 +6927,23 @@ export interface components {
        * @enum {string}
        */
       code: "invalid";
+      detail: string;
+    };
+    ToggleComposeStackServiceNameErrorComponent: {
+      /**
+       * @description * `service_name` - service_name
+       * @enum {string}
+       */
+      attr: "service_name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ToggleComposeStackValidationError: {

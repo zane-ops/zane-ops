@@ -13047,6 +13047,9 @@ components:
       properties:
         desired_state:
           $ref: '#/components/schemas/DesiredStateEnum'
+        service_name:
+          type: string
+          minLength: 1
       required:
       - desired_state
     ComposeStackUpdate:
@@ -25152,11 +25155,13 @@ components:
       oneOf:
       - $ref: '#/components/schemas/ToggleComposeStackNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/ToggleComposeStackDesiredStateErrorComponent'
+      - $ref: '#/components/schemas/ToggleComposeStackServiceNameErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/ToggleComposeStackNonFieldErrorsErrorComponent'
           desired_state: '#/components/schemas/ToggleComposeStackDesiredStateErrorComponent'
+          service_name: '#/components/schemas/ToggleComposeStackServiceNameErrorComponent'
     ToggleComposeStackErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ToggleComposeStackValidationError'
@@ -25179,6 +25184,34 @@ components:
           - invalid
           type: string
           description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ToggleComposeStackServiceNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_name
+          type: string
+          description: '* `service_name` - service_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:

@@ -1,10 +1,9 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
-import { getComposeStackStatus } from "~/components/compose-stack-cards";
 import { composeStackQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
-import { durationToMs, getCsrfTokenHeader, wait } from "~/utils";
+import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/toggle-compose-stack";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
@@ -31,14 +30,19 @@ export async function clientAction({
 }: Route.ClientActionArgs) {
   const formData = await request.formData();
 
+  const service = formData.get("service_name")?.toString().trim();
+
   const userData = {
-    desired_state: formData.get("desired_state")?.toString() as "start" | "stop"
+    desired_state: formData.get("desired_state")?.toString() as
+      | "start"
+      | "stop",
+    service_name: service ? service : undefined
   } satisfies RequestInput<
     "put",
     "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/toggle/"
   >;
 
-  const { error, data } = await apiClient.PUT(
+  const { error } = await apiClient.PUT(
     "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/toggle/",
     {
       headers: {
