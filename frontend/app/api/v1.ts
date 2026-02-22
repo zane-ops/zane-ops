@@ -1079,6 +1079,8 @@ export interface components {
       deploy_token: string | null;
       /** Format: date-time */
       created_at: string;
+      name: string;
+      hash_prefix: string;
     };
     ComposeStackChange: {
       id: string;
@@ -1221,7 +1223,7 @@ export interface components {
       protocol: components["schemas"]["ProtocolEnum"];
     };
     ComposeStackServiceStatus: {
-      id: string | null;
+      id: string;
       status: components["schemas"]["ComposeStackServiceStatusStatusEnum"];
       network_alias: string;
       global_alias: string;
@@ -1247,7 +1249,7 @@ export interface components {
      */
     ComposeStackServiceStatusModeEnum: "replicated" | "global" | "replicated-job" | "global-job";
     ComposeStackServiceStatusRequest: {
-      id?: string | null;
+      id: string;
       status: components["schemas"]["ComposeStackServiceStatusStatusEnum"];
       network_alias: string;
       global_alias: string;
@@ -1366,6 +1368,8 @@ export interface components {
       deploy_token: string | null;
       /** Format: date-time */
       created_at: string;
+      name: string;
+      hash_prefix: string;
     };
     ComposeStackUpdateRequest: {
       slug?: string;

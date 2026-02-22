@@ -41,7 +41,7 @@ export default function ComposeStackServicesPage({
         <div className="grid lg:grid-cols-2 gap-4 mt-8">
           {services.map(([name, service]) => (
             <ComposeStackServiceCard
-              key={name}
+              key={service.id}
               name={name}
               service={service}
               urls={stack.urls[name] ?? []}

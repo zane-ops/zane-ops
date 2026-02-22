@@ -12318,13 +12318,21 @@ components:
           type: string
           format: date-time
           readOnly: true
+        name:
+          type: string
+          readOnly: true
+        hash_prefix:
+          type: string
+          readOnly: true
       required:
       - computed_content
       - configs
       - created_at
       - deploy_token
       - env_overrides
+      - hash_prefix
       - id
+      - name
       - network_alias_prefix
       - services
       - slug
@@ -12699,7 +12707,6 @@ components:
       properties:
         id:
           type: string
-          nullable: true
         status:
           $ref: '#/components/schemas/ComposeStackServiceStatusStatusEnum'
         network_alias:
@@ -12774,7 +12781,6 @@ components:
       properties:
         id:
           type: string
-          nullable: true
           minLength: 1
         status:
           $ref: '#/components/schemas/ComposeStackServiceStatusStatusEnum'
@@ -12825,6 +12831,7 @@ components:
       - desired_replicas
       - environment
       - global_alias
+      - id
       - image
       - mode
       - network_alias
@@ -13112,13 +13119,21 @@ components:
           type: string
           format: date-time
           readOnly: true
+        name:
+          type: string
+          readOnly: true
+        hash_prefix:
+          type: string
+          readOnly: true
       required:
       - computed_content
       - configs
       - created_at
       - deploy_token
       - env_overrides
+      - hash_prefix
       - id
+      - name
       - network_alias_prefix
       - services
       - slug

@@ -255,11 +255,6 @@ export function ComposeStackServiceCard({
                 text="Terminal"
                 onClick={() => navigate(`./services/${name}/terminal`)}
               />
-              <MenubarContentItem
-                icon={Eye}
-                text="Details"
-                onClick={() => navigate(`./services/${name}/details`)}
-              />
 
               {urls?.length > 0 && (
                 <>
@@ -274,6 +269,12 @@ export function ComposeStackServiceCard({
                 icon={ChartNoAxesColumnIcon}
                 text="View metrics"
                 onClick={() => navigate(`./services/${name}/metrics`)}
+              />
+
+              <MenubarContentItem
+                icon={Eye}
+                text="Details"
+                onClick={() => navigate(`./services/${name}/details`)}
               />
 
               {!is_job && (
