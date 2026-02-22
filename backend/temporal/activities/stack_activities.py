@@ -3,7 +3,7 @@ from datetime import timedelta
 import shlex
 import shutil
 from time import monotonic
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 from temporalio import activity, workflow
 import tempfile
 from temporalio.exceptions import ApplicationError
@@ -735,6 +735,14 @@ class ComposeStackActivities:
         )
 
         for service in services:
+            service_name = (
+                cast(str, service.name)
+                .removeprefix(f"{stack.name}_")
+                .removeprefix(f"{stack.hash_prefix}_")
+            )
+            if details.only_service is not None and service.name != service_name:
+                continue
+
             service_mode: str = service.attrs["Spec"]["Mode"]
 
             # Only replicated services are considered
@@ -773,6 +781,14 @@ class ComposeStackActivities:
         )
 
         for service in services:
+            service_name = (
+                cast(str, service.name)
+                .removeprefix(f"{stack.name}_")
+                .removeprefix(f"{stack.hash_prefix}_")
+            )
+            if details.only_service is not None and service.name != service_name:
+                continue
+
             service_mode: str = service.attrs["Spec"]["Mode"]
 
             # Only replicated services are considered

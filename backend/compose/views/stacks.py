@@ -1157,6 +1157,7 @@ class ToggleComposeStackAPIView(APIView):
 
         payload = ToggleComposeStackDetails(
             stack=snapshot,
+            only_service=data.get("service_name"),
             desired_state=data["desired_state"],  # type: ignore
         )
 

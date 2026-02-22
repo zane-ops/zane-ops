@@ -368,6 +368,7 @@ class ComposeStackWebhookDeployRequestSerializer(serializers.Serializer):
 
 class ComposeStackToggleRequestSerializer(serializers.Serializer):
     desired_state = serializers.ChoiceField(choices=["start", "stop"])
+    service_name = serializers.CharField(required=False)
 
 
 class BaseChangeItemSerializer(serializers.Serializer):
