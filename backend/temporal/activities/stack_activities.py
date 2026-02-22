@@ -409,7 +409,7 @@ class ComposeStackActivities:
                 workflow=MonitorComposeStackWorkflow.run,
                 args=deployment.stack,
                 id=deployment.stack.monitor_schedule_id,
-                interval=timedelta(seconds=30),
+                interval=timedelta(seconds=15),
                 task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
             )
         except ScheduleAlreadyRunningError:
