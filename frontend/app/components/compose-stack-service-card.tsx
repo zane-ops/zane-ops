@@ -7,9 +7,9 @@ import {
   GlobeIcon,
   Layers2Icon,
   LayersIcon,
+  MoonIcon,
   RotateCcwIcon,
   ScrollText,
-  SquareIcon,
   TagIcon,
   TerminalIcon
 } from "lucide-react";
@@ -279,7 +279,7 @@ export function ComposeStackServiceCard({
               {!is_job && (
                 <MenubarContentItem
                   icon={
-                    service.status === "SLEEPING" ? RotateCcwIcon : SquareIcon
+                    service.status === "SLEEPING" ? RotateCcwIcon : MoonIcon
                   }
                   text={
                     service.status === "SLEEPING"
