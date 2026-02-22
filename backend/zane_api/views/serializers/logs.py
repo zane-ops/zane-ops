@@ -219,6 +219,7 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
         field_name="request_host", method="filter_multiple_values"
     )
     request_path = django_filters.BaseInFilter(method="filter_multiple_values")
+    stack_service_name = django_filters.BaseInFilter(method="filter_multiple_values")
 
     def filter_multiple_values(self, queryset: QuerySet, name: str, value: str):
         params = self.request.GET.getlist(name)  # type: ignore

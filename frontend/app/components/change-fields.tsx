@@ -1,23 +1,34 @@
 import {
   ArrowDownIcon,
   ArrowRightIcon,
+  EyeIcon,
+  EyeOffIcon,
   FileSlidersIcon,
   GithubIcon,
   GitlabIcon,
   HardDriveDownloadIcon,
   HardDriveIcon
 } from "lucide-react";
-import type { Service } from "~/api/types";
+import * as React from "react";
+import type { ComposeStack, Service } from "~/api/types";
 import { Code } from "~/components/code";
+import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { CodeEditor } from "~/components/ui/code-editor";
 import { Input } from "~/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import { BUILDER_DESCRIPTION_MAP, DEFAULT_REGISTRIES } from "~/lib/constants";
-
 import { cn } from "~/lib/utils";
 
 export type ChangeItemProps = {
-  change: Service["unapplied_changes"][number];
+  change:
+    | Service["unapplied_changes"][number]
+    | ComposeStack["unapplied_changes"][number];
   unapplied?: boolean;
 };
 
@@ -2040,11 +2051,14 @@ export function EnvVariableChangeItem({
   const new_value = change.new_value as Service["env_variables"][number] | null;
   const old_value = change.old_value as Service["env_variables"][number] | null;
 
+  const [isOldEnvValueShown, setIsOldEnvValueShown] = React.useState(false);
+  const [isNewEnvValueShown, setIsNewEnvValueShown] = React.useState(false);
+
   return (
     <div className="flex flex-col gap-2 items-center md:flex-row overflow-x-auto">
       <div
         className={cn(
-          "w-full px-3 py-4 bg-muted rounded-md inline-flex items-start text-start pr-24",
+          "w-full px-3 py-4 bg-muted rounded-md inline-flex items-start text-start pr-8",
           "font-mono",
           {
             "dark:bg-primary-foreground bg-primary/60": change.type === "ADD",
@@ -2054,8 +2068,35 @@ export function EnvVariableChangeItem({
       >
         <span>{(old_value ?? new_value)?.key}</span>
         <span className="text-grey">{"="}</span>
-        <span className={`hyphens-auto`}>
-          {(old_value ?? new_value)?.value}
+        <span className={`hyphens-auto inline-flex items-start`}>
+          <span className="grow">
+            {isOldEnvValueShown
+              ? (old_value ?? new_value)?.value
+              : "***********"}
+          </span>
+          <TooltipProvider>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsOldEnvValueShown((prev) => !prev)}
+                  className="px-2.5 py-0.5 inline-flex self-end"
+                >
+                  {isOldEnvValueShown ? (
+                    <EyeOffIcon size={15} className="flex-none" />
+                  ) : (
+                    <EyeIcon size={15} className="flex-none" />
+                  )}
+                  <span className="sr-only">
+                    {isOldEnvValueShown ? "Hide" : "Reveal"} variable value
+                  </span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isOldEnvValueShown ? "Hide" : "Reveal"} variable value
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </span>
         <span>&nbsp;</span>
         {change.type === "ADD" && (
@@ -2075,14 +2116,41 @@ export function EnvVariableChangeItem({
 
           <div
             className={cn(
-              "w-full px-3 py-4 bg-muted rounded-md inline-flex items-start text-start pr-24",
+              "w-full px-3 py-4 bg-muted rounded-md inline-flex items-start text-start pr-8",
               "font-mono",
               "dark:bg-secondary-foreground bg-secondary/60"
             )}
           >
             <span>{new_value?.key}</span>
             <span className="text-grey">{"="}</span>
-            <span className={`hyphens-auto`}>{new_value?.value}</span>
+            <span className={`hyphens-auto inline-flex items-start flex-wrap`}>
+              <span className="grow">
+                {isNewEnvValueShown ? new_value?.value : "***********"}
+              </span>
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setIsNewEnvValueShown((prev) => !prev)}
+                      className="px-2.5 py-0.5 inline-flex self-end"
+                    >
+                      {isNewEnvValueShown ? (
+                        <EyeOffIcon size={15} className="flex-none" />
+                      ) : (
+                        <EyeIcon size={15} className="flex-none" />
+                      )}
+                      <span className="sr-only">
+                        {isNewEnvValueShown ? "Hide" : "Reveal"} variable value
+                      </span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isNewEnvValueShown ? "Hide" : "Reveal"} variable value
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </span>
             <span>&nbsp;</span>
             <span className="text-blue-500">
               {unapplied && "will be"} updated

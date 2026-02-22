@@ -1,9 +1,12 @@
 import asyncio
+import base64
 import os
+import shlex
 import shutil
 
-from typing import Any, Dict, List, Literal, TypedDict, cast
+from typing import Any, Dict, List, Literal, Optional, TypedDict, cast
 from docker.models.services import Service as DockerService
+from docker.models.configs import Config as DockerConfig
 
 
 from .shared import DeploymentDetails, ContainerMetrics
@@ -544,7 +547,9 @@ def obfuscate_env_in_shell_command(cmd: str, build_envs: dict[str, str]) -> str:
 
 
 async def get_compose_stack_swarm_service_status(
-    service: DockerService, stack: ComposeStackSnapshot
+    service: DockerService,
+    stack: ComposeStackSnapshot,
+    all_configs: Optional[Dict[str, DockerConfig]] = None,
 ) -> Dict[str, Any]:
     service_mode = service.attrs["Spec"]["Mode"]
     # Mode is a dict in the format:
@@ -581,6 +586,9 @@ async def get_compose_stack_swarm_service_status(
         # default is replicated
         mode_type = "replicated"
 
+    # Determine status based on mode
+    is_job = mode_type in ["replicated-job", "global-job"]
+
     # Get counts from ServiceStatus
     running_replicas = service_status["RunningTasks"]
     desired_replicas = service_status["DesiredTasks"]
@@ -588,9 +596,6 @@ async def get_compose_stack_swarm_service_status(
 
     # Get all tasks for the tasks list
     tasks = [DockerSwarmTask.from_dict(task) for task in service.tasks()]
-
-    # Determine status based on mode
-    is_job = mode_type in ["replicated-job", "global-job"]
 
     if is_job:
         # For jobs, healthy means completed >= desired
@@ -613,13 +618,17 @@ async def get_compose_stack_swarm_service_status(
                 DockerSwarmTaskState.ORPHANED,
             ]
 
-            has_failed_tasks = any(t.state in unhealthy_states for t in tasks)
+            expected_tasks = [
+                t for t in tasks if t.DesiredState == DockerSwarmTaskState.RUNNING
+            ]
+
+            has_failed_tasks = any(t.state in unhealthy_states for t in expected_tasks)
 
             # Check for shutdown tasks with non-zero exit codes
             has_errored_shutdown = any(
                 t.state == DockerSwarmTaskState.SHUTDOWN
                 and (t.exit_code is not None and t.exit_code != 0)
-                for t in tasks
+                for t in expected_tasks
             )
 
             if has_failed_tasks or has_errored_shutdown:
@@ -633,26 +642,106 @@ async def get_compose_stack_swarm_service_status(
         .removeprefix(f"{stack.hash_prefix}_")
     )
 
+    container_spec = service.attrs["Spec"]["TaskTemplate"]["ContainerSpec"]
+
     # Get image from service spec
-    image = service.attrs["Spec"]["TaskTemplate"]["ContainerSpec"]["Image"]
-    # Remove the digest suffix if present (e.g., "nginx:latest@sha256:...")
-    if "@" in image:
-        image = image.split("@")[0]
+    image = container_spec["Image"]
+
+    environment: list[dict[str, str]] = []
+
+    for env in container_spec.get("Env", []):
+        key, value = env.split(
+            "=", 1
+        )  # env is in the format `KEY=VALUE`, split will return an array of [KEY, VALUE]
+        environment.append({"key": key, "value": value})
+
+    volumes: list[dict[str, str]] = []
+
+    for vol in container_spec.get("Mounts", []):
+        volumes.append(
+            {
+                "target": vol["Target"],
+                "source": vol["Source"],
+                "read_only": vol.get("ReadOnly", False),
+                "type": vol.get("type", "volume"),
+            }
+        )
+
+    configs: list[dict[str, str]] = []
+    cfg_dict = all_configs or {}
+
+    for cfg in container_spec.get("Configs", []):
+        existing_cfg = cfg_dict.get(cfg["ConfigID"])
+        if existing_cfg:
+            content: str = existing_cfg.attrs["Spec"]["Data"]
+            configs.append(
+                {
+                    "source": cfg["ConfigName"],
+                    "target": cfg["File"]["Name"],
+                    "content": base64.b64decode(content).decode("utf-8"),
+                }
+            )
+
+    ports: list[dict[str, str | bool]] = []
+
+    for port in service.attrs.get("Endpoint", {"Ports": []}).get("Ports", []):
+        ports.append(
+            {
+                "protocol": port["Protocol"],
+                "published": port["PublishedPort"],
+                "target": port["TargetPort"],
+            }
+        )
+
+    healthcheck = None
+    health = container_spec.get("Healthcheck")
+    if health:
+        cmd = health["Test"]
+        if cmd != ["NONE"]:  # healthcheck disabled
+            healthcheck = {
+                "command": shlex.join(cmd),
+            }
+            if health.get("Interval"):
+                healthcheck["interval_sec"] = (
+                    health["Interval"] // 5e9
+                )  # the time is in nanoseconds
+            if health.get("Timeout"):
+                healthcheck["timeout_sec"] = (
+                    health["Timeout"] // 5e9
+                )  # the time is in nanoseconds
+            if health.get("Retries"):
+                healthcheck["retries"] = health["Retries"]
 
     return {
         "name": service_name,
         "image": image,
         "mode": mode_type,
         "status": status,
+        "network_alias": f"{stack.network_alias_prefix}-{service_name}",
+        "global_alias": f"{stack.hash_prefix}_{service_name}",
         "desired_replicas": desired_replicas,
         "running_replicas": running_replicas,
         "updated_at": timezone.now().isoformat(),
+        "id": service.id,
+        "environment": environment,
+        "volumes": volumes,
+        "ports": ports,
+        "configs": configs,
+        "healthcheck": healthcheck,
         "tasks": [
             {
+                "id": task.ID,
+                "container_id": task.container_id,
+                "version": task.Version.Index,
+                "slot": task.Slot,
+                "name": f"{service.name}.{task.Slot}.{task.ID}",
+                "desired_status": task.DesiredState.value,
                 "status": task.state.value,
                 "image": task.image,
                 "message": task.message,
                 "exit_code": task.exit_code,
+                "created_at": task.CreatedAt,
+                "updated_at": task.UpdatedAt,
             }
             for task in tasks
         ],
@@ -742,7 +831,7 @@ async def collect_container_metrics(
         if container.status != "running":
             return  # we cannot get the stats of a dead container
 
-        stats = container.stats(stream=False)
+        stats = container.stats(stream=False)  # type: Any
 
         # Calculate CPU usage percentage
         cpu_delta = (

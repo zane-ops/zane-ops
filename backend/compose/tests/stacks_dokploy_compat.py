@@ -14,13 +14,14 @@ from .fixtures import (
     DOKPLOY_RYBBIT_TEMPLATE,
     DOKPLOY_KENER_TEMPLATE,
     DOKPLOY_POSTGRES_TEMPLATE,
+    DOKPLOY_DOCMOST_TEMPLATE,
 )
 from .stacks import ComposeStackAPITestBase
-from ..dtos import ComposeVolumeMountSpec
+from ..dtos import ComposeVolumeMountSpec, ComposeServiceSpec
 
 
 class DokployCompatibilityViewTests(ComposeStackAPITestBase):
-    def test_create_compose_stack_from_dokploy(self):
+    def test_create_compose_stack_from_dokploy_simple(self):
         project = self.create_project(slug="compose")
 
         create_stack_payload = {
@@ -47,6 +48,7 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(created_stack)
         self.assertIsNone(created_stack.user_content)
         self.assertIsNone(created_stack.computed_content)
+        self.assertIsNotNone(created_stack.deploy_token)
 
         pending_change = cast(
             ComposeStackChange,
@@ -509,3 +511,86 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
         # This verifies that variables with placeholders defined in config.env
         # are still replaced by ZaneOps placeholder expressions
         self.assertEqual("{{ generate_password | 32 }}", x_env["PG_PASS"])
+
+    def test_create_compose_stack_from_dokploy_fill_in_empty_service_variables(self):
+        project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "my-stack",
+            "user_content": DOKPLOY_DOCMOST_TEMPLATE.base64,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create_from_dokploy.base64",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="my-stack").first()
+        )
+        self.assertIsNotNone(created_stack)
+        self.assertIsNone(created_stack.user_content)
+        self.assertIsNone(created_stack.computed_content)
+
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(str, pending_change.new_value)
+        self.assertIsNotNone(new_value)
+        print("========= converted user_content =========")
+        print(new_value)
+
+        # Parse the converted user_content to verify it was transformed correctly
+        user_content_dict = yaml.safe_load(new_value)
+
+        # Verify x-env section was added with template placeholders
+        self.assertIn("x-zane-env", user_content_dict)
+
+        # Verify services section exists
+        self.assertIn("services", user_content_dict)
+        services = user_content_dict["services"]
+        self.assertIn("docmost", services)
+        self.assertIn("db", services)
+
+        docmost_service = services["docmost"]
+        db_service = services["db"]
+
+        # Verify environment variables reference x-env variables
+        self.assertIn("environment", docmost_service)
+        self.assertIn("environment", db_service)
+
+        # Verify that empty env variables use the variables in `x-zane-env`
+        doc_service = ComposeServiceSpec.from_dict(
+            {**docmost_service, "name": "docmost"}
+        )
+        self.assertIn("APP_URL", doc_service.environment)
+        self.assertEqual("${APP_URL}", doc_service.environment["APP_URL"].value)
+        self.assertIn("APP_SECRET", doc_service.environment)
+        self.assertEqual("${APP_SECRET}", doc_service.environment["APP_SECRET"].value)
+        # Verify that variables not referenced in `x-zane-env` are left empty
+        self.assertNotIn("APP_WHATEVER", doc_service.environment)
+
+        dbb_service = ComposeServiceSpec.from_dict({**db_service, "name": "db"})
+        self.assertIn("POSTGRES_DB", dbb_service.environment)
+        self.assertEqual("${POSTGRES_DB}", dbb_service.environment["POSTGRES_DB"].value)
+        self.assertIn("POSTGRES_USER", dbb_service.environment)
+        self.assertEqual(
+            "${POSTGRES_USER}", dbb_service.environment["POSTGRES_USER"].value
+        )
+        self.assertIn("POSTGRES_PASSWORD", dbb_service.environment)
+        self.assertEqual(
+            "${POSTGRES_PASSWORD}", dbb_service.environment["POSTGRES_PASSWORD"].value
+        )

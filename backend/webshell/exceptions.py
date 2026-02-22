@@ -1,3 +1,4 @@
+import traceback
 from channels.exceptions import AcceptConnection, DenyConnection, StopConsumer
 from functools import wraps
 from logging import getLogger
@@ -16,6 +17,7 @@ def log_exceptions(f):
         try:
             return await f(*args, **kwargs)
         except (AcceptConnection, DenyConnection, StopConsumer):
+            traceback.print_exc()
             raise
         except Exception as exception:
             if not getattr(exception, "logged_by_wrapper", False):
@@ -24,6 +26,7 @@ def log_exceptions(f):
                     exc_info=exception,
                 )
                 setattr(exception, "logged_by_wrapper", True)
+            traceback.print_exc()
             raise
 
     return wrapper

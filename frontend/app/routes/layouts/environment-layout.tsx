@@ -1,7 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRightIcon,
+  BoxesIcon,
+  ChevronDownIcon,
   ContainerIcon,
+  GithubIcon,
+  GitlabIcon,
   KeyRoundIcon,
   LoaderIcon,
   PlusIcon,
@@ -31,6 +35,13 @@ import {
 } from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import {
+  Menubar,
+  MenubarContent,
+  MenubarContentItem,
+  MenubarMenu,
+  MenubarTrigger
+} from "~/components/ui/menubar";
 import {
   Select,
   SelectContent,
@@ -222,11 +233,47 @@ export default function EnvironmentLayout({
               </StatusBadge>
             </div>
 
-            <Button asChild variant="secondary" className="flex gap-2">
-              <Link to="create-service" prefetch="intent">
-                New Service <PlusIcon size={18} />
-              </Link>
-            </Button>
+            <Menubar className="border-none w-fit">
+              <MenubarMenu>
+                <MenubarTrigger asChild>
+                  <Button variant="secondary" className="flex gap-2">
+                    New <ChevronDownIcon size={18} />
+                  </Button>
+                </MenubarTrigger>
+                <MenubarContent
+                  align="start"
+                  alignOffset={-35}
+                  sideOffset={5}
+                  className="border min-w-0 mx-9  border-border"
+                >
+                  <MenubarContentItem
+                    icon={ContainerIcon}
+                    text="Service"
+                    onClick={() => {
+                      navigate(
+                        href(
+                          "/project/:projectSlug/:envSlug/create-service",
+                          params
+                        )
+                      );
+                    }}
+                  />
+
+                  <MenubarContentItem
+                    icon={BoxesIcon}
+                    text="Compose Stack"
+                    onClick={() => {
+                      navigate(
+                        href(
+                          "/project/:projectSlug/:envSlug/create-compose-stack",
+                          params
+                        )
+                      );
+                    }}
+                  />
+                </MenubarContent>
+              </MenubarMenu>
+            </Menubar>
           </div>
 
           <div className="flex my-0 flex-wrap w-full md:w-auto  justify-end items-center md:gap-3 gap-1">

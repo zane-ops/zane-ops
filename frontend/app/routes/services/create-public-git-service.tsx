@@ -122,7 +122,7 @@ export default function CreateServicePage({
 
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Git public</BreadcrumbPage>
+            <BreadcrumbPage>From public Git repo</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>

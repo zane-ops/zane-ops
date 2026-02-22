@@ -514,7 +514,7 @@ class RuntimelogComposeStackCollectViewTests(ComposeStackAPITestBase):
                     "env_slug": "production",
                     "slug": stack.slug,
                 },
-                query={"stack_service_names": "frontend"},
+                query={"stack_service_name": "frontend"},
             ),
         )
         jprint(response.json())

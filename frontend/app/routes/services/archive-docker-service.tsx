@@ -9,7 +9,7 @@ import {
 import type { ErrorResponseFromAPI } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
-import { type Route } from "./+types/archive-docker-service";
+import type { Route } from "./+types/archive-docker-service";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
@@ -29,9 +29,6 @@ export async function clientAction({
 }: Route.ClientActionArgs) {
   const formData = await request.formData();
 
-  console.log({
-    service_slug: formData.get("service_slug")?.toString().trim()
-  });
   if (
     formData.get("service_slug")?.toString().trim() !==
     `${project_slug}/${env_slug}/${service_slug}`

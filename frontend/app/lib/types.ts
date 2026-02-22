@@ -18,7 +18,7 @@ export type RecursivePartial<T> = {
 };
 export type DotNotationToObject<
   T extends string,
-  TValue extends unknown
+  TValue
 > = T extends `${infer Head}.${infer Rest}`
   ? { [K in Head]: DotNotationToObject<Rest, TValue> }
   : { [K in T]: TValue };
@@ -111,3 +111,5 @@ export type DataTableFilterField<TData> =
   | DataTableSliderFilterField<TData>
   | DataTableInputFilterField<TData>
   | DataTableTimerangeFilterField<TData>;
+
+export type SortDirection = "ascending" | "descending" | "indeterminate";

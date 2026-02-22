@@ -21,11 +21,9 @@ export function StatusBadge({
       className={cn(
         "inline-flex border w-fit whitespace-nowrap px-3 py-1 border-opacity-60 rounded-full text-sm items-center gap-2",
         {
-          "bg-green-600/10 text-status-success border-green-600":
-            color === "green",
-          "border-red-600 bg-red-600/10 text-status-error": color === "red",
-          "border-yellow-600 bg-yellow-600/10 text-status-warning":
-            color === "yellow",
+          "bg-green-600/10 border-green-600": color === "green",
+          "border-red-600 bg-red-600/10": color === "red",
+          "border-yellow-600 bg-yellow-600/10": color === "yellow",
           "border-gray-600 bg-gray-600/10": color === "gray",
           "border-blue-600 bg-blue-600/10 dark:text-blue-100": color === "blue"
         },

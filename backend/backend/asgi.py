@@ -19,7 +19,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
 # is populated before importing code that may import ORM models.
 asgi_application = get_asgi_application()
 
-from webshell.routing import websocket_urlpatterns
+from webshell.routing import websocket_urlpatterns  # noqa: E402
 
 
 application = ProtocolTypeRouter(

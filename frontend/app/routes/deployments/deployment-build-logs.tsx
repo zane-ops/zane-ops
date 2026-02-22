@@ -8,6 +8,7 @@ import {
 import * as React from "react";
 import { useSearchParams } from "react-router";
 import { Virtuoso } from "react-virtuoso";
+import { Log } from "~/components/log";
 import { Ping } from "~/components/ping";
 import { Button } from "~/components/ui/button";
 import {
@@ -20,7 +21,6 @@ import { REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER } from "~/lib/cons
 import { deploymentQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { Log } from "~/routes/deployments/deployment-logs";
 import type { Route } from "./+types/deployment-build-logs";
 
 export async function clientLoader({
@@ -29,8 +29,7 @@ export async function clientLoader({
     serviceSlug: service_slug,
     envSlug: env_slug,
     deploymentHash: deployment_hash
-  },
-  request
+  }
 }: Route.ClientLoaderArgs) {
   queryClient.prefetchInfiniteQuery(
     deploymentQueries.buildLogs({

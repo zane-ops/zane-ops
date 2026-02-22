@@ -393,3 +393,59 @@ export function getDockerImageIconURL(image: string) {
   // Other registries are ignored
   return iconSrc;
 }
+
+const CONTAINER_ID_COLORS = [
+  "blue",
+  "emerald",
+  "violet",
+  "orange",
+  "pink",
+  "teal",
+  "amber",
+  "indigo",
+  "green",
+  "red",
+  "cyan",
+  "purple",
+  "lime",
+  "rose",
+  "sky",
+  "fuchsia"
+];
+
+export function stringToColor(str: string): {
+  light: string;
+  dark: string;
+} {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const color =
+    CONTAINER_ID_COLORS[Math.abs(hash) % CONTAINER_ID_COLORS.length];
+  return {
+    light: `var(--color-${color}-700)`,
+    dark: `var(--color-${color}-400)`
+  };
+}
+
+export function getMaxDomainForStorageValue(maxValueInBytes: number) {
+  const _100Kb = convertValueToBytes(100, "KILOBYTES");
+  const _10Mb = convertValueToBytes(10, "MEGABYTES");
+  const _100Mb = convertValueToBytes(100, "MEGABYTES");
+  const _500Mb = convertValueToBytes(500, "MEGABYTES");
+  const _1GB = convertValueToBytes(1, "GIGABYTES");
+
+  return (
+    maxValueInBytes +
+    (maxValueInBytes > _1GB
+      ? _1GB
+      : maxValueInBytes > _500Mb
+        ? _500Mb
+        : maxValueInBytes > _100Mb
+          ? _100Mb
+          : maxValueInBytes > _10Mb
+            ? _10Mb
+            : _100Kb)
+  );
+}

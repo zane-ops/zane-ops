@@ -133,23 +133,20 @@ export default [
         route("variables", "./routes/environments/environment-variables.tsx"),
         route("settings", "./routes/environments/environments-settings.tsx")
       ]),
-      route("create-service", "./routes/services/create-service.tsx"),
-      route(
-        "create-service/docker",
-        "./routes/services/create-docker-service.tsx"
-      ),
-      route(
-        "create-service/git-public",
-        "./routes/services/create-public-git-service.tsx"
-      ),
-      route(
-        "create-service/git-private",
-        "./routes/services/create-private-git-service.tsx"
-      ),
-      route(
-        "create-service/git-private/:gitAppId",
-        "./routes/services/create-git-service-from-gitapp.tsx"
-      ),
+
+      ...prefix("create-service", [
+        route("", "./routes/services/create-service.tsx"),
+        route("docker", "./routes/services/create-docker-service.tsx"),
+        route("git-public", "./routes/services/create-public-git-service.tsx"),
+        route(
+          "git-private",
+          "./routes/services/create-private-git-service.tsx"
+        ),
+        route(
+          "git-private/:gitAppId",
+          "./routes/services/create-git-service-from-gitapp.tsx"
+        )
+      ]),
 
       ...prefix("services/:serviceSlug", [
         route("", "./routes/layouts/service-layout.tsx", [
@@ -185,6 +182,91 @@ export default [
               "./routes/deployments/redeploy-git-deployment.tsx"
             ),
             route("cancel", "./routes/deployments/cancel-deployment.tsx")
+          ]
+        )
+      ]),
+
+      ...prefix("create-compose-stack", [
+        route("", "./routes/compose/create-compose-stack.tsx"),
+        route(
+          "compose-contents",
+          "./routes/compose/create-compose-stack-from-contents.tsx"
+        ),
+        route(
+          "dokploy",
+          "./routes/compose/create-compose-stack-from-dokploy.tsx"
+        )
+      ]),
+
+      ...prefix("compose-stacks/:composeStackSlug", [
+        route("", "./routes/layouts/compose-stack-layout.tsx", [
+          index("./routes/compose/compose-stack-service-list.tsx"),
+          route("settings", "./routes/compose/compose-stack-settings.tsx"),
+          route("deploy", "./routes/compose/deploy-compose-stack.tsx"),
+          route("toggle", "./routes/compose/toggle-compose-stack.tsx"),
+          route("archive", "./routes/compose/archive-compose-stack.tsx"),
+          route(
+            "regenerate-token",
+            "./routes/compose/regenerate-compose-stack-deploy-token.tsx"
+          ),
+          route("http-logs", "./routes/compose/compose-stack-http-logs.tsx"),
+          route("metrics", "./routes/compose/compose-stack-metrics.tsx"),
+          route(
+            "deployments",
+            "./routes/compose/compose-stack-deployment-list.tsx"
+          ),
+          route(
+            "discard-multiple-changes",
+            "./routes/compose/discard-compose-stack-multiple-changes.tsx"
+          ),
+          route(
+            "discard-change",
+            "./routes/compose/discard-compose-stack-change.tsx"
+          )
+        ]),
+
+        route(
+          "services/:serviceSlug",
+          "./routes/layouts/compose-stack-service-layout.tsx",
+          [
+            index("./routes/compose/compose-stack-service-replicas.tsx"),
+            route(
+              "runtime-logs",
+              "./routes/compose/compose-stack-service-runtime-logs.tsx"
+            ),
+            route(
+              "terminal",
+              "./routes/compose/compose-stack-service-terminal.tsx"
+            ),
+            route(
+              "http-logs",
+              "./routes/compose/compose-stack-service-http-logs.tsx"
+            ),
+            route(
+              "metrics",
+              "./routes/compose/compose-stack-service-metrics.tsx"
+            ),
+            route(
+              "details",
+              "./routes/compose/compose-stack-service-details.tsx"
+            )
+          ]
+        ),
+
+        route(
+          "deployments/:deploymentHash",
+          "./routes/layouts/compose-stack-deployment-layout.tsx",
+          [
+            index("./routes/compose/compose-stack-deployment-logs.tsx"),
+            route(
+              "details",
+              "./routes/compose/compose-stack-deployment-details.tsx"
+            ),
+            route("cancel", "./routes/compose/cancel-compose-deployment.tsx"),
+            route(
+              "redeploy",
+              "./routes/compose/redeploy-compose-deployment.tsx"
+            )
           ]
         )
       ])

@@ -1,30 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  BanIcon,
   ChartNoAxesColumnIcon,
-  ClockArrowUpIcon,
-  FastForwardIcon,
   GlobeIcon,
-  HammerIcon,
-  HeartPulseIcon,
   HistoryIcon,
-  HourglassIcon,
   InfoIcon,
   LoaderIcon,
-  PauseIcon,
-  RefreshCwOffIcon,
   RocketIcon,
-  RotateCcwIcon,
   SquareChartGanttIcon,
   TerminalIcon,
-  TextSearchIcon,
-  Trash2Icon,
-  TriangleAlertIcon,
-  XIcon
+  TextSearchIcon
 } from "lucide-react";
 import { Link, Outlet, useFetcher } from "react-router";
 import { NavLink } from "~/components/nav-link";
-import type { StatusBadgeColor } from "~/components/status-badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -36,7 +23,6 @@ import {
 import { SubmitButton } from "~/components/ui/button";
 
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
-import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
 import {
   deploymentQueries,
   serverQueries,
@@ -45,7 +31,7 @@ import {
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
 import { queryClient } from "~/root";
 import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
-import { capitalizeText, formattedTime, metaTitle } from "~/utils";
+import { formattedTime, metaTitle } from "~/utils";
 import type { Route } from "./+types/deployment-layout";
 
 export function meta({ params, error }: Route.MetaArgs) {
@@ -261,15 +247,16 @@ export default function DeploymentLayoutPage({
             </li>
 
             <li>
-              <NavLink to="./details">
-                <span>Details</span>
-                <InfoIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
-            <li>
               <NavLink to="./metrics">
                 <span>Metrics</span>
                 <ChartNoAxesColumnIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink to="./details">
+                <span>Details</span>
+                <InfoIcon size={15} className="flex-none" />
               </NavLink>
             </li>
           </ul>

@@ -42,7 +42,7 @@ class ProjectCreateRequestSerializer(serializers.Serializer):
 
 class ProjectUpdateRequestSerializer(serializers.Serializer):
     slug = serializers.SlugField(max_length=255, required=False)
-    description = serializers.CharField(required=False)
+    description = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, attrs: dict[str, str]):
         if not bool(attrs):
@@ -82,6 +82,15 @@ class ServiceSearchResponseSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField(required=True)
     kind = serializers.ChoiceField(required=True, choices=Service.ServiceType.choices)
     type = serializers.ChoiceField(choices=["service"], default="service")
+    environment = serializers.CharField(required=True)
+
+
+class ComposeStackSearchResponseSerializer(serializers.Serializer):
+    id = serializers.CharField(required=True)
+    project_slug = serializers.SlugField(required=True)
+    slug = serializers.SlugField(required=True)
+    created_at = serializers.DateTimeField(required=True)
+    type = serializers.ChoiceField(choices=["compose_stack"], default="compose_stack")
     environment = serializers.CharField(required=True)
 
 

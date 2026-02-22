@@ -141,10 +141,6 @@ export default function DeploymentDetailsPage({
   const tag = imageParts.length > 1 ? imageParts.pop() : "latest";
   const image = imageParts.join(":");
 
-  const repoUrl = deployment.service_snapshot.repository_url
-    ? new URL(deployment.service_snapshot.repository_url)
-    : null;
-
   React.useEffect(() => {
     if (deployment.started_at && !deployment.finished_at) {
       const timer = setInterval(() => {
@@ -349,7 +345,7 @@ export default function DeploymentDetailsPage({
                 <span>Full commit message:</span>
               </dt>
               <dd className="w-full">
-                <pre className="font-mono bg-muted/25 dark:bg-card p-2 rounded-md text-sm">
+                <pre className="font-mono bg-muted/25 dark:bg-card p-2 rounded-md text-sm break-all w-full">
                   {deployment.commit_message}
                 </pre>
               </dd>

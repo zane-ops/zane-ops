@@ -1,0 +1,580 @@
+import { useQuery } from "@tanstack/react-query";
+import {
+  BoxIcon,
+  ChartNoAxesColumn,
+  ChevronRight,
+  ContainerIcon,
+  GlobeIcon,
+  InfoIcon,
+  LayersIcon,
+  PauseIcon,
+  PickaxeIcon,
+  RotateCcwIcon,
+  ScrollTextIcon,
+  TerminalIcon
+} from "lucide-react";
+import * as React from "react";
+import { Link, Navigate, Outlet, href, useFetcher } from "react-router";
+import { toast } from "sonner";
+import type { ComposeStackService } from "~/api/types";
+import { Code } from "~/components/code";
+import { getComposeStackStatus } from "~/components/compose-stack-cards";
+import { CopyButton } from "~/components/copy-button";
+import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
+import { NavLink } from "~/components/nav-link";
+import { StatusBadge } from "~/components/status-badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator
+} from "~/components/ui/breadcrumb";
+import { SubmitButton } from "~/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "~/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
+import { composeStackQueries } from "~/lib/queries";
+import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
+import { cn, notFound } from "~/lib/utils";
+import { queryClient } from "~/root";
+import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
+import {
+  durationToMs,
+  formatURL,
+  getDockerImageIconURL,
+  metaTitle,
+  pluralize,
+  wait
+} from "~/utils";
+import type { Route } from "./+types/compose-stack-service-layout";
+
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const stack = await queryClient.ensureQueryData(
+    composeStackQueries.single({
+      project_slug: params.projectSlug,
+      stack_slug: params.composeStackSlug,
+      env_slug: params.envSlug
+    })
+  );
+
+  if (!stack) {
+    throw notFound();
+  }
+
+  const service = Object.keys(stack.services).find(
+    (svc) => svc === params.serviceSlug
+  );
+
+  if (!service) {
+    throw notFound(`Service '${params.serviceSlug}' not found in this stack`);
+  }
+
+  return { stack };
+}
+
+export default function ComposeStackServiceLayoutPage({
+  params,
+  loaderData
+}: Route.ComponentProps) {
+  const { data: stack } = useQuery({
+    ...composeStackQueries.single({
+      project_slug: params.projectSlug,
+      stack_slug: params.composeStackSlug,
+      env_slug: params.envSlug
+    }),
+    initialData: loaderData.stack
+  });
+
+  const serviceFound = Object.entries(stack.services).find(
+    ([name]) => name === params.serviceSlug
+  );
+
+  if (!serviceFound) {
+    return (
+      <Navigate
+        to={href(
+          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+          params
+        )}
+      />
+    );
+  }
+
+  const [name, service] = serviceFound;
+
+  const serviceUrls = stack.urls[name] ?? [];
+
+  const status_emoji_map = {
+    HEALTHY: "🟢",
+    UNHEALTHY: "🔴",
+    SLEEPING: "🌙",
+    STARTING: "▶️",
+    COMPLETE: "✅"
+  } satisfies Record<(typeof service)["status"], string>;
+
+  const { title } = metaTitle(
+    `${status_emoji_map[service.status]} ${stack.slug} / ${params.serviceSlug}`
+  );
+
+  let [serviceImage] = service.image.split("@"); // the image is in the format 'image@sha', we just remove the sha
+
+  if (serviceImage && !serviceImage.includes(":")) {
+    serviceImage += ":latest";
+  }
+
+  let extraServiceUrls: typeof serviceUrls = [];
+
+  if (service && serviceUrls.length > 1) {
+    const [_, ...rest] = serviceUrls;
+    extraServiceUrls = rest;
+  }
+
+  const [iconNotFound, setIconNotFound] = React.useState(false);
+
+  let iconSrc: string | null = null;
+  if (serviceImage) {
+    iconSrc = getDockerImageIconURL(serviceImage);
+  }
+
+  const is_job =
+    service.mode === "global-job" || service.mode === "replicated-job";
+
+  return (
+    <>
+      <title>{title}</title>
+      <Breadcrumb>
+        <BreadcrumbList className="text-sm">
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/">Projects</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link
+                to={href("/project/:projectSlug/:envSlug", {
+                  ...params,
+                  envSlug: "production"
+                })}
+                prefetch="intent"
+              >
+                {params.projectSlug}
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              asChild
+              className={cn(
+                params.envSlug === "production"
+                  ? "text-green-500 dark:text-primary"
+                  : params.envSlug.startsWith("preview")
+                    ? "text-link"
+                    : ""
+              )}
+            >
+              <Link
+                to={href("/project/:projectSlug/:envSlug", params)}
+                prefetch="intent"
+              >
+                {params.envSlug}
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <Link
+              to={href(
+                "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+                params
+              )}
+            >
+              {params.composeStackSlug}
+            </Link>
+          </BreadcrumbItem>
+
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{params.serviceSlug}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <section
+        id="header"
+        className="flex flex-col sm:flex-row md:items-center gap-4 justify-between"
+      >
+        <div className="mt-10 flex flex-col gap-2">
+          <div className="flex items-center gap-x-2">
+            <h1 className="text-xl md:text-2xl inline-flex gap-1 items-center">
+              {is_job ? (
+                <PickaxeIcon className="size-6 flex-none" />
+              ) : (
+                <BoxIcon className="size-6 flex-none" />
+              )}
+              <span className="text-grey sr-only md:not-sr-only flex-none">
+                <Link to={`./../..`} className="hover:underline">
+                  {params.composeStackSlug}
+                </Link>{" "}
+                /
+              </span>
+              <span>{params.serviceSlug}</span>
+            </h1>
+            <span className="inline-block rounded-full size-0.5 bg-foreground relative top-0.5" />
+            <DeploymentStatusBadge status={service.status} />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Code className="inline-flex gap-1 items-center text-sm self-start">
+              {is_job ? (
+                <>
+                  <PickaxeIcon className="size-4 flex-none" /> job
+                </>
+              ) : (
+                <>
+                  <BoxIcon className="size-4 flex-none" /> service
+                </>
+              )}
+            </Code>
+            <div className="flex gap-1 items-center">
+              {iconSrc && !iconNotFound ? (
+                <img
+                  src={iconSrc}
+                  onError={() => setIconNotFound(true)}
+                  alt={`Logo for ${serviceImage}`}
+                  className="size-4 flex-none object-center object-contain rounded-sm"
+                />
+              ) : (
+                <ContainerIcon className="flex-none" size={16} />
+              )}
+              <span className="text-grey text-sm">{serviceImage}</span>
+            </div>
+          </div>
+
+          <div>
+            {serviceUrls.length > 0 && (
+              <div className="flex gap-3 items-center flex-wrap">
+                <div className="flex gap-0.5 items-center">
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <CopyButton
+                          value={
+                            serviceUrls[0].domain + serviceUrls[0].base_path
+                          }
+                          label="Copy url"
+                          size="icon"
+                          className="hover:bg-transparent !opacity-100 size-4"
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>Copy URL (without scheme)</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <a
+                    href={formatURL(serviceUrls[0])}
+                    target="_blank"
+                    className="underline text-link text-sm break-all inline-flex items-center gap-1"
+                  >
+                    {formatURL(serviceUrls[0])}
+                  </a>
+                </div>
+
+                {extraServiceUrls.length > 0 && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button>
+                        <StatusBadge
+                          className="relative top-0.5 text-xs pl-3 pr-2 inline-flex items-center gap-1"
+                          color="gray"
+                          pingState="hidden"
+                        >
+                          <span>
+                            {`+${serviceUrls.length - 1} ${pluralize("url", serviceUrls.length - 1)}`}
+                          </span>
+                          <ChevronRight size={15} className="flex-none" />
+                        </StatusBadge>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="start"
+                      side="top"
+                      className="px-4 pt-3 pb-2 max-w-[300px] md:max-w-[500px] lg:max-w-[600px] w-auto"
+                    >
+                      <ul className="w-full">
+                        {extraServiceUrls.map((url) => (
+                          <li
+                            key={url.domain + url.base_path}
+                            className="w-full flex items-center gap-0.5"
+                          >
+                            <CopyButton
+                              value={url.domain + url.base_path}
+                              label="Copy url"
+                              size="icon"
+                              className="hover:bg-transparent !opacity-100 size-4"
+                            />
+                            <a
+                              href={formatURL(url)}
+                              target="_blank"
+                              className="underline text-link text-sm inline-block w-full"
+                            >
+                              <p className="whitespace-nowrap overflow-x-hidden text-ellipsis">
+                                {formatURL(url)}
+                              </p>
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {!is_job && (
+          <div>
+            <ToggleServiceForm
+              params={params}
+              current_state={service.status}
+              stack_id={stack.id}
+            />
+          </div>
+        )}
+      </section>
+
+      <nav className="mt-5">
+        <ul
+          className={cn(
+            "overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start rounded-none border-b border-border ",
+            "inline-flex items-stretch p-0.5 text-muted-foreground"
+          )}
+        >
+          <li>
+            <NavLink to=".">
+              <span>Replicas</span>
+              <LayersIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
+
+          <li>
+            <NavLink to="./runtime-logs">
+              <span>Runtime Logs</span>
+              <ScrollTextIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="./terminal">
+              <span>Terminal</span>
+              <TerminalIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
+
+          <li>
+            <NavLink to="./http-logs" prefetch="viewport">
+              <span>Http logs</span>
+              <GlobeIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
+
+          <li>
+            <NavLink to="./metrics">
+              <span>Metrics</span>
+              <ChartNoAxesColumn size={15} className="flex-none" />
+            </NavLink>
+          </li>
+
+          <li>
+            <NavLink to="./details">
+              <span>Details</span>
+              <InfoIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
+        </ul>
+      </nav>
+
+      <section className="mt-2">
+        <Outlet />
+      </section>
+    </>
+  );
+}
+
+type RestartServiceFormProps = {
+  params: Route.ComponentProps["params"];
+  current_state: ComposeStackService["status"];
+  stack_id: string;
+};
+
+function ToggleServiceForm({
+  params,
+  current_state,
+  stack_id
+}: RestartServiceFormProps) {
+  const fetcher = useFetcher();
+  const isPending = fetcher.state !== "idle";
+
+  const { queue, queueToggleItem, dequeueToggleItem } =
+    useToggleStateQueueStore();
+
+  const [, formAction] = React.useActionState(action, null);
+
+  async function action(_: any, formData: FormData) {
+    const queue_id = `${stack_id}-${params.serviceSlug}`;
+    if (queue.has(queue_id)) {
+      toast.info("The service is already being toggled in the background.");
+      return;
+    }
+
+    await fetcher.submit(formData, {
+      action: href(
+        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
+        params
+      ),
+      method: "POST"
+    });
+
+    const desiredState = formData.get("desired_state") as "stop" | "start";
+    queueToggleItem(queue_id);
+    toggleStateToast({
+      desiredState,
+      ...params
+    }).finally(() => dequeueToggleItem(queue_id));
+  }
+
+  return (
+    <form method="post" action={formAction}>
+      <input type="hidden" name="service_name" value={params.serviceSlug} />
+      <input
+        type="hidden"
+        name="desired_state"
+        value={current_state === "SLEEPING" ? "start" : "stop"}
+      />
+      <SubmitButton
+        isPending={isPending}
+        variant={current_state === "SLEEPING" ? "secondary" : "warning"}
+      >
+        {current_state === "SLEEPING" ? (
+          <>
+            <RotateCcwIcon className="size-4 flex-none" />
+            <span>Restart service</span>
+          </>
+        ) : (
+          <>
+            <PauseIcon className="size-4 flex-none" />
+            <span>Put service to sleep</span>
+          </>
+        )}
+      </SubmitButton>
+    </form>
+  );
+}
+
+async function toggleStateToast({
+  desiredState,
+  ...params
+}: {
+  desiredState: "stop" | "start";
+} & Route.ComponentProps["params"]) {
+  const stackLink = (
+    <Link
+      className="text-link underline inline break-all"
+      to={href(
+        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/services/:serviceSlug",
+        params
+      )}
+    >
+      {params.projectSlug}/{params.envSlug}/{params.composeStackSlug}/
+      {params.serviceSlug}
+    </Link>
+  );
+
+  const toastId = toast.loading(
+    desiredState === "start" ? (
+      <span>Starting {stackLink}, this may take up to a minute...</span>
+    ) : (
+      <span>Stopping {stackLink}, this may take up to a minute...</span>
+    ),
+    {
+      closeButton: false
+    }
+  );
+
+  const MAX_TRIES = 12; // wait max for `1min` (12*5s = 60s)
+  let total_tries = 0;
+
+  let currentState: ToggleStackState | null = null;
+
+  while (total_tries < MAX_TRIES && currentState !== desiredState) {
+    total_tries++;
+
+    // refetch queries to get fresh data
+    let stack;
+    try {
+      stack = await queryClient.fetchQuery(
+        composeStackQueries.single({
+          project_slug: params.projectSlug,
+          stack_slug: params.composeStackSlug,
+          env_slug: params.envSlug
+        })
+      );
+    } catch (error) {
+      break;
+    }
+
+    const currentService = stack.services[params.serviceSlug];
+
+    if (!currentService) {
+      break;
+    }
+
+    currentState = currentService.status === "SLEEPING" ? "stop" : "start";
+
+    if (currentState !== desiredState && total_tries < MAX_TRIES) {
+      await wait(durationToMs(5, "seconds"));
+    }
+  }
+
+  if (currentState === desiredState) {
+    toast.success("Success", {
+      description:
+        desiredState === "start" ? (
+          <>{stackLink} restarted successfully</>
+        ) : (
+          <>{stackLink} stopped successfully</>
+        ),
+      closeButton: true,
+      id: toastId
+    });
+  } else {
+    toast.warning("Warning", {
+      description:
+        desiredState === "start" ? (
+          <>
+            {stackLink} failed to restart within the time limit. Check the
+            service replicas and their logs or try again.
+          </>
+        ) : (
+          <>
+            {stackLink} failed to stop within the time limit. Check the service
+            replicas and their logs or try again.
+          </>
+        ),
+      closeButton: true,
+      id: toastId
+    });
+  }
+}

@@ -14,12 +14,7 @@ import {
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
 import { flushSync } from "react-dom";
-import {
-  useLoaderData,
-  useMatches,
-  useParams,
-  useSearchParams
-} from "react-router";
+import { useLoaderData, useParams, useSearchParams } from "react-router";
 import { useDebouncedCallback } from "use-debounce";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { HttpLogRequestDetails } from "~/components/http-log-request-details";
@@ -47,7 +42,7 @@ import {
   httpLogSearchSchema,
   serviceQueries
 } from "~/lib/queries";
-import type { Writeable } from "~/lib/types";
+import type { SortDirection, Writeable } from "~/lib/types";
 import { cn, formatLogTime, notFound } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { formatDuration } from "~/utils";
@@ -113,7 +108,6 @@ export async function clientLoader({
   ] as const);
   return { httpLogs, httpLog, service };
 }
-type SortDirection = "ascending" | "descending" | "indeterminate";
 
 export default function ServiceHttpLogsPage({
   loaderData,
@@ -300,7 +294,7 @@ export default function ServiceHttpLogsPage({
   });
 
   const items = virtualizer.getVirtualItems();
-  const [before, after] =
+  const [virtualizerPaddingBefore, virtualizerPaddingAfter] =
     items.length > 0
       ? [
           notUndefined(items[0]).start - virtualizer.options.scrollMargin,
@@ -429,9 +423,12 @@ export default function ServiceHttpLogsPage({
                   </div>
                 </td>
               </tr>
-              {before > 0 && (
+              {virtualizerPaddingBefore > 0 && (
                 <tr>
-                  <td colSpan={7} style={{ height: before }} />
+                  <td
+                    colSpan={7}
+                    style={{ height: virtualizerPaddingBefore }}
+                  />
                 </tr>
               )}
 
@@ -457,9 +454,9 @@ export default function ServiceHttpLogsPage({
                   </TableRow>
                 );
               })}
-              {after > 0 && (
+              {virtualizerPaddingAfter > 0 && (
                 <tr>
-                  <td colSpan={7} style={{ height: after }} />
+                  <td colSpan={7} style={{ height: virtualizerPaddingAfter }} />
                 </tr>
               )}
 

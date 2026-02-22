@@ -24,7 +24,7 @@ class SSHKeySerializer(serializers.ModelSerializer):
         ]
 
 
-class DeploymentTerminalQuerySerializer(serializers.Serializer):
+class ContainerTerminalQuerySerializer(serializers.Serializer):
     cmd = serializers.ListField(
         child=serializers.ChoiceField(
             choices=[

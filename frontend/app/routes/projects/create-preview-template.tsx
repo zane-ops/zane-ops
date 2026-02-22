@@ -99,12 +99,15 @@ function EditPreviewTemplateForm({
   const [cloneStrategy, setCloneStrategy] =
     React.useState<PreviewTemplate["clone_strategy"]>("ALL");
 
-  const { data: serviceList } = useQuery({
-    ...environmentQueries.serviceList(params.projectSlug!, baseEnvironment.name)
-  });
-  const { data: stackList } = useQuery({
-    ...environmentQueries.stacksList(params.projectSlug!, baseEnvironment.name)
-  });
+  const { data: serviceList } = useQuery(
+    environmentQueries.serviceList(params.projectSlug!, baseEnvironment.name)
+  );
+  const { data: stackList } = useQuery(
+    environmentQueries.composeStackList(
+      params.projectSlug!,
+      baseEnvironment.name
+    )
+  );
 
   const serviceListPerEnv = serviceList ?? [];
   const stackListPerEnv = stackList ?? [];

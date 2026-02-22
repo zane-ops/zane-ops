@@ -140,7 +140,7 @@ export default function CreateServicePage({
 
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Docker</BreadcrumbPage>
+            <BreadcrumbPage>From Docker Image</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -305,10 +305,6 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   const navigation = useNavigation();
   const isPending = navigation.state === "submitting";
 
-  if (actionData?.serviceSlug) {
-    onSuccess(actionData.serviceSlug);
-  }
-
   React.useEffect(() => {
     const key = Object.keys(errors ?? {})[0] as keyof typeof errors;
 
@@ -324,6 +320,10 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
       field?.focus();
     }
   }, [errors]);
+
+  if (actionData?.serviceSlug) {
+    onSuccess(actionData.serviceSlug);
+  }
 
   return (
     <Form
@@ -511,7 +511,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
               <LoaderIcon className="animate-spin" size={15} />
             </>
           ) : (
-            " Create New Service"
+            "Create New Service"
           )}
         </SubmitButton>
       </div>
@@ -532,7 +532,6 @@ function StepServiceCreated({
   envSlug,
   onSuccess
 }: StepServiceCreatedProps) {
-  // const navigation = useNavigation();
   const fetcher = useFetcher<typeof clientAction>();
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
   const isPending = fetcher.state !== "idle";

@@ -27,6 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { ZANEOPS_INTERNAL_DOMAIN } from "~/lib/constants";
 import {
   environmentQueries,
   gitAppsQueries,
@@ -455,7 +456,7 @@ function NetworkAliasesGroup({
                   <TooltipTrigger asChild>
                     <CopyButton
                       value={service.network_alias!.replace(
-                        ".zaneops.internal",
+                        `.${ZANEOPS_INTERNAL_DOMAIN}`,
                         ""
                       )}
                       label="Copy network alias"
@@ -480,7 +481,10 @@ function NetworkAliasesGroup({
             </StatusBadge>
             <div className="flex gap-2 items-center">
               <span className="text-lg break-all">
-                {service.global_network_alias.replace(".zaneops.internal", "")}
+                {service.global_network_alias.replace(
+                  `.${ZANEOPS_INTERNAL_DOMAIN}`,
+                  ""
+                )}
               </span>
 
               <TooltipProvider>
@@ -488,7 +492,7 @@ function NetworkAliasesGroup({
                   <TooltipTrigger asChild>
                     <CopyButton
                       value={service.global_network_alias.replace(
-                        ".zaneops.internal",
+                        `.${ZANEOPS_INTERNAL_DOMAIN}`,
                         ""
                       )}
                       label="Copy network alias"

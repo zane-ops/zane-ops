@@ -773,7 +773,6 @@ type RecentDockerDeploymentCardProps = Omit<
   service_slug: string;
   env_slug: string;
   className?: string;
-  style?: React.CSSProperties;
 };
 
 export function RecentDeploymentCard({
@@ -786,8 +785,7 @@ export function RecentDeploymentCard({
   service_slug,
   project_slug,
   env_slug,
-  className,
-  style
+  className
 }: RecentDockerDeploymentCardProps) {
   const now = new Date();
   const [timeElapsed, setTimeElapsed] = React.useState(
@@ -818,7 +816,6 @@ export function RecentDeploymentCard({
   const isPending = !finished_at && runningDeploymentsStatuses.includes(status);
   return (
     <Card
-      style={style}
       className={cn(
         "border group p-3 rounded-md relative",
         "grid items-start gap-2 grid-rows-subgrid row-span-4",

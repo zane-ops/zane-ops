@@ -75,11 +75,11 @@ deploy: ### Install and deploy zaneops based on MODE (https or http)
 	@set -a; . ./.env; set +a; \
 	if [ "$$MODE" = "https" ]; then \
 		echo -e "====== \x1b[94mDeploying ZaneOps \x1b[92mwith HTTPS 🔒\x1b[0m ======"; \
-		docker stack deploy --detach --with-registry-auth --compose-file docker-stack.prod.yaml zane; \
+		docker stack deploy --detach --with-registry-auth --prune --compose-file docker-stack.prod.yaml zane; \
 		ACCESS_URL="https://$$ZANE_APP_DOMAIN"; \
 	elif [ "$$MODE" = "http" ]; then \
 		echo -e "====== \x1b[94mDeploying ZaneOps\x1b[0m \x1b[38;5;208m⚠️  with HTTP enabled ⚠️\x1b[0m  ======"; \
-		docker stack deploy --detach --with-registry-auth --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane; \
+		docker stack deploy --detach --with-registry-auth --prune --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane; \
 		ACCESS_URL="http://$$ZANE_APP_DOMAIN"; \
 	else \
 		echo -e "\x1b[91mError: MODE must be either 'https' or 'http'\x1b[0m"; \

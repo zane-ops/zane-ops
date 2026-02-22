@@ -129,7 +129,6 @@ export default function ServiceDetailsLayout({
     }),
     initialData: loaderData.detectedPorts
   });
-  const [hasCopied, startTransition] = React.useTransition();
 
   let currentSelectedTab: ValueOf<typeof TABS> = TABS.DEPLOYMENTS;
   if (location.pathname.match(/env\-variables\/?$/)) {

@@ -52,6 +52,8 @@ from ..models import (
     Environment,
     ArchivedGitService,
 )
+from django.db.models.expressions import RawSQL
+
 from ..serializers import (
     ProjectSerializer,
     ErrorResponse409Serializer,
@@ -123,6 +125,30 @@ class ProjectsListAPIView(ListCreateAPIView):
                     output_field=IntegerField(),
                     default=0,
                 )
+            ),
+            total_stack_services=RawSQL(
+                """
+            (SELECT COALESCE(SUM(
+                (SELECT COUNT(*) FROM jsonb_each(cs.services) AS x(key, val) 
+                WHERE val->>'status' != 'SLEEPING')
+            ), 0)
+            FROM compose_composestack cs
+            WHERE cs.project_id = zane_api_project.id)
+            """,
+                [],
+                output_field=IntegerField(),
+            ),
+            healthy_stack_services=RawSQL(
+                """
+            (SELECT COALESCE(SUM(
+                (SELECT COUNT(*) FROM jsonb_each(cs.services) AS x(key, val) 
+                WHERE val->>'status' = 'HEALTHY' or val->>'status' = 'COMPLETE')
+            ), 0)
+            FROM compose_composestack cs
+            WHERE cs.project_id = zane_api_project.id)
+            """,
+                [],
+                output_field=IntegerField(),
             ),
         )
 
@@ -203,7 +229,7 @@ class ProjectDetailsView(APIView):
         operation_id="updateProject",
         summary="Update a project",
     )
-    def patch(self, request: Request, slug: str) -> Response:
+    def put(self, request: Request, slug: str) -> Response:
         try:
             project = Project.objects.get(slug=slug)
         except Project.DoesNotExist:

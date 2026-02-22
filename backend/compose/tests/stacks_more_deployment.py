@@ -37,8 +37,8 @@ class ToggleStackSleepViewTests(ComposeStackAPITestBase):
         )
 
         # Verify stack is deployed and has service statuses
-        self.assertIsNotNone(stack.service_statuses)
-        statuses = cast(dict, stack.service_statuses)
+        self.assertIsNotNone(stack.services)
+        statuses = cast(dict, stack.services)
         self.assertGreater(len(statuses), 0)
 
         # Stop the stack

@@ -69,7 +69,14 @@ export function FieldSetErrors(
         aria-live="polite"
         className={cn("text-red-500 text-sm", props.className)}
       >
-        {errors}
+        {typeof errors === "string"
+          ? errors
+          : errors.map((err) => (
+              <>
+                {err}
+                <br />
+              </>
+            ))}
       </span>
     )
   );

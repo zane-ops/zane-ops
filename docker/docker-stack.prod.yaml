@@ -20,7 +20,7 @@ x-backend-vars: &env-vars
   ZANE_HTTP_MODE: ${MODE:-https}
 
 services:
-  proxy:
+  zane-proxy:
     image: ghcr.io/zane-ops/proxy:${IMAGE_VERSION}
     command: caddy run --resume
     logging:
@@ -68,7 +68,7 @@ services:
       timeout: 5s
       start_period: 5s
       retries: 3
-  app:
+  zane-app:
     image: ghcr.io/zane-ops/app:${IMAGE_VERSION}
     deploy:
       replicas: 1
@@ -109,12 +109,12 @@ services:
       - docker-data:/root/.docker
       - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     depends_on:
-      - db
-      - valkey
-      - proxy
-      - temporal-server
-      - loki
-  temporal-server:
+      - zane-db
+      - zane-valkey
+      - zane-proxy
+      - zane-temporal-server
+      - zane-loki
+  zane-temporal-server:
     entrypoint: ["/etc/temporal/entrypoint.sh"]
     environment:
       - DB=postgres12
@@ -153,7 +153,7 @@ services:
         aliases:
           - zane.temporal
     depends_on:
-      - db
+      - zane-db
     healthcheck:
       test:
         [
@@ -166,7 +166,7 @@ services:
       timeout: 3m
       start_period: 15s
       retries: 3
-  temporal-admin-tools:
+  zane-temporal-admin-tools:
     image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-1.0.0
     environment:
       - DB=postgres12
@@ -200,7 +200,7 @@ services:
           memory: 500M
     networks:
       - zane
-  temporal-main-worker:
+  zane-temporal-main-worker:
     image: ghcr.io/zane-ops/app:${IMAGE_VERSION}
     command: /bin/bash -l -c "/app/scripts/run_worker.sh"
     volumes:
@@ -209,11 +209,11 @@ services:
       - docker-data:/root/.docker
       - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     depends_on:
-      - db
-      - valkey
-      - proxy
-      - temporal-server
-      - loki
+      - zane-db
+      - zane-valkey
+      - zane-proxy
+      - zane-temporal-server
+      - zane-loki
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
@@ -237,7 +237,7 @@ services:
           memory: 1G
     networks:
       - zane
-  temporal-schedule-worker:
+  zane-temporal-schedule-worker:
     image: ghcr.io/zane-ops/app:${IMAGE_VERSION}
     command: /bin/bash -l -c "/app/scripts/run_worker.sh"
     volumes:
@@ -246,11 +246,11 @@ services:
       - docker-data:/root/.docker
       - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     depends_on:
-      - db
-      - valkey
-      - proxy
-      - temporal-server
-      - loki
+      - zane-db
+      - zane-valkey
+      - zane-proxy
+      - zane-temporal-server
+      - zane-loki
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
@@ -275,7 +275,7 @@ services:
           memory: 1G
     networks:
       - zane
-  valkey:
+  zane-valkey:
     image: valkey/valkey:7.2.5-alpine
     volumes:
       - redis-data:/data
@@ -301,7 +301,7 @@ services:
       interval: 5s
       retries: 10
       timeout: 2s
-  db:
+  zane-db:
     image: postgres:16-alpine
     volumes:
       - db-data:/var/lib/postgresql/data
@@ -327,12 +327,12 @@ services:
           cpus: "1"
           memory: 1G
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       retries: 5
       start_period: 5s
       timeout: 10s
-  pgbouncer:
+  zane-pgbouncer:
     image: edoburu/pgbouncer:v1.23.1-p3
     environment:
       <<: *env-vars
@@ -342,7 +342,7 @@ services:
       DEFAULT_POOL_SIZE: 50
       AUTH_TYPE: scram-sha-256
     depends_on:
-      - db
+      - zane-db
     networks:
       zane:
         aliases:
@@ -366,7 +366,7 @@ services:
         limits:
           cpus: "1"
           memory: 1G
-  fluentd:
+  zane-fluentd:
     image: fluentd:v1.16.2-1.1
     volumes:
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/fluent.conf:/fluentd/etc/fluent.conf:ro"
@@ -391,7 +391,7 @@ services:
         limits:
           cpus: "0.5"
           memory: 200M
-  loki:
+  zane-loki:
     image: grafana/loki:3.4
     volumes:
       - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/loki-config.yaml:/etc/loki/local-config.yaml

@@ -340,7 +340,7 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         deployment = await stack.deployments.afirst()
         self.assertIsNotNone(deployment)
         deployment = cast(ComposeStackDeployment, deployment)
-        jprint(stack.service_statuses)
+        jprint(stack.services)
         jprint(deployment.stack_snapshot)
 
         self.assertEqual(
@@ -349,10 +349,10 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(deployment.finished_at)
 
         # service statuses should be updated
-        statuses = cast(dict, stack.service_statuses)
+        statuses = cast(dict, stack.services)
         self.assertGreater(len(statuses), 0)
 
-        name, redis_service = next(iter(stack.service_statuses.items()))
+        name, redis_service = next(iter(stack.services.items()))
         self.assertEqual("redis", name)
         self.assertEqual(ComposeStackServiceStatus.HEALTHY, redis_service["status"])
         self.assertEqual("valkey/valkey:alpine", redis_service["image"])
@@ -576,16 +576,16 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             )
 
             # Verify service statuses are initially set after deployment
-            statuses = cast(dict, stack.service_statuses)
+            statuses = cast(dict, stack.services)
             self.assertGreater(len(statuses), 0)
 
             # Clear service statuses to simulate stale state
-            stack.service_statuses = {}
+            stack.services = {}
             await stack.asave()
 
             # Refresh to verify it was cleared
             await stack.arefresh_from_db()
-            self.assertEqual({}, stack.service_statuses)
+            self.assertEqual({}, stack.services)
 
             # Run the monitor workflow directly
             @sync_to_async
@@ -604,7 +604,7 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
 
             # Refresh and verify service statuses are updated
             await stack.arefresh_from_db()
-            statuses = cast(dict, stack.service_statuses)
+            statuses = cast(dict, stack.services)
             self.assertGreater(len(statuses), 0)
 
             name, redis_service = next(iter(statuses.items()))

@@ -1,17 +1,34 @@
 import { PopoverContent } from "@radix-ui/react-popover";
 import { useQuery } from "@tanstack/react-query";
 import {
+  BoxesIcon,
+  ChevronDownIcon,
   ChevronUpIcon,
+  ContainerIcon,
   LoaderIcon,
   PauseIcon,
   PlayIcon,
   RocketIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, href, useFetcher, useSearchParams } from "react-router";
+import {
+  Link,
+  href,
+  useFetcher,
+  useNavigate,
+  useSearchParams
+} from "react-router";
 import { toast } from "sonner";
+import { ComposeStackCard } from "~/components/compose-stack-cards";
 import { DockerServiceCard, GitServiceCard } from "~/components/service-cards";
 import { Button, SubmitButton } from "~/components/ui/button";
+import {
+  Menubar,
+  MenubarContent,
+  MenubarContentItem,
+  MenubarMenu,
+  MenubarTrigger
+} from "~/components/ui/menubar";
 import { Popover, PopoverTrigger } from "~/components/ui/popover";
 import { environmentQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
@@ -33,7 +50,13 @@ export async function clientLoader({
     })
   );
 
-  return { serviceList };
+  const composeStackList = await queryClient.ensureQueryData(
+    environmentQueries.composeStackList(params.projectSlug, params.envSlug, {
+      slug: queryString
+    })
+  );
+
+  return { serviceList, composeStackList };
 }
 
 export default function EnvironmentServiceListPage({
@@ -48,6 +71,13 @@ export default function EnvironmentServiceListPage({
       query
     }),
     initialData: loaderData.serviceList
+  });
+
+  const { data: composeStackList = loaderData.composeStackList } = useQuery({
+    ...environmentQueries.composeStackList(project_slug, env_slug, {
+      slug: query
+    }),
+    initialData: loaderData.composeStackList
   });
 
   const [selectedServiceIds, setSelectedServiceIds] = React.useState<
@@ -223,16 +253,18 @@ export default function EnvironmentServiceListPage({
     };
   }, []);
 
+  const navigate = useNavigate();
+
   return (
     <>
-      <section className="py-8 grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 place-content-center  gap-8">
-        {serviceList.length === 0 && (
+      <section className="py-8 grid lg:grid-cols-3 xl:grid-cols-4 md:grid-cols-2 grid-cols-1 place-content-center gap-8 xl:gap-6">
+        {serviceList.length === 0 && composeStackList.length === 0 && (
           <section className="flex gap-3 h-96 col-span-full flex-col items-center justify-center grow py-20">
             <div className="flex flex-col gap-2 items-center text-center">
               {query.length > 0 ? (
                 <>
                   <h2 className="text-2xl font-medium">
-                    No services match the filter criteria
+                    No services or stacks match the filter criteria
                   </h2>
                   <h3 className="text-lg text-gray-500">
                     Your search for <em>`{query}`</em> did not return any
@@ -247,16 +279,57 @@ export default function EnvironmentServiceListPage({
               ) : (
                 <>
                   <h1 className="text-2xl font-bold">
-                    No services found in this environment
+                    No services or stacks found in this environment
                   </h1>
                   <h2 className="text-lg">
                     Would you like to start by creating one?
                   </h2>
-                  <Button asChild>
-                    <Link to="./create-service" prefetch="intent">
-                      Create a new service
-                    </Link>
-                  </Button>
+                  <Menubar className="border-none w-fit">
+                    <MenubarMenu>
+                      <MenubarTrigger asChild>
+                        <Button className="flex gap-2">
+                          Create new <ChevronDownIcon size={18} />
+                        </Button>
+                      </MenubarTrigger>
+                      <MenubarContent
+                        align="center"
+                        sideOffset={5}
+                        className="border min-w-0 mx-9  border-border"
+                      >
+                        <MenubarContentItem
+                          icon={ContainerIcon}
+                          text="Service"
+                          onClick={() => {
+                            navigate(
+                              href(
+                                "/project/:projectSlug/:envSlug/create-service",
+                                {
+                                  projectSlug: project_slug,
+                                  envSlug: env_slug
+                                }
+                              )
+                            );
+                          }}
+                        />
+
+                        <MenubarContentItem
+                          icon={BoxesIcon}
+                          text="Compose Stack"
+                          onClick={() => {
+                            navigate(
+                              href(
+                                "/project/:projectSlug/:envSlug/create-compose-stack",
+                                {
+                                  projectSlug: project_slug,
+                                  envSlug: env_slug
+                                }
+                              )
+                            );
+                          }}
+                        />
+                      </MenubarContent>
+                    </MenubarMenu>
+                  </Menubar>
                 </>
               )}
             </div>
@@ -319,6 +392,15 @@ export default function EnvironmentServiceListPage({
             />
           );
         })}
+
+        {composeStackList.map((stack) => (
+          <ComposeStackCard
+            key={stack.id}
+            services={stack.services}
+            slug={stack.slug}
+            urls={stack.urls}
+          />
+        ))}
       </section>
     </>
   );

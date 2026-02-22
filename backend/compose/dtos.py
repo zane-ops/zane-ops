@@ -1,5 +1,6 @@
 import base64
 from dataclasses import asdict, dataclass, field
+from datetime import datetime
 import json
 import re
 from typing import Dict, Literal, Optional, List, Any, Self, cast
@@ -26,6 +27,13 @@ class ComposeEnvVarSpec:
 
     def to_dict(self) -> Dict[str, str]:
         return {self.key: self.value}
+
+    @classmethod
+    def from_dict(cls, data) -> Self:
+        return cls(
+            key=data["key"],
+            value=data["value"],
+        )
 
 
 @dataclass
@@ -160,15 +168,17 @@ class ComposeServiceSpec:
     healthcheck: Optional[Dict[str, Any]] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ComposeServiceSpec":
+    def extract_service_environment(cls, data: Dict[str, Any]):
         # handle envs
-        envs: Dict[str, ComposeEnvVarSpec] = {}
+        envs: Dict[str, ComposeEnvVarSpec | None] = {}
         original_env = data.get("environment", [])
         if isinstance(original_env, list):
             for env in original_env:
                 if "=" not in env:
                     # format: ENV (value is null)
                     # this should be ignored and not passed to env variables
+                    key = cast(str, env)
+                    envs[key] = None
                     continue
                 else:
                     # format: ENV=VALUE
@@ -178,6 +188,15 @@ class ComposeServiceSpec:
         elif isinstance(original_env, dict):
             for key, value in original_env.items():
                 envs[key] = ComposeEnvVarSpec(key=key, value=value)
+        return envs
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ComposeServiceSpec":
+        # handle envs
+        extracted_envs = cls.extract_service_environment(data)
+        envs: Dict[str, ComposeEnvVarSpec] = {
+            key: env for key, env in extracted_envs.items() if env is not None
+        }
 
         # handle networks - convert to dict format
         networks: Dict[str, Any] = {}
@@ -551,28 +570,89 @@ class ComposeStackSnapshot:
 @dataclass
 class ComposeStackServiceTaskDto:
     status: str  # DockerSwarmTaskState value
+    desired_status: str  # DockerSwarmTaskState value
     image: str
+    id: str
     message: str
+    slot: int
+    name: str
+    version: int
+    created_at: str
+    updated_at: str
     exit_code: Optional[int] = None
+    container_id: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> Self:
         return cls(
+            id=data["id"],
+            version=data["version"],
+            slot=data["slot"],
+            name=data["name"],
             status=data["status"],
+            created_at=data["created_at"],
+            updated_at=data["updated_at"],
+            desired_status=data["desired_status"],
             image=data["image"],
             message=data["message"],
             exit_code=data.get("exit_code"),
+            container_id=data.get("container_id"),
         )
 
     def to_dict(self) -> Dict[str, Any]:
         result: Dict[str, Any] = {
+            "id": self.id,
             "status": self.status,
+            "slot": self.slot,
+            "version": self.version,
+            "name": self.name,
+            "desired_status": self.desired_status,
             "image": self.image,
             "message": self.message,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
         }
         if self.exit_code is not None:
             result["exit_code"] = self.exit_code
+        if self.container_id is not None:
+            result["container_id"] = self.container_id
         return result
+
+
+@dataclass
+class ComposeStackVolumeSpec:
+    source: str
+    target: str
+    read_only: bool
+    type: Literal["volume", "bind"] = "volume"
+
+
+@dataclass
+class ComposeStackConfigSpec:
+    source: str
+    target: str
+    content: str
+
+
+@dataclass
+class ComposeStackEnvVarSpec:
+    key: str
+    value: str
+
+
+@dataclass
+class ComposeStackPortSpec:
+    published: int
+    target: int
+    protocol: Literal["tcp", "udp"]
+
+
+@dataclass
+class ComposeStackHealthCheck:
+    command: str
+    retries: Optional[int] = None
+    timeout_sec: Optional[int] = None
+    interval_sec: Optional[int] = None
 
 
 @dataclass
@@ -582,11 +662,20 @@ class ComposeStackServiceStatusDto:
     running_replicas: int
     desired_replicas: int
     updated_at: str
+    network_alias: str
+    global_alias: str
     mode: Literal["replicated", "global", "replicated-job", "global-job"]
     tasks: List[ComposeStackServiceTaskDto] = field(default_factory=list)
+    environment: List[ComposeStackEnvVarSpec] = field(default_factory=list)
+    volumes: List[ComposeStackVolumeSpec] = field(default_factory=list)
+    configs: List[ComposeStackConfigSpec] = field(default_factory=list)
+    ports: List[ComposeStackPortSpec] = field(default_factory=list)
+    id: Optional[str] = None
+    healthcheck: Optional[ComposeStackHealthCheck] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> Self:
+        healthcheck_data = data.get("healthcheck")
         return cls(
             status=data["status"],
             image=data["image"],
@@ -598,10 +687,48 @@ class ComposeStackServiceStatusDto:
                 ComposeStackServiceTaskDto.from_dict(task)
                 for task in data.get("tasks", [])
             ],
+            network_alias=data["network_alias"],
+            global_alias=data["global_alias"],
+            id=data.get("id"),
+            environment=[
+                ComposeStackEnvVarSpec(key=e["key"], value=e["value"])
+                for e in data.get("environment", [])
+            ],
+            volumes=[
+                ComposeStackVolumeSpec(
+                    source=v["source"],
+                    target=v["target"],
+                    read_only=v["read_only"],
+                    type=v.get("type", "volume"),
+                )
+                for v in data.get("volumes", [])
+            ],
+            configs=[
+                ComposeStackConfigSpec(
+                    source=c["source"],
+                    target=c["target"],
+                    content=c["content"],
+                )
+                for c in data.get("configs", [])
+            ],
+            ports=[
+                ComposeStackPortSpec(
+                    published=p["published"], target=p["target"], protocol=p["protocol"]
+                )
+                for p in data.get("ports", [])
+            ],
+            healthcheck=ComposeStackHealthCheck(
+                command=healthcheck_data["command"],
+                interval_sec=healthcheck_data.get("interval_sec"),
+                timeout_sec=healthcheck_data.get("timeout_sec"),
+                retries=healthcheck_data.get("retries"),
+            )
+            if healthcheck_data is not None
+            else None,
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result: Dict[str, Any] = {
             "status": self.status,
             "image": self.image,
             "running_replicas": self.running_replicas,
@@ -609,7 +736,37 @@ class ComposeStackServiceStatusDto:
             "updated_at": self.updated_at,
             "mode": self.mode,
             "tasks": [task.to_dict() for task in self.tasks],
+            "network_alias": self.network_alias,
+            "global_alias": self.global_alias,
+            "environment": [{"key": e.key, "value": e.value} for e in self.environment],
+            "volumes": [
+                {
+                    "source": v.source,
+                    "target": v.target,
+                    "read_only": v.read_only,
+                    "type": v.type,
+                }
+                for v in self.volumes
+            ],
+            "configs": [
+                {"source": c.source, "target": c.target, "content": c.content}
+                for c in self.configs
+            ],
+            "ports": [
+                {"published": p.published, "target": p.target, "protocol": p.protocol}
+                for p in self.ports
+            ],
         }
+        if self.id is not None:
+            result["id"] = self.id
+        if self.healthcheck is not None:
+            result["healthcheck"] = {
+                "command": self.healthcheck.command,
+                "interval_sec": self.healthcheck.interval_sec,
+                "timeout_sec": self.healthcheck.timeout_sec,
+                "retries": self.healthcheck.retries,
+            }
+        return result
 
 
 @dataclass

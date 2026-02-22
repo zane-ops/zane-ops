@@ -92,7 +92,7 @@ class ComposeStack(TimestampedModel):
     configs = models.JSONField(null=True)
 
     # Per-service status (JSON)
-    service_statuses = models.JSONField(default=dict)
+    services = models.JSONField(default=dict)
     # Example:
     # {
     #     "web": {
@@ -119,6 +119,9 @@ class ComposeStack(TimestampedModel):
     @property
     def hash_prefix(self) -> str:
         return cast(str, self.id).replace(self.ID_PREFIX, "").lower()
+
+    def get_full_computed_service_name(self, service_name: str):
+        return f"{self.name}_{self.hash_prefix}_{service_name}"
 
     @property
     def name(self) -> str:
@@ -373,6 +376,10 @@ class ComposeStackDeployment(TimestampedModel):
     @property
     def workflow_id(self):
         return f"deploy-compose-{self.stack.id}"
+
+    class Meta:  # type: ignore
+        ordering = ["-queued_at"]
+        indexes = [models.Index(fields=["queued_at"]), models.Index(fields=["status"])]
 
 
 class ComposeStackEnvOverride(BaseEnvVariable):

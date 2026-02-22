@@ -1,14 +1,19 @@
 import {
   BanIcon,
+  CheckSquareIcon,
   ClockArrowUpIcon,
+  CloudOffIcon,
   FastForwardIcon,
   HammerIcon,
   HeartPulseIcon,
   HourglassIcon,
   LoaderIcon,
+  type LucideIcon,
   PauseIcon,
   RefreshCwOffIcon,
+  RocketIcon,
   RotateCcwIcon,
+  SquareCheckBig,
   Trash2Icon,
   TriangleAlertIcon,
   XIcon
@@ -22,28 +27,40 @@ const DEPLOYMENT_STATUS_COLOR_MAP = {
   STARTING: "blue",
   RESTARTING: "blue",
   BUILDING: "blue",
+  DEPLOYING: "blue",
   PREPARING: "blue",
   CANCELLING: "blue",
   HEALTHY: "green",
+  FINISHED: "green",
   UNHEALTHY: "red",
   FAILED: "red",
   REMOVED: "gray",
   CANCELLED: "gray",
   QUEUED: "gray",
-  SLEEPING: "yellow"
+  SLEEPING: "yellow",
+  COMPLETE: "yellow",
+  NOT_DEPLOYED_YET: "gray"
 } as const satisfies Record<
-  (typeof DEPLOYMENT_STATUSES)[number],
+  | (typeof DEPLOYMENT_STATUSES)[number]
+  | "COMPLETE"
+  | "NOT_DEPLOYED_YET"
+  | "DEPLOYING"
+  | "FINISHED",
   StatusBadgeColor
 >;
 
+export type DeploymentStatus = keyof typeof DEPLOYMENT_STATUS_COLOR_MAP;
+
 type DeploymentStatusBadgeProps = {
-  status: keyof typeof DEPLOYMENT_STATUS_COLOR_MAP;
+  status: DeploymentStatus;
   className?: string;
+  variant?: "outline" | "ghost";
 };
 
 export function DeploymentStatusBadge({
   status,
-  className
+  className,
+  variant = "ghost"
 }: DeploymentStatusBadgeProps) {
   const color = DEPLOYMENT_STATUS_COLOR_MAP[status];
 
@@ -58,9 +75,13 @@ export function DeploymentStatusBadge({
     SLEEPING: PauseIcon,
     STARTING: FastForwardIcon,
     BUILDING: HammerIcon,
+    DEPLOYING: RocketIcon,
+    FINISHED: CheckSquareIcon,
     PREPARING: HourglassIcon,
-    CANCELLING: RefreshCwOffIcon
-  } as const satisfies Record<typeof status, React.ComponentType<any>>;
+    CANCELLING: RefreshCwOffIcon,
+    COMPLETE: SquareCheckBig,
+    NOT_DEPLOYED_YET: CloudOffIcon
+  } as const satisfies Record<typeof status, LucideIcon>;
 
   const Icon = icons[status];
 
@@ -69,7 +90,8 @@ export function DeploymentStatusBadge({
     "PREPARING",
     "BUILDING",
     "CANCELLING",
-    "RESTARTING"
+    "RESTARTING",
+    "DEPLOYING"
   ].includes(status);
 
   const isActive = ["HEALTHY", "UNHEALTHY"].includes(status);
@@ -86,10 +108,11 @@ export function DeploymentStatusBadge({
           "bg-gray-600/20 dark:bg-gray-600/60 text-gray": color === "gray",
           "bg-link/20 text-link": color === "blue"
         },
+        variant === "outline" && "!bg-transparent",
         className
       )}
     >
-      <div className="relative ">
+      <div className="relative">
         {isActive && (
           <Icon
             size={15}
@@ -98,7 +121,7 @@ export function DeploymentStatusBadge({
         )}
         <Icon size={15} className="flex-none" />
       </div>
-      <p>{capitalizeText(status)}</p>
+      <p>{capitalizeText(status.replaceAll("_", " "))}</p>
       {isLoading && <LoaderIcon className="animate-spin flex-none" size={15} />}
     </div>
   );

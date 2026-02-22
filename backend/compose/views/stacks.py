@@ -23,6 +23,8 @@ from .serializers import (
     ComposeStackToggleRequestSerializer,
     ComposeStackWebhookDeployRequestSerializer,
     ComposeStacksListFilterSet,
+    ComposeStackDeploymentListFilterSet,
+    ComposeStackDeploymentListPagination,
 )
 from ..models import ComposeStack, ComposeStackDeployment, ComposeStackChange
 from django.db.models import QuerySet
@@ -57,6 +59,8 @@ from ..processor import ComposeSpecProcessor
 from rest_framework import permissions
 from rest_framework.throttling import ScopedRateThrottle
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import serializers
+from drf_standardized_errors.formatter import ExceptionFormatter
 
 
 class ComposeStackListAPIView(ListAPIView):
@@ -94,6 +98,7 @@ class ComposeStackListAPIView(ListAPIView):
             )
             .prefetch_related("changes", "env_overrides")
             .all()
+            .order_by("created_at")
         )
 
 
@@ -139,6 +144,7 @@ class ComposeStackCreateFromDokployBase64APIView(APIView):
             environment=environment,
             project=project,
             network_alias_prefix=f"zn-{data['slug']}",
+            deploy_token=secrets.token_hex(16),
         )
 
         user_content = DokployComposeAdapter.to_zaneops(template=data["user_content"])
@@ -152,10 +158,21 @@ class ComposeStackCreateFromDokployBase64APIView(APIView):
             )
         ]
 
-        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
-            user_content=user_content,
-            stack=stack,
-        )
+        try:
+            artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+                user_content=user_content,
+                stack=stack,
+            )
+        except serializers.ValidationError as e:
+            formated: dict[str, Any] = ExceptionFormatter(e, {}, e).run()  # type: ignore
+            errors = ["Could not parse Dokploy template:"]
+            errors.extend(
+                [f"{error['attr']}: {error['detail']}" for error in formated["errors"]]
+            )
+            errors.append(
+                "Please verify the template is valid on templates.dokploy.com"
+            )
+            raise serializers.ValidationError({"user_content": errors})
 
         changes.extend(
             [
@@ -217,9 +234,10 @@ class ComposeStackCreateFromDokployObjectAPIView(APIView):
             environment=environment,
             project=project,
             network_alias_prefix=f"zn-{data['slug']}",
+            deploy_token=secrets.token_hex(16),
         )
 
-        template = DokployTemplate(**data)
+        template = DokployTemplate(compose=data["compose"], config=data["config"])
 
         user_content = DokployComposeAdapter.to_zaneops(template=template.base64)
 
@@ -232,10 +250,21 @@ class ComposeStackCreateFromDokployObjectAPIView(APIView):
             )
         ]
 
-        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
-            user_content=user_content,
-            stack=stack,
-        )
+        try:
+            artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+                user_content=user_content,
+                stack=stack,
+            )
+        except serializers.ValidationError as e:
+            formated: dict[str, Any] = ExceptionFormatter(e, {}, e).run()  # type: ignore
+            errors = ["Could not parse Dokploy template:"]
+            errors.extend(
+                [f"{error['attr']}: {error['detail']}" for error in formated["errors"]]
+            )
+            errors.append(
+                "Please verify the template is valid on templates.dokploy.com"
+            )
+            raise serializers.ValidationError({"non_field_errors": errors})
 
         changes.extend(
             [
@@ -258,36 +287,6 @@ class ComposeStackCreateFromDokployObjectAPIView(APIView):
 class ComposeStackCreateAPIView(CreateAPIView):
     serializer_class = ComposeStackSerializer
     queryset = ComposeStack.objects.all()
-
-    def get_queryset(self) -> QuerySet[ComposeStack]:  # type: ignore
-        project_slug = self.kwargs["project_slug"]
-        env_slug = self.kwargs["env_slug"]
-
-        try:
-            project = Project.objects.get(
-                slug=project_slug.lower(),
-                owner=self.request.user,
-            )
-            environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
-            )
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist"
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
-            )
-
-        return (
-            ComposeStack.objects.filter(
-                environment=environment,
-                project=project,
-            )
-            .all()
-            .prefetch_related("changes")
-        )
 
     def get_serializer_context(self):
         project_slug = self.kwargs["project_slug"]
@@ -371,6 +370,7 @@ class ComposeStackRegenerateDeployTokenAPIView(APIView):
     serializer_class = ComposeStackSerializer
 
     @extend_schema(
+        request=None,
         operation_id="regenerateComposeStackDeployToken",
         summary="Regenerate a compose stack deploy token",
     )
@@ -463,6 +463,58 @@ class ComposeStackArchiveAPIView(APIView):
         stack.name
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ComposeStackDeploymentListAPIView(ListAPIView):
+    serializer_class = ComposeStackDeploymentSerializer
+    queryset = ComposeStackDeployment.objects.all()
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ComposeStackDeploymentListFilterSet
+    pagination_class = ComposeStackDeploymentListPagination
+
+    @extend_schema(
+        operation_id="listComposeStackDeployments",
+        summary="Get a list of all the deployments for a compose stack",
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self) -> QuerySet[ComposeStackDeployment]:  # type: ignore
+        project_slug = self.kwargs["project_slug"]
+        env_slug = self.kwargs["env_slug"]
+        slug = self.kwargs["slug"]
+
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=self.request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = ComposeStack.objects.filter(
+                environment=environment,
+                project=project,
+                slug=slug,
+            ).get()
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+        except ComposeStackDeployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack deployment with the hash `{hash}` does not exist in this stack"
+            )
+
+        return stack.deployments
 
 
 class ComposeStackDeploymentDetailsAPIView(RetrieveAPIView):
@@ -642,7 +694,9 @@ class ComposeStackReDeployAPIView(APIView):
         new_deployment.stack_snapshot = ComposeStackSnapshotSerializer(stack).data  # type: ignore
         new_deployment.save()
 
-        payload = ComposeStackDeploymentDetails.from_deployment(deployment=deployment)
+        payload = ComposeStackDeploymentDetails.from_deployment(
+            deployment=new_deployment
+        )
 
         def commit_callback():
             TemporalClient.start_workflow(
@@ -795,6 +849,68 @@ class ComposeStackDeployAPIView(APIView):
 
         serializer = ComposeStackDeploymentSerializer(deployment)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+class ComposeStackCancelChangesAPIView(APIView):
+    @extend_schema(
+        responses={
+            409: ErrorResponse409Serializer,
+            204: None,
+        },
+        operation_id="cancelStackChanges",
+        summary="Cancel stack change",
+    )
+    def delete(
+        self,
+        request: Request,
+        project_slug: str,
+        slug: str,
+        change_id: str,
+        env_slug: str,
+    ):
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=self.request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = (
+                ComposeStack.objects.filter(
+                    environment=environment,
+                    project=project,
+                    slug=slug,
+                )
+                .prefetch_related("changes", "env_overrides")
+                .get()
+            )
+            found_change = stack.unapplied_changes.get(id=change_id)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+        except ComposeStackChange.DoesNotExist:
+            raise exceptions.NotFound(
+                f"A pending change with id `{change_id}` does not exist in this stack."
+            )
+
+        if found_change.field == ComposeStackChange.ChangeField.COMPOSE_CONTENT:
+            if stack.user_content is None:
+                raise ResourceConflict(
+                    "Cannot revert this change because the stack has no previous compose file content to restore."
+                )
+
+        found_change.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ComposeStackRequestChangesAPIView(APIView):
@@ -1041,6 +1157,7 @@ class ToggleComposeStackAPIView(APIView):
 
         payload = ToggleComposeStackDetails(
             stack=snapshot,
+            only_service=data.get("service_name"),
             desired_state=data["desired_state"],  # type: ignore
         )
 

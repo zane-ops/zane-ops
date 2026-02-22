@@ -125,6 +125,7 @@ class LokiSearchClient:
                 "created_at": log_data["created_at"],
                 "stack_service_name": log_data.get("stack_service_name"),
                 "stack_id": log_data.get("stack_id"),
+                "container_id": log_data.get("container_id"),
                 "timestamp": int(float(log_data["time"])),  # timestamp for pagination
             }
             hits.append(hit)
@@ -205,6 +206,7 @@ class LokiSearchClient:
                     "level": hit["level"],
                     "source": hit["source"],
                     "service_id": hit.get("service_id"),
+                    "container_id": hit.get("container_id"),
                     "deployment_id": hit.get("deployment_id"),
                     "stack_id": hit.get("stack_id"),
                     "stack_service_name": hit.get("stack_service_name"),
@@ -255,8 +257,9 @@ class LokiSearchClient:
         timestamp_ns: int,
         lines: int = 10,
         stack_id: str | None = None,
-        stack_service_names: list[str] | None = None,
+        stack_service_name: list[str] | None = None,
         deployment_id: str | None = None,
+        container_id: str | None = None,
     ):
         """
         Get context around a single log entry.
@@ -268,12 +271,12 @@ class LokiSearchClient:
         label_selectors: list[str] = []
         if stack_id:
             label_selectors.append(f'stack_id="{stack_id}"')
-        if stack_service_names:
-            label_selectors.append(
-                'stack_service_name=~"(' + "|".join(stack_service_names) + ')"'
-            )
+        if stack_service_name:
+            label_selectors.append(f'stack_service_name="{stack_service_name}"')
         if deployment_id:
             label_selectors.append(f'deployment_id="{deployment_id}"')
+        if container_id:
+            label_selectors.append(f'container_id="{container_id}"')
         label_selectors.append(f'source="{RuntimeLogSource.SERVICE}"')
         label_selectors.append(f'app="{settings.LOKI_APP_NAME}"')
 
@@ -335,6 +338,7 @@ class LokiSearchClient:
                     "time": int(float(log_data["time"])),
                     "level": log_data["level"],
                     "source": log_data["source"],
+                    "container_id": log_data.get("container_id"),
                     "service_id": log_data.get("service_id"),
                     "deployment_id": log_data.get("deployment_id"),
                     "stack_id": log_data.get("stack_id"),
@@ -356,6 +360,7 @@ class LokiSearchClient:
                     "time": int(float(log_data["time"])),
                     "level": log_data["level"],
                     "source": log_data["source"],
+                    "container_id": log_data.get("container_id"),
                     "service_id": log_data.get("service_id"),
                     "deployment_id": log_data.get("deployment_id"),
                     "stack_id": log_data.get("stack_id"),
@@ -388,6 +393,7 @@ class LokiSearchClient:
                     ).isoformat(),
                     "level": hit["level"],
                     "source": hit["source"],
+                    "container_id": hit.get("container_id"),
                     "service_id": hit.get("service_id"),
                     "deployment_id": hit.get("deployment_id"),
                     "stack_id": hit.get("stack_id"),
@@ -433,18 +439,16 @@ class LokiSearchClient:
         label_selectors: list[str] = []
         if search_params.get("stack_id"):
             label_selectors.append(f'stack_id="{search_params["stack_id"]}"')
-        if search_params.get("stack_service_names"):
-            services = search_params["stack_service_names"]
-            if isinstance(services, list):
-                label_selectors.append(
-                    'stack_service_name=~"(' + "|".join(services) + ')"'
-                )
-            else:
-                label_selectors.append(f'stack_service_name="{services}"')
+        if search_params.get("stack_service_name"):
+            label_selectors.append(
+                f'stack_service_name="{search_params["stack_service_name"]}"'
+            )
         if search_params.get("service_id"):
             label_selectors.append(f'service_id="{search_params["service_id"]}"')
         if search_params.get("deployment_id"):
             label_selectors.append(f'deployment_id="{search_params["deployment_id"]}"')
+        if search_params.get("container_id"):
+            label_selectors.append(f'container_id="{search_params["container_id"]}"')
         if search_params.get("level"):
             levels = search_params["level"]
             if isinstance(levels, list):

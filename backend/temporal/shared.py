@@ -705,3 +705,4 @@ class ComposeStackMonitorPayload:
 class ToggleComposeStackDetails:
     stack: ComposeStackSnapshot
     desired_state: Literal["start", "stop"]
+    only_service: Optional[str] = None

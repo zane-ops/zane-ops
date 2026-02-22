@@ -3,7 +3,7 @@ from datetime import timedelta
 import shlex
 import shutil
 from time import monotonic
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 from temporalio import activity, workflow
 import tempfile
 from temporalio.exceptions import ApplicationError
@@ -312,11 +312,18 @@ class ComposeStackActivities:
                     },
                     status=True,
                 )
+                configs = self.docker_client.configs.list(
+                    filters={
+                        "label": [f"com.docker.stack.namespace={deployment.stack.name}"]
+                    },
+                )
 
                 statuses = await asyncio.gather(
                     *[
                         get_compose_stack_swarm_service_status(
-                            service=service, stack=deployment.stack
+                            service=service,
+                            stack=deployment.stack,
+                            all_configs={config.id: config for config in configs},  # type: ignore
                         )
                         for service in services
                     ]
@@ -328,7 +335,7 @@ class ComposeStackActivities:
                     service_statuses[name] = service_status
 
                 await ComposeStack.objects.filter(id=deployment.stack.id).aupdate(
-                    service_statuses=service_statuses,
+                    services=service_statuses,
                     updated_at=timezone.now(),
                 )
 
@@ -402,7 +409,7 @@ class ComposeStackActivities:
                 workflow=MonitorComposeStackWorkflow.run,
                 args=deployment.stack,
                 id=deployment.stack.monitor_schedule_id,
-                interval=timedelta(seconds=30),
+                interval=timedelta(seconds=15),
                 task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
             )
         except ScheduleAlreadyRunningError:
@@ -437,7 +444,10 @@ class ComposeStackActivities:
 
         await deployment_log(
             deployment,
-            f"Compose stack deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC} finished with status {status_color}{result.status}{Colors.ENDC}",
+            [
+                "===========================================================================",
+                f"Compose stack deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC} finished with status {status_color}{result.status}{Colors.ENDC}",
+            ],
         )
 
         await deployment_log(
@@ -446,7 +456,10 @@ class ComposeStackActivities:
         )
         await deployment_log(
             deployment,
-            result.status_message.splitlines(),
+            result.status_message.splitlines()
+            + [
+                "===========================================================================",
+            ],
         )
 
         await ComposeStackDeployment.objects.filter(
@@ -691,6 +704,22 @@ class ComposeStackActivities:
             update_fields=["updated_at", "status", "status_reason", "finished_at"]
         )
 
+        await deployment_log(
+            deployment,
+            [
+                "===========================================================================",
+                f"Compose stack deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC} finished with status {Colors.GREY}{stack_deployment.status}{Colors.ENDC}",
+            ],
+        )
+
+        await deployment_log(
+            deployment,
+            [
+                f"Compose stack deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC} finished with reason {Colors.GREY}{stack_deployment.status_reason}{Colors.ENDC}",
+                "===========================================================================",
+            ],
+        )
+
     @activity.defn
     async def scale_down_stack_services(self, details: ToggleComposeStackDetails):
         stack = details.stack
@@ -706,6 +735,17 @@ class ComposeStackActivities:
         )
 
         for service in services:
+            service_name = (
+                cast(str, service.name)
+                .removeprefix(f"{stack.name}_")
+                .removeprefix(f"{stack.hash_prefix}_")
+            )
+            if (
+                details.only_service is not None
+                and details.only_service != service_name
+            ):
+                continue
+
             service_mode: str = service.attrs["Spec"]["Mode"]
 
             # Only replicated services are considered
@@ -744,6 +784,17 @@ class ComposeStackActivities:
         )
 
         for service in services:
+            service_name = (
+                cast(str, service.name)
+                .removeprefix(f"{stack.name}_")
+                .removeprefix(f"{stack.hash_prefix}_")
+            )
+            if (
+                details.only_service is not None
+                and details.only_service != service_name
+            ):
+                continue
+
             service_mode: str = service.attrs["Spec"]["Mode"]
 
             # Only replicated services are considered

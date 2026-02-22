@@ -1,14 +1,14 @@
-import { redirect } from "react-router";
+import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { serviceQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
-import { type Route } from "./+types/deploy-git-service";
+import type { Route } from "./+types/deploy-git-service";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
+    href("/project/:projectSlug/:envSlug/services/:serviceSlug", params)
   );
 }
 

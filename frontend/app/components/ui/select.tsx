@@ -1,11 +1,5 @@
 import * as SelectPrimitive from "@radix-ui/react-select";
-import {
-  Check,
-  ChevronDown,
-  ChevronUp,
-  type LucideIcon,
-  type LucideProps
-} from "lucide-react";
+import { Check, ChevronDown, ChevronUp, type LucideProps } from "lucide-react";
 import type * as React from "react";
 
 import { cn } from "~/lib/utils";
@@ -131,7 +125,10 @@ const SelectLabel = ({
 }) => (
   <SelectPrimitive.Label
     ref={ref}
-    className={cn("py-1.5 pl-8 pr-2 text-sm font-semibold", className)}
+    className={cn(
+      "py-1.5 pl-9 mt-1 pr-2 text-sm text-grey border-t border-border -mx-1",
+      className
+    )}
     {...props}
   />
 );
@@ -186,13 +183,13 @@ SelectSeparator.displayName = SelectPrimitive.Separator.displayName;
 
 export {
   Select,
-  SelectGroup,
-  SelectValue,
-  SelectTrigger,
   SelectContent,
-  SelectLabel,
+  SelectGroup,
   SelectItem,
-  SelectSeparator,
+  SelectLabel,
+  SelectScrollDownButton,
   SelectScrollUpButton,
-  SelectScrollDownButton
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue
 };

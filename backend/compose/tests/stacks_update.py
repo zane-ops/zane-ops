@@ -26,68 +26,6 @@ from ..dtos import ComposeStackUrlRouteDto
 
 
 class ComposeStackRequestUpdateViewTests(ComposeStackAPITestBase):
-    async def acreate_and_deploy_compose_stack(
-        self,
-        content: str,
-        slug="my-stack",
-    ):
-        project = await self.acreate_project(slug="compose")
-
-        create_stack_payload = {
-            "slug": slug,
-            "user_content": content,
-        }
-
-        response = await self.async_client.post(
-            reverse(
-                "compose:stacks.create",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            ),
-            data=create_stack_payload,
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        stack = cast(
-            ComposeStack, await ComposeStack.objects.filter(slug=slug).afirst()
-        )
-        self.assertIsNotNone(stack)
-        self.assertIsNone(stack.user_content)
-        self.assertIsNone(stack.computed_content)
-
-        # Deploy the stack
-        response = await self.async_client.put(
-            reverse(
-                "compose:stacks.deploy",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                    "slug": stack.slug,
-                },
-            ),
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        await stack.arefresh_from_db()
-        print(
-            "========= original =========",
-            stack.user_content,
-            "========= end original =========",
-            sep="\n",
-        )
-        print(
-            "========= computed =========",
-            stack.computed_content,
-            "========= end computed =========",
-            sep="\n",
-        )
-
-        return project, stack
-
     def test_update_content_request_create_change(self):
         project, stack = self.create_and_deploy_compose_stack(
             content=DOCKER_COMPOSE_MINIMAL, slug="minimal"
@@ -762,6 +700,117 @@ configs:
         # app_config should still be at v1 (didn't change)
         self.assertIn("app_config_v1:", new_computed)
         self.assertNotIn("app_config_v2:", new_computed)
+
+
+class ComposeStackCancelRequestChangeViewTests(ComposeStackAPITestBase):
+    def test_cancel_request_update_change_successful(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL
+        )
+
+        # Request content update with new compose file
+        update_payload = {
+            "field": ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+            "type": "UPDATE",
+            "new_value": DOCKER_COMPOSE_SIMPLE_DB,
+        }
+
+        response = self.client.put(
+            reverse(
+                "compose:stacks.request_changes",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+            data=update_payload,
+            content_type="application/json",
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Verify a change was created
+        stack.refresh_from_db()
+        content_change = cast(
+            ComposeStackChange,
+            stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(content_change)
+        self.assertFalse(content_change.applied)
+
+        # cancel the change
+        response = self.client.delete(
+            reverse(
+                "compose:stacks.cancel_request_changes",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                    "change_id": content_change.id,
+                },
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        jprint(
+            response.json()
+            if response.status_code != status.HTTP_204_NO_CONTENT
+            else None
+        )
+
+        # verify that is has been deleted
+        content_change = stack.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+            type=ComposeStackChange.ChangeType.UPDATE,
+        ).first()
+        self.assertIsNone(content_change)
+
+    def test_cancel_request_update_change_not_deployed_prevent_cancelling_compose_content_change(
+        self,
+    ):
+        project, stack = self.create_compose_stack(content=DOCKER_COMPOSE_MINIMAL)
+
+        # Verify a change was created
+        content_change = cast(
+            ComposeStackChange,
+            stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(content_change)
+        self.assertFalse(content_change.applied)
+
+        # cancel the change
+        response = self.client.delete(
+            reverse(
+                "compose:stacks.cancel_request_changes",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                    "change_id": content_change.id,
+                },
+            ),
+            content_type="application/json",
+        )
+        jprint(
+            response.json()
+            if response.status_code != status.HTTP_204_NO_CONTENT
+            else None
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+        # verify that is has been deleted
+        content_change = stack.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+            type=ComposeStackChange.ChangeType.UPDATE,
+        ).first()
+        self.assertIsNotNone(content_change)
 
 
 class ComposeStackSharedEnvViewTests(ComposeStackAPITestBase):

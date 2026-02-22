@@ -34,6 +34,7 @@ from container_registry.models import BuildRegistry
 from django.db.models import Q
 import uuid
 from django.db import connection
+import base64
 
 
 class ComposeStackSpecSerializer(serializers.Serializer):
@@ -237,6 +238,9 @@ class ComposeSpecProcessor:
     PASSWORD_REGEX = (
         r"generate_password[ \t]*\|[ \t]*(\d+)"  # format: generate_password | <number>
     )
+    BASE64_REGEX = (
+        r"generate_base64[ \t]*\|[ \t]*(\d+)"  # format: generate_base64 | <number>
+    )
     NETWORK_ALIAS_REGEX = r"network_alias[ \t]*\|[ \t]*(\".*\"|\'.*\')"  # format: network_alias | 'service_name'
     GLOBAL_ALIAS_REGEX = r"global_alias[ \t]*\|[ \t]*(\".*\"|\'.*\')"  # format: global_alias | 'service_name'
 
@@ -247,6 +251,7 @@ class ComposeSpecProcessor:
         r"generate_uuid",
         r"generate_email",
         PASSWORD_REGEX,
+        BASE64_REGEX,
         NETWORK_ALIAS_REGEX,
         GLOBAL_ALIAS_REGEX,
     ]
@@ -315,7 +320,8 @@ class ComposeSpecProcessor:
                 if retry_error:
                     raise ValidationError(f"Invalid compose file: {retry_error}")
             else:
-                raise ValidationError(f"Invalid compose file: {error}")
+                last_error = error.splitlines()[-1]
+                raise ValidationError(f"Invalid compose file: {last_error}")
 
         # Parse and validate YAML structure
         user_spec_dict = cls.parse_user_yaml(user_content)
@@ -449,16 +455,31 @@ class ComposeSpecProcessor:
                 matched = cast(re.Match[str], regex.match(template_func))
                 count = int(matched.group(1))
 
-                if count >= 8 and count % 2 == 0:
-                    return secrets.token_hex(int(count / 2))
-
                 issues = []
                 if count < 8:
                     issues.append(f"must be at least 8 characters (got {count})")
                 if count % 2 != 0:
                     issues.append(f"must be an even number (got {count})")
 
-                raise ValidationError(f"Invalid `{template_func}`: {', '.join(issues)}")
+                if issues:
+                    raise ValidationError(
+                        f"Invalid `{template_func}`: {', '.join(issues)}"
+                    )
+
+                return secrets.token_hex(int(count / 2))
+
+            case template_func if template_func.startswith("generate_base64"):
+                # Cryptographically secure base64 token (equivalent to `openssl rand -base64 N`)
+                regex = re.compile(cls.BASE64_REGEX)
+                matched = cast(re.Match[str], regex.match(template_func))
+                count = int(matched.group(1))
+
+                if count < 8:
+                    raise ValidationError(
+                        f"Invalid `{template_func}`: must be at least 8 bytes (got {count})"
+                    )
+
+                return base64.b64encode(secrets.token_bytes(count)).decode()
 
             case template_func if template_func.startswith("network_alias"):
                 regex = re.compile(cls.NETWORK_ALIAS_REGEX)
@@ -651,7 +672,9 @@ class ComposeSpecProcessor:
             # Add environment network with stable alias for cross-env communication
             # using the original service name and the stack alias prefix, for better UX
             service.networks[env_network_name] = {
-                "aliases": [f"{stack.network_alias_prefix}-{original_service_name}"]
+                "aliases": [
+                    f"{stack.network_alias_prefix}-{original_service_name}",
+                ]
             }
 
             if service.networks.get("default") is None:
@@ -895,11 +918,29 @@ class ComposeSpecProcessor:
             non_escaped_single_slash, r"\\\\\2", expanded
         )  # `\\` is one slash and \2 is the character after the single slash
 
+        all_quoted_strings = re.compile(r"(?:\:\s*)\"(.*)\"", re.MULTILINE)
+        non_escaped_quotes = re.compile(r"(?<!\\)(\")", re.MULTILINE)
+
+        def escape_inner_quotes(match: re.Match) -> str:
+            full = match.group(0)
+            inner = match.group(1)
+            escaped_inner = non_escaped_quotes.sub(r'\\"', inner)
+            return full[: match.start(1) - match.start(0)] + escaped_inner + '"'
+
+        expanded = re.sub(all_quoted_strings, escape_inner_quotes, expanded)
+
         print("=== expanded reformatted ===")
         print(expanded)
 
+        # convert <service>.deploy.replicas to integer (if set)
+        expanded_spec = json.loads(expanded)
+        for service in expanded_spec.get("services", {}).values():
+            deploy = service.get("deploy")
+            if deploy and "replicas" in deploy:
+                deploy["replicas"] = int(deploy["replicas"])
+
         return yaml.safe_dump(
-            json.loads(expanded),
+            expanded_spec,
             default_flow_style=False,
             sort_keys=False,  # Preserve order
             allow_unicode=True,
@@ -1061,8 +1102,10 @@ class ComposeSpecProcessor:
                 route_dict[key] = route
 
                 existing_exact = find_item_in_sequence(
-                    lambda r: (r["domain"] == route["domain"])
-                    and r["base_path"] == route["base_path"],
+                    lambda r: (
+                        (r["domain"] == route["domain"])
+                        and r["base_path"] == route["base_path"]
+                    ),
                     all_routes,
                 )
                 if existing_exact:

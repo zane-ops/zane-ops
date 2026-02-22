@@ -89,7 +89,15 @@ export default function ServiceMetricsPage({
     initialData: loaderData.metrics
   });
 
-  const metrics = data.map((m) => ({ ...m, avg_cpu: m.avg_cpu / 100 }));
+  const metrics = data.map((m) => ({
+    ...m,
+    avg_cpu: (limits.no_of_cpus * m.avg_cpu) / 100
+  }));
+
+  const maxCPU = Math.min(
+    service.resource_limits?.cpus ?? limits.no_of_cpus,
+    Math.max(...metrics.flatMap((m) => m.avg_cpu))
+  );
 
   return (
     <div className="flex flex-col gap-4 py-4">
@@ -160,6 +168,12 @@ export default function ServiceMetricsPage({
                     ]}
                     allowDataOverflow
                     type="number"
+                    tickFormatter={(value) => {
+                      const fmt = Intl.NumberFormat("en-GB", {
+                        maximumFractionDigits: 2
+                      });
+                      return fmt.format(value as number);
+                    }}
                   />
                   <XAxis
                     dataKey="bucket_epoch"
@@ -173,7 +187,6 @@ export default function ServiceMetricsPage({
                   />
 
                   <ChartTooltip
-                    cursor={false}
                     content={
                       <ChartTooltipContent
                         hideLabel
@@ -190,13 +203,20 @@ export default function ServiceMetricsPage({
                             }
                           ).format(new Date(payload.bucket_epoch));
 
+                          const percent =
+                            (Number(value) * 100) / limits.no_of_cpus;
+                          const value_percent = Intl.NumberFormat("en-GB", {
+                            maximumFractionDigits: 2
+                          }).format(percent);
+
                           return (
                             <div className="flex items-start text-sm text-muted-foreground flex-col">
                               <span>{formattedDate}</span>
                               <div className="ml-auto flex items-baseline gap-0.5 font-mono font-medium tabular-nums text-card-foreground text-sm">
                                 {Number(value).toFixed(4)}
+                                <span className="text-foreground">CPUs</span>
                                 <span className="font-normal text-grey">
-                                  CPUs
+                                  ({value_percent}%)
                                 </span>
                               </div>
                             </div>
@@ -284,7 +304,6 @@ export default function ServiceMetricsPage({
                   />
 
                   <ChartTooltip
-                    cursor={false}
                     content={
                       <ChartTooltipContent
                         hideLabel
@@ -374,9 +393,10 @@ export default function ServiceMetricsPage({
                     domain={[
                       0,
                       Math.max(
-                        ...metrics
-                          .map((m) => [m.total_net_rx, m.total_net_tx])
-                          .flat()
+                        ...metrics.flatMap((m) => [
+                          m.total_net_rx,
+                          m.total_net_tx
+                        ])
                       ) + convertValueToBytes(10, "MEGABYTES")
                     ]}
                     tickFormatter={(value) => {
@@ -402,7 +422,6 @@ export default function ServiceMetricsPage({
                   />
 
                   <ChartTooltip
-                    cursor={false}
                     content={
                       <ChartTooltipContent
                         hideLabel
@@ -422,25 +441,30 @@ export default function ServiceMetricsPage({
                             Number(value)
                           );
 
-                          return (
-                            <div className="flex items-start text-sm text-muted-foreground flex-col w-full">
-                              {index === 0 && <span>{formattedDate}</span>}
+                          const label =
+                            name === "total_net_rx" ? "Inbound" : "Outbound";
 
-                              <div className="ml-auto flex items-baseline justify-end gap-1 self-stretch w-full font-mono font-medium tabular-nums text-card-foreground text-sm">
-                                <div className="flex gap-0.5">
+                          return (
+                            <div className="flex items-start w-full text-sm text-muted-foreground flex-col">
+                              {index === 0 && <span>{formattedDate}</span>}
+                              <div className="ml-auto flex justify-between self-stretch w-full items-baseline gap-4 font-mono font-medium tabular-nums text-card-foreground text-sm">
+                                <div className="flex items-center gap-1">
+                                  <div
+                                    className="h-2.5 w-2.5 flex-none rounded-[2px] bg-[var(--color-bg)]"
+                                    style={
+                                      {
+                                        "--color-bg": `var(--color-${name})`
+                                      } as React.CSSProperties
+                                    }
+                                  />
+                                  <span className="text-grey">{label}</span>
+                                </div>
+                                <div className="flex gap-0.5 items-baseline">
                                   <span>{value_str}</span>
                                   <span className="font-normal text-grey">
                                     {unit}
                                   </span>
                                 </div>
-                                <div
-                                  className="h-2.5 w-2.5 flex-none rounded-[2px] bg-[var(--color-bg)]"
-                                  style={
-                                    {
-                                      "--color-bg": `var(--color-${name})`
-                                    } as React.CSSProperties
-                                  }
-                                />
                               </div>
                             </div>
                           );
@@ -512,9 +536,10 @@ export default function ServiceMetricsPage({
                     domain={[
                       0,
                       Math.max(
-                        ...metrics
-                          .map((m) => [m.total_disk_write, m.total_disk_read])
-                          .flat()
+                        ...metrics.flatMap((m) => [
+                          m.total_disk_write,
+                          m.total_disk_read
+                        ])
                       ) + convertValueToBytes(10, "MEGABYTES")
                     ]}
                     tickFormatter={(value) => {
@@ -540,7 +565,6 @@ export default function ServiceMetricsPage({
                   />
 
                   <ChartTooltip
-                    cursor={false}
                     content={
                       <ChartTooltipContent
                         hideLabel
@@ -560,25 +584,30 @@ export default function ServiceMetricsPage({
                             Number(value)
                           );
 
-                          return (
-                            <div className="flex items-start text-sm text-muted-foreground flex-col w-full">
-                              {index === 0 && <span>{formattedDate}</span>}
+                          const label =
+                            name === "total_disk_read" ? "Reads" : "Writes";
 
-                              <div className="ml-auto flex items-baseline justify-end gap-1 self-stretch w-full font-mono font-medium tabular-nums text-card-foreground text-sm">
-                                <div className="flex gap-0.5">
+                          return (
+                            <div className="flex items-start w-full text-sm text-muted-foreground flex-col">
+                              {index === 0 && <span>{formattedDate}</span>}
+                              <div className="ml-auto flex justify-between self-stretch w-full items-baseline gap-4 font-mono font-medium tabular-nums text-card-foreground text-sm">
+                                <div className="flex items-center gap-1">
+                                  <div
+                                    className="h-2.5 w-2.5 flex-none rounded-[2px] bg-[var(--color-bg)]"
+                                    style={
+                                      {
+                                        "--color-bg": `var(--color-${name})`
+                                      } as React.CSSProperties
+                                    }
+                                  />
+                                  <span className="text-grey">{label}</span>
+                                </div>
+                                <div className="flex gap-0.5 items-baseline">
                                   <span>{value_str}</span>
                                   <span className="font-normal text-grey">
                                     {unit}
                                   </span>
                                 </div>
-                                <div
-                                  className="h-2.5 w-2.5 flex-none rounded-[2px] bg-[var(--color-bg)]"
-                                  style={
-                                    {
-                                      "--color-bg": `var(--color-${name})`
-                                    } as React.CSSProperties
-                                  }
-                                />
                               </div>
                             </div>
                           );

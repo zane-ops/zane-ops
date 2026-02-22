@@ -734,7 +734,7 @@ class CancelServiceChangesAPIView(APIView):
                     "configs",
                 )
             ).get()
-
+            found_change = service.unapplied_changes.get(id=change_id)
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -748,8 +748,6 @@ class CancelServiceChangesAPIView(APIView):
                 detail=f"A service with the slug `{service_slug}`"
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-        try:
-            found_change = service.unapplied_changes.get(id=change_id)
         except DeploymentChange.DoesNotExist:
             raise exceptions.NotFound(
                 f"A pending change with id `{change_id}` does not exist in this service."
@@ -761,26 +759,26 @@ class CancelServiceChangesAPIView(APIView):
                 and snapshot.image is None
             ):
                 raise ResourceConflict(
-                    detail="Cannot revert this change because it would remove the image of the service."
+                    detail="Cannot revert this change because the service has no previous image to restore."
                 )
             if service.type == Service.ServiceType.GIT_REPOSITORY:
                 if snapshot.repository_url is None:
                     raise ResourceConflict(
-                        detail="Cannot revert this change because it would remove the repository of the service."
+                        detail="Cannot revert this change because the service has no previous repository to restore."
                     )
                 if snapshot.builder is None:
                     raise ResourceConflict(
-                        detail="Cannot revert this change because it would remove the builder of the service."
+                        detail="Cannot revert this change because the service has no previous builder to restore."
                     )
 
             if snapshot.has_duplicate_volumes():
                 raise ResourceConflict(
-                    detail="Cannot revert this change as it would cause duplicate volumes with the same host path or container path for this service."
+                    detail="Cannot revert this change because it would result in duplicate volumes sharing the same host path or container path."
                 )
 
             if snapshot.has_duplicate_configs():
                 raise ResourceConflict(
-                    detail="Cannot revert this change as it would cause duplicate config files with the same mounth path for this service."
+                    detail="Cannot revert this change because it would result in duplicate config files sharing the same mount path."
                 )
 
             found_change.delete()

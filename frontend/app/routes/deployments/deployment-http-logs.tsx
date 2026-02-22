@@ -41,10 +41,10 @@ import {
   type HttpLog,
   REQUEST_METHODS,
   deploymentQueries,
-  httpLogSearchSchema,
-  serviceQueries
+  httpLogSearchSchema
 } from "~/lib/queries";
-import { cn, formatLogTime, notFound } from "~/lib/utils";
+import type { SortDirection } from "~/lib/types";
+import { cn, formatLogTime } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { formatDuration } from "~/utils";
 import type { Route } from "./+types/deployment-http-logs";
@@ -98,8 +98,6 @@ export async function clientLoader({
   ] as const);
   return { httpLogs, httpLog };
 }
-
-type SortDirection = "ascending" | "descending" | "indeterminate";
 
 export default function DeploymentHttpLogsPage({
   loaderData,
