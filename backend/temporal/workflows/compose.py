@@ -393,6 +393,9 @@ class ToggleComposeStackWorkflow:
                     retry_policy=self.retry_policy,
                 )
 
+            # wait some time before checking the state so that we can see something happen
+            await asyncio.sleep(5)
+
             # Run the stack healthcheck to automatically get stack data
             healthcheck = await workflow.execute_activity_method(
                 MonitorComposeStackActivites.run_stack_healthcheck,
