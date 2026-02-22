@@ -32,9 +32,9 @@ import { composeStackQueries } from "~/lib/queries";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { ComposeStackActionsPopover } from "~/routes/compose/components/compose-stack-actions-popover";
+import { ComposeStackChangesModal } from "~/routes/compose/components/compose-stack-changes-modal";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/compose-stack-layout";
-import { ComposeStackChangesModal } from "~/routes/compose/components/compose-stack-changes-modal";
 
 export function meta({ params, error }: Route.MetaArgs) {
   const title = !error
