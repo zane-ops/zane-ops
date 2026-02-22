@@ -347,7 +347,7 @@ export default function ComposeStackServiceLayoutPage({
 
         {!is_job && (
           <div>
-            <RestartServiceForm
+            <ToggleServiceForm
               params={params}
               current_state={service.status}
               stack_id={stack.id}
@@ -419,7 +419,7 @@ type RestartServiceFormProps = {
   stack_id: string;
 };
 
-function RestartServiceForm({
+function ToggleServiceForm({
   params,
   current_state,
   stack_id

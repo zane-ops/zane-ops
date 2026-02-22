@@ -9,11 +9,13 @@ import {
   LayersIcon,
   RotateCcwIcon,
   ScrollText,
+  SquareIcon,
   TagIcon,
   TerminalIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, href, useFetcher, useNavigate } from "react-router";
+import { toast } from "sonner";
 import type { ComposeStack } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
@@ -32,22 +34,37 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { composeStackQueries } from "~/lib/queries";
+import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import type { ValueOf } from "~/lib/types";
 import { cn } from "~/lib/utils";
-import { formatURL, getDockerImageIconURL, stripSlashIfExists } from "~/utils";
+import { queryClient } from "~/root";
+import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
+import {
+  durationToMs,
+  formatURL,
+  getDockerImageIconURL,
+  stripSlashIfExists,
+  wait
+} from "~/utils";
 
 export type ComposeStackServiceCardProps = {
   service: ValueOf<ComposeStack["services"]>;
   urls: ValueOf<ComposeStack["urls"]>;
   name: string;
   className?: string;
+  stackId: string;
+  composeStackSlug: string;
+  envSlug: string;
+  projectSlug: string;
 };
 
 export function ComposeStackServiceCard({
   service,
   name,
   className,
-  urls
+  urls,
+  ...params
 }: ComposeStackServiceCardProps) {
   const [iconNotFound, setIconNotFound] = React.useState(false);
   const iconSrc = getDockerImageIconURL(service.image);
@@ -65,6 +82,8 @@ export function ComposeStackServiceCard({
   }
 
   const navigate = useNavigate();
+
+  const formRef = React.useRef<SubmitServiceFormHandle>(null);
 
   return (
     <Card
@@ -198,6 +217,13 @@ export function ComposeStackServiceCard({
           <Link to={`./services/${name}/runtime-logs`}>View logs</Link>
         </Button>
 
+        <ToggleServiceForm
+          ref={formRef}
+          serviceSlug={name}
+          {...params}
+          current_state={service.status}
+        />
+
         <Menubar className="border-none h-auto w-fit">
           <MenubarMenu>
             <MenubarTrigger
@@ -252,10 +278,16 @@ export function ComposeStackServiceCard({
 
               {!is_job && (
                 <MenubarContentItem
-                  icon={RotateCcwIcon}
-                  text="Restart service"
+                  icon={
+                    service.status === "SLEEPING" ? RotateCcwIcon : SquareIcon
+                  }
+                  text={
+                    service.status === "SLEEPING"
+                      ? "Restart service"
+                      : "Put service to sleep"
+                  }
                   onClick={() => {
-                    //...
+                    formRef.current?.submit();
                   }}
                 />
               )}
@@ -265,4 +297,176 @@ export function ComposeStackServiceCard({
       </div>
     </Card>
   );
+}
+
+type SubmitServiceFormHandle = {
+  submit: () => void;
+};
+
+type ToggleServiceFormProps = {
+  stackId: string;
+  serviceSlug: string;
+  composeStackSlug: string;
+  envSlug: string;
+  projectSlug: string;
+  current_state: string;
+  ref: React.Ref<SubmitServiceFormHandle>;
+};
+
+function ToggleServiceForm({
+  stackId,
+  current_state,
+  ref,
+  ...params
+}: ToggleServiceFormProps) {
+  const fetcher = useFetcher();
+
+  const { queue, queueToggleItem, dequeueToggleItem } =
+    useToggleStateQueueStore();
+
+  const [, formAction] = React.useActionState(action, null);
+
+  async function action(_: any, formData: FormData) {
+    const queue_id = `${stackId}-${params.serviceSlug}`;
+    if (queue.has(queue_id)) {
+      toast.info("The service is already being toggled in the background.");
+      return;
+    }
+
+    await fetcher.submit(formData, {
+      action: href(
+        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
+        params
+      ),
+      method: "POST"
+    });
+
+    const desiredState = formData.get("desired_state") as "stop" | "start";
+    queueToggleItem(queue_id);
+    toggleStateToast({
+      desiredState,
+      ...params
+    }).finally(() => dequeueToggleItem(queue_id));
+  }
+
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
+
+  React.useImperativeHandle(
+    ref,
+    () => {
+      return {
+        submit() {
+          formRef.current?.requestSubmit();
+        }
+      };
+    },
+    []
+  );
+
+  return (
+    <form method="post" action={formAction} className="sr-only" ref={formRef}>
+      <input type="hidden" name="service_name" value={params.serviceSlug} />
+      <input
+        type="hidden"
+        name="desired_state"
+        value={current_state === "SLEEPING" ? "start" : "stop"}
+      />
+    </form>
+  );
+}
+
+async function toggleStateToast({
+  desiredState,
+  ...params
+}: {
+  desiredState: "stop" | "start";
+} & Omit<ToggleServiceFormProps, "stackId" | "current_state" | "ref">) {
+  const stackLink = (
+    <Link
+      className="text-link underline inline break-all"
+      to={href(
+        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/services/:serviceSlug",
+        params
+      )}
+    >
+      {params.projectSlug}/{params.envSlug}/{params.composeStackSlug}/
+      {params.serviceSlug}
+    </Link>
+  );
+
+  const toastId = toast.loading(
+    desiredState === "start" ? (
+      <span>Starting {stackLink}, this may take up to a minute...</span>
+    ) : (
+      <span>Stopping {stackLink}, this may take up to a minute...</span>
+    ),
+    {
+      closeButton: false
+    }
+  );
+
+  const MAX_TRIES = 12; // wait max for `1min` (12*5s = 60s)
+  let total_tries = 0;
+
+  let currentState: ToggleStackState | null = null;
+
+  while (total_tries < MAX_TRIES && currentState !== desiredState) {
+    total_tries++;
+
+    // refetch queries to get fresh data
+    let stack;
+    try {
+      stack = await queryClient.fetchQuery(
+        composeStackQueries.single({
+          project_slug: params.projectSlug,
+          stack_slug: params.composeStackSlug,
+          env_slug: params.envSlug
+        })
+      );
+    } catch (error) {
+      break;
+    }
+
+    const currentService = stack.services[params.serviceSlug];
+
+    if (!currentService) {
+      break;
+    }
+
+    currentState = currentService.status === "SLEEPING" ? "stop" : "start";
+
+    if (currentState !== desiredState && total_tries < MAX_TRIES) {
+      await wait(durationToMs(5, "seconds"));
+    }
+  }
+
+  if (currentState === desiredState) {
+    toast.success("Success", {
+      description:
+        desiredState === "start" ? (
+          <>{stackLink} restarted successfully</>
+        ) : (
+          <>{stackLink} stopped successfully</>
+        ),
+      closeButton: true,
+      id: toastId
+    });
+  } else {
+    toast.warning("Warning", {
+      description:
+        desiredState === "start" ? (
+          <>
+            {stackLink} failed to restart within the time limit. Check the
+            service replicas and their logs or try again.
+          </>
+        ) : (
+          <>
+            {stackLink} failed to stop within the time limit. Check the service
+            replicas and their logs or try again.
+          </>
+        ),
+      closeButton: true,
+      id: toastId
+    });
+  }
 }

@@ -45,6 +45,8 @@ export default function ComposeStackServicesPage({
               name={name}
               service={service}
               urls={stack.urls[name] ?? []}
+              stackId={stack.id}
+              {...params}
             />
           ))}
         </div>
