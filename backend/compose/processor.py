@@ -674,6 +674,7 @@ class ComposeSpecProcessor:
             service.networks[env_network_name] = {
                 "aliases": [
                     f"{stack.network_alias_prefix}-{original_service_name}",
+                    f"{stack.network_alias_prefix}-{original_service_name}.{settings.ZANE_INTERNAL_DOMAIN}",
                 ]
             }
 
