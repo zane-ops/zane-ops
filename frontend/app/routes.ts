@@ -214,6 +214,14 @@ export default [
           route(
             "deployments",
             "./routes/compose/compose-stack-deployment-list.tsx"
+          ),
+          route(
+            "discard-multiple-changes",
+            "./routes/compose/discard-compose-stack-multiple-changes.tsx"
+          ),
+          route(
+            "discard-change",
+            "./routes/compose/discard-compose-stack-change.tsx"
           )
         ]),
 

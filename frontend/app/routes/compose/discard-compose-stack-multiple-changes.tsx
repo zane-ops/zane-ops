@@ -1,22 +1,24 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { serviceQueries } from "~/lib/queries";
+import { composeStackQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
-import type { Route } from "./+types/discard-multiple-changes";
+import type { Route } from "./+types/discard-compose-stack-multiple-changes";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href("/project/:projectSlug/:envSlug/services/:serviceSlug", params)
+    href(
+      `/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug`,
+      params
+    )
   );
 }
-
 export async function clientAction({
   request,
   params: {
     projectSlug: project_slug,
-    serviceSlug: service_slug,
+    composeStackSlug: stack_slug,
     envSlug: env_slug
   }
 }: Route.ClientActionArgs) {
@@ -26,7 +28,7 @@ export async function clientAction({
   const results = await Promise.all(
     changes.map(async (change_id) =>
       apiClient.DELETE(
-        "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/{service_slug}/{change_id}/",
+        "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/cancel-changes/{change_id}/",
         {
           headers: {
             ...(await getCsrfTokenHeader())
@@ -34,7 +36,7 @@ export async function clientAction({
           params: {
             path: {
               project_slug,
-              service_slug,
+              slug: stack_slug,
               env_slug,
               change_id: change_id.toString()
             }
@@ -52,9 +54,10 @@ export async function clientAction({
     }
   }
 
-  await queryClient.invalidateQueries(
-    serviceQueries.single({ project_slug, service_slug, env_slug })
-  );
+  await queryClient.invalidateQueries({
+    ...composeStackQueries.single({ project_slug, stack_slug, env_slug }),
+    exact: true
+  });
 
   if (fullErrorMessage) {
     toast.error("Error", {
