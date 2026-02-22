@@ -60,7 +60,7 @@ export default function ComposeStackServiceReplicasPage({
   const [accordionValue, setAccordionValue] = React.useState(
     running.length === 0
       ? "old"
-      : service.desired_replicas === running.length
+      : running.length >= service.desired_replicas
         ? ""
         : "old"
   );

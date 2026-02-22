@@ -1,5 +1,7 @@
 import {
   ChevronRightIcon,
+  ClockArrowUpIcon,
+  ClockPlusIcon,
   ContainerIcon,
   EllipsisVerticalIcon,
   Layers2Icon,
@@ -31,7 +33,10 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import { cn } from "~/lib/utils";
-import { getDockerImageIconURL } from "~/utils";
+import {
+  getDockerImageIconURL,
+  mergeTimeAgoFormatterAndFormattedDate
+} from "~/utils";
 
 export const TASK_STATUS_COLOR_MAP = {
   new: "gray",
@@ -367,6 +372,40 @@ export function ComposeStackServiceReplicaCard({
                   />
                 </div>
               </div>
+
+              {/* Task Created At */}
+              {task.created_at && (
+                <div className="text-sm inline-grid items-start gap-2 grid-cols-[auto_1fr]">
+                  <div className="w-4 hidden md:flex flex-col items-center gap-2 relative top-1 h-full self-stretch">
+                    <ClockPlusIcon className="size-4 flex-none text-grey" />
+                    <div className="min-h-5 h-full bg-grey/50 w-px mb-2"></div>
+                  </div>
+
+                  <div className="flex flex-col relative top-0.5">
+                    <span>Created</span>
+                    <span className="text-grey py-2">
+                      {mergeTimeAgoFormatterAndFormattedDate(task.created_at)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Task Updated At */}
+              {task.updated_at && (
+                <div className="text-sm inline-grid items-start gap-2 grid-cols-[auto_1fr]">
+                  <div className="w-4 hidden md:flex flex-col items-center gap-2 relative top-1 h-full self-stretch">
+                    <ClockArrowUpIcon className="size-4 flex-none text-grey" />
+                    <div className="min-h-5 h-full bg-grey/50 w-px mb-2"></div>
+                  </div>
+
+                  <div className="flex flex-col relative top-0.5">
+                    <span>Updated</span>
+                    <span className="text-grey py-2">
+                      {mergeTimeAgoFormatterAndFormattedDate(task.updated_at)}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Slot */}
               <div className="text-sm inline-grid items-center gap-2 grid-cols-[auto_1fr]">

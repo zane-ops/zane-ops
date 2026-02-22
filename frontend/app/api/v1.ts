@@ -1283,6 +1283,10 @@ export interface components {
       container_id: string | null;
       image: string;
       message: string;
+      /** Format: date-time */
+      created_at: string | null;
+      /** Format: date-time */
+      updated_at: string | null;
       exit_code: number | null;
     };
     ComposeStackServiceTaskRequest: {
@@ -1295,6 +1299,10 @@ export interface components {
       container_id?: string | null;
       image: string;
       message: string;
+      /** Format: date-time */
+      created_at?: string | null;
+      /** Format: date-time */
+      updated_at?: string | null;
       exit_code?: number | null;
     };
     ComposeStackServiceVolume: {

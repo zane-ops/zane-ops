@@ -77,6 +77,8 @@ class ComposeStackServiceTask(serializers.Serializer):
     container_id = serializers.CharField(required=False, allow_null=True)
     image = serializers.CharField()
     message = serializers.CharField()
+    created_at = serializers.DateTimeField(required=False, allow_null=True)
+    updated_at = serializers.DateTimeField(required=False, allow_null=True)
     exit_code = serializers.IntegerField(required=False, allow_null=True)
 
 
@@ -135,7 +137,9 @@ class ComposeStackServiceStatusSerializer(serializers.Serializer):
     volumes = ComposeStackServiceVolumeSerializer(many=True)
     configs = ComposeStackServiceConfigSerializer(many=True)
     ports = ComposeStackServicePortSerializer(many=True)
-    healthcheck = ComposeStackServiceHealthCheckSerializer(required=False, allow_null=True)
+    healthcheck = ComposeStackServiceHealthCheckSerializer(
+        required=False, allow_null=True
+    )
 
 
 class ComposeConfigVersionSerializer(serializers.Serializer):

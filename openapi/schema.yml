@@ -12870,11 +12870,20 @@ components:
           type: string
         message:
           type: string
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
         exit_code:
           type: integer
           nullable: true
       required:
       - container_id
+      - created_at
       - desired_status
       - exit_code
       - id
@@ -12883,6 +12892,7 @@ components:
       - name
       - slot
       - status
+      - updated_at
       - version
     ComposeStackServiceTaskRequest:
       type: object
@@ -12911,6 +12921,14 @@ components:
         message:
           type: string
           minLength: 1
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
         exit_code:
           type: integer
           nullable: true
