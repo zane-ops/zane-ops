@@ -229,7 +229,7 @@ class ProjectDetailsView(APIView):
         operation_id="updateProject",
         summary="Update a project",
     )
-    def patch(self, request: Request, slug: str) -> Response:
+    def put(self, request: Request, slug: str) -> Response:
         try:
             project = Project.objects.get(slug=slug)
         except Project.DoesNotExist:

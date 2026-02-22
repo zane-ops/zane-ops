@@ -137,9 +137,9 @@ export async function clientAction({
 async function updateProject(project_slug: string, formData: FormData) {
   const userData = {
     slug: formData.get("slug")?.toString() ?? "",
-    description: formData.get("description")?.toString() || undefined
+    description: formData.get("description")?.toString()
   };
-  const apiResponse = await apiClient.PATCH("/api/projects/{slug}/", {
+  const apiResponse = await apiClient.PUT("/api/projects/{slug}/", {
     headers: {
       ...(await getCsrfTokenHeader())
     },

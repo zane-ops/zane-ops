@@ -442,10 +442,10 @@ export interface paths {
   "/api/projects/{slug}/": {
     /** Get single project */
     get: operations["getSingleProject"];
+    /** Update a project */
+    put: operations["updateProject"];
     /** Archive a Project */
     delete: operations["archiveSingleProject"];
-    /** Update a project */
-    patch: operations["updateProject"];
   };
   "/api/projects/{slug}/{env_slug}/service-list/": {
     /**
@@ -3637,10 +3637,6 @@ export interface components {
       auth_password?: string | null;
       env_variables?: string;
     };
-    PatchedProjectUpdateRequestRequest: {
-      slug?: string;
-      description?: string;
-    };
     PatchedServiceRequest: {
       slug?: string;
       auto_deploy_enabled?: boolean;
@@ -3796,6 +3792,10 @@ export interface components {
      * @enum {string}
      */
     ProjectSearchResponseTypeEnum: "project";
+    ProjectUpdateRequestRequest: {
+      slug?: string;
+      description?: string;
+    };
     ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent: {
       /**
        * @description * `auth_enabled` - auth_enabled
@@ -7227,14 +7227,13 @@ export interface components {
        */
       attr: "description";
       /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
+       * @description * `invalid` - invalid
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     UpdateProjectError: components["schemas"]["UpdateProjectNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateProjectSlugErrorComponent"] | components["schemas"]["UpdateProjectDescriptionErrorComponent"];
@@ -11578,21 +11577,29 @@ export interface operations {
       };
     };
   };
-  /** Archive a Project */
-  archiveSingleProject: {
+  /** Update a project */
+  updateProject: {
     parameters: {
       path: {
         slug: string;
       };
     };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["ProjectUpdateRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ProjectUpdateRequestRequest"];
+        "multipart/form-data": components["schemas"]["ProjectUpdateRequestRequest"];
+      };
+    };
     responses: {
-      /** @description No response body */
       200: {
-        content: never;
+        content: {
+          "application/json": components["schemas"]["Project"];
+        };
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ArchiveSingleProjectErrorResponse400"];
+          "application/json": components["schemas"]["UpdateProjectErrorResponse400"];
         };
       };
       401: {
@@ -11612,29 +11619,21 @@ export interface operations {
       };
     };
   };
-  /** Update a project */
-  updateProject: {
+  /** Archive a Project */
+  archiveSingleProject: {
     parameters: {
       path: {
         slug: string;
       };
     };
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["PatchedProjectUpdateRequestRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["PatchedProjectUpdateRequestRequest"];
-        "multipart/form-data": components["schemas"]["PatchedProjectUpdateRequestRequest"];
-      };
-    };
     responses: {
+      /** @description No response body */
       200: {
-        content: {
-          "application/json": components["schemas"]["Project"];
-        };
+        content: never;
       };
       400: {
         content: {
-          "application/json": components["schemas"]["UpdateProjectErrorResponse400"];
+          "application/json": components["schemas"]["ArchiveSingleProjectErrorResponse400"];
         };
       };
       401: {
