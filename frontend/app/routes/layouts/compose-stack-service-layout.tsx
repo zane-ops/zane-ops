@@ -15,6 +15,7 @@ import {
 import * as React from "react";
 import { Link, Navigate, Outlet, href, useFetcher } from "react-router";
 import type { ComposeStackService } from "~/api/types";
+import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
 import { NavLink } from "~/components/nav-link";
@@ -138,6 +139,9 @@ export default function ComposeStackServiceLayoutPage({
     iconSrc = getDockerImageIconURL(serviceImage);
   }
 
+  const is_job =
+    service.mode === "global-job" || service.mode === "replicated-job";
+
   return (
     <>
       <title>{title}</title>
@@ -209,7 +213,7 @@ export default function ComposeStackServiceLayoutPage({
         <div className="mt-10 flex flex-col gap-2">
           <div className="flex items-center gap-x-2">
             <h1 className="text-xl md:text-2xl inline-flex gap-1 items-center">
-              {service.mode.includes("job") ? (
+              {is_job ? (
                 <PickaxeIcon className="size-6 flex-none" />
               ) : (
                 <BoxIcon className="size-6 flex-none" />
@@ -226,18 +230,31 @@ export default function ComposeStackServiceLayoutPage({
             <DeploymentStatusBadge status={service.status} />
           </div>
 
-          <div className="flex gap-1 items-center">
-            {iconSrc && !iconNotFound ? (
-              <img
-                src={iconSrc}
-                onError={() => setIconNotFound(true)}
-                alt={`Logo for ${serviceImage}`}
-                className="size-4 flex-none object-center object-contain rounded-sm"
-              />
-            ) : (
-              <ContainerIcon className="flex-none" size={16} />
-            )}
-            <span className="text-grey text-sm">{serviceImage}</span>
+          <div className="flex items-center gap-2">
+            <Code className="inline-flex gap-1 items-center text-sm self-start">
+              {is_job ? (
+                <>
+                  <PickaxeIcon className="size-4 flex-none" /> job
+                </>
+              ) : (
+                <>
+                  <BoxIcon className="size-4 flex-none" /> service
+                </>
+              )}
+            </Code>
+            <div className="flex gap-1 items-center">
+              {iconSrc && !iconNotFound ? (
+                <img
+                  src={iconSrc}
+                  onError={() => setIconNotFound(true)}
+                  alt={`Logo for ${serviceImage}`}
+                  className="size-4 flex-none object-center object-contain rounded-sm"
+                />
+              ) : (
+                <ContainerIcon className="flex-none" size={16} />
+              )}
+              <span className="text-grey text-sm">{serviceImage}</span>
+            </div>
           </div>
 
           <div>
@@ -321,9 +338,11 @@ export default function ComposeStackServiceLayoutPage({
           </div>
         </div>
 
-        <div>
-          <RestartServiceForm params={params} />
-        </div>
+        {!is_job && (
+          <div>
+            <RestartServiceForm params={params} />
+          </div>
+        )}
       </section>
 
       <nav className="mt-5">

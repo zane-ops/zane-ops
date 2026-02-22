@@ -249,13 +249,16 @@ export function ComposeStackServiceCard({
                 text="View metrics"
                 onClick={() => navigate(`./services/${name}/metrics`)}
               />
-              <MenubarContentItem
-                icon={RotateCcwIcon}
-                text="Restart service"
-                onClick={() => {
-                  //...
-                }}
-              />
+
+              {!is_job && (
+                <MenubarContentItem
+                  icon={RotateCcwIcon}
+                  text="Restart service"
+                  onClick={() => {
+                    //...
+                  }}
+                />
+              )}
             </MenubarContent>
           </MenubarMenu>
         </Menubar>
