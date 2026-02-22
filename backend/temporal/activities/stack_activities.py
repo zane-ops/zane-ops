@@ -740,7 +740,10 @@ class ComposeStackActivities:
                 .removeprefix(f"{stack.name}_")
                 .removeprefix(f"{stack.hash_prefix}_")
             )
-            if details.only_service is not None and service.name != service_name:
+            if (
+                details.only_service is not None
+                and details.only_service != service_name
+            ):
                 continue
 
             service_mode: str = service.attrs["Spec"]["Mode"]
@@ -786,7 +789,10 @@ class ComposeStackActivities:
                 .removeprefix(f"{stack.name}_")
                 .removeprefix(f"{stack.hash_prefix}_")
             )
-            if details.only_service is not None and service.name != service_name:
+            if (
+                details.only_service is not None
+                and details.only_service != service_name
+            ):
                 continue
 
             service_mode: str = service.attrs["Spec"]["Mode"]
