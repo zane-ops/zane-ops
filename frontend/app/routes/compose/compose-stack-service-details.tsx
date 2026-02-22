@@ -1,9 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  ArrowRightIcon,
   CableIcon,
   ContainerIcon,
   GlobeIcon,
   GlobeLockIcon,
+  HammerIcon,
+  HeartPulseIcon,
   InfoIcon,
   NetworkIcon
 } from "lucide-react";
@@ -57,6 +60,7 @@ export default function ComposeStackServiceDetailsPage({
     );
   }
   const [name, service] = serviceFound;
+  const serviceUrls = stack.urls[name] ?? [];
 
   const servicePrefix = `${stack.name}_${stack.hash_prefix}_`;
   let [serviceImage, imageSha] = service.image.split("@"); // the image is in the format 'image@sha'
@@ -216,17 +220,112 @@ export default function ComposeStackServiceDetailsPage({
               />
             </div>
 
-            {/* <hr className="w-full max-w-4xl border-border" />
-            <ServiceURLsForm
+            {serviceUrls.length > 0 && (
+              <>
+                <hr className="w-full max-w-4xl border-border" />
+                <div className="w-full max-w-4xl flex flex-col gap-5">
+                  <div className="flex flex-col gap-3">
+                    <h3 className="text-lg">URL Routes</h3>
+                    <p className="text-gray-400">
+                      The domains and base path which are associated to this
+                      service.
+                    </p>
+                  </div>
+
+                  {serviceUrls.map((url) => (
+                    <div
+                      key={url.domain + url.base_path}
+                      className="flex flex-col gap-2 items-stretch md:flex-row overflow-x-auto"
+                    >
+                      <div
+                        className={cn(
+                          "w-full px-3 bg-muted rounded-md flex flex-col gap-2 items-start text-start flex-wrap pr-24 py-4",
+                          "text-base"
+                        )}
+                      >
+                        <p className="break-all">
+                          {url.domain}
+                          <span className="text-grey">
+                            {url.base_path ?? "/"}
+                          </span>
+                          &nbsp;
+                        </p>
+
+                        {url.port && (
+                          <small className="inline-flex gap-2 items-center">
+                            <ArrowRightIcon
+                              size={15}
+                              className="text-grey flex-none"
+                            />
+                            <span className="text-grey">{url.port}</span>
+                          </small>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {service.ports.length > 0 && (
+              <>
+                <hr className="w-full max-w-4xl border-border" />
+
+                <div className="w-full max-w-4xl flex flex-col gap-5">
+                  <div className="flex flex-col gap-3">
+                    <h3 className="text-lg">Exposed ports</h3>
+                    <p className="text-gray-400">
+                      This makes the service reachable externally via the ports
+                      defined in&nbsp;
+                      <Code>host port</Code>.
+                    </p>
+                  </div>
+
+                  {service.ports.map((port) => (
+                    <div
+                      key={`${port.published}:${port.target}/${port.protocol}`}
+                      className="flex flex-col gap-2 items-center md:flex-row overflow-x-auto"
+                    >
+                      <div
+                        className={cn(
+                          "w-full px-3 py-4 bg-muted rounded-md inline-flex gap-1 items-center text-start flex-wrap pr-24"
+                        )}
+                      >
+                        <span>{port.published}</span>
+                        <ArrowRightIcon size={15} className="text-grey" />
+                        <span className="text-grey">{port.target}</span>
+                        <Code className="ml-1">{port.protocol}</Code>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+
+        <section id="health" className="flex gap-1 scroll-mt-24">
+          <div className="w-16 hidden md:flex flex-col items-center">
+            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+              <HeartPulseIcon size={15} className="flex-none text-grey" />
+            </div>
+            <div className="h-full border border-grey/50"></div>
+          </div>
+          <div className="w-full flex flex-col gap-12 pt-1 pb-14">
+            <h2 className="text-lg text-grey">Health check</h2>
+            {/* <ServiceCommandForm
               project_slug={project_slug}
               service_slug={service_slug}
               env_slug={env_slug}
             />
-            <hr className="w-full max-w-4xl border-border" />
-
-            <ServicePortsForm
-              service_slug={service_slug}
+            <ServiceHealthcheckForm
               project_slug={project_slug}
+              service_slug={service_slug}
+              env_slug={env_slug}
+            />
+            <ServiceResourceLimits
+              project_slug={project_slug}
+              service_slug={service_slug}
               env_slug={env_slug}
             /> */}
           </div>
