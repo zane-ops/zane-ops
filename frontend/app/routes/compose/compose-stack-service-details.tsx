@@ -487,14 +487,11 @@ export default function ComposeStackServiceDetailsPage({
               return (
                 <div
                   className={cn(
-                    "rounded-md p-4 flex items-start gap-2 bg-muted w-full"
+                    "rounded-md p-4 flex items-center gap-2 bg-muted w-full"
                   )}
                   key={`${v.source}:${v.target}`}
                 >
-                  <HardDriveIcon
-                    size={20}
-                    className="text-grey relative top-1.5"
-                  />
+                  <HardDriveIcon className="size-5 text-grey flex-none" />
                   <div className="inline-flex gap-1 items-center flex-wrap">
                     <span className="text-card-foreground">
                       {prefix && <span className="text-grey">{prefix}</span>}
