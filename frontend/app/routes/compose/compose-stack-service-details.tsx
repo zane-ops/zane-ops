@@ -3,6 +3,7 @@ import {
   ArrowRightIcon,
   CableIcon,
   ContainerIcon,
+  ExternalLinkIcon,
   GlobeIcon,
   GlobeLockIcon,
   HeartPulseIcon,
@@ -13,6 +14,7 @@ import { Link, Navigate, href } from "react-router";
 import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
 import { StatusBadge } from "~/components/status-badge";
+import { Button } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetInput,
@@ -242,8 +244,49 @@ export default function ComposeStackServiceDetailsPage({
               {serviceUrls.map((url) => (
                 <div
                   key={url.domain + url.base_path}
-                  className="flex flex-col gap-2 items-stretch md:flex-row overflow-x-auto"
+                  className={cn(
+                    "flex flex-col gap-2 items-stretch md:flex-row overflow-x-auto",
+                    "relative group/url"
+                  )}
                 >
+                  <div className="absolute top-2 right-2 inline-flex gap-1 items-center">
+                    <TooltipProvider>
+                      <Tooltip delayDuration={0}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className={cn(
+                              "px-2.5 py-0.5 opacity-0 focus-visible:opacity-100 group-hover/url:opacity-100"
+                            )}
+                            asChild
+                          >
+                            <Link to={`//${url.domain}${url.base_path}`}>
+                              <ExternalLinkIcon
+                                size={15}
+                                className="flex-none"
+                              />
+                              <span className="sr-only">
+                                Navigate to this url
+                              </span>
+                            </Link>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Navigate to this url</TooltipContent>
+                      </Tooltip>
+                      <Tooltip delayDuration={0}>
+                        <TooltipTrigger asChild>
+                          <CopyButton
+                            label="Copy URL"
+                            className={cn(
+                              "px-2.5 py-0.5 focus-visible:opacity-100 opacity-0 group-hover/url:opacity-100"
+                            )}
+                            value={`${url.domain}${url.base_path}`}
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent>Copy url</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <div
                     className={cn(
                       "w-full px-3 bg-muted rounded-md flex flex-col gap-2 items-start text-start flex-wrap pr-24 py-4",
@@ -252,7 +295,7 @@ export default function ComposeStackServiceDetailsPage({
                   >
                     <p className="break-all">
                       {url.domain}
-                      <span className="text-grey">{url.base_path ?? "/"}</span>
+                      <span className="text-grey">{url.base_path}</span>
                       &nbsp;
                     </p>
 
@@ -276,9 +319,9 @@ export default function ComposeStackServiceDetailsPage({
               <div className="flex flex-col gap-3">
                 <h3 className="text-lg">Exposed ports</h3>
                 <p className="text-gray-400">
-                  This makes the service reachable externally via the ports
-                  defined in&nbsp;
-                  <Code>host port</Code>.
+                  Ports exposed to make this service reachable from outside the
+                  cluster. For HTTP/HTTPS traffic, URLs are preferred over
+                  exposed ports.
                 </p>
               </div>
               {service.ports.length === 0 && (

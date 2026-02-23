@@ -95,7 +95,7 @@ export function ComposeStackChangesModal({
         <DialogHeader className="pb-4">
           <DialogTitle>
             {stack.unapplied_changes.length === 0 ? (
-              "no changes to apply"
+              "No changes to apply"
             ) : (
               <>
                 {stack.unapplied_changes.length}&nbsp;
@@ -109,8 +109,9 @@ export function ComposeStackChangesModal({
           <div className="border-t border-border -mx-6 px-6 py-4">
             <div
               className={cn(
-                "border-dashed border border-foreground rounded-md px-4 py-8 font-mono",
-                "flex items-center justify-center text-foreground h-100"
+                "border-border border-dashed rounded-md border-1  px-4 py-8 ",
+                "flex items-center justify-center text-foreground h-100",
+                "bg-muted/20"
               )}
             >
               No changes queued

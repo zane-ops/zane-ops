@@ -371,8 +371,8 @@ export default function DeploymentDetailsPage({
           {changes.length === 0 && (
             <div
               className={cn(
-                "border-dashed border border-foreground rounded-md px-4 py-8 font-mono",
-                "flex items-center justify-center text-foreground"
+                "flex flex-col gap-2 items-center py-8 bg-muted/20",
+                "border-border border-dashed rounded-md border-1"
               )}
             >
               No changes made in this deployment

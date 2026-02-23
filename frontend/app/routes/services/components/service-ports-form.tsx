@@ -84,9 +84,10 @@ export function ServicePortsForm({
       <div className="flex flex-col gap-3">
         <h3 className="text-lg">Exposed ports</h3>
         <p className="text-gray-400">
-          This makes the service reachable externally via the ports defined
-          in&nbsp;
-          <Code>host port</Code>.
+          Expose ports to make this service reachable from outside the server
+          via the <Code>host port</Code>. <br />
+          If you want to access your service via HTTP, please avoid using this
+          and instead add a URL route.
         </p>
 
         <Alert variant="warning">
@@ -416,7 +417,7 @@ function NewServicePortForm() {
         errors={errors.new_value?.forwarded}
         className="flex-1 inline-flex flex-col gap-1"
       >
-        <FieldSetLabel>Forwarded port</FieldSetLabel>
+        <FieldSetLabel>Port in the container</FieldSetLabel>
         <FieldSetInput placeholder="ex: 8080" name="forwarded" />
       </FieldSet>
       <FieldSet
