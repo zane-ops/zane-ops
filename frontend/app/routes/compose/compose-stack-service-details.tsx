@@ -544,7 +544,7 @@ export default function ComposeStackServiceDetailsPage({
 function SideNav() {
   return (
     <aside className="col-span-2 hidden lg:flex flex-col h-full">
-      <nav className="sticky top-20 flex flex-col gap-4">
+      <nav className="sticky top-24 flex flex-col gap-4">
         <ul className="flex flex-col gap-2 text-grey">
           <li>
             <Link
