@@ -4,8 +4,10 @@ import {
   CableIcon,
   ContainerIcon,
   ExternalLinkIcon,
+  FileSlidersIcon,
   GlobeIcon,
   GlobeLockIcon,
+  HardDriveIcon,
   HeartPulseIcon,
   HistoryIcon,
   InfoIcon,
@@ -449,6 +451,60 @@ export default function ComposeStackServiceDetailsPage({
                 )}
               </dl>
             )}
+          </div>
+        </section>
+
+        <section id="volumes" className="flex gap-1 scroll-mt-24">
+          <div className="w-16 hidden md:flex flex-col items-center">
+            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+              <HardDriveIcon size={15} className="flex-none text-grey" />
+            </div>
+            <div className="h-full border border-grey/50"></div>
+          </div>
+          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+            <h2 className="text-lg text-grey">Volumes</h2>
+            {service.volumes.length === 0 && (
+              <div
+                className={cn(
+                  "flex flex-col gap-2 items-center py-8 bg-muted/20",
+                  "border-border border-dashed rounded-md border-1"
+                )}
+              >
+                No volumes in this service
+              </div>
+            )}
+            {/* <ServiceVolumesForm
+              project_slug={project_slug}
+              service_slug={service_slug}
+              env_slug={env_slug}
+            /> */}
+          </div>
+        </section>
+
+        <section id="configs" className="flex gap-1 scroll-mt-24 max-w-full">
+          <div className="w-16 hidden md:flex flex-col items-center">
+            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+              <FileSlidersIcon size={15} className="flex-none text-grey" />
+            </div>
+          </div>
+          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+            <h2 className="text-lg text-grey">Configs</h2>
+
+            {service.configs.length === 0 && (
+              <div
+                className={cn(
+                  "flex flex-col gap-2 items-center py-8 bg-muted/20",
+                  "border-border border-dashed rounded-md border-1"
+                )}
+              >
+                No configs in this service
+              </div>
+            )}
+            {/* <ServiceConfigsForm
+              project_slug={project_slug}
+              service_slug={service_slug}
+              env_slug={env_slug}
+            /> */}
           </div>
         </section>
       </div>
