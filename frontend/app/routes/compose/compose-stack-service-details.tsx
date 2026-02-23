@@ -7,8 +7,13 @@ import {
   GlobeIcon,
   GlobeLockIcon,
   HeartPulseIcon,
+  HistoryIcon,
   InfoIcon,
-  NetworkIcon
+  MetronomeIcon,
+  NetworkIcon,
+  RotateCwIcon,
+  TerminalIcon,
+  TimerResetIcon
 } from "lucide-react";
 import { Link, Navigate, href } from "react-router";
 import { Code } from "~/components/code";
@@ -30,6 +35,7 @@ import {
 import { ZANEOPS_INTERNAL_DOMAIN } from "~/lib/constants";
 import { composeStackQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
+import { formatElapsedTime } from "~/utils";
 import type { Route } from "./+types/compose-stack-service-details";
 
 export default function ComposeStackServiceDetailsPage({
@@ -362,7 +368,7 @@ export default function ComposeStackServiceDetailsPage({
             </div>
             <div className="h-full border border-grey/50"></div>
           </div>
-          <div className="w-full flex flex-col gap-12 pt-1 pb-14">
+          <div className="w-full flex flex-col gap-8 pt-1 pb-14">
             <h2 className="text-lg text-grey">Health checks</h2>
 
             {!service.healthcheck && (
@@ -376,7 +382,73 @@ export default function ComposeStackServiceDetailsPage({
               </div>
             )}
 
-            {service.healthcheck && <dl></dl>}
+            {service.healthcheck && (
+              <dl className="flex flex-col gap-2">
+                <div className="flex flex-col items-start gap-2">
+                  <dt className="flex gap-1 items-center text-grey">
+                    <TerminalIcon className="size-4 flex-none" />
+                    <span>Command:</span>
+                  </dt>
+                  <dd className="w-full">
+                    <pre className="font-mono bg-muted/25 dark:bg-card p-2 rounded-md text-sm break-all w-full">
+                      {service.healthcheck.command}
+                    </pre>
+                  </dd>
+                </div>
+
+                {service.healthcheck.interval_sec && (
+                  <div className="flex items-center gap-2">
+                    <dt className="flex gap-1 items-center text-grey">
+                      <MetronomeIcon className="size-4 flex-none" />
+                      <span>Interval:</span>
+                    </dt>
+                    <dd className="w-full">
+                      {formatElapsedTime(
+                        service.healthcheck.interval_sec,
+                        "long"
+                      )}
+                    </dd>
+                  </div>
+                )}
+                {service.healthcheck.retries && (
+                  <div className="flex items-center gap-2 w-full">
+                    <dt className="flex gap-1 items-center text-grey">
+                      <RotateCwIcon className="size-4 flex-none" />
+                      <span className="whitespace-nowrap">Max retries:</span>
+                    </dt>
+                    <dd className="w-full">{service.healthcheck.retries}</dd>
+                  </div>
+                )}
+                {service.healthcheck.start_period && (
+                  <div className="flex items-center gap-2 w-full">
+                    <dt className="flex gap-1 items-center text-grey">
+                      <HistoryIcon className="size-4 flex-none" />
+                      <span className="whitespace-nowrap">Start period:</span>
+                    </dt>
+                    <dd className="w-full">
+                      {formatElapsedTime(
+                        service.healthcheck.start_period,
+                        "long"
+                      )}
+                    </dd>
+                  </div>
+                )}
+                {service.healthcheck.start_interval && (
+                  <div className="flex items-center gap-2 w-full">
+                    <dt className="flex gap-1 items-center text-grey">
+                      <TimerResetIcon className="size-4 flex-none" />
+                      <span className="whitespace-nowrap">Start interval:</span>
+                    </dt>
+                    <dd className="w-full">
+                      {formatElapsedTime(
+                        service.healthcheck.start_interval,
+                        "long"
+                      )}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            )}
           </div>
         </section>
       </div>

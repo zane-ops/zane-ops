@@ -12654,10 +12654,18 @@ components:
         interval_sec:
           type: integer
           nullable: true
+        start_period:
+          type: integer
+          nullable: true
+        start_interval:
+          type: integer
+          nullable: true
       required:
       - command
       - interval_sec
       - retries
+      - start_interval
+      - start_period
       - timeout_sec
     ComposeStackServiceHealthCheckRequest:
       type: object
@@ -12672,6 +12680,12 @@ components:
           type: integer
           nullable: true
         interval_sec:
+          type: integer
+          nullable: true
+        start_period:
+          type: integer
+          nullable: true
+        start_interval:
           type: integer
           nullable: true
       required:

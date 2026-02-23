@@ -1205,12 +1205,16 @@ export interface components {
       retries: number | null;
       timeout_sec: number | null;
       interval_sec: number | null;
+      start_period: number | null;
+      start_interval: number | null;
     };
     ComposeStackServiceHealthCheckRequest: {
       command: string;
       retries?: number | null;
       timeout_sec?: number | null;
       interval_sec?: number | null;
+      start_period?: number | null;
+      start_interval?: number | null;
     };
     ComposeStackServicePort: {
       published: number;
