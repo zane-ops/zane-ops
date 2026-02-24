@@ -2,7 +2,6 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { notUndefined, useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowDown01Icon,
-  ArrowRightIcon,
   ArrowUp10Icon,
   ArrowUpIcon,
   ChevronsUpDownIcon,
@@ -13,7 +12,7 @@ import {
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, useLoaderData, useParams, useSearchParams } from "react-router";
+import { useLoaderData, useParams, useSearchParams } from "react-router";
 import { HttpLogRequestDetails } from "~/components/http-log-request-details";
 import { Ping } from "~/components/ping";
 import { Button } from "~/components/ui/button";
@@ -29,8 +28,7 @@ import {
   type HttpLog,
   REQUEST_METHODS,
   composeStackQueries,
-  httpLogSearchSchema,
-  serviceQueries
+  httpLogSearchSchema
 } from "~/lib/queries";
 import type { SortDirection, Writeable } from "~/lib/types";
 import { cn, formatLogTime, notFound } from "~/lib/utils";
@@ -40,6 +38,7 @@ import type { Route } from "./+types/compose-stack-http-logs";
 import type { DateRange } from "react-day-picker";
 import { flushSync } from "react-dom";
 import { useDebouncedCallback } from "use-debounce";
+import { Code } from "~/components/code";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { MultiSelect } from "~/components/multi-select";
 import { Input } from "~/components/ui/input";
@@ -544,15 +543,9 @@ function LogTableRowContent({ log }: LogTableRowProps) {
       </TableCell>
 
       <TableCell>
-        <Link
-          to={`../services/${log.stack_service_name}/http-logs`}
-          className={cn("flex items-center underline text-link")}
-        >
-          <p className="whitespace-nowrap max-w-[150px] text-ellipsis overflow-x-hidden flex-shrink">
-            {log.stack_service_name}
-          </p>
-          <ArrowRightIcon className="size-4 flex-none" />
-        </Link>
+        <Code className="whitespace-nowrap max-w-[150px] text-ellipsis overflow-x-hidden flex-shrink">
+          {log.stack_service_name}
+        </Code>
       </TableCell>
       <TableCell>
         <p className="text-grey whitespace-nowrap max-w-[150px] text-ellipsis overflow-x-hidden flex-shrink">
