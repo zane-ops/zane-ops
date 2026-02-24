@@ -195,6 +195,11 @@ export default [
         route(
           "dokploy",
           "./routes/compose/create-compose-stack-from-dokploy.tsx"
+        ),
+        route("template", "./routes/compose/compose-stack-template-list.tsx"),
+        route(
+          "template/:templateSlug",
+          "./routes/compose/create-compose-stack-from-template.tsx"
         )
       ]),
 

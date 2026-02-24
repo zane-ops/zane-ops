@@ -4,11 +4,8 @@ import {
   BoxesIcon,
   ChevronDownIcon,
   ContainerIcon,
-  GithubIcon,
-  GitlabIcon,
   KeyRoundIcon,
   LoaderIcon,
-  PlusIcon,
   Search,
   SettingsIcon
 } from "lucide-react";

@@ -194,3 +194,4 @@ export const ZANE_DEPLOYMENT_HASH_HEADER = "x-zane-dpl-hash";
 export const THEME_STORAGE_KEY = "__theme";
 export const ZANE_UPDATE_TOAST_ID = "zaneops-update-toast";
 export const ZANEOPS_INTERNAL_DOMAIN = "zaneops.internal";
+export const TEMPLATE_API_HOST = "https://templates.zaneops.dev";

@@ -85,26 +85,18 @@ export default function CreateComposeStackPage({
         <div className="card  flex  md:w-[50%] lg:w-[30%] w-full flex-col gap-6">
           <h1 className="text-3xl font-bold">New Compose Stack</h1>
           <div className="flex flex-col gap-3">
-            <TooltipProvider>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    aria-disabled="true"
-                    variant="secondary"
-                    asChild
-                    className="flex gap-2.5 items-center font-semibold justify-center p-10"
-                  >
-                    <Link to="#">
-                      <ZaneOpsLogo className="flex-none size-8" />
-                      <span>From ZaneOps template</span>
-                      <ArrowRightIcon className="flex-none" />
-                    </Link>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">Coming soon ✨</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Button
+              type="button"
+              variant="secondary"
+              asChild
+              className="flex gap-2.5 items-center font-semibold justify-center p-10"
+            >
+              <Link to="./template">
+                <ZaneOpsLogo className="flex-none size-8" />
+                <span>From ZaneOps template</span>
+                <ArrowRightIcon className="flex-none" />
+              </Link>
+            </Button>
 
             <Button
               asChild
