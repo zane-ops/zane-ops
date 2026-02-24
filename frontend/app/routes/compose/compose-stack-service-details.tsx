@@ -2,11 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRightIcon,
   CableIcon,
-  CheckIcon,
   ContainerIcon,
-  CopyIcon,
-  EditIcon,
-  EllipsisVerticalIcon,
   ExternalLinkIcon,
   EyeIcon,
   EyeOffIcon,
@@ -22,12 +18,10 @@ import {
   NetworkIcon,
   RotateCwIcon,
   TerminalIcon,
-  TimerResetIcon,
-  Trash2Icon,
-  Undo2Icon
+  TimerResetIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, Navigate, href, useFetcher } from "react-router";
+import { Link, Navigate, href } from "react-router";
 import type { ComposeStackService } from "~/api/types";
 import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
@@ -55,8 +49,7 @@ import {
 import { ZANEOPS_INTERNAL_DOMAIN } from "~/lib/constants";
 import { composeStackQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import type { clientAction } from "~/routes/trigger-update";
-import { formatElapsedTime, pluralize, wait } from "~/utils";
+import { formatElapsedTime, pluralize } from "~/utils";
 import type { Route } from "./+types/compose-stack-service-details";
 
 export default function ComposeStackServiceDetailsPage({
