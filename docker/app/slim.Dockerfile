@@ -97,6 +97,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         docker-ce-cli \
         docker-buildx-plugin \
+        docker-compose-plugin \
         supervisor \
         curl \
         wait-for-it \
