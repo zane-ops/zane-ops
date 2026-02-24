@@ -56,7 +56,7 @@ import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, pluralize, wait } from "~/utils";
-import { type Route } from "./+types/services-env-variables";
+import type { Route } from "./+types/services-env-variables";
 
 type EnvVariableUI = {
   change_id?: string;
@@ -1038,6 +1038,7 @@ function DotEnvFileFormDialog() {
 
           <CodeEditor
             language="shell"
+            containerClassName="w-full"
             value={contents}
             onChange={(value) => setContents(value ?? "")}
           />
