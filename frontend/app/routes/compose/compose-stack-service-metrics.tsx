@@ -302,7 +302,14 @@ export default function ComposeStackServiceMetricsPage({
                 No data
               </div>
             ) : (
-              <ChartContainer config={chartConfig}>
+              <ChartContainer
+                config={{
+                  [params.serviceSlug]: {
+                    label: "Average usage",
+                    color: "var(--chart-1)"
+                  }
+                }}
+              >
                 <AreaChart
                   accessibilityLayer
                   data={metrics["avg_cpu"]}
@@ -385,17 +392,15 @@ export default function ComposeStackServiceMetricsPage({
                     }
                   />
 
-                  {selectedServices.map((svc) => (
-                    <Area
-                      dataKey={svc}
-                      key={svc}
-                      type="step"
-                      fill={`var(--color-${svc})`}
-                      fillOpacity={0.4}
-                      isAnimationActive={false}
-                      stroke={`var(--color-${svc})`}
-                    />
-                  ))}
+                  <Area
+                    dataKey={params.serviceSlug}
+                    key={params.serviceSlug}
+                    type="step"
+                    fill={`var(--color-${params.serviceSlug})`}
+                    fillOpacity={0.4}
+                    isAnimationActive={false}
+                    stroke={`var(--color-${params.serviceSlug})`}
+                  />
                 </AreaChart>
               </ChartContainer>
             )}
@@ -415,7 +420,14 @@ export default function ComposeStackServiceMetricsPage({
                 No data
               </div>
             ) : (
-              <ChartContainer config={chartConfig}>
+              <ChartContainer
+                config={{
+                  [params.serviceSlug]: {
+                    label: "Average usage",
+                    color: "var(--chart-2)"
+                  }
+                }}
+              >
                 <AreaChart
                   accessibilityLayer
                   data={metrics["avg_memory"]}
@@ -490,16 +502,15 @@ export default function ComposeStackServiceMetricsPage({
                     }
                   />
 
-                  {selectedServices.map((svc) => (
-                    <Area
-                      dataKey={svc}
-                      type="step"
-                      fill={`var(--color-${svc})`}
-                      fillOpacity={0.4}
-                      isAnimationActive={false}
-                      stroke={`var(--color-${svc})`}
-                    />
-                  ))}
+                  <Area
+                    dataKey={params.serviceSlug}
+                    key={params.serviceSlug}
+                    type="step"
+                    fill={`var(--color-${params.serviceSlug})`}
+                    fillOpacity={0.4}
+                    isAnimationActive={false}
+                    stroke={`var(--color-${params.serviceSlug})`}
+                  />
                 </AreaChart>
               </ChartContainer>
             )}
@@ -519,7 +530,14 @@ export default function ComposeStackServiceMetricsPage({
                 No data
               </div>
             ) : (
-              <ChartContainer config={chartConfig}>
+              <ChartContainer
+                config={{
+                  [params.serviceSlug]: {
+                    label: "Inbound",
+                    color: "var(--chart-4)"
+                  }
+                }}
+              >
                 <AreaChart
                   accessibilityLayer
                   data={metrics["total_net_rx"]}
@@ -594,16 +612,14 @@ export default function ComposeStackServiceMetricsPage({
                     }
                   />
 
-                  {selectedServices.map((svc) => (
-                    <Area
-                      dataKey={svc}
-                      type="step"
-                      fill={`var(--color-${svc})`}
-                      fillOpacity={0.4}
-                      isAnimationActive={false}
-                      stroke={`var(--color-${svc})`}
-                    />
-                  ))}
+                  <Area
+                    dataKey={params.serviceSlug}
+                    type="step"
+                    fill={`var(--color-${params.serviceSlug})`}
+                    fillOpacity={0.4}
+                    isAnimationActive={false}
+                    stroke={`var(--color-${params.serviceSlug})`}
+                  />
                 </AreaChart>
               </ChartContainer>
             )}
@@ -623,7 +639,14 @@ export default function ComposeStackServiceMetricsPage({
                 No data
               </div>
             ) : (
-              <ChartContainer config={chartConfig}>
+              <ChartContainer
+                config={{
+                  [params.serviceSlug]: {
+                    label: "Outbound",
+                    color: "var(--chart-3)"
+                  }
+                }}
+              >
                 <AreaChart
                   accessibilityLayer
                   data={metrics["total_net_tx"]}
@@ -698,16 +721,14 @@ export default function ComposeStackServiceMetricsPage({
                     }
                   />
 
-                  {selectedServices.map((svc) => (
-                    <Area
-                      dataKey={svc}
-                      type="step"
-                      fill={`var(--color-${svc})`}
-                      fillOpacity={0.4}
-                      isAnimationActive={false}
-                      stroke={`var(--color-${svc})`}
-                    />
-                  ))}
+                  <Area
+                    dataKey={params.serviceSlug}
+                    type="step"
+                    fill={`var(--color-${params.serviceSlug})`}
+                    fillOpacity={0.4}
+                    isAnimationActive={false}
+                    stroke={`var(--color-${params.serviceSlug})`}
+                  />
                 </AreaChart>
               </ChartContainer>
             )}
@@ -727,7 +748,14 @@ export default function ComposeStackServiceMetricsPage({
                 No data
               </div>
             ) : (
-              <ChartContainer config={chartConfig}>
+              <ChartContainer
+                config={{
+                  [params.serviceSlug]: {
+                    label: "Reads",
+                    color: "var(--chart-1)"
+                  }
+                }}
+              >
                 <AreaChart
                   accessibilityLayer
                   data={metrics["total_disk_read"]}
@@ -802,16 +830,14 @@ export default function ComposeStackServiceMetricsPage({
                     }
                   />
 
-                  {selectedServices.map((svc) => (
-                    <Area
-                      dataKey={svc}
-                      type="step"
-                      fill={`var(--color-${svc})`}
-                      fillOpacity={0.4}
-                      isAnimationActive={false}
-                      stroke={`var(--color-${svc})`}
-                    />
-                  ))}
+                  <Area
+                    dataKey={params.serviceSlug}
+                    type="step"
+                    fill={`var(--color-${params.serviceSlug})`}
+                    fillOpacity={0.4}
+                    isAnimationActive={false}
+                    stroke={`var(--color-${params.serviceSlug})`}
+                  />
                 </AreaChart>
               </ChartContainer>
             )}
@@ -831,7 +857,14 @@ export default function ComposeStackServiceMetricsPage({
                 No data
               </div>
             ) : (
-              <ChartContainer config={chartConfig}>
+              <ChartContainer
+                config={{
+                  [params.serviceSlug]: {
+                    label: "Writes",
+                    color: "var(--chart-5)"
+                  }
+                }}
+              >
                 <AreaChart
                   accessibilityLayer
                   data={metrics["total_disk_write"]}
@@ -906,16 +939,14 @@ export default function ComposeStackServiceMetricsPage({
                     }
                   />
 
-                  {selectedServices.map((svc) => (
-                    <Area
-                      dataKey={svc}
-                      type="step"
-                      fill={`var(--color-${svc})`}
-                      fillOpacity={0.4}
-                      isAnimationActive={false}
-                      stroke={`var(--color-${svc})`}
-                    />
-                  ))}
+                  <Area
+                    dataKey={params.serviceSlug}
+                    type="step"
+                    fill={`var(--color-${params.serviceSlug})`}
+                    fillOpacity={0.4}
+                    isAnimationActive={false}
+                    stroke={`var(--color-${params.serviceSlug})`}
+                  />
                 </AreaChart>
               </ChartContainer>
             )}
