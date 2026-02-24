@@ -1,3 +1,4 @@
+import path from "path";
 import MonacoEditor, {
   type DiffEditorProps,
   type EditorProps,
@@ -23,6 +24,7 @@ import { cn } from "~/lib/utils";
 
 export type CodeEditorProps = {
   value?: string;
+  path?: string;
   language?: string;
   readOnly?: boolean;
   onChange?: (value: string | undefined) => void;
@@ -37,6 +39,7 @@ export function CodeEditor({
   language,
   readOnly = false,
   onChange,
+  path,
   className,
   containerClassName,
   fontSize,
@@ -99,6 +102,7 @@ export function CodeEditor({
         language={language}
         value={value}
         theme={editorTheme}
+        path={path}
         options={{
           readOnly,
           fontSize,

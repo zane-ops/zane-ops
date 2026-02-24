@@ -1,4 +1,3 @@
-import { prefix } from "@react-router/dev/routes";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRightIcon,
@@ -18,11 +17,20 @@ import {
   TerminalIcon,
   TimerResetIcon
 } from "lucide-react";
+import * as React from "react";
 import { Link, Navigate, href } from "react-router";
+import type { ComposeStackService } from "~/api/types";
 import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
 import { StatusBadge } from "~/components/status-badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from "~/components/ui/accordion";
 import { Button } from "~/components/ui/button";
+import { CodeEditor } from "~/components/ui/code-editor";
 import {
   FieldSet,
   FieldSetInput,
@@ -85,7 +93,7 @@ export default function ComposeStackServiceDetailsPage({
   return (
     <div className="my-6 grid lg:grid-cols-12 gap-10 relative max-w-full">
       <div className="lg:col-span-10 flex flex-col max-w-full">
-        <section id="details" className="flex gap-1 scroll-mt-24">
+        <section id="details" className="flex gap-1 scroll-mt-24 max-w-4xl">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <InfoIcon size={15} className="flex-none text-grey" />
@@ -111,7 +119,12 @@ export default function ComposeStackServiceDetailsPage({
                         "disabled:text-transparent disabled:select-none"
                       )}
                     />
-                    <span className="absolute inset-y-0 left-3 flex items-center text-sm">
+                    <span
+                      className={cn(
+                        "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
+                        "w-[calc(100%-calc(var(--spacing)*4))] max-w-full min-w-0 overflow-auto pr-4"
+                      )}
+                    >
                       <span className="text-grey">
                         {servicePrefix}
                         <span className="text-card-foreground">{name}</span>
@@ -169,7 +182,7 @@ export default function ComposeStackServiceDetailsPage({
           </div>
         </section>
 
-        <section id="source" className="flex gap-1 scroll-mt-24">
+        <section id="source" className="flex gap-1 scroll-mt-24 max-w-4xl">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <ContainerIcon size={15} className="flex-none text-grey" />
@@ -198,7 +211,7 @@ export default function ComposeStackServiceDetailsPage({
                     />
                     <div
                       className={cn(
-                        "absolute  inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
+                        "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
                         "w-[calc(100%-calc(var(--spacing)*4))] max-w-full min-w-0 overflow-auto pr-4"
                       )}
                     >
@@ -214,7 +227,7 @@ export default function ComposeStackServiceDetailsPage({
           </div>
         </section>
 
-        <section id="networking" className="flex gap-1 scroll-mt-24">
+        <section id="networking" className="flex gap-1 scroll-mt-24 max-w-4xl">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <CableIcon size={15} className="flex-none text-grey" />
@@ -364,7 +377,7 @@ export default function ComposeStackServiceDetailsPage({
           </div>
         </section>
 
-        <section id="health" className="flex gap-1 scroll-mt-24">
+        <section id="health" className="flex gap-1 scroll-mt-24 max-w-4xl">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <HeartPulseIcon size={15} className="flex-none text-grey" />
@@ -455,7 +468,7 @@ export default function ComposeStackServiceDetailsPage({
           </div>
         </section>
 
-        <section id="volumes" className="flex gap-1 scroll-mt-24">
+        <section id="volumes" className="flex gap-1 scroll-mt-24 max-w-4xl">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <HardDriveIcon size={15} className="flex-none text-grey" />
@@ -464,7 +477,7 @@ export default function ComposeStackServiceDetailsPage({
           </div>
           <div className="w-full flex flex-col gap-5 pt-1 pb-14">
             <h2 className="text-lg text-grey">Volumes</h2>
-            {service.volumes.length === 0 && (
+            {service.volumes.length === 0 ? (
               <div
                 className={cn(
                   "flex flex-col gap-2 items-center py-8 bg-muted/20",
@@ -473,43 +486,50 @@ export default function ComposeStackServiceDetailsPage({
               >
                 No volumes in this service
               </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {service.volumes.map((v) => {
+                  let prefix: string | null = null;
+                  let suffix = v.source;
+                  if (
+                    v.type === "volume" &&
+                    v.source.startsWith(stack.name + "_")
+                  ) {
+                    prefix = stack.name + "_";
+                    suffix = v.source.substring(prefix.length);
+                  }
+                  return (
+                    <div
+                      className={cn(
+                        "rounded-md p-4 flex items-start sm:items-center gap-2 bg-muted w-full"
+                      )}
+                      key={`v-${v.source}:${v.target}`}
+                    >
+                      <HardDriveIcon className="size-5 text-grey flex-none relative top-1 sm:static" />
+                      <div className="inline-flex gap-1 items-center flex-wrap">
+                        <span className="text-card-foreground break-all">
+                          {prefix && (
+                            <span className="text-grey">{prefix}</span>
+                          )}
+                          {suffix}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <ArrowRightIcon size={15} className="text-grey" />
+                          <span className="text-grey">{v.target}</span>
+                          <Code className="text-sm ml-1">
+                            {v.read_only ? "read only" : "read & write"}
+                          </Code>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
-            {service.volumes.map((v) => {
-              let prefix: string | null = null;
-              let suffix = v.source;
-              if (
-                v.type === "volume" &&
-                v.source.startsWith(stack.name + "_")
-              ) {
-                prefix = stack.name + "_";
-                suffix = v.source.substring(prefix.length);
-              }
-              return (
-                <div
-                  className={cn(
-                    "rounded-md p-4 flex items-center gap-2 bg-muted w-full"
-                  )}
-                  key={`${v.source}:${v.target}`}
-                >
-                  <HardDriveIcon className="size-5 text-grey flex-none" />
-                  <div className="inline-flex gap-1 items-center flex-wrap">
-                    <span className="text-card-foreground">
-                      {prefix && <span className="text-grey">{prefix}</span>}
-                      {suffix}
-                    </span>
-                    <ArrowRightIcon size={15} className="text-grey" />
-                    <span className="text-grey">{v.target}</span>
-                    <Code className="text-sm ml-1">
-                      {v.read_only ? "read only" : "read & write"}
-                    </Code>
-                  </div>
-                </div>
-              );
-            })}
           </div>
         </section>
 
-        <section id="configs" className="flex gap-1 scroll-mt-24 max-w-full">
+        <section id="configs" className="flex gap-1 scroll-mt-24 max-w-4xl">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <FileSlidersIcon size={15} className="flex-none text-grey" />
@@ -518,7 +538,7 @@ export default function ComposeStackServiceDetailsPage({
           <div className="w-full flex flex-col gap-5 pt-1 pb-14">
             <h2 className="text-lg text-grey">Configs</h2>
 
-            {service.configs.length === 0 && (
+            {service.configs.length === 0 ? (
               <div
                 className={cn(
                   "flex flex-col gap-2 items-center py-8 bg-muted/20",
@@ -527,12 +547,21 @@ export default function ComposeStackServiceDetailsPage({
               >
                 No configs in this service
               </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {service.configs.map((cfg) => {
+                  return (
+                    <ConfigItem
+                      key={`c-${cfg.source}:${cfg.target}`}
+                      source={cfg.source}
+                      target={cfg.target}
+                      content={cfg.content}
+                      stackPrefix={stack.name + "_"}
+                    />
+                  );
+                })}
+              </div>
             )}
-            {/* <ServiceConfigsForm
-              project_slug={project_slug}
-              service_slug={service_slug}
-              env_slug={env_slug}
-            /> */}
           </div>
         </section>
       </div>
@@ -617,7 +646,7 @@ function NetworkAliasesGroup({
   global_alias: string;
 }) {
   return (
-    <div className="flex flex-col gap-5 w-full max-w-4xl border-border">
+    <div className="flex flex-col gap-5 w-full  border-border">
       <div className="flex flex-col gap-3">
         <h3 className="text-lg">Network aliases</h3>
         <p className="text-gray-400">
@@ -632,7 +661,7 @@ function NetworkAliasesGroup({
 
         <div className="flex flex-col gap-0.5 w-full">
           <div className="flex gap-2 flex-col items-start">
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-x-2 gap-y-0.5 items-center flex-wrap">
               <StatusBadge
                 color="blue"
                 pingState="hidden"
@@ -671,7 +700,7 @@ function NetworkAliasesGroup({
 
           <Separator className="my-2" />
           <div className="flex gap-2 flex-col items-start">
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-x-2 gap-y-0.5 items-center  flex-wrap">
               <StatusBadge
                 color="gray"
                 pingState="hidden"
@@ -711,5 +740,70 @@ function NetworkAliasesGroup({
         </div>
       </div>
     </div>
+  );
+}
+
+function ConfigItem({
+  source,
+  target,
+  content,
+  stackPrefix
+}: ComposeStackService["configs"][number] & { stackPrefix: string }) {
+  const [accordionValue, setAccordionValue] = React.useState("");
+
+  let prefix: string | null = null;
+  let suffix = source;
+  if (source.startsWith(stackPrefix)) {
+    prefix = stackPrefix;
+    suffix = source.substring(stackPrefix.length);
+  }
+
+  return (
+    <Accordion
+      type="single"
+      collapsible
+      value={accordionValue}
+      onValueChange={(state) => {
+        setAccordionValue(state);
+      }}
+    >
+      <AccordionItem value={`${source}`} className="border-none">
+        <AccordionTrigger
+          className={cn(
+            "rounded-md p-4 flex items-start gap-2 bg-muted",
+            "aria-expanded:rounded-b-none"
+          )}
+        >
+          <FileSlidersIcon size={20} className="text-grey relative top-1.5" />
+          <div className="flex flex-col gap-2">
+            <h3 className="text-lg inline-flex gap-1 items-center">
+              <span>
+                {prefix && <span className="text-grey">{prefix}</span>}
+                {suffix}
+              </span>
+            </h3>
+            <small className="text-card-foreground inline-flex gap-1 items-center">
+              <span className="text-grey">{target}</span>
+            </small>
+          </div>
+        </AccordionTrigger>
+        <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
+          <div className={cn("flex flex-col gap-4 w-full")}>
+            <FieldSet name="contents" className="flex flex-col gap-1.5 flex-1">
+              <FieldSetLabel className="text-muted-foreground">
+                contents
+              </FieldSetLabel>
+
+              <CodeEditor
+                containerClassName="w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[855px]"
+                path={target}
+                value={content}
+                readOnly
+              />
+            </FieldSet>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }
