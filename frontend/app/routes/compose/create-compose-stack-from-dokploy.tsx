@@ -335,7 +335,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
       method="post"
       className="flex my-10 grow justify-center items-center"
     >
-      <div className="card flex xl:w-[40%] lg:w-1/2 md:w-2/3 w-full flex-col gap-5 items-stretch">
+      <div className="card flex lg:w-1/2 md:w-2/3 w-full flex-col gap-5 items-stretch">
         <h1 className="text-3xl font-bold">New Dokploy Compose stack</h1>
 
         <p className="text-grey">
@@ -482,7 +482,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
 
               <CodeEditor
                 hasError={!!errors.compose}
-                containerClassName="w-full"
+                containerClassName="xl:max-w-[44dvw] lg:max-w-[58dvw] md:max-w-[64dvw] w-full h-100"
                 language="yaml"
                 value={composeContent}
                 onChange={(value) => setComposeContent(value ?? "")}
@@ -506,7 +506,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
 
               <CodeEditor
                 hasError={!!errors.config}
-                containerClassName="w-full"
+                containerClassName="xl:max-w-[44dvw] lg:max-w-[58dvw] md:max-w-[64dvw] w-full h-100"
                 language="ini"
                 value={configContent}
                 onChange={(value) => setConfigContent(value ?? "")}
