@@ -335,7 +335,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
       method="post"
       className="flex my-10 grow justify-center items-center"
     >
-      <div className="card flex lg:w-1/2 md:w-2/3 w-full flex-col gap-5 items-stretch">
+      <div className="card flex xl:max-w-xl lg:w-1/2 md:w-2/3 w-full flex-col gap-5 items-stretch">
         <h1 className="text-3xl font-bold">New Dokploy Compose stack</h1>
 
         <p className="text-grey">

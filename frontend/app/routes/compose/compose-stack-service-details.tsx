@@ -771,7 +771,7 @@ function ConfigItem({
         <AccordionTrigger
           className={cn(
             "rounded-md p-4 flex items-start gap-2 bg-muted",
-            "aria-expanded:rounded-b-none"
+            "aria-expanded:rounded-b-none cursor-pointer"
           )}
         >
           <FileSlidersIcon size={20} className="text-grey relative top-1.5" />
