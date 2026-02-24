@@ -374,7 +374,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
 
           <CodeEditor
             hasError={!!errors.user_content}
-            containerClassName="xl:max-w-[48dvw] lg:max-w-[58dvw] md:max-w-[64dvw] w-full h-100"
+            containerClassName="w-full h-100"
             language="yaml"
             value={userContents}
             onChange={(value) => setUserContents(value ?? "")}

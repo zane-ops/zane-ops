@@ -56,8 +56,25 @@ export function CodeEditor({
 
   const isDev = !import.meta.env.PROD;
 
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    // limit the max width of this component to max width of the parent
+    if (isFullScreen) return;
+    const container = containerRef.current;
+    if (!container?.parentElement?.parentElement) return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      container.style.maxWidth = `${entry.contentRect.width}px`;
+    });
+
+    observer.observe(container.parentElement.parentElement);
+    return () => observer.disconnect();
+  }, [isFullScreen]);
+
   return (
     <div
+      ref={containerRef}
       className={cn(
         "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
         "border border-border",

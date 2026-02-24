@@ -482,7 +482,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
 
               <CodeEditor
                 hasError={!!errors.compose}
-                containerClassName="xl:max-w-[44dvw] lg:max-w-[58dvw] md:max-w-[64dvw] w-full h-100"
+                containerClassName="w-full h-100"
                 language="yaml"
                 value={composeContent}
                 onChange={(value) => setComposeContent(value ?? "")}
@@ -506,7 +506,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
 
               <CodeEditor
                 hasError={!!errors.config}
-                containerClassName="xl:max-w-[44dvw] lg:max-w-[58dvw] md:max-w-[64dvw] w-full h-100"
+                containerClassName="w-full h-100"
                 language="ini"
                 value={configContent}
                 onChange={(value) => setConfigContent(value ?? "")}
