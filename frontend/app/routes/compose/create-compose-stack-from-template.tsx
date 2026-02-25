@@ -39,7 +39,7 @@ import type { Route } from "./+types/create-compose-stack-from-template";
 
 export function meta({ params }: Route.MetaArgs) {
   return [
-    metaTitle(`New compose stack from \`${params.templateSlug}\``)
+    metaTitle(`Deploy \`${params.templateSlug}\` on ZaneOps`)
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
@@ -321,7 +321,7 @@ function FormStep({
                   className="size-8 object-contain flex-none rounded-sm"
                 />
                 <a
-                  href={`https://zaneops.dev/templates/${template.id}`}
+                  href={`https://docs-docs-r3t2kzrc7l.zaneops.dev/templates/${template.id}`}
                   target="_blank"
                   className="font-medium truncate after:inset-0 after:absolute  no-underline text-card-foreground"
                 >
