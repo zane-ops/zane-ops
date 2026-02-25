@@ -1,13 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowRightIcon,
-  CheckIcon,
-  ChevronRightIcon,
-  SearchIcon
-} from "lucide-react";
+import { ChevronRightIcon, SearchIcon } from "lucide-react";
 import * as React from "react";
 import { Link, href, useLoaderData, useSearchParams } from "react-router";
-import { useDebouncedCallback } from "use-debounce";
 import { MultiSelect } from "~/components/multi-select";
 import { Pagination } from "~/components/pagination";
 import {
@@ -22,11 +16,7 @@ import { Card } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { TEMPLATE_API_HOST } from "~/lib/constants";
-import {
-  type TemplateSearchFilters,
-  templateQueries,
-  templateSearchFilters
-} from "~/lib/queries";
+import { templateQueries, templateSearchFilters } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
@@ -57,7 +47,7 @@ export default function ComposeStackTemplateListPage({
   params
 }: Route.ComponentProps) {
   return (
-    <div>
+    <>
       <Breadcrumb>
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
@@ -121,7 +111,7 @@ export default function ComposeStackTemplateListPage({
       </Breadcrumb>
 
       <TemplateSearchList />
-    </div>
+    </>
   );
 }
 
@@ -152,7 +142,7 @@ function TemplateSearchList() {
   }
 
   return (
-    <div className="flex my-20  flex-col gap-8 max-w-6xl mx-auto">
+    <div className="flex my-20 flex-col gap-8 max-w-5xl mx-auto">
       <h1 className="text-center text-3xl font-medium">
         Deploy your app in seconds
       </h1>
@@ -245,9 +235,7 @@ function TemplateCard({
   logoUrl: logo
 }: TemplateCardProps) {
   const logoUrl = new URL(logo, TEMPLATE_API_HOST);
-  console.log({
-    logoUrl
-  });
+
   return (
     <Card
       className={cn(
@@ -288,14 +276,9 @@ function TemplateCard({
 type TagsListFormProps = {
   selectedTags: string[];
   onTagSelectChange: (newValues: string[]) => void;
-  className?: string;
 };
 
-function TagsListForm({
-  selectedTags,
-  onTagSelectChange,
-  className
-}: TagsListFormProps) {
+function TagsListForm({ selectedTags, onTagSelectChange }: TagsListFormProps) {
   const loaderData = useLoaderData<Route.ComponentProps["loaderData"]>();
 
   const { data: allTags } = useQuery({
@@ -324,7 +307,7 @@ function TagsListForm({
   }, [tagSearch, selectedTags, allTags]);
 
   return (
-    <form className="flex flex-col gap-2 w-full md:sticky top-24">
+    <form className="flex flex-col gap-2.5 w-full md:sticky top-24">
       <h3 className="text-lg">Tags</h3>
 
       <MultiSelect
@@ -355,7 +338,7 @@ function TagsListForm({
             <label
               className={cn(
                 "m-0 w-full cursor-pointer py-1 px-2",
-                "flex items-start gap-1 rounded-sm group",
+                "flex items-start gap-1.5 rounded-sm group",
                 "transition-transform duration-100 active:scale-95"
               )}
             >
@@ -370,9 +353,6 @@ function TagsListForm({
                 }}
                 className="relative top-1 border-grey/40"
               />
-              {/* <span className="p-0.5 bg-gray-500/10 dark:bg-gray-500/30 rounded-md text-transparent peer-checked:text-(--sl-color-accent) relative top-1">
-                <CheckIcon className="size-4 " />
-              </span> */}
               <span
                 className={cn(
                   "text-grey",
