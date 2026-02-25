@@ -1,13 +1,10 @@
-import { useLocalStorage } from "@uidotdev/usehooks";
 import {
   AlertCircleIcon,
   ArrowRightIcon,
+  ArrowUpRightIcon,
   CheckIcon,
-  ChevronRightIcon,
   ClockArrowUpIcon,
-  ExternalLinkIcon,
-  LoaderIcon,
-  MoveUpRightIcon
+  LoaderIcon
 } from "lucide-react";
 import * as React from "react";
 import { Form, Link, href, useFetcher, useNavigation } from "react-router";
@@ -301,35 +298,36 @@ function FormStep({
     >
       <div className="card flex xl:w-1/2 lg:w-[60%] md:w-2/3 w-full flex-col gap-5 items-stretch">
         <h1 className="text-3xl font-semibold">
-          New compose stack from template
+          Deploy <span className="text-grey">`</span>
+          {template.name}
+          <span className="text-grey">`</span> on ZaneOps
         </h1>
 
         <Card
           className={cn(
-            "p-3.5 rounded-md bg-toggle dark:bg-muted relative",
+            "p-4 rounded-md bg-toggle dark:bg-muted relative",
             "ring-1 ring-transparent hover:ring-primary focus-within:ring-primary",
-            "transition-colors duration-300 shadow-sm",
-            "min-h-28"
+            "transition-colors duration-300 shadow-sm"
           )}
         >
-          <div className="flex flex-col items-start gap-2">
+          <div className="flex flex-col items-start gap-4">
             <div className="flex justify-between gap-2 items-center w-full">
               <div className="flex items-center gap-2 border-gray-400/30  w-full">
                 <img
                   src={logoUrl.toString()}
                   alt={template.name}
-                  className="size-8 object-contain flex-none rounded-sm"
+                  className="size-6 object-contain flex-none rounded-sm"
                 />
                 <a
-                  href={`https://docs-docs-r3t2kzrc7l.zaneops.dev/templates/${template.id}`}
+                  href={`https://zaneops.dev/templates/${template.id}`}
                   target="_blank"
-                  className="font-medium truncate after:inset-0 after:absolute  no-underline text-card-foreground"
+                  className="font-medium truncate after:inset-0 after:absolute no-underline text-card-foreground"
                 >
                   {template.name}
                 </a>
               </div>
 
-              <MoveUpRightIcon className="size-4 flex-none text-grey" />
+              <ArrowUpRightIcon className="size-4 flex-none text-grey" />
             </div>
 
             <div>
