@@ -44,7 +44,7 @@ def validate_env_name(value: str):
     pattern = r"^[A-Za-z_][A-Za-z0-9_]*$"
     if not bool(re.match(pattern, value)):
         raise ValidationError(
-            "shoud starts with an underscore (_) or a letter followed by letters, number or underscores(_)"
+            "Environment variable names shoud starts with an underscore (_) or a letter followed by letters, number or underscores(_)"
         )
 
 

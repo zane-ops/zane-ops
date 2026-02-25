@@ -8,6 +8,7 @@ from drf_spectacular.utils import extend_schema_field
 from drf_standardized_errors.openapi_serializers import ClientErrorEnum
 from rest_framework import serializers
 from . import models
+from django.core.exceptions import ValidationError as DjangoValidationError
 from .validators import validate_env_name, validate_url_path, validate_url_domain
 from git_connectors.serializers import GitAppSerializer, GitRepositorySerializer
 from container_registry.serializers import (
@@ -40,6 +41,20 @@ class URLPathField(serializers.CharField):
 
 class URLDomainField(serializers.CharField):
     default_validators = [validate_url_domain]
+
+
+class EnvVarDictField(serializers.DictField):
+    def to_internal_value(self, data):
+        result = super().to_internal_value(data)
+        errors = {}
+        for key in result:
+            try:
+                validate_env_name(key)
+            except DjangoValidationError as e:
+                errors[key] = e.message
+        if errors:
+            raise serializers.ValidationError(errors)
+        return result
 
 
 class CustomChoiceField(serializers.ChoiceField):

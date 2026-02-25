@@ -35,10 +35,11 @@ from django.db.models import Q
 import uuid
 from django.db import connection
 import base64
+from zane_api.serializers import EnvVarDictField
 
 
 class ComposeStackSpecSerializer(serializers.Serializer):
-    x_zane_env = serializers.DictField(
+    x_zane_env = EnvVarDictField(
         child=serializers.CharField(allow_blank=True), required=False
     )
 
