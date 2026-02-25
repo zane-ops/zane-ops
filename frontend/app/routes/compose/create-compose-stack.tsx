@@ -2,7 +2,6 @@ import { ArrowRightIcon, FileTextIcon } from "lucide-react";
 import { Link } from "react-router";
 import { DokployLogo } from "~/components/dokploy-logo";
 import { ZaneOpsLogo } from "~/components/logo";
-import { Badge } from "~/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -12,12 +11,6 @@ import {
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/create-compose-stack";
