@@ -11,7 +11,7 @@ import {
 import * as React from "react";
 import { Link, href, redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
-import { apiClient } from "~/api/client";
+import { type RequestInput, apiClient } from "~/api/client";
 import type { Project } from "~/api/types";
 import { Code } from "~/components/code";
 import { StatusBadge } from "~/components/status-badge";
@@ -370,8 +370,11 @@ async function cloneEnvironment(
 ) {
   const userData = {
     name: formData.get("name")?.toString() ?? "",
-    deploy_services: formData.get("deploy_services") === "on"
-  };
+    deploy_after_clone: formData.get("deploy_after_clone") === "on"
+  } satisfies RequestInput<
+    "post",
+    "/api/projects/{slug}/clone-environment/{env_slug}/"
+  >;
 
   if (!cloned_environment.trim()) {
     return {

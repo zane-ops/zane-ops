@@ -186,7 +186,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
       <Header user={user} />
       <main
         className={cn(
-          "grow container p-6 relative",
+          "grow container p-6 relative overflow-y-clip",
           !import.meta.env.PROD && "my-7"
         )}
       >

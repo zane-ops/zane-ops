@@ -510,6 +510,7 @@ class ComposeSpecProcessor:
 
         environ = spec.to_dict()["x-zane-env"]
 
+        index = 0
         for name, service in spec.services.items():
             if not service.deploy or not service.deploy.get("labels"):
                 continue
@@ -538,9 +539,10 @@ class ComposeSpecProcessor:
 
                 if template_func != "generate_domain":
                     # create new variable in `x-zane-env`
-                    variable_name = f"__zane_override_{name}_routes_{route_index}"
+                    variable_name = f"__zane_override_{index}_routes_{route_index}"
                     environ[variable_name] = "{{ generate_domain }}"
                     labels[domain_label_key] = f"${{{variable_name}}}"
+                    index += 1
                 continue
 
             # update labels

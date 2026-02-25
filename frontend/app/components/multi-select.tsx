@@ -87,6 +87,8 @@ interface MultiSelectProps
    * Optional, can be used to add custom styles.
    */
   className?: string;
+  popoverClassName?: string;
+  itemClassName?: string;
   value: string[];
   align?: React.ComponentProps<typeof PopoverContent>["align"];
   order?: "icon-label" | "label-icon";
@@ -105,7 +107,7 @@ export const MultiSelect = ({
   value: values = [],
   label = "Select options",
   animation = 0,
-  maxCount = 3,
+  maxCount = 2,
   modalPopover = false,
   asChild = false,
   className,
@@ -116,6 +118,8 @@ export const MultiSelect = ({
   inputValue: customInputValue,
   order = "icon-label",
   onInputValueChange,
+  popoverClassName,
+  itemClassName,
   ...props
 }: MultiSelectProps) => {
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
@@ -140,7 +144,7 @@ export const MultiSelect = ({
 
   const inputValue = customInputValue ?? value;
 
-  let visibleOptions = new Set(options);
+  const visibleOptions = new Set(options);
   if (inputValue.trim().length > 0 && acceptArbitraryValues) {
     visibleOptions.add(inputValue.trim());
   }
@@ -157,13 +161,14 @@ export const MultiSelect = ({
           {...props}
           onClick={handleTogglePopover}
           className={cn(
-            "flex w-full py-1 px-2 rounded-md border border-border border-dashed min-h-10 h-auto items-center justify-between bg-inherit",
-            "hover:bg-accent",
+            "flex w-full py-1 px-2 rounded-md border border-border border-dashed",
+            "min-h-10 h-auto items-center justify-between",
+            "bg-inherit hover:bg-accent",
             values.length === 0 && "pr-3.5",
             className
           )}
         >
-          <div className="flex items-center gap-1  w-full mx-auto">
+          <div className="flex items-center gap-1 w-full mx-auto">
             {order === "icon-label" && (
               <Icon
                 size={15}
@@ -175,7 +180,7 @@ export const MultiSelect = ({
               {values.length > 0 && (
                 <>
                   <div className="h-4 bg-border w-px"></div>
-                  {values.length > 2 ? (
+                  {values.length > maxCount ? (
                     <span className="text-sm rounded-md bg-grey/20 px-1 text-card-foreground">
                       {values.length} selected
                     </span>
@@ -186,7 +191,8 @@ export const MultiSelect = ({
                           key={val}
                           className={cn(
                             "text-sm rounded-md bg-grey/20 px-1 text-card-foreground",
-                            "whitespace-nowrap text-ellipsis overflow-x-hidden max-w-[50px] sm:max-w-[150px]"
+                            "whitespace-nowrap text-ellipsis overflow-x-hidden max-w-[50px] sm:max-w-[150px]",
+                            itemClassName
                           )}
                         >
                           {capitalizeText(val)}
@@ -207,7 +213,7 @@ export const MultiSelect = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="min-w-[200px] p-0 border-0 w-full"
+        className={cn("min-w-[200px] p-0 border-0 w-full", popoverClassName)}
         align={align}
         sideOffset={0}
         side="bottom"

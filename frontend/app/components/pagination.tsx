@@ -21,6 +21,7 @@ export type PaginationProps = {
   className?: string;
   onChangePage: (page: number) => void;
   onChangePerPage: (perPage: number) => void;
+  pageSizeOptions?: number[];
 };
 
 export function Pagination({
@@ -29,7 +30,8 @@ export function Pagination({
   perPage,
   className,
   onChangePage,
-  onChangePerPage
+  onChangePerPage,
+  pageSizeOptions = [10, 20, 30, 40, 50]
 }: PaginationProps) {
   return (
     <div className={cn("flex items-center justify-end px-2", className)}>
@@ -45,7 +47,7 @@ export function Pagination({
             <SelectValue placeholder={perPage.toString()} />
           </SelectTrigger>
           <SelectContent className="border border-border" side="top">
-            {[10, 20, 30, 40, 50].map((pageSize) => (
+            {pageSizeOptions.map((pageSize) => (
               <SelectItem key={pageSize} value={pageSize.toString()}>
                 {pageSize}
               </SelectItem>
