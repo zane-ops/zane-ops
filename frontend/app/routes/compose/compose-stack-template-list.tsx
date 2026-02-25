@@ -1,5 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRightIcon, SearchIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  CheckIcon,
+  ChevronRightIcon,
+  SearchIcon
+} from "lucide-react";
 import * as React from "react";
 import { Link, href, useLoaderData, useSearchParams } from "react-router";
 import { useDebouncedCallback } from "use-debounce";
@@ -14,6 +19,7 @@ import {
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
 import { Card } from "~/components/ui/card";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { TEMPLATE_API_HOST } from "~/lib/constants";
 import {
@@ -129,22 +135,11 @@ function TemplateSearchList() {
     initialData: loaderData.templates
   });
 
-  console.log({
-    filters
-  });
-
-  const { data: allTags } = useQuery({
-    ...templateQueries.tags,
-    initialData: loaderData.tags
-  });
-
   const filterTemplates = (query: string) => {
     searchParams.set("query", query);
     searchParams.set("page", "1");
     setSearchParams(searchParams, { replace: true });
   };
-
-  const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
 
   const [searchQuery, setSearchQuery] = React.useState(filters.query ?? "");
 
@@ -157,7 +152,7 @@ function TemplateSearchList() {
   }
 
   return (
-    <div className="flex my-20 grow flex-col gap-8 max-w-6xl mx-auto">
+    <div className="flex my-20  flex-col gap-8 max-w-6xl mx-auto">
       <h1 className="text-center text-3xl font-medium">
         Deploy your app in seconds
       </h1>
@@ -179,6 +174,7 @@ function TemplateSearchList() {
             }}
             className="grow pr-10"
             autoFocus
+            type="search"
           />
 
           <SearchIcon className="absolute top-1/2 -translate-y-1/2 right-4 size-4 flex-none text-(--sl-color-text)" />
@@ -188,35 +184,49 @@ function TemplateSearchList() {
         </small>
       </div>
 
-      <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {hits.map(({ document }) => (
-          <TemplateCard
-            key={document.id}
-            id={document.id}
-            name={document.name}
-            description={document.description}
-            logoUrl={document.logoUrl}
-          />
-        ))}
-      </div>
-
-      {templates.found > 0 && (
-        <Pagination
-          totalPages={totalPages}
-          currentPage={filters.page}
-          perPage={filters.perPage}
-          onChangePage={(newPage) => {
-            searchParams.set("page", newPage.toString());
-            setSearchParams(searchParams, { replace: true });
-          }}
-          pageSizeOptions={[16, 32, 50, 100]}
-          onChangePerPage={(newPerPage) => {
-            searchParams.set("perPage", newPerPage.toString());
-            searchParams.set("page", "1");
+      <div className="grid md:grid-cols-4 lg:grid-cols-5 gap-4 place-items-start">
+        <TagsListForm
+          selectedTags={filters.tags}
+          onTagSelectChange={(newTags) => {
+            searchParams.delete("tags");
+            for (const tag of newTags) {
+              searchParams.append("tags", tag);
+            }
             setSearchParams(searchParams, { replace: true });
           }}
         />
-      )}
+        <div className="flex flex-col gap-8 md:col-span-3 lg:col-span-4 items-center w-full">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {hits.map(({ document }) => (
+              <TemplateCard
+                key={document.id}
+                id={document.id}
+                name={document.name}
+                description={document.description}
+                logoUrl={document.logoUrl}
+              />
+            ))}
+          </div>
+
+          {templates.found > 0 && (
+            <Pagination
+              totalPages={totalPages}
+              currentPage={filters.page}
+              perPage={filters.perPage}
+              onChangePage={(newPage) => {
+                searchParams.set("page", newPage.toString());
+                setSearchParams(searchParams, { replace: true });
+              }}
+              pageSizeOptions={[15, 30, 50, 100]}
+              onChangePerPage={(newPerPage) => {
+                searchParams.set("perPage", newPerPage.toString());
+                searchParams.set("page", "1");
+                setSearchParams(searchParams, { replace: true });
+              }}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -257,14 +267,14 @@ function TemplateCard({
             />
             <Link
               prefetch="intent"
-              to={`/${id}`}
-              className="font-medium truncate after:inset-0  no-underline text-card-foreground"
+              to={`./${id}`}
+              className="font-medium truncate after:inset-0 after:absolute  no-underline text-card-foreground"
             >
               {name}
             </Link>
           </div>
 
-          <ArrowRightIcon className="size-5 flex-none text-grey" />
+          <ChevronRightIcon className="size-4 flex-none text-grey" />
         </div>
 
         <div>
@@ -272,5 +282,109 @@ function TemplateCard({
         </div>
       </div>
     </Card>
+  );
+}
+
+type TagsListFormProps = {
+  selectedTags: string[];
+  onTagSelectChange: (newValues: string[]) => void;
+  className?: string;
+};
+
+function TagsListForm({
+  selectedTags,
+  onTagSelectChange,
+  className
+}: TagsListFormProps) {
+  const loaderData = useLoaderData<Route.ComponentProps["loaderData"]>();
+
+  const { data: allTags } = useQuery({
+    ...templateQueries.tags,
+    initialData: loaderData.tags
+  });
+
+  const [tagSearch, setTagSearch] = React.useState("");
+
+  const tagList = React.useMemo(() => {
+    const filteredTags = allTags.toSorted((tagA, tagB) => {
+      // put selected tags first & sort alphabetically
+      if (selectedTags.includes(tagA) && selectedTags.includes(tagB)) {
+        return tagA > tagB ? 1 : -1;
+      }
+      if (selectedTags.includes(tagA)) {
+        return -1;
+      }
+      if (selectedTags.includes(tagB)) {
+        return 1;
+      }
+      return 0;
+    });
+
+    return filteredTags.filter((tag) => tag.includes(tagSearch));
+  }, [tagSearch, selectedTags, allTags]);
+
+  return (
+    <form className="flex flex-col gap-2 w-full md:sticky top-24">
+      <h3 className="text-lg">Tags</h3>
+
+      <MultiSelect
+        options={tagList}
+        value={selectedTags}
+        onValueChange={onTagSelectChange}
+        label="selected"
+        align="start"
+        popoverClassName="w-full h-80 max-h-80 overflow-auto"
+        itemClassName="max-w-[130px]"
+        className="md:hidden"
+        maxCount={3}
+      />
+
+      <Input
+        placeholder="search tags"
+        className="py-1 hidden md:inline-flex"
+        type="search"
+        value={tagSearch}
+        onChange={(ev) => {
+          setTagSearch(ev.currentTarget.value);
+        }}
+      />
+
+      <ul className="hidden md:grid md:grid-cols-1 pl-0 list-none gap-1 shrink min-h-0 h-80 max-h-80 overflow-auto">
+        {tagList.map((tag) => (
+          <li key={tag}>
+            <label
+              className={cn(
+                "m-0 w-full cursor-pointer py-1 px-2",
+                "flex items-start gap-1 rounded-sm group",
+                "transition-transform duration-100 active:scale-95"
+              )}
+            >
+              <Checkbox
+                checked={selectedTags.includes(tag)}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    onTagSelectChange([...selectedTags, tag]);
+                  } else {
+                    onTagSelectChange(selectedTags.filter((t) => t !== tag));
+                  }
+                }}
+                className="relative top-1 border-grey/40"
+              />
+              {/* <span className="p-0.5 bg-gray-500/10 dark:bg-gray-500/30 rounded-md text-transparent peer-checked:text-(--sl-color-accent) relative top-1">
+                <CheckIcon className="size-4 " />
+              </span> */}
+              <span
+                className={cn(
+                  "text-grey",
+                  selectedTags.includes(tag) && "text-card-foreground"
+                )}
+              >
+                {tag}
+              </span>
+            </label>
+          </li>
+        ))}
+      </ul>
+    </form>
   );
 }
