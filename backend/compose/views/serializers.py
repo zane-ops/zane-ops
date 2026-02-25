@@ -174,16 +174,27 @@ class ComposeStackSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    def validate_user_content(self, user_content: str):
+        try:
+            ComposeSpecProcessor.validate_compose_file_syntax(user_content)
+        except ValidationError as e:
+            raise serializers.ValidationError(e.messages)
+        except serializers.ValidationError as e:
+            formated: dict[str, Any] = ExceptionFormatter(e, self.context, e).run()  # type: ignore
+            raise serializers.ValidationError(
+                [
+                    f"Invalid compose file: `{error['attr']}: {error['detail']}`"
+                    for error in formated["errors"]
+                ]
+            )
+
+        return user_content
+
     @transaction.atomic()
     def create(self, validated_data: dict):
         project = cast(Project, self.context["project"])
         environment = cast(Environment, self.context["environment"])
         user_content = validated_data["user_content"]
-
-        try:
-            ComposeSpecProcessor.validate_compose_file_syntax(user_content)
-        except ValidationError as e:
-            raise serializers.ValidationError({"user_content": e.messages})
 
         slug = validated_data["slug"]
         if ComposeStack.objects.filter(
@@ -497,6 +508,16 @@ class ComposeContentFieldChangeSerializer(BaseFieldChangeSerializer):
             ComposeSpecProcessor.validate_compose_file_syntax(user_content)
         except ValidationError as e:
             raise serializers.ValidationError({"new_value": e.messages})
+        except serializers.ValidationError as e:
+            formated: dict[str, Any] = ExceptionFormatter(e, self.context, e).run()  # type: ignore
+            raise serializers.ValidationError(
+                {
+                    "new_value": [
+                        f"Invalid compose file: `{error['attr']}: {error['detail']}`"
+                        for error in formated["errors"]
+                    ]
+                }
+            )
 
         stack = self.get_stack()
 
