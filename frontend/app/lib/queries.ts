@@ -2805,7 +2805,7 @@ export const buildRegistryQueries = {
 export const templateSearchFilters = zfd.formData({
   query: z.string().optional().catch(""),
   page: zfd.numeric().catch(1).optional().default(1),
-  perPage: zfd.numeric().optional().catch(20).optional().default(20),
+  perPage: zfd.numeric().optional().catch(15).optional().default(15),
   tags: zfd.repeatable(z.array(z.string())).optional().default([])
 });
 
