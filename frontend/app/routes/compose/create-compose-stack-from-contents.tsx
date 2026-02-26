@@ -172,7 +172,7 @@ export default function CreateComposeStackFromContentsPage({
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>From compose contents</BreadcrumbPage>
+            <BreadcrumbPage>From docker-compose.yml</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
