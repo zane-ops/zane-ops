@@ -94,6 +94,14 @@ export function ServiceURLsForm({
         <p className="text-gray-400">
           The domains and base path which are associated to this service. Use{" "}
           <Code>*.example.com</Code> for wildcard support.
+          <a
+            href="https://zaneops.dev/configuring-zaneops/"
+            target="_blank"
+            className="text-link underline inline-flex gap-1 items-center"
+          >
+            How to add your domain to your DNS{" "}
+            <ExternalLinkIcon className="size-3 flex-none" />
+          </a>
         </p>
       </div>
       {urls.size > 0 && (
