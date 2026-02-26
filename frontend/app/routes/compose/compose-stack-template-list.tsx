@@ -332,7 +332,12 @@ function TagsListForm({ selectedTags, onTagSelectChange }: TagsListFormProps) {
         }}
       />
 
-      <ul className="hidden md:grid md:grid-cols-1 pl-0 list-none gap-1 shrink min-h-0 h-80 max-h-80 overflow-auto">
+      <ul
+        className={cn(
+          "hidden md:grid md:grid-cols-1 pl-0 list-none gap-1 shrink",
+          "min-h-0 h-80 max-h-80 overflow-auto place-content-start"
+        )}
+      >
         {tagList.map((tag) => (
           <li key={tag}>
             <label
