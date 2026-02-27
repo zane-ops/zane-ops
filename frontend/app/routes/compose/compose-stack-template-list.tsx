@@ -197,19 +197,14 @@ function TemplateSearchList() {
                   Can't find what you're looking for? Suggest a template!
                 </h2>
 
-                <Button
-                  asChild
-                  variant="secondary"
-                  className="inline-flex items-center gap-1.5 my-3"
+                <a
+                  href="https://github.com/zane-ops/templates/issues/new?template=new-template.md"
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 my-3 text-link underline"
                 >
-                  <a
-                    href="https://github.com/zane-ops/templates"
-                    target="_blank"
-                  >
-                    Submit a suggestion{" "}
-                    <ArrowUpRightIcon className="size-4 flex-none" />
-                  </a>
-                </Button>
+                  Submit a suggestion{" "}
+                  <ArrowUpRightIcon className="size-4 flex-none" />
+                </a>
               </div>
             )}
             {hits.map(({ document }) => (
