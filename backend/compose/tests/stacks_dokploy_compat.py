@@ -15,6 +15,7 @@ from .fixtures import (
     DOKPLOY_KENER_TEMPLATE,
     DOKPLOY_POSTGRES_TEMPLATE,
     DOKPLOY_DOCMOST_TEMPLATE,
+    DOKPLOY_WORDPRESS_TEMPLATE,
 )
 from .stacks import ComposeStackAPITestBase
 from ..dtos import ComposeVolumeMountSpec, ComposeServiceSpec
@@ -594,3 +595,91 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
         self.assertEqual(
             "${POSTGRES_PASSWORD}", dbb_service.environment["POSTGRES_PASSWORD"].value
         )
+
+    def test_create_compose_stack_from_dokploy_replace_variable_references_with_curlies(
+        self,
+    ):
+        project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "wordpress",
+            "user_content": DOKPLOY_WORDPRESS_TEMPLATE.base64,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create_from_dokploy.base64",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="wordpress").first()
+        )
+        self.assertIsNotNone(created_stack)
+        self.assertIsNone(created_stack.user_content)
+        self.assertIsNone(created_stack.computed_content)
+
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(str, pending_change.new_value)
+        self.assertIsNotNone(new_value)
+        print("========= converted user_content =========")
+        print(new_value)
+
+        # Parse the converted user_content to verify it was transformed correctly
+        user_content_dict = yaml.safe_load(new_value)
+
+        # Verify x-env section was added with template placeholders
+        self.assertIn("x-zane-env", user_content_dict)
+
+        # Verify services section exists
+        self.assertIn("services", user_content_dict)
+        services = user_content_dict["services"]
+        self.assertIn("wordpress", services)
+        self.assertIn("wp_db", services)
+
+        wordpress_service = services["wordpress"]
+        db_service = services["wp_db"]
+
+        # Verify that variables with `$REFERENCE` are replaced with `${REFERENCE}`
+        self.assertIn("environment", wordpress_service)
+        self.assertIn("environment", db_service)
+
+        wp_service = ComposeServiceSpec.from_dict(
+            {**wordpress_service, "name": "wordpress"}
+        )
+        self.assertIn("WORDPRESS_DB_NAME", wp_service.environment)
+        self.assertEqual(
+            "${DB_NAME}", wp_service.environment["WORDPRESS_DB_NAME"].value
+        )
+        self.assertIn("WORDPRESS_DB_PASSWORD", wp_service.environment)
+        self.assertEqual(
+            "${DB_PASSWORD}", wp_service.environment["WORDPRESS_DB_PASSWORD"].value
+        )
+
+        wp_db_service = ComposeServiceSpec.from_dict({**db_service, "name": "wp_db"})
+        self.assertIn("MYSQL_DATABASE", wp_db_service.environment)
+        self.assertEqual(
+            "${DB_NAME}", wp_db_service.environment["MYSQL_DATABASE"].value
+        )
+        self.assertIn("MYSQL_ROOT_PASSWORD", wp_db_service.environment)
+        self.assertEqual(
+            "${DB_PASSWORD}", wp_db_service.environment["MYSQL_ROOT_PASSWORD"].value
+        )
+
+        # Verify that variables with `$$REFERENCE` are kept as is
+        healthcheck_cmd = db_service["healthcheck"]["test"][1]
+        self.assertIn("$$MYSQL_ROOT_PASSWORD", healthcheck_cmd)

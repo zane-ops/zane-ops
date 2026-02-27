@@ -1385,6 +1385,78 @@ PG_PASS = "${password:32}" # Password for PostgreSQL authentication
 """,
 )
 
+DOKPLOY_WORDPRESS_TEMPLATE = DokployTemplate(
+    compose="""
+services:
+  wordpress:
+    image: wordpress:latest
+    volumes:
+      - wp_app:/var/www/html
+      - ../files/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    environment:
+      WORDPRESS_DB_HOST: wp_db
+      WORDPRESS_DB_NAME: $DB_NAME
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: $DB_PASSWORD
+      WORDPRESS_DEBUG: ${WORDPRESS_DEBUG:-0}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_MEMORY_LIMIT', '256M');
+        define('DISALLOW_FILE_EDIT', true);
+    depends_on:
+      wp_db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  wp_db:
+    image: mysql:8.4
+    restart: unless-stopped
+    volumes:
+      - wp_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: $DB_PASSWORD
+      MYSQL_DATABASE: $DB_NAME
+    healthcheck:
+      test: ["CMD-SHELL", "exit | mysql -h localhost -P 3306 -u root -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  wp_app:
+  wp_data:
+""",
+    config='''
+[variables]
+main_domain = "${domain}"
+db_name = "wordpress"
+db_user = "wordpress"
+db_password = "${password:32}"
+
+[config]
+env = [
+  "WORDPRESS_DEBUG=0",
+  "DB_NAME=${db_name}",
+  "DB_USER=${db_user}",
+  "DB_PASSWORD=${db_password}"
+]
+
+[[config.domains]]
+serviceName = "wordpress"
+port = 80
+host = "${main_domain}"
+
+[[config.mounts]]
+filePath = "uploads.ini"
+content = """upload_max_filesize = 64M
+post_max_size = 64M
+memory_limit = 256M
+max_execution_time = 300
+max_input_vars = 3000
+""" 
+''',
+)
+
 # Prefixed vars create overrides on deployment (key keeps double underscore)
 DOCKER_COMPOSE_WITH_PREFIXED_ENV_OVERRIDE = """
 x-zane-env:

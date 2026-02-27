@@ -180,6 +180,7 @@ class DokployComposeAdapter(BaseComposeAdapter):
                 compose_service.pop("restart", None)
 
         # Handle envs
+        single_variable_regex = re.compile(r"(?<!\$)\$([A-Za-z_][A-Za-z0-9_]*)")
         for service_name, compose_service in compose_dict["services"].items():
             service = ComposeServiceSpec.from_dict(
                 {**compose_service, "name": service_name}
@@ -187,11 +188,18 @@ class DokployComposeAdapter(BaseComposeAdapter):
             envs = ComposeServiceSpec.extract_service_environment(compose_service)
             for key, env in envs.items():
                 if env is None:
+                    # fill in empty variables like `APP_URL` with variables in `x-zane-env` if availabe
                     exist_in_x_env = x_env.get(key)
                     if exist_in_x_env:
                         service.environment[key] = ComposeEnvVarSpec(
                             key=key, value=f"${{{key}}}"
                         )
+                else:
+                    # replace single variable references ($DB_NAME) with curlies (${DB_NAME})
+                    service.environment[key] = ComposeEnvVarSpec(
+                        key=key,
+                        value=re.sub(single_variable_regex, r"${\1}", env.value),
+                    )
 
             if envs:
                 compose_service["environment"] = service.to_dict()["environment"]
