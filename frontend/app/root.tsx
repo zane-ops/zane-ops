@@ -23,7 +23,7 @@ import {
 import { Loader } from "~/components/loader";
 import { Logo } from "~/components/logo";
 import { TailwindIndicator } from "~/components/tailwind-indicator";
-import { ThemeProvider, getThemePreference } from "~/components/theme-provider";
+import { ThemeProvider, getThemePreference } from "~/components/theme-context";
 import { Button } from "~/components/ui/button";
 import { Toaster } from "~/components/ui/sonner";
 import { THEME_STORAGE_KEY } from "~/lib/constants";

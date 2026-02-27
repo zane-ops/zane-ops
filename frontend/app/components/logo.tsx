@@ -1,4 +1,4 @@
-import { useTheme } from "~/components/theme-provider";
+import { useTheme } from "~/components/theme-context";
 import { cn } from "~/lib/utils";
 import logoSymbolBlack from "/logo/ZaneOps-SYMBOL-BLACK.svg";
 import logoSymbolWhite from "/logo/ZaneOps-SYMBOL-WHITE.svg";

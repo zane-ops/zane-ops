@@ -12,7 +12,7 @@ import {
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { Maximize2Icon, Minimize2Icon } from "lucide-react";
 import * as React from "react";
-import { useTheme } from "~/components/theme-provider";
+import { useTheme } from "~/components/theme-context";
 import { Button } from "~/components/ui/button";
 import {
   Tooltip,

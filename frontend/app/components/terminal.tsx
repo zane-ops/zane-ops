@@ -3,7 +3,7 @@ import { type ITheme, Terminal as XTermTerminal } from "@xterm/xterm";
 import * as React from "react";
 import "@xterm/xterm/css/xterm.css";
 import { useMediaQuery } from "@uidotdev/usehooks";
-import { useTheme } from "~/components/theme-provider";
+import { useTheme } from "~/components/theme-context";
 import { cn } from "~/lib/utils";
 
 type TerminalProps = {
