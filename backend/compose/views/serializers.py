@@ -706,6 +706,36 @@ class DokployTemplateObjectRequestSerializer(serializers.Serializer):
     compose = serializers.CharField()
     config = serializers.CharField()
 
+    def _run_docker_validation(self, content: str) -> str | None:
+        """
+        Run docker stack config validation on YAML content.
+
+        Args:
+            content: YAML content to validate
+
+        Returns:
+            Error message if validation fails, None if successful
+        """
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yml", delete_on_close=False
+        ) as temp_file:
+            temp_file.write(content)
+            temp_file.flush()
+
+            result = subprocess.run(
+                [
+                    "docker",
+                    "compose",
+                    "-f",
+                    temp_file.name,
+                    "config",
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+            return result.stderr.strip() if result.returncode != 0 else None
+
     def validate_compose(self, content: str):
         try:
             parsed = yaml.safe_load(content)
@@ -716,27 +746,49 @@ class DokployTemplateObjectRequestSerializer(serializers.Serializer):
         except yaml.YAMLError as e:
             raise ValidationError(f"Invalid YAML syntax: {str(e)}")
         else:
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".yml", delete_on_close=False
-            ) as temp_file:
-                temp_file.write(content)
-                temp_file.flush()
+            # with tempfile.NamedTemporaryFile(
+            #     mode="w", suffix=".yml", delete_on_close=False
+            # ) as temp_file:
+            #     temp_file.write(content)
+            #     temp_file.flush()
 
-                # validate compose syntax
-                result = subprocess.run(
-                    [
-                        "docker",
-                        "compose",  # we use `docker compose config` here because dokploy use the compose syntax
-                        "-f",
-                        temp_file.name,
-                        "config",
-                    ],
-                    capture_output=True,
-                    text=True,
-                )
+            #     # validate compose syntax
+            #     result = subprocess.run(
+            #         [
+            #             "docker",
+            #             "compose",  # we use `docker compose config` here because dokploy use the compose syntax
+            #             "-f",
+            #             temp_file.name,
+            #             "config",
+            #         ],
+            #         capture_output=True,
+            #         text=True,
+            #     )
 
-                if result.returncode != 0:
-                    last_error = result.stderr.strip().splitlines()[-1]
+            #     if result.returncode != 0:
+            error = self._run_docker_validation(content)
+
+            if error:
+                # If docker rejects env_file `.env` retry by removing it
+                # to ensure there are no other validation errors
+                if error.endswith(".env: no such file or directory"):
+                    user_spec_dict = parsed
+                    # Replace config content with temporary file references
+                    for service in user_spec_dict.get("services", {}).values():
+                        if isinstance(service, dict) and "env_file" in service:
+                            del service["env_file"]
+
+                    # Retry validation with modified YAML
+                    retry_content = yaml.safe_dump(
+                        user_spec_dict, default_flow_style=False
+                    )
+                    retry_error = self._run_docker_validation(retry_content)
+
+                    if retry_error:
+                        last_error = error.splitlines()[-1]
+                        raise serializers.ValidationError(last_error)
+                else:
+                    last_error = error.splitlines()[-1]
                     raise serializers.ValidationError(last_error)
 
         return content

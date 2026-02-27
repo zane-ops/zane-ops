@@ -1,4 +1,5 @@
 import base64
+from copy import deepcopy
 import json
 import os
 import re
@@ -117,6 +118,7 @@ class DokployComposeAdapter(BaseComposeAdapter):
             converted_value = cls._convert_dokploy_placeholder_to_zaneops(value)
             x_env[key] = converted_value
 
+        config_env_processed = {}
         # Process config.env
         for key, value in config.env.items():
             # Check if this is a self-reference to a definition in
@@ -126,13 +128,14 @@ class DokployComposeAdapter(BaseComposeAdapter):
             # KENER_SECRET_KEY = "${password:64}" -> replaced with "{{ generate_password | 64 }}"
             #
             # [[config.env]]
-            # KENER_SECRET_KEY = "KENER_SECRET_KEY"
+            # KENER_SECRET_KEY = "${KENER_SECRET_KEY}"
 
             # expected result:
             #   -> { "KENER_SECRET_KEY": "{{ generate_password | 64 }}" }
 
             if value == f"${{{key}}}" and key in x_env:
                 # Self-reference: skip it, keep the variable definition
+                config_env_processed[key] = value
                 continue
             else:
                 # Not a self-reference: override the variable
@@ -147,6 +150,7 @@ class DokployComposeAdapter(BaseComposeAdapter):
                 #   -> { "MYSQL_PASSWORD": "password", "DB_PASSWORD": "whatever" }
                 converted_value = cls._convert_dokploy_placeholder_to_zaneops(value)
                 x_env[key] = converted_value
+                config_env_processed[key] = converted_value
 
         if x_env:
             compose_dict["x-zane-env"] = x_env
@@ -200,6 +204,11 @@ class DokployComposeAdapter(BaseComposeAdapter):
                         key=key,
                         value=re.sub(single_variable_regex, r"${\1}", str(env.value)),
                     )
+
+            # remove `env_file` and replace with variables in `[config.env]`
+            if compose_service.get("env_file") is not None:
+                del compose_service["env_file"]
+                compose_service["environment"] = deepcopy(config_env_processed)
 
             if envs:
                 compose_service["environment"] = service.to_dict()["environment"]
@@ -265,6 +274,10 @@ class DokployComposeAdapter(BaseComposeAdapter):
             # Step 2: For each mount path, create a file at the selected path inside the temp dir
             mount_path_to_config: dict[str, DokployConfigMount] = {}
             for mount in config.mounts:
+                # if the filePath is an absolute path, we need to make it relative
+                if os.path.normpath(mount.filePath).startswith("/"):
+                    mount.filePath = "." + mount.filePath
+
                 # Create file in temp directory
                 file_path = os.path.join(tmpdir, mount.filePath)
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)

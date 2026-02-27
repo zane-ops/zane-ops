@@ -1,3 +1,4 @@
+import tomllib
 from typing import cast
 
 from django.urls import reverse
@@ -16,6 +17,7 @@ from .fixtures import (
     DOKPLOY_POSTGRES_TEMPLATE,
     DOKPLOY_DOCMOST_TEMPLATE,
     DOKPLOY_WORDPRESS_TEMPLATE,
+    DOKPLOY_PLAUSIBLE_TEMPLATE,
 )
 from .stacks import ComposeStackAPITestBase
 from ..dtos import ComposeVolumeMountSpec, ComposeServiceSpec
@@ -683,3 +685,67 @@ class DokployCompatibilityViewTests(ComposeStackAPITestBase):
         # Verify that variables with `$$REFERENCE` are kept as is
         healthcheck_cmd = db_service["healthcheck"]["test"][1]
         self.assertIn("$$MYSQL_ROOT_PASSWORD", healthcheck_cmd)
+
+    def test_create_compose_stack_from_dokploy_replace_env_file_with_all_envs_in_config_env(
+        self,
+    ):
+        project = self.create_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": "plausible",
+            "user_content": DOKPLOY_PLAUSIBLE_TEMPLATE.base64,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create_from_dokploy.base64",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="plausible").first()
+        )
+        self.assertIsNotNone(created_stack)
+        self.assertIsNone(created_stack.user_content)
+        self.assertIsNone(created_stack.computed_content)
+
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(str, pending_change.new_value)
+        self.assertIsNotNone(new_value)
+        print("========= converted user_content =========")
+        print(new_value)
+
+        # Parse the converted user_content to verify it was transformed correctly
+        user_content_dict = yaml.safe_load(new_value)
+
+        # Verify x-env section was added with template placeholders
+        self.assertIn("x-zane-env", user_content_dict)
+
+        config = tomllib.loads(DOKPLOY_PLAUSIBLE_TEMPLATE.config)
+
+        # Verify services section exists
+        self.assertIn("services", user_content_dict)
+        services = user_content_dict["services"]
+        self.assertIn("plausible", services)
+
+        plausible_service = services["plausible"]
+
+        # Verify that `env_file` is removed
+        self.assertNotIn("env_file", plausible_service)
+        # Verify that `environment` is filled with all values in `[config.env]`
+        self.assertIn("environment", plausible_service)
+        self.assertEqual(plausible_service["environment"], config["config"]["env"])
