@@ -198,7 +198,7 @@ class DokployComposeAdapter(BaseComposeAdapter):
                     # replace single variable references ($DB_NAME) with curlies (${DB_NAME})
                     service.environment[key] = ComposeEnvVarSpec(
                         key=key,
-                        value=re.sub(single_variable_regex, r"${\1}", env.value),
+                        value=re.sub(single_variable_regex, r"${\1}", str(env.value)),
                     )
 
             if envs:
