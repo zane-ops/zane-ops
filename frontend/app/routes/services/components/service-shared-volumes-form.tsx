@@ -93,7 +93,7 @@ export function ServiceSharedVolumesForm({
             target="_blank"
             className="text-link underline inline-flex gap-1 items-center"
           >
-            documentation <ExternalLinkIcon size={12} />
+            documentation <ExternalLinkIcon className="size-3 flex-none" />
           </a>
         </p>
       </div>

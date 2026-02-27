@@ -112,7 +112,7 @@ export default function CreateComposeStackPage({
             >
               <Link to="./compose-contents" prefetch="intent">
                 <FileTextIcon className="flex-none" />
-                <span>From compose file contents</span>
+                <span>From docker-compose.yml</span>
                 <ArrowRightIcon className="flex-none" />
               </Link>
             </Button>

@@ -1,5 +1,5 @@
 import type * as React from "react";
-import { useTheme } from "~/components/theme-provider";
+import { useTheme } from "~/components/theme-context";
 import { cn } from "~/lib/utils";
 
 export function GitlabLogo(props: React.ComponentProps<"svg">) {

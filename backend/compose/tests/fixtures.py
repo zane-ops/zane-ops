@@ -1385,6 +1385,174 @@ PG_PASS = "${password:32}" # Password for PostgreSQL authentication
 """,
 )
 
+DOKPLOY_WORDPRESS_TEMPLATE = DokployTemplate(
+    compose="""
+services:
+  wordpress:
+    image: wordpress:latest
+    volumes:
+      - wp_app:/var/www/html
+      - ../files/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    environment:
+      WORDPRESS_DB_HOST: wp_db
+      WORDPRESS_DB_NAME: $DB_NAME
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: $DB_PASSWORD
+      WORDPRESS_DEBUG: ${WORDPRESS_DEBUG:-0}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_MEMORY_LIMIT', '256M');
+        define('DISALLOW_FILE_EDIT', true);
+    depends_on:
+      wp_db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  wp_db:
+    image: mysql:8.4
+    restart: unless-stopped
+    volumes:
+      - wp_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: $DB_PASSWORD
+      MYSQL_DATABASE: $DB_NAME
+    healthcheck:
+      test: ["CMD-SHELL", "exit | mysql -h localhost -P 3306 -u root -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  wp_app:
+  wp_data:
+""",
+    config='''
+[variables]
+main_domain = "${domain}"
+db_name = "wordpress"
+db_user = "wordpress"
+db_password = "${password:32}"
+
+[config]
+env = [
+  "WORDPRESS_DEBUG=0",
+  "DB_NAME=${db_name}",
+  "DB_USER=${db_user}",
+  "DB_PASSWORD=${db_password}"
+]
+
+[[config.domains]]
+serviceName = "wordpress"
+port = 80
+host = "${main_domain}"
+
+[[config.mounts]]
+filePath = "uploads.ini"
+content = """upload_max_filesize = 64M
+post_max_size = 64M
+memory_limit = 256M
+max_execution_time = 300
+max_input_vars = 3000
+""" 
+''',
+)
+
+DOKPLOY_PLAUSIBLE_TEMPLATE = DokployTemplate(
+    compose="""
+services:
+  plausible_db:
+    image: postgres:16-alpine
+    restart: always
+
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+
+  plausible_events_db:
+    image: clickhouse/clickhouse-server:24.3.3.102-alpine
+    restart: always
+
+    volumes:
+      - event-data:/var/lib/clickhouse
+      - event-logs:/var/log/clickhouse-server
+      - ../files/clickhouse/clickhouse-config.xml:/etc/clickhouse-server/config.d/logging.xml:ro
+      - ../files/clickhouse/clickhouse-user-config.xml:/etc/clickhouse-server/users.d/logging.xml:ro
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  plausible:
+    image: ghcr.io/plausible/community-edition:v2.1.5
+    restart: always
+    command: sh -c "sleep 10 && /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
+    depends_on:
+      - plausible_db
+      - plausible_events_db
+    env_file:
+      - .env
+
+volumes:
+  db-data:
+    driver: local
+  event-data:
+    driver: local
+  event-logs:
+    driver: local
+""",
+    config='''
+[variables]
+main_domain = "${domain}"
+secret_base = "${base64:64}"
+totp_key = "${base64:32}"
+
+[[config.domains]]
+serviceName = "plausible"
+port = 8_000
+host = "${main_domain}"
+
+[config.env]
+BASE_URL = "http://${main_domain}"
+SECRET_KEY_BASE = "${secret_base}"
+TOTP_VAULT_KEY = "${totp_key}"
+
+[[config.mounts]]
+filePath = "/clickhouse/clickhouse-config.xml"
+content = """
+<clickhouse>
+  <logger>
+    <level>warning</level>
+    <console>true</console>
+  </logger>
+
+  <!-- Stop all the unnecessary logging -->
+  <query_thread_log remove="remove"/>
+  <query_log remove="remove"/>
+  <text_log remove="remove"/>
+  <trace_log remove="remove"/>
+  <metric_log remove="remove"/>
+  <asynchronous_metric_log remove="remove"/>
+  <session_log remove="remove"/>
+  <part_log remove="remove"/>
+</clickhouse>
+"""
+
+[[config.mounts]]
+filePath = "/clickhouse/clickhouse-user-config.xml"
+content = """
+<clickhouse>
+  <profiles>
+    <default>
+      <log_queries>0</log_queries>
+      <log_query_threads>0</log_query_threads>
+    </default>
+  </profiles>
+</clickhouse>
+"""
+''',
+)
+
 # Prefixed vars create overrides on deployment (key keeps double underscore)
 DOCKER_COMPOSE_WITH_PREFIXED_ENV_OVERRIDE = """
 x-zane-env:

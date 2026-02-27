@@ -58,7 +58,7 @@ import { useDebounce } from "use-debounce";
 import { CommandMenuSearchbar } from "~/components/command-menu-searchbar";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { StatusBadge } from "~/components/status-badge";
-import { type Theme, useTheme } from "~/components/theme-provider";
+import { type Theme, useTheme } from "~/components/theme-context";
 import { Button, SubmitButton } from "~/components/ui/button";
 
 import {

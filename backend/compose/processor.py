@@ -319,7 +319,8 @@ class ComposeSpecProcessor:
                 retry_error = cls._run_docker_validation(retry_content)
 
                 if retry_error:
-                    raise ValidationError(f"Invalid compose file: {retry_error}")
+                    last_error = retry_error.splitlines()[-1]
+                    raise ValidationError(f"Invalid compose file: {last_error}")
             else:
                 last_error = error.splitlines()[-1]
                 raise ValidationError(f"Invalid compose file: {last_error}")

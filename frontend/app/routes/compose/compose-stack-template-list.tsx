@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRightIcon, SearchIcon } from "lucide-react";
+import { ArrowUpRightIcon, ChevronRightIcon, SearchIcon } from "lucide-react";
 import * as React from "react";
 import { Link, href, useLoaderData, useSearchParams } from "react-router";
 import { MultiSelect } from "~/components/multi-select";
@@ -187,6 +187,25 @@ function TemplateSearchList() {
         />
         <div className="flex flex-col gap-8 md:col-span-3 lg:col-span-4 items-center w-full">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {hits.length === 0 && (
+              <div className="col-span-full my-10 flex flex-col items-center justify-center">
+                <h2 className="text-2xl font-bold">
+                  No templates match the search criteria
+                </h2>
+                <h2 className="text-lg text-grey">
+                  Can't find what you're looking for? Suggest a template!
+                </h2>
+
+                <a
+                  href="https://github.com/zane-ops/templates/issues/new?template=new-template.md"
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 my-3 text-link underline"
+                >
+                  Submit a suggestion{" "}
+                  <ArrowUpRightIcon className="size-4 flex-none" />
+                </a>
+              </div>
+            )}
             {hits.map(({ document }) => (
               <TemplateCard
                 key={document.id}
