@@ -6,6 +6,7 @@ with workflow.unsafe.imports_passed_through():
     from django.core.cache import cache
     from django.conf import settings
     from zane_api.utils import DockerSwarmTask, DockerSwarmTaskState
+    from docker.models.services import Service as DockerService
 
 from ..shared import UpdateDetails, UpdateOnGoingDetails
 from ..constants import ZANEOPS_ONGOING_UPDATE_CACHE_KEY
@@ -35,6 +36,16 @@ async def update_ongoing_state(payload: UpdateOnGoingDetails):
         payload.ongoing,
         timeout=int(timedelta(minutes=15).total_seconds()),
     )
+
+
+@activity.defn
+async def get_all_zane_services() -> list[str]:
+    docker_client = get_docker_client()
+    services: list[DockerService] = docker_client.services.list(
+        filters={"label": ["com.docker.stack.namespace=zane"]},
+        status=True,
+    )
+    return [service.name for service in services]
 
 
 @activity.defn

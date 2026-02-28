@@ -37,6 +37,7 @@ with workflow.unsafe.imports_passed_through():
         update_image_version_in_env_file,
         wait_for_service_to_be_updated,
         update_ongoing_state,
+        get_all_zane_services,
     )
     from . import (
         ArchiveDockerServiceWorkflow,
@@ -210,6 +211,7 @@ def get_workflows_and_activities():
             release_service_deploy_semaphore,
             reset_deploy_semaphore,
             schedule_update_docker_service,
+            get_all_zane_services,
             update_image_version_in_env_file,
             delete_env_resources,
             wait_for_service_to_be_updated,

@@ -21,7 +21,9 @@ with workflow.unsafe.imports_passed_through():
         update_image_version_in_env_file,
         wait_for_service_to_be_updated,
         update_ongoing_state,
+        get_all_zane_services,
     )
+    from zane_api.utils import find_item_in_sequence
 
 
 @workflow.defn(name="system-cleanup")
@@ -86,23 +88,57 @@ class AutoUpdateDockerServiceWorkflow:
             maximum_interval=timedelta(seconds=30),
         )
 
-        services_to_update = [
-            ("zane_proxy", "ghcr.io/zane-ops/proxy", False),
-            ("zane_app", "ghcr.io/zane-ops/app", True),
-            ("zane_temporal-schedule-worker", "ghcr.io/zane-ops/app", True),
-            ("zane_temporal-main-worker", "ghcr.io/zane-ops/app", True),
-        ]
+        services_to_update = {
+            "proxy": {  # zane_proxy or zane_zane-proxy
+                "image": "ghcr.io/zane-ops/proxy",
+                "wait_for_update": False,
+                "full_name": None,
+            },
+            "app": {
+                "image": "ghcr.io/zane-ops/app",
+                "wait_for_update": True,
+                "full_name": None,
+            },
+            "temporal-schedule-worker": {
+                "image": "ghcr.io/zane-ops/app",
+                "wait_for_update": True,
+                "full_name": None,
+            },
+            "temporal-main-worker": {
+                "image": "ghcr.io/zane-ops/app",
+                "wait_for_update": True,
+                "full_name": None,
+            },
+        }
 
-        for service, image, _ in services_to_update:
+        all_services = await workflow.execute_activity(
+            get_all_zane_services,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=retry_policy,
+        )
+
+        # update the service names with their actual values
+        for service in services_to_update:
+            corresponding_service_in_stack = find_item_in_sequence(
+                lambda s: s.endswith(service), all_services
+            )
+            if corresponding_service_in_stack is None:
+                continue
+            services_to_update[service]["full_name"] = corresponding_service_in_stack
+
+        for service, config in services_to_update.items():
+            if config["full_name"] is None:
+                continue
+
             print(
                 f"Running activity `update_docker_service({service=}, {desired_version=})`"
             )
             await workflow.execute_activity(
                 schedule_update_docker_service,
                 UpdateDetails(
-                    service_name=service,
+                    service_name=config["full_name"],
                     desired_version=desired_version,
-                    service_image=image,
+                    service_image=config["image"],
                 ),
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=retry_policy,
@@ -122,15 +158,15 @@ class AutoUpdateDockerServiceWorkflow:
                     workflow.execute_activity(
                         wait_for_service_to_be_updated,
                         UpdateDetails(
-                            service_name=service,
+                            service_name=config["full_name"],
                             desired_version=desired_version,
-                            service_image=image,
-                            wait_for_update=wait_for_update,
+                            service_image=config["image"],
+                            wait_for_update=config["wait_for_update"],
                         ),
                         start_to_close_timeout=timedelta(minutes=5),
                         retry_policy=retry_policy,
                     )
-                    for service, image, wait_for_update in services_to_update
+                    for config in services_to_update.values()
                 ]
             )
         finally:
