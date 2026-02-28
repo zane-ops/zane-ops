@@ -95,7 +95,7 @@ export function ComposeStackUserContentForm({
         Define your services, networks, and volumes using a docker-compose.yml
         format. More info in{" "}
         <a
-          href="#"
+          href="https://zaneops.dev/knowledge-base/docker-compose"
           target="_blank"
           className="text-link underline inline-flex gap-1"
         >
