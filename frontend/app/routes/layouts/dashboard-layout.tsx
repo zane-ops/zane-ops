@@ -40,12 +40,7 @@ import {
   SheetHeader,
   SheetTrigger
 } from "~/components/ui/sheet";
-import {
-  resourceQueries,
-  serverQueries,
-  userQueries,
-  versionQueries
-} from "~/lib/queries";
+import { serverQueries, userQueries, versionQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { metaTitle } from "~/utils";
 
@@ -54,7 +49,6 @@ import * as React from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
-import { useDebounce } from "use-debounce";
 import { CommandMenuSearchbar } from "~/components/command-menu-searchbar";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { StatusBadge } from "~/components/status-badge";
@@ -202,10 +196,10 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                   </StatusBadge>
                 </DialogTitle>
                 <DialogDescription className="border-t border-border -mx-6 px-6 pt-2">
-                  <p className="text-start text-lg font-medium">
+                  <p className="text-start text-lg font-medium text-card-foreground">
                     Release notes:
                   </p>
-                  <div className="flex my-2 flex-col gap-2.5 markdown py-2 rounded-lg bg-muted p-4">
+                  <div className="flex my-2 flex-col gap-2.5 markdown py-2 rounded-lg bg-muted p-4 max-h-[500px] overflow-auto text-card-foreground">
                     <Markdown remarkPlugins={[remarkGfm]}>
                       {latestVersion.body}
                     </Markdown>

@@ -85,7 +85,7 @@ export function ComposeStackEnvForm({ stack }: ComposeStackEnvFormProps) {
         <Code className="text-sm">x-zane-env</Code> section of your
         docker-compose.yml. More info in{" "}
         <a
-          href="#"
+          href="https://zaneops.dev/knowledge-base/docker-compose"
           target="_blank"
           className="text-link underline inline-flex gap-1"
         >
