@@ -1,5 +1,5 @@
 services:
-  proxy:
+  zane-proxy:
     ports:
       - target: 80
         published: 80
