@@ -11,6 +11,8 @@ from ..models import URL
 from .serializers import URLDomainField
 from django.db import connection
 from zane_api.utils import domain_to_wildcard
+from container_registry.models import BuildRegistry
+from typing import cast
 
 
 class CertificateCheckSerializer(serializers.Serializer):
@@ -28,19 +30,25 @@ class CheckCertificatesAPIView(APIView):
             data=dict(domain=request.query_params.get("domain"))
         )
         if form.is_valid(raise_exception=True):
-            domain: str = form.data["domain"]  # type: ignore
+            # Check against ZaneOps base domains
+            domain: str = cast(dict[str, str], form.data)["domain"].lower()
             if (
                 domain == settings.ZANE_APP_DOMAIN
                 or domain == f"*.{settings.ROOT_DOMAIN}"
             ):  # These are default certificates for zaneops and subdomains
                 return Response({"validated": True}, status=status.HTTP_200_OK)
 
+            # Check for service domains
             domain_as_wildcard = domain_to_wildcard(domain)
             existing_urls = URL.objects.filter(
                 Q(domain=domain) | Q(domain=domain_as_wildcard)
             ).exists()
 
             if existing_urls:
+                return Response({"validated": True}, status=status.HTTP_200_OK)
+
+            # Check for build registry urls
+            if BuildRegistry.objects.filter(registry_domain=domain).exists():
                 return Response({"validated": True}, status=status.HTTP_200_OK)
 
             # Check compose stack URLs
@@ -58,8 +66,8 @@ class CheckCertificatesAPIView(APIView):
                 LIMIT 1
             """
             params = [
-                domain.lower(),
-                domain_as_wildcard.lower(),
+                domain,
+                domain_as_wildcard,
             ]
             with connection.cursor() as cursor:
                 cursor.execute(query, params)
