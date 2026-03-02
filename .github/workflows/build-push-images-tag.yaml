@@ -1,7 +1,8 @@
 name: Build and Push Latest Images
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
 
 jobs:
@@ -200,3 +201,21 @@ jobs:
           docker buildx imagetools create -t ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }} \
             ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }}-amd64 \
             ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }}-arm64
+
+  create-release:
+    if: ${{ github.repository == 'zane-ops/zane-ops' && github.event_name == 'push' }}
+    name: Create GitHub Release
+    needs: [extract-version, create-manifests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create ${{ needs.extract-version.outputs.tag }} \
+            --repo ${{ github.repository }} \
+            --title "${{ needs.extract-version.outputs.tag }}" \
+            --generate-notes \
+            --draft
