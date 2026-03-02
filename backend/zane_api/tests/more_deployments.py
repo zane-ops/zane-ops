@@ -884,35 +884,6 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-    async def test_validate_url_cannot_use_deployment_domain(self):
-        p, service = await self.acreate_and_deploy_caddy_docker_service()
-
-        latest_deployment = await service.alatest_production_deployment
-        self.assertIsNotNone(latest_deployment)
-
-        first_url: DeploymentURL = await latest_deployment.urls.afirst()  # type: ignore
-        changes_payload = {
-            "field": DeploymentChange.ChangeField.URLS,
-            "type": DeploymentChange.ChangeType.ADD,
-            "new_value": {
-                "domain": first_url.domain,
-                "base_path": "/portainer",
-                "associated_port": 80,
-            },
-        }
-        response = await self.async_client.put(
-            reverse(
-                "zane_api:services.request_deployment_changes",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-            data=changes_payload,
-        )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-
     def test_add_env_string_change(self):
         self.loginUser()
         response = self.client.post(
@@ -1655,73 +1626,6 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
         self.assertEqual(8081, updated_url.associated_port)
         self.assertEqual(False, updated_url.strip_prefix)
 
-    def test_apply_urls_changes_create_as_many_deployment_urls_as_there_ports(self):
-        p, service = self.create_caddy_docker_service()
-
-        DeploymentChange.objects.bulk_create(
-            [
-                DeploymentChange(
-                    field=DeploymentChange.ChangeField.SOURCE,
-                    type=DeploymentChange.ChangeType.UPDATE,
-                    new_value={"image": "caddy:2.8-alpine"},
-                    service=service,
-                ),
-                DeploymentChange(
-                    field=DeploymentChange.ChangeField.URLS,
-                    type=DeploymentChange.ChangeType.ADD,
-                    new_value={
-                        "domain": "web-server.fred.kiss",
-                        "base_path": "/",
-                        "strip_prefix": True,
-                        "associated_port": 8080,
-                    },
-                    service=service,
-                ),
-                DeploymentChange(
-                    field=DeploymentChange.ChangeField.URLS,
-                    type=DeploymentChange.ChangeType.ADD,
-                    new_value={
-                        "domain": "proxy.fredkiss.dev",
-                        "base_path": "/config",
-                        "strip_prefix": False,
-                        "associated_port": 8081,
-                    },
-                    service=service,
-                ),
-                DeploymentChange(
-                    field=DeploymentChange.ChangeField.URLS,
-                    type=DeploymentChange.ChangeType.ADD,
-                    new_value={
-                        "domain": "proxy2.fredkiss.dev",
-                        "base_path": "/config",
-                        "strip_prefix": False,
-                        "associated_port": 8081,
-                    },
-                    service=service,
-                ),
-            ]
-        )
-
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        deployment: Deployment = service.deployments.first()
-        self.assertEqual(2, deployment.urls.count())
-
-        ports = [
-            port for port in deployment.urls.filter().values_list("port", flat=True)
-        ]
-        ports.sort()
-        self.assertEqual([8080, 8081], ports)
-
     def test_apply_port_changes(
         self,
     ):
@@ -1793,49 +1697,6 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
         updated_port = updated_service.ports.get(id=port_to_update.id)
         self.assertEqual(8080, updated_port.host)
         self.assertEqual(80, updated_port.forwarded)
-
-    def test_apply_changes_creates_a_deployment_with_url_if_service_has_url_provided(
-        self,
-    ):
-        p, service = self.create_caddy_docker_service()
-
-        DeploymentChange.objects.bulk_create(
-            [
-                DeploymentChange(
-                    field=DeploymentChange.ChangeField.SOURCE,
-                    type=DeploymentChange.ChangeType.UPDATE,
-                    new_value={"image": "caddy:2.8-alpine"},
-                    service=service,
-                ),
-                DeploymentChange(
-                    field=DeploymentChange.ChangeField.URLS,
-                    type=DeploymentChange.ChangeType.ADD,
-                    new_value={
-                        "domain": "hello.local",
-                        "base_path": "/",
-                        "associated_port": 80,
-                        "strip_prefix": False,
-                    },
-                    service=service,
-                ),
-            ]
-        )
-
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = Service.objects.get(slug=service.slug)
-        new_deployment: Deployment = updated_service.deployments.first()
-        self.assertIsNotNone(new_deployment)
-        self.assertEqual(1, new_deployment.urls.count())
 
 
 class DockerServiceUpdateViewTests(AuthAPITestCase):

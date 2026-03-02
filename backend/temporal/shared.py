@@ -157,7 +157,6 @@ class DeploymentDetails:
     workflow_id: str
     service: ServiceSnapshot
     ignore_build_cache: bool = False
-    urls: List[DeploymentURLDto] = field(default_factory=list)
     changes: List[DeploymentChangeDto] = field(default_factory=list)
     pause_at_step: int = 0
     network_alias: Optional[str] = None
@@ -174,10 +173,6 @@ class DeploymentDetails:
             image_tag=deployment.image_tag,
             ignore_build_cache=deployment.ignore_build_cache,
             unprefixed_hash=deployment.unprefixed_hash,
-            urls=[
-                DeploymentURLDto(domain=url.domain, port=url.port)
-                for url in deployment.urls.all()
-            ],  # type: ignore
             service=ServiceSnapshot.from_dict(deployment.service_snapshot),  # type: ignore
             changes=[
                 DeploymentChangeDto.from_dict(
@@ -210,10 +205,6 @@ class DeploymentDetails:
             image_tag=await deployment.aimage_tag,
             ignore_build_cache=deployment.ignore_build_cache,
             unprefixed_hash=deployment.unprefixed_hash,
-            urls=[
-                DeploymentURLDto(domain=url.domain, port=url.port)
-                async for url in deployment.urls.all()
-            ],  # type: ignore
             service=ServiceSnapshot.from_dict(deployment.service_snapshot),  # type: ignore
             changes=[
                 DeploymentChangeDto.from_dict(

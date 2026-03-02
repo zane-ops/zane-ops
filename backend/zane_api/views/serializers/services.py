@@ -24,7 +24,12 @@ from temporal.helpers import (
     check_if_docker_image_exists,
     check_if_port_is_available_on_host,
 )
-from ...utils import EnhancedJSONEncoder, find_item_in_sequence, add_suffix_if_missing
+from ...utils import (
+    EnhancedJSONEncoder,
+    domain_to_wildcard,
+    find_item_in_sequence,
+    add_suffix_if_missing,
+)
 from ...git_client import GitClient
 from ...validators import validate_git_commit_sha
 from ...constants import HEAD_COMMIT
@@ -380,8 +385,9 @@ class BaseChangeItemSerializer(serializers.Serializer):
             changes = build_pending_changeset_with_extra(service, attrs)
             items_with_same_id = list(
                 filter(
-                    lambda c: c.item_id is not None
-                    and c.item_id == attrs.get("item_id"),
+                    lambda c: (
+                        c.item_id is not None and c.item_id == attrs.get("item_id")
+                    ),
                     changes,
                 )
             )
@@ -454,10 +460,12 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
         new_value = attrs.get("new_value") or {}
         same_urls = list(
             filter(
-                lambda url: url.domain is not None
-                and url.base_path is not None
-                and url.domain == new_value.get("domain")
-                and url.base_path == new_value.get("base_path"),
+                lambda url: (
+                    url.domain is not None
+                    and url.base_path is not None
+                    and url.domain == new_value.get("domain")
+                    and url.base_path == new_value.get("base_path")
+                ),
                 snapshot.urls,
             )
         )
@@ -472,8 +480,7 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
 
         if change_type == "ADD":
             domain = new_value["domain"]
-            domain_parts = domain.split(".")
-            domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
+            domain_as_wildcard = domain_to_wildcard(domain)
 
             existing_parent_domain = URL.objects.filter(
                 Q(domain=domain_as_wildcard.lower())
@@ -551,8 +558,10 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
         # validate double container paths
         volumes_with_same_container_path = list(
             filter(
-                lambda v: v.container_path is not None
-                and v.container_path == new_value.get("container_path"),
+                lambda v: (
+                    v.container_path is not None
+                    and v.container_path == new_value.get("container_path")
+                ),
                 snapshot.volumes,
             )
         )
@@ -568,8 +577,10 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
         # validate double host path
         volumes_with_same_host_path = list(
             filter(
-                lambda v: v.host_path is not None
-                and v.host_path == new_value.get("host_path"),
+                lambda v: (
+                    v.host_path is not None
+                    and v.host_path == new_value.get("host_path")
+                ),
                 snapshot.volumes,
             )
         )
@@ -838,8 +849,9 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
         # validate double host port
         ports_with_same_host = list(
             filter(
-                lambda port: port.host is not None
-                and port.host == new_value.get("host"),
+                lambda port: (
+                    port.host is not None and port.host == new_value.get("host")
+                ),
                 snapshot.ports,
             )
         )

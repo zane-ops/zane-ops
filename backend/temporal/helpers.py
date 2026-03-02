@@ -297,7 +297,6 @@ class GitDeploymentStep(Enum):
     CONFIGS_CREATED = auto()
     PREVIOUS_DEPLOYMENT_SCALED_DOWN = auto()
     SWARM_SERVICE_CREATED = auto()
-    DEPLOYMENT_EXPOSED_TO_HTTP = auto()
     SERVICE_EXPOSED_TO_HTTP = auto()
     FINISHED = auto()
 
@@ -328,7 +327,6 @@ class DockerDeploymentStep(Enum):
     CONFIGS_CREATED = auto()
     PREVIOUS_DEPLOYMENT_SCALED_DOWN = auto()
     SWARM_SERVICE_CREATED = auto()
-    DEPLOYMENT_EXPOSED_TO_HTTP = auto()
     SERVICE_EXPOSED_TO_HTTP = auto()
     FINISHED = auto()
 

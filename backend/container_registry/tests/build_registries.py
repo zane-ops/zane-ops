@@ -829,3 +829,34 @@ class BuildRegistryViewTests(AuthAPITestCase):
         print(config_file.data)
         print("==[end config_file.data]==")
         self.assertTrue("s3:" in config_file.data)
+
+
+class BuildRegistryProxyTests(AuthAPITestCase):
+    def test_certificate_for_build_registry_domain(self):
+        self.loginUser()
+        body = {
+            "name": "My registry",
+            "is_default": True,
+            "registry_domain": "registry.zaneops.io",
+            "registry_username": "fredkisss",
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        registry = cast(
+            BuildRegistry,
+            BuildRegistry.objects.first(),
+        )
+        self.assertIsNotNone(registry)
+        response = self.client.get(
+            reverse(
+                "zane_api:proxy.check_certificates",
+                query={"domain": registry.registry_domain},
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)

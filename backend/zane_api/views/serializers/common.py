@@ -34,6 +34,7 @@ from ...models import (
 from temporal.helpers import get_server_resource_limits
 from ...utils import (
     convert_value_to_bytes,
+    domain_to_wildcard,
     format_storage_value,
 )
 from ...validators import validate_url_path, validate_env_name
@@ -228,21 +229,7 @@ class URLRequestSerializer(serializers.Serializer):
                 }
             )
 
-        existing_deployment_urls = DeploymentURL.objects.filter(
-            Q(domain=attrs["domain"].lower())
-        ).distinct()
-        if len(existing_deployment_urls) > 0:
-            raise serializers.ValidationError(
-                {
-                    "domain": [
-                        f"URL with domain `{attrs['domain']}` is already assigned to another deployment."
-                    ]
-                }
-            )
-
-        domain = attrs["domain"]
-        domain_parts = domain.split(".")
-        domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
+        domain_as_wildcard = domain_to_wildcard(attrs["domain"])
 
         existing_parent_domain = URL.objects.filter(
             Q(domain=domain_as_wildcard.lower())

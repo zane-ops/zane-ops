@@ -328,7 +328,6 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
             ]
         )
         deployment: Deployment = await service.deployments.afirst()
-        first_deployment_url: DeploymentURL = await deployment.urls.afirst()
         response = requests.get(
             ZaneProxyClient.get_uri_for_service_url(
                 service.id, await service.urls.afirst()
@@ -365,13 +364,6 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         url: ArchivedURL = await archived_service.urls.afirst()
         response = requests.get(
             ZaneProxyClient.get_uri_for_service_url(archived_service.original_id, url),
-            timeout=5,
-        )
-        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
-        response = requests.get(
-            ZaneProxyClient.get_uri_for_deployment(
-                deployment.hash, first_deployment_url.domain
-            ),
             timeout=5,
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)

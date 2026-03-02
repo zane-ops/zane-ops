@@ -29,6 +29,17 @@ services:
         zane.http.routes.0.base_path: "/"
 """
 
+DOCKER_COMPOSE_WILDCARD_WEB_SERVICE = """
+services:
+  web:
+    image: nginxdemos/hello:latest
+    deploy:
+      labels:
+        zane.http.routes.0.port: "80"
+        zane.http.routes.0.domain: "*.zaneops.io"
+        zane.http.routes.0.base_path: "/"
+"""
+
 DOCKER_COMPOSE_MULTIPLE_WEB_SERVICES = """
 services:
   frontend:
