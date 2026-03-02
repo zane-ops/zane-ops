@@ -18,6 +18,7 @@ from django.conf import settings
 from .models import ComposeStack, ComposeStackChange
 import secrets
 from zane_api.utils import (
+    domain_to_wildcard,
     generate_random_chars,
     find_item_in_sequence,
     replace_placeholders,
@@ -100,21 +101,7 @@ class ComposeStackURLRouteSerializer(serializers.Serializer):
                 }
             )
 
-        existing_deployment_urls = DeploymentURL.objects.filter(
-            Q(domain=attrs["domain"].lower())
-        ).distinct()
-        if len(existing_deployment_urls) > 0:
-            raise serializers.ValidationError(
-                {
-                    "domain": [
-                        f"URL with domain `{attrs['domain']}` is already assigned to another deployment."
-                    ]
-                }
-            )
-
-        domain = attrs["domain"]
-        domain_parts = domain.split(".")
-        domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
+        domain_as_wildcard = domain_to_wildcard(attrs["domain"])
 
         existing_parent_domain = URL.objects.filter(
             Q(domain=domain_as_wildcard.lower())
@@ -1144,11 +1131,16 @@ class ComposeSpecProcessor:
                     routes
                 )
 
+        # Check that URLs in stack are not overshadowed by wildcard URLs in the same stack
         for service, routes in service_urls.items():
             for route_index, url_route in enumerate(routes):
-                domain = url_route.domain
-                domain_parts = domain.split(".")
-                domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
+                domain_as_wildcard = domain_to_wildcard(url_route.domain)
+
+                # If the domain is already a wildcard, we do not need to check if it
+                # is overshadowed by itself
+                if url_route.domain == domain_as_wildcard:
+                    continue
+
                 existing_wildcard = find_item_in_sequence(
                     lambda r: (
                         r["domain"] == domain_as_wildcard
@@ -1156,6 +1148,7 @@ class ComposeSpecProcessor:
                     ),
                     all_routes,
                 )
+
                 if existing_wildcard:
                     raise serializers.ValidationError(
                         {
