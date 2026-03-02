@@ -668,18 +668,6 @@ class Service(BaseService):
 
         self.apply_pending_changes(deployment=new_deployment)
 
-        ports = (
-            self.urls.filter(associated_port__isnull=False)
-            .values_list("associated_port", flat=True)
-            .distinct()
-        )
-        for port in ports:
-            DeploymentURL.generate_for_deployment(
-                deployment=new_deployment,
-                service=self,
-                port=port,
-            )
-
         latest_deployment = self.latest_production_deployment
 
         new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
@@ -716,18 +704,6 @@ class Service(BaseService):
         new_deployment.save()
 
         self.apply_pending_changes(deployment=new_deployment)
-
-        ports = (
-            self.urls.filter(associated_port__isnull=False)
-            .values_list("associated_port", flat=True)
-            .distinct()
-        )
-        for port in ports:
-            DeploymentURL.generate_for_deployment(
-                deployment=new_deployment,
-                service=self,
-                port=port,
-            )
 
         latest_deployment = self.latest_production_deployment
 

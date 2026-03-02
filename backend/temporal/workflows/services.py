@@ -272,15 +272,6 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
                         deployment, DockerDeploymentStep.SWARM_SERVICE_CREATED
                     )
 
-                if await self.check_for_cancellation(
-                    DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
-                    pause_at_step=pause_at_step,
-                    deployment=deployment,
-                ):
-                    return await self.handle_cancellation(
-                        deployment, DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP
-                    )
-
                 healthcheck_timeout = (
                     deployment.service.healthcheck.timeout_seconds
                     if deployment.service.healthcheck is not None
@@ -432,14 +423,6 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
         if last_completed_step >= DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.remove_changed_urls_in_deployment,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=60),
-                retry_policy=self.retry_policy,
-            )
-
-        if last_completed_step >= DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP:
-            await workflow.execute_activity_method(
-                DockerSwarmActivities.unexpose_docker_deployment_from_http,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=self.retry_policy,
@@ -1031,16 +1014,6 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     deployment, GitDeploymentStep.SWARM_SERVICE_CREATED
                 )
 
-            if await self.check_for_cancellation(
-                GitDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
-                pause_at_step=pause_at_step,
-                deployment=deployment,
-            ):
-                return await self.handle_cancellation(
-                    deployment,
-                    GitDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
-                )
-
             healthcheck_timeout = (
                 deployment.service.healthcheck.timeout_seconds
                 if deployment.service.healthcheck is not None
@@ -1293,14 +1266,6 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
         if last_completed_step >= GitDeploymentStep.SERVICE_EXPOSED_TO_HTTP:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.remove_changed_urls_in_deployment,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=60),
-                retry_policy=self.retry_policy,
-            )
-
-        if last_completed_step >= GitDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP:
-            await workflow.execute_activity_method(
-                DockerSwarmActivities.unexpose_docker_deployment_from_http,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=self.retry_policy,

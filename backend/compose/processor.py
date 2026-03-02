@@ -30,7 +30,7 @@ import os
 from expandvars import expand
 from rest_framework import serializers
 from zane_api.serializers import URLDomainField, URLPathField
-from zane_api.models import URL, DeploymentURL
+from zane_api.models import URL
 from container_registry.models import BuildRegistry
 from django.db.models import Q
 import uuid

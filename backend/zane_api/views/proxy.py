@@ -7,7 +7,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from django.db.models import Q
 from rest_framework import serializers
-from ..models import URL, DeploymentURL
+from ..models import URL
 from .serializers import URLDomainField
 from django.db import connection
 from zane_api.utils import domain_to_wildcard
@@ -38,13 +38,9 @@ class CheckCertificatesAPIView(APIView):
             domain_as_wildcard = domain_to_wildcard(domain)
             existing_urls = URL.objects.filter(
                 Q(domain=domain) | Q(domain=domain_as_wildcard)
-            ).count()
+            ).exists()
 
-            existing_docker_deployment_urls = DeploymentURL.objects.filter(
-                domain=domain
-            ).count()
-            total_urls = existing_urls + existing_docker_deployment_urls
-            if total_urls > 0:
+            if existing_urls:
                 return Response({"validated": True}, status=status.HTTP_200_OK)
 
             # Check compose stack URLs

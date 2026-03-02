@@ -1213,8 +1213,9 @@ class DockerSwarmActivities:
             for config in service.configs:
                 # Only include configs that will not be deleted
                 docker_config = find_item_in_sequence(
-                    lambda v: v.name
-                    == get_config_resource_name(config.id, config.version),  # type: ignore
+                    lambda v: (
+                        v.name == get_config_resource_name(config.id, config.version)  # type: ignore
+                    ),
                     docker_config_list,
                 )
 
@@ -1602,16 +1603,6 @@ class DockerSwarmActivities:
         return deployment_status, deployment_status_reason
 
     @activity.defn
-    async def expose_docker_deployment_to_http(
-        self,
-        deployment: DeploymentDetails,
-    ):
-        # add URL conf for deployment
-        service = deployment.service
-        if len(service.urls_with_associated_ports) > 0:
-            ZaneProxyClient.insert_deployment_urls(deployment)
-
-    @activity.defn
     async def expose_docker_service_to_http(
         self,
         deployment: DeploymentDetails,
@@ -1743,11 +1734,6 @@ class DockerSwarmActivities:
         for deployment in service_details.deployments:
             for domain in deployment.urls:
                 ZaneProxyClient.remove_deployment_url(deployment.hash, domain)
-
-    @activity.defn
-    async def unexpose_docker_deployment_from_http(self, deployment: DeploymentDetails):
-        for url in deployment.urls:
-            ZaneProxyClient.remove_deployment_url(deployment.hash, url.domain)
 
     @activity.defn
     async def remove_changed_urls_in_deployment(self, deployment: DeploymentDetails):

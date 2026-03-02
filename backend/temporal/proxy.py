@@ -39,80 +39,6 @@ class ZaneProxyClient:
         return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{cls._get_id_for_deployment(deployment_hash, domain)}"
 
     @classmethod
-    def _get_request_for_deployment_url(
-        cls, deployment: DeploymentDetails, url: DeploymentURLDto
-    ):
-        service_name = get_swarm_service_name_for_deployment(
-            deployment_hash=deployment.hash,
-            project_id=deployment.service.project_id,
-            service_id=deployment.service.id,
-        )
-
-        # This gnarly config object is so that only authenticated
-        # users can have access to this deployment
-        # It proxies the request to the API that checks that the user is authenticated before allowing the request
-        protect_deployment_proxy_handler = {
-            "handle_response": [
-                {
-                    "match": {"status_code": [2]},
-                    "routes": [
-                        {
-                            "handle": [
-                                {
-                                    "handler": "headers",
-                                    "request": {},
-                                }
-                            ]
-                        }
-                    ],
-                }
-            ],
-            "handler": "reverse_proxy",
-            "headers": {
-                "request": {
-                    "set": {
-                        "X-Forwarded-Method": ["{http.request.method}"],
-                        "X-Forwarded-Uri": ["{http.request.uri}"],
-                    }
-                }
-            },
-            "rewrite": {
-                "method": "GET",
-                "uri": "/api/auth/me/with-token",
-            },
-            "upstreams": [{"dial": settings.ZANE_FRONT_SERVICE_INTERNAL_DOMAIN}],
-        }
-
-        return {
-            "@id": cls._get_id_for_deployment(deployment.hash, url.domain),
-            "match": [{"host": [url.domain]}],
-            "handle": [
-                {
-                    "handler": "subroute",
-                    "routes": [
-                        {
-                            "handle": [
-                                protect_deployment_proxy_handler,
-                                {
-                                    "handler": "encode",
-                                    "encodings": {"gzip": {}},
-                                    "prefer": ["gzip"],
-                                },
-                                {
-                                    "flush_interval": -1,
-                                    "handler": "reverse_proxy",
-                                    "upstreams": [
-                                        {"dial": f"{service_name}:{url.port}"}
-                                    ],
-                                },
-                            ]
-                        }
-                    ],
-                }
-            ],
-        }
-
-    @classmethod
     def _get_id_for_service_url(cls, service_id: str, url: URLDto | URL):
         normalized_path = strip_slash_if_exists(
             url.base_path, strip_end=True, strip_start=True
@@ -373,29 +299,6 @@ class ZaneProxyClient:
                 }
             ],
         }
-
-    @classmethod
-    def insert_deployment_urls(cls, deployment: DeploymentDetails):
-        for url in deployment.urls:
-            response = requests.get(
-                cls.get_uri_for_deployment(deployment.hash, url.domain),
-                timeout=5,
-            )
-
-            # if the domain doesn't exist we create the config for the domain
-            if response.status_code == status.HTTP_404_NOT_FOUND:
-                deployment_url = find_item_in_sequence(
-                    lambda u: u.domain == url.domain, deployment.urls
-                )
-                if deployment_url is not None:
-                    requests.put(
-                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes/0",
-                        headers={"content-type": "application/json"},
-                        json=cls._get_request_for_deployment_url(
-                            deployment, deployment_url
-                        ),
-                        timeout=5,
-                    )
 
     @classmethod
     def upsert_service_url(
