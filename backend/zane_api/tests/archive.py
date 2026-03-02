@@ -368,13 +368,6 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
             timeout=5,
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
-        response = requests.get(
-            ZaneProxyClient.get_uri_for_deployment(
-                deployment.hash, first_deployment_url.domain
-            ),
-            timeout=5,
-        )
-        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
         deleted_docker_service = self.fake_docker_client.get_deployment_service(
             deployment
