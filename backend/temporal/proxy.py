@@ -2,16 +2,15 @@ import asyncio
 
 from typing import Dict, List, TypedDict
 
-from .shared import DeploymentDetails, DeploymentURLDto, ProxyURLRoute
+from .shared import DeploymentDetails, ProxyURLRoute
 from zane_api.models import Deployment, URL
-from zane_api.utils import strip_slash_if_exists, find_item_in_sequence
+from zane_api.utils import strip_slash_if_exists
 from django.conf import settings
 from zane_api.dtos import URLDto
 import requests
 from rest_framework import status
 
 from compose.dtos import ComposeStackUrlRouteDto
-from .helpers import get_swarm_service_name_for_deployment
 
 
 class ZaneProxyEtagError(Exception):
