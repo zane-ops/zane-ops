@@ -8,3 +8,4 @@ from .stacks_prefix_override import *
 from .stack_logs import *
 from .stack_clone_environments import *
 from .stack_metrics import *
+from .proxy import *

@@ -8,8 +8,8 @@ from rest_framework.views import APIView
 from django.db.models import Q
 from rest_framework import serializers
 from ..models import URL, DeploymentURL
-from compose.models import ComposeStack
 from .serializers import URLDomainField
+from django.db import connection
 
 
 class CertificateCheckSerializer(serializers.Serializer):
@@ -48,12 +48,29 @@ class CheckCertificatesAPIView(APIView):
                 return Response({"validated": True}, status=status.HTTP_200_OK)
 
             # Check compose stack URLs
-            compose_stacks = ComposeStack.objects.filter(urls__isnull=False)
-            for stack in compose_stacks:
-                for service_urls in stack.urls.values():
-                    for route in service_urls:
-                        if route.get("domain") == domain or route.get("domain") == domain_as_wildcard:
-                            return Response({"validated": True}, status=status.HTTP_200_OK)
+            # Use PostgreSQL's jsonb_each and jsonb_array_elements to search nested JSON
+            # The urls field structure is: {service_name: [{domain, base_path, ...}, ...]}
+            query = """
+                SELECT cs.id
+                FROM compose_composestack cs,
+                    jsonb_each(cs.urls) AS services(service_name, routes),
+                    jsonb_array_elements(services.routes) AS route
+                WHERE cs.urls IS NOT NULL
+                AND (
+                    lower(route->>'domain') = %s
+                )
+                LIMIT 1
+            """
+            params = [
+                domain.lower(),
+            ]
+            with connection.cursor() as cursor:
+                cursor.execute(query, params)
+                result = cursor.fetchone()
+
+            if result:
+                return Response({"validated": True}, status=status.HTTP_200_OK)
+
         raise exceptions.PermissionDenied(
             "A certificate cannot be issued for this domain"
         )
