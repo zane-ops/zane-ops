@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from django.db.models import Q
 from rest_framework import serializers
 from ..models import URL, DeploymentURL
+from compose.models import ComposeStack
 from .serializers import URLDomainField
 
 
@@ -45,6 +46,14 @@ class CheckCertificatesAPIView(APIView):
             total_urls = existing_urls + existing_docker_deployment_urls
             if total_urls > 0:
                 return Response({"validated": True}, status=status.HTTP_200_OK)
+
+            # Check compose stack URLs
+            compose_stacks = ComposeStack.objects.filter(urls__isnull=False)
+            for stack in compose_stacks:
+                for service_urls in stack.urls.values():
+                    for route in service_urls:
+                        if route.get("domain") == domain or route.get("domain") == domain_as_wildcard:
+                            return Response({"validated": True}, status=status.HTTP_200_OK)
         raise exceptions.PermissionDenied(
             "A certificate cannot be issued for this domain"
         )
