@@ -229,18 +229,6 @@ class URLRequestSerializer(serializers.Serializer):
                 }
             )
 
-        existing_deployment_urls = DeploymentURL.objects.filter(
-            Q(domain=attrs["domain"].lower())
-        ).distinct()
-        if len(existing_deployment_urls) > 0:
-            raise serializers.ValidationError(
-                {
-                    "domain": [
-                        f"URL with domain `{attrs['domain']}` is already assigned to another deployment."
-                    ]
-                }
-            )
-
         domain_as_wildcard = domain_to_wildcard(attrs["domain"])
 
         existing_parent_domain = URL.objects.filter(
