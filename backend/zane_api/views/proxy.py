@@ -10,6 +10,7 @@ from rest_framework import serializers
 from ..models import URL, DeploymentURL
 from .serializers import URLDomainField
 from django.db import connection
+from zane_api.utils import domain_to_wildcard
 
 
 class CertificateCheckSerializer(serializers.Serializer):
@@ -34,8 +35,7 @@ class CheckCertificatesAPIView(APIView):
             ):  # These are default certificates for zaneops and subdomains
                 return Response({"validated": True}, status=status.HTTP_200_OK)
 
-            domain_parts = domain.split(".")
-            domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
+            domain_as_wildcard = domain_to_wildcard(domain)
             existing_urls = URL.objects.filter(
                 Q(domain=domain) | Q(domain=domain_as_wildcard)
             ).count()
@@ -57,12 +57,13 @@ class CheckCertificatesAPIView(APIView):
                     jsonb_array_elements(services.routes) AS route
                 WHERE cs.urls IS NOT NULL
                 AND (
-                    lower(route->>'domain') = %s
+                  lower(route->>'domain') = %s OR lower(route->>'domain') = %s
                 )
                 LIMIT 1
             """
             params = [
                 domain.lower(),
+                domain_as_wildcard.lower(),
             ]
             with connection.cursor() as cursor:
                 cursor.execute(query, params)

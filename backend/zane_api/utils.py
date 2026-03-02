@@ -533,3 +533,20 @@ def obfuscate_git_token(url: str):
         obfuscated = re.sub(pattern, replacement, url)
 
     return obfuscated
+
+
+def domain_to_wildcard(domain: str) -> str:
+    """
+    Strips the leftmost label of a domain and returns it as a wildcard.
+    e.g. `hello.zaneops.io` -> `*.zaneops.io`, `zaneops.io` -> `*.io`
+    """
+    # domain can be something like `hello.zaneops.io` or `zaneops.io`
+    domain_parts = domain.split(".", 1)
+
+    # remove the first subdomain, we are left with `zaneops.io` or `io`
+    domain_parts.pop(0)
+
+    # and the wildcard result is `*.zaneops.io` or `*.io`
+    domain_as_wildcard = ".".join(["*", *domain_parts])
+
+    return domain_as_wildcard
