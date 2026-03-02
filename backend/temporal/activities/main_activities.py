@@ -693,9 +693,6 @@ class DockerSwarmActivities:
                 service_id=latest_production_deployment.service_id,  # type: ignore
                 project_id=deployment.service.project_id,
                 status=latest_production_deployment.status,
-                urls=[
-                    url.domain async for url in latest_production_deployment.urls.all()
-                ],  # type: ignore
                 service_snapshot=ServiceSnapshot.from_dict(snapshot),
             )
         return None

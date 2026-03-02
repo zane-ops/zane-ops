@@ -328,7 +328,6 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
             ]
         )
         deployment: Deployment = await service.deployments.afirst()
-        first_deployment_url: DeploymentURL = await deployment.urls.afirst()
         response = requests.get(
             ZaneProxyClient.get_uri_for_service_url(
                 service.id, await service.urls.afirst()
