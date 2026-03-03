@@ -155,7 +155,7 @@ class ComposeStackURLRouteSerializer(serializers.Serializer):
         # The urls field structure is: {service_name: [{domain, base_path, ...}, ...]}
         query = f"""
             SELECT cs.id
-            FROM compose_composestack cs,
+            FROM {ComposeStack._meta.db_table} cs,
                  jsonb_each(cs.urls) AS services(service_name, routes),
                  jsonb_array_elements(services.routes) AS route
             WHERE cs.urls IS NOT NULL

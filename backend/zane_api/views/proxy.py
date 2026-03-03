@@ -13,6 +13,7 @@ from django.db import connection
 from zane_api.utils import domain_to_wildcard
 from container_registry.models import BuildRegistry
 from typing import cast
+from compose.models import ComposeStack
 
 
 class CertificateCheckSerializer(serializers.Serializer):
@@ -54,9 +55,9 @@ class CheckCertificatesAPIView(APIView):
             # Check compose stack URLs
             # Use PostgreSQL's jsonb_each and jsonb_array_elements to search nested JSON
             # The urls field structure is: {service_name: [{domain, base_path, ...}, ...]}
-            query = """
+            query = f"""
                 SELECT cs.id
-                FROM compose_composestack cs,
+                FROM {ComposeStack._meta.db_table} cs,
                     jsonb_each(cs.urls) AS services(service_name, routes),
                     jsonb_array_elements(services.routes) AS route
                 WHERE cs.urls IS NOT NULL
