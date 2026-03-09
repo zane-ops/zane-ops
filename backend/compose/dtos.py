@@ -136,11 +136,17 @@ class ComposeVolumeMountSpec:
 class ComposeServiceConfigSpec:
     source: str
     target: str
+    mode: Optional[int]
+    uid: Optional[str]
+    gid: Optional[str]
 
     def to_dict(self):
         return dict(
             source=self.source,
             target=self.target,
+            mode=self.mode,
+            uid=self.uid,
+            gid=self.gid,
         )
 
     @classmethod
