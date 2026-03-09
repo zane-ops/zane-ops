@@ -93,7 +93,7 @@ export function Log({
             } as React.CSSProperties
           }
         >
-          <span className="text-[var(--container-color-light)] dark:text-[var(--container-color-dark)]">
+          <span className="select-none text-[var(--container-color-light)] dark:text-[var(--container-color-dark)]">
             &nbsp;|&nbsp;{shortContainerId}&nbsp;|
           </span>
 
