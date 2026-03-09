@@ -35,6 +35,8 @@ import {
 } from "~/components/ui/menubar";
 import { cn } from "~/lib/utils";
 import {
+  formattedDate,
+  formattedTime,
   getDockerImageIconURL,
   mergeTimeAgoFormatterAndFormattedDate
 } from "~/utils";
@@ -397,9 +399,9 @@ export function ComposeStackServiceReplicaCard({
 
                 <div className="flex flex-col relative top-0.5">
                   <span>Created</span>
-                  <span className="text-grey py-2">
-                    {mergeTimeAgoFormatterAndFormattedDate(task.created_at)}
-                  </span>
+                  <time dateTime={task.created_at} className="text-grey py-2">
+                    {formattedTime(task.created_at)}
+                  </time>
                 </div>
               </div>
 
@@ -412,9 +414,9 @@ export function ComposeStackServiceReplicaCard({
 
                 <div className="flex flex-col relative top-0.5">
                   <span>Updated</span>
-                  <span className="text-grey py-2">
-                    {mergeTimeAgoFormatterAndFormattedDate(task.updated_at)}
-                  </span>
+                  <time dateTime={task.updated_at} className="text-grey py-2">
+                    {formattedTime(task.updated_at)}
+                  </time>
                 </div>
               </div>
 
