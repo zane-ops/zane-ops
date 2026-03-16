@@ -50,7 +50,7 @@ services:
         zane.role: "proxy"
     ports:
       - target: 443
-        published: 443
+        published: ${HTTPS_PORT:-443}
         protocol: tcp
         mode: host
     volumes:
