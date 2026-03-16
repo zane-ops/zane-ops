@@ -1,0 +1,17 @@
+name: zane-ops
+icon: images/logo.png
+processes:
+  api:
+    command: make dev-api
+    working_dir: null
+    auto_start: true
+    auto_restart: false
+    restart_when_changed: []
+    env: {}
+  react router:
+    command: pnpm run dev
+    working_dir: /Users/fredkiss3/Developer/zane-ops/frontend
+    auto_start: true
+    auto_restart: true
+    restart_when_changed: []
+    env: {}
