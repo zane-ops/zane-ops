@@ -1,3 +1,4 @@
+import re
 import uuid
 from typing import Any, cast
 
@@ -48,6 +49,8 @@ from .fixtures import (
     INVALID_COMPOSE_YAML_SYNTAX,
     INVALID_DOCKER_COMPOSE_DUPLICATE_URLS,
     INVALID_DOCKER_COMPOSE_WIDLCARD_SHADOW_URLS,
+    DOCKER_COMPOSE_WITH_SHORT_SYNTAX_CONFIGS,
+    DOCKER_COMPOSE_WITH_CONFIG_UID_GID,
     compose_with_url,
 )
 
@@ -2577,3 +2580,68 @@ class ComposeStackURLConflictTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+
+class ComposeStackConfigModeTests(ComposeStackAPITestBase):
+    def test_create_compose_config_with_short_syntax(self):
+        _, stack = self.create_compose_stack(
+            content=DOCKER_COMPOSE_WITH_SHORT_SYNTAX_CONFIGS
+        )
+
+        # Verify that compile_stack_for_deployment generates correct computed values
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WITH_SHORT_SYNTAX_CONFIGS,
+            stack=stack,
+        )
+        self.assertIsNotNone(artifacts.computed_content)
+        print(
+            "========= original =========",
+            DOCKER_COMPOSE_WITH_SHORT_SYNTAX_CONFIGS.strip(),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            artifacts.computed_content,
+            sep="\n",
+        )
+
+        services = cast(dict, artifacts.computed_spec.get("services"))
+        self.assertIsNotNone(services)
+
+        web = services[f"{stack.hash_prefix}_web"]
+        self.assertEqual(1, len(web["configs"]))
+        cfg = web["configs"][0]
+
+        # remove `_vX` suffix
+        src = re.sub(r"_v\d+$", "", cfg["source"])
+        self.assertEqual(cfg["target"], f"/{src}")
+
+    def test_create_compose_config_with_uid_gid_mode(self):
+        _, stack = self.create_compose_stack(content=DOCKER_COMPOSE_WITH_CONFIG_UID_GID)
+
+        # Verify that compile_stack_for_deployment generates correct computed values
+        artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+            user_content=DOCKER_COMPOSE_WITH_CONFIG_UID_GID,
+            stack=stack,
+        )
+        self.assertIsNotNone(artifacts.computed_content)
+        print(
+            "========= original =========",
+            DOCKER_COMPOSE_WITH_CONFIG_UID_GID.strip(),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            artifacts.computed_content,
+            sep="\n",
+        )
+
+        services = cast(dict, artifacts.computed_spec.get("services"))
+        self.assertIsNotNone(services)
+
+        web = services[f"{stack.hash_prefix}_web"]
+        self.assertEqual(1, len(web["configs"]))
+        cfg = web["configs"][0]
+        self.assertEqual(cfg["uid"], "103")
+        self.assertEqual(cfg["gid"], "103")
+        self.assertEqual(cfg["mode"], 0o440)

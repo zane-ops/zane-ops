@@ -157,8 +157,16 @@ class ComposeServiceConfigSpec:
         return data
 
     @classmethod
-    def from_dict(cls, data: dict):
-        return cls(**data)
+    def from_dict(cls, data: dict | str):
+        cfg: dict = {}
+        if isinstance(data, str):
+            cfg = {
+                "source": data,
+                "target": f"/{data}",
+            }
+        else:
+            cfg = data
+        return cls(**cfg)
 
 
 @dataclass
