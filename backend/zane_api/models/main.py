@@ -76,6 +76,7 @@ class Project(TimestampedModel):
         prefix="prj_",
     )
     description = models.TextField(blank=True, null=True)
+    deploy_token = models.CharField(null=True, blank=False)
 
     @property
     async def abuild_registry(self):
