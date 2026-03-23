@@ -23,7 +23,8 @@ import { Button, SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetInput,
-  FieldSetLabel
+  FieldSetLabel,
+  FieldSetTextarea
 } from "~/components/ui/fieldset";
 import {
   Menubar,
@@ -416,11 +417,12 @@ function EditVariableForm({
         className="flex-1 inline-flex flex-col gap-1 w-full"
       >
         <FieldSetLabel className="sr-only">variable value</FieldSetLabel>
-        <FieldSetInput
+        <FieldSetTextarea
           autoFocus
-          placeholder="value"
+          placeholder="<empty>"
           defaultValue={value}
-          className="font-mono"
+          className="font-mono min-h-0"
+          rows={1}
         />
       </FieldSet>
 
