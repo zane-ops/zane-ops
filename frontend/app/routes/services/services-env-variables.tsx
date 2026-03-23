@@ -37,6 +37,11 @@ import {
   DialogTitle,
   DialogTrigger
 } from "~/components/ui/dialog";
+import {
+  FieldSet,
+  FieldSetLabel,
+  FieldSetTextarea
+} from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
 import {
   Menubar,
@@ -785,26 +790,20 @@ function EditVariableForm({
         )}
       </fieldset>
 
-      <fieldset className="flex-1 inline-flex flex-col gap-1 w-full">
-        <label id={`${idPrefix}-value`} className="sr-only">
-          variable value
-        </label>
-        <Input
+      <FieldSet
+        name="value"
+        errors={errors.new_value?.value}
+        className="flex-1 inline-flex flex-col gap-1 w-full"
+      >
+        <FieldSetLabel className="sr-only">variable value</FieldSetLabel>
+        <FieldSetTextarea
           autoFocus
-          placeholder="value"
-          id="variable-value"
+          placeholder="<empty>"
           defaultValue={value}
-          name="value"
-          className="font-mono"
-          aria-labelledby={`${idPrefix}-value-error`}
-          aria-invalid={!!errors.new_value?.value}
+          className="font-mono min-h-0"
+          rows={1}
         />
-        {errors.new_value?.value && (
-          <span id={`${idPrefix}-value-error`} className="text-red-500 text-sm">
-            {errors.new_value?.value}
-          </span>
-        )}
-      </fieldset>
+      </FieldSet>
 
       <div className="flex gap-3">
         <SubmitButton

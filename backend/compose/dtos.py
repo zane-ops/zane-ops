@@ -136,16 +136,37 @@ class ComposeVolumeMountSpec:
 class ComposeServiceConfigSpec:
     source: str
     target: str
+    mode: Optional[int] = None
+    uid: Optional[str] = None
+    gid: Optional[str] = None
 
     def to_dict(self):
-        return dict(
+        data: dict[str, Any] = dict(
             source=self.source,
             target=self.target,
         )
 
+        if self.mode is not None:
+            data["mode"] = self.mode
+
+        if self.uid is not None:
+            data["uid"] = self.uid
+
+        if self.gid is not None:
+            data["gid"] = self.gid
+        return data
+
     @classmethod
-    def from_dict(cls, data: dict):
-        return cls(**data)
+    def from_dict(cls, data: dict | str):
+        cfg: dict = {}
+        if isinstance(data, str):
+            cfg = {
+                "source": data,
+                "target": f"/{data}",
+            }
+        else:
+            cfg = data
+        return cls(**cfg)
 
 
 @dataclass

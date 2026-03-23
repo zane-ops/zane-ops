@@ -250,6 +250,44 @@ configs:
 """
 
 
+DOCKER_COMPOSE_WITH_SHORT_SYNTAX_CONFIGS = """
+services:
+  web:
+    image: nginx:alpine
+    configs:
+      - nginx_config
+
+configs:
+  nginx_config:
+    content: |
+      user nginx;
+      worker_processes auto;
+      events {
+        worker_connections 1024;
+      }
+"""
+
+DOCKER_COMPOSE_WITH_CONFIG_UID_GID = """
+services:
+  web:
+    image: nginx:alpine
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf
+        uid: '103'
+        gid: '103'
+        mode: 0440
+
+configs:
+  nginx_config:
+    content: |
+      user nginx;
+      worker_processes auto;
+      events {
+        worker_connections 1024;
+      }
+"""
+
 DOCKER_COMPOSE_MINIMAL = """
 services:
   redis:
