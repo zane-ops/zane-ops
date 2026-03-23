@@ -63,22 +63,21 @@ export function FieldSetErrors(
   }
   const { id, errors } = ctx;
   return (
-    errors && (
-      <span
-        id={`${id}-error`}
-        aria-live="polite"
-        className={cn("text-red-500 text-sm", props.className)}
-      >
-        {typeof errors === "string"
+    <span
+      id={`${id}-error`}
+      aria-live="assertive"
+      className={cn("text-red-500 text-sm", props.className)}
+    >
+      {errors &&
+        (typeof errors === "string"
           ? errors
           : errors.map((err) => (
               <>
                 {err}
                 <br />
               </>
-            ))}
-      </span>
-    )
+            )))}
+    </span>
   );
 }
 
@@ -113,7 +112,7 @@ export function FieldSetLabel(props: React.ComponentProps<"label">) {
 export function FieldSetInput(
   props: Omit<
     React.ComponentProps<typeof Input>,
-    "id" | "aria-invalid" | "aria-labelledby"
+    "id" | "aria-invalid" | "aria-describedby"
   >
 ) {
   const ctx = React.use(FieldSetContext);
@@ -130,7 +129,7 @@ export function FieldSetInput(
     <Input
       id={id}
       aria-invalid={Boolean(errors)}
-      aria-labelledby={`${id}-error`}
+      aria-describedby={`${id}-error`}
       {...props}
       name={props.name ?? name}
     />
@@ -140,7 +139,7 @@ export function FieldSetInput(
 export function FieldSetPasswordToggleInput(
   props: Omit<
     React.ComponentProps<typeof PasswordToggleInput>,
-    "id" | "aria-invalid" | "aria-labelledby"
+    "id" | "aria-invalid" | "aria-describedby"
   >
 ) {
   const ctx = React.use(FieldSetContext);
@@ -157,7 +156,7 @@ export function FieldSetPasswordToggleInput(
     <PasswordToggleInput
       id={id}
       aria-invalid={Boolean(errors)}
-      aria-labelledby={`${id}-error`}
+      aria-describedby={`${id}-error`}
       {...props}
       name={props.name ?? name}
     />
@@ -167,7 +166,7 @@ export function FieldSetPasswordToggleInput(
 export function FieldSetTextarea(
   props: Omit<
     React.ComponentProps<typeof Textarea>,
-    "id" | "aria-invalid" | "aria-labelledby"
+    "id" | "aria-invalid" | "aria-describedby"
   >
 ) {
   const ctx = React.use(FieldSetContext);
@@ -184,7 +183,7 @@ export function FieldSetTextarea(
     <Textarea
       id={id}
       aria-invalid={Boolean(errors)}
-      aria-labelledby={`${id}-error`}
+      aria-describedby={`${id}-error`}
       {...props}
       name={props.name ?? name}
     />
@@ -194,7 +193,7 @@ export function FieldSetTextarea(
 export function FieldSetCheckbox(
   props: Omit<
     React.ComponentProps<typeof Checkbox>,
-    "id" | "aria-invalid" | "aria-labelledby"
+    "id" | "aria-invalid" | "aria-describedby"
   >
 ) {
   const ctx = React.use(FieldSetContext);
@@ -211,7 +210,7 @@ export function FieldSetCheckbox(
     <Checkbox
       id={id}
       aria-invalid={Boolean(errors)}
-      aria-labelledby={`${id}-error`}
+      aria-describedby={`${id}-error`}
       {...props}
       name={props.name ?? name}
     />
@@ -221,7 +220,7 @@ export function FieldSetCheckbox(
 export function FieldSetSelect(
   props: Omit<
     React.ComponentProps<typeof Select>,
-    "aria-invalid" | "aria-labelledby"
+    "aria-invalid" | "aria-describedby"
   >
 ) {
   const ctx = React.use(FieldSetContext);
@@ -237,7 +236,7 @@ export function FieldSetSelect(
     <Select
       name={name}
       aria-invalid={Boolean(errors)}
-      aria-labelledby={`${id}-error`}
+      aria-describedby={`${id}-error`}
       {...props}
     />
   );
@@ -257,7 +256,7 @@ export function FieldSetSlider(props: React.ComponentProps<typeof Slider>) {
     <Slider
       id={id}
       aria-invalid={Boolean(errors)}
-      aria-labelledby={`${id}-error`}
+      aria-describedby={`${id}-error`}
       {...props}
       name={props.name ?? name}
     />
