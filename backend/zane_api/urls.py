@@ -294,6 +294,11 @@ urlpatterns = [
         name="services.git.trigger_preview_env",
     ),
     re_path(
+        r"^trigger-monorepo-preview/(?P<deploy_token>[a-zA-Z0-9-_]+)/?$",
+        views.ProjectWebhookDeployAPIView.as_view(),
+        name="project.trigger_preview_env",
+    ),
+    re_path(
         r"^auth/check-user-existence/?$",
         views.CheckUserExistenceView.as_view(),
         name="auth.check_user_existence",

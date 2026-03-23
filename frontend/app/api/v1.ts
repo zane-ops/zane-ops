@@ -554,6 +554,13 @@ export interface paths {
     get: operations["shell_ssh_keys_retrieve"];
     delete: operations["shell_ssh_keys_destroy"];
   };
+  "/api/trigger-monorepo-preview/{deploy_token}/": {
+    /**
+     * Webhook to deploy a monorepo in a project environment
+     * @description trigger a new deployment for a monorepo in the project.
+     */
+    put: operations["webhookProjectDeployService"];
+  };
   "/api/trigger-preview/{deploy_token}/": {
     /** Webhook to trigger a new preview environment */
     post: operations["webhookTriggerPreviewEnv"];
@@ -2769,6 +2776,10 @@ export interface components {
     EnvStringChangeRequest: {
       new_value: string;
     };
+    EnvVarItemRequest: {
+      value: string;
+      key: string;
+    };
     EnvVariable: {
       id: string;
       key: string;
@@ -3803,6 +3814,16 @@ export interface components {
     ProjectUpdateRequestRequest: {
       slug?: string;
       description?: string;
+    };
+    ProjectWebhookDeployRequestRequest: {
+      /** Format: uri */
+      repository_url: string;
+      template?: string;
+      pr_number?: number;
+      branch_name?: string;
+      services_env_overrides?: {
+        [key: string]: components["schemas"]["EnvVarItemRequest"][];
+      };
     };
     ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent: {
       /**
@@ -7638,6 +7659,173 @@ export interface components {
     WebhookGitDeployServiceValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["WebhookGitDeployServiceError"][];
+    };
+    WebhookProjectDeployServiceBranchNameErrorComponent: {
+      /**
+       * @description * `branch_name` - branch_name
+       * @enum {string}
+       */
+      attr: "branch_name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookProjectDeployServiceError: components["schemas"]["WebhookProjectDeployServiceNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookProjectDeployServiceRepositoryUrlErrorComponent"] | components["schemas"]["WebhookProjectDeployServiceTemplateErrorComponent"] | components["schemas"]["WebhookProjectDeployServicePrNumberErrorComponent"] | components["schemas"]["WebhookProjectDeployServiceBranchNameErrorComponent"] | components["schemas"]["WebhookProjectDeployServiceServicesEnvOverridesErrorComponent"] | components["schemas"]["WebhookProjectDeployServiceServicesEnvOverridesKEYErrorComponent"] | components["schemas"]["WebhookProjectDeployServiceServicesEnvOverridesKEYINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookProjectDeployServiceServicesEnvOverridesKEYINDEXValueErrorComponent"] | components["schemas"]["WebhookProjectDeployServiceServicesEnvOverridesKEYINDEXKeyErrorComponent"];
+    WebhookProjectDeployServiceErrorResponse400: components["schemas"]["WebhookProjectDeployServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    WebhookProjectDeployServiceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    WebhookProjectDeployServicePrNumberErrorComponent: {
+      /**
+       * @description * `pr_number` - pr_number
+       * @enum {string}
+       */
+      attr: "pr_number";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "min_value" | "null";
+      detail: string;
+    };
+    WebhookProjectDeployServiceRepositoryUrlErrorComponent: {
+      /**
+       * @description * `repository_url` - repository_url
+       * @enum {string}
+       */
+      attr: "repository_url";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookProjectDeployServiceServicesEnvOverridesErrorComponent: {
+      /**
+       * @description * `services_env_overrides` - services_env_overrides
+       * @enum {string}
+       */
+      attr: "services_env_overrides";
+      /**
+       * @description * `not_a_dict` - not_a_dict
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "not_a_dict" | "null";
+      detail: string;
+    };
+    WebhookProjectDeployServiceServicesEnvOverridesKEYErrorComponent: {
+      /**
+       * @description * `services_env_overrides.KEY` - services_env_overrides.KEY
+       * @enum {string}
+       */
+      attr: "services_env_overrides.KEY";
+      /**
+       * @description * `not_a_list` - not_a_list
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "not_a_list" | "null" | "required";
+      detail: string;
+    };
+    WebhookProjectDeployServiceServicesEnvOverridesKEYINDEXKeyErrorComponent: {
+      /**
+       * @description * `services_env_overrides.KEY.INDEX.key` - services_env_overrides.KEY.INDEX.key
+       * @enum {string}
+       */
+      attr: "services_env_overrides.KEY.INDEX.key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookProjectDeployServiceServicesEnvOverridesKEYINDEXNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `services_env_overrides.KEY.INDEX.non_field_errors` - services_env_overrides.KEY.INDEX.non_field_errors
+       * @enum {string}
+       */
+      attr: "services_env_overrides.KEY.INDEX.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "required";
+      detail: string;
+    };
+    WebhookProjectDeployServiceServicesEnvOverridesKEYINDEXValueErrorComponent: {
+      /**
+       * @description * `services_env_overrides.KEY.INDEX.value` - services_env_overrides.KEY.INDEX.value
+       * @enum {string}
+       */
+      attr: "services_env_overrides.KEY.INDEX.value";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookProjectDeployServiceTemplateErrorComponent: {
+      /**
+       * @description * `template` - template
+       * @enum {string}
+       */
+      attr: "template";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookProjectDeployServiceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["WebhookProjectDeployServiceError"][];
     };
     WebhookTriggerPreviewEnvBranchNameErrorComponent: {
       /**
@@ -12730,6 +12918,50 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ShellSshKeysDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Webhook to deploy a monorepo in a project environment
+   * @description trigger a new deployment for a monorepo in the project.
+   */
+  webhookProjectDeployService: {
+    parameters: {
+      path: {
+        deploy_token: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProjectWebhookDeployRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ProjectWebhookDeployRequestRequest"];
+        "multipart/form-data": components["schemas"]["ProjectWebhookDeployRequestRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WebhookProjectDeployServiceErrorResponse400"];
         };
       };
       401: {

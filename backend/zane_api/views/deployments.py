@@ -22,6 +22,7 @@ from .serializers import (
     GitServiceWebhookDeployRequestSerializer,
     BulkDeployServiceRequestSerializer,
     DeploymentCleanupQueueSerializer,
+    ProjectWebhookDeployRequestSerializer,
 )
 
 from temporal.workflows import DeployDockerServiceWorkflow, DeployGitServiceWorkflow
@@ -125,7 +126,6 @@ class WebhookDeployDockerServiceAPIView(APIView):
         description="trigger a new deployment.",
     )
     def put(self, request: Request, deploy_token: str):
-
         try:
             service = (
                 Service.objects.filter(
@@ -198,9 +198,7 @@ class WebhookDeployDockerServiceAPIView(APIView):
                     TemporalClient.workflow_signal(
                         workflow=DeployDockerServiceWorkflow.run,
                         input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
-                        signal=(
-                            DeployDockerServiceWorkflow.cancel_deployment
-                        ),  # type: ignore
+                        signal=(DeployDockerServiceWorkflow.cancel_deployment),  # type: ignore
                         workflow_id=dpl.workflow_id,
                     )
                 TemporalClient.start_workflow(
@@ -312,7 +310,6 @@ class WebhookDeployGitServiceAPIView(APIView):
 
 
 class BulkDeployServicesAPIView(APIView):
-
     @extend_schema(
         request=BulkDeployServiceRequestSerializer,
         responses={202: None},
@@ -394,7 +391,6 @@ class BulkDeployServicesAPIView(APIView):
 
 
 class CleanupDeploymentQueueAPIView(APIView):
-
     @extend_schema(
         request=DeploymentCleanupQueueSerializer,
         responses={202: None},
@@ -570,9 +566,7 @@ class ServiceDeploymentsAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = DockerServiceDeploymentFilterSet
     pagination_class = DeploymentListPagination
-    queryset = (
-        Deployment.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = Deployment.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
     @extend_schema(
         summary="List all deployments",
@@ -629,9 +623,7 @@ class ServiceDeploymentsAPIView(ListAPIView):
 class ServiceDeploymentSingleAPIView(RetrieveAPIView):
     serializer_class = ServiceDeploymentSerializer
     lookup_url_kwarg = "deployment_hash"  # This corresponds to the URL configuration
-    queryset = (
-        Deployment.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
+    queryset = Deployment.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
 
     def get_object(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
@@ -677,9 +669,7 @@ class ServiceDeploymentSingleAPIView(RetrieveAPIView):
 
 class RecentDeploymentsAPIView(ListAPIView):
     serializer_class = SimpleDeploymentSerializer
-    queryset = (
-        Deployment.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
+    queryset = Deployment.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
     pagination_class = None
 
     @extend_schema(
@@ -690,7 +680,6 @@ class RecentDeploymentsAPIView(ListAPIView):
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self) -> QuerySet[Deployment]:  # type: ignore
-
         latest_per_service = (
             Deployment.objects.filter(
                 Q(is_current_production=True)
@@ -754,3 +743,20 @@ class RecentDeploymentsAPIView(ListAPIView):
             )
             .order_by("is_priority", "-queued_at")[:6]
         )
+
+
+class ProjectWebhookDeployAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "deploy_webhook"
+
+    @transaction.atomic()
+    @extend_schema(
+        request=ProjectWebhookDeployRequestSerializer,
+        responses={202: None},
+        operation_id="webhookProjectDeployService",
+        summary="Webhook to deploy a monorepo in a project environment",
+        description="trigger a new deployment for a monorepo in the project.",
+    )
+    def put(self, request: Request, deploy_token: str):
+        return Response()

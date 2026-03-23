@@ -10974,6 +10974,93 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/trigger-monorepo-preview/{deploy_token}/:
+    put:
+      operationId: webhookProjectDeployService
+      description: trigger a new deployment for a monorepo in the project.
+      summary: Webhook to deploy a monorepo in a project environment
+      parameters:
+      - in: path
+        name: deploy_token
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      tags:
+      - trigger-monorepo-preview
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectWebhookDeployRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectWebhookDeployRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectWebhookDeployRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookProjectDeployServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '202':
+          description: No response body
   /api/trigger-preview/{deploy_token}/:
     post:
       operationId: webhookTriggerPreviewEnv
@@ -16196,6 +16283,18 @@ components:
           type: string
       required:
       - new_value
+    EnvVarItemRequest:
+      type: object
+      properties:
+        value:
+          type: string
+          minLength: 1
+        key:
+          type: string
+          minLength: 1
+      required:
+      - key
+      - value
     EnvVariable:
       type: object
       properties:
@@ -18779,6 +18878,31 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
         description:
           type: string
+    ProjectWebhookDeployRequestRequest:
+      type: object
+      properties:
+        repository_url:
+          type: string
+          format: uri
+          minLength: 1
+        template:
+          type: string
+          minLength: 1
+          pattern: ^[-a-zA-Z0-9_]+$
+        pr_number:
+          type: integer
+          minimum: 1
+        branch_name:
+          type: string
+          minLength: 1
+        services_env_overrides:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/EnvVarItemRequest'
+      required:
+      - repository_url
     ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent:
       type: object
       properties:
@@ -26687,6 +26811,313 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WebhookGitDeployServiceError'
+      required:
+      - errors
+      - type
+    WebhookProjectDeployServiceBranchNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - branch_name
+          type: string
+          description: '* `branch_name` - branch_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookProjectDeployServiceError:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookProjectDeployServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WebhookProjectDeployServiceRepositoryUrlErrorComponent'
+      - $ref: '#/components/schemas/WebhookProjectDeployServiceTemplateErrorComponent'
+      - $ref: '#/components/schemas/WebhookProjectDeployServicePrNumberErrorComponent'
+      - $ref: '#/components/schemas/WebhookProjectDeployServiceBranchNameErrorComponent'
+      - $ref: '#/components/schemas/WebhookProjectDeployServiceServicesEnvOverridesErrorComponent'
+      - $ref: '#/components/schemas/WebhookProjectDeployServiceServicesEnvOverridesKEYErrorComponent'
+      - $ref: '#/components/schemas/WebhookProjectDeployServiceServicesEnvOverridesKEYINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WebhookProjectDeployServiceServicesEnvOverridesKEYINDEXValueErrorComponent'
+      - $ref: '#/components/schemas/WebhookProjectDeployServiceServicesEnvOverridesKEYINDEXKeyErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/WebhookProjectDeployServiceNonFieldErrorsErrorComponent'
+          repository_url: '#/components/schemas/WebhookProjectDeployServiceRepositoryUrlErrorComponent'
+          template: '#/components/schemas/WebhookProjectDeployServiceTemplateErrorComponent'
+          pr_number: '#/components/schemas/WebhookProjectDeployServicePrNumberErrorComponent'
+          branch_name: '#/components/schemas/WebhookProjectDeployServiceBranchNameErrorComponent'
+          services_env_overrides: '#/components/schemas/WebhookProjectDeployServiceServicesEnvOverridesErrorComponent'
+          services_env_overrides.KEY: '#/components/schemas/WebhookProjectDeployServiceServicesEnvOverridesKEYErrorComponent'
+          services_env_overrides.KEY.INDEX.non_field_errors: '#/components/schemas/WebhookProjectDeployServiceServicesEnvOverridesKEYINDEXNonFieldErrorsErrorComponent'
+          services_env_overrides.KEY.INDEX.value: '#/components/schemas/WebhookProjectDeployServiceServicesEnvOverridesKEYINDEXValueErrorComponent'
+          services_env_overrides.KEY.INDEX.key: '#/components/schemas/WebhookProjectDeployServiceServicesEnvOverridesKEYINDEXKeyErrorComponent'
+    WebhookProjectDeployServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookProjectDeployServiceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/WebhookProjectDeployServiceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    WebhookProjectDeployServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookProjectDeployServicePrNumberErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - pr_number
+          type: string
+          description: '* `pr_number` - pr_number'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookProjectDeployServiceRepositoryUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - repository_url
+          type: string
+          description: '* `repository_url` - repository_url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookProjectDeployServiceServicesEnvOverridesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - services_env_overrides
+          type: string
+          description: '* `services_env_overrides` - services_env_overrides'
+        code:
+          enum:
+          - not_a_dict
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_dict` - not_a_dict
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookProjectDeployServiceServicesEnvOverridesKEYErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - services_env_overrides.KEY
+          type: string
+          description: '* `services_env_overrides.KEY` - services_env_overrides.KEY'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookProjectDeployServiceServicesEnvOverridesKEYINDEXKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - services_env_overrides.KEY.INDEX.key
+          type: string
+          description: '* `services_env_overrides.KEY.INDEX.key` - services_env_overrides.KEY.INDEX.key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookProjectDeployServiceServicesEnvOverridesKEYINDEXNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - services_env_overrides.KEY.INDEX.non_field_errors
+          type: string
+          description: '* `services_env_overrides.KEY.INDEX.non_field_errors` - services_env_overrides.KEY.INDEX.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookProjectDeployServiceServicesEnvOverridesKEYINDEXValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - services_env_overrides.KEY.INDEX.value
+          type: string
+          description: '* `services_env_overrides.KEY.INDEX.value` - services_env_overrides.KEY.INDEX.value'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookProjectDeployServiceTemplateErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - template
+          type: string
+          description: '* `template` - template'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookProjectDeployServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookProjectDeployServiceError'
       required:
       - errors
       - type
