@@ -1,3 +1,4 @@
+import secrets
 import time
 
 from django.db import IntegrityError, transaction
@@ -190,6 +191,7 @@ class ProjectsListAPIView(ListCreateAPIView):
                     slug=slug,
                     owner=request.user,
                     description=data.get("description"),  # type: ignore
+                    deploy_token=secrets.token_hex(16),
                 )
                 # Create default production environment
                 production_env = new_project.environments.create(

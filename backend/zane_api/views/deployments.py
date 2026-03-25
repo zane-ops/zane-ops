@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status
 
-from ..serializers import ServiceSerializer
+from ..serializers import ServiceSerializer, ProjectSerializer
 from ..models import (
     Service,
     Project,
@@ -760,3 +760,25 @@ class ProjectWebhookDeployAPIView(APIView):
     )
     def put(self, request: Request, deploy_token: str):
         return Response()
+
+
+class RegenerateProjectDeployTokenAPIView(APIView):
+    serializer_class = ProjectSerializer
+
+    @extend_schema(
+        summary="Regenerate service deploy token",
+        operation_id="regenerateProjectDeployToken",
+    )
+    def patch(self, request: Request, project_slug: str):
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+
+        project.deploy_token = secrets.token_hex(16)
+        project.save()
+
+        response = ProjectSerializer(project)
+        return Response(response.data)
