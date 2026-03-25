@@ -8410,6 +8410,94 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/projects/{project_slug}/regenerate-deploy-token/:
+    patch:
+      operationId: regenerateProjectDeployToken
+      summary: Regenerate service deploy token
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegenerateProjectDeployTokenErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
   /api/projects/{slug}/:
     get:
       operationId: getSingleProject
@@ -10974,93 +11062,6 @@ paths:
           description: ''
         '204':
           description: No response body
-  /api/trigger-monorepo-preview/{deploy_token}/:
-    put:
-      operationId: webhookProjectDeployService
-      description: trigger a new deployment for a monorepo in the project.
-      summary: Webhook to deploy a monorepo in a project environment
-      parameters:
-      - in: path
-        name: deploy_token
-        schema:
-          type: string
-          pattern: ^[a-zA-Z0-9-_]+$
-        required: true
-      tags:
-      - trigger-monorepo-preview
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProjectWebhookDeployRequestRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ProjectWebhookDeployRequestRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ProjectWebhookDeployRequestRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - {}
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WebhookProjectDeployServiceErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '202':
-          description: No response body
   /api/trigger-preview/{deploy_token}/:
     post:
       operationId: webhookTriggerPreviewEnv
@@ -11150,6 +11151,93 @@ paths:
               schema:
                 $ref: '#/components/schemas/EnvironmentWithVariables'
           description: ''
+  /api/trigger-preview/project/{deploy_token}/:
+    put:
+      operationId: webhookProjectDeployService
+      description: trigger a new deployment for a monorepo in the project.
+      summary: Webhook to deploy a monorepo in a project environment
+      parameters:
+      - in: path
+        name: deploy_token
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      tags:
+      - trigger-preview
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectWebhookDeployRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectWebhookDeployRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectWebhookDeployRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookProjectDeployServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '202':
+          description: No response body
   /api/trigger-update/:
     post:
       operationId: trigger_update_create
@@ -18379,6 +18467,21 @@ components:
         env_variables:
           type: string
           writeOnly: true
+    PatchedProjectRequest:
+      type: object
+      properties:
+        description:
+          type: string
+          nullable: true
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
     PatchedServiceRequest:
       type: object
       properties:
@@ -18821,8 +18924,12 @@ components:
         healthy_stack_services:
           type: integer
           readOnly: true
+        deploy_token:
+          type: string
+          readOnly: true
       required:
       - created_at
+      - deploy_token
       - description
       - environments
       - healthy_services
@@ -20450,6 +20557,149 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    RegenerateProjectDeployTokenDescriptionErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - description
+          type: string
+          description: '* `description` - description'
+        code:
+          enum:
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateProjectDeployTokenError:
+      oneOf:
+      - $ref: '#/components/schemas/RegenerateProjectDeployTokenNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateProjectDeployTokenDescriptionErrorComponent'
+      - $ref: '#/components/schemas/RegenerateProjectDeployTokenIdErrorComponent'
+      - $ref: '#/components/schemas/RegenerateProjectDeployTokenSlugErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/RegenerateProjectDeployTokenNonFieldErrorsErrorComponent'
+          description: '#/components/schemas/RegenerateProjectDeployTokenDescriptionErrorComponent'
+          id: '#/components/schemas/RegenerateProjectDeployTokenIdErrorComponent'
+          slug: '#/components/schemas/RegenerateProjectDeployTokenSlugErrorComponent'
+    RegenerateProjectDeployTokenErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/RegenerateProjectDeployTokenValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/RegenerateProjectDeployTokenValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RegenerateProjectDeployTokenIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - id
+          type: string
+          description: '* `id` - id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateProjectDeployTokenNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateProjectDeployTokenSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateProjectDeployTokenValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegenerateProjectDeployTokenError'
+      required:
+      - errors
+      - type
     RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent:
       type: object
       properties:
@@ -24986,6 +25236,22 @@ components:
       - created_at
       - id
       - is_preview
+      - name
+    SimpleEnvironmentRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        is_preview:
+          type: boolean
+      required:
       - name
     SimplePreviewMetadata:
       type: object

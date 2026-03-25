@@ -439,6 +439,10 @@ export interface paths {
     delete: operations["projects_preview_templates_destroy"];
     patch: operations["projects_preview_templates_partial_update"];
   };
+  "/api/projects/{project_slug}/regenerate-deploy-token/": {
+    /** Regenerate service deploy token */
+    patch: operations["regenerateProjectDeployToken"];
+  };
   "/api/projects/{slug}/": {
     /** Get single project */
     get: operations["getSingleProject"];
@@ -554,16 +558,16 @@ export interface paths {
     get: operations["shell_ssh_keys_retrieve"];
     delete: operations["shell_ssh_keys_destroy"];
   };
-  "/api/trigger-monorepo-preview/{deploy_token}/": {
+  "/api/trigger-preview/{deploy_token}/": {
+    /** Webhook to trigger a new preview environment */
+    post: operations["webhookTriggerPreviewEnv"];
+  };
+  "/api/trigger-preview/project/{deploy_token}/": {
     /**
      * Webhook to deploy a monorepo in a project environment
      * @description trigger a new deployment for a monorepo in the project.
      */
     put: operations["webhookProjectDeployService"];
-  };
-  "/api/trigger-preview/{deploy_token}/": {
-    /** Webhook to trigger a new preview environment */
-    post: operations["webhookTriggerPreviewEnv"];
   };
   "/api/trigger-update/": {
     /**
@@ -3656,6 +3660,11 @@ export interface components {
       auth_password?: string | null;
       env_variables?: string;
     };
+    PatchedProjectRequest: {
+      description?: string | null;
+      id?: string;
+      slug?: string;
+    };
     PatchedServiceRequest: {
       slug?: string;
       auto_deploy_enabled?: boolean;
@@ -3793,6 +3802,7 @@ export interface components {
       total_services: number;
       total_stack_services: number;
       healthy_stack_services: number;
+      deploy_token: string;
     };
     ProjectCreateRequestRequest: {
       slug?: string;
@@ -4577,6 +4587,79 @@ export interface components {
     RecentDeploymentsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RegenerateComposeStackDeployTokenErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    RegenerateProjectDeployTokenDescriptionErrorComponent: {
+      /**
+       * @description * `description` - description
+       * @enum {string}
+       */
+      attr: "description";
+      /**
+       * @description * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateProjectDeployTokenError: components["schemas"]["RegenerateProjectDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateProjectDeployTokenDescriptionErrorComponent"] | components["schemas"]["RegenerateProjectDeployTokenIdErrorComponent"] | components["schemas"]["RegenerateProjectDeployTokenSlugErrorComponent"];
+    RegenerateProjectDeployTokenErrorResponse400: components["schemas"]["RegenerateProjectDeployTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RegenerateProjectDeployTokenIdErrorComponent: {
+      /**
+       * @description * `id` - id
+       * @enum {string}
+       */
+      attr: "id";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * * `unique` - unique
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed" | "unique";
+      detail: string;
+    };
+    RegenerateProjectDeployTokenNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    RegenerateProjectDeployTokenSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * * `unique` - unique
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
+      detail: string;
+    };
+    RegenerateProjectDeployTokenValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["RegenerateProjectDeployTokenError"][];
+    };
     RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent: {
       /**
        * @description * `auto_deploy_enabled` - auto_deploy_enabled
@@ -6822,6 +6905,11 @@ export interface components {
       is_preview: boolean;
       /** Format: date-time */
       created_at: string;
+    };
+    SimpleEnvironmentRequest: {
+      id?: string;
+      name: string;
+      is_preview?: boolean;
     };
     SimplePreviewMetadata: {
       id: number;
@@ -11738,6 +11826,48 @@ export interface operations {
       };
     };
   };
+  /** Regenerate service deploy token */
+  regenerateProjectDeployToken: {
+    parameters: {
+      path: {
+        project_slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedProjectRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedProjectRequest"];
+        "multipart/form-data": components["schemas"]["PatchedProjectRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Project"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["RegenerateProjectDeployTokenErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /** Get single project */
   getSingleProject: {
     parameters: {
@@ -12937,6 +13067,48 @@ export interface operations {
       };
     };
   };
+  /** Webhook to trigger a new preview environment */
+  webhookTriggerPreviewEnv: {
+    parameters: {
+      path: {
+        deploy_token: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["TriggerPreviewEnvRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["TriggerPreviewEnvRequestRequest"];
+        "multipart/form-data": components["schemas"]["TriggerPreviewEnvRequestRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["EnvironmentWithVariables"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WebhookTriggerPreviewEnvErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /**
    * Webhook to deploy a monorepo in a project environment
    * @description trigger a new deployment for a monorepo in the project.
@@ -12962,48 +13134,6 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["WebhookProjectDeployServiceErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /** Webhook to trigger a new preview environment */
-  webhookTriggerPreviewEnv: {
-    parameters: {
-      path: {
-        deploy_token: string;
-      };
-    };
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["TriggerPreviewEnvRequestRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["TriggerPreviewEnvRequestRequest"];
-        "multipart/form-data": components["schemas"]["TriggerPreviewEnvRequestRequest"];
-      };
-    };
-    responses: {
-      201: {
-        content: {
-          "application/json": components["schemas"]["EnvironmentWithVariables"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["WebhookTriggerPreviewEnvErrorResponse400"];
         };
       };
       401: {
