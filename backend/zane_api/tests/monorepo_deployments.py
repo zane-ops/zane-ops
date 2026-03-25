@@ -38,3 +38,20 @@ class MonorepoDeploymentViewTests(AuthAPITestCase):
         project = Project.objects.get(slug="zaneops")
 
         self.assertIsNotNone(project.deploy_token)
+
+    def test_webhook_deploy_project(self):
+        _, serviceA = self.create_and_deploy_git_service(slug="docs")
+        project, serviceB = self.create_and_deploy_git_service(slug="templates")
+
+        response = self.client.put(
+            reverse(
+                "zane_api:projects.trigger_monorepo_preview",
+                kwargs={"deploy_token": project.deploy_token},
+            ),
+        )
+        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
+        deployment_count_serviceA = serviceA.deployments.count()
+        deployment_count_serviceB = serviceB.deployments.count()
+
+        self.assertEqual(2, deployment_count_serviceA)
+        self.assertEqual(2, deployment_count_serviceB)
