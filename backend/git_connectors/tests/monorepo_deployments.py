@@ -1,15 +1,14 @@
 from django.conf import settings
 
-from .base import AuthAPITestCase
-from ..dtos import HealthCheckDto
-from ..models import Project
+from zane_api.tests.base import AuthAPITestCase
+from zane_api.models import Project
 from temporal.shared import (
     HealthcheckDeploymentDetails,
     SimpleDeploymentDetails,
 )
 from django.urls import reverse
 from rest_framework import status
-from ..utils import jprint
+from zane_api.utils import jprint
 
 
 class MonorepoDeploymentViewTests(AuthAPITestCase):
