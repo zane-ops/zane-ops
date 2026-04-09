@@ -124,6 +124,40 @@ APP_DOMAIN="${CLI_APP_DOMAIN:-${APP_DOMAIN}}"
 APP_DIRECTORY="${CLI_APP_DIRECTORY:-${APP_DIRECTORY}}"
 ALLOW_HTTP_SESSION="${CLI_ALLOW_HTTP_SESSION:-${ALLOW_HTTP_SESSION}}"
 
+# Interactively ask for domains if in a terminal and not already provided
+if [ -t 0 ] && { [ -z "$ROOT_DOMAIN" ] || [ -z "$APP_DOMAIN" ]; }; then
+    SSLIP_IP=$(ip route show default | awk '/src/ {for (i=1; i<=NF; i++) if ($i=="src") print $(i+1)}' | sed 's/\./-/g')
+    DEFAULT_SSLIP_DOMAIN="${SSLIP_IP}.sslip.io"
+
+    echo ""
+    echo "🌐 Domain Configuration"
+    echo "   ZaneOps needs two domains:"
+    echo "   • Root domain : where the ZaneOps dashboard will be accessible (e.g. zane.example.com)"
+    echo "   • App domain  : base domain for your deployed apps (e.g. apps.example.com)"
+    echo "   Both default to your server's IP via sslip.io — no DNS setup needed."
+    echo "   Press Enter or type 'OK' to accept the default value shown in brackets."
+    echo ""
+
+    if [ -z "$ROOT_DOMAIN" ]; then
+        read -r -p "   Root domain [${DEFAULT_SSLIP_DOMAIN}]: " _input_root
+        if [ -z "$_input_root" ] || [ "${_input_root,,}" = "ok" ]; then
+            ROOT_DOMAIN="$DEFAULT_SSLIP_DOMAIN"
+        else
+            ROOT_DOMAIN="$_input_root"
+        fi
+    fi
+
+    if [ -z "$APP_DOMAIN" ]; then
+        read -r -p "   App domain  [${DEFAULT_SSLIP_DOMAIN}]: " _input_app
+        if [ -z "$_input_app" ] || [ "${_input_app,,}" = "ok" ]; then
+            APP_DOMAIN="$DEFAULT_SSLIP_DOMAIN"
+        else
+            APP_DOMAIN="$_input_app"
+        fi
+    fi
+    echo ""
+fi
+
 echo "➡️ Installing ZaneOps version: $VERSION"
 [ -n "$MODE" ] && echo "➡️ Mode: $MODE"
 [ -n "$ROOT_DOMAIN" ] && echo "➡️ Root Domain: $ROOT_DOMAIN"
