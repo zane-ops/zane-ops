@@ -36,6 +36,7 @@ setup: ### Launch initial setup before installing zaneops
 	@chmod 777 .fluentd
 	@echo "Step 2️⃣ Done ✅"
 	@echo "Step 3️⃣: Downloading docker compose files for zaneops..."
+	@mkdir -p $(current_dir)/pgbouncer
 	@mkdir -p $(current_dir)/temporalio/config/dynamicconfig
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/entrypoint.sh > ./temporalio/entrypoint.sh
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/admin-tools-entrypoint.sh > ./temporalio/admin-tools-entrypoint.sh
@@ -45,7 +46,9 @@ setup: ### Launch initial setup before installing zaneops
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-http.yaml > ./docker-stack.prod-http.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/fluentd/fluent.conf > ./fluent.conf
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/loki/config.yaml > ./loki-config.yaml
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/pgbouncer/entrypoint.sh > ./pgbouncer/entrypoint.sh
 	@chmod -R a+x ./temporalio/*.sh
+	@chmod -R a+x ./pgbouncer/*.sh
 	@echo "Step 3️⃣ Done ✅"
 	@echo "Step 4️⃣: Downloading the env file template..."
 	@if [ ! -f ".env" ]; then \
