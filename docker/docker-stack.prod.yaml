@@ -335,7 +335,7 @@ services:
       start_period: 5s
       timeout: 10s
   zane-pgbouncer:
-    image: edoburu/pgbouncer:v1.23.1-p3
+    image: edoburu/pgbouncer:v1.25.1-p0
     environment:
       <<: *env-vars
       DB_HOST: zane.db
