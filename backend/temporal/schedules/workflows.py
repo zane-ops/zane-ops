@@ -74,7 +74,7 @@ class MonitorDockerDeploymentWorkflow:
         await workflow.execute_activity_method(
             MonitorDockerDeploymentActivities.save_deployment_status,
             healthcheck_result,
-            start_to_close_timeout=timedelta(seconds=5),
+            start_to_close_timeout=timedelta(seconds=30),
             retry_policy=retry_policy,
         )
         return deployment_status, deployment_status_reason
@@ -104,7 +104,7 @@ class MonitorRegistrySwarmServiceWorkflow:
             MonitorRegistryDeploymentActivites.save_registry_health_check_status,
             healthcheck,
             retry_policy=retry_policy,
-            start_to_close_timeout=timedelta(seconds=10),
+            start_to_close_timeout=timedelta(seconds=30),
         )
 
         return healthcheck
@@ -135,7 +135,7 @@ class MonitorComposeStackWorkflow:
             MonitorComposeStackActivites.save_stack_health_check_status,
             healthcheck,
             retry_policy=retry_policy,
-            start_to_close_timeout=timedelta(seconds=10),
+            start_to_close_timeout=timedelta(seconds=30),
         )
 
         return healthcheck
@@ -220,12 +220,12 @@ class CleanupAppLogsWorkflow:
         )
         service_metrics_deleted_count = await workflow.execute_activity_method(
             CleanupActivities.cleanup_service_metrics,
-            start_to_close_timeout=timedelta(seconds=5),
+            start_to_close_timeout=timedelta(seconds=30),
             retry_policy=retry_policy,
         )
         stack_metrics_deleted_count = await workflow.execute_activity_method(
             CleanupActivities.cleanup_compose_stack_metrics,
-            start_to_close_timeout=timedelta(seconds=5),
+            start_to_close_timeout=timedelta(seconds=30),
             retry_policy=retry_policy,
         )
 
