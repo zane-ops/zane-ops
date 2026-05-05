@@ -2055,7 +2055,7 @@ export function EnvVariableChangeItem({
   const [isNewEnvValueShown, setIsNewEnvValueShown] = React.useState(false);
 
   return (
-    <div className="flex flex-col gap-2 items-center md:flex-row overflow-x-auto">
+    <div className="flex flex-col gap-2 items-center overflow-x-auto">
       <div
         className={cn(
           "w-full px-3 py-4 bg-muted rounded-md inline-flex items-start text-start pr-8",
@@ -2109,10 +2109,7 @@ export function EnvVariableChangeItem({
 
       {change.type === "UPDATE" && (
         <>
-          <ArrowDownIcon
-            size={24}
-            className="text-grey md:-rotate-90 flex-none"
-          />
+          <ArrowDownIcon size={24} className="text-grey flex-none" />
 
           <div
             className={cn(

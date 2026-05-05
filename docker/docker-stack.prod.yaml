@@ -123,7 +123,7 @@ services:
       - DB_PORT=5432
       - POSTGRES_USER=${ZANE_DB_USER:-zane}
       - POSTGRES_PWD=${ZANE_DB_PASSWORD}
-      - POSTGRES_SEEDS=zane.db
+      - POSTGRES_SEEDS=zane.pgbouncer
       - SERVICES=history,matching,frontend,worker
       - BIND_ON_IP=0.0.0.0
     image: temporalio/auto-setup:1.24.2
@@ -175,7 +175,8 @@ services:
       - DB_PORT=5432
       - POSTGRES_USER=${ZANE_DB_USER:-zane}
       - POSTGRES_PWD=${ZANE_DB_PASSWORD}
-      - POSTGRES_SEEDS=zane.db
+      - POSTGRES_SEEDS=zane.pgbouncer
+      - POSTGRES_SEEDS_CREATE=zane.db
       - SKIP_SCHEMA_SETUP=false
       - SKIP_DB_SETUP=false
       - SERVICES=history,matching,frontend,worker
@@ -335,7 +336,7 @@ services:
       start_period: 5s
       timeout: 10s
   zane-pgbouncer:
-    image: edoburu/pgbouncer:v1.23.1-p3
+    image: edoburu/pgbouncer:v1.25.1-p0
     environment:
       <<: *env-vars
       DB_HOST: zane.db
@@ -349,6 +350,9 @@ services:
       zane:
         aliases:
           - zane.pgbouncer
+    volumes:
+      - ./pgbouncer/entrypoint.sh:/entrypoint.sh
+    entrypoint: ["/entrypoint.sh"]
     healthcheck:
       test: ["CMD", "pg_isready", "-h", "localhost"]
       interval: 10s
@@ -368,6 +372,7 @@ services:
         limits:
           cpus: "1"
           memory: 1G
+  
   zane-fluentd:
     image: fluentd:v1.16.2-1.1
     volumes:
