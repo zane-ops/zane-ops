@@ -267,10 +267,7 @@ function ComposeStackServiceItemCard({
 
   return (
     <div className="relative">
-      <span
-        tabIndex={0}
-        className="absolute cursor-pointer flex size-2.5 -top-1 -right-1 z-20"
-      >
+      <span className="absolute cursor-pointer flex size-2.5 -top-1 -right-1 z-20">
         <Ping color={STATUS_COLOR_MAP[status]} static={status !== "HEALTHY"} />
       </span>
 

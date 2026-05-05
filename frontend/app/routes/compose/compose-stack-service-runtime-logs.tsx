@@ -542,7 +542,7 @@ const HeaderSection = React.memo(function HeaderSection({
   const [, service] = serviceFound;
 
   const tasks = service.tasks
-    .filter((t) => t.container_id !== null)
+    .filter((t) => Boolean(t.container_id?.trim()))
     .toSorted((tA, tB) => tB.version - tA.version) as Array<
     Omit<ComposeStackTask, "container_id"> & { container_id: string }
   >;

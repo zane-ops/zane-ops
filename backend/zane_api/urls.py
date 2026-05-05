@@ -289,6 +289,16 @@ urlpatterns = [
         name="services.git.webhook_deploy",
     ),
     re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/regenerate-deploy-token/?$",
+        views.RegenerateProjectDeployTokenAPIView.as_view(),
+        name="projects.regenerate_deploy_token",
+    ),
+    re_path(
+        r"^trigger-preview/project/(?P<deploy_token>[a-zA-Z0-9-_]+)/?$",
+        views.ProjectWebhookDeployAPIView.as_view(),
+        name="projects.trigger_monorepo_preview",
+    ),
+    re_path(
         r"^trigger-preview/(?P<deploy_token>[a-zA-Z0-9-_]+)/?$",
         views.TriggerPreviewEnvironmentAPIView.as_view(),
         name="services.git.trigger_preview_env",

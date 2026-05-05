@@ -7,3 +7,4 @@ from .gitlab_auto_deploy import *
 from .gitlab_service import *
 from .github_pull_request_previews import *
 from .gitlab_merge_request_previews import *
+from .monorepo_deployments import *

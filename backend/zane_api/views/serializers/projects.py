@@ -4,6 +4,7 @@ from django_filters import OrderingFilter
 
 from rest_framework import serializers
 from ...models import Project, Service
+from ...validators import validate_env_name
 
 
 # ==============================
@@ -133,4 +134,25 @@ class GitServiceCardSerializer(BaseServiceCardSerializer):
     branch = serializers.CharField(required=True)
     git_provider = serializers.ChoiceField(
         choices=["gitlab", "github"], allow_null=True
+    )
+
+
+# ====================================
+#       Project webhook deploy       #
+# ====================================
+
+
+class EnvVarItemSerializer(serializers.Serializer):
+    value = serializers.CharField()
+    key = serializers.CharField(required=True, validators=[validate_env_name])
+
+
+class ProjectWebhookDeployRequestSerializer(serializers.Serializer):
+    repository_url = serializers.URLField()
+    template = serializers.SlugField(required=False)
+    pr_number = serializers.IntegerField(required=False, min_value=1)
+    branch_name = serializers.CharField(required=False)
+    services_env_overrides = serializers.DictField(
+        required=False,
+        child=serializers.ListField(child=EnvVarItemSerializer()),
     )
