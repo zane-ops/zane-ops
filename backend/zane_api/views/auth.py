@@ -2,7 +2,13 @@ from datetime import timedelta
 from typing import cast
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login, logout, get_user_model, update_session_auth_hash
+from django.contrib.auth import (
+    authenticate,
+    login,
+    logout,
+    get_user_model,
+    update_session_auth_hash,
+)
 from django.contrib.auth.models import AnonymousUser, AbstractUser
 from django.contrib.sessions.models import Session
 from django.http import QueryDict
@@ -30,8 +36,13 @@ from .serializers import (
     UserCreatedResponseSerializer,
     UserExistenceResponseSerializer,
 )
-from .serializers.auth import ChangePasswordRequestSerializer, ChangePasswordResponseSerializer, UpdateProfileSerializer
+from .serializers.auth import (
+    ChangePasswordRequestSerializer,
+    ChangePasswordResponseSerializer,
+    UpdateProfileSerializer,
+)
 from ..serializers import UserSerializer
+from ..models import Workspace, WorkspaceMembership, WorkspaceRole
 
 
 User = get_user_model()
@@ -225,10 +236,22 @@ class CreateUserView(APIView):
         serializer = UserCreationRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        data = cast(dict[str, str], serializer.validated_data)
+
         user = User.objects.create_superuser(
-            username=serializer.validated_data["username"],  # type: ignore
-            password=serializer.validated_data["password"],  # type: ignore
+            username=data["username"],
+            password=data["password"],
         )  # type: ignore
+
+        # Create workspace and membership
+        default_workspace = Workspace.objects.create(
+            name=data["workspace_name"], owner=user
+        )
+        WorkspaceMembership.objects.create(
+            user=user,
+            workspace=default_workspace,
+            role=WorkspaceRole.ADMIN,
+        )
 
         login(request, user)  # type: ignore
         serializer = UserCreatedResponseSerializer(
@@ -238,6 +261,7 @@ class CreateUserView(APIView):
             serializer.data,
             status=status.HTTP_201_CREATED,
         )
+
 
 class ChangePasswordAPIView(APIView):
     serializer_class = ChangePasswordRequestSerializer
@@ -250,34 +274,36 @@ class ChangePasswordAPIView(APIView):
         description="Change the authenticated user's password. Requires current password verification and validates new password strength.",
     )
     def post(self, request: Request) -> Response:
-        form = ChangePasswordRequestSerializer(data=request.data, context={'request': request})
+        form = ChangePasswordRequestSerializer(
+            data=request.data, context={"request": request}
+        )
         user: AbstractUser = request.user
-        
+
         form.is_valid(raise_exception=True)
 
         data = cast(ReturnDict, form.data)
         new_password = data.get("new_password")
-        
+
         user.set_password(new_password)
         user.save()
-        
+
         update_session_auth_hash(request._request, user)
-        
-        response_serializer = ChangePasswordResponseSerializer({
-            'success': True,
-        })
+
+        response_serializer = ChangePasswordResponseSerializer(
+            {
+                "success": True,
+            }
+        )
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
 class UpdateProfileAPIView(UpdateAPIView):
     serializer_class = UpdateProfileSerializer
 
-    queryset = (
-        get_user_model().objects.all()
-    )
+    queryset = get_user_model().objects.all()
     http_method_names = ["patch"]
 
-    def get_object(self): # type: ignore
+    def get_object(self):  # type: ignore
         return self.request.user
 
     @extend_schema(
