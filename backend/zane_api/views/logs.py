@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from .base import InternalZaneAppPermission
+from ..permissions import InternalZaneAppPermission
 from ..utils import Colors, escape_ansi
 from datetime import datetime
 

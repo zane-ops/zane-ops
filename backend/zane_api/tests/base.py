@@ -55,6 +55,9 @@ from ..models import (
     Config,
     URL,
     Environment,
+    Workspace,
+    WorkspaceMembership,
+    WorkspaceRole,
 )
 from temporal.helpers import (
     get_network_resource_name,
@@ -428,10 +431,20 @@ class AuthAPITestCase(APITestCase):
 
     def setUp(self):
         super().setUp()
-        User.objects.create_user(username="Fredkiss3", password="password")
+        user = User.objects.create_superuser(username="Fredkiss3", password="password")  # type: ignore
         self.commit_callback: Optional[Callable[[], Coroutine]] = None
         self.workflow_env: Optional[WorkflowEnvironment] = None
         self.workflow_schedules: List[WorkflowScheduleHandle] = []
+
+        # Create workspace and membership
+        default_workspace = Workspace.objects.create(
+            name="Default workspace", owner=user
+        )
+        WorkspaceMembership.objects.create(
+            user=user,
+            workspace=default_workspace,
+            role=WorkspaceRole.ADMIN,
+        )
 
     @staticmethod
     def get_error_from_response(response: Any, field: str):

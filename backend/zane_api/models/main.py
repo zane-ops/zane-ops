@@ -93,12 +93,14 @@ class WorkspaceRole(models.IntegerChoices):
 
 
 class WorkspaceMembership(models.Model):
+    workspace_id: str
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="workspace_memberships",
     )
-    workspace = models.ForeignKey(
+    workspace: models.ForeignKey["Workspace"] = models.ForeignKey(
         "Workspace",
         on_delete=models.CASCADE,
         related_name="memberships",

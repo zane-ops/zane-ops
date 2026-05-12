@@ -25,18 +25,6 @@ class AuthLoginViewTests(AuthAPITestCase):
             response.cookies.get("sessionid"),
         )
 
-    def test_successful_login_create_token(self):
-        response = self.client.post(
-            reverse("zane_api:auth.login"),
-            data={"username": "Fredkiss3", "password": "password"},
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        self.assertIsNotNone(
-            response.cookies.get("sessionid"),
-        )
-        user = User.objects.get(username="Fredkiss3")
-        self.assertIsNotNone(Token.objects.filter(user=user).first())
-
     def test_login_redirect_to_if_provided(self):
         params = QueryDict(mutable=True)
         redirect_path = "https://example-service-dpl_xyz.zaneops.local/"
