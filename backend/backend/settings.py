@@ -59,6 +59,7 @@ SECURE_HSTS_SECONDS = (
     0 if (__DANGEROUS_ALLOW_HTTP_SESSION or ENVIRONMENT != PRODUCTION_ENV) else 60
 )
 
+
 # We will only support one root domain on production
 # And it will be in the format domain.com (without `http://` or `https://`)
 ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "127-0-0-1.sslip.io")

@@ -51,10 +51,65 @@ from datetime import timezone as tz
 from typing import TYPE_CHECKING
 from asgiref.sync import sync_to_async
 
+
 if TYPE_CHECKING:
     from container_registry.models import SharedRegistryCredentials  # noqa: F401
     from compose.models import ComposeStack
     from django.db.models.manager import RelatedManager
+
+
+class Workspace(TimestampedModel):
+    if TYPE_CHECKING:
+        projects: RelatedManager["Project"]
+
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix="wrk_",
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+    name = models.CharField(max_length=255)
+
+
+class WorkspaceRole(models.IntegerChoices):
+    # Read-only user: View projects and preview deployments only
+    GUEST = 1, "Guest"
+
+    # + View logs, env vars, trigger deploys, manage own tokens
+    CONTRIBUTOR = 2, "Contributor"
+
+    # Read-write: + Edit service config, create/update/delete env vars
+    MEMBER = 3, "Member"
+
+    # Full access on the workspace, can invite people, cannot delete the workspace
+    # + Delete services, manage workspace users & roles, manage API tokens
+    ADMIN = 4, "Admin"
+
+    # INSTANCE OWNER (superuser) + Create/delete projects, instance-wide settings and user management
+
+
+class WorkspaceMembership(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="workspace_memberships",
+    )
+    workspace = models.ForeignKey(
+        "Workspace",
+        on_delete=models.CASCADE,
+        related_name="memberships",
+    )
+    role = models.PositiveSmallIntegerField(
+        choices=WorkspaceRole.choices,
+        default=WorkspaceRole.MEMBER,
+    )
+
+    class Meta:
+        unique_together = [("user", "workspace")]
 
 
 class Project(TimestampedModel):
@@ -65,6 +120,11 @@ class Project(TimestampedModel):
     services: Manager["Service"]
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+
+    workspace = models.ForeignKey(
+        Workspace,
         on_delete=models.CASCADE,
     )
 
