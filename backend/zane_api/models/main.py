@@ -77,16 +77,20 @@ class WorkspaceRole(models.IntegerChoices):
     # Read-only user: View projects and preview deployments only
     GUEST = 1, "Guest"
 
+    # 3rd party contributor to the team (usually temporary)
     # + View logs, env vars, trigger deploys, manage own tokens
     CONTRIBUTOR = 2, "Contributor"
 
+    # member of the team
     # Read-write: + Edit service config, create/update/delete env vars
     MEMBER = 3, "Member"
 
+    # manager of the workspace
     # Full access on the workspace, can invite people, cannot delete the workspace
     # + Delete services, manage workspace users & roles, manage API tokens
     ADMIN = 4, "Admin"
 
+    # creator of the workspace
     # Full access on the workspace, +can delete the workspace
     OWNER = 5, "Owner"
 
