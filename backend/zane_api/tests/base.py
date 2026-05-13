@@ -432,19 +432,16 @@ class AuthAPITestCase(APITestCase):
     def setUp(self):
         super().setUp()
         user = User.objects.create_superuser(username="Fredkiss3", password="password")  # type: ignore
+        workspace = Workspace.objects.create(name="Default workspace")
+        WorkspaceMembership.objects.create(
+            user=user,
+            workspace=workspace,
+            role=WorkspaceRole.OWNER,
+        )
+
         self.commit_callback: Optional[Callable[[], Coroutine]] = None
         self.workflow_env: Optional[WorkflowEnvironment] = None
         self.workflow_schedules: List[WorkflowScheduleHandle] = []
-
-        # Create workspace and membership
-        default_workspace = Workspace.objects.create(
-            name="Default workspace", owner=user
-        )
-        WorkspaceMembership.objects.create(
-            user=user,
-            workspace=default_workspace,
-            role=WorkspaceRole.ADMIN,
-        )
 
     @staticmethod
     def get_error_from_response(response: Any, field: str):

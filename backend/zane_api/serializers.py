@@ -73,6 +73,12 @@ class WorkspaceSerializer(serializers.ModelSerializer):
         fields = ["id", "name"]
 
 
+class WorkspaceMembershipSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.WorkspaceMembership
+        fields = ["role_name", "role"]
+
+
 class SharedEnvVariableSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
     key = serializers.CharField(required=True, validators=[validate_env_name])

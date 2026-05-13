@@ -10,7 +10,6 @@ from django.contrib.auth import (
     update_session_auth_hash,
 )
 from django.contrib.auth.models import AnonymousUser, AbstractUser
-from django.contrib.sessions.models import Session
 from django.http import QueryDict
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -41,9 +40,13 @@ from .serializers.auth import (
     ChangePasswordResponseSerializer,
     UpdateProfileSerializer,
 )
-from ..serializers import UserSerializer, WorkspaceSerializer
+from ..serializers import (
+    UserSerializer,
+    WorkspaceSerializer,
+    WorkspaceMembershipSerializer,
+)
 from ..models import Workspace, WorkspaceMembership, WorkspaceRole
-
+from ..constants import WORKSPACE_SESSION_KEY
 
 User = get_user_model()
 
@@ -76,39 +79,42 @@ class LoginView(APIView):
     )
     def post(self, request: Request):
         form = LoginRequestSerializer(data=request.data)
-        if form.is_valid(raise_exception=True):
-            data = cast(ReturnDict, form.data)
-            user = authenticate(
-                username=data.get("username"), password=data.get("password")
-            )
-            if user is not None:
-                membership = WorkspaceMembership.objects.filter(user=user).first()
-                if membership is None:
-                    raise exceptions.PermissionDenied(
-                        detail="This account is not associated with any workspace. Please contact your administrator."
-                    )
+        form.is_valid(raise_exception=True)
+        data = cast(ReturnDict, form.data)
+        user = authenticate(
+            username=data.get("username"), password=data.get("password")
+        )
+        if user is not None:
+            associated_workspace = Workspace.objects.filter(
+                memberships__user=user
+            ).first()
+            if associated_workspace is None:
+                raise exceptions.PermissionDenied(
+                    detail="This account is not associated with any workspace. Please contact your administrator."
+                )
 
-                login(request, user)  # type: ignore
+            login(request, user)  # type: ignore
 
-                # TODO: remove in future updates
-                token, _ = Token.objects.get_or_create(user=user)
+            # TODO: remove in future updates
+            token, _ = Token.objects.get_or_create(user=user)
 
-                # Set the current authed workspace to be the first workspace of the user
-                request.session["current_workspace_id"] = membership.workspace_id
+            # Set the current authed workspace to be the first workspace of the user
+            request.session[WORKSPACE_SESSION_KEY] = associated_workspace.id
 
-                response = LoginSuccessResponseSerializer({"success": True})
-                query_params = request.query_params.dict()
-                redirect_uri = query_params.get("redirect_to")
-                if redirect_uri is not None:
-                    return redirect(iri_to_uri(redirect_uri))  # type: ignore
-                return Response(response.data, status=status.HTTP_201_CREATED)
+            response = LoginSuccessResponseSerializer({"success": True})
+            query_params = request.query_params.dict()
+            redirect_uri = query_params.get("redirect_to")
+            if redirect_uri is not None:
+                return redirect(iri_to_uri(redirect_uri))  # type: ignore
+            return Response(response.data, status=status.HTTP_201_CREATED)
 
-            raise exceptions.AuthenticationFailed(detail="Invalid username or password")
+        raise exceptions.AuthenticationFailed(detail="Invalid username or password")
 
 
 class AuthedSuccessResponseSerializer(serializers.Serializer):
     user = UserSerializer(read_only=True)
     workspace = WorkspaceSerializer(read_only=True)
+    membership = WorkspaceMembershipSerializer(read_only=True)
 
 
 class AuthedView(APIView):
@@ -129,8 +135,17 @@ class AuthedView(APIView):
                 now + timedelta(seconds=settings.SESSION_EXTEND_PERIOD)
             )
 
+        membership = WorkspaceMembership.objects.get(
+            user=request.user,
+            workspace=request.workspace,
+        )
+
         response = AuthedSuccessResponseSerializer(
-            {"user": request.user, "workspace": request.workspace}
+            dict(
+                user=request.user,
+                workspace=request.workspace,
+                membership=membership,
+            )
         )
         return Response(
             response.data,

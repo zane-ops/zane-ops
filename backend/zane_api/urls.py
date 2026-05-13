@@ -11,6 +11,11 @@ UUID_REGEX = r"[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-
 urlpatterns = [
     re_path(r"^auth/me/?$", views.AuthedView.as_view(), name="auth.me"),
     re_path(
+        r"^workspaces/switch/?$",
+        views.SwitchWorkspaceAPIView.as_view(),
+        name="workspaces.switch",
+    ),
+    re_path(
         r"^auth/me/with-token/?$",
         views.TokenAuthedView.as_view(),
         name="auth.me.with_token",

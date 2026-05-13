@@ -5,3 +5,4 @@ from .deployments import *
 from .services import *
 from .logs import *
 from .projects import *
+from .workspace import *

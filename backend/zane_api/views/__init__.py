@@ -15,3 +15,4 @@ from .environments import *
 from .git_services import *
 from .service_detected_ports import *
 from .volumes import *
+from .workspace import *

@@ -68,10 +68,7 @@ class Workspace(TimestampedModel):
         primary_key=True,
         prefix="wrk_",
     )
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-    )
+
     name = models.CharField(max_length=255)
 
 
@@ -89,7 +86,8 @@ class WorkspaceRole(models.IntegerChoices):
     # + Delete services, manage workspace users & roles, manage API tokens
     ADMIN = 4, "Admin"
 
-    # INSTANCE OWNER (superuser) + Create/delete projects, instance-wide settings and user management
+    # Full access on the workspace, +can delete the workspace
+    OWNER = 5, "Owner"
 
 
 class WorkspaceMembership(models.Model):
@@ -109,6 +107,10 @@ class WorkspaceMembership(models.Model):
         choices=WorkspaceRole.choices,
         default=WorkspaceRole.MEMBER,
     )
+
+    @property
+    def role_name(self) -> str:
+        return self.get_role_display()
 
     class Meta:
         unique_together = [("user", "workspace")]

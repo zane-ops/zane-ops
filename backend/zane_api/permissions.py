@@ -1,4 +1,6 @@
-from .models import Workspace, WorkspaceMembership
+from .constants import WORKSPACE_SESSION_KEY
+
+from .models import Workspace
 import base64
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
@@ -6,10 +8,7 @@ from django.conf import settings
 from typing import Any
 from django.contrib.auth.models import AnonymousUser
 
-
-from django.contrib.auth import (
-    get_user_model,
-)
+from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
@@ -39,12 +38,12 @@ class HasWorkspace(BasePermission):
         if not request.user or isinstance(request.user, AnonymousUser):
             return False
 
-        workspace_id = request.session.get("current_workspace_id")
-        qs = WorkspaceMembership.objects.select_related("workspace").filter(
-            user=request.user
-        )
+        workspace_id = request.session.get(WORKSPACE_SESSION_KEY)
+
+        qs = Workspace.objects.filter(memberships__user=request.user)
+
         if workspace_id:
-            qs = qs.filter(workspace_id=workspace_id)
-        membership = qs.first()
-        request.workspace = membership.workspace if membership else None  # type: ignore
+            qs = qs.filter(id=workspace_id)
+        workspace = qs.earliest("created_at")
+        request.workspace = workspace  # type: ignore
         return request.workspace is not None
