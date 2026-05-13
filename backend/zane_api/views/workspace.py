@@ -5,16 +5,17 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, CreateAPIView
 
 from rest_framework import status
 
 
-from ..models import Workspace, WorkspaceMembership
+from ..models import Workspace, WorkspaceMembership, WorkspaceRole
 from ..constants import WORKSPACE_SESSION_KEY
 from .serializers import SwitchWorkspaceRequestSerializer
 from rest_framework import exceptions
-from ..serializers import WorkspaceMembershipSerializer
+from ..serializers import WorkspaceMembershipSerializer, WorkspaceSerializer
+from ..permissions import IsInstanceOwner
 
 from django.db.models import QuerySet
 
@@ -26,6 +27,27 @@ class WorkspaceMembershipListAPIView(ListAPIView):
         return WorkspaceMembership.objects.filter(
             user=self.request.user
         ).select_related("workspace")
+
+
+class CreateWorkspaceAPIView(CreateAPIView):
+    permission_classes = [IsInstanceOwner]
+    serializer_class = WorkspaceSerializer
+
+    def perform_create(self, serializer: WorkspaceSerializer):
+        super().perform_create(serializer)
+
+        WorkspaceMembership.objects.create(
+            user=self.request.user,
+            workspace=serializer.instance,
+            role=WorkspaceRole.OWNER,
+        )
+
+    @extend_schema(
+        operation_id="createWorkspace",
+        summary="Create a new workspace",
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
 
 
 class SwitchWorkspaceAPIView(APIView):

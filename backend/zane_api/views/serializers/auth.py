@@ -55,7 +55,9 @@ class UserCreationRequestSerializer(serializers.Serializer):
         min_length=1, max_length=150, validators=[UnicodeUsernameValidator()]
     )
     password = serializers.CharField(min_length=8)
-    workspace_name = serializers.CharField(min_length=1, max_length=255)
+    workspace_name = serializers.CharField(
+        min_length=1, max_length=255, default="Default workspace"
+    )
 
     def validate_password(self, value):
         validate_new_password(value)

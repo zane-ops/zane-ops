@@ -275,13 +275,11 @@ class CreateUserView(APIView):
         )  # type: ignore
 
         # Create workspace and membership
-        default_workspace = Workspace.objects.create(
-            name=data["workspace_name"], owner=user
-        )
+        default_workspace = Workspace.objects.create(name=data["workspace_name"])
         WorkspaceMembership.objects.create(
             user=user,
             workspace=default_workspace,
-            role=WorkspaceRole.ADMIN,
+            role=WorkspaceRole.OWNER,
         )
 
         login(request, user)  # type: ignore

@@ -5,8 +5,8 @@ import base64
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from django.conf import settings
-from typing import Any
-from django.contrib.auth.models import AnonymousUser
+from typing import Any, cast
+from django.contrib.auth.models import AnonymousUser, AbstractUser
 
 from django.contrib.auth import get_user_model
 
@@ -31,6 +31,14 @@ class InternalZaneAppPermission(BasePermission):
 
         credentials = base64.b64decode(credentials).decode("utf-8")
         return credentials == f"zaneops:{settings.SECRET_KEY}"
+
+
+class IsInstanceOwner(BasePermission):
+    def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
+        if not request.user or isinstance(request.user, AnonymousUser):
+            return False
+
+        return cast(AbstractUser, request.user).is_superuser
 
 
 class HasWorkspace(BasePermission):

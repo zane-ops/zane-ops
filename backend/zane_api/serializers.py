@@ -71,6 +71,9 @@ class WorkspaceSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Workspace
         fields = ["id", "name"]
+        extra_kwargs = {
+            "id": {"read_only": True},
+        }
 
 
 class WorkspaceMembershipSerializer(serializers.ModelSerializer):

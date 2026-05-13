@@ -21,10 +21,15 @@ urlpatterns = [
         name="workspaces.list",
     ),
     re_path(
-        r"^auth/me/with-token/?$",
-        views.TokenAuthedView.as_view(),
-        name="auth.me.with_token",
+        r"^workspaces/create/?$",
+        views.CreateWorkspaceAPIView.as_view(),
+        name="workspaces.create",
     ),
+    # re_path(
+    #     r"^auth/me/with-token/?$",
+    #     views.TokenAuthedView.as_view(),
+    #     name="auth.me.with_token",
+    # ),
     re_path(r"^auth/logout/?$", views.AuthLogoutView.as_view(), name="auth.logout"),
     re_path(
         r"^auth/change-password/?$",

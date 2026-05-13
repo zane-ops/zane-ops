@@ -5,9 +5,67 @@ from django.urls import reverse
 from rest_framework import status
 
 from ..models import Workspace, WorkspaceMembership, WorkspaceRole
-from .base import AuthAPITestCase
+from .base import AuthAPITestCase, APITestCase
 from ..utils import jprint
 from ..constants import WORKSPACE_SESSION_KEY
+
+
+class OnBoardingTests(APITestCase):
+    def test_create_initial_user_creates_default_workspace_without_providing_workspace_name(
+        self,
+    ):
+        response = self.client.post(
+            reverse("zane_api:auth.create_initial_user"),
+            data={
+                "username": "mohai",
+                "password": "mohai123",
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        default_user = cast(User, User.objects.filter(username="mohai").first())
+        self.assertIsNotNone(default_user)
+
+        default_workspace = cast(Workspace, Workspace.objects.first())
+        self.assertIsNotNone(default_workspace)
+
+        membership = cast(
+            WorkspaceMembership,
+            WorkspaceMembership.objects.filter(
+                workspace=default_workspace, user=default_user
+            ).first(),
+        )
+        self.assertIsNotNone(membership)
+        self.assertEqual(WorkspaceRole.OWNER, membership.role)
+
+    def test_create_initial_user_with_custom_workspace_name(self):
+        response = self.client.post(
+            reverse("zane_api:auth.create_initial_user"),
+            data={
+                "username": "mohai",
+                "password": "mohai123",
+                "workspace_name": "Custom workspace",
+            },
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        default_user = cast(User, User.objects.filter(username="mohai").first())
+        self.assertIsNotNone(default_user)
+
+        default_workspace = cast(
+            Workspace, Workspace.objects.filter(name="Custom workspace").first()
+        )
+        self.assertIsNotNone(default_workspace)
+
+        membership = cast(
+            WorkspaceMembership,
+            WorkspaceMembership.objects.filter(
+                workspace=default_workspace, user=default_user
+            ).first(),
+        )
+        self.assertIsNotNone(membership)
+        self.assertEqual(WorkspaceRole.OWNER, membership.role)
 
 
 class WorkspaceMiddlewareTests(AuthAPITestCase):
@@ -61,6 +119,30 @@ class WorkspaceMiddlewareTests(AuthAPITestCase):
         self.assertEqual(
             response.json()["membership"]["workspace"]["id"], first_workspace.id
         )
+
+
+class CreateWorkspaceTests(AuthAPITestCase):
+    def test_create_workspace_succesful(self):
+        self.loginUser()
+
+        response = self.client.post(
+            reverse("zane_api:workspaces.create"),
+            data={"name": "Fredkiss's work"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+    def test_cannot_create_workspace_if_not_instance_admin(self):
+        user = self.loginUser()
+        user.is_superuser = False
+        user.save()
+
+        response = self.client.post(
+            reverse("zane_api:workspaces.create"),
+            data={"name": "Fredkiss's work"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
 
 
 class SwitchWorkspaceViewTests(AuthAPITestCase):

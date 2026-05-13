@@ -262,43 +262,6 @@ class UserExistenceAndCreationTests(APITestCase):
         response = self.client.get(reverse("zane_api:auth.me"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-    def test_create_user_require_workspace_name(self):
-        response = self.client.post(
-            reverse("zane_api:auth.create_initial_user"),
-            data={"username": "mohai", "password": "mohai123"},
-        )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-
-    def test_create_initial_user_creates_default_workspace(self):
-        response = self.client.post(
-            reverse("zane_api:auth.create_initial_user"),
-            data={
-                "username": "mohai",
-                "password": "mohai123",
-                "workspace_name": "Default workspace",
-            },
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        default_user = cast(User, User.objects.filter(username="mohai").first())
-        self.assertIsNotNone(default_user)
-
-        default_workspace = cast(
-            Workspace, Workspace.objects.filter(name="Default workspace").first()
-        )
-        self.assertIsNotNone(default_workspace)
-
-        self.assertEqual(default_user, default_workspace.owner)
-
-        membership = cast(
-            WorkspaceMembership,
-            WorkspaceMembership.objects.filter(
-                workspace=default_workspace, user=default_user
-            ).first(),
-        )
-        self.assertIsNotNone(membership)
-        self.assertEqual(WorkspaceRole.ADMIN, membership.role)
-
 
 class ChangePasswordViewTests(AuthAPITestCase):
     def test_successful_password_change(self):
