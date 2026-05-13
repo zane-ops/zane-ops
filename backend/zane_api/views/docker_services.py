@@ -51,7 +51,7 @@ from ..dtos import (
     StaticDirectoryBuilderOptions,
     NixpacksBuilderOptions,
 )
-from ..utils import jprint, pluralize
+from ..utils import pluralize
 from ..models import (
     Project,
     Service,
@@ -98,9 +98,19 @@ from io import StringIO
 from dotenv import dotenv_values
 from container_registry.models import SharedRegistryCredentials
 
+from ..permissions import (
+    HasWorkspace,
+    IsWorkspaceMember,
+    IsWorkspaceAdmin,
+    IsWorkspaceGuest,
+    IsWorkspaceContributor,
+    get_accessible_projects,
+)
+
 
 class CreateDockerServiceAPIView(APIView):
     serializer_class = ServiceSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
@@ -120,7 +130,13 @@ class CreateDockerServiceAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug, owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
 
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -197,6 +213,7 @@ class CreateDockerServiceAPIView(APIView):
 
 class RequestServiceChangesAPIView(APIView):
     serializer_class = ServiceSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         request=PolymorphicProxySerializer(
@@ -232,7 +249,13 @@ class RequestServiceChangesAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -616,6 +639,7 @@ class RequestServiceChangesAPIView(APIView):
 
 class RequestServiceEnvChangesAPIView(APIView):
     serializer_class = ServiceSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         request=EnvStringChangeSerializer,
@@ -631,7 +655,13 @@ class RequestServiceEnvChangesAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -691,6 +721,8 @@ class RequestServiceEnvChangesAPIView(APIView):
 
 
 class CancelServiceChangesAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+
     @extend_schema(
         responses={
             409: ErrorResponse409Serializer,
@@ -709,7 +741,13 @@ class CancelServiceChangesAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -787,6 +825,7 @@ class CancelServiceChangesAPIView(APIView):
 
 class DeployDockerServiceAPIView(APIView):
     serializer_class = ServiceDeploymentSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @transaction.atomic()
     @extend_schema(
@@ -803,7 +842,13 @@ class DeployDockerServiceAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -890,6 +935,7 @@ class DeployDockerServiceAPIView(APIView):
 
 class RedeployDockerServiceAPIView(APIView):
     serializer_class = ServiceDeploymentSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @transaction.atomic()
     @extend_schema(
@@ -907,7 +953,13 @@ class RedeployDockerServiceAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -1102,6 +1154,11 @@ class ServiceDetailsAPIView(RetrieveUpdateAPIView):
     http_method_names = ["patch", "get"]
     lookup_field = "slug"
 
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [HasWorkspace(), IsWorkspaceGuest()]
+        return [HasWorkspace(), IsWorkspaceMember()]
+
     @extend_schema(
         operation_id="updateService",
         summary="Update a service",
@@ -1126,14 +1183,18 @@ class ServiceDetailsAPIView(RetrieveUpdateAPIView):
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    def get_queryset(self):  # type: ignore
+    def get_object(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["slug"]
         env_slug = self.kwargs.get("env_slug", Environment.PRODUCTION_ENV_NAME)
 
         try:
             project = Project.objects.get(
-                slug=project_slug.lower(), owner=self.request.user
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -1146,7 +1207,7 @@ class ServiceDetailsAPIView(RetrieveUpdateAPIView):
                 )
                 .select_related("project", "healthcheck", "environment")
                 .prefetch_related("volumes", "ports", "urls", "env_variables")
-            )
+            ).get()
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -1164,6 +1225,8 @@ class ServiceDetailsAPIView(RetrieveUpdateAPIView):
 
 
 class ArchiveDockerServiceAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
+
     @extend_schema(
         responses={
             204: None,
@@ -1183,7 +1246,11 @@ class ArchiveDockerServiceAPIView(APIView):
         try:
             project = (
                 Project.objects.filter(
-                    slug=project_slug.lower(), owner=request.user
+                    slug=project_slug.lower(),
+                    id__in=get_accessible_projects(
+                        self.request.user,  # type: ignore
+                        self.request.workspace,  # type: ignore
+                    ),
                 ).select_related("archived_version")
             ).get()
             environment = Environment.objects.filter(
@@ -1298,6 +1365,8 @@ class ArchiveDockerServiceAPIView(APIView):
 
 
 class ToggleServiceAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+
     @extend_schema(
         request=ToggleServiceStateRequestSerializer,
         operation_id="toggleService",
@@ -1316,7 +1385,10 @@ class ToggleServiceAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=request.user,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(),
@@ -1385,6 +1457,8 @@ class ToggleServiceAPIView(APIView):
 
 
 class BulkToggleServicesAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+
     @extend_schema(
         request=BulkToggleServiceStateRequestSerializer,
         operation_id="bulkToggleServices",
@@ -1400,7 +1474,13 @@ class BulkToggleServicesAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
