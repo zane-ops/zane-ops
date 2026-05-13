@@ -122,10 +122,6 @@ class Project(TimestampedModel):
     environments: Manager["Environment"]
     preview_templates: Manager["PreviewEnvTemplate"]
     services: Manager["Service"]
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-    )
 
     workspace = models.ForeignKey(
         Workspace,
