@@ -24,7 +24,7 @@ from drf_spectacular.utils import (
 from faker import Faker
 from rest_framework import exceptions
 from rest_framework import status
-from rest_framework.generics import ListCreateAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -51,6 +51,8 @@ from ..models import (
     Config,
     Environment,
     ArchivedGitService,
+    WorkspaceMembership,
+    WorkspaceRole,
 )
 from django.db.models.expressions import RawSQL
 
@@ -70,7 +72,12 @@ from temporal.workflows import (
     CreateProjectResourcesWorkflow,
     RemoveProjectResourcesWorkflow,
 )
-from ..permissions import HasWorkspace, IsWorkspaceAdmin, IsWorkspaceGuest
+from ..permissions import (
+    HasWorkspace,
+    IsWorkspaceAdmin,
+    IsWorkspaceGuest,
+    get_accessible_projects,
+)
 
 
 class ProjectsListAPIView(ListCreateAPIView):
@@ -87,7 +94,12 @@ class ProjectsListAPIView(ListCreateAPIView):
 
     def get_queryset(self) -> QuerySet[Project]:  # type: ignore
         queryset = (
-            Project.objects.filter(workspace=self.request.workspace)  # type: ignore
+            Project.objects.filter(
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             .prefetch_related(
                 "environments",
             )
@@ -235,44 +247,53 @@ class ProjectDetailsView(APIView):
             return [HasWorkspace(), IsWorkspaceGuest()]
         return [HasWorkspace(), IsWorkspaceAdmin()]
 
+    def get_object(self) -> Project:  # type: ignore
+        slug = self.kwargs["slug"]
+        try:
+            project = (
+                Project.objects.filter(
+                    slug=slug,
+                    id__in=get_accessible_projects(
+                        self.request.user,  # type: ignore
+                        self.request.workspace,  # type: ignore
+                    ),
+                )
+                .prefetch_related("environments")
+                .select_related("archived_version")
+                .get()
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
+            )
+        return project
+
     @extend_schema(
         request=ProjectUpdateRequestSerializer,
         operation_id="updateProject",
         summary="Update a project",
     )
     def put(self, request: Request, slug: str) -> Response:
-        try:
-            project = Project.objects.get(slug=slug, workspace=request.workspace)
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{slug}` does not exist"
-            )
+        project = self.get_object()
 
         form = ProjectUpdateRequestSerializer(data=request.data)
-        if form.is_valid(raise_exception=True):
-            try:
-                project.slug = form.data.get("slug", project.slug).lower()  # type: ignore
-                project.description = form.data.get("description", project.description)  # type: ignore
-                project.save()
-            except IntegrityError:
-                raise ResourceConflict(
-                    detail=f"The slug `{slug}` is already used by another project."
-                )
-            else:
-                response = ProjectSerializer(project)
-                return Response(response.data)
-        raise NotImplementedError("should not reach here")
+        form.is_valid(raise_exception=True)
+
+        try:
+            project.slug = form.data.get("slug", project.slug).lower()  # type: ignore
+            project.description = form.data.get("description", project.description)  # type: ignore
+            project.save()
+        except IntegrityError:
+            raise ResourceConflict(
+                detail=f"The slug `{slug}` is already used by another project."
+            )
+        else:
+            response = ProjectSerializer(project)
+            return Response(response.data)
 
     @extend_schema(operation_id="getSingleProject", summary="Get single project")
     def get(self, request: Request, slug: str) -> Response:
-        try:
-            project = (
-                Project.objects.filter(slug=slug).prefetch_related("environments").get()
-            )
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{slug}` does not exist"
-            )
+        project = self.get_object()
         response = ProjectSerializer(project)
         return Response(response.data)
 
@@ -285,15 +306,7 @@ class ProjectDetailsView(APIView):
     )
     @transaction.atomic()
     def delete(self, request: Request, slug: str) -> Response:
-        try:
-            project = (
-                Project.objects.filter(slug=slug).select_related("archived_version")
-            ).get()
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{slug}` does not exist"
-            )
-
+        project = self.get_object()
         archived_version = ArchivedProject.get_or_create_from_project(project)
 
         docker_service_list = (

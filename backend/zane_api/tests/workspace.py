@@ -10,7 +10,7 @@ from ..utils import jprint
 from ..constants import WORKSPACE_SESSION_KEY
 
 
-class ProjectCreateInWorkspaceViewTests(AuthAPITestCase):
+class WorkspaceProjectCreateViewTests(AuthAPITestCase):
     def test_create_project_should_be_done_in_current_workspace(self):
         owner = self.loginUser()
         response = self.client.post(
@@ -40,7 +40,7 @@ class ProjectCreateInWorkspaceViewTests(AuthAPITestCase):
         self.assertEqual(0, Project.objects.count())
 
 
-class ProjectListInWorkspaceViewTests(AuthAPITestCase):
+class WorkspaceProjectListViewTests(AuthAPITestCase):
     def test_list_projects_show_projects_in_current_workspace(self):
         owner = self.loginUser()
 
@@ -81,7 +81,85 @@ class ProjectListInWorkspaceViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         project_list = response.json()
-        self.assertEqual(3, len(project_list))
+        self.assertEqual(0, len(project_list))
+
+    def test_can_only_list_accessible_projects_if_guest(self):
+        owner = self.loginUser()
+
+        workspace = Workspace.objects.get(memberships__user=owner)
+
+        projects = Project.objects.bulk_create(
+            [
+                Project(slug="gh-clone", workspace=workspace),
+                Project(slug="gh-next", workspace=workspace),
+                Project(slug="zaneops", workspace=workspace),
+                Project(slug="locaci", workspace=workspace),
+            ]
+        )
+        membership = WorkspaceMembership.objects.get(user=owner)
+        membership.role = WorkspaceRole.GUEST
+        membership.save()
+        membership.accessible_projects.add(*projects[:2])
+
+        response = self.client.get(reverse("zane_api:projects.list"))
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json()
+        self.assertEqual(2, len(project_list))
+
+
+class WorkspaceProjectDetailViewTests(AuthAPITestCase):
+    def test_project_member_can_see_all_workspace_projects(self):
+        owner = self.loginUser()
+
+        first_workspace = Workspace.objects.get(memberships__user=owner)
+        WorkspaceMembership.objects.filter(user=owner).update(role=WorkspaceRole.MEMBER)
+
+        Project.objects.bulk_create(
+            [
+                Project(slug="gh-clone", workspace=first_workspace),
+            ]
+        )
+
+        response = self.client.get(
+            reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+    def test_project_guest_can_only_see_accessible_projects(self):
+        owner = self.loginUser()
+
+        workspace = Workspace.objects.get(memberships__user=owner)
+
+        projects = Project.objects.bulk_create(
+            [
+                Project(slug="gh-next", workspace=workspace),
+                Project(slug="zaneops", workspace=workspace),
+            ]
+        )
+        membership = WorkspaceMembership.objects.get(user=owner)
+        membership.role = WorkspaceRole.GUEST
+        membership.save()
+        membership.accessible_projects.add(projects[0])
+
+        response = self.client.get(
+            reverse(
+                "zane_api:projects.details",
+                kwargs=dict(slug="zaneops"),
+            )
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+        response = self.client.get(
+            reverse(
+                "zane_api:projects.details",
+                kwargs=dict(slug="gh-next"),
+            )
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
 
 class OnBoardingTests(APITestCase):
