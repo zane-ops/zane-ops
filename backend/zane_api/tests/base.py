@@ -699,7 +699,7 @@ class AuthAPITestCase(APITestCase):
         with_healthcheck: bool = False,
         other_changes: list[DeploymentChange] | None = None,
     ) -> tuple[Project, Service]:
-        owner = await self.aLoginUser()
+        await self.aLoginUser()
         response = await self.async_client.post(
             reverse("zane_api:projects.list"),
             data={"slug": "zaneops", "env_slug": "production"},

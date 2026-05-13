@@ -4,10 +4,84 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 
-from ..models import Workspace, WorkspaceMembership, WorkspaceRole
+from ..models import Workspace, WorkspaceMembership, WorkspaceRole, Project
 from .base import AuthAPITestCase, APITestCase
 from ..utils import jprint
 from ..constants import WORKSPACE_SESSION_KEY
+
+
+class ProjectCreateInWorkspaceViewTests(AuthAPITestCase):
+    def test_create_project_should_be_done_in_current_workspace(self):
+        owner = self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(1, Project.objects.count())
+
+        p = Project.objects.get(slug="zane-ops")
+
+        workspace = Workspace.objects.get(memberships__user=owner)
+        self.assertEqual(workspace, p.workspace)
+
+    def test_cannot_create_project_if_not_admin(self):
+        owner = self.loginUser()
+        WorkspaceMembership.objects.filter(user=owner).update(role=WorkspaceRole.MEMBER)
+
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        self.assertEqual(0, Project.objects.count())
+
+
+class ProjectListInWorkspaceViewTests(AuthAPITestCase):
+    def test_list_projects_show_projects_in_current_workspace(self):
+        owner = self.loginUser()
+
+        first_workspace = Workspace.objects.get(memberships__user=owner)
+
+        second_workspace = Workspace.objects.create(name="Second workspace")
+
+        Project.objects.bulk_create(
+            [
+                Project(slug="gh-clone", workspace=first_workspace),
+                Project(slug="gh-next", workspace=first_workspace),
+                Project(slug="zaneops", workspace=first_workspace),
+                Project(slug="stop", workspace=second_workspace),
+            ]
+        )
+
+        response = self.client.get(reverse("zane_api:projects.list"))
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json()
+        self.assertEqual(3, len(project_list))
+
+    def test_can_list_projects_even_if_just_a_guest(self):
+        owner = self.loginUser()
+        WorkspaceMembership.objects.filter(user=owner).update(role=WorkspaceRole.GUEST)
+
+        workspace = Workspace.objects.get(memberships__user=owner)
+
+        Project.objects.bulk_create(
+            [
+                Project(slug="gh-clone", workspace=workspace),
+                Project(slug="gh-next", workspace=workspace),
+                Project(slug="zaneops", workspace=workspace),
+            ]
+        )
+
+        response = self.client.get(reverse("zane_api:projects.list"))
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        project_list = response.json()
+        self.assertEqual(3, len(project_list))
 
 
 class OnBoardingTests(APITestCase):
@@ -134,9 +208,6 @@ class EditWorkspaceTests(AuthAPITestCase):
 
     def test_cannot_edit_workspace_if_not_at_least_admin(self):
         user = self.loginUser()
-
-        user.is_superuser = False
-        user.save()
         WorkspaceMembership.objects.filter(user=user).update(role=WorkspaceRole.MEMBER)
 
         response = self.client.put(
@@ -151,6 +222,18 @@ class EditWorkspaceTests(AuthAPITestCase):
 
         user.is_superuser = False
         user.save()
+        WorkspaceMembership.objects.filter(user=user).update(role=WorkspaceRole.ADMIN)
+
+        response = self.client.put(
+            reverse("zane_api:workspaces.edit"),
+            data={"name": "Fredkiss corp"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+    def test_can_edit_workspace_if_not_member(self):
+        user = self.loginUser()
+
         WorkspaceMembership.objects.filter(user=user).update(role=WorkspaceRole.ADMIN)
 
         response = self.client.put(

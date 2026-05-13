@@ -70,6 +70,7 @@ from temporal.workflows import (
     CreateProjectResourcesWorkflow,
     RemoveProjectResourcesWorkflow,
 )
+from ..permissions import HasWorkspace, IsWorkspaceAdmin, IsWorkspaceGuest
 
 
 class ProjectsListAPIView(ListCreateAPIView):
@@ -79,9 +80,14 @@ class ProjectsListAPIView(ListCreateAPIView):
     filterset_class = ProjectListFilterSet
     queryset = Project.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [HasWorkspace(), IsWorkspaceGuest()]
+        return [HasWorkspace(), IsWorkspaceAdmin()]
+
     def get_queryset(self) -> QuerySet[Project]:  # type: ignore
         queryset = (
-            Project.objects.filter(owner=self.request.user)
+            Project.objects.filter(workspace=self.request.workspace)  # type: ignore
             .prefetch_related(
                 "environments",
             )
@@ -188,7 +194,7 @@ class ProjectsListAPIView(ListCreateAPIView):
             try:
                 new_project = Project.objects.create(
                     slug=slug,
-                    owner=request.user,
+                    workspace=request.workspace,
                     description=data.get("description"),  # type: ignore
                 )
                 # Create default production environment
