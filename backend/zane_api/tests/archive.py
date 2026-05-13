@@ -375,7 +375,9 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
     async def test_archive_service_non_existing(self):
         owner = await self.aLoginUser()
-        p = await Project.objects.acreate(slug="kiss-cam", owner=owner)
+        p = await Project.objects.acreate(
+            slug="kiss-cam",
+        )
 
         response = await self.async_client.delete(
             reverse(

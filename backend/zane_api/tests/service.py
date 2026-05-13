@@ -489,7 +489,9 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
     def test_get_service_non_existing(self):
         owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        p = Project.objects.create(
+            slug="kiss-cam",
+        )
 
         response = self.client.get(
             reverse(
@@ -505,9 +507,13 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
     def test_get_service_not_in_the_correct_project(self):
         owner = self.loginUser()
-        p1 = Project.objects.create(slug="kiss-cam", owner=owner)
+        p1 = Project.objects.create(
+            slug="kiss-cam",
+        )
         p1.environments.create(name="production")
-        p2 = Project.objects.create(slug="camly", owner=owner)
+        p2 = Project.objects.create(
+            slug="camly",
+        )
         p2.environments.create(name="production")
 
         service = Service.objects.create(
@@ -587,7 +593,9 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
 
     def test_update_service_non_existent(self):
         owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        p = Project.objects.create(
+            slug="kiss-cam",
+        )
         response = self.client.patch(
             reverse(
                 "zane_api:services.details",

@@ -10,9 +10,9 @@ class ResourceSearchViewTests(AuthAPITestCase):
 
         projects = Project.objects.bulk_create(
             [
-                Project(owner=owner, slug="gh-clone"),
-                Project(owner=owner, slug="gh-next"),
-                Project(owner=owner, slug="zaneops"),
+                Project(slug="gh-clone"),
+                Project(slug="gh-next"),
+                Project(slug="zaneops"),
             ]
         )
         Environment.objects.bulk_create(
@@ -51,9 +51,9 @@ class ResourceSearchViewTests(AuthAPITestCase):
 
         projects = Project.objects.bulk_create(
             [
-                Project(owner=owner, slug="gh-clone"),
-                Project(owner=owner, slug="gh-next"),
-                Project(owner=owner, slug="zaneops"),
+                Project(slug="gh-clone"),
+                Project(slug="gh-next"),
+                Project(slug="zaneops"),
             ]
         )
         Environment.objects.bulk_create(

@@ -77,7 +77,9 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
 
     def test_deployments_service_non_existing(self):
         owner = self.loginUser()
-        p = Project.objects.create(slug="kiss-cam", owner=owner)
+        p = Project.objects.create(
+            slug="kiss-cam",
+        )
 
         response = self.client.get(
             reverse(

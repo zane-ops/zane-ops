@@ -30,7 +30,7 @@ class ProjectListViewTests(AuthAPITestCase):
 
         Project.objects.bulk_create(
             [
-                Project(owner=owner, slug="thullo"),
+                Project(slug="thullo"),
             ]
         )
 
@@ -44,9 +44,9 @@ class ProjectListViewTests(AuthAPITestCase):
 
         Project.objects.bulk_create(
             [
-                Project(owner=owner, slug="gh-clone"),
-                Project(owner=owner, slug="gh-next"),
-                Project(owner=owner, slug="zaneops"),
+                Project(slug="gh-clone"),
+                Project(slug="gh-next"),
+                Project(slug="zaneops"),
             ]
         )
         response = self.client.get(
@@ -97,7 +97,9 @@ class ProjectCreateViewTests(AuthAPITestCase):
 
     def test_unique_slug(self):
         owner = self.loginUser()
-        Project.objects.create(slug="zane-ops", owner=owner)
+        Project.objects.create(
+            slug="zane-ops",
+        )
         response = self.client.post(
             reverse("zane_api:projects.list"),
             data={"slug": "zane-ops"},
@@ -126,7 +128,9 @@ class ProjectCreateViewTests(AuthAPITestCase):
 class ProjectUpdateViewTests(AuthAPITestCase):
     def test_sucessfully_update_project_slug(self):
         owner = self.loginUser()
-        previous_project = Project.objects.create(slug="gh-next", owner=owner)
+        previous_project = Project.objects.create(
+            slug="gh-next",
+        )
         response = self.client.put(
             reverse(
                 "zane_api:projects.details", kwargs={"slug": previous_project.slug}
@@ -143,7 +147,9 @@ class ProjectUpdateViewTests(AuthAPITestCase):
 
     def test_sucessfully_update_project_description(self):
         owner = self.loginUser()
-        previous_project = Project.objects.create(slug="gh-next", owner=owner)
+        previous_project = Project.objects.create(
+            slug="gh-next",
+        )
         response = self.client.put(
             reverse(
                 "zane_api:projects.details", kwargs={"slug": previous_project.slug}
@@ -162,7 +168,9 @@ class ProjectUpdateViewTests(AuthAPITestCase):
 
     def test_prevent_empy_update(self):
         owner = self.loginUser()
-        previous_project = Project.objects.create(slug="gh-next", owner=owner)
+        previous_project = Project.objects.create(
+            slug="gh-next",
+        )
         response = self.client.put(
             reverse(
                 "zane_api:projects.details", kwargs={"slug": previous_project.slug}
@@ -175,8 +183,12 @@ class ProjectUpdateViewTests(AuthAPITestCase):
         owner = self.loginUser()
         Project.objects.bulk_create(
             [
-                Project(slug="gh-clone", owner=owner),
-                Project(slug="zane-ops", owner=owner),
+                Project(
+                    slug="gh-clone",
+                ),
+                Project(
+                    slug="zane-ops",
+                ),
             ]
         )
         response = self.client.put(
@@ -197,8 +209,12 @@ class ProjectUpdateViewTests(AuthAPITestCase):
         owner = self.loginUser()
         Project.objects.bulk_create(
             [
-                Project(slug="gh-clone", owner=owner),
-                Project(slug="zane-ops", owner=owner),
+                Project(
+                    slug="gh-clone",
+                ),
+                Project(
+                    slug="zane-ops",
+                ),
             ]
         )
         response = self.client.put(
@@ -212,8 +228,8 @@ class ProjectUpdateViewTests(AuthAPITestCase):
         owner = self.loginUser()
         Project.objects.bulk_create(
             [
-                Project(slug="gh-clone", owner=owner),
-                Project(slug="zane-ops", owner=owner),
+                Project(slug="gh-clone"),
+                Project(slug="zane-ops"),
             ]
         )
         response = self.client.put(
@@ -226,7 +242,9 @@ class ProjectUpdateViewTests(AuthAPITestCase):
 class ProjectGetViewTests(AuthAPITestCase):
     def test_sucessfully_get_project(self):
         owner = self.loginUser()
-        Project.objects.create(slug="gh-clone", owner=owner)
+        Project.objects.create(
+            slug="gh-clone",
+        )
         response = self.client.get(
             reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})
         )
@@ -245,7 +263,6 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         owner = self.loginUser()
         Project.objects.create(
             slug="gh-clone",
-            owner=owner,
             description="Github clone",
         )
         response = self.client.delete(
@@ -300,7 +317,9 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
     def test_cannot_archive_already_archived_project(self):
         owner = self.loginUser()
-        ArchivedProject.objects.create(slug="zane-ops", owner=owner)
+        ArchivedProject.objects.create(
+            slug="zane-ops",
+        )
         response = self.client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"})
         )
@@ -308,7 +327,9 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
     def test_can_reuse_archived_version_if_it_exists(self):
         owner = self.loginUser()
-        p = Project.objects.create(slug="gh-clone", owner=owner)
+        p = Project.objects.create(
+            slug="gh-clone",
+        )
         ArchivedProject.create_from_project(p)
 
         response = self.client.delete(
@@ -509,7 +530,7 @@ class DockerRemoveNetworkTest(AuthAPITestCase):
 class ProjectStatusViewTests(AuthAPITestCase):
     def test_return_status_in_project(self):
         owner = self.loginUser()
-        Project.objects.create(owner=owner, slug="thullo")
+        Project.objects.create(slug="thullo")
 
         response = self.client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
