@@ -1,11 +1,5 @@
 from typing import cast
 
-from rest_framework import serializers
-from .serializers import (
-    UserCreationRequestSerializer,
-    UserCreatedResponseSerializer,
-    UserExistenceResponseSerializer,
-)
 from drf_spectacular.utils import extend_schema
 
 from rest_framework.views import APIView
@@ -15,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 
-from ..models import Workspace, WorkspaceMembership, WorkspaceRole
+from ..models import Workspace
 from ..constants import WORKSPACE_SESSION_KEY
 from .serializers import SwitchWorkspaceRequestSerializer
 from rest_framework import exceptions
