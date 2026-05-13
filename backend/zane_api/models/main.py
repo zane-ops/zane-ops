@@ -94,6 +94,9 @@ class WorkspaceRole(models.IntegerChoices):
 class WorkspaceMembership(models.Model):
     workspace_id: str
 
+    if TYPE_CHECKING:
+        accessible_projects: RelatedManager["Project"]
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -108,6 +111,9 @@ class WorkspaceMembership(models.Model):
         choices=WorkspaceRole.choices,
         default=WorkspaceRole.MEMBER,
     )
+
+    # Only relevant for GUEST and CONTRIBUTOR
+    accessible_projects = models.ManyToManyField("Project", blank=True)
 
     @property
     def role_name(self) -> str:
