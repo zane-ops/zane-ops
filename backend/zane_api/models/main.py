@@ -61,6 +61,7 @@ if TYPE_CHECKING:
 class Workspace(TimestampedModel):
     if TYPE_CHECKING:
         projects: RelatedManager["Project"]
+        members: RelatedManager["WorkspaceMembership"]
 
     id = ShortUUIDField(
         length=11,

@@ -230,6 +230,11 @@ class ProjectsListAPIView(ListCreateAPIView):
 class ProjectDetailsView(APIView):
     serializer_class = ProjectSerializer
 
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [HasWorkspace(), IsWorkspaceGuest()]
+        return [HasWorkspace(), IsWorkspaceAdmin()]
+
     @extend_schema(
         request=ProjectUpdateRequestSerializer,
         operation_id="updateProject",
@@ -237,7 +242,7 @@ class ProjectDetailsView(APIView):
     )
     def put(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug)
+            project = Project.objects.get(slug=slug, workspace=request.workspace)
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist"

@@ -53,6 +53,30 @@ class IsWorkspaceGuest(BasePermission):
         return membership is not None and membership.role >= WorkspaceRole.GUEST
 
 
+class IsWorkspaceMember(BasePermission):
+    def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
+        if not request.user or isinstance(request.user, AnonymousUser):
+            return False
+
+        membership = WorkspaceMembership.objects.filter(
+            user=request.user, workspace=request.workspace
+        ).first()
+
+        return membership is not None and membership.role >= WorkspaceRole.MEMBER
+
+
+class IsWorkspaceContributor(BasePermission):
+    def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
+        if not request.user or isinstance(request.user, AnonymousUser):
+            return False
+
+        membership = WorkspaceMembership.objects.filter(
+            user=request.user, workspace=request.workspace
+        ).first()
+
+        return membership is not None and membership.role >= WorkspaceRole.CONTRIBUTOR
+
+
 class IsWorkspaceAdmin(BasePermission):
     def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
         if not request.user or isinstance(request.user, AnonymousUser):
