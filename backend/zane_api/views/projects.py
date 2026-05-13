@@ -51,8 +51,6 @@ from ..models import (
     Config,
     Environment,
     ArchivedGitService,
-    WorkspaceMembership,
-    WorkspaceRole,
 )
 from django.db.models.expressions import RawSQL
 
@@ -392,9 +390,16 @@ class ProjectServiceListAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=slug.lower())
+            project = Project.objects.get(
+                slug=slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
+                name=env_slug.lower(),
+                project=project,
             )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
@@ -550,9 +555,11 @@ class ProjectServiceListAPIView(APIView):
                             repository=service_repo,
                             last_commit_message=service.latest_commit_message,  # type: ignore
                             branch=branch_name,
-                            updated_at=service.last_updated  # type: ignore
-                            if service.last_updated is not None  # type: ignore
-                            else service.created_at,  # type: ignore
+                            updated_at=(
+                                service.last_updated  # type: ignore
+                                if service.last_updated is not None  # type: ignore
+                                else service.created_at
+                            ),  # type: ignore
                             slug=service.slug,
                             git_provider=service.git_provider or source_git_provider,  # type: ignore
                             volume_number=service.volume_number,  # type: ignore
