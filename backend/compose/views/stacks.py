@@ -61,6 +61,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from drf_standardized_errors.formatter import ExceptionFormatter
+from zane_api.permissions import get_accessible_projects
 
 
 class ComposeStackListAPIView(ListAPIView):
@@ -77,7 +78,10 @@ class ComposeStackListAPIView(ListAPIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -115,7 +119,10 @@ class ComposeStackCreateFromDokployBase64APIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    request.user,  # type: ignore
+                    request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -205,7 +212,10 @@ class ComposeStackCreateFromDokployObjectAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    request.user,  # type: ignore
+                    request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -294,7 +304,11 @@ class ComposeStackCreateAPIView(CreateAPIView):
 
         try:
             project = Project.objects.get(
-                slug=project_slug.lower(), owner=self.request.user
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -336,7 +350,10 @@ class ComposeStackDetailsAPIView(RetrieveUpdateAPIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -378,7 +395,10 @@ class ComposeStackRegenerateDeployTokenAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    request.user,  # type: ignore
+                    request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -419,7 +439,10 @@ class ComposeStackArchiveAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    request.user,  # type: ignore
+                    request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -487,7 +510,10 @@ class ComposeStackDeploymentListAPIView(ListAPIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -538,7 +564,10 @@ class ComposeStackDeploymentDetailsAPIView(RetrieveAPIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -593,7 +622,6 @@ class ComposeStackReDeployAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=request.user,
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -795,7 +823,10 @@ class ComposeStackDeployAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -871,7 +902,10 @@ class ComposeStackCancelChangesAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -933,7 +967,10 @@ class ComposeStackRequestChangesAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -1030,7 +1067,6 @@ class CancelComposeStackDeploymentAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=request.user,
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -1109,7 +1145,6 @@ class ToggleComposeStackAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=request.user,
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
