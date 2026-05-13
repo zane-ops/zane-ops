@@ -1,6 +1,6 @@
 from .constants import WORKSPACE_SESSION_KEY
 
-from .models import Workspace
+from .models import Workspace, WorkspaceMembership, WorkspaceRole
 import base64
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
@@ -39,6 +39,18 @@ class IsInstanceOwner(BasePermission):
             return False
 
         return cast(AbstractUser, request.user).is_superuser
+
+
+class IsWorkspaceAdmin(BasePermission):
+    def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
+        if not request.user or isinstance(request.user, AnonymousUser):
+            return False
+
+        membership = WorkspaceMembership.objects.filter(
+            user=request.user, workspace=request.workspace
+        ).first()
+
+        return membership is not None and membership.role >= WorkspaceRole.ADMIN
 
 
 class HasWorkspace(BasePermission):
