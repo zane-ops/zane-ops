@@ -41,7 +41,7 @@ class WorkspaceMiddlewareTests(AuthAPITestCase):
             memberships__user__username="Fredkiss3"
         ).get()
 
-        self.assertEqual(response.json()["workspace"]["id"], workspace.id)
+        self.assertEqual(response.json()["membership"]["workspace"]["id"], workspace.id)
 
     def test_request_workspace_falls_back_to_first_membership_without_session_key(self):
         user = self.loginUser()  # manual login doesn't set the workspace in the session
@@ -58,7 +58,9 @@ class WorkspaceMiddlewareTests(AuthAPITestCase):
         response = self.client.get(reverse("zane_api:auth.me"))
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(response.json()["workspace"]["id"], first_workspace.id)
+        self.assertEqual(
+            response.json()["membership"]["workspace"]["id"], first_workspace.id
+        )
 
 
 class SwitchWorkspaceViewTests(AuthAPITestCase):
@@ -85,7 +87,9 @@ class SwitchWorkspaceViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        self.assertEqual(response.json()["workspace"]["id"], second_workspace.id)
+        self.assertEqual(
+            response.json()["membership"]["workspace"]["id"], second_workspace.id
+        )
 
     def test_cannot_switch_to_a_workspace_without_being_a_member(self):
         self.loginUser()
@@ -118,4 +122,4 @@ class SwitchWorkspaceViewTests(AuthAPITestCase):
         )
         jprint(response.json())
 
-        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)

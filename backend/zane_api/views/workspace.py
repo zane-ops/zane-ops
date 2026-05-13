@@ -5,14 +5,27 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.generics import ListAPIView
 
 from rest_framework import status
 
 
-from ..models import Workspace
+from ..models import Workspace, WorkspaceMembership
 from ..constants import WORKSPACE_SESSION_KEY
 from .serializers import SwitchWorkspaceRequestSerializer
 from rest_framework import exceptions
+from ..serializers import WorkspaceMembershipSerializer
+
+from django.db.models import QuerySet
+
+
+class WorkspaceMembershipListAPIView(ListAPIView):
+    serializer_class = WorkspaceMembershipSerializer
+
+    def get_queryset(self) -> QuerySet[WorkspaceMembership]:  # type: ignore
+        return WorkspaceMembership.objects.filter(
+            user=self.request.user
+        ).select_related("workspace")
 
 
 class SwitchWorkspaceAPIView(APIView):

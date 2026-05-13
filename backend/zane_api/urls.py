@@ -16,6 +16,11 @@ urlpatterns = [
         name="workspaces.switch",
     ),
     re_path(
+        r"^workspaces/list/?$",
+        views.WorkspaceMembershipListAPIView.as_view(),
+        name="workspaces.list",
+    ),
+    re_path(
         r"^auth/me/with-token/?$",
         views.TokenAuthedView.as_view(),
         name="auth.me.with_token",

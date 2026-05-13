@@ -74,9 +74,11 @@ class WorkspaceSerializer(serializers.ModelSerializer):
 
 
 class WorkspaceMembershipSerializer(serializers.ModelSerializer):
+    workspace = WorkspaceSerializer(read_only=True)
+
     class Meta:
         model = models.WorkspaceMembership
-        fields = ["role_name", "role"]
+        fields = ["role_name", "role", "workspace"]
 
 
 class SharedEnvVariableSerializer(serializers.ModelSerializer):

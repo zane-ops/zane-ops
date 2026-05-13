@@ -113,7 +113,6 @@ class LoginView(APIView):
 
 class AuthedSuccessResponseSerializer(serializers.Serializer):
     user = UserSerializer(read_only=True)
-    workspace = WorkspaceSerializer(read_only=True)
     membership = WorkspaceMembershipSerializer(read_only=True)
 
 
@@ -135,15 +134,18 @@ class AuthedView(APIView):
                 now + timedelta(seconds=settings.SESSION_EXTEND_PERIOD)
             )
 
-        membership = WorkspaceMembership.objects.get(
-            user=request.user,
-            workspace=request.workspace,
+        membership = (
+            WorkspaceMembership.objects.filter(
+                user=request.user,
+                workspace=request.workspace,
+            )
+            .select_related("workspace")
+            .get()
         )
 
         response = AuthedSuccessResponseSerializer(
             dict(
                 user=request.user,
-                workspace=request.workspace,
                 membership=membership,
             )
         )
