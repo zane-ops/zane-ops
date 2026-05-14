@@ -67,9 +67,11 @@ def can_access_project(user: AbstractUser, project: Project) -> bool:
 
 
 def get_accessible_projects(user: AbstractUser, workspace: Workspace):
-    membership = WorkspaceMembership.objects.filter(
-        user=user, workspace=workspace
-    ).first()
+    membership = (
+        WorkspaceMembership.objects.filter(user=user, workspace=workspace)
+        .prefetch_related("accessible_projects")
+        .first()
+    )
 
     queryset: ValuesQuerySet[Project, str]
 

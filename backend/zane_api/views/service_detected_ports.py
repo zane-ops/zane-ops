@@ -22,6 +22,7 @@ from temporal.helpers import (
 import docker
 import docker.errors
 from zane_api.utils import DockerSwarmTask
+from ..permissions import get_accessible_projects
 
 
 class ServiceDetectedPortsAPIView(APIView):
@@ -38,7 +39,13 @@ class ServiceDetectedPortsAPIView(APIView):
         env_slug=Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            project = Project.objects.get(
+                slug=project_slug,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
