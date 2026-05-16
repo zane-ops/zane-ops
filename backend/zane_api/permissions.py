@@ -76,7 +76,9 @@ def get_accessible_projects(user: AbstractUser, workspace: Workspace):
     queryset: ValuesQuerySet[Project, str]
 
     if membership is None:
-        queryset = Project.objects.filter(id__in=[]).values_list("id")
+        queryset = Project.objects.filter(id__in=[]).values_list(
+            "id"
+        )  # No membership => no accessible projects
     else:
         if membership.role >= WorkspaceRole.MEMBER:
             queryset = Project.objects.filter(workspace=workspace).values_list("id")
