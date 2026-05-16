@@ -74,10 +74,18 @@ from temporal.workflows import (
 from .helpers import apply_changes_to_snapshot, diff_service_snapshots
 from temporal.helpers import generate_caddyfile_for_static_website
 from ..utils import pluralize
+from ..permissions import (
+    HasWorkspace,
+    IsWorkspaceMember,
+    IsWorkspaceAdmin,
+    IsWorkspaceContributor,
+    get_accessible_projects,
+)
 
 
 class CreateGitServiceAPIView(APIView):
     serializer_class = ServiceSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         request=PolymorphicProxySerializer(
@@ -106,7 +114,13 @@ class CreateGitServiceAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug, owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
 
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -323,6 +337,7 @@ class CreateGitServiceAPIView(APIView):
 
 class DeployGitServiceAPIView(APIView):
     serializer_class = ServiceDeploymentSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @transaction.atomic()
     @extend_schema(
@@ -339,7 +354,13 @@ class DeployGitServiceAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -413,6 +434,7 @@ class DeployGitServiceAPIView(APIView):
 
 class ReDeployGitServiceAPIView(APIView):
     serializer_class = ServiceDeploymentSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @transaction.atomic()
     @extend_schema(
@@ -430,7 +452,13 @@ class ReDeployGitServiceAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -611,6 +639,8 @@ class ReDeployGitServiceAPIView(APIView):
 
 
 class ArchiveGitServiceAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
+
     @extend_schema(
         responses={
             204: None,
@@ -628,7 +658,13 @@ class ArchiveGitServiceAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
