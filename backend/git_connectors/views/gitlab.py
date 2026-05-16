@@ -59,9 +59,12 @@ from temporal.shared import (
 )
 from ..dtos import GitCommitInfo
 from ..constants import GITLAB_NULL_COMMIT
+from zane_api.permissions import HasWorkspace, IsWorkspaceOwner, IsWorkspaceMember
 
 
 class CreateGitlabAppAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+
     @extend_schema(
         request=CreateGitlabAppRequestSerializer,
         responses={200: CreateGitlabAppResponseSerializer},
@@ -90,6 +93,8 @@ class CreateGitlabAppAPIView(APIView):
 
 
 class SetupGitlabAppAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+
     @transaction.atomic()
     @extend_schema(
         parameters=[SetupGitlabAppQuerySerializer],
@@ -190,6 +195,8 @@ class SetupGitlabAppAPIView(APIView):
 
 
 class TestGitlabAppAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+
     @extend_schema(
         responses={
             200: inline_serializer(
@@ -241,6 +248,8 @@ class TestGitlabAppAPIView(APIView):
 
 
 class SyncRepositoriesAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+
     @transaction.atomic()
     @extend_schema(
         request=None,
@@ -255,7 +264,14 @@ class SyncRepositoriesAPIView(APIView):
     )
     def put(self, request: Request, id: str):
         try:
-            gitapp = GitApp.objects.filter(gitlab__id=id).select_related("gitlab").get()
+            gitapp = (
+                GitApp.objects.filter(
+                    gitlab__id=id,
+                    workspace=self.request.workspace,  # type: ignore
+                )
+                .select_related("gitlab")
+                .get()
+            )
         except GitApp.DoesNotExist:
             raise exceptions.NotFound(
                 "The referenced gitlab app does not exists on ZaneOps"
@@ -274,9 +290,15 @@ class GitlabAppDetailsAPIView(RetrieveAPIView):
     serializer_class = GitlabAppSerializer
     lookup_field = "id"
     queryset = GitlabApp.objects.all()
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
+
+    def get_queryset(self):
+        return super().get_queryset().filter(gitapp__workspace=self.request.workspace)
 
 
 class GitlabAppUpdateAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+
     @transaction.atomic()
     @extend_schema(
         request=GitlabAppUpdateRequestSerializer,
@@ -285,7 +307,12 @@ class GitlabAppUpdateAPIView(APIView):
     def put(self, request: Request, id: str):
         try:
             git_app = (
-                GitApp.objects.filter(gitlab__id=id).select_related("gitlab").get()
+                GitApp.objects.filter(
+                    gitlab__id=id,
+                    workspace=self.request.workspace,  # type: ignore
+                )
+                .select_related("gitlab")
+                .get()
             )
         except GitApp.DoesNotExist:
             raise exceptions.NotFound(f"Gitlab app with id {id} does not exist")

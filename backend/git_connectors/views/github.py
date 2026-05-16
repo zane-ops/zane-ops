@@ -53,9 +53,15 @@ from temporal.workflows import (
     DeployComposeStackWorkflow,
 )
 from ..dtos import GitCommitInfo
+from zane_api.permissions import (
+    HasWorkspace,
+    IsWorkspaceOwner,
+)
 
 
 class SetupGithubAppAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+
     @transaction.atomic()
     @extend_schema(
         responses={status.HTTP_303_SEE_OTHER: None},
@@ -138,9 +144,15 @@ class GithubAppDetailsAPIView(RetrieveUpdateAPIView):
     queryset = GitHubApp.objects.all()
     lookup_field = "id"
     http_method_names = ["patch", "get"]
+    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+
+    def get_queryset(self):
+        return super().get_queryset().filter(gitapp__workspace=self.request.workspace)
 
 
 class TestGithubAppAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+
     @extend_schema(
         responses={
             200: inline_serializer(
@@ -153,7 +165,12 @@ class TestGithubAppAPIView(APIView):
     def get(self, request: Request, id: str):
         try:
             git_app = (
-                GitApp.objects.filter(github__id=id).select_related("github").get()
+                GitApp.objects.filter(
+                    github__id=id,
+                    workspace=self.request.workspace,  # type: ignore
+                )
+                .select_related("github")
+                .get()
             )
         except GitApp.DoesNotExist:
             raise exceptions.NotFound(f"Github app with id {id} does not exist")

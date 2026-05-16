@@ -2426,8 +2426,12 @@ class GitApp(TimestampedModel):
     )
 
     workspace = models.ForeignKey(to=Workspace, on_delete=models.CASCADE)
-    github = models.OneToOneField(to=GitHubApp, on_delete=models.CASCADE, null=True)
-    gitlab = models.OneToOneField(to=GitlabApp, on_delete=models.CASCADE, null=True)
+    github = models.OneToOneField(
+        to=GitHubApp, on_delete=models.CASCADE, null=True, related_name="gitapp"
+    )
+    gitlab = models.OneToOneField(
+        to=GitlabApp, on_delete=models.CASCADE, null=True, related_name="gitapp"
+    )
 
     class Meta:
         constraints = [
