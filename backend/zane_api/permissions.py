@@ -164,7 +164,8 @@ class IsWorkspaceOwner(BasePermission):
             return False
 
         membership = WorkspaceMembership.objects.filter(
-            user=request.user, workspace=request.workspace
+            user=request.user,
+            workspace=request.workspace,
         ).first()
 
         return membership is not None and membership.role >= WorkspaceRole.OWNER
