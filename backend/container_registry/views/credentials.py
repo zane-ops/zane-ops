@@ -14,11 +14,27 @@ from drf_spectacular.utils import extend_schema, inline_serializer
 from zane_api.views import ErrorResponse409Serializer, ResourceConflict, BadRequest
 from zane_api.models import DeploymentChange
 
+from zane_api.permissions import (
+    HasWorkspace,
+    IsWorkspaceOwner,
+    IsWorkspaceMember,
+)
+
 
 class SharedRegistryCredentialsListAPIView(ListCreateAPIView):
     serializer_class = SharedRegistryCredentialsListCreateSerializer
     queryset = SharedRegistryCredentials.objects.all()
     pagination_class = None
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .filter(
+                workspace=self.request.workspace,  # type: ignore
+            )
+        )
 
     @extend_schema(
         operation_id="getRegistryCredentials",
@@ -29,6 +45,8 @@ class SharedRegistryCredentialsListAPIView(ListCreateAPIView):
 
 
 class TestSharedRegistryCredentialsAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
+
     @extend_schema(
         responses={
             200: inline_serializer(
@@ -41,7 +59,10 @@ class TestSharedRegistryCredentialsAPIView(APIView):
     )
     def get(self, request: Request, id: str):
         try:
-            credentials = SharedRegistryCredentials.objects.get(id=id)
+            credentials = SharedRegistryCredentials.objects.filter(
+                id=id,
+                workspace=self.request.workspace,  # type: ignore
+            ).get()
         except SharedRegistryCredentials.DoesNotExist:
             raise exceptions.NotFound(
                 f"No Container Registry Credential with id `{id}` found"
@@ -137,6 +158,20 @@ class SharedRegistryCredentialsDetailsAPIView(RetrieveUpdateDestroyAPIView):
     queryset = SharedRegistryCredentials.objects.all()
     http_method_names = ["get", "patch", "delete"]
     lookup_url_kwarg = "id"
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [HasWorkspace(), IsWorkspaceMember()]
+        return [HasWorkspace(), IsWorkspaceOwner()]
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .filter(
+                workspace=self.request.workspace,  # type: ignore
+            )
+        )
 
     def get_object(self) -> SharedRegistryCredentials:  # type: ignore
         return super().get_object()
