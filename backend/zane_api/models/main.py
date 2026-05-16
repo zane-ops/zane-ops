@@ -2425,6 +2425,7 @@ class GitApp(TimestampedModel):
         prefix=ID_PREFIX,
     )
 
+    workspace = models.ForeignKey(to=Workspace, on_delete=models.CASCADE)
     github = models.OneToOneField(to=GitHubApp, on_delete=models.CASCADE, null=True)
     gitlab = models.OneToOneField(to=GitlabApp, on_delete=models.CASCADE, null=True)
 
