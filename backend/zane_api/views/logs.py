@@ -9,7 +9,13 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from ..permissions import InternalZaneAppPermission
+
+from ..permissions import (
+    InternalZaneAppPermission,
+    HasWorkspace,
+    IsWorkspaceContributor,
+    get_accessible_projects,
+)
 from ..utils import Colors, escape_ansi
 from datetime import datetime
 
@@ -312,6 +318,7 @@ class HttpLogsAPIView(ListAPIView):
     pagination_class = DeploymentHttpLogsPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = DeploymentHttpLogsFilterSet
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         summary="Get HTTP logs",
@@ -332,10 +339,12 @@ class SingleHttpLogAPIView(RetrieveAPIView):
     serializer_class = HttpLogSerializer
     queryset = HttpLog.objects.all()
     lookup_field = "request_uuid"
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
 
 class ServiceDeploymentRuntimeLogsAPIView(APIView):
     serializer_class = RuntimeLogsSearchSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         summary="Get deployment logs", parameters=[DeploymentRuntimeLogsQuerySerializer]
@@ -349,7 +358,13 @@ class ServiceDeploymentRuntimeLogsAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            project = Project.objects.get(
+                slug=project_slug,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
 
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -389,6 +404,7 @@ class ServiceDeploymentRuntimeLogsAPIView(APIView):
 
 class ServiceDeploymentRuntimeLogsWithContextAPIView(APIView):
     serializer_class = RuntimeLogsContextSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         summary="Get deployment logs with context",
@@ -404,7 +420,13 @@ class ServiceDeploymentRuntimeLogsWithContextAPIView(APIView):
         time: str,
     ):
         try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            project = Project.objects.get(
+                slug=project_slug,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
 
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -447,6 +469,7 @@ class ServiceDeploymentRuntimeLogsWithContextAPIView(APIView):
 
 class ServiceDeploymentBuildLogsAPIView(APIView):
     serializer_class = RuntimeLogsSearchSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         summary="Get deployment build logs",
@@ -461,7 +484,13 @@ class ServiceDeploymentBuildLogsAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug)
+            project = Project.objects.get(
+                slug=project_slug,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
 
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
