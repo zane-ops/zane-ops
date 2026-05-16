@@ -149,10 +149,6 @@ class Project(TimestampedModel):
     description = models.TextField(blank=True, null=True)
 
     @property
-    async def abuild_registry(self):
-        return await sync_to_async(lambda: self.build_registry)()
-
-    @property
     def production_env(self):
         return self.environments.get(name=Environment.PRODUCTION_ENV_NAME)
 
