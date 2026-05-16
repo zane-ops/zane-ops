@@ -148,6 +148,18 @@ class IsWorkspaceAdmin(BasePermission):
         return membership is not None and membership.role >= WorkspaceRole.ADMIN
 
 
+class IsWorkspaceOwner(BasePermission):
+    def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
+        if not request.user or isinstance(request.user, AnonymousUser):
+            return False
+
+        membership = WorkspaceMembership.objects.filter(
+            user=request.user, workspace=request.workspace
+        ).first()
+
+        return membership is not None and membership.role >= WorkspaceRole.OWNER
+
+
 class IsInstanceOwner(BasePermission):
     def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
         if not request.user or isinstance(request.user, AnonymousUser):

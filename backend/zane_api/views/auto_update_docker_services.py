@@ -20,6 +20,8 @@ from ..serializers import ErrorResponse409Serializer
 from django.core.cache import cache
 from .base import ResourceConflict
 
+from ..permissions import IsInstanceOwner
+
 
 def check_image_exists(desired_image: str) -> bool:
     params = urlencode(query={"tag": desired_image}, doseq=True)
@@ -36,6 +38,8 @@ class TriggerUpdateView(APIView):
     """
     API endpoint to trigger the update workflow of ZaneOps
     """
+
+    permission_classes = [IsInstanceOwner]
 
     @extend_schema(
         request=AutoUpdateRequestSerializer,
@@ -85,6 +89,8 @@ class CheckOngoingUpdateView(APIView):
     """
     API endpoint to check if the update workflow of ZaneOps is running
     """
+
+    permission_classes = [IsInstanceOwner]
 
     serializer_class = OngoingUpdateResponseSerializer
 
