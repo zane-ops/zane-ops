@@ -63,8 +63,6 @@ from temporal.shared import (
 from ..permissions import (
     HasWorkspace,
     IsWorkspaceMember,
-    IsWorkspaceAdmin,
-    IsWorkspaceGuest,
     IsWorkspaceContributor,
     get_accessible_projects,
 )
@@ -72,6 +70,7 @@ from ..permissions import (
 
 class RegenerateServiceDeployTokenAPIView(APIView):
     serializer_class = ServiceSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         summary="Regenerate service deploy token",
@@ -85,7 +84,13 @@ class RegenerateServiceDeployTokenAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -123,6 +128,7 @@ class WebhookDeployDockerServiceAPIView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @transaction.atomic()
     @extend_schema(
@@ -138,6 +144,10 @@ class WebhookDeployDockerServiceAPIView(APIView):
                 Service.objects.filter(
                     deploy_token=deploy_token,
                     type=Service.ServiceType.DOCKER_REGISTRY,
+                    project__id__in=get_accessible_projects(
+                        self.request.user,  # type: ignore
+                        self.request.workspace,  # type: ignore
+                    ),
                 )
                 .select_related("project", "healthcheck", "environment")
                 .prefetch_related(
@@ -223,6 +233,7 @@ class WebhookDeployGitServiceAPIView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @transaction.atomic()
     @extend_schema(
@@ -238,6 +249,10 @@ class WebhookDeployGitServiceAPIView(APIView):
                 Service.objects.filter(
                     deploy_token=deploy_token,
                     type=Service.ServiceType.GIT_REPOSITORY,
+                    project__id__in=get_accessible_projects(
+                        self.request.user,  # type: ignore
+                        self.request.workspace,  # type: ignore
+                    ),
                 )
                 .select_related("project", "healthcheck", "environment")
                 .prefetch_related(
@@ -317,6 +332,8 @@ class WebhookDeployGitServiceAPIView(APIView):
 
 
 class BulkDeployServicesAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+
     @extend_schema(
         request=BulkDeployServiceRequestSerializer,
         responses={202: None},
@@ -327,7 +344,13 @@ class BulkDeployServicesAPIView(APIView):
     @transaction.atomic()
     def put(self, request: Request, project_slug: str, env_slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=project_slug.lower())
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = project.environments.get(name=env_slug.lower())
         except Project.DoesNotExist:
             raise exceptions.NotFound(
@@ -398,6 +421,8 @@ class BulkDeployServicesAPIView(APIView):
 
 
 class CleanupDeploymentQueueAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+
     @extend_schema(
         request=DeploymentCleanupQueueSerializer,
         responses={202: None},
@@ -414,7 +439,13 @@ class CleanupDeploymentQueueAPIView(APIView):
         service_slug: str,
     ) -> Response:
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
 
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
