@@ -26,9 +26,16 @@ from .serializers import (
     ComposeStackSearchResponseSerializer,
 )
 from compose.models import ComposeStack
+from ..permissions import (
+    get_accessible_projects,
+    HasWorkspace,
+    IsWorkspaceGuest,
+)
 
 
-class ResouceSearchAPIView(APIView):
+class ResourceSearchAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceGuest]
+
     @extend_schema(
         operation_id="searchResources",
         summary="search for resources (project, service, environment ...)",
@@ -51,6 +58,10 @@ class ResouceSearchAPIView(APIView):
         query = request.query_params.get("query", "").strip()
         projects: QuerySet[Project] = Project.objects.filter(
             slug__istartswith=query,
+            id__in=get_accessible_projects(
+                self.request.user,  # type: ignore
+                self.request.workspace,  # type: ignore
+            ),
         )[:5]
         projects_list = [
             {
@@ -62,7 +73,13 @@ class ResouceSearchAPIView(APIView):
         ]
 
         services = (
-            Service.objects.filter(slug__istartswith=query)
+            Service.objects.filter(
+                slug__istartswith=query,
+                project__id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             .select_related("project", "environment", "git_app")
             .annotate(
                 is_production_service=Case(
@@ -102,7 +119,13 @@ class ResouceSearchAPIView(APIView):
         ]
 
         compose_stacks = (
-            ComposeStack.objects.filter(slug__istartswith=query)
+            ComposeStack.objects.filter(
+                slug__istartswith=query,
+                project__id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             .select_related("project", "environment")
             .annotate(
                 is_production_stack=Case(
@@ -128,9 +151,17 @@ class ResouceSearchAPIView(APIView):
             for stack in compose_stacks
         ]
 
-        environments = Environment.objects.filter(
-            Q(name__istartswith=query) & ~Q(name=Environment.PRODUCTION_ENV_NAME)
-        ).select_related("project")[:5]
+        environments = (
+            Environment.objects.filter(
+                name__istartswith=query,
+                project__id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
+            .exclude(name=Environment.PRODUCTION_ENV_NAME)
+            .select_related("project")[:5]
+        )
 
         environments_list = [
             {

@@ -139,7 +139,7 @@ urlpatterns = [
     ),
     re_path(
         r"^search-resources/?$",
-        views.ResouceSearchAPIView.as_view(),
+        views.ResourceSearchAPIView.as_view(),
         name="resources.search",
     ),
     re_path(
