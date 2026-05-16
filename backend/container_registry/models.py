@@ -8,7 +8,7 @@ from zane_api.validators import validate_url_domain
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
-    from zane_api.models.main import Project, Service
+    from zane_api.models.main import Project, Service, Workspace
 
 
 class SharedRegistryCredentials(TimestampedModel):
@@ -16,6 +16,12 @@ class SharedRegistryCredentials(TimestampedModel):
 
     if TYPE_CHECKING:
         services: RelatedManager["Service"]
+
+    workspace: models.ForeignKey["Workspace"] = models.ForeignKey(
+        to="zane_api.Workspace",
+        on_delete=models.CASCADE,
+        related_name="shared_credentials",
+    )
 
     id = ShortUUIDField(  # type: ignore[arg-type]
         length=20,
@@ -59,6 +65,12 @@ class BuildRegistry(TimestampedModel):
     id = ShortUUIDField(primary_key=True, prefix=ID_PREFIX, length=20)  # type: ignore[arg-type]
     name = models.CharField(max_length=200)
     is_default = models.BooleanField(default=True)
+
+    workspace: models.ForeignKey["Workspace"] = models.ForeignKey(
+        to="zane_api.Workspace",
+        on_delete=models.CASCADE,
+        related_name="build_registries",
+    )
 
     registry_domain = models.CharField(
         max_length=2048, validators=[validate_url_domain]
