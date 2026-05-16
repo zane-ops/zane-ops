@@ -23,11 +23,18 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import exceptions
 from zane_api.git_client import GitClient
 
+from zane_api.permissions import (
+    HasWorkspace,
+    IsWorkspaceMember,
+    IsWorkspaceOwner,
+)
+
 
 class GitAppDetailsAPIView(RetrieveDestroyAPIView):
     serializer_class = GitAppSerializer
     queryset = GitApp.objects.filter().select_related("github", "gitlab")
     lookup_field = "id"
+    permission_classes = [HasWorkspace, IsWorkspaceOwner]
 
     def get_object(self) -> GitApp:  # type: ignore
         return super().get_object()
@@ -56,6 +63,7 @@ class ListGitAppsAPIView(ListAPIView):
     serializer_class = GitAppSerializer
     queryset = GitApp.objects.filter().select_related("github", "gitlab")
     pagination_class = None
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(operation_id="listGitApps", summary="List all git apps")
     def get(self, request, *args, **kwargs):
@@ -63,6 +71,8 @@ class ListGitAppsAPIView(ListAPIView):
 
 
 class ListGitRepositoryBranchesAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
+
     @extend_schema(
         responses={200: GitRepositoryBranchesResponseSerializer},
         parameters=[GitRepositoryBranchesQuerySerializer],
@@ -82,7 +92,10 @@ class ListGitRepositoryBranchesAPIView(APIView):
             try:
                 gitapp = (
                     GitApp.objects.filter(
-                        Q(id=app_id)
+                        Q(
+                            id=app_id,
+                            workspace=self.request.workspace,  # type: ignore
+                        )
                         & (Q(github__isnull=False) | Q(gitlab__isnull=False))
                     )
                     .select_related("github", "gitlab")
@@ -113,13 +126,18 @@ class ListGitRepositoriesAPIView(ListAPIView):
     pagination_class = None
     filter_backends = [DjangoFilterBackend]
     filterset_class = GitRepositoryListFilterSet
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     def get_queryset(self) -> QuerySet[GitRepository]:  # type: ignore
         app_id = self.kwargs["id"]
         try:
             gitapp = (
                 GitApp.objects.filter(
-                    Q(id=app_id) & (Q(github__isnull=False) | Q(gitlab__isnull=False))
+                    Q(
+                        id=app_id,
+                        workspace=self.request.workspace,  # type: ignore
+                    )
+                    & (Q(github__isnull=False) | Q(gitlab__isnull=False))
                 )
                 .select_related("github", "gitlab")
                 .get()
@@ -153,13 +171,18 @@ class ListGitRepositoriesPaginatedAPIView(ListAPIView):
     pagination_class = GitRepositoryListPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = GitRepositoryListFilterSet
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     def get_queryset(self) -> QuerySet[GitRepository]:  # type: ignore
         app_id = self.kwargs["id"]
         try:
             gitapp = (
                 GitApp.objects.filter(
-                    Q(id=app_id) & (Q(github__isnull=False) | Q(gitlab__isnull=False))
+                    Q(
+                        id=app_id,
+                        workspace=self.request.workspace,  # type: ignore
+                    )
+                    & (Q(github__isnull=False) | Q(gitlab__isnull=False))
                 )
                 .select_related("github", "gitlab")
                 .get()
@@ -171,9 +194,10 @@ class ListGitRepositoriesPaginatedAPIView(ListAPIView):
 
         if gitapp.github:
             return gitapp.github.repositories
+        if gitapp.gitlab:
+            return gitapp.gitlab.repositories
 
-        gl_app = cast(GitlabApp, gitapp.gitlab)
-        return gl_app.repositories
+        raise NotImplementedError("No other git app type implemented yet.")
 
     @extend_schema(
         operation_id="listGitAppRepositoriesPaginated",
