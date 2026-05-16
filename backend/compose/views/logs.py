@@ -18,9 +18,16 @@ from .serializers import (
 from ..models import ComposeStack, ComposeStackDeployment
 from search.dtos import RuntimeLogSource
 
+from zane_api.permissions import (
+    HasWorkspace,
+    IsWorkspaceContributor,
+    get_accessible_projects,
+)
+
 
 class ComposeStackRuntimeLogsAPIView(APIView):
     serializer_class = RuntimeLogsSearchSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         summary="Get stack runtime logs", parameters=[StackRuntimeLogsQuerySerializer]
@@ -35,7 +42,10 @@ class ComposeStackRuntimeLogsAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(),
@@ -71,6 +81,7 @@ class ComposeStackRuntimeLogsAPIView(APIView):
 
 class ComposeStackDeploymentBuildLogsAPIView(APIView):
     serializer_class = RuntimeLogsSearchSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         summary="Get stack build logs", parameters=[StackBuildLogsQuerySerializer]
@@ -86,7 +97,10 @@ class ComposeStackDeploymentBuildLogsAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(),
@@ -132,6 +146,7 @@ class ComposeStackDeploymentBuildLogsAPIView(APIView):
 
 class ComposeStackRuntimeLogsWithContextAPIView(APIView):
     serializer_class = RuntimeLogsContextSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         summary="Get stack runtime logs with context",
@@ -148,7 +163,10 @@ class ComposeStackRuntimeLogsWithContextAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(),
