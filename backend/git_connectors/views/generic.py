@@ -36,6 +36,15 @@ class GitAppDetailsAPIView(RetrieveDestroyAPIView):
     lookup_field = "id"
     permission_classes = [HasWorkspace, IsWorkspaceOwner]
 
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .filter(
+                workspace=self.request.workspace,  # type: ignore
+            )
+        )
+
     def get_object(self) -> GitApp:  # type: ignore
         return super().get_object()
 
@@ -64,6 +73,15 @@ class ListGitAppsAPIView(ListAPIView):
     queryset = GitApp.objects.filter().select_related("github", "gitlab")
     pagination_class = None
     permission_classes = [HasWorkspace, IsWorkspaceMember]
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .filter(
+                workspace=self.request.workspace,  # type: ignore
+            )
+        )
 
     @extend_schema(operation_id="listGitApps", summary="List all git apps")
     def get(self, request, *args, **kwargs):
