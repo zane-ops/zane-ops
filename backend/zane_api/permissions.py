@@ -121,12 +121,6 @@ class IsWorkspaceGuest(BasePermission):
 
         return membership is not None and membership.role >= WorkspaceRole.GUEST
 
-    # def has_object_permission(self, request: Request, view: Any, obj: Any) -> bool:  # type: ignore
-    #     if not isinstance(obj, Project):
-    #         return False
-
-    #     return can_access_project(request.user, obj)
-
 
 class IsWorkspaceContributor(BasePermission):
     def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
@@ -138,12 +132,6 @@ class IsWorkspaceContributor(BasePermission):
         ).first()
 
         return membership is not None and membership.role >= WorkspaceRole.CONTRIBUTOR
-
-    # def has_object_permission(self, request: Request, view: Any, obj: Any) -> bool:  # type: ignore
-    #     if not isinstance(obj, Project):
-    #         return False
-
-    #     return can_access_project(request.user, obj)
 
 
 class IsWorkspaceMember(BasePermission):
