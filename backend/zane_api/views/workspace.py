@@ -15,7 +15,11 @@ from ..constants import WORKSPACE_SESSION_KEY
 from .serializers import SwitchWorkspaceRequestSerializer
 from rest_framework import exceptions
 from ..serializers import WorkspaceMembershipSerializer, WorkspaceSerializer
-from ..permissions import IsInstanceOwner, HasWorkspace, IsWorkspaceAdmin
+from ..permissions import (
+    IsInstanceOwner,
+    HasWorkspace,
+    IsWorkspaceOwner,
+)
 
 from django.db.models import QuerySet
 
@@ -30,7 +34,7 @@ class WorkspaceMembershipListAPIView(ListAPIView):
 
 
 class EditWorkspaceAPIView(UpdateAPIView):
-    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
+    permission_classes = [HasWorkspace, IsWorkspaceOwner]
     serializer_class = WorkspaceSerializer
     http_method_names = ["put"]
 

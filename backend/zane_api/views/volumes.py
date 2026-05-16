@@ -5,6 +5,11 @@ from rest_framework.generics import ListAPIView
 
 from ..models import Project, Environment, Volume, Service
 from ..serializers import VolumeWithServiceSerializer
+from ..permissions import (
+    HasWorkspace,
+    IsWorkspaceMember,
+    get_accessible_projects,
+)
 
 
 class AvailableVolumesListAPIView(ListAPIView):
@@ -17,6 +22,7 @@ class AvailableVolumesListAPIView(ListAPIView):
     serializer_class = VolumeWithServiceSerializer
     queryset = Volume.objects.all()
     pagination_class = None
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         operation_id="listAvailableVolumes",
@@ -34,7 +40,10 @@ class AvailableVolumesListAPIView(ListAPIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(),
