@@ -88,6 +88,28 @@ def get_accessible_projects(user: AbstractUser, workspace: Workspace):
     return queryset
 
 
+async def aget_accessible_projects(user: AbstractUser, workspace: Workspace):
+    membership = await (
+        WorkspaceMembership.objects.filter(user=user, workspace=workspace)
+        .prefetch_related("accessible_projects")
+        .afirst()
+    )
+
+    queryset: ValuesQuerySet[Project, str]
+
+    if membership is None:
+        queryset = Project.objects.filter(id__in=[]).values_list(
+            "id"
+        )  # No membership => no accessible projects
+    else:
+        if membership.role >= WorkspaceRole.MEMBER:
+            queryset = Project.objects.filter(workspace=workspace).values_list("id")
+        else:
+            queryset = membership.accessible_projects.values_list("id")
+
+    return queryset
+
+
 class IsWorkspaceGuest(BasePermission):
     def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
         if not request.user or isinstance(request.user, AnonymousUser):

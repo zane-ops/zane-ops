@@ -16,15 +16,18 @@ from django.db import transaction, IntegrityError
 from rest_framework.request import Request
 from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import status
+from zane_api.permissions import IsInstanceOwner
 
 
 class SSHKeyDetailsAPIView(RetrieveDestroyAPIView):
+    permission_classes = [IsInstanceOwner]
     serializer_class = SSHKeySerializer
     queryset = SSHKey.objects.all()
     lookup_field = "slug"
 
 
 class SSHKeyListAPIView(ListCreateAPIView):
+    permission_classes = [IsInstanceOwner]
     serializer_class = SSHKeySerializer
     queryset = SSHKey.objects.all()
     pagination_class = None

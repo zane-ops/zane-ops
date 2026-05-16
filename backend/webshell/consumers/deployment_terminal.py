@@ -10,21 +10,33 @@ import urllib.parse
 from ..serializers import ContainerTerminalQuerySerializer
 from ..exceptions import log_consumer_exceptions
 from .container_terminal_consumer import GenericContainerTerminalConsumer
+from zane_api.models import WorkspaceRole
+from zane_api.permissions import aget_accessible_projects
 
 
 @log_consumer_exceptions
 class DeploymentTerminalConsumer(GenericContainerTerminalConsumer):
     async def connect(self):
+        await self.accept()
+
+        membership = await self.check_for_workspace_roles(WorkspaceRole.MEMBER)
+        if not membership:
+            return
+
         kwargs = self.scope["url_route"]["kwargs"]  # type: ignore
         project_slug = kwargs["project_slug"]
         service_slug = kwargs["service_slug"]
         env_slug = kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
         deployment_hash = kwargs["deployment_hash"]
 
-        await self.accept()
-
         try:
-            project = await Project.objects.aget(slug=project_slug)
+            project = await Project.objects.aget(
+                slug=project_slug,
+                id__in=await aget_accessible_projects(
+                    self.user,
+                    membership.workspace,
+                ),
+            )
             environment = await Environment.objects.aget(
                 name=env_slug.lower(), project=project
             )
