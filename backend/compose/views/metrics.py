@@ -23,6 +23,11 @@ from django.db.models import (
     Value,
     DateTimeField,
 )
+from zane_api.permissions import (
+    HasWorkspace,
+    IsWorkspaceContributor,
+    get_accessible_projects,
+)
 
 
 # Define a custom function to extract epoch seconds from a datetime.
@@ -33,6 +38,7 @@ class ExtractEpoch(Func):
 
 class ComposeStackMetricsAPIView(APIView):
     serializer_class = ComposeStackMetricsResponseSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         parameters=[ComposeStackMetricsQuery],
@@ -48,7 +54,10 @@ class ComposeStackMetricsAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                owner=self.request.user,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(),

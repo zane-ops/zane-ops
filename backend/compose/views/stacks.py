@@ -61,7 +61,13 @@ from rest_framework.throttling import ScopedRateThrottle
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from drf_standardized_errors.formatter import ExceptionFormatter
-from zane_api.permissions import get_accessible_projects
+from zane_api.permissions import (
+    HasWorkspace,
+    IsWorkspaceContributor,
+    IsWorkspaceAdmin,
+    IsWorkspaceMember,
+    get_accessible_projects,
+)
 
 
 class ComposeStackListAPIView(ListAPIView):
@@ -70,6 +76,7 @@ class ComposeStackListAPIView(ListAPIView):
     pagination_class = None
     filter_backends = [DjangoFilterBackend]
     filterset_class = ComposeStacksListFilterSet
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     def get_queryset(self) -> QuerySet[ComposeStack]:  # type: ignore
         project_slug = self.kwargs["project_slug"]
@@ -107,6 +114,8 @@ class ComposeStackListAPIView(ListAPIView):
 
 
 class ComposeStackCreateFromDokployBase64APIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
+
     @transaction.atomic()
     @extend_schema(
         operation_id="createFromDokployTemplateBase64",
@@ -200,6 +209,8 @@ class ComposeStackCreateFromDokployBase64APIView(APIView):
 
 
 class ComposeStackCreateFromDokployObjectAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
+
     @transaction.atomic()
     @extend_schema(
         operation_id="createFromDokployTemplateObject",
@@ -297,6 +308,7 @@ class ComposeStackCreateFromDokployObjectAPIView(APIView):
 class ComposeStackCreateAPIView(CreateAPIView):
     serializer_class = ComposeStackSerializer
     queryset = ComposeStack.objects.all()
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     def get_serializer_context(self):
         project_slug = self.kwargs["project_slug"]
@@ -334,6 +346,7 @@ class ComposeStackDetailsAPIView(RetrieveUpdateAPIView):
     lookup_field = "slug"
     http_method_names = ["get", "put"]
     queryset = ComposeStack.objects.all()
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         operation_id="getComposeStackDetails",
@@ -385,6 +398,7 @@ class ComposeStackDetailsAPIView(RetrieveUpdateAPIView):
 
 class ComposeStackRegenerateDeployTokenAPIView(APIView):
     serializer_class = ComposeStackSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         request=None,
@@ -428,6 +442,8 @@ class ComposeStackRegenerateDeployTokenAPIView(APIView):
 
 
 class ComposeStackArchiveAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
+
     @transaction.atomic()
     @extend_schema(
         responses={204: None},
@@ -494,6 +510,7 @@ class ComposeStackDeploymentListAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = ComposeStackDeploymentListFilterSet
     pagination_class = ComposeStackDeploymentListPagination
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         operation_id="listComposeStackDeployments",
@@ -547,6 +564,7 @@ class ComposeStackDeploymentDetailsAPIView(RetrieveAPIView):
     serializer_class = ComposeStackDeploymentSerializer
     lookup_field = "hash"
     queryset = ComposeStackDeployment.objects.all()
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         operation_id="getComposeStackDeploymentDetails",
@@ -604,6 +622,7 @@ class ComposeStackDeploymentDetailsAPIView(RetrieveAPIView):
 
 class ComposeStackReDeployAPIView(APIView):
     serializer_class = ComposeStackDeploymentSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @transaction.atomic()
     @extend_schema(
@@ -622,6 +641,10 @@ class ComposeStackReDeployAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -744,6 +767,7 @@ class ComposeStackWebhookDeployAPIView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @transaction.atomic()
     @extend_schema(
@@ -758,6 +782,10 @@ class ComposeStackWebhookDeployAPIView(APIView):
             stack = (
                 ComposeStack.objects.filter(
                     deploy_token=deploy_token,
+                    project__id__in=get_accessible_projects(
+                        self.request.user,  # type: ignore
+                        self.request.workspace,  # type: ignore
+                    ),
                 ).prefetch_related("changes", "env_overrides")
             ).get()
         except ComposeStack.DoesNotExist:
@@ -812,6 +840,7 @@ class ComposeStackWebhookDeployAPIView(APIView):
 
 class ComposeStackDeployAPIView(APIView):
     serializer_class = ComposeStackDeploymentSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @transaction.atomic()
     @extend_schema(
@@ -883,6 +912,8 @@ class ComposeStackDeployAPIView(APIView):
 
 
 class ComposeStackCancelChangesAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+
     @extend_schema(
         responses={
             409: ErrorResponse409Serializer,
@@ -949,6 +980,7 @@ class ComposeStackCancelChangesAPIView(APIView):
 
 class ComposeStackRequestChangesAPIView(APIView):
     serializer_class = ComposeStackChangeSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @transaction.atomic()
     @extend_schema(
@@ -1044,6 +1076,7 @@ class ComposeStackRequestChangesAPIView(APIView):
 
 class CancelComposeStackDeploymentAPIView(APIView):
     serializer_class = ComposeStackDeploymentSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @transaction.atomic()
     @extend_schema(
@@ -1067,6 +1100,10 @@ class CancelComposeStackDeploymentAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -1130,6 +1167,8 @@ class CancelComposeStackDeploymentAPIView(APIView):
 
 
 class ToggleComposeStackAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+
     @transaction.atomic()
     @extend_schema(
         request=ComposeStackToggleRequestSerializer,
@@ -1145,6 +1184,10 @@ class ToggleComposeStackAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project

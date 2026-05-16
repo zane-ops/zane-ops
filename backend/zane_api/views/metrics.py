@@ -24,6 +24,11 @@ from django.db.models import (
     Value,
     DateTimeField,
 )
+from ..permissions import (
+    HasWorkspace,
+    IsWorkspaceContributor,
+    get_accessible_projects,
+)
 
 
 # Define a custom function to extract epoch seconds from a datetime.
@@ -34,6 +39,7 @@ class ExtractEpoch(Func):
 
 class ServiceMetricsAPIView(APIView):
     serializer_class = ServiceMetricsResponseSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         parameters=[ServiceMetricsQuery],
@@ -48,7 +54,13 @@ class ServiceMetricsAPIView(APIView):
         deployment_hash: str | None = None,
     ):
         try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            project = Project.objects.get(
+                slug=project_slug,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
