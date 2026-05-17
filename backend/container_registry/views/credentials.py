@@ -36,6 +36,9 @@ class SharedRegistryCredentialsListAPIView(ListCreateAPIView):
             )
         )
 
+    def perform_create(self, serializer):
+        serializer.save(workspace=self.request.workspace)  # type: ignore
+
     @extend_schema(
         operation_id="getRegistryCredentials",
         summary="List all container registry credentials",
