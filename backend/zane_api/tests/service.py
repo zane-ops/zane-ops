@@ -9,12 +9,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from .base import AuthAPITestCase
-from ..models import (
-    Project,
-    Service,
-    Deployment,
-    DeploymentChange,
-)
+from ..models import Project, Service, Deployment, DeploymentChange, Workspace
 
 
 class DockerServiceCreateViewTest(AuthAPITestCase):
@@ -489,8 +484,10 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
     def test_get_service_non_existing(self):
         owner = self.loginUser()
+        workspace = Workspace.objects.get(memberships__user=owner)
         p = Project.objects.create(
             slug="kiss-cam",
+            workspace=workspace,
         )
 
         response = self.client.get(
@@ -507,12 +504,15 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
     def test_get_service_not_in_the_correct_project(self):
         owner = self.loginUser()
+        workspace = Workspace.objects.get(memberships__user=owner)
         p1 = Project.objects.create(
             slug="kiss-cam",
+            workspace=workspace,
         )
         p1.environments.create(name="production")
         p2 = Project.objects.create(
             slug="camly",
+            workspace=workspace,
         )
         p2.environments.create(name="production")
 
@@ -593,8 +593,10 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
 
     def test_update_service_non_existent(self):
         owner = self.loginUser()
+        workspace = Workspace.objects.get(memberships__user=owner)
         p = Project.objects.create(
             slug="kiss-cam",
+            workspace=workspace,
         )
         response = self.client.patch(
             reverse(

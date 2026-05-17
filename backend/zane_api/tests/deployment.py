@@ -19,6 +19,7 @@ from ..models import (
     URL,
     HealthCheck,
     EnvVariable,
+    Workspace,
 )
 from ..serializers import ServiceSerializer
 from temporal.activities import (
@@ -77,8 +78,10 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
 
     def test_deployments_service_non_existing(self):
         owner = self.loginUser()
+        workspace = Workspace.objects.get(memberships__user=owner)
         p = Project.objects.create(
             slug="kiss-cam",
+            workspace=workspace,
         )
 
         response = self.client.get(

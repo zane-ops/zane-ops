@@ -16,6 +16,7 @@ from ..models import (
     ArchivedURL,
     Config,
     DeploymentURL,
+    Workspace,
 )
 from temporal.activities import (
     ZaneProxyClient,
@@ -375,8 +376,10 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
     async def test_archive_service_non_existing(self):
         owner = await self.aLoginUser()
+        workspace = await Workspace.objects.aget(memberships__user=owner)
         p = await Project.objects.acreate(
             slug="kiss-cam",
+            workspace=workspace,
         )
 
         response = await self.async_client.delete(
@@ -384,7 +387,6 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
                 "zane_api:services.docker.archive",
                 kwargs={
                     "project_slug": p.slug,
-                    "env_slug": "production",
                     "env_slug": "production",
                     "service_slug": "cache-db",
                 },
