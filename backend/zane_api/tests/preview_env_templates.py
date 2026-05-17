@@ -10,6 +10,7 @@ from ..models import (
     PreviewEnvTemplate,
     Environment,
     SharedTemplateEnvVariable,
+    Workspace,
 )
 
 from django.conf import settings
@@ -124,7 +125,8 @@ class PreviewEnvTestsBase(AuthAPITestCase):
 
 class PreviewTemplateViewTests(AuthAPITestCase):
     def create_and_install_github_app(self):
-        self.loginUser()
+        owner = self.loginUser()
+        workspace = Workspace.objects.get(memberships__user=owner)
         github_api_pattern = re.compile(
             r"^https://api\.github\.com/app/installations/.*",
             re.IGNORECASE,
@@ -146,7 +148,7 @@ class PreviewTemplateViewTests(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        gitapp = GitApp.objects.create(github=github)
+        gitapp = GitApp.objects.create(github=github, workspace=workspace)
 
         # install app
         response = self.client.post(

@@ -18,6 +18,9 @@ from ..serializers import (
     DeploymentTerminalResizeSerializer,
 )
 from rest_framework.utils.serializer_helpers import ReturnDict
+from zane_api.constants import WORKSPACE_SESSION_KEY
+from django.contrib.auth.models import AbstractUser
+from zane_api.models import Workspace, WorkspaceMembership
 
 
 class GenericContainerTerminalConsumer(AsyncWebsocketConsumer):
@@ -27,6 +30,30 @@ class GenericContainerTerminalConsumer(AsyncWebsocketConsumer):
         # file descriptor used for writing to the terminal
         self.master_file_descriptor: Optional[int] = None
         self.process: Optional[asyncio.subprocess.Process] = None
+
+    async def check_for_workspace_roles(self, role: int):
+        self.user: AbstractUser = self.scope["user"]  # type: ignore
+        self.session = self.scope["session"]  # type: ignore
+        workspace_id = self.session.get(WORKSPACE_SESSION_KEY)
+
+        qs = WorkspaceMembership.objects.filter(
+            user=self.user,
+            role__gte=role,
+        ).select_related("workspace")
+
+        if workspace_id:
+            qs = qs.filter(workspace_id=workspace_id)
+
+        membership = await qs.afirst()
+
+        if not membership:
+            await self.send(
+                f"{Colors.RED}You do not have permission to access this resource{Colors.ENDC}\n\r",
+                close=True,
+            )
+
+        # return membership is not None and membership.role >= WorkspaceRole.MEMBER
+        return membership
 
     async def connect(self):
         raise NotImplementedError("This class needs to be subclassed")

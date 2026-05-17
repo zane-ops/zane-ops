@@ -8,7 +8,7 @@ from rest_framework import status
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars, jprint
 import responses
-from zane_api.models import GitApp, Deployment, DeploymentChange
+from zane_api.models import GitApp, Deployment, DeploymentChange, Workspace
 from ..models import GitHubApp, GitlabApp
 from ..serializers import GitlabWebhookEvent, GithubWebhookEvent
 
@@ -315,6 +315,7 @@ class TestGitlabPushWebhookAPIView(AuthAPITestCase):
             json={"token": generate_random_chars(32)},
         )
 
+        workspace = await Workspace.objects.aearliest("created_at")
         gh_app = await GitHubApp.objects.acreate(
             webhook_secret=GITHUB_APP_MANIFEST_DATA["webhook_secret"],
             app_id=GITHUB_APP_MANIFEST_DATA["id"],
@@ -325,7 +326,7 @@ class TestGitlabPushWebhookAPIView(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        git_github = await GitApp.objects.acreate(github=gh_app)
+        git_github = await GitApp.objects.acreate(github=gh_app, workspace=workspace)
         # install app
         response = await self.async_client.post(
             reverse("git_connectors:github.webhook"),

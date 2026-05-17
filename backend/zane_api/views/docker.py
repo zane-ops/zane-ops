@@ -5,9 +5,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from rest_framework import serializers
-from temporal.helpers import (
-    search_images_docker_hub,
-)
+from temporal.helpers import search_images_docker_hub
+from ..permissions import HasWorkspace, IsWorkspaceMember
 
 
 class DockerImageSerializer(serializers.Serializer):
@@ -25,6 +24,7 @@ class DockerImageSearchParamsSerializer(serializers.Serializer):
 
 class DockerImageSearchView(APIView):
     serializer_class = DockerImageSearchResponseSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         parameters=[

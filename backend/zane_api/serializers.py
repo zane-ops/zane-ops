@@ -64,7 +64,24 @@ class CustomChoiceField(serializers.ChoiceField):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["username", "first_name", "last_name"]
+        fields = ["username", "first_name", "last_name", "is_superuser"]
+
+
+class WorkspaceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Workspace
+        fields = ["id", "name"]
+        extra_kwargs = {
+            "id": {"read_only": True},
+        }
+
+
+class WorkspaceMembershipSerializer(serializers.ModelSerializer):
+    workspace = WorkspaceSerializer(read_only=True)
+
+    class Meta:
+        model = models.WorkspaceMembership
+        fields = ["role_name", "role", "workspace"]
 
 
 class SharedEnvVariableSerializer(serializers.ModelSerializer):

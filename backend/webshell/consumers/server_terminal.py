@@ -17,11 +17,11 @@ import struct
 from ..serializers import (
     DeploymentTerminalResizeSerializer,
 )
-from rest_framework.utils.serializer_helpers import ReturnDict
 from ..exceptions import log_consumer_exceptions
 from ..models import SSHKey
 from django.conf import settings
 import tempfile
+from django.contrib.auth.models import AbstractUser
 
 
 @log_consumer_exceptions
@@ -36,10 +36,18 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
         self.process: Optional[asyncio.subprocess.Process] = None
 
     async def connect(self):
-        kwargs = self.scope["url_route"]["kwargs"]
+        self.user: AbstractUser = self.scope["user"]  # type: ignore
+        kwargs = self.scope["url_route"]["kwargs"]  # type: ignore
+
         key_slug = kwargs["slug"]
 
         await self.accept()
+        # Only instance owners a.k.a superusers can have access to the server's terminal
+        if not self.user.is_superuser:
+            return await self.send(
+                f"{Colors.RED}You do not have permission to access this resource{Colors.ENDC}\n\r",
+                close=True,
+            )
 
         try:
             self.ssh_key = await SSHKey.objects.aget(slug=key_slug)
@@ -213,7 +221,7 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
             print("check for resize messages...")
             serializer = DeploymentTerminalResizeSerializer(data=json.loads(text_data))
             if serializer.is_valid():
-                data = cast(ReturnDict, serializer.data)
+                data = cast(dict, serializer.data)
                 if data.get("type") == "resize":
                     cols = data.get("cols")
                     rows = data.get("rows")

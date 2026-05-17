@@ -59,6 +59,7 @@ SECURE_HSTS_SECONDS = (
     0 if (__DANGEROUS_ALLOW_HTTP_SESSION or ENVIRONMENT != PRODUCTION_ENV) else 60
 )
 
+
 # We will only support one root domain on production
 # And it will be in the format domain.com (without `http://` or `https://`)
 ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "127-0-0-1.sslip.io")
@@ -275,7 +276,8 @@ if DEBUG:
 REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
+        "zane_api.permissions.HasWorkspace",
+        "zane_api.permissions.IsWorkspaceGuest",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",

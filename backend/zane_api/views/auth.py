@@ -2,9 +2,14 @@ from datetime import timedelta
 from typing import cast
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login, logout, get_user_model, update_session_auth_hash
+from django.contrib.auth import (
+    authenticate,
+    login,
+    logout,
+    get_user_model,
+    update_session_auth_hash,
+)
 from django.contrib.auth.models import AnonymousUser, AbstractUser
-from django.contrib.sessions.models import Session
 from django.http import QueryDict
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -30,9 +35,18 @@ from .serializers import (
     UserCreatedResponseSerializer,
     UserExistenceResponseSerializer,
 )
-from .serializers.auth import ChangePasswordRequestSerializer, ChangePasswordResponseSerializer, UpdateProfileSerializer
-from ..serializers import UserSerializer
-
+from .serializers.auth import (
+    ChangePasswordRequestSerializer,
+    ChangePasswordResponseSerializer,
+    UpdateProfileSerializer,
+)
+from ..serializers import (
+    UserSerializer,
+    WorkspaceSerializer,
+    WorkspaceMembershipSerializer,
+)
+from ..models import Workspace, WorkspaceMembership, WorkspaceRole
+from ..constants import WORKSPACE_SESSION_KEY
 
 User = get_user_model()
 
@@ -65,27 +79,41 @@ class LoginView(APIView):
     )
     def post(self, request: Request):
         form = LoginRequestSerializer(data=request.data)
-        if form.is_valid(raise_exception=True):
-            data = cast(ReturnDict, form.data)
-            user = authenticate(
-                username=data.get("username"), password=data.get("password")
-            )
-            if user is not None:
-                login(request, user)  # type: ignore
-                token, _ = Token.objects.get_or_create(
-                    user=user
-                )  # this is fine, Token is only used to authenticated internally
-                response = LoginSuccessResponseSerializer({"success": True})
-                query_params = request.query_params.dict()
-                redirect_uri = query_params.get("redirect_to")
-                if redirect_uri is not None:
-                    return redirect(iri_to_uri(redirect_uri))  # type: ignore
-                return Response(response.data, status=status.HTTP_201_CREATED)
-            raise exceptions.AuthenticationFailed(detail="Invalid username or password")
+        form.is_valid(raise_exception=True)
+        data = cast(ReturnDict, form.data)
+        user = authenticate(
+            username=data.get("username"), password=data.get("password")
+        )
+        if user is not None:
+            associated_workspace = Workspace.objects.filter(
+                memberships__user=user
+            ).first()
+            if associated_workspace is None:
+                raise exceptions.PermissionDenied(
+                    detail="This account is not associated with any workspace. Please contact your administrator."
+                )
+
+            login(request, user)  # type: ignore
+
+            # TODO: remove in future updates
+            token, _ = Token.objects.get_or_create(user=user)
+
+            # Set the current authed workspace to be the first workspace of the user
+            request.session[WORKSPACE_SESSION_KEY] = associated_workspace.id
+
+            response = LoginSuccessResponseSerializer({"success": True})
+            query_params = request.query_params.dict()
+            redirect_uri = query_params.get("redirect_to")
+            if redirect_uri is not None:
+                return redirect(iri_to_uri(redirect_uri))  # type: ignore
+            return Response(response.data, status=status.HTTP_201_CREATED)
+
+        raise exceptions.AuthenticationFailed(detail="Invalid username or password")
 
 
 class AuthedSuccessResponseSerializer(serializers.Serializer):
-    user = UserSerializer(read_only=True, many=False)
+    user = UserSerializer(read_only=True)
+    membership = WorkspaceMembershipSerializer(read_only=True)
 
 
 class AuthedView(APIView):
@@ -106,7 +134,21 @@ class AuthedView(APIView):
                 now + timedelta(seconds=settings.SESSION_EXTEND_PERIOD)
             )
 
-        response = AuthedSuccessResponseSerializer({"user": request.user})
+        membership = (
+            WorkspaceMembership.objects.filter(
+                user=request.user,
+                workspace=request.workspace,
+            )
+            .select_related("workspace")
+            .get()
+        )
+
+        response = AuthedSuccessResponseSerializer(
+            dict(
+                user=request.user,
+                membership=membership,
+            )
+        )
         return Response(
             response.data,
         )
@@ -225,10 +267,20 @@ class CreateUserView(APIView):
         serializer = UserCreationRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        data = cast(dict[str, str], serializer.validated_data)
+
         user = User.objects.create_superuser(
-            username=serializer.validated_data["username"],  # type: ignore
-            password=serializer.validated_data["password"],  # type: ignore
+            username=data["username"],
+            password=data["password"],
         )  # type: ignore
+
+        # Create workspace and membership
+        default_workspace = Workspace.objects.create(name=data["workspace_name"])
+        WorkspaceMembership.objects.create(
+            user=user,
+            workspace=default_workspace,
+            role=WorkspaceRole.OWNER,
+        )
 
         login(request, user)  # type: ignore
         serializer = UserCreatedResponseSerializer(
@@ -238,6 +290,7 @@ class CreateUserView(APIView):
             serializer.data,
             status=status.HTTP_201_CREATED,
         )
+
 
 class ChangePasswordAPIView(APIView):
     serializer_class = ChangePasswordRequestSerializer
@@ -250,34 +303,36 @@ class ChangePasswordAPIView(APIView):
         description="Change the authenticated user's password. Requires current password verification and validates new password strength.",
     )
     def post(self, request: Request) -> Response:
-        form = ChangePasswordRequestSerializer(data=request.data, context={'request': request})
+        form = ChangePasswordRequestSerializer(
+            data=request.data, context={"request": request}
+        )
         user: AbstractUser = request.user
-        
+
         form.is_valid(raise_exception=True)
 
         data = cast(ReturnDict, form.data)
         new_password = data.get("new_password")
-        
+
         user.set_password(new_password)
         user.save()
-        
+
         update_session_auth_hash(request._request, user)
-        
-        response_serializer = ChangePasswordResponseSerializer({
-            'success': True,
-        })
+
+        response_serializer = ChangePasswordResponseSerializer(
+            {
+                "success": True,
+            }
+        )
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
 class UpdateProfileAPIView(UpdateAPIView):
     serializer_class = UpdateProfileSerializer
 
-    queryset = (
-        get_user_model().objects.all()
-    )
+    queryset = get_user_model().objects.all()
     http_method_names = ["patch"]
 
-    def get_object(self): # type: ignore
+    def get_object(self):  # type: ignore
         return self.request.user
 
     @extend_schema(

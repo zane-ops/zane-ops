@@ -51,10 +51,80 @@ from datetime import timezone as tz
 from typing import TYPE_CHECKING
 from asgiref.sync import sync_to_async
 
+
 if TYPE_CHECKING:
     from container_registry.models import SharedRegistryCredentials  # noqa: F401
     from compose.models import ComposeStack
     from django.db.models.manager import RelatedManager
+
+
+class Workspace(TimestampedModel):
+    if TYPE_CHECKING:
+        projects: RelatedManager["Project"]
+        members: RelatedManager["WorkspaceMembership"]
+
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix="wrk_",
+    )
+
+    name = models.CharField(max_length=255)
+
+
+class WorkspaceRole(models.IntegerChoices):
+    # Read-only user: View projects and preview deployments only
+    GUEST = 1, "Guest"
+
+    # 3rd party contributor to the team (usually temporary)
+    # + View logs, env vars, trigger deploys, manage own tokens
+    CONTRIBUTOR = 2, "Contributor"
+
+    # member of the team
+    # Read-write: + Edit service config, create/update/delete env vars
+    MEMBER = 3, "Member"
+
+    # manager of the workspace
+    # Full access on the workspace, can invite people, cannot delete the workspace
+    # + Delete services, manage workspace users & roles, manage API tokens
+    ADMIN = 4, "Admin"
+
+    # creator of the workspace
+    # Full access on the workspace, +can delete the workspace
+    OWNER = 5, "Owner"
+
+
+class WorkspaceMembership(models.Model):
+    workspace_id: str
+
+    if TYPE_CHECKING:
+        accessible_projects: RelatedManager["Project"]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="workspace_memberships",
+    )
+    workspace: models.ForeignKey["Workspace"] = models.ForeignKey(
+        "Workspace",
+        on_delete=models.CASCADE,
+        related_name="memberships",
+    )
+    role = models.PositiveSmallIntegerField(
+        choices=WorkspaceRole.choices,
+        default=WorkspaceRole.MEMBER,
+    )
+
+    # Only relevant for GUEST and CONTRIBUTOR
+    accessible_projects = models.ManyToManyField("Project", blank=True)
+
+    @property
+    def role_name(self) -> str:
+        return self.get_role_display()
+
+    class Meta:
+        unique_together = [("user", "workspace")]
 
 
 class Project(TimestampedModel):
@@ -63,8 +133,9 @@ class Project(TimestampedModel):
     environments: Manager["Environment"]
     preview_templates: Manager["PreviewEnvTemplate"]
     services: Manager["Service"]
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+
+    workspace = models.ForeignKey(
+        Workspace,
         on_delete=models.CASCADE,
     )
 
@@ -76,10 +147,6 @@ class Project(TimestampedModel):
         prefix="prj_",
     )
     description = models.TextField(blank=True, null=True)
-
-    @property
-    async def abuild_registry(self):
-        return await sync_to_async(lambda: self.build_registry)()
 
     @property
     def production_env(self):
@@ -2354,8 +2421,13 @@ class GitApp(TimestampedModel):
         prefix=ID_PREFIX,
     )
 
-    github = models.OneToOneField(to=GitHubApp, on_delete=models.CASCADE, null=True)
-    gitlab = models.OneToOneField(to=GitlabApp, on_delete=models.CASCADE, null=True)
+    workspace = models.ForeignKey(to=Workspace, on_delete=models.CASCADE)
+    github = models.OneToOneField(
+        to=GitHubApp, on_delete=models.CASCADE, null=True, related_name="gitapp"
+    )
+    gitlab = models.OneToOneField(
+        to=GitlabApp, on_delete=models.CASCADE, null=True, related_name="gitapp"
+    )
 
     class Meta:
         constraints = [

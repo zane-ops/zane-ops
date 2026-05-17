@@ -1,5 +1,4 @@
 # type: ignore
-from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -16,11 +15,6 @@ class TimestampArchivedModel(models.Model):
 
 class ArchivedProject(TimestampArchivedModel):
     environments: models.Manager["ArchivedEnvironment"]
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-    )
     slug = models.SlugField(max_length=255, blank=True)
     description = models.TextField(blank=True, null=True)
     active_version = models.OneToOneField(
@@ -39,7 +33,6 @@ class ArchivedProject(TimestampArchivedModel):
     def create_from_project(cls, project: Project):
         return cls.objects.create(
             slug=project.slug,
-            owner=project.owner,
             active_version=project,
             original_id=project.id,
             description=project.description,
@@ -53,7 +46,6 @@ class ArchivedProject(TimestampArchivedModel):
         if archived_version is None:
             archived_version = cls.objects.create(
                 slug=project.slug,
-                owner=project.owner,
                 original_id=project.id,
                 description=project.description,
             )
@@ -190,9 +182,7 @@ class ArchivedGitEnvVariable(BaseArchivedEnvVariable):
 
 class ArchivedGitService(ArchivedBaseService):
     repository_url = models.URLField(max_length=2048, null=False, blank=False)
-    deployments = models.JSONField(
-        null=False, default=list
-    )  # type: list[dict[str, str]]
+    deployments = models.JSONField(null=False, default=list)  # type: list[dict[str, str]]
     project = models.ForeignKey(
         to=ArchivedProject, on_delete=models.CASCADE, related_name="git_services"
     )
@@ -309,9 +299,7 @@ class ArchivedDockerService(ArchivedBaseService):
         max_length=255,
         null=True,
     )
-    deployments = models.JSONField(
-        null=False, default=list
-    )  # type: list[dict[str, str]]
+    deployments = models.JSONField(null=False, default=list)  # type: list[dict[str, str]]
 
     @classmethod
     def create_from_service(cls, service: Service, parent: ArchivedProject):

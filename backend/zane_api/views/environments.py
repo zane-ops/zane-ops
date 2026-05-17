@@ -60,10 +60,17 @@ from django.utils.text import slugify
 from faker import Faker
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework import serializers
+from ..permissions import (
+    HasWorkspace,
+    IsWorkspaceContributor,
+    IsWorkspaceAdmin,
+    get_accessible_projects,
+)
 
 
 class CreateEnviromentAPIView(APIView):
     serializer_class = EnvironmentSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
 
     @extend_schema(
         request=CreateEnvironmentRequestSerializer,
@@ -78,7 +85,13 @@ class CreateEnviromentAPIView(APIView):
     @transaction.atomic()
     def post(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug.lower())
+            project = Project.objects.get(
+                slug=slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist"
@@ -111,6 +124,7 @@ class CreateEnviromentAPIView(APIView):
 
 class CloneEnviromentAPIView(APIView):
     serializer_class = EnvironmentWithVariablesSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
 
     @extend_schema(
         request=CloneEnvironmentRequestSerializer,
@@ -125,7 +139,13 @@ class CloneEnviromentAPIView(APIView):
     @transaction.atomic()
     def post(self, request: Request, slug: str, env_slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug.lower())
+            project = Project.objects.get(
+                slug=slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             current_environment = project.environments.get(name=env_slug.lower())
         except Project.DoesNotExist:
             raise exceptions.NotFound(
@@ -216,6 +236,8 @@ class CloneEnviromentAPIView(APIView):
 
 
 class ReviewPreviewEnvDeployAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
+
     @extend_schema(
         responses={200: EnvironmentWithVariablesSerializer},
         operation_id="getPreviewEnvToReview",
@@ -260,7 +282,13 @@ class ReviewPreviewEnvDeployAPIView(APIView):
     @transaction.atomic()
     def post(self, request: Request, slug: str, env_slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug.lower())
+            project = Project.objects.get(
+                slug=slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = (
                 Environment.objects.filter(
                     name=env_slug.lower(),
@@ -417,6 +445,11 @@ class ReviewPreviewEnvDeployAPIView(APIView):
 class EnvironmentDetailsAPIView(APIView):
     serializer_class = EnvironmentSerializer
 
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [HasWorkspace(), IsWorkspaceContributor()]
+        return [HasWorkspace(), IsWorkspaceAdmin()]
+
     @extend_schema(
         responses={200: EnvironmentWithVariablesSerializer},
         operation_id="getEnvironment",
@@ -424,7 +457,13 @@ class EnvironmentDetailsAPIView(APIView):
     )
     def get(self, request: Request, slug: str, env_slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug.lower())
+            project = Project.objects.get(
+                slug=slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = (
                 Environment.objects.filter(name=env_slug.lower(), project=project)
                 .select_related("preview_metadata")
@@ -449,7 +488,13 @@ class EnvironmentDetailsAPIView(APIView):
     )
     def patch(self, request: Request, slug: str, env_slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug.lower())
+            project = Project.objects.get(
+                slug=slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = (
                 Environment.objects.filter(name=env_slug.lower(), project=project)
                 .select_related("preview_metadata")
@@ -494,7 +539,13 @@ class EnvironmentDetailsAPIView(APIView):
     @transaction.atomic()
     def delete(self, request: Request, slug: str, env_slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug.lower())
+            project = Project.objects.get(
+                slug=slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = (
                 Environment.objects.filter(name=env_slug.lower(), project=project)
                 .select_related("preview_metadata")
@@ -540,13 +591,24 @@ class SharedEnvVariablesViewSet(viewsets.ModelViewSet):
     pagination_class = None
     queryset = SharedEnvVariable.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [HasWorkspace(), IsWorkspaceContributor()]
+        return [HasWorkspace(), IsWorkspaceAdmin()]
+
     def get_queryset(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
         env_slug = self.kwargs["env_slug"]
         pk = self.kwargs.get("pk")
 
         try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            project = Project.objects.get(
+                slug=project_slug,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -578,9 +640,20 @@ class SharedEnvVariablesViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer: SharedEnvVariableSerializer):
         project_slug = self.kwargs["project_slug"]
         env_slug = self.kwargs["env_slug"]
-        environment = Environment.objects.get(
-            name=env_slug.lower(), project__slug=project_slug
-        )
+
+        try:
+            environment = Environment.objects.get(
+                name=env_slug.lower(),
+                project__slug=project_slug,
+                project__id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
 
         data = serializer.validated_data
         try:
@@ -598,6 +671,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @transaction.atomic()
     @extend_schema(
@@ -613,6 +687,10 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                     deploy_token=deploy_token,
                     type=Service.ServiceType.GIT_REPOSITORY,
                     git_app__isnull=False,
+                    project__id__in=get_accessible_projects(
+                        self.request.user,  # type: ignore
+                        self.request.workspace,  # type: ignore
+                    ),
                 )
                 .select_related(
                     "project",
@@ -935,12 +1013,19 @@ class PreviewEnvTemplateListAPIView(ListCreateAPIView):
     serializer_class = PreviewEnvTemplateSerializer
     pagination_class = None
     queryset = PreviewEnvTemplate.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
 
     def get_queryset(self):  # type: ignore
         project_slug = self.kwargs["slug"]
 
         try:
-            project = Project.objects.get(slug=project_slug)
+            project = Project.objects.get(
+                slug=project_slug,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
         except Project.DoesNotExist:
             raise exceptions.NotFound("This project does not exist")
 
@@ -955,7 +1040,16 @@ class PreviewEnvTemplateListAPIView(ListCreateAPIView):
 
     def perform_create(self, serializer: serializers.ModelSerializer):
         project_slug = self.kwargs["slug"]
-        project = Project.objects.get(slug=project_slug)
+        try:
+            project = Project.objects.get(
+                slug=project_slug,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound("This project does not exist")
         serializer.save(project=project)
 
     @transaction.atomic()
@@ -971,6 +1065,8 @@ class PreviewEnvTemplateDetailsAPIView(RetrieveUpdateDestroyAPIView):
     queryset = PreviewEnvTemplate.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
     http_method_names = ["patch", "get", "delete"]
 
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
+
     def get_serializer(self, *args, **kwargs):
         try:
             serializer = super().get_serializer(*args, **kwargs)
@@ -984,7 +1080,13 @@ class PreviewEnvTemplateDetailsAPIView(RetrieveUpdateDestroyAPIView):
         template_slug = self.kwargs["template_slug"]
 
         try:
-            project = Project.objects.get(slug=project_slug)
+            project = Project.objects.get(
+                slug=project_slug,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             template = (
                 project.preview_templates.filter(slug=template_slug)
                 .select_related("base_environment", "project")

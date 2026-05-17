@@ -60,10 +60,17 @@ from temporal.shared import (
     DeploymentDetails,
     CancelDeploymentSignalInput,
 )
+from ..permissions import (
+    HasWorkspace,
+    IsWorkspaceMember,
+    IsWorkspaceContributor,
+    get_accessible_projects,
+)
 
 
 class RegenerateServiceDeployTokenAPIView(APIView):
     serializer_class = ServiceSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         summary="Regenerate service deploy token",
@@ -77,7 +84,13 @@ class RegenerateServiceDeployTokenAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -115,6 +128,8 @@ class WebhookDeployDockerServiceAPIView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
+    # TODO: use a an access token and filter by permission
+    # permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @transaction.atomic()
     @extend_schema(
@@ -125,7 +140,6 @@ class WebhookDeployDockerServiceAPIView(APIView):
         description="trigger a new deployment.",
     )
     def put(self, request: Request, deploy_token: str):
-
         try:
             service = (
                 Service.objects.filter(
@@ -198,9 +212,7 @@ class WebhookDeployDockerServiceAPIView(APIView):
                     TemporalClient.workflow_signal(
                         workflow=DeployDockerServiceWorkflow.run,
                         input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
-                        signal=(
-                            DeployDockerServiceWorkflow.cancel_deployment
-                        ),  # type: ignore
+                        signal=(DeployDockerServiceWorkflow.cancel_deployment),  # type: ignore
                         workflow_id=dpl.workflow_id,
                     )
                 TemporalClient.start_workflow(
@@ -218,6 +230,8 @@ class WebhookDeployGitServiceAPIView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
+    # TODO: use a an access token and filter by permission
+    # permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @transaction.atomic()
     @extend_schema(
@@ -312,6 +326,7 @@ class WebhookDeployGitServiceAPIView(APIView):
 
 
 class BulkDeployServicesAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         request=BulkDeployServiceRequestSerializer,
@@ -323,7 +338,13 @@ class BulkDeployServicesAPIView(APIView):
     @transaction.atomic()
     def put(self, request: Request, project_slug: str, env_slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=project_slug.lower())
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = project.environments.get(name=env_slug.lower())
         except Project.DoesNotExist:
             raise exceptions.NotFound(
@@ -394,6 +415,7 @@ class BulkDeployServicesAPIView(APIView):
 
 
 class CleanupDeploymentQueueAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         request=DeploymentCleanupQueueSerializer,
@@ -411,7 +433,13 @@ class CleanupDeploymentQueueAPIView(APIView):
         service_slug: str,
     ) -> Response:
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
 
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -473,6 +501,8 @@ class CleanupDeploymentQueueAPIView(APIView):
 
 
 class CancelServiceDeploymentAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+
     @transaction.atomic()
     @extend_schema(
         request=None,
@@ -490,7 +520,13 @@ class CancelServiceDeploymentAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
 
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -570,9 +606,8 @@ class ServiceDeploymentsAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = DockerServiceDeploymentFilterSet
     pagination_class = DeploymentListPagination
-    queryset = (
-        Deployment.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = Deployment.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         summary="List all deployments",
@@ -592,7 +627,13 @@ class ServiceDeploymentsAPIView(ListAPIView):
         env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
 
         try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            project = Project.objects.get(
+                slug=project_slug,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -629,9 +670,8 @@ class ServiceDeploymentsAPIView(ListAPIView):
 class ServiceDeploymentSingleAPIView(RetrieveAPIView):
     serializer_class = ServiceDeploymentSerializer
     lookup_url_kwarg = "deployment_hash"  # This corresponds to the URL configuration
-    queryset = (
-        Deployment.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
+    queryset = Deployment.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     def get_object(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
@@ -640,7 +680,13 @@ class ServiceDeploymentSingleAPIView(RetrieveAPIView):
         deployment_hash = self.kwargs["deployment_hash"]
 
         try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            project = Project.objects.get(
+                slug=project_slug,
+                id__in=get_accessible_projects(
+                    self.request.user,  # type: ignore
+                    self.request.workspace,  # type: ignore
+                ),
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -677,10 +723,9 @@ class ServiceDeploymentSingleAPIView(RetrieveAPIView):
 
 class RecentDeploymentsAPIView(ListAPIView):
     serializer_class = SimpleDeploymentSerializer
-    queryset = (
-        Deployment.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
+    queryset = Deployment.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
     pagination_class = None
+    permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
     @extend_schema(
         summary="List recent deployments",
@@ -690,17 +735,24 @@ class RecentDeploymentsAPIView(ListAPIView):
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self) -> QuerySet[Deployment]:  # type: ignore
-
         latest_per_service = (
             Deployment.objects.filter(
-                Q(is_current_production=True)
-                | Q(
-                    status__in=[
-                        Deployment.DeploymentStatus.FAILED,
-                        Deployment.DeploymentStatus.PREPARING,
-                        Deployment.DeploymentStatus.BUILDING,
-                        Deployment.DeploymentStatus.STARTING,
-                    ]
+                Q(
+                    service__project__id__in=get_accessible_projects(
+                        self.request.user,  # type: ignore
+                        self.request.workspace,  # type: ignore
+                    )
+                )
+                & (
+                    Q(is_current_production=True)
+                    | Q(
+                        status__in=[
+                            Deployment.DeploymentStatus.FAILED,
+                            Deployment.DeploymentStatus.PREPARING,
+                            Deployment.DeploymentStatus.BUILDING,
+                            Deployment.DeploymentStatus.STARTING,
+                        ]
+                    )
                 )
             )
             .filter(service_id=OuterRef("service_id"))

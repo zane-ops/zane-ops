@@ -21,6 +21,7 @@ from ..models import (
     HealthCheck,
     Environment,
     ArchivedGitService,
+    Workspace,
 )
 
 
@@ -28,9 +29,11 @@ class ProjectListViewTests(AuthAPITestCase):
     def test_default(self):
         owner = self.loginUser()
 
+        workspace = Workspace.objects.get(memberships__user=owner)
+
         Project.objects.bulk_create(
             [
-                Project(owner=owner, slug="thullo"),
+                Project(slug="thullo", workspace=workspace),
             ]
         )
 
@@ -42,11 +45,13 @@ class ProjectListViewTests(AuthAPITestCase):
     def test_list_filter_slug(self):
         owner = self.loginUser()
 
+        workspace = Workspace.objects.get(memberships__user=owner)
+
         Project.objects.bulk_create(
             [
-                Project(owner=owner, slug="gh-clone"),
-                Project(owner=owner, slug="gh-next"),
-                Project(owner=owner, slug="zaneops"),
+                Project(slug="gh-clone", workspace=workspace),
+                Project(slug="gh-next", workspace=workspace),
+                Project(slug="zaneops", workspace=workspace),
             ]
         )
         response = self.client.get(
@@ -97,7 +102,8 @@ class ProjectCreateViewTests(AuthAPITestCase):
 
     def test_unique_slug(self):
         owner = self.loginUser()
-        Project.objects.create(slug="zane-ops", owner=owner)
+        workspace = Workspace.objects.get(memberships__user=owner)
+        Project.objects.create(slug="zane-ops", workspace=workspace)
         response = self.client.post(
             reverse("zane_api:projects.list"),
             data={"slug": "zane-ops"},
@@ -126,7 +132,8 @@ class ProjectCreateViewTests(AuthAPITestCase):
 class ProjectUpdateViewTests(AuthAPITestCase):
     def test_sucessfully_update_project_slug(self):
         owner = self.loginUser()
-        previous_project = Project.objects.create(slug="gh-next", owner=owner)
+        workspace = Workspace.objects.get(memberships__user=owner)
+        previous_project = Project.objects.create(slug="gh-next", workspace=workspace)
         response = self.client.put(
             reverse(
                 "zane_api:projects.details", kwargs={"slug": previous_project.slug}
@@ -143,7 +150,8 @@ class ProjectUpdateViewTests(AuthAPITestCase):
 
     def test_sucessfully_update_project_description(self):
         owner = self.loginUser()
-        previous_project = Project.objects.create(slug="gh-next", owner=owner)
+        workspace = Workspace.objects.get(memberships__user=owner)
+        previous_project = Project.objects.create(slug="gh-next", workspace=workspace)
         response = self.client.put(
             reverse(
                 "zane_api:projects.details", kwargs={"slug": previous_project.slug}
@@ -162,7 +170,8 @@ class ProjectUpdateViewTests(AuthAPITestCase):
 
     def test_prevent_empy_update(self):
         owner = self.loginUser()
-        previous_project = Project.objects.create(slug="gh-next", owner=owner)
+        workspace = Workspace.objects.get(memberships__user=owner)
+        previous_project = Project.objects.create(slug="gh-next", workspace=workspace)
         response = self.client.put(
             reverse(
                 "zane_api:projects.details", kwargs={"slug": previous_project.slug}
@@ -173,10 +182,11 @@ class ProjectUpdateViewTests(AuthAPITestCase):
 
     def test_bad_request(self):
         owner = self.loginUser()
+        workspace = Workspace.objects.get(memberships__user=owner)
         Project.objects.bulk_create(
             [
-                Project(slug="gh-clone", owner=owner),
-                Project(slug="zane-ops", owner=owner),
+                Project(slug="gh-clone", workspace=workspace),
+                Project(slug="zane-ops", workspace=workspace),
             ]
         )
         response = self.client.put(
@@ -195,10 +205,11 @@ class ProjectUpdateViewTests(AuthAPITestCase):
 
     def test_already_existing_slug(self):
         owner = self.loginUser()
+        workspace = Workspace.objects.get(memberships__user=owner)
         Project.objects.bulk_create(
             [
-                Project(slug="gh-clone", owner=owner),
-                Project(slug="zane-ops", owner=owner),
+                Project(slug="gh-clone", workspace=workspace),
+                Project(slug="zane-ops", workspace=workspace),
             ]
         )
         response = self.client.put(
@@ -210,10 +221,11 @@ class ProjectUpdateViewTests(AuthAPITestCase):
 
     def test_can_rename_to_self(self):
         owner = self.loginUser()
+        workspace = Workspace.objects.get(memberships__user=owner)
         Project.objects.bulk_create(
             [
-                Project(slug="gh-clone", owner=owner),
-                Project(slug="zane-ops", owner=owner),
+                Project(slug="gh-clone", workspace=workspace),
+                Project(slug="zane-ops", workspace=workspace),
             ]
         )
         response = self.client.put(
@@ -226,7 +238,8 @@ class ProjectUpdateViewTests(AuthAPITestCase):
 class ProjectGetViewTests(AuthAPITestCase):
     def test_sucessfully_get_project(self):
         owner = self.loginUser()
-        Project.objects.create(slug="gh-clone", owner=owner)
+        workspace = Workspace.objects.get(memberships__user=owner)
+        Project.objects.create(slug="gh-clone", workspace=workspace)
         response = self.client.get(
             reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})
         )
@@ -243,10 +256,11 @@ class ProjectGetViewTests(AuthAPITestCase):
 class ProjectArchiveViewTests(AuthAPITestCase):
     def test_sucessfully_archive_project(self):
         owner = self.loginUser()
+        workspace = Workspace.objects.get(memberships__user=owner)
         Project.objects.create(
             slug="gh-clone",
-            owner=owner,
             description="Github clone",
+            workspace=workspace,
         )
         response = self.client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})
@@ -299,8 +313,8 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     def test_cannot_archive_already_archived_project(self):
-        owner = self.loginUser()
-        ArchivedProject.objects.create(slug="zane-ops", owner=owner)
+        self.loginUser()
+        ArchivedProject.objects.create(slug="zane-ops")
         response = self.client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"})
         )
@@ -308,7 +322,11 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
     def test_can_reuse_archived_version_if_it_exists(self):
         owner = self.loginUser()
-        p = Project.objects.create(slug="gh-clone", owner=owner)
+        workspace = Workspace.objects.get(memberships__user=owner)
+        p = Project.objects.create(
+            slug="gh-clone",
+            workspace=workspace,
+        )
         ArchivedProject.create_from_project(p)
 
         response = self.client.delete(
@@ -509,7 +527,8 @@ class DockerRemoveNetworkTest(AuthAPITestCase):
 class ProjectStatusViewTests(AuthAPITestCase):
     def test_return_status_in_project(self):
         owner = self.loginUser()
-        Project.objects.create(owner=owner, slug="thullo")
+        workspace = Workspace.objects.get(memberships__user=owner)
+        Project.objects.create(slug="thullo", workspace=workspace)
 
         response = self.client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)

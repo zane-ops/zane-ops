@@ -55,6 +55,9 @@ from ..models import (
     Config,
     URL,
     Environment,
+    Workspace,
+    WorkspaceMembership,
+    WorkspaceRole,
 )
 from temporal.helpers import (
     get_network_resource_name,
@@ -428,7 +431,14 @@ class AuthAPITestCase(APITestCase):
 
     def setUp(self):
         super().setUp()
-        User.objects.create_user(username="Fredkiss3", password="password")
+        user = User.objects.create_superuser(username="Fredkiss3", password="password")  # type: ignore
+        workspace = Workspace.objects.create(name="Default workspace")
+        WorkspaceMembership.objects.create(
+            user=user,
+            workspace=workspace,
+            role=WorkspaceRole.OWNER,
+        )
+
         self.commit_callback: Optional[Callable[[], Coroutine]] = None
         self.workflow_env: Optional[WorkflowEnvironment] = None
         self.workflow_schedules: List[WorkflowScheduleHandle] = []
@@ -689,7 +699,7 @@ class AuthAPITestCase(APITestCase):
         with_healthcheck: bool = False,
         other_changes: list[DeploymentChange] | None = None,
     ) -> tuple[Project, Service]:
-        owner = await self.aLoginUser()
+        await self.aLoginUser()
         response = await self.async_client.post(
             reverse("zane_api:projects.list"),
             data={"slug": "zaneops", "env_slug": "production"},
@@ -698,7 +708,9 @@ class AuthAPITestCase(APITestCase):
             response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
         )
 
-        project = await Project.objects.aget(slug="zaneops", owner=owner)
+        project = await Project.objects.aget(
+            slug="zaneops",
+        )
 
         create_service_payload = {"slug": slug, "image": "valkey/valkey:7.2-alpine"}
         response = await self.async_client.post(
@@ -762,7 +774,9 @@ class AuthAPITestCase(APITestCase):
             response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
         )
 
-        project: Project = await Project.objects.aget(slug="zaneops", owner=owner)
+        project: Project = await Project.objects.aget(
+            slug="zaneops",
+        )
 
         create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
         response = await self.async_client.post(

@@ -13,7 +13,7 @@ from .github import (
     get_github_signed_event_headers,
 )
 from ..serializers import GithubWebhookEvent
-from zane_api.models import GitApp, Project
+from zane_api.models import GitApp, Project, Workspace
 from .gitlab import GITLAB_ACCESS_TOKEN_DATA
 from django.conf import settings
 
@@ -115,6 +115,7 @@ class TestDeleteGitApp(AuthAPITestCase):
     @responses.activate
     def test_cannot_delete_github_app_if_referenced_in_non_deployed_service(self):
         self.loginUser()
+        workspace = Workspace.objects.earliest("created_at")
         github_api_pattern = re.compile(
             r"^https://api\.github\.com/app/installations/.*",
             re.IGNORECASE,
@@ -136,7 +137,7 @@ class TestDeleteGitApp(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         # install app
         response = self.client.post(
@@ -184,6 +185,7 @@ class TestDeleteGitApp(AuthAPITestCase):
     @responses.activate
     def test_cannot_delete_github_app_if_referenced_in_deployed_service(self):
         self.loginUser()
+        workspace = Workspace.objects.earliest("created_at")
         github_api_pattern = re.compile(
             r"^https://api\.github\.com/app/installations/.*",
             re.IGNORECASE,
@@ -205,7 +207,7 @@ class TestDeleteGitApp(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         # install app
         response = self.client.post(

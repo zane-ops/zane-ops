@@ -26,11 +26,15 @@ from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import exceptions, status
 from zane_api.views.base import BadRequest
 
+from zane_api.permissions import IsInstanceOwner
+
 
 class BuildRegistryListCreateAPIView(ListCreateAPIView):
     serializer_class = BuildRegistryListCreateSerializer
     queryset = BuildRegistry.objects.all()
     pagination_class = BuildRegistryListPagination
+
+    permission_classes = [IsInstanceOwner]
 
     @extend_schema(
         operation_id="getBuildRegistries",
@@ -49,6 +53,7 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
     ]
     lookup_url_kwarg = "id"
     queryset = BuildRegistry.objects.all()
+    permission_classes = [IsInstanceOwner]
 
     def get_object(self) -> BuildRegistry:  # type: ignore
         return super().get_object()
@@ -88,6 +93,8 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
 
 
 class BuildRegistryListImagesAPIView(APIView):
+    permission_classes = [IsInstanceOwner]
+
     @extend_schema(
         parameters=[BuildRegistryQuerySerializer],
         responses={200: BuildRegistryResponseSerializer},
@@ -96,7 +103,7 @@ class BuildRegistryListImagesAPIView(APIView):
     )
     def get(self, request: Request, id: str):
         try:
-            registry = BuildRegistry.objects.get(pk=id)
+            registry = BuildRegistry.objects.filter().get(pk=id)
         except BuildRegistry.DoesNotExist:
             raise exceptions.NotFound(
                 f"A build registry with the id `{id}` does not exist."

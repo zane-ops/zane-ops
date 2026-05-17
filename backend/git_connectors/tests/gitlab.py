@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars, jprint
 import responses
-from zane_api.models import GitApp
+from zane_api.models import GitApp, Workspace
 from ..models import GitlabApp, GitRepository
 
 from django.core.cache import cache
@@ -382,7 +382,8 @@ class TestUpdateGitlabConnectorViewTests(AuthAPITestCase):
             gitlab_url="https://gitlab.com",
             refresh_token=generate_random_chars(64),
         )
-        _ = GitApp.objects.create(gitlab=gitlab)
+        workspace = Workspace.objects.earliest("created_at")
+        _ = GitApp.objects.create(gitlab=gitlab, workspace=workspace)
 
         body = {
             "app_secret": generate_random_chars(40),
@@ -461,7 +462,8 @@ class TestUpdateGitlabConnectorViewTests(AuthAPITestCase):
             gitlab_url="https://gitlab.com",
             refresh_token=initial_refresh_token,
         )
-        _ = GitApp.objects.create(gitlab=gitlab)
+        workspace = Workspace.objects.earliest("created_at")
+        _ = GitApp.objects.create(gitlab=gitlab, workspace=workspace)
 
         body = {
             "app_secret": generate_random_chars(40),
