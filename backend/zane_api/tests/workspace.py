@@ -284,7 +284,7 @@ class EditWorkspaceTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-    def test_cannot_edit_workspace_if_not_at_least_admin(self):
+    def test_cannot_edit_workspace_if_not_owner(self):
         user = self.loginUser()
         WorkspaceMembership.objects.filter(user=user).update(role=WorkspaceRole.MEMBER)
 
@@ -294,32 +294,6 @@ class EditWorkspaceTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
-
-    def test_can_edit_workspace_if_admin(self):
-        user = self.loginUser()
-
-        user.is_superuser = False
-        user.save()
-        WorkspaceMembership.objects.filter(user=user).update(role=WorkspaceRole.ADMIN)
-
-        response = self.client.put(
-            reverse("zane_api:workspace.edit"),
-            data={"name": "Fredkiss corp"},
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-    def test_can_edit_workspace_if_not_member(self):
-        user = self.loginUser()
-
-        WorkspaceMembership.objects.filter(user=user).update(role=WorkspaceRole.ADMIN)
-
-        response = self.client.put(
-            reverse("zane_api:workspace.edit"),
-            data={"name": "Fredkiss corp"},
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
 
 class CreateWorkspaceTests(AuthAPITestCase):
