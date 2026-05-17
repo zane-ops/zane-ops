@@ -84,7 +84,10 @@ class SetupGithubAppAPIView(APIView):
 
                 try:
                     git_app = (
-                        GitApp.objects.filter(github__id=app_id)
+                        GitApp.objects.filter(
+                            github__id=app_id,
+                            workspace=self.request.workspace,  # type: ignore
+                        )
                         .select_related("github")
                         .get()
                     )
@@ -125,7 +128,10 @@ class SetupGithubAppAPIView(APIView):
                         name=github_manifest_data["name"],
                     )
 
-                git_app, _ = GitApp.objects.get_or_create(github=github_app)
+                git_app, _ = GitApp.objects.get_or_create(
+                    github=github_app,
+                    workspace=self.request.workspace,  # type: ignore
+                )
             case _:
                 raise BadRequest("Invalid state token")
 
