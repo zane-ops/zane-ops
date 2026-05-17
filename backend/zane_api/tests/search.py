@@ -1,5 +1,5 @@
 from .base import AuthAPITestCase
-from ..models import Project, Service, Environment
+from ..models import Project, Service, Environment, Workspace
 from django.urls import reverse
 from rest_framework import status
 
@@ -7,12 +7,13 @@ from rest_framework import status
 class ResourceSearchViewTests(AuthAPITestCase):
     def test_filter_query(self):
         owner = self.loginUser()
+        workspace = Workspace.objects.get(memberships__user=owner)
 
         projects = Project.objects.bulk_create(
             [
-                Project(slug="gh-clone"),
-                Project(slug="gh-next"),
-                Project(slug="zaneops"),
+                Project(slug="gh-clone", workspace=workspace),
+                Project(slug="gh-next", workspace=workspace),
+                Project(slug="zaneops", workspace=workspace),
             ]
         )
         Environment.objects.bulk_create(
@@ -48,12 +49,13 @@ class ResourceSearchViewTests(AuthAPITestCase):
 
     def test_filter_no_query(self):
         owner = self.loginUser()
+        workspace = Workspace.objects.get(memberships__user=owner)
 
         projects = Project.objects.bulk_create(
             [
-                Project(slug="gh-clone"),
-                Project(slug="gh-next"),
-                Project(slug="zaneops"),
+                Project(slug="gh-clone", workspace=workspace),
+                Project(slug="gh-next", workspace=workspace),
+                Project(slug="zaneops", workspace=workspace),
             ]
         )
         Environment.objects.bulk_create(

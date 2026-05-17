@@ -313,9 +313,8 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     def test_cannot_archive_already_archived_project(self):
-        owner = self.loginUser()
-        workspace = Workspace.objects.get(memberships__user=owner)
-        ArchivedProject.objects.create(slug="zane-ops", workspace=workspace)
+        self.loginUser()
+        ArchivedProject.objects.create(slug="zane-ops")
         response = self.client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": "zane-ops"})
         )
