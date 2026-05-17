@@ -75,19 +75,6 @@ class AuthMeViewTests(AuthAPITestCase):
         user = response.json().get("user")
         self.assertEqual("Fredkiss3", user["username"])
 
-    def test_authed_with_token(self):
-        user = User.objects.get(username="Fredkiss3")
-        token, _ = Token.objects.get_or_create(user=user)
-        response = self.client.get(
-            reverse("zane_api:auth.me.with_token"),
-            HTTP_AUTHORIZATION=f"Token {token.key}",
-        )
-
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertIsNotNone(response.json().get("user"))
-        user = response.json().get("user")
-        self.assertEqual("Fredkiss3", user["username"])
-
     @patch("zane_api.views.auth.timezone")
     def test_authed_renew_session(self, mock_timezone: Mock):
         self.loginUser()
@@ -98,57 +85,9 @@ class AuthMeViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertIsNotNone(response.cookies.get("sessionid"))
 
-    def test_authed_without_token_but_session(self):
-        self.loginUser()
-        response = self.client.get(
-            reverse("zane_api:auth.me.with_token"),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-    def test_unauthed_without_token_and_session(self):
-        response = self.client.get(
-            reverse("zane_api:auth.me.with_token"),
-        )
-        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
-
-    def test_unauthed_with_bad_token(self):
-        response = self.client.get(
-            reverse("zane_api:auth.me.with_token"),
-            HTTP_AUTHORIZATION=f"Token bad_token",
-        )
-        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
-
     def test_unauthed(self):
         response = self.client.get(reverse("zane_api:auth.me"))
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
-
-    def test_redirect_token_to_path_if_html_request_if_not_authed(self):
-        response = self.client.get(
-            reverse("zane_api:auth.me.with_token"),
-            content_type="application/json",
-            HTTP_ACCEPT="text/html",
-        )
-        self.assertEqual(status.HTTP_302_FOUND, response.status_code)
-
-    def test_redirect_to_path_if_html_request_if_not_authed_for_proxy(self):
-        response = self.client.get(
-            reverse("zane_api:auth.me.with_token"),
-            content_type="application/json",
-            HTTP_ACCEPT="text/html",
-            HTTP_HOST=f"example-service-dpl-xyz.{settings.ROOT_DOMAIN}",
-            HTTP_X_FORWARED_URI="/",
-            HTTP_X_FORWARED_PROTO="https",
-        )
-        self.assertEqual(status.HTTP_302_FOUND, response.status_code)
-        params = QueryDict(mutable=True)
-        params["redirect_to"] = (
-            f"https://example-service-dpl-xyz.{settings.ROOT_DOMAIN}/"
-        )
-
-        self.assertEqual(
-            f"{reverse('zane_api:auth.login')}?{params.urlencode()}",
-            response.headers.get("Location"),
-        )
 
 
 class AuthLogoutViewTests(AuthAPITestCase):
