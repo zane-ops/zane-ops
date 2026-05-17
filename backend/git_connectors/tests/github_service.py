@@ -5,7 +5,7 @@ from rest_framework import status
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars, jprint
 import responses
-from zane_api.models import GitApp, Project, Service, DeploymentChange
+from zane_api.models import GitApp, Project, Service, DeploymentChange, Workspace
 from ..models import GitHubApp, GitRepository
 from ..serializers import GithubWebhookEvent
 from unittest.mock import patch, MagicMock
@@ -44,7 +44,8 @@ class TestCreateServiceFromGithubAPIViewTests(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         # install app
         response = self.client.post(
@@ -154,7 +155,8 @@ class TestCreateServiceFromGithubAPIViewTests(AuthAPITestCase):
             private_key=GITHUB_APP_MANIFEST_DATA["pem"],
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         # create project
         response = self.client.post(
@@ -192,7 +194,8 @@ class TestCreateServiceFromGithubAPIViewTests(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         # install app
         response = self.client.post(
@@ -256,7 +259,8 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         # install app
         response = self.client.post(
@@ -337,7 +341,8 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         # install app
         response = self.client.post(
@@ -423,7 +428,8 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        git_app = await GitApp.objects.acreate(github=gh_app)
+        workspace = await Workspace.objects.aearliest("created_at")
+        git_app = await GitApp.objects.acreate(github=gh_app, workspace=workspace)
 
         # install app
         response = await self.async_client.post(
@@ -516,7 +522,8 @@ class UpdateGitServiceFromGithubAPIViewTests(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
@@ -628,7 +635,8 @@ class UpdateGitServiceFromGithubAPIViewTests(AuthAPITestCase):
             private_key=GITHUB_APP_MANIFEST_DATA["pem"],
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         # create service & request changes
         p, service = self.create_git_service()
@@ -670,7 +678,8 @@ class UpdateGitServiceFromGithubAPIViewTests(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         # install app
         response = self.client.post(
@@ -737,7 +746,8 @@ class UpdateGitServiceFromGithubAPIViewTests(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         # install app
         response = self.client.post(

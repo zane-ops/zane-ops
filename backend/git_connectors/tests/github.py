@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars, jprint
 import responses
-from zane_api.models import GitApp
+from zane_api.models import GitApp, Workspace
 from ..models import GitHubApp, GitRepository
 from ..serializers import GithubWebhookEvent
 from .fixtures import (
@@ -181,7 +181,8 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
             private_key=GITHUB_APP_MANIFEST_DATA["pem"],
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
@@ -207,7 +208,8 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
             private_key=GITHUB_APP_MANIFEST_DATA["pem"],
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
@@ -249,7 +251,8 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
             private_key=GITHUB_APP_MANIFEST_DATA["pem"],
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
@@ -278,7 +281,8 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
             private_key=GITHUB_APP_MANIFEST_DATA["pem"],
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
@@ -316,7 +320,8 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
             private_key=GITHUB_APP_MANIFEST_DATA["pem"],
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
@@ -354,7 +359,8 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
             private_key=GITHUB_APP_MANIFEST_DATA["pem"],
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(github=gh_app, workspace=workspace)
 
         response = self.client.post(
             reverse("git_connectors:github.webhook"),

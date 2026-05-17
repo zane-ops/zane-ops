@@ -7,7 +7,7 @@ from rest_framework import status
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars, jprint
 import responses
-from zane_api.models import GitApp, Project, Service, DeploymentChange
+from zane_api.models import GitApp, Project, Service, DeploymentChange, Workspace
 from ..models import GitRepository, GitlabApp
 from unittest.mock import patch, MagicMock
 
@@ -152,7 +152,8 @@ class TestCreateServiceFromGitlabAPIViewTests(AuthAPITestCase):
             gitlab_url="https://gitlab.com",
             refresh_token=generate_random_chars(64),
         )
-        git_app = GitApp.objects.create(gitlab=gitlab)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(gitlab=gitlab, workspace=workspace)
 
         # create project
         response = self.client.post(
@@ -202,7 +203,8 @@ class DeployGitServiceFromGitlabAPIViewTests(AuthAPITestCase):
             gitlab_url="https://gitlab.com",
             refresh_token=generate_random_chars(64),
         )
-        git_app = GitApp.objects.create(gitlab=gitlab)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(gitlab=gitlab, workspace=workspace)
 
         gitlab.repositories.add(
             *GitRepository.objects.bulk_create(
@@ -282,7 +284,8 @@ class DeployGitServiceFromGitlabAPIViewTests(AuthAPITestCase):
             gitlab_url="https://gitlab.com",
             refresh_token=generate_random_chars(64),
         )
-        git_app = GitApp.objects.create(gitlab=gitlab)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(gitlab=gitlab, workspace=workspace)
 
         gitlab.repositories.add(
             *GitRepository.objects.bulk_create(
@@ -367,7 +370,8 @@ class DeployGitServiceFromGitlabAPIViewTests(AuthAPITestCase):
             gitlab_url="https://gitlab.com",
             refresh_token=generate_random_chars(64),
         )
-        git_app = await GitApp.objects.acreate(gitlab=gitlab)
+        workspace = await Workspace.objects.aearliest("created_at")
+        git_app = await GitApp.objects.acreate(gitlab=gitlab, workspace=workspace)
 
         await gitlab.repositories.aadd(
             *(
@@ -461,7 +465,8 @@ class UpdateGitServiceFromGitlabAPIViewTests(AuthAPITestCase):
             gitlab_url="https://gitlab.com",
             refresh_token=generate_random_chars(64),
         )
-        git_app = GitApp.objects.create(gitlab=gitlab)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(gitlab=gitlab, workspace=workspace)
 
         gitlab.repositories.add(
             *GitRepository.objects.bulk_create(
@@ -569,7 +574,8 @@ class UpdateGitServiceFromGitlabAPIViewTests(AuthAPITestCase):
             gitlab_url="https://gitlab.com",
             refresh_token=generate_random_chars(64),
         )
-        git_app = GitApp.objects.create(gitlab=gitlab)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(gitlab=gitlab, workspace=workspace)
         gitlab.repositories.add(
             *GitRepository.objects.bulk_create(
                 [
@@ -633,7 +639,8 @@ class UpdateGitServiceFromGitlabAPIViewTests(AuthAPITestCase):
             gitlab_url="https://gitlab.com",
             refresh_token=generate_random_chars(64),
         )
-        git_app = GitApp.objects.create(gitlab=gitlab)
+        workspace = Workspace.objects.earliest("created_at")
+        git_app = GitApp.objects.create(gitlab=gitlab, workspace=workspace)
         gitlab.repositories.add(
             *GitRepository.objects.bulk_create(
                 [

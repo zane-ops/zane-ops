@@ -26,6 +26,7 @@ from zane_api.models import (
     Deployment,
     DeploymentChange,
     ArchivedEnvironment,
+    Workspace,
 )
 from django.urls import reverse
 from zane_api.models import Environment, PreviewEnvMetadata
@@ -57,7 +58,8 @@ class BaseGithubPRViewTestCase(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        gitapp = GitApp.objects.create(github=github)
+        workspace = Workspace.objects.earliest("created_at")
+        gitapp = GitApp.objects.create(github=github, workspace=workspace)
 
         # install app
         response = self.client.post(
