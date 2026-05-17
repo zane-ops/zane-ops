@@ -45,6 +45,7 @@ from git_connectors.tests.fixtures import (
 )
 from git_connectors.constants import GITLAB_NULL_COMMIT
 from git_connectors.views.gitlab import GitlabWebhookEvent
+from zane_api.models import Workspace
 
 
 class BasePreviewEnvTests(AuthAPITestCase):
@@ -56,6 +57,7 @@ class BasePreviewEnvTests(AuthAPITestCase):
             r"^https://api\.github\.com/app/installations/.*",
             re.IGNORECASE,
         )
+        workspace = Workspace.objects.earliest("created_at")
 
         responses.add(
             responses.POST,
@@ -74,7 +76,7 @@ class BasePreviewEnvTests(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        gitapp = GitApp.objects.create(github=github)
+        gitapp = GitApp.objects.create(github=github, workspace=workspace)
 
         # install app
         response = self.client.post(
@@ -234,7 +236,6 @@ class BasePreviewEnvTests(AuthAPITestCase):
 
 
 class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
-
     def test_create_default_preview_template_when_creating_a_project(self):
         self.loginUser()
         p, _ = self.create_redis_docker_service()
@@ -1126,7 +1127,9 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
             .select_related("preview_metadata")
             .get()
         )
-        self.assertEqual(default_template.ttl_seconds, preview_env.preview_metadata.ttl_seconds)  # type: ignore
+        self.assertEqual(
+            default_template.ttl_seconds, preview_env.preview_metadata.ttl_seconds
+        )  # type: ignore
 
     @responses.activate
     def test_deleting_project_should_delete_preview_envs_too(
@@ -1265,7 +1268,6 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
 
 
 class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
-
     @responses.activate
     def test_trigger_preview_environment_add_env_variables(
         self,
