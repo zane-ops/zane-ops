@@ -7,7 +7,7 @@ from rest_framework import status
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars, jprint
 import responses
-from zane_api.models import GitApp, Deployment
+from zane_api.models import GitApp, Deployment, Workspace
 from ..models import GitHubApp
 from ..serializers import GithubWebhookEvent
 from .fixtures import (
@@ -22,6 +22,7 @@ class DeployGithubServiceFromWebhookPushViewTests(AuthAPITestCase):
     @responses.activate
     async def test_deploy_service_from_push_webhook_deploy_service_succesfully(self):
         await self.aLoginUser()
+        workspace = Workspace.objects.earliest("created_at")
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
         github_api_pattern = re.compile(
@@ -45,7 +46,7 @@ class DeployGithubServiceFromWebhookPushViewTests(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        git_app = await GitApp.objects.acreate(github=gh_app)
+        git_app = await GitApp.objects.acreate(github=gh_app, workspace=workspace)
         # install app
         response = await self.async_client.post(
             reverse("git_connectors:github.webhook"),
@@ -103,6 +104,8 @@ class DeployGithubServiceFromWebhookPushViewTests(AuthAPITestCase):
         await self.aLoginUser()
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
+        workspace = Workspace.objects.earliest("created_at")
+
         github_api_pattern = re.compile(
             r"^https://api\.github\.com/app/installations/.*",
             re.IGNORECASE,
@@ -124,7 +127,7 @@ class DeployGithubServiceFromWebhookPushViewTests(AuthAPITestCase):
             app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        git_app = await GitApp.objects.acreate(github=gh_app)
+        git_app = await GitApp.objects.acreate(github=gh_app, workspace=workspace)
         # install app
         response = await self.async_client.post(
             reverse("git_connectors:github.webhook"),
