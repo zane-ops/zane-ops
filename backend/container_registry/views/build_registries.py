@@ -36,9 +36,6 @@ class BuildRegistryListCreateAPIView(ListCreateAPIView):
 
     permission_classes = [IsInstanceOwner]
 
-    def get_queryset(self):
-        return super().get_queryset().filter(workspace=self.request.workspace)
-
     @extend_schema(
         operation_id="getBuildRegistries",
         summary="List all build registries",
