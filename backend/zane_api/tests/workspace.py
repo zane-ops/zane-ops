@@ -278,7 +278,7 @@ class EditWorkspaceTests(AuthAPITestCase):
         self.loginUser()
 
         response = self.client.put(
-            reverse("zane_api:workspaces.edit"),
+            reverse("zane_api:workspace.edit"),
             data={"name": "Fredkiss corp"},
         )
         jprint(response.json())
@@ -289,7 +289,7 @@ class EditWorkspaceTests(AuthAPITestCase):
         WorkspaceMembership.objects.filter(user=user).update(role=WorkspaceRole.MEMBER)
 
         response = self.client.put(
-            reverse("zane_api:workspaces.edit"),
+            reverse("zane_api:workspace.edit"),
             data={"name": "Fredkiss corp"},
         )
         jprint(response.json())
@@ -303,7 +303,7 @@ class EditWorkspaceTests(AuthAPITestCase):
         WorkspaceMembership.objects.filter(user=user).update(role=WorkspaceRole.ADMIN)
 
         response = self.client.put(
-            reverse("zane_api:workspaces.edit"),
+            reverse("zane_api:workspace.edit"),
             data={"name": "Fredkiss corp"},
         )
         jprint(response.json())
@@ -315,7 +315,7 @@ class EditWorkspaceTests(AuthAPITestCase):
         WorkspaceMembership.objects.filter(user=user).update(role=WorkspaceRole.ADMIN)
 
         response = self.client.put(
-            reverse("zane_api:workspaces.edit"),
+            reverse("zane_api:workspace.edit"),
             data={"name": "Fredkiss corp"},
         )
         jprint(response.json())
