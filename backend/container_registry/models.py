@@ -66,12 +66,6 @@ class BuildRegistry(TimestampedModel):
     name = models.CharField(max_length=200)
     is_default = models.BooleanField(default=True)
 
-    workspace: models.ForeignKey["Workspace"] = models.ForeignKey(
-        to="zane_api.Workspace",
-        on_delete=models.CASCADE,
-        related_name="build_registries",
-    )
-
     registry_domain = models.CharField(
         max_length=2048, validators=[validate_url_domain]
     )
