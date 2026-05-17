@@ -26,11 +26,7 @@ from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import exceptions, status
 from zane_api.views.base import BadRequest
 
-from zane_api.permissions import (
-    HasWorkspace,
-    IsWorkspaceOwner,
-    IsWorkspaceMember,
-)
+from zane_api.permissions import IsInstanceOwner
 
 
 class BuildRegistryListCreateAPIView(ListCreateAPIView):
@@ -38,10 +34,7 @@ class BuildRegistryListCreateAPIView(ListCreateAPIView):
     queryset = BuildRegistry.objects.all()
     pagination_class = BuildRegistryListPagination
 
-    def get_permissions(self):
-        if self.request.method == "GET":
-            return [HasWorkspace(), IsWorkspaceMember()]
-        return [HasWorkspace(), IsWorkspaceOwner()]
+    permission_classes = [IsInstanceOwner]
 
     def get_queryset(self):
         return super().get_queryset().filter(workspace=self.request.workspace)
@@ -63,10 +56,7 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
     ]
     lookup_url_kwarg = "id"
     queryset = BuildRegistry.objects.all()
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
-
-    def get_queryset(self):
-        return super().get_queryset().filter(workspace=self.request.workspace)
+    permission_classes = [IsInstanceOwner]
 
     def get_object(self) -> BuildRegistry:  # type: ignore
         return super().get_object()
@@ -106,7 +96,7 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
 
 
 class BuildRegistryListImagesAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    permission_classes = [IsInstanceOwner]
 
     @extend_schema(
         parameters=[BuildRegistryQuerySerializer],
@@ -116,9 +106,7 @@ class BuildRegistryListImagesAPIView(APIView):
     )
     def get(self, request: Request, id: str):
         try:
-            registry = BuildRegistry.objects.filter(
-                workspace=self.request.workspace  # type: ignore
-            ).get(pk=id)
+            registry = BuildRegistry.objects.filter().get(pk=id)
         except BuildRegistry.DoesNotExist:
             raise exceptions.NotFound(
                 f"A build registry with the id `{id}` does not exist."
