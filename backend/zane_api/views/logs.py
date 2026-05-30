@@ -8,7 +8,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
-
+from django.db.models import QuerySet
 
 from ..permissions import (
     InternalZaneAppPermission,
@@ -60,7 +60,7 @@ from ..models import (
     Environment,
 )
 from ..serializers import HttpLogSerializer
-
+from compose.models import ComposeStack
 
 from temporal.proxy import ZaneProxyClient
 
@@ -288,18 +288,38 @@ class HttpLogsFieldsAPIView(APIView):
         stack_id = data.get("stack_id")
         deployment_id = data.get("deployment_hash")
 
+        accessible_projects = get_accessible_projects(
+            request.user,
+            request.workspace,  # type: ignore
+        )
+
+        has_access = False
+
         condition = Q()
         if len(value) > 0:
             condition &= Q(**{f"{field}__startswith": value})
 
         if service_id:
+            has_access = Service.objects.filter(
+                id=service_id, project__id__in=accessible_projects
+            ).exists()
             condition &= Q(service_id=service_id)
 
         if stack_id:
+            has_access = ComposeStack.objects.filter(
+                id=stack_id, project__id__in=accessible_projects
+            ).exists()
             condition &= Q(stack_id=stack_id)
 
         if deployment_id:
+            has_access = Deployment.objects.filter(
+                hash=deployment_id, service__project__id__in=accessible_projects
+            ).exists()
             condition &= Q(deployment_id=deployment_id)
+
+        # The user does not have permission to access the logs for this service, stack or deployment
+        if not has_access:
+            condition &= Q(pk__in=[])
 
         values = (
             HttpLog.objects.filter(condition)
@@ -319,6 +339,42 @@ class HttpLogsAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = DeploymentHttpLogsFilterSet
     permission_classes = [HasWorkspace, IsWorkspaceContributor]
+
+    def filter_queryset(self, queryset: QuerySet[HttpLog]):
+        queryset = super().filter_queryset(queryset)
+
+        service_id: str = self.request.query_params.get("service_id")  # type: ignore
+        stack_id: str = self.request.query_params.get("stack_id")  # type: ignore
+        deployment_id: str = self.request.query_params.get("deployment_id")  # type: ignore
+
+        accessible_projects = get_accessible_projects(
+            self.request.user,  # type: ignore
+            self.request.workspace,  # type: ignore
+        )
+
+        has_access = False
+
+        if service_id:
+            has_access = Service.objects.filter(
+                id=service_id, project__id__in=accessible_projects
+            ).exists()
+
+        if stack_id:
+            has_access = ComposeStack.objects.filter(
+                id=stack_id, project__id__in=accessible_projects
+            ).exists()
+
+        if deployment_id:
+            has_access = Deployment.objects.filter(
+                hash=deployment_id, service__project__id__in=accessible_projects
+            ).exists()
+
+        if has_access:
+            return queryset
+
+        raise exceptions.PermissionDenied(
+            "You must provide at least one of `service_id`, `stack_id`, or `deployment_id` to filter logs."
+        )
 
     @extend_schema(
         summary="Get HTTP logs",
