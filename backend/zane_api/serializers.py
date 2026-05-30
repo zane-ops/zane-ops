@@ -117,14 +117,14 @@ class WorkspaceInvitationSerializer(serializers.ModelSerializer):
             )
         return role
 
-    def get_workspace(self):
+    def _get_workspace(self):
         workspace: models.Workspace | None = self.context.get("workspace")
         assert workspace is not None
         return workspace
 
     def validate_accessible_project_ids(self, projects: Sequence[models.Project]):
         for project in projects:
-            if project.workspace != self.get_workspace():
+            if project.workspace != self._get_workspace():
                 raise serializers.ValidationError(
                     f"Project with id `{project.id}` does not exist in this workspace."
                 )

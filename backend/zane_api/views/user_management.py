@@ -14,7 +14,6 @@ from .base import ResourceConflict
 
 
 from ..models import Workspace, WorkspaceMembership, WorkspaceRole, WorkspaceInvitation
-from ..constants import WORKSPACE_SESSION_KEY
 from rest_framework import exceptions
 from ..serializers import WorkspaceInvitationSerializer
 from ..permissions import (
@@ -32,9 +31,17 @@ class InviteUserIntoWorkspaceAPIView(CreateAPIView):
     serializer_class = WorkspaceInvitationSerializer
 
     def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context["workspace"] = self.request.workspace  # type: ignore
-        return context
+        return dict(
+            **super().get_serializer_context(),
+            workspace=(
+                self.request.workspace  # type: ignore
+                # This mumbo jumbo is needed because the OpenAPI generator runs this
+                # function and it doesn't have a correctly initialized request at
+                # generation time
+                if hasattr(self.request, "workspace")
+                else None
+            ),
+        )
 
     def perform_create(self, serializer: WorkspaceInvitationSerializer):
         accessible_projects = cast(dict, serializer.validated_data).pop(

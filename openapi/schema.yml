@@ -29486,7 +29486,7 @@ components:
           type: string
           minLength: 1
           pattern: ^[\w.@+-]+$
-        accessible_projects_ids:
+        accessible_project_ids:
           type: array
           items:
             type: string
@@ -29502,14 +29502,14 @@ components:
           default: 3
       required:
       - username
-    WorkspaceInviteUserCreateAccessibleProjectsIdsErrorComponent:
+    WorkspaceInviteUserCreateAccessibleProjectIdsErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - accessible_projects_ids
+          - accessible_project_ids
           type: string
-          description: '* `accessible_projects_ids` - accessible_projects_ids'
+          description: '* `accessible_project_ids` - accessible_project_ids'
         code:
           enum:
           - does_not_exist
@@ -29533,7 +29533,7 @@ components:
       - $ref: '#/components/schemas/WorkspaceInviteUserCreateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/WorkspaceInviteUserCreateRoleErrorComponent'
       - $ref: '#/components/schemas/WorkspaceInviteUserCreateUsernameErrorComponent'
-      - $ref: '#/components/schemas/WorkspaceInviteUserCreateAccessibleProjectsIdsErrorComponent'
+      - $ref: '#/components/schemas/WorkspaceInviteUserCreateAccessibleProjectIdsErrorComponent'
       - $ref: '#/components/schemas/WorkspaceInviteUserCreateValidForErrorComponent'
       discriminator:
         propertyName: attr
@@ -29541,7 +29541,7 @@ components:
           non_field_errors: '#/components/schemas/WorkspaceInviteUserCreateNonFieldErrorsErrorComponent'
           role: '#/components/schemas/WorkspaceInviteUserCreateRoleErrorComponent'
           username: '#/components/schemas/WorkspaceInviteUserCreateUsernameErrorComponent'
-          accessible_projects_ids: '#/components/schemas/WorkspaceInviteUserCreateAccessibleProjectsIdsErrorComponent'
+          accessible_project_ids: '#/components/schemas/WorkspaceInviteUserCreateAccessibleProjectIdsErrorComponent'
           valid_for: '#/components/schemas/WorkspaceInviteUserCreateValidForErrorComponent'
     WorkspaceInviteUserCreateErrorResponse400:
       oneOf:
