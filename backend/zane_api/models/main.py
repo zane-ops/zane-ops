@@ -47,10 +47,11 @@ from git_connectors.constants import (
     PREVIEW_DEPLOYMENT_BLOCKED_COMMENT_MARKDOWN_TEMPLATE,
     PREVIEW_DEPLOYMENT_DECLINED_COMMENT_MARKDOWN_TEMPLATE,
 )
-from datetime import timezone as tz
+from datetime import timezone as tz, timedelta
 from typing import TYPE_CHECKING
 from asgiref.sync import sync_to_async
-
+from django.contrib.auth.validators import UnicodeUsernameValidator
+from typing import Literal
 
 if TYPE_CHECKING:
     from container_registry.models import SharedRegistryCredentials  # noqa: F401
@@ -95,6 +96,35 @@ class WorkspaceRole(models.IntegerChoices):
     OWNER = 5, "Owner"
 
 
+class WorkspaceInvitation(TimestampedModel):
+    workspace = models.ForeignKey(to=Workspace, on_delete=models.CASCADE)
+    expires_at = models.DateTimeField()
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix="wrk_ivt_",
+    )
+    username = models.CharField(validators=[UnicodeUsernameValidator()])
+    token = models.CharField(
+        max_length=35,
+        unique=True,
+    )
+    role = models.PositiveSmallIntegerField(
+        choices=WorkspaceRole.choices,
+        default=WorkspaceRole.MEMBER,
+    )
+    # Only relevant for GUEST and CONTRIBUTOR
+    accessible_projects = models.ManyToManyField("Project", blank=True)
+
+    @property
+    def role_name(self) -> Literal["Owner", "Admin", "Member", "Contributor", "Guest"]:
+        return self.get_role_display()
+
+    class Meta:
+        unique_together = [("username", "workspace")]
+
+
 class WorkspaceMembership(models.Model):
     workspace_id: str
 
@@ -120,7 +150,7 @@ class WorkspaceMembership(models.Model):
     accessible_projects = models.ManyToManyField("Project", blank=True)
 
     @property
-    def role_name(self) -> str:
+    def role_name(self) -> Literal["Owner", "Admin", "Member", "Contributor", "Guest"]:
         return self.get_role_display()
 
     class Meta:

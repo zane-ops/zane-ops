@@ -26,3 +26,4 @@ from .preview_env_templates import *
 from .more_environments import *
 from .shared_volumes import *
 from .workspace import *
+from .user_management import *
