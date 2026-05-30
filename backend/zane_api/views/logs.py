@@ -369,12 +369,10 @@ class HttpLogsAPIView(ListAPIView):
                 hash=deployment_id, service__project__id__in=accessible_projects
             ).exists()
 
-        if has_access:
-            return queryset
+        if not has_access:
+            return queryset.filter(pk__in=[])
 
-        raise exceptions.PermissionDenied(
-            "You must provide at least one of `service_id`, `stack_id`, or `deployment_id` to filter logs."
-        )
+        return queryset
 
     @extend_schema(
         summary="Get HTTP logs",
