@@ -395,6 +395,36 @@ class SingleHttpLogAPIView(RetrieveAPIView):
     lookup_field = "request_uuid"
     permission_classes = [HasWorkspace, IsWorkspaceContributor]
 
+    def get_object(self):
+        log: HttpLog = super().get_object()
+
+        accessible_projects = get_accessible_projects(
+            self.request.user,  # type: ignore
+            self.request.workspace,  # type: ignore
+        )
+
+        has_access = False
+
+        if log.service_id:
+            has_access = Service.objects.filter(
+                id=log.service_id, project__id__in=accessible_projects
+            ).exists()
+
+        if log.stack_id:
+            has_access = ComposeStack.objects.filter(
+                id=log.stack_id, project__id__in=accessible_projects
+            ).exists()
+
+        if log.deployment_id:
+            has_access = Deployment.objects.filter(
+                hash=log.deployment_id, service__project__id__in=accessible_projects
+            ).exists()
+
+        if not has_access:
+            raise exceptions.NotFound()
+
+        return log
+
 
 class ServiceDeploymentRuntimeLogsAPIView(APIView):
     serializer_class = RuntimeLogsSearchSerializer
