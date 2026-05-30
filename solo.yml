@@ -1,6 +1,13 @@
 name: zane-ops
 icon: images/logo.png
 processes:
+  react router:
+    command: pnpm run dev
+    working_dir: /Users/fredkiss3/Developer/zane-ops/frontend
+    auto_start: true
+    auto_restart: true
+    restart_when_changed: []
+    env: {}
   api:
     command: make dev-api
     working_dir: null
@@ -8,10 +15,10 @@ processes:
     auto_restart: false
     restart_when_changed: []
     env: {}
-  react router:
-    command: pnpm run dev
-    working_dir: /Users/fredkiss3/Developer/zane-ops/frontend
+  api logs:
+    command: docker compose logs -f zane-api
+    working_dir: /Users/fredkiss3/Developer/zane-ops/docker
     auto_start: true
-    auto_restart: true
+    auto_restart: false
     restart_when_changed: []
     env: {}
