@@ -35,6 +35,21 @@ urlpatterns = [
         views.InviteUserIntoWorkspaceAPIView.as_view(),
         name="workspace.invite_user",
     ),
+    re_path(
+        r"^workspace/invitations/?$",
+        views.ListWorkspaceInvitationAPIView.as_view(),
+        name="workspace.list_invitations",
+    ),
+    re_path(
+        r"^workspace/invitations/(?P<id>[a-zA-Z0-9-_]+)/?$",
+        views.WorkspaceInvitationDetailsAPIView.as_view(),
+        name="workspace.invitation_detail",
+    ),
+    re_path(
+        r"^workspace/members/?$",
+        views.ListWorkspaceMembersAPIView.as_view(),
+        name="workspace.list_members",
+    ),
     # re_path(
     #     r"^auth/me/with-token/?$",
     #     views.TokenAuthedView.as_view(),

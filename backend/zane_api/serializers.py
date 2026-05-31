@@ -134,10 +134,10 @@ class WorkspaceInvitationSerializer(serializers.ModelSerializer):
         role = attrs.get("role", models.WorkspaceRole.MEMBER)
         accessible_projects = attrs["accessible_project_ids"]
 
-        if role <= models.WorkspaceRole.CONTRIBUTOR and len(accessible_projects) == 0:
+        if role < models.WorkspaceRole.MEMBER and len(accessible_projects) == 0:
             raise serializers.ValidationError(
                 {
-                    "accessible_project_ids": "Users with the Contributor or Guest role must be granted access to at least one project."
+                    "accessible_project_ids": "Users with the Guest role must be granted access to at least one project."
                 }
             )
         if role >= models.WorkspaceRole.MEMBER:
@@ -172,6 +172,36 @@ class WorkspaceMembershipSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.WorkspaceMembership
         fields = ["role_name", "role", "workspace"]
+
+
+class SimpleWorkspaceUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "username",
+            "first_name",
+            "last_name",
+        ]
+
+
+class WorkspaceMemberSerializer(serializers.ModelSerializer):
+    accessible_projects = AccessibleWorkspaceProjectSerializer(
+        many=True,
+        read_only=True,
+    )
+    user = SimpleWorkspaceUserSerializer(
+        read_only=True,
+    )
+
+    class Meta:
+        model = models.WorkspaceMembership
+        fields = [
+            "id",
+            "role_name",
+            "role",
+            "accessible_projects",
+            "user",
+        ]
 
 
 class SharedEnvVariableSerializer(serializers.ModelSerializer):

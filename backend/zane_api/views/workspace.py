@@ -59,8 +59,8 @@ class CreateWorkspaceAPIView(CreateAPIView):
         operation_id="createWorkspace",
         summary="Create a new workspace",
     )
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
 
 
 class SwitchWorkspaceAPIView(APIView):
