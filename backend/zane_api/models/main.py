@@ -47,7 +47,7 @@ from git_connectors.constants import (
     PREVIEW_DEPLOYMENT_BLOCKED_COMMENT_MARKDOWN_TEMPLATE,
     PREVIEW_DEPLOYMENT_DECLINED_COMMENT_MARKDOWN_TEMPLATE,
 )
-from datetime import timezone as tz, timedelta
+from datetime import timezone as tz
 from typing import TYPE_CHECKING
 from asgiref.sync import sync_to_async
 from django.contrib.auth.validators import UnicodeUsernameValidator
@@ -76,24 +76,24 @@ class Workspace(TimestampedModel):
 
 class WorkspaceRole(models.IntegerChoices):
     # Read-only user: View projects and preview deployments only
-    GUEST = 1, "Guest"
+    GUEST = 10, "Guest"
 
     # 3rd party contributor to the team (usually temporary)
     # + View logs, env vars, trigger deploys, manage own tokens
-    CONTRIBUTOR = 2, "Contributor"
+    # CONTRIBUTOR = 20, "Contributor"
 
     # member of the team
     # Read-write: + Edit service config, create/update/delete env vars
-    MEMBER = 3, "Member"
+    MEMBER = 30, "Member"
 
     # manager of the workspace
     # Full access on the workspace, can invite people, cannot delete the workspace
     # + Delete services, manage workspace users & roles, manage API tokens
-    ADMIN = 4, "Admin"
+    ADMIN = 40, "Admin"
 
     # creator of the workspace
     # Full access on the workspace, +can delete the workspace
-    OWNER = 5, "Owner"
+    OWNER = 50, "Owner"
 
 
 class WorkspaceInvitation(TimestampedModel):
