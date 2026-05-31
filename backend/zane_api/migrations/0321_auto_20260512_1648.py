@@ -15,8 +15,8 @@ def rollback_workspace_and_projects(apps, schema_editor):
     Workspace = apps.get_model("zane_api", "Workspace")
     Project = apps.get_model("zane_api", "Project")
 
-    Workspace.objects.filter().delete()
     Project.objects.update(workspace=None)
+    Workspace.objects.filter().delete()
 
 
 class Migration(migrations.Migration):
