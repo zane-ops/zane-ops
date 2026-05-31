@@ -103,7 +103,6 @@ from ..permissions import (
     IsWorkspaceMember,
     IsWorkspaceAdmin,
     IsWorkspaceGuest,
-    IsWorkspaceContributor,
     get_accessible_projects,
 )
 
@@ -721,7 +720,7 @@ class RequestServiceEnvChangesAPIView(APIView):
 
 
 class CancelServiceChangesAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         responses={
@@ -825,7 +824,7 @@ class CancelServiceChangesAPIView(APIView):
 
 class DeployDockerServiceAPIView(APIView):
     serializer_class = ServiceDeploymentSerializer
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @transaction.atomic()
     @extend_schema(
@@ -935,7 +934,7 @@ class DeployDockerServiceAPIView(APIView):
 
 class RedeployDockerServiceAPIView(APIView):
     serializer_class = ServiceDeploymentSerializer
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @transaction.atomic()
     @extend_schema(
@@ -1365,7 +1364,7 @@ class ArchiveDockerServiceAPIView(APIView):
 
 
 class ToggleServiceAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         request=ToggleServiceStateRequestSerializer,
@@ -1457,7 +1456,7 @@ class ToggleServiceAPIView(APIView):
 
 
 class BulkToggleServicesAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         request=BulkToggleServiceStateRequestSerializer,

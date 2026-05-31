@@ -13,7 +13,7 @@ from django.db.models import QuerySet
 from ..permissions import (
     InternalZaneAppPermission,
     HasWorkspace,
-    IsWorkspaceContributor,
+    IsWorkspaceMember,
     get_accessible_projects,
 )
 from ..utils import Colors, escape_ansi
@@ -338,7 +338,7 @@ class HttpLogsAPIView(ListAPIView):
     pagination_class = DeploymentHttpLogsPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = DeploymentHttpLogsFilterSet
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     def filter_queryset(self, queryset: QuerySet[HttpLog]):
         queryset = super().filter_queryset(queryset)
@@ -393,7 +393,7 @@ class SingleHttpLogAPIView(RetrieveAPIView):
     serializer_class = HttpLogSerializer
     queryset = HttpLog.objects.all()
     lookup_field = "request_uuid"
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     def get_object(self):
         log: HttpLog = super().get_object()
@@ -428,7 +428,7 @@ class SingleHttpLogAPIView(RetrieveAPIView):
 
 class ServiceDeploymentRuntimeLogsAPIView(APIView):
     serializer_class = RuntimeLogsSearchSerializer
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         summary="Get deployment logs", parameters=[DeploymentRuntimeLogsQuerySerializer]
@@ -488,7 +488,7 @@ class ServiceDeploymentRuntimeLogsAPIView(APIView):
 
 class ServiceDeploymentRuntimeLogsWithContextAPIView(APIView):
     serializer_class = RuntimeLogsContextSerializer
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         summary="Get deployment logs with context",
@@ -553,7 +553,7 @@ class ServiceDeploymentRuntimeLogsWithContextAPIView(APIView):
 
 class ServiceDeploymentBuildLogsAPIView(APIView):
     serializer_class = RuntimeLogsSearchSerializer
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         summary="Get deployment build logs",

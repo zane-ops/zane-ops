@@ -63,7 +63,6 @@ from temporal.shared import (
 from ..permissions import (
     HasWorkspace,
     IsWorkspaceMember,
-    IsWorkspaceContributor,
     get_accessible_projects,
 )
 
@@ -129,7 +128,7 @@ class WebhookDeployDockerServiceAPIView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
     # TODO: use a an access token and filter by permission
-    # permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    # permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @transaction.atomic()
     @extend_schema(
@@ -231,7 +230,7 @@ class WebhookDeployGitServiceAPIView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
     # TODO: use a an access token and filter by permission
-    # permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    # permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @transaction.atomic()
     @extend_schema(
@@ -326,7 +325,7 @@ class WebhookDeployGitServiceAPIView(APIView):
 
 
 class BulkDeployServicesAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         request=BulkDeployServiceRequestSerializer,
@@ -415,7 +414,7 @@ class BulkDeployServicesAPIView(APIView):
 
 
 class CleanupDeploymentQueueAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         request=DeploymentCleanupQueueSerializer,
@@ -501,7 +500,7 @@ class CleanupDeploymentQueueAPIView(APIView):
 
 
 class CancelServiceDeploymentAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @transaction.atomic()
     @extend_schema(
@@ -607,7 +606,7 @@ class ServiceDeploymentsAPIView(ListAPIView):
     filterset_class = DockerServiceDeploymentFilterSet
     pagination_class = DeploymentListPagination
     queryset = Deployment.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         summary="List all deployments",
@@ -671,7 +670,7 @@ class ServiceDeploymentSingleAPIView(RetrieveAPIView):
     serializer_class = ServiceDeploymentSerializer
     lookup_url_kwarg = "deployment_hash"  # This corresponds to the URL configuration
     queryset = Deployment.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     def get_object(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
@@ -725,7 +724,7 @@ class RecentDeploymentsAPIView(ListAPIView):
     serializer_class = SimpleDeploymentSerializer
     queryset = Deployment.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
     pagination_class = None
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         summary="List recent deployments",
