@@ -12898,9 +12898,275 @@ paths:
               schema:
                 $ref: '#/components/schemas/Workspace'
           description: ''
+  /api/workspace/invitations/:
+    get:
+      operationId: workspace_invitations_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - workspace
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceInvitationsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWorkspaceInvitationList'
+          description: ''
+  /api/workspace/invitations/{id}/:
+    get:
+      operationId: workspace_invitations_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      tags:
+      - workspace
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceInvitationsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceInvitation'
+          description: ''
+    delete:
+      operationId: workspace_invitations_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      tags:
+      - workspace
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceInvitationsDestroyErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
   /api/workspace/invite-user/:
     post:
-      operationId: workspace_invite_user_create
+      operationId: inviteUser
+      summary: Generate an invitation link for a new user in a workspace
       tags:
       - workspace
       requestBody:
@@ -12922,7 +13188,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceInviteUserCreateErrorResponse400'
+                $ref: '#/components/schemas/InviteUserErrorResponse400'
           description: ''
         '401':
           content:
@@ -12993,9 +13259,100 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkspaceInvitation'
           description: ''
+  /api/workspace/members/:
+    get:
+      operationId: workspace_members_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - workspace
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMembersListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWorkspaceMemberList'
+          description: ''
   /api/workspaces/create/:
     post:
-      operationId: workspaces_create_create
+      operationId: createWorkspace
+      summary: Create a new workspace
       tags:
       - workspaces
       requestBody:
@@ -13017,7 +13374,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspacesCreateCreateErrorResponse400'
+                $ref: '#/components/schemas/CreateWorkspaceErrorResponse400'
           description: ''
         '401':
           content:
@@ -17470,6 +17827,87 @@ components:
       required:
       - errors
       - type
+    CreateWorkspaceError:
+      oneOf:
+      - $ref: '#/components/schemas/CreateWorkspaceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateWorkspaceNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CreateWorkspaceNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/CreateWorkspaceNameErrorComponent'
+    CreateWorkspaceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CreateWorkspaceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CreateWorkspaceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CreateWorkspaceNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateWorkspaceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateWorkspaceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateWorkspaceError'
+      required:
+      - errors
+      - type
     DecisionEnum:
       enum:
       - APPROVE
@@ -19751,6 +20189,165 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    InviteUserAccessibleProjectIdsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - accessible_project_ids
+          type: string
+          description: '* `accessible_project_ids` - accessible_project_ids'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    InviteUserError:
+      oneOf:
+      - $ref: '#/components/schemas/InviteUserNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/InviteUserRoleErrorComponent'
+      - $ref: '#/components/schemas/InviteUserUsernameErrorComponent'
+      - $ref: '#/components/schemas/InviteUserAccessibleProjectIdsErrorComponent'
+      - $ref: '#/components/schemas/InviteUserValidForErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/InviteUserNonFieldErrorsErrorComponent'
+          role: '#/components/schemas/InviteUserRoleErrorComponent'
+          username: '#/components/schemas/InviteUserUsernameErrorComponent'
+          accessible_project_ids: '#/components/schemas/InviteUserAccessibleProjectIdsErrorComponent'
+          valid_for: '#/components/schemas/InviteUserValidForErrorComponent'
+    InviteUserErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/InviteUserValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/InviteUserValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    InviteUserNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    InviteUserRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - role
+          type: string
+          description: '* `role` - role'
+        code:
+          enum:
+          - invalid_choice
+          - max_value
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `max_value` - max_value
+            * `min_value` - min_value
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    InviteUserUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - username
+          type: string
+          description: '* `username` - username'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    InviteUserValidForErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - valid_for
+          type: string
+          description: '* `valid_for` - valid_for'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    InviteUserValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/InviteUserError'
+      required:
+      - errors
+      - type
     ItemChangeTypeEnum:
       enum:
       - ADD
@@ -20365,6 +20962,56 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ServiceDeployment'
+    PaginatedWorkspaceInvitationList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceInvitation'
+    PaginatedWorkspaceMemberList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceMember'
     PaginatedWorkspaceMembershipList:
       type: object
       required:
@@ -26088,18 +26735,16 @@ components:
       - decision
     RoleEnum:
       enum:
-      - 1
-      - 2
-      - 3
-      - 4
-      - 5
+      - 10
+      - 30
+      - 40
+      - 50
       type: integer
       description: |-
-        * `1` - Guest
-        * `2` - Contributor
-        * `3` - Member
-        * `4` - Admin
-        * `5` - Owner
+        * `10` - Guest
+        * `30` - Member
+        * `40` - Admin
+        * `50` - Owner
     RoleNameEnum:
       enum:
       - Owner
@@ -27258,6 +27903,25 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+    SimpleWorkspaceUser:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+      required:
+      - first_name
+      - last_name
+      - username
     SlotEnum:
       enum:
       - BLUE
@@ -29502,165 +30166,64 @@ components:
           default: 3
       required:
       - username
-    WorkspaceInviteUserCreateAccessibleProjectIdsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - accessible_project_ids
-          type: string
-          description: '* `accessible_project_ids` - accessible_project_ids'
-        code:
-          enum:
-          - does_not_exist
-          - incorrect_type
-          - not_a_list
-          - 'null'
-          type: string
-          description: |-
-            * `does_not_exist` - does_not_exist
-            * `incorrect_type` - incorrect_type
-            * `not_a_list` - not_a_list
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    WorkspaceInviteUserCreateError:
+    WorkspaceInvitationsDestroyErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/WorkspaceInviteUserCreateNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/WorkspaceInviteUserCreateRoleErrorComponent'
-      - $ref: '#/components/schemas/WorkspaceInviteUserCreateUsernameErrorComponent'
-      - $ref: '#/components/schemas/WorkspaceInviteUserCreateAccessibleProjectIdsErrorComponent'
-      - $ref: '#/components/schemas/WorkspaceInviteUserCreateValidForErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          non_field_errors: '#/components/schemas/WorkspaceInviteUserCreateNonFieldErrorsErrorComponent'
-          role: '#/components/schemas/WorkspaceInviteUserCreateRoleErrorComponent'
-          username: '#/components/schemas/WorkspaceInviteUserCreateUsernameErrorComponent'
-          accessible_project_ids: '#/components/schemas/WorkspaceInviteUserCreateAccessibleProjectIdsErrorComponent'
-          valid_for: '#/components/schemas/WorkspaceInviteUserCreateValidForErrorComponent'
-    WorkspaceInviteUserCreateErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/WorkspaceInviteUserCreateValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/WorkspaceInviteUserCreateValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    WorkspaceInviteUserCreateNonFieldErrorsErrorComponent:
+    WorkspaceInvitationsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    WorkspaceInvitationsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    WorkspaceMember:
       type: object
       properties:
-        attr:
-          enum:
-          - non_field_errors
-          type: string
-          description: '* `non_field_errors` - non_field_errors'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    WorkspaceInviteUserCreateRoleErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - role
-          type: string
-          description: '* `role` - role'
-        code:
-          enum:
-          - invalid_choice
-          - max_value
-          - min_value
-          - 'null'
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `max_value` - max_value
-            * `min_value` - min_value
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    WorkspaceInviteUserCreateUsernameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - username
-          type: string
-          description: '* `username` - username'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    WorkspaceInviteUserCreateValidForErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - valid_for
-          type: string
-          description: '* `valid_for` - valid_for'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    WorkspaceInviteUserCreateValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
+        id:
+          type: integer
+          readOnly: true
+        role_name:
+          allOf:
+          - $ref: '#/components/schemas/RoleNameEnum'
+          readOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          minimum: 0
+          maximum: 32767
+        accessible_projects:
           type: array
           items:
-            $ref: '#/components/schemas/WorkspaceInviteUserCreateError'
+            $ref: '#/components/schemas/AccessibleWorkspaceProject'
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/SimpleWorkspaceUser'
+          readOnly: true
       required:
-      - errors
-      - type
+      - accessible_projects
+      - id
+      - role
+      - role_name
+      - user
+    WorkspaceMembersListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     WorkspaceMembership:
       type: object
       properties:
@@ -29690,87 +30253,6 @@ components:
           maxLength: 255
       required:
       - name
-    WorkspacesCreateCreateError:
-      oneOf:
-      - $ref: '#/components/schemas/WorkspacesCreateCreateNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/WorkspacesCreateCreateNameErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          non_field_errors: '#/components/schemas/WorkspacesCreateCreateNonFieldErrorsErrorComponent'
-          name: '#/components/schemas/WorkspacesCreateCreateNameErrorComponent'
-    WorkspacesCreateCreateErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/WorkspacesCreateCreateValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/WorkspacesCreateCreateValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    WorkspacesCreateCreateNameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - name
-          type: string
-          description: '* `name` - name'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    WorkspacesCreateCreateNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - non_field_errors
-          type: string
-          description: '* `non_field_errors` - non_field_errors'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    WorkspacesCreateCreateValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkspacesCreateCreateError'
-      required:
-      - errors
-      - type
     WorkspacesListListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
