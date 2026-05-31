@@ -46,6 +46,11 @@ urlpatterns = [
         name="workspace.invitation_detail",
     ),
     re_path(
+        r"^workspace/invitations/(?P<id>[a-zA-Z0-9-_]+)/regenerate/?$",
+        views.RegenerateWorkspaceInvitationAPIView.as_view(),
+        name="workspace.regenerate_invitation",
+    ),
+    re_path(
         r"^workspace/members/?$",
         views.ListWorkspaceMembersAPIView.as_view(),
         name="workspace.list_members",

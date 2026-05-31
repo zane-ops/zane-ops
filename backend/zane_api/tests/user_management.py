@@ -1,6 +1,5 @@
 from typing import cast
 
-from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 
@@ -11,7 +10,7 @@ from ..models import (
     Project,
     WorkspaceInvitation,
 )
-from .base import AuthAPITestCase, APITestCase
+from .base import AuthAPITestCase
 from ..utils import jprint
 from django.utils import timezone
 from datetime import timedelta
@@ -22,7 +21,10 @@ class WorkspaceInviteUserViewTests(AuthAPITestCase):
         self.loginUser()
         workspace = cast(Workspace, Workspace.objects.first())
 
-        data = {"username": "mohai"}
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.MEMBER,
+        }
         response = self.client.post(
             reverse("zane_api:workspace.invite_user"),
             data=data,
@@ -223,7 +225,10 @@ class WorkspaceInviteUserViewTests(AuthAPITestCase):
 
     def test_cannot_invite_two_users_with_the_same_username(self):
         self.loginUser()
-        data = {"username": "mohai"}
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.MEMBER,
+        }
         response = self.client.post(
             reverse("zane_api:workspace.invite_user"),
             data=data,
@@ -231,10 +236,60 @@ class WorkspaceInviteUserViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        data = {"username": "mohai"}
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.MEMBER,
+        }
         response = self.client.post(
             reverse("zane_api:workspace.invite_user"),
             data=data,
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+
+class RegenerateWorkspaceInvitationViewTests(AuthAPITestCase):
+    def test_regenerate_workspace_invitation_regenerates_token_and_extends_validity(
+        self,
+    ):
+        self.loginUser()
+
+        data = {
+            "username": "mohai",
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
+
+        self.assertIsNotNone(new_invitation)
+
+        self.assertAlmostEqual(
+            new_invitation.expires_at,
+            timezone.now() + timedelta(days=3),
+            delta=timedelta(seconds=5),
+        )
+
+        data = {"valid_for": 1}
+        response = self.client.put(
+            reverse(
+                "zane_api:workspace.regenerate_invitation",
+                kwargs={"id": new_invitation.id},
+            ),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        updated_invitation = WorkspaceInvitation.objects.get(pk=new_invitation.id)
+
+        self.assertNotEqual(new_invitation.token, updated_invitation.token)
+        self.assertNotEqual(new_invitation.expires_at, updated_invitation.expires_at)
+
+        self.assertAlmostEqual(
+            updated_invitation.expires_at,
+            timezone.now() + timedelta(days=1),
+            delta=timedelta(seconds=5),
+        )

@@ -84,66 +84,10 @@ class AccessibleWorkspaceProjectSerializer(serializers.ModelSerializer):
 
 
 class WorkspaceInvitationSerializer(serializers.ModelSerializer):
-    accessible_project_ids = serializers.PrimaryKeyRelatedField(
-        many=True,
-        write_only=True,
-        queryset=models.Project.objects.all(),
-        default=[],
-    )
     accessible_projects = AccessibleWorkspaceProjectSerializer(
         many=True,
         read_only=True,
     )
-
-    valid_for = serializers.ChoiceField(
-        choices=[
-            (1, "1 day"),
-            (2, "2 days"),
-            (3, "3 days"),
-            (4, "4 days"),
-            (5, "5 days"),
-            (6, "6 days"),
-            (7, "7 days"),
-        ],
-        write_only=True,
-        default=3,
-    )
-
-    def validate_role(self, role: int):
-        if role >= models.WorkspaceRole.OWNER:
-            raise serializers.ValidationError(
-                "The owner role cannot be assigned when inviting a user. "
-                "To transfer ownership, the current workspace owner must do so from their workspace settings."
-            )
-        return role
-
-    def _get_workspace(self):
-        workspace: models.Workspace | None = self.context.get("workspace")
-        assert workspace is not None
-        return workspace
-
-    def validate_accessible_project_ids(self, projects: Sequence[models.Project]):
-        for project in projects:
-            if project.workspace != self._get_workspace():
-                raise serializers.ValidationError(
-                    f"Project with id `{project.id}` does not exist in this workspace."
-                )
-        return projects
-
-    def validate(self, attrs: dict):
-        role = attrs.get("role", models.WorkspaceRole.MEMBER)
-        accessible_projects = attrs["accessible_project_ids"]
-
-        if role < models.WorkspaceRole.MEMBER and len(accessible_projects) == 0:
-            raise serializers.ValidationError(
-                {
-                    "accessible_project_ids": "Users with the Guest role must be granted access to at least one project."
-                }
-            )
-        if role >= models.WorkspaceRole.MEMBER:
-            attrs["accessible_project_ids"] = []
-
-        return attrs
 
     class Meta:
         model = models.WorkspaceInvitation
@@ -154,16 +98,8 @@ class WorkspaceInvitationSerializer(serializers.ModelSerializer):
             "token",
             "id",
             "username",
-            "accessible_projects",  # read
-            "accessible_project_ids",  # write
-            "valid_for",
+            "accessible_projects",
         ]
-        extra_kwargs = {
-            "id": {"read_only": True},
-            "token": {"read_only": True},
-            "role_name": {"read_only": True},
-            "expires_at": {"read_only": True},
-        }
 
 
 class WorkspaceMembershipSerializer(serializers.ModelSerializer):

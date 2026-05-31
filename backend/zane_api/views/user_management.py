@@ -8,17 +8,14 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.generics import (
     ListAPIView,
-    CreateAPIView,
-    UpdateAPIView,
     RetrieveDestroyAPIView,
 )
-
 from rest_framework import status
 
 from .base import ResourceConflict
 
 
-from ..models import Workspace, WorkspaceMembership, WorkspaceRole, WorkspaceInvitation
+from ..models import WorkspaceMembership, WorkspaceInvitation
 from rest_framework import exceptions
 from ..serializers import WorkspaceInvitationSerializer, WorkspaceMemberSerializer
 from ..permissions import (
@@ -29,6 +26,10 @@ import secrets
 from django.db.models import QuerySet
 from django.utils import timezone
 from datetime import timedelta
+from .serializers import (
+    RegenerateWorkspaceInvitationRequestSerializer,
+    InviteUserIntoWorkspaceRequestSerializer,
+)
 
 
 class ListWorkspaceInvitationAPIView(ListAPIView):
@@ -55,6 +56,43 @@ class ListWorkspaceMembersAPIView(ListAPIView):
         )
 
 
+class RegenerateWorkspaceInvitationAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
+    serializer_class = WorkspaceInvitationSerializer
+
+    @extend_schema(
+        request=RegenerateWorkspaceInvitationRequestSerializer,
+        operation_id="regenerateUserInvitation",
+        summary="Regenerate user invitation link in workspace",
+    )
+    def put(self, request: Request, id: str):
+        try:
+            invitation = (
+                WorkspaceInvitation.objects.filter(
+                    pk=id,
+                    workspace=self.request.workspace,  # type: ignore
+                )
+                .prefetch_related("accessible_projects")
+                .get()
+            )
+        except WorkspaceInvitation.DoesNotExist:
+            raise exceptions.NotFound(
+                f"An invitation with an id of `{id}` does not exist in this workspace."
+            )
+
+        form = RegenerateWorkspaceInvitationRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+        data = cast(dict, form.data)
+
+        valid_for = data["valid_for"]
+        invitation.token = secrets.token_hex(16)
+        invitation.expires_at = timezone.now() + timedelta(days=valid_for)
+        invitation.save()
+
+        serializer = WorkspaceInvitationSerializer(invitation)
+        return Response(data=serializer.data)
+
+
 class WorkspaceInvitationDetailsAPIView(RetrieveDestroyAPIView):
     permission_classes = [HasWorkspace, IsWorkspaceAdmin]
     serializer_class = WorkspaceInvitationSerializer
@@ -66,34 +104,34 @@ class WorkspaceInvitationDetailsAPIView(RetrieveDestroyAPIView):
         return super().get_queryset().filter(workspace=self.request.workspace)
 
 
-class InviteUserIntoWorkspaceAPIView(CreateAPIView):
+class InviteUserIntoWorkspaceAPIView(APIView):
     permission_classes = [HasWorkspace, IsWorkspaceAdmin]
     serializer_class = WorkspaceInvitationSerializer
 
-    def get_serializer_context(self):
-        return dict(
-            **super().get_serializer_context(),
-            workspace=(
-                self.request.workspace  # type: ignore
-                # This mumbo jumbo is needed because the OpenAPI generator runs this
-                # function and it doesn't have a correctly initialized request at
-                # generation time
-                if hasattr(self.request, "workspace")
-                else None
+    @extend_schema(
+        request=InviteUserIntoWorkspaceRequestSerializer,
+        operation_id="inviteUser",
+        summary="Generate an invitation link for a new user in a workspace",
+    )
+    def post(self, request):
+        form = InviteUserIntoWorkspaceRequestSerializer(
+            data=request.data,
+            context=dict(
+                workspace=self.request.workspace,  # type: ignore
             ),
         )
+        form.is_valid(raise_exception=True)
 
-    def perform_create(self, serializer: WorkspaceInvitationSerializer):
-        accessible_projects = cast(dict, serializer.validated_data).pop(
-            "accessible_project_ids", []
-        )
-        valid_for = cast(dict, serializer.validated_data).pop("valid_for", 3)
+        data = cast(dict, form.validated_data)
+
+        accessible_projects = data["accessible_project_ids"]
 
         try:
-            serializer.save(
-                accessible_projects=accessible_projects,
+            invitation = WorkspaceInvitation.objects.create(
                 token=secrets.token_hex(16),
-                expires_at=timezone.now() + timedelta(days=valid_for),
+                username=data["username"],
+                role=data["role"],
+                expires_at=timezone.now() + timedelta(days=data["valid_for"]),
                 workspace=self.request.workspace,  # type: ignore
             )
         except IntegrityError:
@@ -104,9 +142,7 @@ class InviteUserIntoWorkspaceAPIView(CreateAPIView):
                 )
             )
 
-    @extend_schema(
-        operation_id="inviteUser",
-        summary="Generate an invitation link for a new user in a workspace",
-    )
-    def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+        invitation.accessible_projects.add(*accessible_projects)
+
+        serializer = WorkspaceInvitationSerializer(invitation)
+        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
