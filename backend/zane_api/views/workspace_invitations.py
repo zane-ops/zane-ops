@@ -16,7 +16,6 @@ from ..models import WorkspaceMembership, WorkspaceInvitation
 from rest_framework import exceptions
 from ..serializers import (
     WorkspaceInvitationSerializer,
-    WorkspaceMemberSerializer,
     WorkspaceInvitationLinkSerializer,
 )
 from ..permissions import (
@@ -30,7 +29,12 @@ from datetime import timedelta
 from .serializers import (
     RegenerateWorkspaceInvitationRequestSerializer,
     InviteUserIntoWorkspaceRequestSerializer,
+    WorkspaceAcceptInvitationResponseSerializer,
+    WorkspaceAcceptInvitationRequestSerializer,
 )
+from django.contrib.auth.models import User, AbstractUser
+from django.contrib.auth import login, authenticate
+from django.db import transaction
 
 
 class ListWorkspaceInvitationAPIView(ListAPIView):
@@ -41,20 +45,6 @@ class ListWorkspaceInvitationAPIView(ListAPIView):
         return WorkspaceInvitation.objects.filter(
             workspace=self.request.workspace  # type: ignore
         ).prefetch_related("accessible_projects")
-
-
-class ListWorkspaceMembersAPIView(ListAPIView):
-    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
-    serializer_class = WorkspaceMemberSerializer
-
-    def get_queryset(self) -> QuerySet[WorkspaceInvitation]:  # type: ignore
-        return (
-            WorkspaceMembership.objects.filter(
-                workspace=self.request.workspace  # type: ignore
-            )
-            .select_related("user")
-            .prefetch_related("accessible_projects")
-        )
 
 
 class RegenerateWorkspaceInvitationAPIView(APIView):
@@ -111,6 +101,89 @@ class WorkspaceInvitationLinkDetailsAPIView(RetrieveAPIView):
     queryset = WorkspaceInvitation.objects.all().select_related("workspace")
     lookup_field = "token"
     lookup_url_kwarg = "token"
+
+
+class WorkspaceRejectInvitationAPIView(DestroyAPIView):
+    permission_classes = [permissions.AllowAny]
+    serializer_class = WorkspaceInvitationSerializer
+    queryset = WorkspaceInvitation.objects.all()
+    lookup_field = "token"
+    lookup_url_kwarg = "token"
+
+
+class WorkspaceAcceptInvitationAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @transaction.atomic()
+    @extend_schema(
+        request=WorkspaceAcceptInvitationRequestSerializer,
+        responses={201: WorkspaceAcceptInvitationResponseSerializer},
+        operation_id="acceptInvitation",
+        summary="Accept workspace invitation",
+    )
+    def post(self, request: Request, token: str):
+        try:
+            invitation = (
+                WorkspaceInvitation.objects.filter(token=token)
+                .select_related("workspace")
+                .get()
+            )
+        except WorkspaceInvitation.DoesNotExist:
+            raise exceptions.NotFound(
+                f"An invitation with the token `{token}` does not exist."
+            )
+
+        authed_user: AbstractUser = request.user
+        if authed_user.is_authenticated and invitation.username != authed_user.username:
+            raise ResourceConflict(
+                    "This invitation is not intended for the currently logged-in account. Please log out and try again."
+                )
+
+        has_existing_account = invitation.has_existing_account
+
+        form = WorkspaceAcceptInvitationRequestSerializer(
+            data=request.data,
+            context={"has_existing_account": has_existing_account},
+        )
+        form.is_valid(raise_exception=True)
+
+        data = cast(dict, form.validated_data)
+
+        if not has_existing_account:
+            user = User.objects.create_user(
+                username=invitation.username,
+                password=data["password"],
+            )  # type: ignore
+        else:
+            user = authenticate(
+                username=invitation.username,
+                password=data["password"],
+            )
+            if user is None:
+                raise exceptions.AuthenticationFailed(
+                    detail="Incorrect password for the existing account"
+                )
+
+        membership = WorkspaceMembership.objects.create(
+            user=user,
+            workspace=invitation.workspace,
+            role=invitation.role,
+        )
+
+        for project in invitation.accessible_projects.all():
+            membership.accessible_projects.add(project)
+
+        login(request, user)  # type: ignore
+
+        invitation.delete()
+
+        serializer = WorkspaceAcceptInvitationResponseSerializer(
+            {
+                "success": True,
+                "detail": "User logged in successfully.",
+            }
+        )
+        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
 
 class InviteUserIntoWorkspaceAPIView(APIView):

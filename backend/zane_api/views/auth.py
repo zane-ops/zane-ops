@@ -42,7 +42,6 @@ from .serializers.auth import (
 )
 from ..serializers import (
     UserSerializer,
-    WorkspaceSerializer,
     WorkspaceMembershipSerializer,
 )
 from ..models import Workspace, WorkspaceMembership, WorkspaceRole

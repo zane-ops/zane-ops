@@ -1,44 +1,14 @@
-import re
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
 from ..base import ResourceConflict
-
+from ...validators import validate_new_password
 
 # ==========================================
 #                 Shared                   #
 # ==========================================
-
-
-def validate_new_password(value, user=None):
-    # configuration of validate_password is in settings.py["AUTH_PASSWORD_VALIDATORS"]
-    validate_password(value, user)
-
-    # Check for mix of uppercase, lowercase, numbers, symbols (>= 2 types of them)
-    char_types = 0
-
-    types = [
-        r"[a-z]",
-        r"[A-Z]",
-        r"[0-9]",
-        r"[^a-zA-Z0-9]",
-    ]
-
-    for regex in types:
-        if re.search(regex, value):
-            char_types += 1
-
-    if char_types < 2:
-        raise ValidationError(
-            "Password must contain at least 2 different types of characters "
-            "(uppercase letters, lowercase letters, numbers, or symbols)."
-        )
-
-    return value
 
 
 # ==========================================
@@ -59,7 +29,7 @@ class UserCreationRequestSerializer(serializers.Serializer):
         min_length=1, max_length=255, default="Default workspace"
     )
 
-    def validate_password(self, value):
+    def validate_password(self, value: str):
         validate_new_password(value)
         return value
 

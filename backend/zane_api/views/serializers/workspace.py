@@ -2,6 +2,7 @@ from rest_framework import serializers
 from ...models import Project, WorkspaceRole, Workspace
 from typing import Sequence
 from django.contrib.auth.validators import UnicodeUsernameValidator
+from ...validators import validate_new_password
 
 
 class SwitchWorkspaceRequestSerializer(serializers.Serializer):
@@ -21,6 +22,22 @@ class RegenerateWorkspaceInvitationRequestSerializer(serializers.Serializer):
         ],
         default=3,
     )
+
+
+class WorkspaceAcceptInvitationRequestSerializer(serializers.Serializer):
+    password = serializers.CharField(min_length=8, max_length=255)
+
+    def validate_password(self, value: str):
+        has_existing_account = self.context.get("has_existing_account", False)
+
+        if not has_existing_account:
+            validate_new_password(value)
+        return value
+
+
+class WorkspaceAcceptInvitationResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+    detail = serializers.CharField()
 
 
 class InviteUserIntoWorkspaceRequestSerializer(serializers.Serializer):

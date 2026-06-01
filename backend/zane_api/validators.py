@@ -3,6 +3,34 @@ from urllib.parse import urlparse
 
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
+from django.contrib.auth.password_validation import validate_password
+
+
+def validate_new_password(value: str, user=None):
+    # configuration of validate_password is in settings.py["AUTH_PASSWORD_VALIDATORS"]
+    validate_password(value, user)
+
+    # Check for mix of uppercase, lowercase, numbers, symbols (>= 2 types of them)
+    char_types = 0
+
+    types = [
+        r"[a-z]",
+        r"[A-Z]",
+        r"[0-9]",
+        r"[^a-zA-Z0-9]",
+    ]
+
+    for regex in types:
+        if re.search(regex, value):
+            char_types += 1
+
+    if char_types < 2:
+        raise ValidationError(
+            "Password must contain at least 2 different types of characters "
+            "(uppercase letters, lowercase letters, numbers, or symbols)."
+        )
+
+    return value
 
 
 def validate_url_domain(value: str):

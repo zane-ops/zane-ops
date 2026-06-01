@@ -57,7 +57,7 @@ from django.contrib.auth import get_user_model
 if TYPE_CHECKING:
     from container_registry.models import SharedRegistryCredentials  # noqa: F401
     from compose.models import ComposeStack
-    from django.db.models.manager import RelatedManager
+    from django.db.models.manager import RelatedManager, ManyToManyRelatedManager
 
 
 class Workspace(TimestampedModel):
@@ -98,6 +98,9 @@ class WorkspaceRole(models.IntegerChoices):
 
 
 class WorkspaceInvitation(TimestampedModel):
+    if TYPE_CHECKING:
+        accessible_projects: RelatedManager["Project"]
+
     workspace = models.ForeignKey(to=Workspace, on_delete=models.CASCADE)
     expires_at = models.DateTimeField()
     id = ShortUUIDField(
