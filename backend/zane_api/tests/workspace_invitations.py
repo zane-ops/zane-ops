@@ -258,6 +258,7 @@ class RegenerateWorkspaceInvitationViewTests(AuthAPITestCase):
 
         data = {
             "username": "mohai",
+            "role": WorkspaceRole.MEMBER,
         }
         response = self.client.post(
             reverse("zane_api:workspace.invite_user"),
