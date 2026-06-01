@@ -6,18 +6,19 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.generics import (
-    ListAPIView,
-    RetrieveDestroyAPIView,
-)
-from rest_framework import status
+from rest_framework.generics import ListAPIView, DestroyAPIView, RetrieveAPIView
+from rest_framework import status, permissions
 
 from .base import ResourceConflict
 
 
 from ..models import WorkspaceMembership, WorkspaceInvitation
 from rest_framework import exceptions
-from ..serializers import WorkspaceInvitationSerializer, WorkspaceMemberSerializer
+from ..serializers import (
+    WorkspaceInvitationSerializer,
+    WorkspaceMemberSerializer,
+    WorkspaceInvitationLinkSerializer,
+)
 from ..permissions import (
     HasWorkspace,
     IsWorkspaceAdmin,
@@ -93,7 +94,7 @@ class RegenerateWorkspaceInvitationAPIView(APIView):
         return Response(data=serializer.data)
 
 
-class WorkspaceInvitationDetailsAPIView(RetrieveDestroyAPIView):
+class WorkspaceInvitationDeleteAPIView(DestroyAPIView):
     permission_classes = [HasWorkspace, IsWorkspaceAdmin]
     serializer_class = WorkspaceInvitationSerializer
     queryset = WorkspaceInvitation.objects.all()
@@ -102,6 +103,14 @@ class WorkspaceInvitationDetailsAPIView(RetrieveDestroyAPIView):
 
     def get_queryset(self):
         return super().get_queryset().filter(workspace=self.request.workspace)
+
+
+class WorkspaceInvitationLinkDetailsAPIView(RetrieveAPIView):
+    permission_classes = [permissions.AllowAny]
+    serializer_class = WorkspaceInvitationLinkSerializer
+    queryset = WorkspaceInvitation.objects.all().select_related("workspace")
+    lookup_field = "token"
+    lookup_url_kwarg = "token"
 
 
 class InviteUserIntoWorkspaceAPIView(APIView):

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ...models import WorkspaceInvitation, Project, WorkspaceRole, Workspace
+from ...models import Project, WorkspaceRole, Workspace
 from typing import Sequence
 from django.contrib.auth.validators import UnicodeUsernameValidator
 

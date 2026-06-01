@@ -52,6 +52,7 @@ from typing import TYPE_CHECKING
 from asgiref.sync import sync_to_async
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from typing import Literal
+from django.contrib.auth import get_user_model
 
 if TYPE_CHECKING:
     from container_registry.models import SharedRegistryCredentials  # noqa: F401
@@ -120,6 +121,11 @@ class WorkspaceInvitation(TimestampedModel):
     @property
     def role_name(self) -> Literal["Owner", "Admin", "Member", "Contributor", "Guest"]:
         return self.get_role_display()
+
+    @property
+    def has_existing_account(self) -> bool:
+        User = get_user_model()
+        return User.objects.filter(username=self.username).exists()
 
     class Meta:
         unique_together = [("username", "workspace")]

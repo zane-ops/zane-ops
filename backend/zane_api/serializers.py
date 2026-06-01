@@ -102,6 +102,27 @@ class WorkspaceInvitationSerializer(serializers.ModelSerializer):
         ]
 
 
+class SimpleWorkspaceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Workspace
+        fields = ["name"]
+
+
+class WorkspaceInvitationLinkSerializer(serializers.ModelSerializer):
+    workspace = SimpleWorkspaceSerializer(read_only=True)
+
+    class Meta:
+        model = models.WorkspaceInvitation
+        fields = [
+            "role_name",
+            "role",
+            "token",
+            "username",
+            "has_existing_account",
+            "workspace",
+        ]
+
+
 class WorkspaceMembershipSerializer(serializers.ModelSerializer):
     workspace = WorkspaceSerializer(read_only=True)
 
