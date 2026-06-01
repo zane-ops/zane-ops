@@ -74,6 +74,44 @@ class WorkspaceInviteUserViewTests(AuthAPITestCase):
             delta=timedelta(seconds=5),
         )
 
+    def test_cannot_invite_user_who_is_already_in_workspace(self):
+        self.loginUser()
+
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        user = User.objects.create_user(username="mohai", password="another")
+
+        WorkspaceMembership.objects.create(
+            role=WorkspaceRole.MEMBER,
+            user=user,
+            workspace=workspace,
+        )
+
+        data = {
+            "username": user.username,
+            "role": WorkspaceRole.MEMBER,
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    def test_cannot_invite_oneself(self):
+        user = self.loginUser()
+
+        data = {
+            "username": user.username,
+            "role": WorkspaceRole.MEMBER,
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
     def test_invite_with_guest_role(self):
         self.loginUser()
         response = self.client.post(
@@ -646,3 +684,38 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
 
         # 6- Invitation should be deleted
         self.assertEqual(0, WorkspaceInvitation.objects.count())
+
+    def test_accept_invitation_automatically_when_logged_in(self):
+        self.loginUser()
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        # 0- Create user
+        new_user = User.objects.create_user(username="mohai", password="p4$$word")
+
+        # 1- Create invitation
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.MEMBER,
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
+
+        # 2- Login other user
+        self.client.login(username="mohai", password="p4$$word")
+
+        # 3- Accept invitation
+        data = {}
+        response = self.client.post(
+            reverse(
+                "zane_api:workspace.accept_invitation",
+                kwargs={"token": new_invitation.token},
+            ),
+            data=data,
+        )
+        jprint(response.json())

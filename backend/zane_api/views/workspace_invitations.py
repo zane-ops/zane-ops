@@ -136,8 +136,8 @@ class WorkspaceAcceptInvitationAPIView(APIView):
         authed_user: AbstractUser = request.user
         if authed_user.is_authenticated and invitation.username != authed_user.username:
             raise ResourceConflict(
-                    "This invitation is not intended for the currently logged-in account. Please log out and try again."
-                )
+                "This invitation is not intended for the currently logged-in account. Please log out and try again."
+            )
 
         has_existing_account = invitation.has_existing_account
 
@@ -207,6 +207,15 @@ class InviteUserIntoWorkspaceAPIView(APIView):
         data = cast(dict, form.validated_data)
 
         accessible_projects = data["accessible_project_ids"]
+
+        if data["username"] == self.request.user.username:
+            raise ResourceConflict("You cannot invite yourself to the workspace.")
+
+        if WorkspaceMembership.objects.filter(
+            user__username=data["username"],
+            workspace=self.request.workspace,  # type: ignore
+        ).exists():
+            raise ResourceConflict("This user is already a member of the workspace.")
 
         try:
             invitation = WorkspaceInvitation.objects.create(
