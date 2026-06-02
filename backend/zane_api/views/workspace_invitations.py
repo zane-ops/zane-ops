@@ -117,14 +117,15 @@ class WorkspaceRegisterInvitationAPIView(APIView):
     def post(self, request: Request, token: str):
         try:
             invitation = (
-                WorkspaceInvitation.objects.filter(token=token)
+                WorkspaceInvitation.objects.filter(
+                    token=token,
+                    expires_at__gt=timezone.now(),
+                )
                 .select_related("workspace")
                 .get()
             )
         except WorkspaceInvitation.DoesNotExist:
-            raise exceptions.NotFound(
-                f"An invitation with the token `{token}` does not exist."
-            )
+            raise exceptions.NotFound("This invitation link is invalid or has expired.")
 
         if invitation.has_existing_account:
             raise BadRequest(
@@ -183,14 +184,13 @@ class WorkspaceAcceptInvitationAPIView(APIView):
                 WorkspaceInvitation.objects.filter(
                     token=token,
                     username=request.user.username,
+                    expires_at__gt=timezone.now(),
                 )
                 .select_related("workspace")
                 .get()
             )
         except WorkspaceInvitation.DoesNotExist:
-            raise exceptions.NotFound(
-                f"An invitation with the token `{token}` does not exist."
-            )
+            raise exceptions.NotFound("This invitation link is invalid or has expired.")
 
         membership = WorkspaceMembership.objects.create(
             user=request.user,

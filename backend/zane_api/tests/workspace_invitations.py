@@ -783,7 +783,73 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         self.assertEqual(workspace_id, workspace.id)
 
     def test_cannot_register_with_expired_invitation(self):
-        self.fail("Not implemented yet")
+        self.loginUser()
+
+        # 1- Create invitation
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.MEMBER,
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
+
+        # Modify the invitation expiration date to be in the past
+        new_invitation.expires_at = timezone.now() - timedelta(days=8)
+        new_invitation.save()
+
+        # 2- Logout current user
+        self.client.logout()
+
+        # 2- Register new user
+        data = {"password": "p4$$word"}
+        response = self.client.post(
+            reverse(
+                "zane_api:workspace.register", kwargs={"token": new_invitation.token}
+            ),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     def test_cannot_accept_expired_invitation(self):
-        self.fail("Not implemented yet")
+        self.loginUser()
+
+        # 0- Create user
+        User.objects.create_user(username="mohai", password="password")
+
+        # 1- Create invitation
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.MEMBER,
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
+
+        # Modify the invitation expiration date to be in the past
+        new_invitation.expires_at = timezone.now() - timedelta(days=8)
+        new_invitation.save()
+
+        # 2- Login to second user
+        self.client.login(username="mohai", password="password")
+
+        # 3- Accept invitation
+        response = self.client.post(
+            reverse(
+                "zane_api:workspace.accept_invitation",
+                kwargs={"token": new_invitation.token},
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
