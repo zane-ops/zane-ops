@@ -32,7 +32,6 @@ class WorkspaceRegisterRequestSerializer(serializers.Serializer):
 
 class WorkspaceAcceptInvitationResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
-    detail = serializers.CharField()
 
 
 class InviteUserIntoWorkspaceRequestSerializer(serializers.Serializer):

@@ -159,12 +159,7 @@ class WorkspaceRegisterInvitationAPIView(APIView):
 
         invitation.delete()
 
-        serializer = WorkspaceAcceptInvitationResponseSerializer(
-            {
-                "success": True,
-                "detail": "User logged in successfully.",
-            }
-        )
+        serializer = WorkspaceAcceptInvitationResponseSerializer({"success": True})
         return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -173,6 +168,7 @@ class WorkspaceAcceptInvitationAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
+        request=None,
         responses={201: WorkspaceAcceptInvitationResponseSerializer},
         operation_id="acceptInvitation",
         summary="Accept workspace invitation",
@@ -203,12 +199,7 @@ class WorkspaceAcceptInvitationAPIView(APIView):
 
         invitation.delete()
 
-        serializer = WorkspaceAcceptInvitationResponseSerializer(
-            {
-                "success": True,
-                "detail": "User logged in successfully.",
-            }
-        )
+        serializer = WorkspaceAcceptInvitationResponseSerializer({"success": True})
         return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
 
