@@ -33,8 +33,9 @@ from .serializers import (
     WorkspaceRegisterRequestSerializer,
 )
 from django.contrib.auth.models import User, AbstractUser
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import login
 from django.db import transaction
+from ..constants import WORKSPACE_SESSION_KEY
 
 
 class ListWorkspaceInvitationAPIView(ListAPIView):
@@ -157,6 +158,9 @@ class WorkspaceRegisterInvitationAPIView(APIView):
 
         login(request, user)  # type: ignore
 
+        # Commit workspace to session
+        request.session[WORKSPACE_SESSION_KEY] = invitation.workspace.id
+
         invitation.delete()
 
         serializer = WorkspaceAcceptInvitationResponseSerializer({"success": True})
@@ -196,6 +200,9 @@ class WorkspaceAcceptInvitationAPIView(APIView):
 
         for project in invitation.accessible_projects.all():
             membership.accessible_projects.add(project)
+
+        # Commit workspace to session
+        request.session[WORKSPACE_SESSION_KEY] = invitation.workspace.id
 
         invitation.delete()
 

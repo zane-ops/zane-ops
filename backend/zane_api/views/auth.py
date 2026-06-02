@@ -94,9 +94,6 @@ class LoginView(APIView):
 
             login(request, user)  # type: ignore
 
-            # TODO: remove in future updates
-            token, _ = Token.objects.get_or_create(user=user)
-
             # Set the current authed workspace to be the first workspace of the user
             request.session[WORKSPACE_SESSION_KEY] = associated_workspace.id
 

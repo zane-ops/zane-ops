@@ -16,6 +16,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.contrib import auth
 from django.contrib.auth.models import User
+from ..constants import WORKSPACE_SESSION_KEY
 
 
 class WorkspaceInviteUserViewTests(AuthAPITestCase):
@@ -704,3 +705,85 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
 
         # 6- Invitation should be deleted
         self.assertEqual(0, WorkspaceInvitation.objects.count())
+
+    def test_register_into_workspace_should_commit_workspace_into_session(self):
+        self.loginUser()
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        # 1- Create invitation
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.MEMBER,
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
+
+        # 2- Logout current user
+        self.client.logout()
+
+        # 2- Register new user
+        data = {"password": "p4$$word"}
+        response = self.client.post(
+            reverse(
+                "zane_api:workspace.register", kwargs={"token": new_invitation.token}
+            ),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Verify that workspace session is set
+        workspace_id = self.client.session.get(WORKSPACE_SESSION_KEY)
+        self.assertIsNotNone(workspace_id)
+        self.assertEqual(workspace_id, workspace.id)
+
+    def test_accept_invitation_should_commit_workspace_into_session(self):
+        self.loginUser()
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        # 0- Create user
+        User.objects.create_user(username="mohai", password="password")
+
+        # 1- Create invitation
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.MEMBER,
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
+
+        # 2- Login to second user
+        self.client.login(username="mohai", password="password")
+
+        # 3- Accept invitation
+        response = self.client.post(
+            reverse(
+                "zane_api:workspace.accept_invitation",
+                kwargs={"token": new_invitation.token},
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Verify that workspace session is set
+        workspace_id = self.client.session.get(WORKSPACE_SESSION_KEY)
+        self.assertIsNotNone(workspace_id)
+        self.assertEqual(workspace_id, workspace.id)
+
+    def test_cannot_register_with_expired_invitation(self):
+        self.fail("Not implemented yet")
+
+    def test_cannot_accept_expired_invitation(self):
+        self.fail("Not implemented yet")

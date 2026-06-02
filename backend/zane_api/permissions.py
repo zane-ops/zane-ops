@@ -48,9 +48,11 @@ class HasWorkspace(BasePermission):
 
         qs = Workspace.objects.filter(memberships__user=request.user)
 
-        if workspace_id:
+        if workspace_id is not None:
             qs = qs.filter(id=workspace_id)
-        workspace = qs.earliest("created_at")
+
+        workspace = qs.order_by("created_at").first()
+
         request.workspace = workspace  # type: ignore
         return request.workspace is not None
 
