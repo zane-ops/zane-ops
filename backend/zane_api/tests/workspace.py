@@ -221,16 +221,6 @@ class OnBoardingTests(APITestCase):
 
 
 class WorkspaceMiddlewareTests(AuthAPITestCase):
-    def test_cannot_login_without_being_a_workspace_member(self):
-        User.objects.create_user(username="mohai", password="password")
-
-        response = self.client.post(
-            reverse("zane_api:auth.login"),
-            data={"username": "mohai", "password": "password"},
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
-
     def test_set_workspace_when_login(self):
         response = self.client.post(
             reverse("zane_api:auth.login"),

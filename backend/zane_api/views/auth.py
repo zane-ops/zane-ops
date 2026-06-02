@@ -84,18 +84,15 @@ class LoginView(APIView):
             username=data.get("username"), password=data.get("password")
         )
         if user is not None:
+            login(request, user)  # type: ignore
+
             associated_workspace = Workspace.objects.filter(
                 memberships__user=user
             ).first()
-            if associated_workspace is None:
-                raise exceptions.PermissionDenied(
-                    detail="This account is not associated with any workspace. Please contact your administrator."
-                )
 
-            login(request, user)  # type: ignore
-
-            # Set the current authed workspace to be the first workspace of the user
-            request.session[WORKSPACE_SESSION_KEY] = associated_workspace.id
+            if associated_workspace is not None:
+                # Set the current authed workspace to be the first workspace of the user
+                request.session[WORKSPACE_SESSION_KEY] = associated_workspace.id
 
             response = LoginSuccessResponseSerializer({"success": True})
             query_params = request.query_params.dict()
@@ -109,7 +106,7 @@ class LoginView(APIView):
 
 class AuthedSuccessResponseSerializer(serializers.Serializer):
     user = UserSerializer(read_only=True)
-    membership = WorkspaceMembershipSerializer(read_only=True)
+    membership = WorkspaceMembershipSerializer(read_only=True, allow_null=True)
 
 
 class AuthedView(APIView):
@@ -136,7 +133,7 @@ class AuthedView(APIView):
                 workspace=request.workspace,
             )
             .select_related("workspace")
-            .get()
+            .first()
         )
 
         response = AuthedSuccessResponseSerializer(
