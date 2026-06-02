@@ -1,4 +1,4 @@
-from .auth import *
+from .authentication import *
 from .deployment import *
 from .docker import *
 from .logs import *

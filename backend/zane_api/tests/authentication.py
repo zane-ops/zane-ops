@@ -1,8 +1,6 @@
 from datetime import timedelta
-from typing import cast
 from unittest.mock import patch, Mock
 
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.http import QueryDict
 from django.urls import reverse
@@ -11,7 +9,6 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 
 from .base import AuthAPITestCase, APITestCase
-from ..models import Workspace, WorkspaceMembership, WorkspaceRole
 
 
 class AuthLoginViewTests(AuthAPITestCase):
