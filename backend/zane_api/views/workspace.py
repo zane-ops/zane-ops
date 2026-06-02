@@ -10,22 +10,42 @@ from rest_framework.generics import ListAPIView, CreateAPIView, UpdateAPIView
 from rest_framework import status
 
 
-from ..models import Workspace, WorkspaceMembership, WorkspaceRole
+from ..models import Workspace, WorkspaceMembership, WorkspaceRole, WorkspaceInvitation
 from ..constants import WORKSPACE_SESSION_KEY
 from .serializers import SwitchWorkspaceRequestSerializer
 from rest_framework import exceptions
-from ..serializers import WorkspaceMembershipSerializer, WorkspaceSerializer
+from ..serializers import (
+    WorkspaceMembershipSerializer,
+    WorkspaceSerializer,
+    WorkspaceMemberSerializer,
+)
 from ..permissions import (
     IsInstanceOwner,
     HasWorkspace,
     IsWorkspaceOwner,
+    IsWorkspaceAdmin,
 )
 
 from django.db.models import QuerySet
 
 
+class ListWorkspaceMembersAPIView(ListAPIView):
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
+    serializer_class = WorkspaceMemberSerializer
+
+    def get_queryset(self) -> QuerySet[WorkspaceInvitation]:  # type: ignore
+        return (
+            WorkspaceMembership.objects.filter(
+                workspace=self.request.workspace  # type: ignore
+            )
+            .select_related("user")
+            .prefetch_related("accessible_projects")
+        )
+
+
 class WorkspaceMembershipListAPIView(ListAPIView):
     serializer_class = WorkspaceMembershipSerializer
+    pagination_class = None
 
     def get_queryset(self) -> QuerySet[WorkspaceMembership]:  # type: ignore
         return WorkspaceMembership.objects.filter(
@@ -59,8 +79,8 @@ class CreateWorkspaceAPIView(CreateAPIView):
         operation_id="createWorkspace",
         summary="Create a new workspace",
     )
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
 
 
 class SwitchWorkspaceAPIView(APIView):

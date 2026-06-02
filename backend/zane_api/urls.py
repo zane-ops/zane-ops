@@ -30,11 +30,46 @@ urlpatterns = [
         views.EditWorkspaceAPIView.as_view(),
         name="workspace.edit",
     ),
-    # re_path(
-    #     r"^auth/me/with-token/?$",
-    #     views.TokenAuthedView.as_view(),
-    #     name="auth.me.with_token",
-    # ),
+    re_path(
+        r"^workspace/invite-user/?$",
+        views.InviteUserIntoWorkspaceAPIView.as_view(),
+        name="workspace.invite_user",
+    ),
+    re_path(
+        r"^workspace/invitations/?$",
+        views.ListWorkspaceInvitationAPIView.as_view(),
+        name="workspace.list_invitations",
+    ),
+    re_path(
+        r"^workspace/invitations/(?P<token>[a-zA-Z0-9]+)/?$",
+        views.WorkspaceInvitationLinkDetailsAPIView.as_view(),
+        name="workspace.invitation_detail",
+    ),
+    re_path(
+        r"^workspace/register/(?P<token>[a-zA-Z0-9]+)/?$",
+        views.WorkspaceRegisterInvitationAPIView.as_view(),
+        name="workspace.register",
+    ),
+    re_path(
+        r"^workspace/invitations/(?P<token>[a-zA-Z0-9]+)/accept/?$",
+        views.WorkspaceAcceptInvitationAPIView.as_view(),
+        name="workspace.accept_invitation",
+    ),
+    re_path(
+        r"^workspace/invitations/(?P<id>[a-zA-Z0-9-_]+)/delete/?$",
+        views.WorkspaceInvitationDeleteAPIView.as_view(),
+        name="workspace.invitation_delete",
+    ),
+    re_path(
+        r"^workspace/invitations/(?P<id>[a-zA-Z0-9-_]+)/regenerate/?$",
+        views.RegenerateWorkspaceInvitationAPIView.as_view(),
+        name="workspace.regenerate_invitation",
+    ),
+    re_path(
+        r"^workspace/members/?$",
+        views.ListWorkspaceMembersAPIView.as_view(),
+        name="workspace.list_members",
+    ),
     re_path(r"^auth/logout/?$", views.AuthLogoutView.as_view(), name="auth.logout"),
     re_path(
         r"^auth/change-password/?$",

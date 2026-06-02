@@ -1,4 +1,5 @@
 import os
+from typing import Sequence
 
 from django.contrib.auth.models import User
 from django.db.models import TextChoices
@@ -76,12 +77,88 @@ class WorkspaceSerializer(serializers.ModelSerializer):
         }
 
 
+class AccessibleWorkspaceProjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Project
+        fields = ["id", "slug"]
+
+
+class WorkspaceInvitationSerializer(serializers.ModelSerializer):
+    accessible_projects = AccessibleWorkspaceProjectSerializer(
+        many=True,
+        read_only=True,
+    )
+
+    class Meta:
+        model = models.WorkspaceInvitation
+        fields = [
+            "role_name",
+            "expires_at",
+            "role",
+            "token",
+            "id",
+            "username",
+            "accessible_projects",
+        ]
+
+
+class SimpleWorkspaceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Workspace
+        fields = ["name"]
+
+
+class WorkspaceInvitationLinkSerializer(serializers.ModelSerializer):
+    workspace = SimpleWorkspaceSerializer(read_only=True)
+
+    class Meta:
+        model = models.WorkspaceInvitation
+        fields = [
+            "role_name",
+            "role",
+            "token",
+            "username",
+            "has_existing_account",
+            "workspace",
+        ]
+
+
 class WorkspaceMembershipSerializer(serializers.ModelSerializer):
     workspace = WorkspaceSerializer(read_only=True)
 
     class Meta:
         model = models.WorkspaceMembership
-        fields = ["role_name", "role", "workspace"]
+        fields = ["id", "role_name", "role", "workspace"]
+
+
+class SimpleWorkspaceUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "username",
+            "first_name",
+            "last_name",
+        ]
+
+
+class WorkspaceMemberSerializer(serializers.ModelSerializer):
+    accessible_projects = AccessibleWorkspaceProjectSerializer(
+        many=True,
+        read_only=True,
+    )
+    user = SimpleWorkspaceUserSerializer(
+        read_only=True,
+    )
+
+    class Meta:
+        model = models.WorkspaceMembership
+        fields = [
+            "id",
+            "role_name",
+            "role",
+            "accessible_projects",
+            "user",
+        ]
 
 
 class SharedEnvVariableSerializer(serializers.ModelSerializer):

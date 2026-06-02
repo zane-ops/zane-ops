@@ -565,19 +565,55 @@ export interface paths {
      */
     post: operations["trigger_update_create"];
   };
+  "/api/workspace/edit/": {
+    put: operations["workspace_edit_update"];
+  };
+  "/api/workspace/invitations/": {
+    get: operations["workspace_invitations_list"];
+  };
+  "/api/workspace/invitations/{id}/": {
+    get: operations["workspace_invitations_retrieve"];
+    delete: operations["workspace_invitations_destroy"];
+  };
+  "/api/workspace/invite-user/": {
+    /** Generate an invitation link for a new user in a workspace */
+    post: operations["inviteUser"];
+  };
+  "/api/workspace/members/": {
+    get: operations["workspace_members_list"];
+  };
+  "/api/workspaces/create/": {
+    /** Create a new workspace */
+    post: operations["createWorkspace"];
+  };
+  "/api/workspaces/list/": {
+    get: operations["workspaces_list_list"];
+  };
+  "/api/workspaces/switch/": {
+    /** Switch workspaces */
+    post: operations["switchWorkspace"];
+  };
 }
 
 export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    AccessibleWorkspaceProject: {
+      id: string;
+      slug: string;
+    };
+    AccessibleWorkspaceProjectRequest: {
+      id?: string;
+      slug: string;
+    };
     ArchiveComposeStackErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveGitServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     AuthCheckUserExistenceRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    AuthCreateInitialUserCreateError: components["schemas"]["AuthCreateInitialUserCreateNonFieldErrorsErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreateUsernameErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreatePasswordErrorComponent"];
+    AuthCreateInitialUserCreateError: components["schemas"]["AuthCreateInitialUserCreateNonFieldErrorsErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreateUsernameErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreatePasswordErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreateWorkspaceNameErrorComponent"];
     AuthCreateInitialUserCreateErrorResponse400: components["schemas"]["AuthCreateInitialUserCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     AuthCreateInitialUserCreateNonFieldErrorsErrorComponent: {
       /**
@@ -635,8 +671,28 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["AuthCreateInitialUserCreateError"][];
     };
+    AuthCreateInitialUserCreateWorkspaceNameErrorComponent: {
+      /**
+       * @description * `workspace_name` - workspace_name
+       * @enum {string}
+       */
+      attr: "workspace_name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `min_length` - min_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     AuthedSuccessResponse: {
       user: components["schemas"]["User"];
+      membership: components["schemas"]["WorkspaceMembership"];
     };
     AutoUpdateRequestRequest: {
       desired_version: string;
@@ -2407,6 +2463,44 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateSSHKeyError"][];
     };
+    CreateWorkspaceError: components["schemas"]["CreateWorkspaceNonFieldErrorsErrorComponent"] | components["schemas"]["CreateWorkspaceNameErrorComponent"];
+    CreateWorkspaceErrorResponse400: components["schemas"]["CreateWorkspaceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CreateWorkspaceNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateWorkspaceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    CreateWorkspaceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["CreateWorkspaceError"][];
+    };
     /**
      * @description * `APPROVE` - APPROVE
      * * `DECLINE` - DECLINE
@@ -2817,6 +2911,11 @@ export interface components {
       detail: string;
       attr: string | null;
     };
+    Error403: {
+      code: components["schemas"]["ErrorCode403Enum"];
+      detail: string;
+      attr: string | null;
+    };
     Error404: {
       code: components["schemas"]["ErrorCode404Enum"];
       detail: string;
@@ -2844,6 +2943,11 @@ export interface components {
      */
     ErrorCode401Enum: "authentication_failed" | "not_authenticated";
     /**
+     * @description * `permission_denied` - Permission Denied
+     * @enum {string}
+     */
+    ErrorCode403Enum: "permission_denied";
+    /**
      * @description * `not_found` - Not Found
      * @enum {string}
      */
@@ -2856,6 +2960,10 @@ export interface components {
     ErrorResponse401: {
       type: components["schemas"]["ClientErrorEnum"];
       errors: components["schemas"]["Error401"][];
+    };
+    ErrorResponse403: {
+      type: components["schemas"]["ClientErrorEnum"];
+      errors: components["schemas"]["Error403"][];
     };
     ErrorResponse404: {
       type: components["schemas"]["ClientErrorEnum"];
@@ -3328,6 +3436,89 @@ export interface components {
       errors: components["schemas"]["HttpLogsListError"][];
     };
     HttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    InviteUserAccessibleProjectIdsErrorComponent: {
+      /**
+       * @description * `accessible_project_ids` - accessible_project_ids
+       * @enum {string}
+       */
+      attr: "accessible_project_ids";
+      /**
+       * @description * `does_not_exist` - does_not_exist
+       * * `incorrect_type` - incorrect_type
+       * * `not_a_list` - not_a_list
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "does_not_exist" | "incorrect_type" | "not_a_list" | "null";
+      detail: string;
+    };
+    InviteUserError: components["schemas"]["InviteUserNonFieldErrorsErrorComponent"] | components["schemas"]["InviteUserRoleErrorComponent"] | components["schemas"]["InviteUserUsernameErrorComponent"] | components["schemas"]["InviteUserAccessibleProjectIdsErrorComponent"] | components["schemas"]["InviteUserValidForErrorComponent"];
+    InviteUserErrorResponse400: components["schemas"]["InviteUserValidationError"] | components["schemas"]["ParseErrorResponse"];
+    InviteUserNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    InviteUserRoleErrorComponent: {
+      /**
+       * @description * `role` - role
+       * @enum {string}
+       */
+      attr: "role";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "max_value" | "min_value" | "null";
+      detail: string;
+    };
+    InviteUserUsernameErrorComponent: {
+      /**
+       * @description * `username` - username
+       * @enum {string}
+       */
+      attr: "username";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    InviteUserValidForErrorComponent: {
+      /**
+       * @description * `valid_for` - valid_for
+       * @enum {string}
+       */
+      attr: "valid_for";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    InviteUserValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["InviteUserError"][];
+    };
     /**
      * @description * `ADD` - Add
      * * `DELETE` - Delete
@@ -3599,6 +3790,51 @@ export interface components {
        */
       previous: string | null;
       results: components["schemas"]["ServiceDeployment"][];
+    };
+    PaginatedWorkspaceInvitationList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["WorkspaceInvitation"][];
+    };
+    PaginatedWorkspaceMemberList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["WorkspaceMember"][];
+    };
+    PaginatedWorkspaceMembershipList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["WorkspaceMembership"][];
     };
     ParseError: {
       code: components["schemas"]["ParseErrorCodeEnum"];
@@ -6473,6 +6709,16 @@ export interface components {
     ReviewPreviewEnvDeploymentRequestRequest: {
       decision: components["schemas"]["DecisionEnum"];
     };
+    /**
+     * @description * `10` - Guest
+     * * `30` - Member
+     * * `40` - Admin
+     * * `50` - Owner
+     * @enum {integer}
+     */
+    RoleEnum: 10 | 30 | 40 | 50;
+    /** @enum {string} */
+    RoleNameEnum: "Owner" | "Admin" | "Member" | "Contributor" | "Guest";
     RuntimeLog: {
       id: string;
       service_id: string | null;
@@ -6844,6 +7090,12 @@ export interface components {
     SimpleTemplateServiceRequest: {
       id?: string;
     };
+    SimpleWorkspaceUser: {
+      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+      username: string;
+      first_name: string;
+      last_name: string;
+    };
     /**
      * @description * `BLUE` - Blue
      * * `GREEN` - Green
@@ -6881,6 +7133,46 @@ export interface components {
      * @enum {string}
      */
     StorageBackendEnum: "LOCAL" | "S3";
+    SwitchWorkspaceError: components["schemas"]["SwitchWorkspaceNonFieldErrorsErrorComponent"] | components["schemas"]["SwitchWorkspaceWorkspaceIdErrorComponent"];
+    SwitchWorkspaceErrorResponse400: components["schemas"]["SwitchWorkspaceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    SwitchWorkspaceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    SwitchWorkspaceRequestRequest: {
+      workspace_id: string;
+    };
+    SwitchWorkspaceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["SwitchWorkspaceError"][];
+    };
+    SwitchWorkspaceWorkspaceIdErrorComponent: {
+      /**
+       * @description * `workspace_id` - workspace_id
+       * @enum {string}
+       */
+      attr: "workspace_id";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     SyncGitlabReposErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SyncGitlabRepositoriesResponse: {
       repositories_count: number;
@@ -7383,6 +7675,11 @@ export interface components {
       username: string;
       first_name: string;
       last_name: string;
+      /**
+       * Superuser status
+       * @description Designates that this user has all permissions without explicitly assigning them.
+       */
+      is_superuser: boolean;
     };
     UserCreatedResponse: {
       detail: string;
@@ -7390,10 +7687,23 @@ export interface components {
     UserCreationRequestRequest: {
       username: string;
       password: string;
+      /** @default Default workspace */
+      workspace_name?: string;
     };
     UserExistenceResponse: {
       exists: boolean;
     };
+    /**
+     * @description * `1` - 1 day
+     * * `2` - 2 days
+     * * `3` - 3 days
+     * * `4` - 4 days
+     * * `5` - 5 days
+     * * `6` - 6 days
+     * * `7` - 7 days
+     * @enum {integer}
+     */
+    ValidForEnum: 1 | 2 | 3 | 4 | 5 | 6 | 7;
     /**
      * @description * `validation_error` - Validation Error
      * @enum {string}
@@ -7788,6 +8098,86 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["WebhookTriggerPreviewEnvError"][];
     };
+    Workspace: {
+      id: string;
+      name: string;
+    };
+    WorkspaceEditUpdateError: components["schemas"]["WorkspaceEditUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["WorkspaceEditUpdateNameErrorComponent"];
+    WorkspaceEditUpdateErrorResponse400: components["schemas"]["WorkspaceEditUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    WorkspaceEditUpdateNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WorkspaceEditUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    WorkspaceEditUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["WorkspaceEditUpdateError"][];
+    };
+    WorkspaceInvitation: {
+      role_name: components["schemas"]["RoleNameEnum"];
+      /** Format: date-time */
+      expires_at: string;
+      role: components["schemas"]["RoleEnum"];
+      token: string;
+      id: string;
+      username: string;
+      accessible_projects: readonly components["schemas"]["AccessibleWorkspaceProject"][];
+    };
+    WorkspaceInvitationRequest: {
+      role?: components["schemas"]["RoleEnum"];
+      username: string;
+      /** @default [] */
+      accessible_project_ids?: string[];
+      /** @default 3 */
+      valid_for?: components["schemas"]["ValidForEnum"];
+    };
+    WorkspaceInvitationsDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    WorkspaceInvitationsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    WorkspaceInvitationsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    WorkspaceMember: {
+      id: number;
+      role_name: components["schemas"]["RoleNameEnum"];
+      role: components["schemas"]["RoleEnum"];
+      accessible_projects: readonly components["schemas"]["AccessibleWorkspaceProject"][];
+      user: components["schemas"]["SimpleWorkspaceUser"];
+    };
+    WorkspaceMembersListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    WorkspaceMembership: {
+      role_name: components["schemas"]["RoleNameEnum"];
+      role: components["schemas"]["RoleEnum"];
+      workspace: components["schemas"]["Workspace"];
+    };
+    WorkspaceRequest: {
+      name: string;
+    };
+    WorkspacesListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WriteableContainerRegistryCredentials: {
       id: string;
       /** @default DOCKER_HUB */
@@ -7844,6 +8234,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {
@@ -7972,6 +8367,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       429: {
         content: {
           "application/json": components["schemas"]["ErrorResponse429"];
@@ -7998,6 +8398,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {
@@ -8035,6 +8440,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -8066,6 +8476,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {
@@ -8154,6 +8569,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -8189,6 +8609,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -8234,6 +8659,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -8268,6 +8698,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -8305,6 +8740,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -8356,6 +8796,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -8392,6 +8837,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -8447,6 +8897,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -8483,6 +8938,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -8527,6 +8987,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -8566,6 +9031,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -8621,6 +9091,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -8656,6 +9131,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -8700,6 +9180,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -8749,6 +9234,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -8790,6 +9280,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -8836,6 +9331,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -8885,6 +9385,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -8929,6 +9434,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -8977,6 +9487,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -9011,6 +9526,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -9042,6 +9562,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -9086,6 +9611,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -9124,6 +9654,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -9156,6 +9691,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -9199,6 +9739,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -9231,6 +9776,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -9269,6 +9819,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       429: {
         content: {
           "application/json": components["schemas"]["ErrorResponse429"];
@@ -9296,6 +9851,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -9333,6 +9893,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -9365,6 +9930,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -9408,6 +9978,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -9445,6 +10020,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       429: {
         content: {
           "application/json": components["schemas"]["ErrorResponse429"];
@@ -9475,6 +10055,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       429: {
         content: {
           "application/json": components["schemas"]["ErrorResponse429"];
@@ -9498,6 +10083,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {
@@ -9529,6 +10119,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {
@@ -9674,6 +10269,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       429: {
         content: {
           "application/json": components["schemas"]["ErrorResponse429"];
@@ -9744,6 +10344,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -9777,6 +10382,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -9822,6 +10432,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {
@@ -9891,6 +10506,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       429: {
         content: {
           "application/json": components["schemas"]["ErrorResponse429"];
@@ -9921,6 +10541,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       409: {
@@ -9963,6 +10588,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -10002,6 +10632,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -10039,6 +10674,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -10086,6 +10726,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -10131,6 +10776,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -10170,6 +10820,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -10215,6 +10870,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -10268,6 +10928,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -10317,6 +10982,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -10371,6 +11041,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -10418,6 +11093,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -10457,6 +11137,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -10507,6 +11192,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -10552,6 +11242,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -10601,6 +11296,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -10645,6 +11345,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -10710,6 +11415,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -10746,6 +11456,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -10788,6 +11503,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -10838,6 +11558,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -10884,6 +11609,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -10926,6 +11656,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -10961,6 +11696,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -11010,6 +11750,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -11054,6 +11799,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -11092,6 +11842,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -11136,6 +11891,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -11184,6 +11944,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -11222,6 +11987,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -11266,6 +12036,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -11301,6 +12076,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -11347,6 +12127,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -11381,6 +12166,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -11427,6 +12217,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -11462,6 +12257,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -11494,6 +12294,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -11538,6 +12343,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -11571,6 +12381,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -11615,6 +12430,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -11647,6 +12467,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -11689,6 +12514,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -11735,6 +12565,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -11787,6 +12622,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -11828,6 +12668,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -11864,6 +12709,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -11909,6 +12759,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -11943,6 +12798,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -11987,6 +12847,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -12019,6 +12884,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -12062,6 +12932,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -12095,6 +12970,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       429: {
         content: {
           "application/json": components["schemas"]["ErrorResponse429"];
@@ -12126,6 +13006,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -12164,6 +13049,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -12198,6 +13088,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -12230,6 +13125,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -12278,6 +13178,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -12317,6 +13222,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -12345,6 +13255,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {
@@ -12378,6 +13293,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       429: {
         content: {
           "application/json": components["schemas"]["ErrorResponse429"];
@@ -12405,6 +13325,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -12439,6 +13364,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -12487,6 +13417,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -12520,6 +13455,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -12557,6 +13497,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       429: {
         content: {
           "application/json": components["schemas"]["ErrorResponse429"];
@@ -12583,6 +13528,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {
@@ -12613,6 +13563,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       429: {
         content: {
           "application/json": components["schemas"]["ErrorResponse429"];
@@ -12636,6 +13591,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {
@@ -12668,6 +13628,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       409: {
@@ -12704,6 +13669,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -12735,6 +13705,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -12779,6 +13754,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -12819,9 +13799,372 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       409: {
         content: {
           "application/json": components["schemas"]["ErrorResponse409"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  workspace_edit_update: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WorkspaceRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["WorkspaceRequest"];
+        "multipart/form-data": components["schemas"]["WorkspaceRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Workspace"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceEditUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  workspace_invitations_list: {
+    parameters: {
+      query?: {
+        /** @description A page number within the paginated result set. */
+        page?: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedWorkspaceInvitationList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceInvitationsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  workspace_invitations_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceInvitation"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceInvitationsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  workspace_invitations_destroy: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceInvitationsDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Generate an invitation link for a new user in a workspace */
+  inviteUser: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WorkspaceInvitationRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["WorkspaceInvitationRequest"];
+        "multipart/form-data": components["schemas"]["WorkspaceInvitationRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceInvitation"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["InviteUserErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  workspace_members_list: {
+    parameters: {
+      query?: {
+        /** @description A page number within the paginated result set. */
+        page?: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedWorkspaceMemberList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceMembersListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Create a new workspace */
+  createWorkspace: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WorkspaceRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["WorkspaceRequest"];
+        "multipart/form-data": components["schemas"]["WorkspaceRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["Workspace"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CreateWorkspaceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  workspaces_list_list: {
+    parameters: {
+      query?: {
+        /** @description A page number within the paginated result set. */
+        page?: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedWorkspaceMembershipList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WorkspacesListListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Switch workspaces */
+  switchWorkspace: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SwitchWorkspaceRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["SwitchWorkspaceRequestRequest"];
+        "multipart/form-data": components["schemas"]["SwitchWorkspaceRequestRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["SwitchWorkspaceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {

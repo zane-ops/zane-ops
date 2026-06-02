@@ -19,6 +19,7 @@ from ...models import (
     GitApp,
     DeploymentChange,
     SharedVolume,
+    Workspace,
 )
 from temporal.helpers import (
     check_if_docker_image_exists,
@@ -57,8 +58,15 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     image = serializers.CharField(required=True)
     container_registry_credentials_id = serializers.CharField(required=False)
 
+    def _get_workspace(self):
+        workspace: Workspace | None = self.context.get("workspace")
+        assert workspace is not None
+        return workspace
+
     def validate_container_registry_credentials_id(self, value: str):
-        if not SharedRegistryCredentials.objects.filter(id=value).exists():
+        if not SharedRegistryCredentials.objects.filter(
+            id=value, workspace=self._get_workspace()
+        ).exists():
             raise serializers.ValidationError(
                 f"A container registry with an ID of `{value}` does not exist."
             )
@@ -914,8 +922,15 @@ class DockerSourceRequestSerializer(serializers.Serializer):
     image = serializers.CharField(required=True)
     container_registry_credentials_id = serializers.CharField(required=False)
 
+    def _get_workspace(self):
+        workspace: Workspace | None = self.context.get("workspace")
+        assert workspace is not None
+        return workspace
+
     def validate_container_registry_credentials_id(self, value: str):
-        if not SharedRegistryCredentials.objects.filter(id=value).exists():
+        if not SharedRegistryCredentials.objects.filter(
+            id=value, workspace=self._get_workspace()
+        ).exists():
             raise serializers.ValidationError(
                 f"A container registry with an ID of `{value}` does not exist."
             )

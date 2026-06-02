@@ -50,12 +50,14 @@ from git_connectors.constants import (
 from datetime import timezone as tz
 from typing import TYPE_CHECKING
 from asgiref.sync import sync_to_async
-
+from django.contrib.auth.validators import UnicodeUsernameValidator
+from typing import Literal
+from django.contrib.auth import get_user_model
 
 if TYPE_CHECKING:
     from container_registry.models import SharedRegistryCredentials  # noqa: F401
     from compose.models import ComposeStack
-    from django.db.models.manager import RelatedManager
+    from django.db.models.manager import RelatedManager, ManyToManyRelatedManager
 
 
 class Workspace(TimestampedModel):
@@ -75,24 +77,61 @@ class Workspace(TimestampedModel):
 
 class WorkspaceRole(models.IntegerChoices):
     # Read-only user: View projects and preview deployments only
-    GUEST = 1, "Guest"
+    GUEST = 10, "Guest"
 
     # 3rd party contributor to the team (usually temporary)
     # + View logs, env vars, trigger deploys, manage own tokens
-    CONTRIBUTOR = 2, "Contributor"
+    # CONTRIBUTOR = 20, "Contributor"
 
     # member of the team
     # Read-write: + Edit service config, create/update/delete env vars
-    MEMBER = 3, "Member"
+    MEMBER = 30, "Member"
 
     # manager of the workspace
     # Full access on the workspace, can invite people, cannot delete the workspace
     # + Delete services, manage workspace users & roles, manage API tokens
-    ADMIN = 4, "Admin"
+    ADMIN = 40, "Admin"
 
     # creator of the workspace
     # Full access on the workspace, +can delete the workspace
-    OWNER = 5, "Owner"
+    OWNER = 50, "Owner"
+
+
+class WorkspaceInvitation(TimestampedModel):
+    if TYPE_CHECKING:
+        accessible_projects: RelatedManager["Project"]
+
+    workspace = models.ForeignKey(to=Workspace, on_delete=models.CASCADE)
+    expires_at = models.DateTimeField()
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix="wrk_ivt_",
+    )
+    username = models.CharField(validators=[UnicodeUsernameValidator()])
+    token = models.CharField(
+        max_length=35,
+        unique=True,
+    )
+    role = models.PositiveSmallIntegerField(
+        choices=WorkspaceRole.choices,
+        default=WorkspaceRole.MEMBER,
+    )
+    # Only relevant for GUEST and CONTRIBUTOR
+    accessible_projects = models.ManyToManyField("Project", blank=True)
+
+    @property
+    def role_name(self) -> Literal["Owner", "Admin", "Member", "Contributor", "Guest"]:
+        return self.get_role_display()
+
+    @property
+    def has_existing_account(self) -> bool:
+        User = get_user_model()
+        return User.objects.filter(username=self.username).exists()
+
+    class Meta:
+        unique_together = [("username", "workspace")]
 
 
 class WorkspaceMembership(models.Model):
@@ -120,7 +159,7 @@ class WorkspaceMembership(models.Model):
     accessible_projects = models.ManyToManyField("Project", blank=True)
 
     @property
-    def role_name(self) -> str:
+    def role_name(self) -> Literal["Owner", "Admin", "Member", "Contributor", "Guest"]:
         return self.get_role_display()
 
     class Meta:

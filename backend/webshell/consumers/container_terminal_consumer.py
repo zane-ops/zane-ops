@@ -20,7 +20,7 @@ from ..serializers import (
 from rest_framework.utils.serializer_helpers import ReturnDict
 from zane_api.constants import WORKSPACE_SESSION_KEY
 from django.contrib.auth.models import AbstractUser
-from zane_api.models import Workspace, WorkspaceMembership
+from zane_api.models import WorkspaceMembership
 
 
 class GenericContainerTerminalConsumer(AsyncWebsocketConsumer):

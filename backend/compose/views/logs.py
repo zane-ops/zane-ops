@@ -20,14 +20,14 @@ from search.dtos import RuntimeLogSource
 
 from zane_api.permissions import (
     HasWorkspace,
-    IsWorkspaceContributor,
+    IsWorkspaceMember,
     get_accessible_projects,
 )
 
 
 class ComposeStackRuntimeLogsAPIView(APIView):
     serializer_class = RuntimeLogsSearchSerializer
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         summary="Get stack runtime logs", parameters=[StackRuntimeLogsQuerySerializer]
@@ -81,7 +81,7 @@ class ComposeStackRuntimeLogsAPIView(APIView):
 
 class ComposeStackDeploymentBuildLogsAPIView(APIView):
     serializer_class = RuntimeLogsSearchSerializer
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         summary="Get stack build logs", parameters=[StackBuildLogsQuerySerializer]
@@ -146,7 +146,7 @@ class ComposeStackDeploymentBuildLogsAPIView(APIView):
 
 class ComposeStackRuntimeLogsWithContextAPIView(APIView):
     serializer_class = RuntimeLogsContextSerializer
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         summary="Get stack runtime logs with context",

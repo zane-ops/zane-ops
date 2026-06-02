@@ -1,4 +1,4 @@
-from .auth import *
+from .authentication import *
 from .deployment import *
 from .docker import *
 from .logs import *
@@ -26,3 +26,4 @@ from .preview_env_templates import *
 from .more_environments import *
 from .shared_volumes import *
 from .workspace import *
+from .workspace_invitations import *

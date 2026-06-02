@@ -941,11 +941,12 @@ class HttpLogViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         params = {
-            "deployment_hash": fist_deployment.hash,
+            "deployment_id": fist_deployment.hash,
         }
         response = self.client.get(
             reverse("zane_api:http_logs", query=params),
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(len(simple_proxy_logs), len(response.json()["results"]))
 
@@ -990,7 +991,7 @@ class HttpLogViewTests(AuthAPITestCase):
             reverse(
                 "zane_api:http_logs",
                 query={
-                    "deployment_hash": fist_deployment.hash,
+                    "deployment_id": fist_deployment.hash,
                     "request_path": "/abc",
                     "request_method": "POST",
                 },

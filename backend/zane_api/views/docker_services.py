@@ -103,7 +103,6 @@ from ..permissions import (
     IsWorkspaceMember,
     IsWorkspaceAdmin,
     IsWorkspaceGuest,
-    IsWorkspaceContributor,
     get_accessible_projects,
 )
 
@@ -150,7 +149,12 @@ class CreateDockerServiceAPIView(APIView):
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
         else:
-            form = DockerServiceCreateRequestSerializer(data=request.data)
+            form = DockerServiceCreateRequestSerializer(
+                data=request.data,
+                context={
+                    "workspace": self.request.workspace  # type: ignore
+                },
+            )
             if form.is_valid(raise_exception=True):
                 data = cast(ReturnDict, form.data)
 
@@ -164,7 +168,8 @@ class CreateDockerServiceAPIView(APIView):
                 if container_registry_credentials_id is not None:
                     container_registry_credentials = (
                         SharedRegistryCredentials.objects.get(
-                            pk=container_registry_credentials_id
+                            pk=container_registry_credentials_id,
+                            workspace=self.request.workspace,  # type: ignore
                         )
                     )
 
@@ -320,7 +325,11 @@ class RequestServiceChangesAPIView(APIView):
                 cast(ReturnDict, request_serializer.data)["field"]
             ]
             form = form_serializer_class(
-                data=request.data, context={"service": service}
+                data=request.data,
+                context={
+                    "service": service,
+                    "workspace": self.request.workspace,  # type: ignore
+                },
             )
             if form.is_valid(raise_exception=True):
                 data = cast(ReturnDict, form.data)
@@ -349,7 +358,8 @@ class RequestServiceChangesAPIView(APIView):
                             if container_registry_credentials_id is not None:
                                 container_registry_credentials = (
                                     SharedRegistryCredentials.objects.get(
-                                        pk=container_registry_credentials_id
+                                        pk=container_registry_credentials_id,
+                                        workspace=self.request.workspace,  # type: ignore
                                     )
                                 )
                                 new_value["container_registry_credentials"] = dict(
@@ -721,7 +731,7 @@ class RequestServiceEnvChangesAPIView(APIView):
 
 
 class CancelServiceChangesAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         responses={
@@ -825,7 +835,7 @@ class CancelServiceChangesAPIView(APIView):
 
 class DeployDockerServiceAPIView(APIView):
     serializer_class = ServiceDeploymentSerializer
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @transaction.atomic()
     @extend_schema(
@@ -935,7 +945,7 @@ class DeployDockerServiceAPIView(APIView):
 
 class RedeployDockerServiceAPIView(APIView):
     serializer_class = ServiceDeploymentSerializer
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @transaction.atomic()
     @extend_schema(
@@ -1365,7 +1375,7 @@ class ArchiveDockerServiceAPIView(APIView):
 
 
 class ToggleServiceAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         request=ToggleServiceStateRequestSerializer,
@@ -1457,7 +1467,7 @@ class ToggleServiceAPIView(APIView):
 
 
 class BulkToggleServicesAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         request=BulkToggleServiceStateRequestSerializer,

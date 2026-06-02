@@ -62,7 +62,7 @@ from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIV
 from rest_framework import serializers
 from ..permissions import (
     HasWorkspace,
-    IsWorkspaceContributor,
+    IsWorkspaceMember,
     IsWorkspaceAdmin,
     get_accessible_projects,
 )
@@ -447,7 +447,7 @@ class EnvironmentDetailsAPIView(APIView):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [HasWorkspace(), IsWorkspaceContributor()]
+            return [HasWorkspace(), IsWorkspaceMember()]
         return [HasWorkspace(), IsWorkspaceAdmin()]
 
     @extend_schema(
@@ -593,7 +593,7 @@ class SharedEnvVariablesViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [HasWorkspace(), IsWorkspaceContributor()]
+            return [HasWorkspace(), IsWorkspaceMember()]
         return [HasWorkspace(), IsWorkspaceAdmin()]
 
     def get_queryset(self):  # type: ignore
@@ -671,7 +671,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
-    permission_classes = [HasWorkspace, IsWorkspaceContributor]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @transaction.atomic()
     @extend_schema(
