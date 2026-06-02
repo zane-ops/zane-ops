@@ -149,7 +149,12 @@ class CreateDockerServiceAPIView(APIView):
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
         else:
-            form = DockerServiceCreateRequestSerializer(data=request.data)
+            form = DockerServiceCreateRequestSerializer(
+                data=request.data,
+                context={
+                    "workspace": self.request.workspace  # type: ignore
+                },
+            )
             if form.is_valid(raise_exception=True):
                 data = cast(ReturnDict, form.data)
 
@@ -163,7 +168,8 @@ class CreateDockerServiceAPIView(APIView):
                 if container_registry_credentials_id is not None:
                     container_registry_credentials = (
                         SharedRegistryCredentials.objects.get(
-                            pk=container_registry_credentials_id
+                            pk=container_registry_credentials_id,
+                            workspace=self.request.workspace,  # type: ignore
                         )
                     )
 
@@ -319,7 +325,11 @@ class RequestServiceChangesAPIView(APIView):
                 cast(ReturnDict, request_serializer.data)["field"]
             ]
             form = form_serializer_class(
-                data=request.data, context={"service": service}
+                data=request.data,
+                context={
+                    "service": service,
+                    "workspace": self.request.workspace,  # type: ignore
+                },
             )
             if form.is_valid(raise_exception=True):
                 data = cast(ReturnDict, form.data)
@@ -348,7 +358,8 @@ class RequestServiceChangesAPIView(APIView):
                             if container_registry_credentials_id is not None:
                                 container_registry_credentials = (
                                     SharedRegistryCredentials.objects.get(
-                                        pk=container_registry_credentials_id
+                                        pk=container_registry_credentials_id,
+                                        workspace=self.request.workspace,  # type: ignore
                                     )
                                 )
                                 new_value["container_registry_credentials"] = dict(
