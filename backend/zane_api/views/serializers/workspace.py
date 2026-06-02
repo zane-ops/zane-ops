@@ -24,15 +24,10 @@ class RegenerateWorkspaceInvitationRequestSerializer(serializers.Serializer):
     )
 
 
-class WorkspaceAcceptInvitationRequestSerializer(serializers.Serializer):
-    password = serializers.CharField(min_length=8, max_length=255)
-
-    def validate_password(self, value: str):
-        has_existing_account = self.context.get("has_existing_account", False)
-
-        if not has_existing_account:
-            validate_new_password(value)
-        return value
+class WorkspaceRegisterRequestSerializer(serializers.Serializer):
+    password = serializers.CharField(
+        min_length=8, max_length=255, validators=[validate_new_password]
+    )
 
 
 class WorkspaceAcceptInvitationResponseSerializer(serializers.Serializer):

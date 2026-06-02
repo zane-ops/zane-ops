@@ -337,7 +337,7 @@ class RegenerateWorkspaceInvitationViewTests(AuthAPITestCase):
 
 
 class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
-    def test_accept_user_invitation_creates_new_user_and_logs_them_in(self):
+    def test_workspace_register_and_accept_invitation(self):
         self.loginUser()
         workspace = cast(Workspace, Workspace.objects.first())
 
@@ -358,27 +358,25 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         # 2- Logout current user
         self.client.logout()
 
-        # 3- Accept invitation
+        # 2- Register  user
         data = {"password": "p4$$word"}
         response = self.client.post(
             reverse(
-                "zane_api:workspace.accept_invitation",
-                kwargs={"token": new_invitation.token},
+                "zane_api:workspace.register", kwargs={"token": new_invitation.token}
             ),
             data=data,
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        # 4- New user should be created & authenticated
+        # 3- New user should be created & authenticated
         self.assertEqual(2, User.objects.count())
-
         new_user = auth.get_user(self.client)
         self.assertTrue(new_user.is_authenticated)
         self.assertEqual("mohai", new_user.username)
         self.assertIsNotNone(User.objects.filter(username=new_user.username).first())
 
-        # 4- Membership should be created for user
+        # 5- Membership should be created for user
         membership = cast(
             WorkspaceMembership,
             WorkspaceMembership.objects.filter(
@@ -389,7 +387,7 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         self.assertIsNotNone(membership)
         self.assertEqual(membership.role, WorkspaceRole.MEMBER)
 
-        # 5- User should be logged into new workspace
+        # 6- User should be logged into new workspace
         response = self.client.get(
             reverse(
                 "zane_api:auth.me",
@@ -401,109 +399,11 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         data = response.json()
         self.assertEqual(data["membership"]["workspace"]["id"], workspace.id)
 
-        # 6- Invitation should be deleted
+        # 7- Invitation should be deleted
         self.assertEqual(0, WorkspaceInvitation.objects.count())
 
-    def test_reject_workspace_invitation(self):
+    def test_cannot_register_into_workspace_for_existing_user(self):
         self.loginUser()
-
-        # 1- Create invitation
-        data = {
-            "username": "mohai",
-            "role": WorkspaceRole.MEMBER,
-        }
-        response = self.client.post(
-            reverse("zane_api:workspace.invite_user"),
-            data=data,
-        )
-        jprint(response.json())
-
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
-
-        # 2- Logout current user
-        self.client.logout()
-
-        # 3- Accept invitation
-        response = self.client.delete(
-            reverse(
-                "zane_api:workspace.reject_invitation",
-                kwargs={"token": new_invitation.token},
-            ),
-            data=data,
-        )
-        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
-        self.assertEqual(0, WorkspaceInvitation.objects.count())
-
-    def test_cannot_accept_invitation_for_other_user_if_logged_into_different_account(
-        self,
-    ):
-        self.loginUser()
-
-        # 1- Create invitation
-        data = {
-            "username": "mohai",
-            "role": WorkspaceRole.MEMBER,
-        }
-        response = self.client.post(
-            reverse("zane_api:workspace.invite_user"),
-            data=data,
-        )
-        jprint(response.json())
-
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
-
-        # 2- Accept invitation
-        data = {"password": "p4$$word"}
-        response = self.client.post(
-            reverse(
-                "zane_api:workspace.accept_invitation",
-                kwargs={"token": new_invitation.token},
-            ),
-            data=data,
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
-
-    def test_accept_invitation_for_new_user_validate_password_strength(
-        self,
-    ):
-        self.loginUser()
-
-        # 1- Create invitation
-        data = {
-            "username": "mohai",
-            "role": WorkspaceRole.MEMBER,
-        }
-        response = self.client.post(
-            reverse("zane_api:workspace.invite_user"),
-            data=data,
-        )
-        jprint(response.json())
-
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
-
-        # 2- Logout current user
-        self.client.logout()
-
-        # 3- Accept invitation
-        data = {"password": "password"}
-        response = self.client.post(
-            reverse(
-                "zane_api:workspace.accept_invitation",
-                kwargs={"token": new_invitation.token},
-            ),
-            data=data,
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(self.get_error_from_response(response, "password"))
-
-    def test_accept_user_invitation_from_existing_user_just_create_membership(self):
-        self.loginUser()
-        workspace = cast(Workspace, Workspace.objects.first())
 
         # 0- Create user
         User.objects.create_user(username="mohai", password="password")
@@ -525,25 +425,80 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         # 2- Logout current user
         self.client.logout()
 
-        # 3- Accept invitation
+        # 3- Register user
         data = {"password": "password"}
         response = self.client.post(
             reverse(
-                "zane_api:workspace.accept_invitation",
+                "zane_api:workspace.register",
                 kwargs={"token": new_invitation.token},
             ),
             data=data,
         )
         jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_cannot_register_into_workspace_if_logged_in(self):
+        self.loginUser()
+
+        # 1- Create invitation
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.MEMBER,
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
 
-        # 4- New user should be created & authenticated
-        self.assertEqual(2, User.objects.count())
+        # 2- Accept invitation
+        data = {"password": "p4$$word"}
+        response = self.client.post(
+            reverse(
+                "zane_api:workspace.register",
+                kwargs={"token": new_invitation.token},
+            ),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-        new_user = auth.get_user(self.client)
-        self.assertTrue(new_user.is_authenticated)
-        self.assertEqual("mohai", new_user.username)
-        self.assertIsNotNone(User.objects.filter(username=new_user.username).first())
+    def test_accept_workspace_invitation(self):
+        self.loginUser()
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        # 0- Create user
+        new_user = User.objects.create_user(username="mohai", password="password")
+
+        # 1- Create invitation
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.MEMBER,
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
+
+        # 2- Login to second user
+        self.client.login(username="mohai", password="password")
+
+        # 3- Accept invitation
+        response = self.client.post(
+            reverse(
+                "zane_api:workspace.accept_invitation",
+                kwargs={"token": new_invitation.token},
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         # 4- Membership should be created for user
         membership = cast(
@@ -571,11 +526,75 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         # 6- Invitation should be deleted
         self.assertEqual(0, WorkspaceInvitation.objects.count())
 
-    def test_accept_user_invitation_from_existing_user_check_correct_password(self):
+    def test_cannot_accept_workspace_invitation_if_not_logged_in(self):
         self.loginUser()
 
         # 0- Create user
-        User.objects.create_user(username="mohai", password="p4$$word")
+        User.objects.create_user(username="mohai", password="password")
+
+        # 1- Create invitation
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.MEMBER,
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
+
+        # 3- Logout current user
+        self.client.logout()
+
+        # 2- Accept invitation
+        response = self.client.post(
+            reverse(
+                "zane_api:workspace.accept_invitation",
+                kwargs={"token": new_invitation.token},
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
+
+    def test_cannot_accept_invitation_for_other_user_if_logged_into_different_account(
+        self,
+    ):
+        self.loginUser()
+
+        # 0- Create user
+        User.objects.create_user(username="mohai", password="password")
+
+        # 1- Create invitation
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.MEMBER,
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
+
+        # 2- Accept invitation
+        response = self.client.post(
+            reverse(
+                "zane_api:workspace.accept_invitation",
+                kwargs={"token": new_invitation.token},
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    def test_workspace_register_validates_password_strength(
+        self,
+    ):
+        self.loginUser()
 
         # 1- Create invitation
         data = {
@@ -598,15 +617,16 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         data = {"password": "password"}
         response = self.client.post(
             reverse(
-                "zane_api:workspace.accept_invitation",
+                "zane_api:workspace.register",
                 kwargs={"token": new_invitation.token},
             ),
             data=data,
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "password"))
 
-    def test_accept_user_invitation_with_guest_role_populate_accessible_projects(self):
+    def test_workspace_register_with_guest_role_populate_accessible_projects(self):
         self.loginUser()
 
         workspace = cast(Workspace, Workspace.objects.first())
@@ -641,7 +661,7 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         data = {"password": "p4$$word"}
         response = self.client.post(
             reverse(
-                "zane_api:workspace.accept_invitation",
+                "zane_api:workspace.register",
                 kwargs={"token": new_invitation.token},
             ),
             data=data,

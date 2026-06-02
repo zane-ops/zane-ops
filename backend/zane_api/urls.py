@@ -41,19 +41,19 @@ urlpatterns = [
         name="workspace.list_invitations",
     ),
     re_path(
-        r"^invitations/(?P<token>[a-zA-Z0-9]+)/?$",
+        r"^workspace/invitations/(?P<token>[a-zA-Z0-9]+)/?$",
         views.WorkspaceInvitationLinkDetailsAPIView.as_view(),
         name="workspace.invitation_detail",
+    ),
+    re_path(
+        r"^workspace/register/(?P<token>[a-zA-Z0-9]+)/?$",
+        views.WorkspaceRegisterInvitationAPIView.as_view(),
+        name="workspace.register",
     ),
     re_path(
         r"^invitations/(?P<token>[a-zA-Z0-9]+)/accept/?$",
         views.WorkspaceAcceptInvitationAPIView.as_view(),
         name="workspace.accept_invitation",
-    ),
-    re_path(
-        r"^invitations/(?P<token>[a-zA-Z0-9]+)/reject/?$",
-        views.WorkspaceRejectInvitationAPIView.as_view(),
-        name="workspace.reject_invitation",
     ),
     re_path(
         r"^workspace/invitations/(?P<id>[a-zA-Z0-9-_]+)/delete/?$",
