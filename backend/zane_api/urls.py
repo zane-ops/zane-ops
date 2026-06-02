@@ -70,11 +70,6 @@ urlpatterns = [
         views.ListWorkspaceMembersAPIView.as_view(),
         name="workspace.list_members",
     ),
-    # re_path(
-    #     r"^auth/me/with-token/?$",
-    #     views.TokenAuthedView.as_view(),
-    #     name="auth.me.with_token",
-    # ),
     re_path(r"^auth/logout/?$", views.AuthLogoutView.as_view(), name="auth.logout"),
     re_path(
         r"^auth/change-password/?$",
