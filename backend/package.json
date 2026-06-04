@@ -11,5 +11,11 @@
     "openapi": ". .venv/bin/activate && python manage.py spectacular --color --file ../openapi/schema.yml",
     "lock": ". .venv/bin/activate && uv lock",
     "shell": ". .venv/bin/activate && python manage.py shell -i ipython"
+  },
+  "dependencies": {
+    "@react-router/dev": "^7.17.0",
+    "@react-router/node": "^7.17.0",
+    "@react-router/serve": "^7.17.0",
+    "react-router": "^7.17.0"
   }
 }
