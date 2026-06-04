@@ -30,6 +30,51 @@ class WorkspaceRegisterRequestSerializer(serializers.Serializer):
     )
 
 
+class WorkspaceEditPermissionsRequestSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(choices=WorkspaceRole.choices)
+    accessible_project_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Project.objects.all(),
+        default=[],
+    )
+
+    def _get_workspace(self):
+        workspace: Workspace | None = self.context.get("workspace")
+        assert workspace is not None
+        return workspace
+
+    def validate_role(self, role: int):
+        if role >= WorkspaceRole.OWNER:
+            raise serializers.ValidationError(
+                "The owner role cannot be assigned when inviting a user. "
+                "To transfer ownership, the current workspace owner must do so from their workspace settings."
+            )
+        return role
+
+    def validate_accessible_project_ids(self, projects: Sequence[Project]):
+        for project in projects:
+            if project.workspace != self._get_workspace():
+                raise serializers.ValidationError(
+                    f"Project with id `{project.id}` does not exist in this workspace."
+                )
+        return projects
+
+    def validate(self, attrs: dict):
+        role = attrs["role"]
+        accessible_projects = attrs["accessible_project_ids"]
+
+        if role < WorkspaceRole.MEMBER and len(accessible_projects) == 0:
+            raise serializers.ValidationError(
+                {
+                    "accessible_project_ids": "Users with the Guest role must be granted access to at least one project."
+                }
+            )
+        if role >= WorkspaceRole.MEMBER:
+            attrs["accessible_project_ids"] = []
+
+        return attrs
+
+
 class WorkspaceAcceptInvitationResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
 

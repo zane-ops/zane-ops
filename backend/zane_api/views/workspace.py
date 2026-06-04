@@ -5,14 +5,22 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.generics import ListAPIView, CreateAPIView, UpdateAPIView
+from rest_framework.generics import (
+    ListAPIView,
+    CreateAPIView,
+    UpdateAPIView,
+    RetrieveAPIView,
+)
 
 from rest_framework import status
 
 
-from ..models import Workspace, WorkspaceMembership, WorkspaceRole, WorkspaceInvitation
+from ..models import Workspace, WorkspaceMembership, WorkspaceRole
 from ..constants import WORKSPACE_SESSION_KEY
-from .serializers import SwitchWorkspaceRequestSerializer
+from .serializers import (
+    SwitchWorkspaceRequestSerializer,
+    WorkspaceEditPermissionsRequestSerializer,
+)
 from rest_framework import exceptions
 from ..serializers import (
     WorkspaceMembershipSerializer,
@@ -27,13 +35,78 @@ from ..permissions import (
 )
 
 from django.db.models import QuerySet
+from .base import ResourceConflict
+
+
+class WorkspaceMemberDetailAPIView(RetrieveAPIView):
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
+    serializer_class = WorkspaceMemberSerializer
+    lookup_field = "pk"
+    lookup_url_kwarg = "membership_id"
+
+    def get_queryset(self) -> QuerySet[WorkspaceMembership]:  # type: ignore
+        return (
+            WorkspaceMembership.objects.filter(
+                workspace=self.request.workspace  # type: ignore
+            )
+            .select_related("user")
+            .prefetch_related("accessible_projects")
+        )
+
+
+class EditWorkspaceMemberPermissionsAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
+    serializer_class = WorkspaceMemberSerializer
+
+    @extend_schema(
+        request=WorkspaceEditPermissionsRequestSerializer,
+        operation_id="editWorkpacePermissions",
+        summary="Edit workspace membership permissions",
+    )
+    def put(self, request: Request, membership_id: int):
+        try:
+            membership = (
+                WorkspaceMembership.objects.filter(
+                    workspace=self.request.workspace,  # type: ignore
+                    id=membership_id,
+                )
+                .select_related("user")
+                .prefetch_related("accessible_projects")
+                .get()
+            )
+        except WorkspaceMembership.DoesNotExist:
+            raise exceptions.NotFound()
+
+        if membership.user == self.request.user:
+            raise ResourceConflict(
+                "You cannot edit your own permissions in the workspace."
+            )
+
+        form = WorkspaceEditPermissionsRequestSerializer(
+            data=request.data,
+            context=dict(
+                workspace=self.request.workspace  # type: ignore
+            ),
+        )
+        form.is_valid(raise_exception=True)
+
+        data = cast(dict, form.data)
+
+        membership.role = data["role"]
+        membership.save()
+
+        for project in data["accessible_project_ids"]:
+            membership.accessible_projects.add(project)
+
+        serializer = WorkspaceMemberSerializer(membership)
+        return Response(serializer.data)
 
 
 class ListWorkspaceMembersAPIView(ListAPIView):
     permission_classes = [HasWorkspace, IsWorkspaceAdmin]
     serializer_class = WorkspaceMemberSerializer
 
-    def get_queryset(self) -> QuerySet[WorkspaceInvitation]:  # type: ignore
+    def get_queryset(self) -> QuerySet[WorkspaceMembership]:  # type: ignore
         return (
             WorkspaceMembership.objects.filter(
                 workspace=self.request.workspace  # type: ignore
