@@ -571,9 +571,19 @@ export interface paths {
   "/api/workspace/invitations/": {
     get: operations["workspace_invitations_list"];
   };
-  "/api/workspace/invitations/{id}/": {
+  "/api/workspace/invitations/{id}/delete/": {
+    delete: operations["workspace_invitations_delete_destroy"];
+  };
+  "/api/workspace/invitations/{id}/regenerate/": {
+    /** Regenerate user invitation link in workspace */
+    put: operations["regenerateUserInvitation"];
+  };
+  "/api/workspace/invitations/{token}/": {
     get: operations["workspace_invitations_retrieve"];
-    delete: operations["workspace_invitations_destroy"];
+  };
+  "/api/workspace/invitations/{token}/accept/": {
+    /** Accept workspace invitation */
+    post: operations["acceptInvitation"];
   };
   "/api/workspace/invite-user/": {
     /** Generate an invitation link for a new user in a workspace */
@@ -581,6 +591,10 @@ export interface paths {
   };
   "/api/workspace/members/": {
     get: operations["workspace_members_list"];
+  };
+  "/api/workspace/register/{token}/": {
+    /** Create user account and register them into workspace */
+    post: operations["registerUserIntoWorkspace"];
   };
   "/api/workspaces/create/": {
     /** Create a new workspace */
@@ -599,12 +613,9 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    AcceptInvitationErrorResponse400: components["schemas"]["ParseErrorResponse"];
     AccessibleWorkspaceProject: {
       id: string;
-      slug: string;
-    };
-    AccessibleWorkspaceProjectRequest: {
-      id?: string;
       slug: string;
     };
     ArchiveComposeStackErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -3452,8 +3463,17 @@ export interface components {
       code: "does_not_exist" | "incorrect_type" | "not_a_list" | "null";
       detail: string;
     };
-    InviteUserError: components["schemas"]["InviteUserNonFieldErrorsErrorComponent"] | components["schemas"]["InviteUserRoleErrorComponent"] | components["schemas"]["InviteUserUsernameErrorComponent"] | components["schemas"]["InviteUserAccessibleProjectIdsErrorComponent"] | components["schemas"]["InviteUserValidForErrorComponent"];
+    InviteUserError: components["schemas"]["InviteUserNonFieldErrorsErrorComponent"] | components["schemas"]["InviteUserAccessibleProjectIdsErrorComponent"] | components["schemas"]["InviteUserValidForErrorComponent"] | components["schemas"]["InviteUserRoleErrorComponent"] | components["schemas"]["InviteUserUsernameErrorComponent"];
     InviteUserErrorResponse400: components["schemas"]["InviteUserValidationError"] | components["schemas"]["ParseErrorResponse"];
+    InviteUserIntoWorkspaceRequestRequest: {
+      /** @default [] */
+      accessible_project_ids?: string[];
+      /** @default 3 */
+      valid_for?: components["schemas"]["ValidForEnum"];
+      /** @default 10 */
+      role?: components["schemas"]["RoleEnum"];
+      username: string;
+    };
     InviteUserNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -3475,12 +3495,10 @@ export interface components {
       attr: "role";
       /**
        * @description * `invalid_choice` - invalid_choice
-       * * `max_value` - max_value
-       * * `min_value` - min_value
        * * `null` - null
        * @enum {string}
        */
-      code: "invalid_choice" | "max_value" | "min_value" | "null";
+      code: "invalid_choice" | "null";
       detail: string;
     };
     InviteUserUsernameErrorComponent: {
@@ -3492,13 +3510,15 @@ export interface components {
       /**
        * @description * `blank` - blank
        * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `min_length` - min_length
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     InviteUserValidForErrorComponent: {
@@ -3820,21 +3840,6 @@ export interface components {
        */
       previous: string | null;
       results: components["schemas"]["WorkspaceMember"][];
-    };
-    PaginatedWorkspaceMembershipList: {
-      /** @example 123 */
-      count: number;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=4
-       */
-      next: string | null;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=2
-       */
-      previous: string | null;
-      results: components["schemas"]["WorkspaceMembership"][];
     };
     ParseError: {
       code: components["schemas"]["ParseErrorCodeEnum"];
@@ -4888,6 +4893,82 @@ export interface components {
        */
       code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
+    };
+    RegenerateUserInvitationError: components["schemas"]["RegenerateUserInvitationNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateUserInvitationValidForErrorComponent"];
+    RegenerateUserInvitationErrorResponse400: components["schemas"]["RegenerateUserInvitationValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RegenerateUserInvitationNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    RegenerateUserInvitationValidForErrorComponent: {
+      /**
+       * @description * `valid_for` - valid_for
+       * @enum {string}
+       */
+      attr: "valid_for";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    RegenerateUserInvitationValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["RegenerateUserInvitationError"][];
+    };
+    RegenerateWorkspaceInvitationRequestRequest: {
+      /** @default 3 */
+      valid_for?: components["schemas"]["ValidForEnum"];
+    };
+    RegisterUserIntoWorkspaceError: components["schemas"]["RegisterUserIntoWorkspaceNonFieldErrorsErrorComponent"] | components["schemas"]["RegisterUserIntoWorkspacePasswordErrorComponent"];
+    RegisterUserIntoWorkspaceErrorResponse400: components["schemas"]["RegisterUserIntoWorkspaceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RegisterUserIntoWorkspaceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    RegisterUserIntoWorkspacePasswordErrorComponent: {
+      /**
+       * @description * `password` - password
+       * @enum {string}
+       */
+      attr: "password";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `min_length` - min_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegisterUserIntoWorkspaceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["RegisterUserIntoWorkspaceError"][];
     };
     RegistriesBuildRegistriesCreateError: components["schemas"]["RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsDefaultErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryDomainErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsRegionErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsEndpointErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsBucketErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsAccessKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsSecretKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateStorageBackendErrorComponent"];
     RegistriesBuildRegistriesCreateErrorResponse400: components["schemas"]["RegistriesBuildRegistriesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -7090,6 +7171,9 @@ export interface components {
     SimpleTemplateServiceRequest: {
       id?: string;
     };
+    SimpleWorkspace: {
+      name: string;
+    };
     SimpleWorkspaceUser: {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
       username: string;
@@ -8102,6 +8186,9 @@ export interface components {
       id: string;
       name: string;
     };
+    WorkspaceAcceptInvitationResponse: {
+      success: boolean;
+    };
     WorkspaceEditUpdateError: components["schemas"]["WorkspaceEditUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["WorkspaceEditUpdateNameErrorComponent"];
     WorkspaceEditUpdateErrorResponse400: components["schemas"]["WorkspaceEditUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     WorkspaceEditUpdateNameErrorComponent: {
@@ -8150,15 +8237,15 @@ export interface components {
       username: string;
       accessible_projects: readonly components["schemas"]["AccessibleWorkspaceProject"][];
     };
-    WorkspaceInvitationRequest: {
-      role?: components["schemas"]["RoleEnum"];
+    WorkspaceInvitationLink: {
+      role_name: components["schemas"]["RoleNameEnum"];
+      role: components["schemas"]["RoleEnum"];
+      token: string;
       username: string;
-      /** @default [] */
-      accessible_project_ids?: string[];
-      /** @default 3 */
-      valid_for?: components["schemas"]["ValidForEnum"];
+      has_existing_account: boolean;
+      workspace: components["schemas"]["SimpleWorkspace"];
     };
-    WorkspaceInvitationsDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    WorkspaceInvitationsDeleteDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceInvitationsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceInvitationsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceMember: {
@@ -8170,9 +8257,13 @@ export interface components {
     };
     WorkspaceMembersListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceMembership: {
+      id: number;
       role_name: components["schemas"]["RoleNameEnum"];
       role: components["schemas"]["RoleEnum"];
       workspace: components["schemas"]["Workspace"];
+    };
+    WorkspaceRegisterRequestRequest: {
+      password: string;
     };
     WorkspaceRequest: {
       name: string;
@@ -13897,21 +13988,20 @@ export interface operations {
       };
     };
   };
-  workspace_invitations_retrieve: {
+  workspace_invitations_delete_destroy: {
     parameters: {
       path: {
         id: string;
       };
     };
     responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["WorkspaceInvitation"];
-        };
+      /** @description No response body */
+      204: {
+        content: never;
       };
       400: {
         content: {
-          "application/json": components["schemas"]["WorkspaceInvitationsRetrieveErrorResponse400"];
+          "application/json": components["schemas"]["WorkspaceInvitationsDeleteDestroyErrorResponse400"];
         };
       };
       401: {
@@ -13936,20 +14026,29 @@ export interface operations {
       };
     };
   };
-  workspace_invitations_destroy: {
+  /** Regenerate user invitation link in workspace */
+  regenerateUserInvitation: {
     parameters: {
       path: {
         id: string;
       };
     };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["RegenerateWorkspaceInvitationRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["RegenerateWorkspaceInvitationRequestRequest"];
+        "multipart/form-data": components["schemas"]["RegenerateWorkspaceInvitationRequestRequest"];
+      };
+    };
     responses: {
-      /** @description No response body */
-      204: {
-        content: never;
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceInvitation"];
+        };
       };
       400: {
         content: {
-          "application/json": components["schemas"]["WorkspaceInvitationsDestroyErrorResponse400"];
+          "application/json": components["schemas"]["RegenerateUserInvitationErrorResponse400"];
         };
       };
       401: {
@@ -13960,6 +14059,75 @@ export interface operations {
       403: {
         content: {
           "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  workspace_invitations_retrieve: {
+    parameters: {
+      path: {
+        token: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceInvitationLink"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceInvitationsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Accept workspace invitation */
+  acceptInvitation: {
+    parameters: {
+      path: {
+        token: string;
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceAcceptInvitationResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["AcceptInvitationErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
       404: {
@@ -13978,13 +14146,13 @@ export interface operations {
   inviteUser: {
     requestBody: {
       content: {
-        "application/json": components["schemas"]["WorkspaceInvitationRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["WorkspaceInvitationRequest"];
-        "multipart/form-data": components["schemas"]["WorkspaceInvitationRequest"];
+        "application/json": components["schemas"]["InviteUserIntoWorkspaceRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["InviteUserIntoWorkspaceRequestRequest"];
+        "multipart/form-data": components["schemas"]["InviteUserIntoWorkspaceRequestRequest"];
       };
     };
     responses: {
-      201: {
+      200: {
         content: {
           "application/json": components["schemas"]["WorkspaceInvitation"];
         };
@@ -14002,11 +14170,6 @@ export interface operations {
       403: {
         content: {
           "application/json": components["schemas"]["ErrorResponse403"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {
@@ -14042,6 +14205,48 @@ export interface operations {
       403: {
         content: {
           "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Create user account and register them into workspace */
+  registerUserIntoWorkspace: {
+    parameters: {
+      path: {
+        token: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WorkspaceRegisterRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["WorkspaceRegisterRequestRequest"];
+        "multipart/form-data": components["schemas"]["WorkspaceRegisterRequestRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceAcceptInvitationResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["RegisterUserIntoWorkspaceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
       404: {
@@ -14099,16 +14304,10 @@ export interface operations {
     };
   };
   workspaces_list_list: {
-    parameters: {
-      query?: {
-        /** @description A page number within the paginated result set. */
-        page?: number;
-      };
-    };
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["PaginatedWorkspaceMembershipList"];
+          "application/json": components["schemas"]["WorkspaceMembership"][];
         };
       };
       400: {
@@ -14124,11 +14323,6 @@ export interface operations {
       403: {
         content: {
           "application/json": components["schemas"]["ErrorResponse403"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {
