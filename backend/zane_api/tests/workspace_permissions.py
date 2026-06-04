@@ -126,3 +126,194 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertIsNotNone(self.get_error_from_response(response, "role"))
+
+    def test_edit_guest_accessible_projects(self):
+        self.loginUser()
+        for slug in ["zaneops", "second-project"]:
+            response = self.client.post(
+                reverse("zane_api:projects.list"),
+                data={"slug": slug, "env_slug": "production"},
+            )
+            self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        first_project = Project.objects.get(slug="zaneops")
+        second_project = Project.objects.get(slug="second-project")
+
+        workspace = cast(Workspace, Workspace.objects.first())
+        user = User.objects.create_user(username="mohai", password="password")
+        membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.GUEST,
+            user=user,
+            workspace=workspace,
+        )
+        membership.accessible_projects.set([first_project])
+
+        data = {
+            "role": WorkspaceRole.GUEST,
+            "accessible_project_ids": [second_project.id],
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:workspace.edit_membership_permissions",
+                kwargs={"membership_id": membership.pk},
+            ),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        membership = WorkspaceMembership.objects.get(user=user, workspace=workspace)
+        self.assertEqual(1, membership.accessible_projects.count())
+        self.assertEqual(second_project, membership.accessible_projects.first())
+
+    def test_edit_permissions_with_role_greater_than_guest_empties_accessible_projects(
+        self,
+    ):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops", "env_slug": "production"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        project = Project.objects.get(slug="zaneops")
+
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        user = User.objects.create_user(username="mohai", password="password")
+
+        membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.GUEST,
+            user=user,
+            workspace=workspace,
+        )
+        membership.accessible_projects.set([project])
+
+        data = {
+            "role": WorkspaceRole.MEMBER,
+            "accessible_project_ids": [project.id],
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:workspace.edit_membership_permissions",
+                kwargs={"membership_id": membership.pk},
+            ),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        membership = WorkspaceMembership.objects.get(user=user, workspace=workspace)
+        self.assertEqual(0, membership.accessible_projects.count())
+
+    def test_edit_guest_permissions_require_nonempty_accessible_projects(self):
+        self.loginUser()
+
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        user = User.objects.create_user(username="mohai", password="password")
+
+        membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.MEMBER,
+            user=user,
+            workspace=workspace,
+        )
+
+        data = {
+            "role": WorkspaceRole.GUEST,
+            "accessible_project_ids": [],
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:workspace.edit_membership_permissions",
+                kwargs={"membership_id": membership.pk},
+            ),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "accessible_project_ids")
+        )
+
+    def test_cannot_select_accessible_project_not_in_current_workspace(self):
+        user = self.loginUser()
+        first_workspace = cast(Workspace, Workspace.objects.first())
+
+        # switch to 2nd workspace
+        second_workspace = Workspace.objects.create(name="Second workspace")
+        WorkspaceMembership.objects.create(
+            user=user, workspace=second_workspace, role=WorkspaceRole.ADMIN
+        )
+        response = self.client.post(
+            reverse("zane_api:workspaces.switch"),
+            data={"workspace_id": second_workspace.id},
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # create project in 2nd workspace
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops", "env_slug": "production"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        project = Project.objects.get(slug="zaneops")
+        self.assertEqual(project.workspace, second_workspace)
+
+        # switch back to 1st workspace
+        response = self.client.post(
+            reverse("zane_api:workspaces.switch"),
+            data={"workspace_id": first_workspace.id},
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        other_user = User.objects.create_user(username="mohai", password="password")
+        membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.MEMBER,
+            user=other_user,
+            workspace=first_workspace,
+        )
+
+        data = {
+            "role": WorkspaceRole.GUEST,
+            "accessible_project_ids": [project.id],
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:workspace.edit_membership_permissions",
+                kwargs={"membership_id": membership.pk},
+            ),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "accessible_project_ids")
+        )
+
+    def test_require_minimal_workspace_admin_permission_to_edit_user_permissions(self):
+        owner = self.loginUser()
+        WorkspaceMembership.objects.filter(user=owner).update(role=WorkspaceRole.MEMBER)
+
+        workspace = cast(Workspace, Workspace.objects.first())
+        other_user = User.objects.create_user(username="mohai", password="password")
+        membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.MEMBER,
+            user=other_user,
+            workspace=workspace,
+        )
+
+        data = {"role": WorkspaceRole.ADMIN}
+
+        response = self.client.put(
+            reverse(
+                "zane_api:workspace.edit_membership_permissions",
+                kwargs={"membership_id": membership.pk},
+            ),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)

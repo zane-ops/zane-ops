@@ -36,6 +36,7 @@ from ..permissions import (
 
 from django.db.models import QuerySet
 from .base import ResourceConflict
+from django.db import transaction
 
 
 class WorkspaceMemberDetailAPIView(RetrieveAPIView):
@@ -58,6 +59,7 @@ class EditWorkspaceMemberPermissionsAPIView(APIView):
     permission_classes = [HasWorkspace, IsWorkspaceAdmin]
     serializer_class = WorkspaceMemberSerializer
 
+    @transaction.atomic()
     @extend_schema(
         request=WorkspaceEditPermissionsRequestSerializer,
         operation_id="editWorkpacePermissions",
@@ -90,11 +92,12 @@ class EditWorkspaceMemberPermissionsAPIView(APIView):
         )
         form.is_valid(raise_exception=True)
 
-        data = cast(dict, form.data)
+        data = cast(dict, form.validated_data)
 
         membership.role = data["role"]
         membership.save()
 
+        membership.accessible_projects.clear()
         for project in data["accessible_project_ids"]:
             membership.accessible_projects.add(project)
 
