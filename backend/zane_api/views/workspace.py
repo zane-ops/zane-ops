@@ -9,7 +9,7 @@ from rest_framework.generics import (
     ListAPIView,
     CreateAPIView,
     UpdateAPIView,
-    RetrieveAPIView,
+    RetrieveDestroyAPIView,
 )
 
 from rest_framework import status
@@ -39,7 +39,7 @@ from .base import ResourceConflict
 from django.db import transaction
 
 
-class WorkspaceMemberDetailAPIView(RetrieveAPIView):
+class WorkspaceMemberDetailAPIView(RetrieveDestroyAPIView):
     permission_classes = [HasWorkspace, IsWorkspaceAdmin]
     serializer_class = WorkspaceMemberSerializer
     lookup_field = "pk"
@@ -53,6 +53,19 @@ class WorkspaceMemberDetailAPIView(RetrieveAPIView):
             .select_related("user")
             .prefetch_related("accessible_projects")
         )
+
+    def perform_destroy(self, instance: WorkspaceMembership):
+        if instance.user == self.request.user:
+            raise ResourceConflict(
+                "You cannot remove yourself from the workspace. Contact the owner to remove you from the workspace."
+            )
+
+        if instance.role >= WorkspaceRole.ADMIN:
+            raise ResourceConflict(
+                "You cannot remove another admin or the owner of the workspace."
+            )
+
+        return super().perform_destroy(instance)
 
 
 class EditWorkspaceMemberPermissionsAPIView(APIView):

@@ -317,3 +317,123 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+
+class RemoveUserFromWorkspaceViewtests(AuthAPITestCase):
+    def test_remove_user_from_workspace(self):
+        self.loginUser()
+
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        user = User.objects.create_user(username="mohai", password="password")
+
+        membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.MEMBER,
+            user=user,
+            workspace=workspace,
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:workspace.membership_detail",
+                kwargs={"membership_id": membership.pk},
+            )
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertIsNone(
+            WorkspaceMembership.objects.filter(
+                user=user,
+                workspace=workspace,
+            ).first()
+        )
+
+    def test_cannot_remove_oneself_from_workspace(self):
+        user = self.loginUser()
+
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        membership = WorkspaceMembership.objects.get(
+            user=user,
+            workspace=workspace,
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:workspace.membership_detail",
+                kwargs={"membership_id": membership.pk},
+            )
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+        self.assertIsNotNone(
+            WorkspaceMembership.objects.filter(
+                user=user,
+                workspace=workspace,
+            ).first()
+        )
+
+    def test_cannot_remove_another_admin_from_workspace(self):
+        self.loginUser()
+
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        user = User.objects.create_user(username="mohai", password="password")
+
+        membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.ADMIN,
+            user=user,
+            workspace=workspace,
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:workspace.membership_detail",
+                kwargs={"membership_id": membership.pk},
+            )
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+        self.assertIsNotNone(
+            WorkspaceMembership.objects.filter(
+                user=user,
+                workspace=workspace,
+            ).first()
+        )
+
+    def test_cannot_remove_the_owner_from_workspace(self):
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        user = User.objects.create_user(username="mohai", password="password")
+
+        WorkspaceMembership.objects.create(
+            role=WorkspaceRole.ADMIN,
+            user=user,
+            workspace=workspace,
+        )
+
+        # Login from second user
+        self.client.login(username="mohai", password="password")
+
+        membership = WorkspaceMembership.objects.get(
+            role=WorkspaceRole.OWNER,
+            workspace=workspace,
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:workspace.membership_detail",
+                kwargs={"membership_id": membership.pk},
+            )
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+        self.assertIsNotNone(
+            WorkspaceMembership.objects.filter(
+                role=WorkspaceRole.OWNER,
+                workspace=workspace,
+            ).first()
+        )
