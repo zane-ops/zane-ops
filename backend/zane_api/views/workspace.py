@@ -55,12 +55,23 @@ class WorkspaceMemberDetailAPIView(RetrieveDestroyAPIView):
         )
 
     def perform_destroy(self, instance: WorkspaceMembership):
+        current_membership = WorkspaceMembership.objects.get(
+            workspace=self.request.workspace,  # type: ignore
+            user=self.request.user,
+        )
+
         if instance.user == self.request.user:
             raise ResourceConflict(
                 "You cannot remove yourself from the workspace. Contact the owner to remove you from the workspace."
             )
 
-        if instance.role >= WorkspaceRole.ADMIN:
+        # We don't need to check for the case of removing another owner
+        # as there are DB checks that enforces that a workspace can only
+        # have one owner
+        if (
+            current_membership.role < WorkspaceRole.OWNER
+            and instance.role >= WorkspaceRole.ADMIN
+        ):
             raise ResourceConflict(
                 "You cannot remove another admin or the owner of the workspace."
             )

@@ -437,3 +437,71 @@ class RemoveUserFromWorkspaceViewtests(AuthAPITestCase):
                 workspace=workspace,
             ).first()
         )
+
+    def test_owner_can_remove_an_admin_from_workspace(self):
+        self.loginUser()
+
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        user = User.objects.create_user(username="mohai", password="password")
+
+        membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.ADMIN,
+            user=user,
+            workspace=workspace,
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:workspace.membership_detail",
+                kwargs={"membership_id": membership.pk},
+            )
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertIsNone(
+            WorkspaceMembership.objects.filter(
+                user=user,
+                workspace=workspace,
+            ).first()
+        )
+
+    def test_regular_member_cannot_remove_anyone_from_workspace(self):
+        owner = self.loginUser()
+
+        workspace = cast(Workspace, Workspace.objects.first())
+        WorkspaceMembership.objects.filter(user=owner).update(role=WorkspaceRole.MEMBER)
+
+        user = User.objects.create_user(username="mohai", password="password")
+
+        membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.MEMBER,
+            user=user,
+            workspace=workspace,
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:workspace.membership_detail",
+                kwargs={"membership_id": membership.pk},
+            )
+        )
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+        self.assertIsNotNone(
+            WorkspaceMembership.objects.filter(
+                user=user,
+                workspace=workspace,
+            ).first()
+        )
+
+    def test_remove_nonexistent_membership_returns_404(self):
+        self.loginUser()
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:workspace.membership_detail",
+                kwargs={"membership_id": 99999},
+            )
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
