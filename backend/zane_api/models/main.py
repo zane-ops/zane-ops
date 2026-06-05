@@ -164,6 +164,13 @@ class WorkspaceMembership(models.Model):
 
     class Meta:
         unique_together = [("user", "workspace")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["workspace"],
+                condition=models.Q(role=WorkspaceRole.OWNER),
+                name="unique_owner_per_workspace",
+            )
+        ]
 
 
 class Project(TimestampedModel):
