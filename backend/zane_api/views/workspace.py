@@ -210,3 +210,42 @@ class SwitchWorkspaceAPIView(APIView):
         request.session[WORKSPACE_SESSION_KEY] = workspace.id
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class WorkspaceLeaveAPIView(APIView):
+    @extend_schema(
+        responses={204: None},
+        operation_id="leaveWorkspace",
+        summary="Leave workspace",
+    )
+    def post(self, request: Request):
+        try:
+            membership = WorkspaceMembership.objects.get(
+                user=self.request.user,
+                workspace=self.request.workspace,  # type: ignore
+            )
+        except WorkspaceMembership.DoesNotExist:
+            raise exceptions.PermissionDenied("You are not a member of this workspace.")
+
+        if membership.role == WorkspaceRole.OWNER:
+            raise ResourceConflict(
+                "You cannot leave this workspace, to be able to do so, please transfer ownership to another member."
+            )
+        membership.delete()
+
+        last_membership = (
+            WorkspaceMembership.objects.filter(
+                user=self.request.user,
+            )
+            .exclude(
+                workspace=self.request.workspace  # type: ignore
+            )
+            .select_related("workspace")
+            .first()
+        )
+
+        request.session[WORKSPACE_SESSION_KEY] = (
+            last_membership.workspace.id if last_membership is not None else None
+        )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

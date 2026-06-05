@@ -5,6 +5,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from ..models import Workspace, WorkspaceMembership, WorkspaceRole, Project
+from ..constants import WORKSPACE_SESSION_KEY
 from .base import AuthAPITestCase
 from ..utils import jprint
 
@@ -505,3 +506,121 @@ class RemoveUserFromWorkspaceViewtests(AuthAPITestCase):
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+
+class LeaveWorkspaceViewTests(AuthAPITestCase):
+    def test_member_can_leave_workspace(self):
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        user = User.objects.create_user(username="mohai", password="password")
+        WorkspaceMembership.objects.create(
+            role=WorkspaceRole.MEMBER,
+            user=user,
+            workspace=workspace,
+        )
+        self.client.login(username="mohai", password="password")
+
+        response = self.client.post(reverse("zane_api:workspace.leave"))
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertIsNone(
+            WorkspaceMembership.objects.filter(
+                user=user,
+                workspace=workspace,
+            ).first()
+        )
+
+    def test_admin_can_leave_workspace(self):
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        user = User.objects.create_user(username="mohai", password="password")
+        WorkspaceMembership.objects.create(
+            role=WorkspaceRole.ADMIN,
+            user=user,
+            workspace=workspace,
+        )
+        self.client.login(username="mohai", password="password")
+
+        response = self.client.post(reverse("zane_api:workspace.leave"))
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertIsNone(
+            WorkspaceMembership.objects.filter(
+                user=user,
+                workspace=workspace,
+            ).first()
+        )
+
+    def test_owner_cannot_leave_workspace(self):
+        self.loginUser()
+
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        response = self.client.post(reverse("zane_api:workspace.leave"))
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+        self.assertIsNotNone(
+            WorkspaceMembership.objects.filter(
+                role=WorkspaceRole.OWNER,
+                workspace=workspace,
+            ).first()
+        )
+
+    def test_cannot_leave_workspace_if_not_a_member(self):
+        User.objects.create_user(username="mohai", password="password")
+        self.client.login(username="mohai", password="password")
+
+        response = self.client.post(reverse("zane_api:workspace.leave"))
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+    def test_leaving_workspace_switches_to_another_workspace_if_member(self):
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        user = User.objects.create_user(username="mohai", password="password")
+        WorkspaceMembership.objects.create(
+            role=WorkspaceRole.MEMBER,
+            user=user,
+            workspace=workspace,
+        )
+
+        second_workspace = Workspace.objects.create(name="Second workspace")
+        WorkspaceMembership.objects.create(
+            role=WorkspaceRole.MEMBER,
+            user=user,
+            workspace=second_workspace,
+        )
+
+        self.client.login(username="mohai", password="password")
+        self.client.post(
+            reverse("zane_api:workspaces.switch"),
+            data={"workspace_id": workspace.id},
+        )
+
+        response = self.client.post(reverse("zane_api:workspace.leave"))
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(
+            self.client.session.get(WORKSPACE_SESSION_KEY), second_workspace.id
+        )
+
+    def test_leaving_workspace_remove_workspace_session_key_if_no_workspace_left(self):
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        user = User.objects.create_user(username="mohai", password="password")
+        WorkspaceMembership.objects.create(
+            role=WorkspaceRole.MEMBER,
+            user=user,
+            workspace=workspace,
+        )
+
+        self.client.login(username="mohai", password="password")
+        self.client.post(
+            reverse("zane_api:workspaces.switch"),
+            data={"workspace_id": workspace.id},
+        )
+
+        response = self.client.post(reverse("zane_api:workspace.leave"))
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertIsNone(self.client.session.get(WORKSPACE_SESSION_KEY))
