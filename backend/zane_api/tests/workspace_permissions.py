@@ -624,3 +624,103 @@ class LeaveWorkspaceViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
         self.assertIsNone(self.client.session.get(WORKSPACE_SESSION_KEY))
+
+
+class TransferWorkspaceOwnershipViewTests(AuthAPITestCase):
+    def test_owner_can_transfer_ownership_to_admin(self):
+        owner = self.loginUser()
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        new_owner = User.objects.create_user(username="mohai", password="password")
+        new_owner_membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.ADMIN,
+            user=new_owner,
+            workspace=workspace,
+        )
+
+        response = self.client.post(
+            reverse("zane_api:workspace.transfer_ownership"),
+            data={"new_owner_id": new_owner_membership.pk},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(
+            WorkspaceMembership.objects.get(user=new_owner, workspace=workspace).role,
+            WorkspaceRole.OWNER,
+        )
+        self.assertEqual(
+            WorkspaceMembership.objects.get(user=owner, workspace=workspace).role,
+            WorkspaceRole.ADMIN,
+        )
+
+    def test_non_owner_cannot_transfer_ownership(self):
+        self.loginUser()
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        admin = User.objects.create_user(username="admin_user", password="password")
+        WorkspaceMembership.objects.create(
+            role=WorkspaceRole.ADMIN,
+            user=admin,
+            workspace=workspace,
+        )
+
+        other = User.objects.create_user(username="mohai", password="password")
+        other_membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.MEMBER,
+            user=other,
+            workspace=workspace,
+        )
+
+        self.client.login(username="admin_user", password="password")
+
+        response = self.client.post(
+            reverse("zane_api:workspace.transfer_ownership"),
+            data={"new_owner_id": other_membership.pk},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+    def test_cannot_transfer_ownership_to_non_member(self):
+        self.loginUser()
+
+        response = self.client.post(
+            reverse("zane_api:workspace.transfer_ownership"),
+            data={"new_owner_id": 99999},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    def test_cannot_transfer_ownership_to_plain_member(self):
+        self.loginUser()
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        member = User.objects.create_user(username="mohai", password="password")
+        member_membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.MEMBER,
+            user=member,
+            workspace=workspace,
+        )
+
+        response = self.client.post(
+            reverse("zane_api:workspace.transfer_ownership"),
+            data={"new_owner_id": member_membership.pk},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    def test_cannot_transfer_ownership_to_self(self):
+        owner = self.loginUser()
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        owner_membership = WorkspaceMembership.objects.get(
+            user=owner,
+            workspace=workspace,
+        )
+
+        response = self.client.post(
+            reverse("zane_api:workspace.transfer_ownership"),
+            data={"new_owner_id": owner_membership.pk},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)

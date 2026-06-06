@@ -144,3 +144,11 @@ class InviteUserIntoWorkspaceRequestSerializer(serializers.Serializer):
             attrs["accessible_project_ids"] = []
 
         return attrs
+
+
+class WorkspaceTransferOwnershipResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+
+
+class WorkspaceTransferOwnershipRequestSerializer(serializers.Serializer):
+    new_owner_id = serializers.IntegerField(min_value=1)

@@ -85,6 +85,11 @@ urlpatterns = [
         views.WorkspaceLeaveAPIView.as_view(),
         name="workspace.leave",
     ),
+    re_path(
+        r"^workspace/transfer-ownership/?$",
+        views.WorkspaceTransferOwnershipAPIView.as_view(),
+        name="workspace.transfer_ownership",
+    ),
     re_path(r"^auth/logout/?$", views.AuthLogoutView.as_view(), name="auth.logout"),
     re_path(
         r"^auth/change-password/?$",

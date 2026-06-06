@@ -20,6 +20,8 @@ from ..constants import WORKSPACE_SESSION_KEY
 from .serializers import (
     SwitchWorkspaceRequestSerializer,
     WorkspaceEditPermissionsRequestSerializer,
+    WorkspaceTransferOwnershipResponseSerializer,
+    WorkspaceTransferOwnershipRequestSerializer,
 )
 from rest_framework import exceptions
 from ..serializers import (
@@ -35,7 +37,7 @@ from ..permissions import (
 )
 
 from django.db.models import QuerySet
-from .base import ResourceConflict
+from .base import ResourceConflict, BadRequest
 from django.db import transaction
 
 
@@ -219,13 +221,10 @@ class WorkspaceLeaveAPIView(APIView):
         summary="Leave workspace",
     )
     def post(self, request: Request):
-        try:
-            membership = WorkspaceMembership.objects.get(
-                user=self.request.user,
-                workspace=self.request.workspace,  # type: ignore
-            )
-        except WorkspaceMembership.DoesNotExist:
-            raise exceptions.PermissionDenied("You are not a member of this workspace.")
+        membership = WorkspaceMembership.objects.get(
+            user=self.request.user,
+            workspace=self.request.workspace,  # type: ignore
+        )
 
         if membership.role == WorkspaceRole.OWNER:
             raise ResourceConflict(
@@ -249,3 +248,49 @@ class WorkspaceLeaveAPIView(APIView):
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class WorkspaceTransferOwnershipAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+    serializer_class = WorkspaceTransferOwnershipResponseSerializer
+
+    @transaction.atomic()
+    @extend_schema(
+        request=WorkspaceTransferOwnershipRequestSerializer,
+        operation_id="transferWorkspaceOwnership",
+        summary="Transfer workspace ownership",
+    )
+    def post(self, request: Request):
+        form = WorkspaceTransferOwnershipRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+
+        data = cast(dict, form.validated_data)
+
+        try:
+            new_owner_membership = WorkspaceMembership.objects.get(
+                pk=data["new_owner_id"],
+                workspace=self.request.workspace,  # type: ignore
+            )
+        except WorkspaceMembership.DoesNotExist:
+            raise exceptions.NotFound("This user is not a member of this workspace.")
+
+        if new_owner_membership.role < WorkspaceRole.ADMIN:
+            raise ResourceConflict(
+                "You cannot transfer ownership to a non-admin member. Promote them to admin first."
+            )
+
+        if new_owner_membership.user == self.request.user:
+            raise ResourceConflict("You are already the owner of this workspace.")
+
+        WorkspaceMembership.objects.filter(
+            user=self.request.user,
+            workspace=self.request.workspace,  # type: ignore
+        ).update(role=WorkspaceRole.ADMIN)
+
+        WorkspaceMembership.objects.filter(
+            pk=data["new_owner_id"],
+            workspace=self.request.workspace,  # type: ignore
+        ).update(role=WorkspaceRole.OWNER)
+
+        serializer = WorkspaceTransferOwnershipResponseSerializer({"success": True})
+        return Response(serializer.data)
