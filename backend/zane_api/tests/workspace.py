@@ -373,4 +373,8 @@ class SwitchWorkspaceViewTests(AuthAPITestCase):
 
 
 class DeleteWorkspaceViewTests(AuthAPITestCase):
-    pass
+    def test_delete_workspace_deletes_projects_and_services(self):
+        pass
+
+    async def test_delete_workspace_deletes_projects_resources(self):
+        pass
