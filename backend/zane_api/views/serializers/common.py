@@ -26,10 +26,8 @@ from rest_framework import serializers
 from ...models import (
     URL,
     Service,
-    DeploymentURL,
     DeploymentChange,
     Volume,
-    SharedVolume,
 )
 from temporal.helpers import get_server_resource_limits
 from ...utils import (

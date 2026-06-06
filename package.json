@@ -5,6 +5,11 @@
     "name": "Adrien KISSIE",
     "email": "hello@fredkiss.dev"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zane-ops/zane-ops"
+  },
+  "homepage": "https://zaneops.dev",
   "description": "A self-hosted PaaS for your web services, databases, CRONs, and everything you need for your next startup.",
   "scripts": {
     "format": "biome check ./frontend ./docker --write",

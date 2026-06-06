@@ -70,6 +70,26 @@ urlpatterns = [
         views.ListWorkspaceMembersAPIView.as_view(),
         name="workspace.list_members",
     ),
+    re_path(
+        r"^workspace/members/(?P<membership_id>\d+)/?$",
+        views.WorkspaceMemberDetailAPIView.as_view(),
+        name="workspace.membership_detail",
+    ),
+    re_path(
+        r"^workspace/members/(?P<membership_id>\d+)/permissions/?$",
+        views.EditWorkspaceMemberPermissionsAPIView.as_view(),
+        name="workspace.edit_membership_permissions",
+    ),
+    re_path(
+        r"^workspace/leave/?$",
+        views.WorkspaceLeaveAPIView.as_view(),
+        name="workspace.leave",
+    ),
+    re_path(
+        r"^workspace/transfer-ownership/?$",
+        views.WorkspaceTransferOwnershipAPIView.as_view(),
+        name="workspace.transfer_ownership",
+    ),
     re_path(r"^auth/logout/?$", views.AuthLogoutView.as_view(), name="auth.logout"),
     re_path(
         r"^auth/change-password/?$",

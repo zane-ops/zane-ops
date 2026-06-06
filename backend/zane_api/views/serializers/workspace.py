@@ -1,8 +1,15 @@
 from rest_framework import serializers
-from ...models import Project, WorkspaceRole, Workspace
+from ...models import (
+    Project,
+    WorkspaceRole,
+    Workspace,
+    WorkspaceMembership,
+)
 from typing import Sequence
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from ...validators import validate_new_password
+import django_filters
+from rest_framework import pagination
 
 
 class SwitchWorkspaceRequestSerializer(serializers.Serializer):
@@ -28,6 +35,51 @@ class WorkspaceRegisterRequestSerializer(serializers.Serializer):
     password = serializers.CharField(
         min_length=8, max_length=255, validators=[validate_new_password]
     )
+
+
+class WorkspaceEditPermissionsRequestSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(choices=WorkspaceRole.choices)
+    accessible_project_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Project.objects.all(),
+        default=[],
+    )
+
+    def _get_workspace(self):
+        workspace: Workspace | None = self.context.get("workspace")
+        assert workspace is not None
+        return workspace
+
+    def validate_role(self, role: int):
+        if role >= WorkspaceRole.OWNER:
+            raise serializers.ValidationError(
+                "The owner role cannot be assigned when inviting a user. "
+                "To transfer ownership, the current workspace owner must do so from their workspace settings."
+            )
+        return role
+
+    def validate_accessible_project_ids(self, projects: Sequence[Project]):
+        for project in projects:
+            if project.workspace != self._get_workspace():
+                raise serializers.ValidationError(
+                    f"Project with id `{project.id}` does not exist in this workspace."
+                )
+        return projects
+
+    def validate(self, attrs: dict):
+        role = attrs["role"]
+        accessible_projects = attrs["accessible_project_ids"]
+
+        if role < WorkspaceRole.MEMBER and len(accessible_projects) == 0:
+            raise serializers.ValidationError(
+                {
+                    "accessible_project_ids": "Users with the Guest role must be granted access to at least one project."
+                }
+            )
+        if role >= WorkspaceRole.MEMBER:
+            attrs["accessible_project_ids"] = []
+
+        return attrs
 
 
 class WorkspaceAcceptInvitationResponseSerializer(serializers.Serializer):
@@ -99,3 +151,29 @@ class InviteUserIntoWorkspaceRequestSerializer(serializers.Serializer):
             attrs["accessible_project_ids"] = []
 
         return attrs
+
+
+class WorkspaceTransferOwnershipResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+
+
+class WorkspaceLeaveResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+
+
+class WorkspaceTransferOwnershipRequestSerializer(serializers.Serializer):
+    new_owner_id = serializers.IntegerField(min_value=1)
+
+
+class WorkspaceMembershipFilterSet(django_filters.FilterSet):
+    role = django_filters.ChoiceFilter(choices=WorkspaceRole.choices)
+
+    class Meta:
+        model = WorkspaceMembership
+        fields = ["role"]
+
+
+class WorkspaceMembershipPagination(pagination.PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "per_page"
+    page_query_param = "page"
