@@ -376,9 +376,13 @@ class RemoveUserFromWorkspaceViewtests(AuthAPITestCase):
         )
 
     def test_cannot_remove_another_admin_from_workspace(self):
-        self.loginUser()
+        owner = self.loginUser()
 
         workspace = cast(Workspace, Workspace.objects.first())
+
+        WorkspaceMembership.objects.filter(user=owner, workspace=workspace).update(
+            role=WorkspaceRole.ADMIN
+        )
 
         user = User.objects.create_user(username="mohai", password="password")
 
