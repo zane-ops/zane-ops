@@ -57,7 +57,7 @@ from django.contrib.auth import get_user_model
 if TYPE_CHECKING:
     from container_registry.models import SharedRegistryCredentials  # noqa: F401
     from compose.models import ComposeStack
-    from django.db.models.manager import RelatedManager, ManyToManyRelatedManager
+    from django.db.models.manager import RelatedManager
 
 
 class Workspace(TimestampedModel):

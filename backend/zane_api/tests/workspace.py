@@ -370,3 +370,7 @@ class SwitchWorkspaceViewTests(AuthAPITestCase):
         jprint(response.json())
 
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
+
+
+class DeleteWorkspaceViewTests(AuthAPITestCase):
+    pass
