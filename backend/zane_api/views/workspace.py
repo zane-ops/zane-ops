@@ -22,6 +22,9 @@ from .serializers import (
     WorkspaceEditPermissionsRequestSerializer,
     WorkspaceTransferOwnershipResponseSerializer,
     WorkspaceTransferOwnershipRequestSerializer,
+    WorkspaceMembershipFilterSet,
+    WorkspaceMembershipPagination,
+    WorkspaceLeaveResponseSerializer,
 )
 from rest_framework import exceptions
 from ..serializers import (
@@ -37,8 +40,9 @@ from ..permissions import (
 )
 
 from django.db.models import QuerySet
-from .base import ResourceConflict, BadRequest
+from .base import ResourceConflict, EMPTY_PAGINATED_RESPONSE
 from django.db import transaction
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class WorkspaceMemberDetailAPIView(RetrieveDestroyAPIView):
@@ -132,8 +136,24 @@ class EditWorkspaceMemberPermissionsAPIView(APIView):
 
 
 class ListWorkspaceMembersAPIView(ListAPIView):
-    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
     serializer_class = WorkspaceMemberSerializer
+    filter_backends = [DjangoFilterBackend]
+    pagination_class = WorkspaceMembershipPagination
+    filterset_class = WorkspaceMembershipFilterSet
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
+
+    queryset = WorkspaceMembership.objects.all()  # just used for the openAPI docs
+
+    @extend_schema(
+        summary="List workspace members",
+    )
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except exceptions.NotFound as e:
+            if "Invalid page" in str(e.detail):
+                return Response(EMPTY_PAGINATED_RESPONSE)
+            raise e
 
     def get_queryset(self) -> QuerySet[WorkspaceMembership]:  # type: ignore
         return (
@@ -215,8 +235,9 @@ class SwitchWorkspaceAPIView(APIView):
 
 
 class WorkspaceLeaveAPIView(APIView):
+    serializer_class = WorkspaceLeaveResponseSerializer
+
     @extend_schema(
-        responses={204: None},
         operation_id="leaveWorkspace",
         summary="Leave workspace",
     )
@@ -247,7 +268,9 @@ class WorkspaceLeaveAPIView(APIView):
             last_membership.workspace.id if last_membership is not None else None
         )
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        serializer = WorkspaceLeaveResponseSerializer({"success": True})
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class WorkspaceTransferOwnershipAPIView(APIView):

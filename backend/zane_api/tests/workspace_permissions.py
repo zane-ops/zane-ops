@@ -521,7 +521,8 @@ class LeaveWorkspaceViewTests(AuthAPITestCase):
         self.client.login(username="mohai", password="password")
 
         response = self.client.post(reverse("zane_api:workspace.leave"))
-        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         self.assertIsNone(
             WorkspaceMembership.objects.filter(
@@ -542,7 +543,8 @@ class LeaveWorkspaceViewTests(AuthAPITestCase):
         self.client.login(username="mohai", password="password")
 
         response = self.client.post(reverse("zane_api:workspace.leave"))
-        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         self.assertIsNone(
             WorkspaceMembership.objects.filter(
@@ -598,7 +600,8 @@ class LeaveWorkspaceViewTests(AuthAPITestCase):
         )
 
         response = self.client.post(reverse("zane_api:workspace.leave"))
-        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         self.assertEqual(
             self.client.session.get(WORKSPACE_SESSION_KEY), second_workspace.id
@@ -621,7 +624,8 @@ class LeaveWorkspaceViewTests(AuthAPITestCase):
         )
 
         response = self.client.post(reverse("zane_api:workspace.leave"))
-        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         self.assertIsNone(self.client.session.get(WORKSPACE_SESSION_KEY))
 

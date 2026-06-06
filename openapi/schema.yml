@@ -13412,9 +13412,92 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkspaceInvitation'
           description: ''
+  /api/workspace/leave/:
+    post:
+      operationId: leaveWorkspace
+      summary: Leave workspace
+      tags:
+      - workspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceLeaveResponseRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceLeaveResponseRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceLeaveResponseRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveWorkspaceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceLeaveResponse'
+          description: ''
   /api/workspace/members/:
     get:
       operationId: workspace_members_list
+      summary: List workspace members
       parameters:
       - name: page
         required: false
@@ -13422,6 +13505,26 @@ paths:
         description: A page number within the paginated result set.
         schema:
           type: integer
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: role
+        schema:
+          type: integer
+          enum:
+          - 10
+          - 30
+          - 40
+          - 50
+        description: |-
+          * `10` - Guest
+          * `30` - Member
+          * `40` - Admin
+          * `50` - Owner
       tags:
       - workspace
       security:
@@ -13501,6 +13604,284 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedWorkspaceMemberList'
+          description: ''
+  /api/workspace/members/{membership_id}/:
+    get:
+      operationId: workspace_members_retrieve
+      parameters:
+      - in: path
+        name: membership_id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - workspace
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMembersRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMember'
+          description: ''
+    delete:
+      operationId: workspace_members_destroy
+      parameters:
+      - in: path
+        name: membership_id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - workspace
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMembersDestroyErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
+  /api/workspace/members/{membership_id}/permissions/:
+    put:
+      operationId: editWorkpacePermissions
+      summary: Edit workspace membership permissions
+      parameters:
+      - in: path
+        name: membership_id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - workspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceEditPermissionsRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceEditPermissionsRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceEditPermissionsRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EditWorkpacePermissionsErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMember'
           description: ''
   /api/workspace/register/{token}/:
     post:
@@ -13591,6 +13972,88 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WorkspaceAcceptInvitationResponse'
+          description: ''
+  /api/workspace/transfer-ownership/:
+    post:
+      operationId: transferWorkspaceOwnership
+      summary: Transfer workspace ownership
+      tags:
+      - workspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceTransferOwnershipRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceTransferOwnershipRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceTransferOwnershipRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferWorkspaceOwnershipErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceTransferOwnershipResponse'
           description: ''
   /api/workspaces/create/:
     post:
@@ -14063,6 +14526,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/WorkspaceMembership'
           readOnly: true
+          nullable: true
       required:
       - membership
       - user
@@ -18996,6 +19460,107 @@ components:
       - build_context_dir
       - build_stage_target
       - dockerfile_path
+    EditWorkpacePermissionsAccessibleProjectIdsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - accessible_project_ids
+          type: string
+          description: '* `accessible_project_ids` - accessible_project_ids'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    EditWorkpacePermissionsError:
+      oneOf:
+      - $ref: '#/components/schemas/EditWorkpacePermissionsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/EditWorkpacePermissionsRoleErrorComponent'
+      - $ref: '#/components/schemas/EditWorkpacePermissionsAccessibleProjectIdsErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/EditWorkpacePermissionsNonFieldErrorsErrorComponent'
+          role: '#/components/schemas/EditWorkpacePermissionsRoleErrorComponent'
+          accessible_project_ids: '#/components/schemas/EditWorkpacePermissionsAccessibleProjectIdsErrorComponent'
+    EditWorkpacePermissionsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/EditWorkpacePermissionsValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/EditWorkpacePermissionsValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    EditWorkpacePermissionsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    EditWorkpacePermissionsRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - role
+          type: string
+          description: '* `role` - role'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    EditWorkpacePermissionsValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/EditWorkpacePermissionsError'
+      required:
+      - errors
+      - type
     EnvItemChangeFieldEnum:
       enum:
       - env_variables
@@ -20601,6 +21166,79 @@ components:
         * `ADD` - Add
         * `DELETE` - Delete
         * `UPDATE` - Update
+    LeaveWorkspaceError:
+      oneOf:
+      - $ref: '#/components/schemas/LeaveWorkspaceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/LeaveWorkspaceSuccessErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/LeaveWorkspaceNonFieldErrorsErrorComponent'
+          success: '#/components/schemas/LeaveWorkspaceSuccessErrorComponent'
+    LeaveWorkspaceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/LeaveWorkspaceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/LeaveWorkspaceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    LeaveWorkspaceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    LeaveWorkspaceSuccessErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - success
+          type: string
+          description: '* `success` - success'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    LeaveWorkspaceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/LeaveWorkspaceError'
+      required:
+      - errors
+      - type
     LevelEnum:
       enum:
       - ERROR
@@ -28738,6 +29376,83 @@ components:
       required:
       - errors
       - type
+    TransferWorkspaceOwnershipError:
+      oneOf:
+      - $ref: '#/components/schemas/TransferWorkspaceOwnershipNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/TransferWorkspaceOwnershipNewOwnerIdErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/TransferWorkspaceOwnershipNonFieldErrorsErrorComponent'
+          new_owner_id: '#/components/schemas/TransferWorkspaceOwnershipNewOwnerIdErrorComponent'
+    TransferWorkspaceOwnershipErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/TransferWorkspaceOwnershipValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/TransferWorkspaceOwnershipValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    TransferWorkspaceOwnershipNewOwnerIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_owner_id
+          type: string
+          description: '* `new_owner_id` - new_owner_id'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    TransferWorkspaceOwnershipNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    TransferWorkspaceOwnershipValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferWorkspaceOwnershipError'
+      required:
+      - errors
+      - type
     TriggerMethodEnum:
       enum:
       - MANUAL
@@ -30413,6 +31128,20 @@ components:
           type: boolean
       required:
       - success
+    WorkspaceEditPermissionsRequestRequest:
+      type: object
+      properties:
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        accessible_project_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            default: []
+          default: []
+      required:
+      - role
     WorkspaceEditUpdateError:
       oneOf:
       - $ref: '#/components/schemas/WorkspaceEditUpdateNonFieldErrorsErrorComponent'
@@ -30584,6 +31313,20 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    WorkspaceLeaveResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+      - success
+    WorkspaceLeaveResponseRequest:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+      - success
     WorkspaceMember:
       type: object
       properties:
@@ -30614,7 +31357,61 @@ components:
       - role
       - role_name
       - user
+    WorkspaceMembersDestroyErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    WorkspaceMembersListError:
+      oneOf:
+      - $ref: '#/components/schemas/WorkspaceMembersListRoleErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          role: '#/components/schemas/WorkspaceMembersListRoleErrorComponent'
     WorkspaceMembersListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/WorkspaceMembersListValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/WorkspaceMembersListValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    WorkspaceMembersListRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - role
+          type: string
+          description: '* `role` - role'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WorkspaceMembersListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceMembersListError'
+      required:
+      - errors
+      - type
+    WorkspaceMembersRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -30663,6 +31460,21 @@ components:
           maxLength: 255
       required:
       - name
+    WorkspaceTransferOwnershipRequestRequest:
+      type: object
+      properties:
+        new_owner_id:
+          type: integer
+          minimum: 1
+      required:
+      - new_owner_id
+    WorkspaceTransferOwnershipResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+      - success
     WorkspacesListListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'

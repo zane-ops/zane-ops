@@ -1,8 +1,15 @@
 from rest_framework import serializers
-from ...models import Project, WorkspaceRole, Workspace
+from ...models import (
+    Project,
+    WorkspaceRole,
+    Workspace,
+    WorkspaceMembership,
+)
 from typing import Sequence
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from ...validators import validate_new_password
+import django_filters
+from rest_framework import pagination
 
 
 class SwitchWorkspaceRequestSerializer(serializers.Serializer):
@@ -150,5 +157,23 @@ class WorkspaceTransferOwnershipResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
 
 
+class WorkspaceLeaveResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+
+
 class WorkspaceTransferOwnershipRequestSerializer(serializers.Serializer):
     new_owner_id = serializers.IntegerField(min_value=1)
+
+
+class WorkspaceMembershipFilterSet(django_filters.FilterSet):
+    role = django_filters.ChoiceFilter(choices=WorkspaceRole.choices)
+
+    class Meta:
+        model = WorkspaceMembership
+        fields = ["role"]
+
+
+class WorkspaceMembershipPagination(pagination.PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "per_page"
+    page_query_param = "page"
