@@ -8,14 +8,37 @@ from rest_framework.response import Response
 from rest_framework.generics import (
     ListAPIView,
     CreateAPIView,
-    UpdateAPIView,
     RetrieveDestroyAPIView,
+    RetrieveUpdateDestroyAPIView,
 )
 
 from rest_framework import status
+from temporal.client import TemporalClient
+from temporal.shared import (
+    ArchivedProjectDetails,
+    EnvironmentDetails,
+    ComposeStackArchiveDetails,
+)
 
+from temporal.workflows import (
+    CreateProjectResourcesWorkflow,
+    RemoveProjectResourcesWorkflow,
+)
 
-from ..models import Workspace, WorkspaceMembership, WorkspaceRole
+from ..models import (
+    Workspace,
+    WorkspaceMembership,
+    WorkspaceRole,
+    ArchivedProject,
+    Service,
+    PortConfiguration,
+    Volume,
+    URL,
+    Config,
+    ArchivedDockerService,
+    ArchivedGitService,
+)
+
 from ..constants import WORKSPACE_SESSION_KEY
 from .serializers import (
     SwitchWorkspaceRequestSerializer,
@@ -39,7 +62,7 @@ from ..permissions import (
     IsWorkspaceAdmin,
 )
 
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Q
 from .base import ResourceConflict, EMPTY_PAGINATED_RESPONSE
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
@@ -175,13 +198,122 @@ class WorkspaceMembershipListAPIView(ListAPIView):
         ).select_related("workspace")
 
 
-class EditWorkspaceAPIView(UpdateAPIView):
+class WorkspaceDetailAPIView(RetrieveUpdateDestroyAPIView):
     permission_classes = [HasWorkspace, IsWorkspaceOwner]
     serializer_class = WorkspaceSerializer
-    http_method_names = ["put"]
+    http_method_names = ["put", "delete", "get"]
 
     def get_object(self) -> Workspace:  # type: ignore
         return self.request.workspace  # type: ignore
+
+    @transaction.atomic()
+    def perform_destroy(self, instance):
+        workspace = cast(
+            Workspace,
+            self.request.workspace,  # type: ignore
+        )
+
+        workflow_payloads: list[tuple[ArchivedProjectDetails, str]] = []
+
+        for project in workspace.projects.all():
+            archived_version = ArchivedProject.get_or_create_from_project(project)
+
+            docker_service_list = (
+                Service.objects.filter(Q(project=project))
+                .select_related("project", "healthcheck")
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "deployments"
+                )
+            )
+            id_list = []
+            for service in docker_service_list:
+                if service.deployments.count() > 0:
+                    if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                        ArchivedDockerService.create_from_service(
+                            service, archived_version
+                        )
+                    else:
+                        ArchivedGitService.create_from_service(
+                            service, archived_version
+                        )
+                    id_list.append(service.id)
+
+            PortConfiguration.objects.filter(Q(service__id__in=id_list)).delete()
+            URL.objects.filter(Q(service__id__in=id_list)).delete()
+            Volume.objects.filter(Q(service__id__in=id_list)).delete()
+            Config.objects.filter(Q(service__id__in=id_list)).delete()
+            for service in docker_service_list:
+                if service.healthcheck is not None:
+                    service.healthcheck.delete()
+            # Delete Preview metadata before the services because they hold protected references
+            # to the services
+            for env in project.environments.filter().select_related("preview_metadata"):
+                if env.preview_metadata is not None:
+                    env.preview_metadata.delete()
+            docker_service_list.delete()
+
+            workflow_payloads.append(
+                (
+                    ArchivedProjectDetails(
+                        id=archived_version.pk,
+                        original_id=archived_version.original_id,
+                        environments=[
+                            EnvironmentDetails(
+                                id=env.original_id,
+                                name=env.name,
+                                project_id=archived_version.original_id,
+                            )
+                            for env in archived_version.environments.all()
+                        ],
+                        compose_stacks=[
+                            ComposeStackArchiveDetails(stack=stack.snapshot)
+                            for stack in project.compose_stacks.filter(
+                                user_content__isnull=False
+                            )
+                            .prefetch_related("env_overrides")
+                            .all()
+                        ],
+                    ),
+                    archived_version.workflow_id,
+                )
+            )
+
+        def commit_callback():
+            for payload, workflow_id in workflow_payloads:
+                TemporalClient.start_workflow(
+                    RemoveProjectResourcesWorkflow.run,
+                    payload,
+                    id=workflow_id,
+                )
+
+        transaction.on_commit(commit_callback)
+
+        return super().perform_destroy(instance)
+
+    def delete(self, request, *args, **kwargs):
+        response = super().delete(request, *args, **kwargs)
+
+        workspace = cast(
+            Workspace,
+            self.request.workspace,  # type: ignore
+        )
+
+        last_membership = (
+            WorkspaceMembership.objects.filter(
+                user=self.request.user,
+            )
+            .exclude(
+                workspace_id=workspace.id,
+            )
+            .select_related("workspace")
+            .first()
+        )
+
+        request.session[WORKSPACE_SESSION_KEY] = (
+            last_membership.workspace.id if last_membership is not None else None
+        )
+
+        return response
 
 
 class CreateWorkspaceAPIView(CreateAPIView):

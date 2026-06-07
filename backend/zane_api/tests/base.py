@@ -81,6 +81,7 @@ from temporal.activities import (
 )
 from ..utils import Colors, find_item_in_sequence, random_word
 from git import GitCommandError
+from ..constants import WORKSPACE_SESSION_KEY
 
 
 class CustomAPIClient(APIClient):
@@ -458,6 +459,9 @@ class AuthAPITestCase(APITestCase):
         self.client.login(username="Fredkiss3", password="password")
         user = User.objects.get(username="Fredkiss3")
         Token.objects.get_or_create(user=user)
+
+        first_workspace = cast(Workspace, Workspace.objects.first())
+        self.client.session.setdefault(WORKSPACE_SESSION_KEY, first_workspace.id)
         return user
 
     async def aLoginUser(self):

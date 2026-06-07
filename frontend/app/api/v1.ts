@@ -589,12 +589,29 @@ export interface paths {
     /** Generate an invitation link for a new user in a workspace */
     post: operations["inviteUser"];
   };
+  "/api/workspace/leave/": {
+    /** Leave workspace */
+    post: operations["leaveWorkspace"];
+  };
   "/api/workspace/members/": {
+    /** List workspace members */
     get: operations["workspace_members_list"];
+  };
+  "/api/workspace/members/{membership_id}/": {
+    get: operations["workspace_members_retrieve"];
+    delete: operations["workspace_members_destroy"];
+  };
+  "/api/workspace/members/{membership_id}/permissions/": {
+    /** Edit workspace membership permissions */
+    put: operations["editWorkpacePermissions"];
   };
   "/api/workspace/register/{token}/": {
     /** Create user account and register them into workspace */
     post: operations["registerUserIntoWorkspace"];
+  };
+  "/api/workspace/transfer-ownership/": {
+    /** Transfer workspace ownership */
+    post: operations["transferWorkspaceOwnership"];
   };
   "/api/workspaces/create/": {
     /** Create a new workspace */
@@ -703,7 +720,7 @@ export interface components {
     };
     AuthedSuccessResponse: {
       user: components["schemas"]["User"];
-      membership: components["schemas"]["WorkspaceMembership"];
+      membership: components["schemas"]["WorkspaceMembership"] | null;
     };
     AutoUpdateRequestRequest: {
       desired_version: string;
@@ -2856,6 +2873,56 @@ export interface components {
       build_context_dir: string;
       build_stage_target: string | null;
     };
+    EditWorkpacePermissionsAccessibleProjectIdsErrorComponent: {
+      /**
+       * @description * `accessible_project_ids` - accessible_project_ids
+       * @enum {string}
+       */
+      attr: "accessible_project_ids";
+      /**
+       * @description * `does_not_exist` - does_not_exist
+       * * `incorrect_type` - incorrect_type
+       * * `not_a_list` - not_a_list
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "does_not_exist" | "incorrect_type" | "not_a_list" | "null";
+      detail: string;
+    };
+    EditWorkpacePermissionsError: components["schemas"]["EditWorkpacePermissionsNonFieldErrorsErrorComponent"] | components["schemas"]["EditWorkpacePermissionsRoleErrorComponent"] | components["schemas"]["EditWorkpacePermissionsAccessibleProjectIdsErrorComponent"];
+    EditWorkpacePermissionsErrorResponse400: components["schemas"]["EditWorkpacePermissionsValidationError"] | components["schemas"]["ParseErrorResponse"];
+    EditWorkpacePermissionsNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    EditWorkpacePermissionsRoleErrorComponent: {
+      /**
+       * @description * `role` - role
+       * @enum {string}
+       */
+      attr: "role";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    EditWorkpacePermissionsValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["EditWorkpacePermissionsError"][];
+    };
     /**
      * @description * `env_variables` - env_variables
      * @enum {string}
@@ -3546,6 +3613,40 @@ export interface components {
      * @enum {string}
      */
     ItemChangeTypeEnum: "ADD" | "DELETE" | "UPDATE";
+    LeaveWorkspaceError: components["schemas"]["LeaveWorkspaceNonFieldErrorsErrorComponent"] | components["schemas"]["LeaveWorkspaceSuccessErrorComponent"];
+    LeaveWorkspaceErrorResponse400: components["schemas"]["LeaveWorkspaceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    LeaveWorkspaceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    LeaveWorkspaceSuccessErrorComponent: {
+      /**
+       * @description * `success` - success
+       * @enum {string}
+       */
+      attr: "success";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "required";
+      detail: string;
+    };
+    LeaveWorkspaceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["LeaveWorkspaceError"][];
+    };
     /**
      * @description * `ERROR` - Error
      * * `INFO` - Info
@@ -7371,6 +7472,42 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ToggleServiceError"][];
     };
+    TransferWorkspaceOwnershipError: components["schemas"]["TransferWorkspaceOwnershipNonFieldErrorsErrorComponent"] | components["schemas"]["TransferWorkspaceOwnershipNewOwnerIdErrorComponent"];
+    TransferWorkspaceOwnershipErrorResponse400: components["schemas"]["TransferWorkspaceOwnershipValidationError"] | components["schemas"]["ParseErrorResponse"];
+    TransferWorkspaceOwnershipNewOwnerIdErrorComponent: {
+      /**
+       * @description * `new_owner_id` - new_owner_id
+       * @enum {string}
+       */
+      attr: "new_owner_id";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "min_value" | "null" | "required";
+      detail: string;
+    };
+    TransferWorkspaceOwnershipNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    TransferWorkspaceOwnershipValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["TransferWorkspaceOwnershipError"][];
+    };
     /**
      * @description * `MANUAL` - Manual
      * * `AUTO` - Automatic
@@ -8189,6 +8326,11 @@ export interface components {
     WorkspaceAcceptInvitationResponse: {
       success: boolean;
     };
+    WorkspaceEditPermissionsRequestRequest: {
+      role: components["schemas"]["RoleEnum"];
+      /** @default [] */
+      accessible_project_ids?: string[];
+    };
     WorkspaceEditUpdateError: components["schemas"]["WorkspaceEditUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["WorkspaceEditUpdateNameErrorComponent"];
     WorkspaceEditUpdateErrorResponse400: components["schemas"]["WorkspaceEditUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     WorkspaceEditUpdateNameErrorComponent: {
@@ -8248,6 +8390,12 @@ export interface components {
     WorkspaceInvitationsDeleteDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceInvitationsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceInvitationsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    WorkspaceLeaveResponse: {
+      success: boolean;
+    };
+    WorkspaceLeaveResponseRequest: {
+      success: boolean;
+    };
     WorkspaceMember: {
       id: number;
       role_name: components["schemas"]["RoleNameEnum"];
@@ -8255,7 +8403,27 @@ export interface components {
       accessible_projects: readonly components["schemas"]["AccessibleWorkspaceProject"][];
       user: components["schemas"]["SimpleWorkspaceUser"];
     };
-    WorkspaceMembersListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    WorkspaceMembersDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    WorkspaceMembersListError: components["schemas"]["WorkspaceMembersListRoleErrorComponent"];
+    WorkspaceMembersListErrorResponse400: components["schemas"]["WorkspaceMembersListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    WorkspaceMembersListRoleErrorComponent: {
+      /**
+       * @description * `role` - role
+       * @enum {string}
+       */
+      attr: "role";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * @enum {string}
+       */
+      code: "invalid_choice";
+      detail: string;
+    };
+    WorkspaceMembersListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["WorkspaceMembersListError"][];
+    };
+    WorkspaceMembersRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceMembership: {
       id: number;
       role_name: components["schemas"]["RoleNameEnum"];
@@ -8267,6 +8435,12 @@ export interface components {
     };
     WorkspaceRequest: {
       name: string;
+    };
+    WorkspaceTransferOwnershipRequestRequest: {
+      new_owner_id: number;
+    };
+    WorkspaceTransferOwnershipResponse: {
+      success: boolean;
     };
     WorkspacesListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WriteableContainerRegistryCredentials: {
@@ -14179,11 +14353,58 @@ export interface operations {
       };
     };
   };
+  /** Leave workspace */
+  leaveWorkspace: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WorkspaceLeaveResponseRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["WorkspaceLeaveResponseRequest"];
+        "multipart/form-data": components["schemas"]["WorkspaceLeaveResponseRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceLeaveResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["LeaveWorkspaceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** List workspace members */
   workspace_members_list: {
     parameters: {
       query?: {
         /** @description A page number within the paginated result set. */
         page?: number;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+        /**
+         * @description * `10` - Guest
+         * * `30` - Member
+         * * `40` - Admin
+         * * `50` - Owner
+         */
+        role?: 10 | 30 | 40 | 50;
       };
     };
     responses: {
@@ -14195,6 +14416,130 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["WorkspaceMembersListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  workspace_members_retrieve: {
+    parameters: {
+      path: {
+        membership_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceMember"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceMembersRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  workspace_members_destroy: {
+    parameters: {
+      path: {
+        membership_id: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceMembersDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Edit workspace membership permissions */
+  editWorkpacePermissions: {
+    parameters: {
+      path: {
+        membership_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WorkspaceEditPermissionsRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["WorkspaceEditPermissionsRequestRequest"];
+        "multipart/form-data": components["schemas"]["WorkspaceEditPermissionsRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceMember"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["EditWorkpacePermissionsErrorResponse400"];
         };
       };
       401: {
@@ -14252,6 +14597,43 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Transfer workspace ownership */
+  transferWorkspaceOwnership: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WorkspaceTransferOwnershipRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["WorkspaceTransferOwnershipRequestRequest"];
+        "multipart/form-data": components["schemas"]["WorkspaceTransferOwnershipRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceTransferOwnershipResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["TransferWorkspaceOwnershipErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {

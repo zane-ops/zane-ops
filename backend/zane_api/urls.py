@@ -26,9 +26,9 @@ urlpatterns = [
         name="workspaces.create",
     ),
     re_path(
-        r"^workspace/edit/?$",
-        views.EditWorkspaceAPIView.as_view(),
-        name="workspace.edit",
+        r"^workspace/?$",
+        views.WorkspaceDetailAPIView.as_view(),
+        name="workspace.details",
     ),
     re_path(
         r"^workspace/invite-user/?$",

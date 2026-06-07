@@ -4,6 +4,10 @@ from django.utils.translation import gettext_lazy as _
 
 from .main import Project, Service
 from ..utils import strip_slash_if_exists, datetime_to_timestamp_string
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from django.db.models.manager import RelatedManager
 
 
 class TimestampArchivedModel(models.Model):
@@ -181,6 +185,9 @@ class ArchivedGitEnvVariable(BaseArchivedEnvVariable):
 
 
 class ArchivedGitService(ArchivedBaseService):
+    if TYPE_CHECKING:
+        env_variables: RelatedManager[ArchivedGitEnvVariable]
+
     repository_url = models.URLField(max_length=2048, null=False, blank=False)
     deployments = models.JSONField(null=False, default=list)  # type: list[dict[str, str]]
     project = models.ForeignKey(
@@ -291,6 +298,9 @@ class ArchivedGitService(ArchivedBaseService):
 
 
 class ArchivedDockerService(ArchivedBaseService):
+    if TYPE_CHECKING:
+        env_variables: RelatedManager[ArchivedDockerEnvVariable]
+
     image = models.CharField(max_length=510, null=False, blank=False)
     project = models.ForeignKey(
         to=ArchivedProject, on_delete=models.CASCADE, related_name="docker_services"

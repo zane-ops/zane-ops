@@ -63,6 +63,7 @@ if TYPE_CHECKING:
 class Workspace(TimestampedModel):
     if TYPE_CHECKING:
         projects: RelatedManager["Project"]
+        invitations: RelatedManager["WorkspaceInvitation"]
         members: RelatedManager["WorkspaceMembership"]
 
     id = ShortUUIDField(
@@ -101,7 +102,9 @@ class WorkspaceInvitation(TimestampedModel):
     if TYPE_CHECKING:
         accessible_projects: RelatedManager["Project"]
 
-    workspace = models.ForeignKey(to=Workspace, on_delete=models.CASCADE)
+    workspace = models.ForeignKey(
+        to=Workspace, on_delete=models.CASCADE, related_name="invitations"
+    )
     expires_at = models.DateTimeField()
     id = ShortUUIDField(
         length=11,
@@ -183,6 +186,7 @@ class Project(TimestampedModel):
     workspace = models.ForeignKey(
         Workspace,
         on_delete=models.CASCADE,
+        related_name="projects",
     )
 
     slug = models.SlugField(max_length=255, unique=True)
