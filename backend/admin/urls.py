@@ -11,9 +11,14 @@ urlpatterns = [
         name="users.list",
     ),
     re_path(
-        r"^users/(?P<id>\d+)?$",
+        r"^users/(?P<id>\d+)/?$",
         views.InstanceUserDetailAPIView.as_view(),
         name="user.details",
+    ),
+    re_path(
+        r"^users/(?P<id>\d+)/generate-password-reset-code/?$",
+        views.GeneratePasswordTokenAPIView.as_view(),
+        name="user.generate_password_reset",
     ),
     re_path(
         r"^workspaces/?$",

@@ -1,19 +1,35 @@
+from typing import cast
+
 from drf_spectacular.utils import extend_schema
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.views import APIView
 
 
 from django.contrib.auth.models import User
-from rest_framework import exceptions
+from rest_framework import exceptions, status
 from zane_api.models import Workspace
 from zane_api.permissions import IsInstanceOwner, HasWorkspace
 from zane_api.serializers import WorkspaceSerializer
 
 from zane_api.views import EMPTY_PAGINATED_RESPONSE
-from .serializers import InstanceUserPagination, WorkspaceListFilterSet, InstanceUserFilterSet
-from ..serializers import InstanceUserSerializer, WorkspaceDetailSerializer
+from .serializers import (
+    InstanceUserPagination,
+    WorkspaceListFilterSet,
+    InstanceUserFilterSet,
+)
+from ..serializers import (
+    InstanceUserSerializer,
+    WorkspaceDetailSerializer,
+    PasswordResetTokenSerializer,
+)
+from ..models import PasswordResetToken
+import secrets
+from django.utils import timezone
+from datetime import timedelta
 
 
 class ListWorkspacesAPIView(ListAPIView):
@@ -75,3 +91,28 @@ class WorkspaceDetailAPIView(RetrieveAPIView):
             "memberships__user",
             "memberships__accessible_projects",
         )
+
+
+class GeneratePasswordTokenAPIView(APIView):
+    permission_classes = [IsInstanceOwner]
+
+    @extend_schema(
+        operation_id="generatePasswordResetToken",
+        summary="Generate password reset token for user",
+        responses={201: PasswordResetTokenSerializer},
+    )
+    def post(self, request: Request, id: int):
+        if not User.objects.filter(pk=id).exists():
+            raise exceptions.NotFound("This user doesn't exist.")
+
+        user = User.objects.get(pk=id)
+
+        token = PasswordResetToken.objects.create(
+            value=secrets.token_hex(16),
+            user=user,
+            expires_at=timezone.now() + timedelta(minutes=30),
+        )
+
+        serializer = PasswordResetTokenSerializer(token)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

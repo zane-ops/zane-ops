@@ -2,6 +2,7 @@ import django_filters
 from rest_framework import pagination
 from django.contrib.auth.models import User
 from zane_api.models import Workspace
+from rest_framework import serializers
 
 
 class InstanceUserPagination(pagination.PageNumberPagination):
