@@ -20,4 +20,9 @@ urlpatterns = [
         views.ListWorkspacesAPIView.as_view(),
         name="workspaces.list",
     ),
+    re_path(
+        r"^workspaces/(?P<id>[a-zA-Z0-9_]+)/?$",
+        views.WorkspaceDetailAPIView.as_view(),
+        name="workspace.detail",
+    ),
 ]

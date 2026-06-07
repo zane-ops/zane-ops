@@ -13,7 +13,7 @@ from zane_api.serializers import WorkspaceSerializer
 
 from zane_api.views import EMPTY_PAGINATED_RESPONSE
 from .serializers import InstanceUserPagination, WorkspaceListFilterSet, InstanceUserFilterSet
-from ..serializers import InstanceUserSerializer
+from ..serializers import InstanceUserSerializer, WorkspaceDetailSerializer
 
 
 class ListWorkspacesAPIView(ListAPIView):
@@ -62,3 +62,16 @@ class InstanceUserDetailAPIView(RetrieveAPIView):
     queryset = User.objects.all()
     lookup_field = "pk"
     lookup_url_kwarg = "id"
+
+
+class WorkspaceDetailAPIView(RetrieveAPIView):
+    permission_classes = [IsInstanceOwner]
+    serializer_class = WorkspaceDetailSerializer
+    lookup_field = "pk"
+    lookup_url_kwarg = "id"
+
+    def get_queryset(self):  # type: ignore
+        return Workspace.objects.prefetch_related(
+            "memberships__user",
+            "memberships__accessible_projects",
+        )
