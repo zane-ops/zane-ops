@@ -15,4 +15,9 @@ urlpatterns = [
         views.InstanceUserDetailAPIView.as_view(),
         name="user.details",
     ),
+    re_path(
+        r"^workspaces/?$",
+        views.ListWorkspacesAPIView.as_view(),
+        name="workspaces.list",
+    ),
 ]
