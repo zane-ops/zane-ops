@@ -8,6 +8,11 @@ urlpatterns = [
     re_path(
         r"^users/?$",
         views.ListInstanceUsersAPIView.as_view(),
-        name="stacks.list",
-    )
+        name="users.list",
+    ),
+    re_path(
+        r"^users/(?P<id>\d+)?$",
+        views.InstanceUserDetailAPIView.as_view(),
+        name="user.details",
+    ),
 ]
