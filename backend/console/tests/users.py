@@ -1,7 +1,9 @@
+from datetime import timedelta
 from typing import cast
 
 from django.contrib.auth.models import User
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 
 from zane_api.tests.base import AuthAPITestCase
@@ -80,9 +82,12 @@ class ResetUserPasswordViewTests(AuthAPITestCase):
 
         user = User.objects.create_user(username="mohai", password="old_password")
 
-        self.client.post(
+        response = self.client.post(
             reverse("console:user.generate_password_reset", kwargs={"id": user.pk})
         )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
         token = cast(
             PasswordResetToken, PasswordResetToken.objects.get(user=user)
         ).value
@@ -108,9 +113,12 @@ class ResetUserPasswordViewTests(AuthAPITestCase):
 
         user = User.objects.create_user(username="mohai", password="old_password")
 
-        self.client.post(
+        response = self.client.post(
             reverse("console:user.generate_password_reset", kwargs={"id": user.pk})
         )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
         token = cast(
             PasswordResetToken, PasswordResetToken.objects.get(user=user)
         ).value
@@ -132,18 +140,22 @@ class ResetUserPasswordViewTests(AuthAPITestCase):
                 "confirm_password": "another_password123",
             },
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     def test_reset_password_with_invalid_token(self):
         self.loginUser()
 
         response = self.client.post(
-            reverse("zane_api:auth.reset_password", kwargs={"token": "invalid-token"}),
+            reverse(
+                "zane_api:auth.reset_password", kwargs={"token": "invalidtoken123"}
+            ),
             data={
                 "new_password": "new_password123",
                 "confirm_password": "new_password123",
             },
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     def test_reset_password_with_mismatched_passwords(self):
@@ -151,9 +163,12 @@ class ResetUserPasswordViewTests(AuthAPITestCase):
 
         user = User.objects.create_user(username="mohai", password="old_password")
 
-        self.client.post(
+        response = self.client.post(
             reverse("console:user.generate_password_reset", kwargs={"id": user.pk})
         )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
         token = cast(
             PasswordResetToken, PasswordResetToken.objects.get(user=user)
         ).value
@@ -167,4 +182,28 @@ class ResetUserPasswordViewTests(AuthAPITestCase):
                 "confirm_password": "different_password123",
             },
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "confirm_password"))
+
+    def test_reset_password_with_expired_token(self):
+        self.loginUser()
+
+        user = User.objects.create_user(username="mohai", password="old_password")
+        token = PasswordResetToken.objects.create(
+            user=user,
+            value="expiredtoken123",
+            expires_at=timezone.now() - timedelta(hours=1),
+        )
+
+        self.client.logout()
+
+        response = self.client.post(
+            reverse("zane_api:auth.reset_password", kwargs={"token": token.value}),
+            data={
+                "new_password": "new_password123",
+                "confirm_password": "new_password123",
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)

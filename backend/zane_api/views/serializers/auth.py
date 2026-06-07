@@ -105,3 +105,26 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
             )
         instance.save()
         return instance
+
+
+# ==========================================
+#             Reset password               #
+# ==========================================
+
+
+class ResetPasswordRequestSerializer(serializers.Serializer):
+    new_password = serializers.CharField(
+        min_length=8, max_length=255, validators=[validate_new_password]
+    )
+    confirm_password = serializers.CharField()
+
+    def validate(self, attrs: dict[str, str]):
+        new_password = attrs["new_password"]
+        confirm_password = attrs["confirm_password"]
+
+        if new_password != confirm_password:
+            raise serializers.ValidationError(
+                {"confirm_password": "Passwords do not match"}
+            )
+
+        return attrs

@@ -7,7 +7,6 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView, RetrieveDestro
 from rest_framework.views import APIView
 
 
-from django.contrib.auth.models import User
 from rest_framework import exceptions, status
 from zane_api.models import Workspace
 from zane_api.permissions import IsInstanceOwner, HasWorkspace
@@ -28,6 +27,9 @@ from ..models import PasswordResetToken
 import secrets
 from django.utils import timezone
 from datetime import timedelta
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class ListWorkspacesAPIView(ListAPIView):

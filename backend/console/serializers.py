@@ -1,8 +1,11 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User
+
 from zane_api.models import Workspace
 from zane_api.serializers import WorkspaceMemberSerializer
 from .models import PasswordResetToken
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class InstanceUserSerializer(serializers.ModelSerializer):

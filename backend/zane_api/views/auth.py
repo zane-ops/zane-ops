@@ -21,7 +21,6 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import exceptions
 from rest_framework import status, permissions
 from rest_framework.authentication import TokenAuthentication, SessionAuthentication
-from rest_framework.authtoken.models import Token
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -39,6 +38,7 @@ from .serializers.auth import (
     ChangePasswordRequestSerializer,
     ChangePasswordResponseSerializer,
     UpdateProfileSerializer,
+    ResetPasswordRequestSerializer,
 )
 from ..serializers import (
     UserSerializer,
@@ -46,12 +46,55 @@ from ..serializers import (
 )
 from ..models import Workspace, WorkspaceMembership, WorkspaceRole
 from ..constants import WORKSPACE_SESSION_KEY
+from console.models import PasswordResetToken
+
 
 User = get_user_model()
 
 
 class LoginSuccessResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
+
+
+class ResetPasswordAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        operation_id="resetPassword",
+        summary="Reset user password",
+        responses=LoginSuccessResponseSerializer,
+        request=ResetPasswordRequestSerializer,
+    )
+    def post(self, request: Request, token: str):
+        try:
+            password_token = (
+                PasswordResetToken.objects.filter(
+                    value=token,
+                    expires_at__gt=timezone.now(),
+                )
+                .select_related("user")
+                .get()
+            )
+        except PasswordResetToken.DoesNotExist:
+            raise exceptions.NotFound("Invalid or expired token.")
+
+        form = ResetPasswordRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+
+        data = cast(dict, form.validated_data)
+
+        # Update password
+        new_password = data["new_password"]
+
+        user = cast(AbstractUser, password_token.user)
+        user.set_password(new_password)
+        user.save()
+
+        # delete token
+        password_token.delete()
+
+        serializer = LoginSuccessResponseSerializer({"success": True})
+        return Response(serializer.data)
 
 
 class LoginRequestSerializer(serializers.Serializer):

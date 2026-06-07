@@ -2,7 +2,6 @@ from django.urls import re_path
 from . import views
 
 app_name = "console"
-DJANGO_SLUG_REGEX = r"[-a-zA-Z0-9_]+"
 
 urlpatterns = [
     re_path(
