@@ -18,7 +18,6 @@ from pathlib import Path
 
 import uvloop
 
-
 from .api_description import API_DESCRIPTION
 from .bootstrap import register_zaneops_app_on_proxy
 
@@ -120,6 +119,7 @@ SESSION_EXTEND_PERIOD = 7
 
 INSTALLED_APPS = [
     "daphne",
+    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -133,7 +133,7 @@ INSTALLED_APPS = [
     "s3_targets.apps.S3TargetsConfig",
     "container_registry.apps.ContainerRegistryConfig",
     "compose.apps.ComposeConfig",
-    "admin.apps.AdminConfig",
+    "console.apps.ConsoleConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",

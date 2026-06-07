@@ -4,10 +4,9 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 
-from zane_api.models import Workspace, WorkspaceMembership, WorkspaceRole
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import jprint
-from admin.models import PasswordResetToken
+from console.models import PasswordResetToken
 
 
 class GeneratePasswordResetCodeViewTests(AuthAPITestCase):
@@ -17,10 +16,11 @@ class GeneratePasswordResetCodeViewTests(AuthAPITestCase):
         user = User.objects.create_user(username="mohai", password="password")
 
         response = self.client.post(
-            reverse("admin:user.generate_password_reset", kwargs={"id": user.pk})
+            reverse("console:user.generate_password_reset", kwargs={"id": user.pk})
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
         token = cast(
             PasswordResetToken, PasswordResetToken.objects.filter(user=user).first()
         )
@@ -32,16 +32,19 @@ class GeneratePasswordResetCodeViewTests(AuthAPITestCase):
         user = User.objects.create_user(username="mohai", password="password")
 
         response = self.client.post(
-            reverse("admin:user.generate_password_reset", kwargs={"id": user.pk})
+            reverse("console:user.generate_password_reset", kwargs={"id": user.pk})
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
         first_token_value = cast(
             PasswordResetToken, PasswordResetToken.objects.get(user=user)
         ).value
 
         response = self.client.post(
-            reverse("admin:user.generate_password_reset", kwargs={"id": user.pk})
+            reverse("console:user.generate_password_reset", kwargs={"id": user.pk})
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         self.assertEqual(1, PasswordResetToken.objects.filter(user=user).count())
@@ -51,26 +54,23 @@ class GeneratePasswordResetCodeViewTests(AuthAPITestCase):
         self.assertNotEqual(first_token_value, new_token_value)
 
     def test_non_instance_owner_cannot_generate_password_reset_code(self):
-        owner = self.loginUser()
-        workspace = cast(Workspace, Workspace.objects.first())
-        WorkspaceMembership.objects.filter(user=owner).update(role=WorkspaceRole.ADMIN)
-
         user = User.objects.create_user(username="mohai", password="password")
-        WorkspaceMembership.objects.create(
-            role=WorkspaceRole.MEMBER, user=user, workspace=workspace
-        )
+
+        self.client.login(username="mohai", password="password")
 
         response = self.client.post(
-            reverse("admin:user.generate_password_reset", kwargs={"id": user.pk})
+            reverse("console:user.generate_password_reset", kwargs={"id": user.pk})
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
 
     def test_generate_password_reset_code_for_nonexistent_user(self):
         self.loginUser()
 
         response = self.client.post(
-            reverse("admin:user.generate_password_reset", kwargs={"id": 99999})
+            reverse("console:user.generate_password_reset", kwargs={"id": 99999})
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
 
@@ -81,7 +81,7 @@ class ResetUserPasswordViewTests(AuthAPITestCase):
         user = User.objects.create_user(username="mohai", password="old_password")
 
         self.client.post(
-            reverse("admin:user.generate_password_reset", kwargs={"id": user.pk})
+            reverse("console:user.generate_password_reset", kwargs={"id": user.pk})
         )
         token = cast(
             PasswordResetToken, PasswordResetToken.objects.get(user=user)
@@ -109,7 +109,7 @@ class ResetUserPasswordViewTests(AuthAPITestCase):
         user = User.objects.create_user(username="mohai", password="old_password")
 
         self.client.post(
-            reverse("admin:user.generate_password_reset", kwargs={"id": user.pk})
+            reverse("console:user.generate_password_reset", kwargs={"id": user.pk})
         )
         token = cast(
             PasswordResetToken, PasswordResetToken.objects.get(user=user)
@@ -152,7 +152,7 @@ class ResetUserPasswordViewTests(AuthAPITestCase):
         user = User.objects.create_user(username="mohai", password="old_password")
 
         self.client.post(
-            reverse("admin:user.generate_password_reset", kwargs={"id": user.pk})
+            reverse("console:user.generate_password_reset", kwargs={"id": user.pk})
         )
         token = cast(
             PasswordResetToken, PasswordResetToken.objects.get(user=user)

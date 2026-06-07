@@ -1,11 +1,9 @@
-from typing import cast
-
 from drf_spectacular.utils import extend_schema
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.response import Response
 from rest_framework.request import Request
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView, RetrieveDestroyAPIView
 from rest_framework.views import APIView
 
 
@@ -93,6 +91,24 @@ class WorkspaceDetailAPIView(RetrieveAPIView):
         )
 
 
+class PasswordTokenListAPIView(ListAPIView):
+    permission_classes = [IsInstanceOwner]
+    queryset = PasswordResetToken.objects.all()
+    serializer_class = PasswordResetTokenSerializer
+    pagination_class = InstanceUserPagination
+
+
+class PasswordTokenDetailAPIView(RetrieveDestroyAPIView):
+    permission_classes = [IsInstanceOwner]
+    queryset = PasswordResetToken.objects.all()
+    lookup_field = "pk"
+    lookup_url_kwarg = "id"
+    serializer_class = PasswordResetTokenSerializer
+
+    def get_queryset(self):  # type: ignore
+        return PasswordResetToken.objects.select_related("user")
+
+
 class GeneratePasswordTokenAPIView(APIView):
     permission_classes = [IsInstanceOwner]
 
@@ -103,15 +119,22 @@ class GeneratePasswordTokenAPIView(APIView):
     )
     def post(self, request: Request, id: int):
         if not User.objects.filter(pk=id).exists():
-            raise exceptions.NotFound("This user doesn't exist.")
+            raise exceptions.NotFound(f"User with `id={id}` does not exist.")
 
         user = User.objects.get(pk=id)
 
-        token = PasswordResetToken.objects.create(
-            value=secrets.token_hex(16),
-            user=user,
-            expires_at=timezone.now() + timedelta(minutes=30),
-        )
+        token = PasswordResetToken.objects.filter(user=user).first()
+        if token is None:
+            token = PasswordResetToken(
+                user=user,
+                value=secrets.token_hex(16),
+                expires_at=timezone.now() + timedelta(minutes=30),
+            )
+        else:
+            token.expires_at = timezone.now() + timedelta(minutes=30)
+            token.value = secrets.token_hex(16)
+
+        token.save()
 
         serializer = PasswordResetTokenSerializer(token)
 
