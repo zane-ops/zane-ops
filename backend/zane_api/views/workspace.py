@@ -21,7 +21,6 @@ from temporal.shared import (
 )
 
 from temporal.workflows import (
-    CreateProjectResourcesWorkflow,
     RemoveProjectResourcesWorkflow,
 )
 
