@@ -66,6 +66,15 @@ class GeneratePasswordResetCodeViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
 
+    def test_instance_owner_cannot_generate_password_reset_code_for_oneself(self):
+        me = self.loginUser()
+
+        response = self.client.post(
+            reverse("console:user.generate_password_reset", kwargs={"id": me.pk})
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
     def test_generate_password_reset_code_for_nonexistent_user(self):
         self.loginUser()
 

@@ -12,7 +12,7 @@ from zane_api.models import Workspace
 from zane_api.permissions import IsInstanceOwner, HasWorkspace
 from zane_api.serializers import WorkspaceSerializer
 
-from zane_api.views import EMPTY_PAGINATED_RESPONSE
+from zane_api.views import EMPTY_PAGINATED_RESPONSE, ResourceConflict
 from .serializers import (
     InstanceUserPagination,
     WorkspaceListFilterSet,
@@ -120,10 +120,14 @@ class GeneratePasswordTokenAPIView(APIView):
         responses={201: PasswordResetTokenSerializer},
     )
     def post(self, request: Request, id: int):
-        if not User.objects.filter(pk=id).exists():
+        user = User.objects.filter(pk=id).first()
+        if user is None:
             raise exceptions.NotFound(f"User with `id={id}` does not exist.")
 
-        user = User.objects.get(pk=id)
+        if user == self.request.user:
+            raise ResourceConflict(
+                "You cannot reset your own password. Use the settings page to change it."
+            )
 
         token = PasswordResetToken.objects.filter(user=user).first()
         if token is None:
