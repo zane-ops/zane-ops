@@ -120,7 +120,6 @@ SESSION_EXTEND_PERIOD = 7
 
 INSTALLED_APPS = [
     "daphne",
-    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -134,6 +133,7 @@ INSTALLED_APPS = [
     "s3_targets.apps.S3TargetsConfig",
     "container_registry.apps.ContainerRegistryConfig",
     "compose.apps.ComposeConfig",
+    "admin.apps.AdminConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
