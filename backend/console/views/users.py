@@ -3,7 +3,12 @@ from drf_spectacular.utils import extend_schema
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.response import Response
 from rest_framework.request import Request
-from rest_framework.generics import ListAPIView, RetrieveAPIView, RetrieveDestroyAPIView
+from rest_framework.generics import (
+    ListAPIView,
+    RetrieveAPIView,
+    RetrieveUpdateAPIView,
+    RetrieveDestroyAPIView,
+)
 from rest_framework.views import APIView
 
 
@@ -28,6 +33,7 @@ import secrets
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractUser
 
 User = get_user_model()
 
@@ -72,12 +78,24 @@ class ListInstanceUsersAPIView(ListAPIView):
             raise e
 
 
-class InstanceUserDetailAPIView(RetrieveAPIView):
+class InstanceUserDetailAPIView(RetrieveUpdateAPIView):
     permission_classes = [IsInstanceOwner]
     serializer_class = InstanceUserSerializer
     queryset = User.objects.all()
     lookup_field = "pk"
     lookup_url_kwarg = "id"
+    http_method_names = ["get", "patch"]
+
+    def get_object(self) -> AbstractUser:  # type: ignore
+        return super().get_object()
+
+    def perform_update(self, serializer: InstanceUserSerializer):
+        user = self.get_object()
+
+        if user == self.request.user:
+            raise ResourceConflict("You cannot change your own active status.")
+
+        return super().perform_update(serializer)
 
 
 class WorkspaceDetailAPIView(RetrieveAPIView):

@@ -216,3 +216,64 @@ class ResetUserPasswordViewTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+
+class ToggleUserStatusViewTests(AuthAPITestCase):
+    def test_suspend_user(self):
+        self.loginUser()
+
+        user = User.objects.create_user(username="mohai", password="password")
+        response = self.client.patch(
+            reverse("console:user.details", kwargs={"id": user.pk}),
+            data={"is_active": False},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        user.refresh_from_db()
+        self.assertFalse(user.is_active)
+
+    def test_reactivate_user(self):
+        self.loginUser()
+
+        user = User.objects.create_user(
+            username="mohai", password="password", is_active=False
+        )
+        response = self.client.patch(
+            reverse("console:user.details", kwargs={"id": user.pk}),
+            data={"is_active": True},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        user.refresh_from_db()
+        self.assertTrue(user.is_active)
+
+    def test_non_instance_owner_cannot_toggle_user_status(self):
+        user = User.objects.create_user(username="mohai", password="password")
+        self.client.login(username="mohai", password="password")
+
+        response = self.client.patch(
+            reverse("console:user.details", kwargs={"id": user.pk}),
+            data={"is_active": False},
+        )
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+    def test_cannot_toggle_own_status(self):
+        self.loginUser()
+
+        me = User.objects.get(username="Fredkiss3")
+        response = self.client.patch(
+            reverse("console:user.details", kwargs={"id": me.pk}),
+            data={"is_active": False},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    def test_toggle_status_for_nonexistent_user(self):
+        self.loginUser()
+
+        response = self.client.patch(
+            reverse("console:user.details", kwargs={"id": 99999}),
+            data={"is_active": False},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)

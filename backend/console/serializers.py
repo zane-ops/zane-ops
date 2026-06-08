@@ -17,7 +17,15 @@ class InstanceUserSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "is_superuser",
+            "is_active",
         ]
+        extra_kwargs = {
+            "id": {"read_only": True},
+            "username": {"read_only": True},
+            "first_name": {"read_only": True},
+            "last_name": {"read_only": True},
+            "is_superuser": {"read_only": True},
+        }
 
 
 class WorkspaceDetailSerializer(serializers.ModelSerializer):
