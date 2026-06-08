@@ -2,7 +2,7 @@ from collections import OrderedDict
 from typing import Any
 
 from drf_standardized_errors.handler import ExceptionHandler
-from rest_framework import exceptions, status
+from rest_framework import exceptions, status, pagination
 
 EMPTY_PAGINATED_RESPONSE = OrderedDict(
     [("count", 0), ("next", None), ("previous", None), ("results", [])]
@@ -75,3 +75,9 @@ def drf_spectular_mark_all_outputs_required(result: Any, **kwargs: Any):
             continue
         schema["required"] = sorted(schema["properties"].keys())
     return result
+
+
+class DefaultPageNumberPagination(pagination.PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "per_page"
+    page_query_param = "page"

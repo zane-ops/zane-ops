@@ -10,13 +10,16 @@ from rest_framework.generics import (
 )
 from rest_framework.views import APIView
 
-
 from rest_framework import exceptions, status
 from zane_api.permissions import IsInstanceOwner
 
-from zane_api.views import EMPTY_PAGINATED_RESPONSE, ResourceConflict
+from zane_api.views.base import (
+    DefaultPageNumberPagination,
+    EMPTY_PAGINATED_RESPONSE,
+    ResourceConflict,
+)
+
 from .serializers import (
-    InstanceUserPagination,
     InstanceUserFilterSet,
 )
 from ..serializers import (
@@ -30,6 +33,7 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 
+
 User = get_user_model()
 
 
@@ -37,7 +41,7 @@ class ListInstanceUsersAPIView(ListAPIView):
     permission_classes = [IsInstanceOwner]
     serializer_class = InstanceUserSerializer
     queryset = User.objects.all()
-    pagination_class = InstanceUserPagination
+    pagination_class = DefaultPageNumberPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = InstanceUserFilterSet
 
@@ -77,7 +81,7 @@ class PasswordTokenListAPIView(ListAPIView):
     permission_classes = [IsInstanceOwner]
     queryset = PasswordResetToken.objects.all()
     serializer_class = PasswordResetTokenSerializer
-    pagination_class = InstanceUserPagination
+    pagination_class = DefaultPageNumberPagination
 
 
 class PasswordTokenDetailAPIView(RetrieveDestroyAPIView):

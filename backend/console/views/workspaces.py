@@ -4,22 +4,21 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.response import Response
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 
-
 from rest_framework import exceptions
 from zane_api.models import Workspace
 from zane_api.permissions import IsInstanceOwner
 from zane_api.serializers import WorkspaceSerializer
 
-from zane_api.views import EMPTY_PAGINATED_RESPONSE
-from .serializers import InstanceUserPagination, WorkspaceListFilterSet
+from .serializers import WorkspaceListFilterSet
 from ..serializers import WorkspaceDetailSerializer
+from zane_api.views.base import DefaultPageNumberPagination, EMPTY_PAGINATED_RESPONSE
 
 
 class ListWorkspacesAPIView(ListAPIView):
     permission_classes = [IsInstanceOwner]
     serializer_class = WorkspaceSerializer
     queryset = Workspace.objects.all()
-    pagination_class = InstanceUserPagination
+    pagination_class = DefaultPageNumberPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = WorkspaceListFilterSet
 
