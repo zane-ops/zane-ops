@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 
 from rest_framework import exceptions, status
 from zane_api.models import Workspace
-from zane_api.permissions import IsInstanceOwner, HasWorkspace
+from zane_api.permissions import IsInstanceOwner
 from zane_api.serializers import WorkspaceSerializer
 
 from zane_api.views import EMPTY_PAGINATED_RESPONSE, ResourceConflict
@@ -73,7 +73,7 @@ class ListInstanceUsersAPIView(ListAPIView):
 
 
 class InstanceUserDetailAPIView(RetrieveAPIView):
-    permission_classes = [HasWorkspace, IsInstanceOwner]
+    permission_classes = [IsInstanceOwner]
     serializer_class = InstanceUserSerializer
     queryset = User.objects.all()
     lookup_field = "pk"
@@ -131,15 +131,11 @@ class GeneratePasswordTokenAPIView(APIView):
 
         token = PasswordResetToken.objects.filter(user=user).first()
         if token is None:
-            token = PasswordResetToken(
-                user=user,
-                value=secrets.token_hex(16),
-                expires_at=timezone.now() + timedelta(minutes=30),
-            )
-        else:
-            token.expires_at = timezone.now() + timedelta(minutes=30)
-            token.value = secrets.token_hex(16)
+            token = PasswordResetToken(user=user)
 
+        # Create or update password reset token
+        token.expires_at = timezone.now() + timedelta(minutes=30)
+        token.value = secrets.token_hex(16)
         token.save()
 
         serializer = PasswordResetTokenSerializer(token)
