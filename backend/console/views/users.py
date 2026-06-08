@@ -95,6 +95,7 @@ class GeneratePasswordTokenAPIView(APIView):
     permission_classes = [IsInstanceOwner]
 
     @extend_schema(
+        request=None,
         operation_id="generatePasswordResetToken",
         summary="Generate password reset token for user",
         responses={201: PasswordResetTokenSerializer},
