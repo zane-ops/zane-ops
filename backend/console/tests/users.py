@@ -277,3 +277,36 @@ class ToggleUserStatusViewTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    def test_suspending_user_clears_their_sessions(self):
+        user = User.objects.create_user(username="mohai", password="password")
+
+        mohai_client = self.client_class()
+        mohai_client.login(username="mohai", password="password")
+
+        self.loginUser()
+        self.client.patch(
+            reverse("console:user.details", kwargs={"id": user.pk}),
+            data={"is_active": False},
+        )
+
+        response = mohai_client.get(reverse("zane_api:auth.me"))
+        jprint(response.json())
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
+
+    def test_suspended_user_cannot_login(self):
+        self.loginUser()
+
+        user = User.objects.create_user(username="mohai", password="password")
+        self.client.patch(
+            reverse("console:user.details", kwargs={"id": user.pk}),
+            data={"is_active": False},
+        )
+        self.client.logout()
+
+        response = self.client.post(
+            reverse("zane_api:auth.login"),
+            data={"username": "mohai", "password": "password"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)

@@ -168,10 +168,17 @@ class AuthedView(APIView):
                 now + timedelta(seconds=settings.SESSION_EXTEND_PERIOD)
             )
 
+        # Get current workspace in session
+        workspace_id = request.session.get(WORKSPACE_SESSION_KEY)
+        qs = Workspace.objects.filter(memberships__user=request.user)
+        if workspace_id is not None:
+            qs = qs.filter(id=workspace_id)
+        workspace = qs.order_by("created_at").first()
+
         membership = (
             WorkspaceMembership.objects.filter(
                 user=request.user,
-                workspace=request.workspace,
+                workspace=workspace,
             )
             .select_related("workspace")
             .first()
