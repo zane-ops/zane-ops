@@ -5,7 +5,6 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.generics import (
     ListAPIView,
-    RetrieveAPIView,
     RetrieveUpdateAPIView,
     RetrieveDestroyAPIView,
 )
@@ -13,19 +12,15 @@ from rest_framework.views import APIView
 
 
 from rest_framework import exceptions, status
-from zane_api.models import Workspace
 from zane_api.permissions import IsInstanceOwner
-from zane_api.serializers import WorkspaceSerializer
 
 from zane_api.views import EMPTY_PAGINATED_RESPONSE, ResourceConflict
 from .serializers import (
     InstanceUserPagination,
-    WorkspaceListFilterSet,
     InstanceUserFilterSet,
 )
 from ..serializers import (
     InstanceUserSerializer,
-    WorkspaceDetailSerializer,
     PasswordResetTokenSerializer,
 )
 from ..models import PasswordResetToken
@@ -36,26 +31,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 
 User = get_user_model()
-
-
-class ListWorkspacesAPIView(ListAPIView):
-    permission_classes = [IsInstanceOwner]
-    serializer_class = WorkspaceSerializer
-    queryset = Workspace.objects.all()
-    pagination_class = InstanceUserPagination
-    filter_backends = [DjangoFilterBackend]
-    filterset_class = WorkspaceListFilterSet
-
-    @extend_schema(
-        summary="List all workspaces in ZaneOps installation",
-    )
-    def get(self, request, *args, **kwargs):
-        try:
-            return super().get(request, *args, **kwargs)
-        except exceptions.NotFound as e:
-            if "Invalid page" in str(e.detail):
-                return Response(EMPTY_PAGINATED_RESPONSE)
-            raise e
 
 
 class ListInstanceUsersAPIView(ListAPIView):
@@ -96,19 +71,6 @@ class InstanceUserDetailAPIView(RetrieveUpdateAPIView):
             raise ResourceConflict("You cannot change your own active status.")
 
         return super().perform_update(serializer)
-
-
-class WorkspaceDetailAPIView(RetrieveAPIView):
-    permission_classes = [IsInstanceOwner]
-    serializer_class = WorkspaceDetailSerializer
-    lookup_field = "pk"
-    lookup_url_kwarg = "id"
-
-    def get_queryset(self):  # type: ignore
-        return Workspace.objects.prefetch_related(
-            "memberships__user",
-            "memberships__accessible_projects",
-        )
 
 
 class PasswordTokenListAPIView(ListAPIView):
