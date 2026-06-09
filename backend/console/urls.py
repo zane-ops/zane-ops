@@ -39,4 +39,9 @@ urlpatterns = [
         views.WorkspaceDetailAPIView.as_view(),
         name="workspace.detail",
     ),
+    re_path(
+        r"^workspaces/(?P<id>[a-zA-Z0-9_]+)/transfer-ownership/?$",
+        views.WorkspaceTransferOwnershipAPIView.as_view(),
+        name="workspace.transfer_ownership",
+    ),
 ]

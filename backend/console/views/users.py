@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.generics import (
     ListAPIView,
-    RetrieveUpdateAPIView,
     RetrieveDestroyAPIView,
+    RetrieveUpdateDestroyAPIView,
 )
 from rest_framework.views import APIView
 
@@ -32,7 +32,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
-
+from zane_api.models import WorkspaceMembership, WorkspaceRole
 
 User = get_user_model()
 
@@ -57,13 +57,13 @@ class ListInstanceUsersAPIView(ListAPIView):
             raise e
 
 
-class InstanceUserDetailAPIView(RetrieveUpdateAPIView):
+class InstanceUserDetailAPIView(RetrieveUpdateDestroyAPIView):
     permission_classes = [IsInstanceOwner]
     serializer_class = InstanceUserSerializer
     queryset = User.objects.all()
     lookup_field = "pk"
     lookup_url_kwarg = "id"
-    http_method_names = ["get", "patch"]
+    http_method_names = ["get", "patch", "delete"]
 
     def get_object(self) -> AbstractUser:  # type: ignore
         return super().get_object()
@@ -75,6 +75,25 @@ class InstanceUserDetailAPIView(RetrieveUpdateAPIView):
             raise ResourceConflict("You cannot change your own active status.")
 
         return super().perform_update(serializer)
+
+    def perform_destroy(self, instance):
+        user = self.get_object()
+
+        if user == self.request.user:
+            raise ResourceConflict("You cannot delete yourself.")
+
+        owned_workspaces = WorkspaceMembership.objects.filter(
+            user=user, role=WorkspaceRole.OWNER
+        ).values_list("workspace__name", flat=True)
+
+        if owned_workspaces.exists():
+            names = ", ".join([f"`{name}`" for name in owned_workspaces])
+            raise ResourceConflict(
+                f"Cannot delete this user because they own the following workspace(s): {names}."
+                " Transfer ownership first, then retry."
+            )
+
+        return super().perform_destroy(instance)
 
 
 class PasswordTokenListAPIView(ListAPIView):

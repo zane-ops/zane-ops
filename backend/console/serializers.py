@@ -40,6 +40,24 @@ class WorkspaceDetailSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "members"]
 
 
+class WorkspaceTransferOwnershipSerializer(serializers.Serializer):
+    owner_id = serializers.IntegerField()
+
+    def validate_owner_id(self, owner_id: int):
+        new_owner = User.objects.filter(pk=owner_id).first()
+        if new_owner is None:
+            raise serializers.ValidationError(
+                f"User with id={owner_id} does not exist."
+            )
+
+        if not new_owner.is_active:
+            raise serializers.ValidationError(
+                "You cannot transfer ownership of this workspace to a suspended user."
+            )
+
+        return owner_id
+
+
 class PasswordResetTokenSerializer(serializers.ModelSerializer):
     user = InstanceUserSerializer(read_only=True)
 
