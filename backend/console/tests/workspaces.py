@@ -58,7 +58,7 @@ class TransferWorkspaceOwnershipViewTests(AuthAPITestCase):
             ).exists()
         )
 
-    def test_cannot_transfer_ownership_to_non_member(self):
+    def test_can_transfer_ownership_to_non_member(self):
         self.loginUser()
 
         user = User.objects.create_user(username="mohai", password="password")
@@ -75,7 +75,17 @@ class TransferWorkspaceOwnershipViewTests(AuthAPITestCase):
             data={"owner_id": non_member.pk},
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertTrue(
+            WorkspaceMembership.objects.filter(
+                user=non_member, workspace=workspace, role=WorkspaceRole.OWNER
+            ).exists()
+        )
+        self.assertFalse(
+            WorkspaceMembership.objects.filter(
+                user=user, workspace=workspace, role=WorkspaceRole.OWNER
+            ).exists()
+        )
 
     def test_non_instance_owner_cannot_transfer_workspace_ownership(self):
         user = User.objects.create_user(username="mohai", password="password")
@@ -122,7 +132,8 @@ class TransferWorkspaceOwnershipViewTests(AuthAPITestCase):
             data={"owner_id": 99999},
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "owner_id"))
 
     def test_cannot_transfer_ownership_to_suspended_user(self):
         self.loginUser()
