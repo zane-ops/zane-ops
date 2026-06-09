@@ -44,6 +44,10 @@ export interface paths {
      */
     get: operations["getAuthedUser"];
   };
+  "/api/auth/reset-password/{token}/": {
+    /** Reset user password */
+    post: operations["resetPassword"];
+  };
   "/api/auth/update-profile/": {
     /**
      * Update user profile
@@ -203,6 +207,37 @@ export interface paths {
   "/api/connectors/repository-branches/": {
     /** List all the branches of a repository */
     get: operations["listGitRepoBranches"];
+  };
+  "/api/console/password-tokens/": {
+    get: operations["console_password_tokens_list"];
+  };
+  "/api/console/password-tokens/{id}": {
+    get: operations["console_password_tokens_retrieve"];
+    delete: operations["console_password_tokens_destroy"];
+  };
+  "/api/console/users/": {
+    /** List all users in ZaneOps installation */
+    get: operations["console_users_list"];
+  };
+  "/api/console/users/{id}/": {
+    get: operations["console_users_retrieve"];
+    delete: operations["console_users_destroy"];
+    patch: operations["console_users_partial_update"];
+  };
+  "/api/console/users/{id}/generate-password-reset-code/": {
+    /** Generate password reset token for user */
+    post: operations["generatePasswordResetToken"];
+  };
+  "/api/console/workspaces/": {
+    /** List all workspaces in ZaneOps installation */
+    get: operations["console_workspaces_list"];
+  };
+  "/api/console/workspaces/{id}/": {
+    get: operations["console_workspaces_retrieve"];
+  };
+  "/api/console/workspaces/{id}/transfer-ownership/": {
+    /** Transfer workspace ownership (admin) */
+    put: operations["consoleTransferWorkspaceOwnership"];
   };
   "/api/csrf/": {
     /**
@@ -565,8 +600,10 @@ export interface paths {
      */
     post: operations["trigger_update_create"];
   };
-  "/api/workspace/edit/": {
-    put: operations["workspace_edit_update"];
+  "/api/workspace/": {
+    get: operations["workspace_retrieve"];
+    put: operations["workspace_update"];
+    delete: operations["workspace_destroy"];
   };
   "/api/workspace/invitations/": {
     get: operations["workspace_invitations_list"];
@@ -1755,6 +1792,118 @@ export interface components {
       errors: components["schemas"]["ConnectorsGitlabUpdateUpdateError"][];
     };
     ConnectorsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsolePasswordTokensDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsolePasswordTokensListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsolePasswordTokensRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsoleTransferWorkspaceOwnershipError: components["schemas"]["ConsoleTransferWorkspaceOwnershipNonFieldErrorsErrorComponent"] | components["schemas"]["ConsoleTransferWorkspaceOwnershipOwnerIdErrorComponent"];
+    ConsoleTransferWorkspaceOwnershipErrorResponse400: components["schemas"]["ConsoleTransferWorkspaceOwnershipValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ConsoleTransferWorkspaceOwnershipNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ConsoleTransferWorkspaceOwnershipOwnerIdErrorComponent: {
+      /**
+       * @description * `owner_id` - owner_id
+       * @enum {string}
+       */
+      attr: "owner_id";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "null" | "required";
+      detail: string;
+    };
+    ConsoleTransferWorkspaceOwnershipValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ConsoleTransferWorkspaceOwnershipError"][];
+    };
+    ConsoleUsersDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsoleUsersListError: components["schemas"]["ConsoleUsersListUsernameErrorComponent"];
+    ConsoleUsersListErrorResponse400: components["schemas"]["ConsoleUsersListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ConsoleUsersListUsernameErrorComponent: {
+      /**
+       * @description * `username` - username
+       * @enum {string}
+       */
+      attr: "username";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ConsoleUsersListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ConsoleUsersListError"][];
+    };
+    ConsoleUsersPartialUpdateError: components["schemas"]["ConsoleUsersPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConsoleUsersPartialUpdateIsActiveErrorComponent"];
+    ConsoleUsersPartialUpdateErrorResponse400: components["schemas"]["ConsoleUsersPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ConsoleUsersPartialUpdateIsActiveErrorComponent: {
+      /**
+       * @description * `is_active` - is_active
+       * @enum {string}
+       */
+      attr: "is_active";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ConsoleUsersPartialUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ConsoleUsersPartialUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ConsoleUsersPartialUpdateError"][];
+    };
+    ConsoleUsersRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsoleWorkspacesListError: components["schemas"]["ConsoleWorkspacesListNameErrorComponent"];
+    ConsoleWorkspacesListErrorResponse400: components["schemas"]["ConsoleWorkspacesListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ConsoleWorkspacesListNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ConsoleWorkspacesListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ConsoleWorkspacesListError"][];
+    };
+    ConsoleWorkspacesRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CreateComposeStackFromDokployTemplateObjectRequestRequest: {
       compose: string;
       config: string;
@@ -3060,6 +3209,7 @@ export interface components {
      * @enum {string}
      */
     FieldChangeTypeEnum: "UPDATE";
+    GeneratePasswordResetTokenErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetAPISettingsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetAuthedUserErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetBuildRegistriesErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -3514,6 +3664,23 @@ export interface components {
       errors: components["schemas"]["HttpLogsListError"][];
     };
     HttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    InstanceUser: {
+      id: number;
+      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+      username: string;
+      first_name: string;
+      last_name: string;
+      /**
+       * Superuser status
+       * @description Designates that this user has all permissions without explicitly assigning them.
+       */
+      is_superuser: boolean;
+      /**
+       * Active
+       * @description Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
+       */
+      is_active: boolean;
+    };
     InviteUserAccessibleProjectIdsErrorComponent: {
       /**
        * @description * `accessible_project_ids` - accessible_project_ids
@@ -3897,6 +4064,36 @@ export interface components {
       previous: string | null;
       results: components["schemas"]["HttpLog"][];
     };
+    PaginatedInstanceUserList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["InstanceUser"][];
+    };
+    PaginatedPasswordResetTokenList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["PasswordResetToken"][];
+    };
     PaginatedServiceDeploymentList: {
       /** @example 123 */
       count: number;
@@ -3927,6 +4124,21 @@ export interface components {
       previous: string | null;
       results: components["schemas"]["WorkspaceInvitation"][];
     };
+    PaginatedWorkspaceList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["Workspace"][];
+    };
     PaginatedWorkspaceMemberList: {
       /** @example 123 */
       count: number;
@@ -3956,6 +4168,13 @@ export interface components {
       type: components["schemas"]["ClientErrorEnum"];
       errors: components["schemas"]["ParseError"][];
     };
+    PasswordResetToken: {
+      id: number;
+      value: string;
+      /** Format: date-time */
+      expires_at: string;
+      user: components["schemas"]["InstanceUser"];
+    };
     PatchedBuildRegistryUpdateDetailsRequest: {
       name?: string;
       is_default?: boolean;
@@ -3968,6 +4187,13 @@ export interface components {
     };
     PatchedGithubAppRequest: {
       name?: string;
+    };
+    PatchedInstanceUserRequest: {
+      /**
+       * Active
+       * @description Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
+       */
+      is_active?: boolean;
     };
     PatchedPreviewEnvTemplateRequest: {
       slug?: string;
@@ -6823,6 +7049,67 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RequestServiceChangesError"][];
     };
+    ResetPasswordConfirmPasswordErrorComponent: {
+      /**
+       * @description * `confirm_password` - confirm_password
+       * @enum {string}
+       */
+      attr: "confirm_password";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ResetPasswordError: components["schemas"]["ResetPasswordNonFieldErrorsErrorComponent"] | components["schemas"]["ResetPasswordNewPasswordErrorComponent"] | components["schemas"]["ResetPasswordConfirmPasswordErrorComponent"];
+    ResetPasswordErrorResponse400: components["schemas"]["ResetPasswordValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ResetPasswordNewPasswordErrorComponent: {
+      /**
+       * @description * `new_password` - new_password
+       * @enum {string}
+       */
+      attr: "new_password";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `min_length` - min_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ResetPasswordNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ResetPasswordRequestRequest: {
+      new_password: string;
+      confirm_password: string;
+    };
+    ResetPasswordValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ResetPasswordError"][];
+    };
     ResourceLimit: {
       no_of_cpus: number;
       max_memory_in_bytes: number;
@@ -8326,48 +8613,16 @@ export interface components {
     WorkspaceAcceptInvitationResponse: {
       success: boolean;
     };
+    WorkspaceDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    WorkspaceDetail: {
+      id: string;
+      name: string;
+      members: readonly components["schemas"]["WorkspaceMember"][];
+    };
     WorkspaceEditPermissionsRequestRequest: {
       role: components["schemas"]["RoleEnum"];
       /** @default [] */
       accessible_project_ids?: string[];
-    };
-    WorkspaceEditUpdateError: components["schemas"]["WorkspaceEditUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["WorkspaceEditUpdateNameErrorComponent"];
-    WorkspaceEditUpdateErrorResponse400: components["schemas"]["WorkspaceEditUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
-    WorkspaceEditUpdateNameErrorComponent: {
-      /**
-       * @description * `name` - name
-       * @enum {string}
-       */
-      attr: "name";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    WorkspaceEditUpdateNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    WorkspaceEditUpdateValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["WorkspaceEditUpdateError"][];
     };
     WorkspaceInvitation: {
       role_name: components["schemas"]["RoleNameEnum"];
@@ -8436,11 +8691,53 @@ export interface components {
     WorkspaceRequest: {
       name: string;
     };
+    WorkspaceRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    WorkspaceTransferOwnershipRequest: {
+      owner_id: number;
+    };
     WorkspaceTransferOwnershipRequestRequest: {
       new_owner_id: number;
     };
     WorkspaceTransferOwnershipResponse: {
       success: boolean;
+    };
+    WorkspaceUpdateError: components["schemas"]["WorkspaceUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["WorkspaceUpdateNameErrorComponent"];
+    WorkspaceUpdateErrorResponse400: components["schemas"]["WorkspaceUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    WorkspaceUpdateNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WorkspaceUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    WorkspaceUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["WorkspaceUpdateError"][];
     };
     WorkspacesListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WriteableContainerRegistryCredentials: {
@@ -8499,11 +8796,6 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      403: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {
@@ -8632,11 +8924,6 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
-      403: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse403"];
-        };
-      };
       429: {
         content: {
           "application/json": components["schemas"]["ErrorResponse429"];
@@ -8665,9 +8952,46 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
-      403: {
+      429: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse403"];
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Reset user password */
+  resetPassword: {
+    parameters: {
+      path: {
+        token: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResetPasswordRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ResetPasswordRequestRequest"];
+        "multipart/form-data": components["schemas"]["ResetPasswordRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LoginSuccessResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ResetPasswordErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {
@@ -8703,11 +9027,6 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      403: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -10389,6 +10708,462 @@ export interface operations {
       403: {
         content: {
           "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  console_password_tokens_list: {
+    parameters: {
+      query?: {
+        /** @description A page number within the paginated result set. */
+        page?: number;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedPasswordResetTokenList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsolePasswordTokensListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  console_password_tokens_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PasswordResetToken"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsolePasswordTokensRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  console_password_tokens_destroy: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsolePasswordTokensDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** List all users in ZaneOps installation */
+  console_users_list: {
+    parameters: {
+      query?: {
+        /** @description A page number within the paginated result set. */
+        page?: number;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+        username?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedInstanceUserList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsoleUsersListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  console_users_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["InstanceUser"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsoleUsersRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  console_users_destroy: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsoleUsersDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  console_users_partial_update: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedInstanceUserRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedInstanceUserRequest"];
+        "multipart/form-data": components["schemas"]["PatchedInstanceUserRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["InstanceUser"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsoleUsersPartialUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Generate password reset token for user */
+  generatePasswordResetToken: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["PasswordResetToken"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GeneratePasswordResetTokenErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** List all workspaces in ZaneOps installation */
+  console_workspaces_list: {
+    parameters: {
+      query?: {
+        name?: string;
+        /** @description A page number within the paginated result set. */
+        page?: number;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedWorkspaceList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsoleWorkspacesListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  console_workspaces_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceDetail"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsoleWorkspacesRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Transfer workspace ownership (admin) */
+  consoleTransferWorkspaceOwnership: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WorkspaceTransferOwnershipRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["WorkspaceTransferOwnershipRequest"];
+        "multipart/form-data": components["schemas"]["WorkspaceTransferOwnershipRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceDetail"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsoleTransferWorkspaceOwnershipErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {
@@ -14081,7 +14856,41 @@ export interface operations {
       };
     };
   };
-  workspace_edit_update: {
+  workspace_retrieve: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Workspace"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  workspace_update: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["WorkspaceRequest"];
@@ -14097,7 +14906,40 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["WorkspaceEditUpdateErrorResponse400"];
+          "application/json": components["schemas"]["WorkspaceUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  workspace_destroy: {
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceDestroyErrorResponse400"];
         };
       };
       401: {

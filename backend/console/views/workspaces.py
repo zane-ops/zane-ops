@@ -69,6 +69,7 @@ class WorkspaceTransferOwnershipAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
+        responses=WorkspaceDetailSerializer,
         request=WorkspaceTransferOwnershipSerializer,
         operation_id="consoleTransferWorkspaceOwnership",
         summary="Transfer workspace ownership (admin)",

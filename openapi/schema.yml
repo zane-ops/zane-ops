@@ -5066,6 +5066,91 @@ paths:
               schema:
                 $ref: '#/components/schemas/InstanceUser'
           description: ''
+    delete:
+      operationId: console_users_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - console
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleUsersDestroyErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
   /api/console/users/{id}/generate-password-reset-code/:
     post:
       operationId: generatePasswordResetToken
@@ -5278,6 +5363,109 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConsoleWorkspacesRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceDetail'
+          description: ''
+  /api/console/workspaces/{id}/transfer-ownership/:
+    put:
+      operationId: consoleTransferWorkspaceOwnership
+      summary: Transfer workspace ownership (admin)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - console
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceTransferOwnershipRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceTransferOwnershipRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceTransferOwnershipRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleTransferWorkspaceOwnershipErrorResponse400'
           description: ''
         '401':
           content:
@@ -18113,6 +18301,88 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     ConsolePasswordTokensRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleTransferWorkspaceOwnershipError:
+      oneOf:
+      - $ref: '#/components/schemas/ConsoleTransferWorkspaceOwnershipNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ConsoleTransferWorkspaceOwnershipOwnerIdErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ConsoleTransferWorkspaceOwnershipNonFieldErrorsErrorComponent'
+          owner_id: '#/components/schemas/ConsoleTransferWorkspaceOwnershipOwnerIdErrorComponent'
+    ConsoleTransferWorkspaceOwnershipErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ConsoleTransferWorkspaceOwnershipValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ConsoleTransferWorkspaceOwnershipValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleTransferWorkspaceOwnershipNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleTransferWorkspaceOwnershipOwnerIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - owner_id
+          type: string
+          description: '* `owner_id` - owner_id'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleTransferWorkspaceOwnershipValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsoleTransferWorkspaceOwnershipError'
+      required:
+      - errors
+      - type
+    ConsoleUsersDestroyErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -32923,6 +33193,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    WorkspaceTransferOwnershipRequest:
+      type: object
+      properties:
+        owner_id:
+          type: integer
+      required:
+      - owner_id
     WorkspaceTransferOwnershipRequestRequest:
       type: object
       properties:
