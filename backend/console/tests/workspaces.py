@@ -176,9 +176,7 @@ class DeleteWorkspaceViewTests(AuthAPITestCase):
         self.loginUser()
 
         workspace = Workspace.objects.create(name="mohai workspace")
-        project = Project.objects.create(slug="my-project", workspace=workspace)
-        Service.objects.create(slug="my-service", project=project)
-
+        project, _ = self.create_and_deploy_caddy_docker_service()
         response = self.client.delete(
             reverse("console:workspace.detail", kwargs={"id": workspace.pk})
         )
