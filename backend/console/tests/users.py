@@ -347,6 +347,7 @@ class DeleteUserViewTests(AuthAPITestCase):
         response = self.client.delete(
             reverse("console:user.details", kwargs={"id": user.pk})
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
 
     def test_cannot_delete_oneself(self):
@@ -357,7 +358,7 @@ class DeleteUserViewTests(AuthAPITestCase):
             reverse("console:user.details", kwargs={"id": me.pk})
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
     def test_delete_nonexistent_user(self):
         self.loginUser()

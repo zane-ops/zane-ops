@@ -21,8 +21,10 @@ class TransferWorkspaceOwnershipViewTests(AuthAPITestCase):
             user=new_owner, workspace=workspace, role=WorkspaceRole.MEMBER
         )
 
-        response = self.client.patch(
-            reverse("console:workspace.detail", kwargs={"id": workspace.pk}),
+        response = self.client.put(
+            reverse(
+                "console:workspace.transfer_ownership", kwargs={"id": workspace.pk}
+            ),
             data={"owner_id": new_owner.pk},
         )
         jprint(response.json())
@@ -48,8 +50,10 @@ class TransferWorkspaceOwnershipViewTests(AuthAPITestCase):
         )
         non_member = User.objects.create_user(username="stranger", password="password")
 
-        response = self.client.patch(
-            reverse("console:workspace.detail", kwargs={"id": workspace.pk}),
+        response = self.client.put(
+            reverse(
+                "console:workspace.transfer_ownership", kwargs={"id": workspace.pk}
+            ),
             data={"owner_id": non_member.pk},
         )
         jprint(response.json())
@@ -63,8 +67,10 @@ class TransferWorkspaceOwnershipViewTests(AuthAPITestCase):
         )
         self.client.login(username="mohai", password="password")
 
-        response = self.client.patch(
-            reverse("console:workspace.detail", kwargs={"id": workspace.pk}),
+        response = self.client.put(
+            reverse(
+                "console:workspace.transfer_ownership", kwargs={"id": workspace.pk}
+            ),
             data={"owner_id": user.pk},
         )
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
@@ -72,8 +78,11 @@ class TransferWorkspaceOwnershipViewTests(AuthAPITestCase):
     def test_transfer_ownership_for_nonexistent_workspace(self):
         self.loginUser()
 
-        response = self.client.patch(
-            reverse("console:workspace.detail", kwargs={"id": "nonexistent"}),
+        response = self.client.put(
+            reverse(
+                "console:workspace.transfer_ownership",
+                kwargs={"id": "nonexistent"},
+            ),
             data={"owner_id": 1},
         )
         jprint(response.json())
@@ -88,8 +97,10 @@ class TransferWorkspaceOwnershipViewTests(AuthAPITestCase):
             user=user, workspace=workspace, role=WorkspaceRole.OWNER
         )
 
-        response = self.client.patch(
-            reverse("console:workspace.detail", kwargs={"id": workspace.pk}),
+        response = self.client.put(
+            reverse(
+                "console:workspace.transfer_ownership", kwargs={"id": workspace.pk}
+            ),
             data={"owner_id": 99999},
         )
         jprint(response.json())
