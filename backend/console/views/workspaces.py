@@ -57,6 +57,8 @@ class WorkspaceDetailAPIView(RetrieveAPIView):
 
     def get_queryset(self):  # type: ignore
         return Workspace.objects.prefetch_related(
+            # No need to prefetch `memberships` as it's already implied
+            # when doing `memberships__{table}`
             "memberships__user",
             "memberships__accessible_projects",
         )
