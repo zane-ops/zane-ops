@@ -135,12 +135,19 @@ class ArchivedPortConfiguration(TimestampArchivedModel):
 
 
 class ArchivedBaseService(TimestampArchivedModel):
+    if TYPE_CHECKING:
+        urls: RelatedManager[ArchivedURL]
+        volumes: RelatedManager[ArchivedVolume]
+        configs: RelatedManager[ArchivedConfig]
+        ports: RelatedManager[ArchivedPortConfiguration]
+
     slug = models.SlugField(max_length=255)
     command = models.TextField(null=True, blank=True)
     urls = models.ManyToManyField(to=ArchivedURL)
     volumes = models.ManyToManyField(to=ArchivedVolume)
     configs = models.ManyToManyField(to=ArchivedConfig)
     ports = models.ManyToManyField(to=ArchivedPortConfiguration)
+
     original_id = models.CharField(max_length=255)
     resource_limits = models.JSONField(
         max_length=255,
