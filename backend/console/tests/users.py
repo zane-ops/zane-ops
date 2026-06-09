@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 
+from zane_api.models import Workspace, WorkspaceMembership, WorkspaceRole
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import jprint
 from console.models import PasswordResetToken
@@ -310,3 +311,59 @@ class ToggleUserStatusViewTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
+
+
+class DeleteUserViewTests(AuthAPITestCase):
+    def test_instance_owner_can_delete_user(self):
+        self.loginUser()
+
+        user = User.objects.create_user(username="mohai", password="password")
+        response = self.client.delete(
+            reverse("console:user.details", kwargs={"id": user.pk})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        self.assertFalse(User.objects.filter(pk=user.pk).exists())
+
+    def test_cannot_delete_user_who_owns_a_workspace(self):
+        self.loginUser()
+
+        user = User.objects.create_user(username="mohai", password="password")
+        workspace = Workspace.objects.create(name="mohai workspace")
+        WorkspaceMembership.objects.create(
+            user=user, workspace=workspace, role=WorkspaceRole.OWNER
+        )
+
+        response = self.client.delete(
+            reverse("console:user.details", kwargs={"id": user.pk})
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertTrue(User.objects.filter(pk=user.pk).exists())
+
+    def test_non_instance_owner_cannot_delete_user(self):
+        user = User.objects.create_user(username="mohai", password="password")
+        self.client.login(username="mohai", password="password")
+
+        response = self.client.delete(
+            reverse("console:user.details", kwargs={"id": user.pk})
+        )
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+    def test_cannot_delete_oneself(self):
+        self.loginUser()
+
+        me = User.objects.get(username="Fredkiss3")
+        response = self.client.delete(
+            reverse("console:user.details", kwargs={"id": me.pk})
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+    def test_delete_nonexistent_user(self):
+        self.loginUser()
+
+        response = self.client.delete(
+            reverse("console:user.details", kwargs={"id": 99999})
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
