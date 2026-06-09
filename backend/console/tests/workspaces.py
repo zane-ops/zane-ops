@@ -124,6 +124,30 @@ class TransferWorkspaceOwnershipViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
+    def test_cannot_transfer_ownership_to_suspended_user(self):
+        self.loginUser()
+
+        user = User.objects.create_user(username="mohai", password="password")
+        workspace = Workspace.objects.create(name="mohai workspace")
+        WorkspaceMembership.objects.create(
+            user=user, workspace=workspace, role=WorkspaceRole.OWNER
+        )
+        suspended_user = User.objects.create_user(
+            username="suspended", password="password", is_active=False
+        )
+        WorkspaceMembership.objects.create(
+            user=suspended_user, workspace=workspace, role=WorkspaceRole.MEMBER
+        )
+
+        response = self.client.put(
+            reverse(
+                "console:workspace.transfer_ownership", kwargs={"id": workspace.pk}
+            ),
+            data={"owner_id": suspended_user.pk},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
 
 class DeleteWorkspaceViewTests(AuthAPITestCase):
     def test_instance_owner_can_delete_workspace(self):
