@@ -179,6 +179,7 @@ class WorkspaceMembership(models.Model):
 class Project(TimestampedModel):
     if TYPE_CHECKING:
         compose_stacks: RelatedManager["ComposeStack"]
+        workspace_id: str
     environments: Manager["Environment"]
     preview_templates: Manager["PreviewEnvTemplate"]
     services: Manager["Service"]

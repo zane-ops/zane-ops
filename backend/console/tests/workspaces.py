@@ -175,8 +175,8 @@ class DeleteWorkspaceViewTests(AuthAPITestCase):
     def test_deleting_workspace_also_deletes_its_projects_and_services(self):
         self.loginUser()
 
-        workspace = Workspace.objects.create(name="mohai workspace")
         project, _ = self.create_and_deploy_caddy_docker_service()
+        workspace = project.workspace
         response = self.client.delete(
             reverse("console:workspace.detail", kwargs={"id": workspace.pk})
         )
@@ -209,8 +209,6 @@ class DeleteWorkspaceViewTests(AuthAPITestCase):
 
     async def test_delete_workspace_cleans_up_all_resources(self):
         await self.aLoginUser()
-
-        workspace = await Workspace.objects.acreate(name="mohai workspace")
 
         project, service1 = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
@@ -273,7 +271,10 @@ class DeleteWorkspaceViewTests(AuthAPITestCase):
         project, service2 = await self.acreate_and_deploy_git_service()
 
         response = await self.async_client.delete(
-            reverse("console:workspace.detail", kwargs={"id": workspace.pk})
+            reverse(
+                "console:workspace.detail",
+                kwargs={"id": project.workspace_id},
+            )
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
