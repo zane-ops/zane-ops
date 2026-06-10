@@ -57,17 +57,6 @@ class HasWorkspace(BasePermission):
         return request.workspace is not None
 
 
-def can_access_project(user: AbstractUser, project: Project) -> bool:
-    membership = WorkspaceMembership.objects.filter(
-        user=user, workspace=project.workspace
-    ).first()
-
-    return membership is not None and (
-        membership.role >= WorkspaceRole.MEMBER
-        or membership.accessible_projects.filter(pk=project.pk).exists()
-    )
-
-
 def get_accessible_projects(user: AbstractUser, workspace: Workspace):
     membership = (
         WorkspaceMembership.objects.filter(user=user, workspace=workspace)

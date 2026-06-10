@@ -18,7 +18,6 @@ from pathlib import Path
 
 import uvloop
 
-
 from .api_description import API_DESCRIPTION
 from .bootstrap import register_zaneops_app_on_proxy
 
@@ -134,6 +133,7 @@ INSTALLED_APPS = [
     "s3_targets.apps.S3TargetsConfig",
     "container_registry.apps.ContainerRegistryConfig",
     "compose.apps.ComposeConfig",
+    "console.apps.ConsoleConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",

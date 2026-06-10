@@ -57,12 +57,13 @@ from django.contrib.auth import get_user_model
 if TYPE_CHECKING:
     from container_registry.models import SharedRegistryCredentials  # noqa: F401
     from compose.models import ComposeStack
-    from django.db.models.manager import RelatedManager, ManyToManyRelatedManager
+    from django.db.models.manager import RelatedManager
 
 
 class Workspace(TimestampedModel):
     if TYPE_CHECKING:
         projects: RelatedManager["Project"]
+        invitations: RelatedManager["WorkspaceInvitation"]
         members: RelatedManager["WorkspaceMembership"]
 
     id = ShortUUIDField(
@@ -101,7 +102,9 @@ class WorkspaceInvitation(TimestampedModel):
     if TYPE_CHECKING:
         accessible_projects: RelatedManager["Project"]
 
-    workspace = models.ForeignKey(to=Workspace, on_delete=models.CASCADE)
+    workspace = models.ForeignKey(
+        to=Workspace, on_delete=models.CASCADE, related_name="invitations"
+    )
     expires_at = models.DateTimeField()
     id = ShortUUIDField(
         length=11,
@@ -176,6 +179,7 @@ class WorkspaceMembership(models.Model):
 class Project(TimestampedModel):
     if TYPE_CHECKING:
         compose_stacks: RelatedManager["ComposeStack"]
+        workspace_id: str
     environments: Manager["Environment"]
     preview_templates: Manager["PreviewEnvTemplate"]
     services: Manager["Service"]
@@ -183,6 +187,7 @@ class Project(TimestampedModel):
     workspace = models.ForeignKey(
         Workspace,
         on_delete=models.CASCADE,
+        related_name="projects",
     )
 
     slug = models.SlugField(max_length=255, unique=True)

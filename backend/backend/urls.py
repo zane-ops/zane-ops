@@ -15,7 +15,6 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
-from django.contrib import admin
 from django.urls import include, path
 from django.conf import settings
 from drf_spectacular.views import (
@@ -25,11 +24,6 @@ from drf_spectacular.views import (
 
 urlpatterns = []
 
-# Don't activate admin site on production
-if settings.DEBUG:
-    urlpatterns += [
-        path("admin/", admin.site.urls),
-    ]
 
 if settings.DEBUG or settings.ENABLE_API_SCHEMA:
     urlpatterns += [
@@ -47,5 +41,6 @@ urlpatterns += [
     path("api/shell/", include("webshell.urls")),
     path("api/connectors/", include("git_connectors.urls")),
     path("api/compose/", include("compose.urls")),
+    path("api/console/", include("console.urls")),
     path("api/", include("zane_api.urls")),
 ]

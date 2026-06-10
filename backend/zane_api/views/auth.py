@@ -9,10 +9,8 @@ from django.contrib.auth import (
     get_user_model,
     update_session_auth_hash,
 )
-from django.contrib.auth.models import AnonymousUser, AbstractUser
-from django.http import QueryDict
+from django.contrib.auth.models import AbstractUser
 from django.shortcuts import redirect
-from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.encoding import iri_to_uri
@@ -20,8 +18,6 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import extend_schema
 from rest_framework import exceptions
 from rest_framework import status, permissions
-from rest_framework.authentication import TokenAuthentication, SessionAuthentication
-from rest_framework.authtoken.models import Token
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -39,6 +35,7 @@ from .serializers.auth import (
     ChangePasswordRequestSerializer,
     ChangePasswordResponseSerializer,
     UpdateProfileSerializer,
+    ResetPasswordRequestSerializer,
 )
 from ..serializers import (
     UserSerializer,
@@ -46,12 +43,55 @@ from ..serializers import (
 )
 from ..models import Workspace, WorkspaceMembership, WorkspaceRole
 from ..constants import WORKSPACE_SESSION_KEY
+from console.models import PasswordResetToken
+
 
 User = get_user_model()
 
 
 class LoginSuccessResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
+
+
+class ResetPasswordAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        operation_id="resetPassword",
+        summary="Reset user password",
+        responses=LoginSuccessResponseSerializer,
+        request=ResetPasswordRequestSerializer,
+    )
+    def post(self, request: Request, token: str):
+        try:
+            password_token = (
+                PasswordResetToken.objects.filter(
+                    value=token,
+                    expires_at__gt=timezone.now(),
+                )
+                .select_related("user")
+                .get()
+            )
+        except PasswordResetToken.DoesNotExist:
+            raise exceptions.NotFound("Invalid or expired token.")
+
+        form = ResetPasswordRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+
+        data = cast(dict, form.validated_data)
+
+        # Update password
+        new_password = data["new_password"]
+
+        user = cast(AbstractUser, password_token.user)
+        user.set_password(new_password)
+        user.save()
+
+        # delete token
+        password_token.delete()
+
+        serializer = LoginSuccessResponseSerializer({"success": True})
+        return Response(serializer.data)
 
 
 class LoginRequestSerializer(serializers.Serializer):
@@ -111,6 +151,7 @@ class AuthedSuccessResponseSerializer(serializers.Serializer):
 
 class AuthedView(APIView):
     serializer_class = AuthedSuccessResponseSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(
         operation_id="getAuthedUser",
@@ -127,10 +168,17 @@ class AuthedView(APIView):
                 now + timedelta(seconds=settings.SESSION_EXTEND_PERIOD)
             )
 
+        # Get current workspace in session
+        workspace_id = request.session.get(WORKSPACE_SESSION_KEY)
+        qs = Workspace.objects.filter(memberships__user=request.user)
+        if workspace_id is not None:
+            qs = qs.filter(id=workspace_id)
+        workspace = qs.order_by("created_at").first()
+
         membership = (
             WorkspaceMembership.objects.filter(
                 user=request.user,
-                workspace=request.workspace,
+                workspace=workspace,
             )
             .select_related("workspace")
             .first()
@@ -147,41 +195,9 @@ class AuthedView(APIView):
         )
 
 
-@extend_schema(exclude=True)
-class TokenAuthedView(APIView):
-    authentication_classes = [TokenAuthentication, SessionAuthentication]
-    serializer_class = AuthedSuccessResponseSerializer
-    permission_classes = [permissions.AllowAny]
-
-    def get(self, request: Request):
-        if isinstance(request.user, AnonymousUser):
-            accept_header = request.headers.get("accept")
-            if accept_header is not None and "text/html" in accept_header:
-                params = QueryDict(mutable=True)
-                host = request.headers.get("Host", None)
-                uri = request.headers.get("X-Forwared-Uri", None)
-                proto = request.headers.get("X-Forwared-Proto", "https")
-
-                redirect_path = ""
-                if host is not None:
-                    redirect_path = f"{proto}://{host}"
-                if uri is not None:
-                    redirect_path += uri
-                if len(redirect_path.strip()) > 0:
-                    params["redirect_to"] = redirect_path
-
-                return redirect(
-                    f"{reverse('zane_api:auth.login')}?{params.urlencode()}"
-                )
-            raise exceptions.NotAuthenticated()
-
-        response = AuthedSuccessResponseSerializer({"user": request.user})
-        return Response(
-            response.data,
-        )
-
-
 class AuthLogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
     @extend_schema(
         responses={
             204: None,
@@ -255,7 +271,7 @@ class CreateUserView(APIView):
     )
     def post(self, request: Request) -> Response:
         if User.objects.exists():
-            raise exceptions.PermissionDenied("A user already exists.")
+            raise exceptions.PermissionDenied()
 
         serializer = UserCreationRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -287,6 +303,7 @@ class CreateUserView(APIView):
 
 class ChangePasswordAPIView(APIView):
     serializer_class = ChangePasswordRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(
         request=ChangePasswordRequestSerializer,
@@ -321,8 +338,9 @@ class ChangePasswordAPIView(APIView):
 
 class UpdateProfileAPIView(UpdateAPIView):
     serializer_class = UpdateProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
-    queryset = get_user_model().objects.all()
+    queryset = User.objects.all()
     http_method_names = ["patch"]
 
     def get_object(self):  # type: ignore
