@@ -17,6 +17,7 @@ auth_file   = /etc/pgbouncer/userlist.txt
 pool_mode   = ${POOL_MODE:-transaction}
 max_db_connections = ${MAX_DB_CONNECTIONS:-100}
 default_pool_size  = ${DEFAULT_POOL_SIZE:-50}
+ignore_startup_parameters = extra_float_digits
 EOF
 
 # Generate userlist.txt from env
