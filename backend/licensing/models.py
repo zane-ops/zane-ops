@@ -1,17 +1,78 @@
+from typing import Self
+
 from django.db import models
-from shortuuid.django_fields import ShortUUIDField
+from django.conf import settings
+from enum import StrEnum
+import jwt
+from dataclasses import dataclass
+from datetime import datetime
+from zane_api.utils import Colors
 
 
-# Create your models here.
+class LicenceFeature(StrEnum):
+    UNLOCKED_WORKSPACES = "UNLOCKED_WORKSPACES"  # "Unlocked workspaces"
+
+
 class License(models.Model):
-    data = models.TextField(null=False, blank=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    """
+    Singleton row holding the raw license key as installed by the user.
+    The decoded payload is stored in data but validated against the global public key
+    """
 
+    SINGLETON_ID = 1
 
-class InstanceSettings(models.Model):
-    id = ShortUUIDField(  # type: ignore
-        length=32,
-        max_length=255,
-        primary_key=True,
-        prefix="ist_",
+    id = models.PositiveSmallIntegerField(
+        primary_key=True, default=SINGLETON_ID, editable=False
     )
+
+    uuid = models.UUIDField()
+    raw_data = models.TextField(null=False, blank=False)
+    installed_at = models.DateTimeField(auto_now_add=True)
+    installed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+
+    def save(self, *args, **kwargs):
+        self.pk = self.SINGLETON_ID
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"License(id={self.uuid}, installed_at={self.installed_at})"
+
+    @classmethod
+    def is_feature_enabled(cls, feature: LicenceFeature):
+        license = cls.objects.filter(id=cls.SINGLETON_ID).first()
+        if not license:
+            return False
+
+        try:
+            payload = jwt.decode(
+                license.raw_data,
+                "public_key.pem",  # TODO: load public key from local path
+                algorithms=["RS256"],  # TODO: check the correct algorithm
+            )
+            data = LicenseData.from_dict(payload)
+        except (jwt.InvalidTokenError, KeyError) as e:
+            print(f"{Colors.ORANGE}ERROR{Colors.ENDC}: Invalid license: {e}")
+            return False
+
+        return feature in data.features
+
+
+@dataclass
+class LicenseData:
+    features: list[str]
+    issued_at: datetime
+    expires_at: datetime
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Self:
+        return cls(
+            features=data["features"],
+            issued_at=data["iat"],
+            expires_at=data["exp"],
+        )
