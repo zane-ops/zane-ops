@@ -21,7 +21,7 @@ from ..constants import WORKSPACE_SESSION_KEY
 
 class WorkspaceInviteUserViewTests(AuthAPITestCase):
     def test_invite_new_user_default(self):
-        self.loginUser()
+        me = self.loginUser()
         workspace = cast(Workspace, Workspace.objects.first())
 
         data = {
@@ -39,6 +39,7 @@ class WorkspaceInviteUserViewTests(AuthAPITestCase):
         self.assertEqual(new_invitation.role, WorkspaceRole.MEMBER)
         self.assertEqual(new_invitation.username, "mohai")
         self.assertEqual(new_invitation.workspace, workspace)
+        self.assertEqual(new_invitation.invited_by, me)
 
         now = timezone.now()
         self.assertAlmostEqual(

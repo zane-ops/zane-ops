@@ -248,6 +248,7 @@ class InviteUserIntoWorkspaceAPIView(APIView):
                 role=data["role"],
                 expires_at=timezone.now() + timedelta(days=data["valid_for"]),
                 workspace=self.request.workspace,  # type: ignore
+                invited_by=self.request.user,
             )
         except IntegrityError:
             raise ResourceConflict(
