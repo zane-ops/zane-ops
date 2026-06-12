@@ -42,5 +42,6 @@ urlpatterns += [
     path("api/connectors/", include("git_connectors.urls")),
     path("api/compose/", include("compose.urls")),
     path("api/console/", include("console.urls")),
+    path("api/license/", include("licensing.urls")),
     path("api/", include("zane_api.urls")),
 ]

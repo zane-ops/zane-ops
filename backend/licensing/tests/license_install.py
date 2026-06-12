@@ -7,6 +7,8 @@ from ..models import License, LicenseData, LicenceFeature, InstanceMeta
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import jprint
 from uuid import uuid4
+from .fixtures import mock_remote_api_for_licensing
+import responses
 
 """
 License install workflow:
@@ -18,13 +20,15 @@ License install workflow:
 
 
 class LicenceInstallViewTests(AuthAPITestCase):
+    @responses.activate()
     def test_install_license_successfully(self):
+        mock_remote_api_for_licensing()
         user = self.loginUser()
 
         license_uuid = str(uuid4())
         data = {"uuid": license_uuid}
         response = self.client.post(
-            reverse("license:install_license"),
+            reverse("licensing:license.install"),
             data=data,
         )
 
@@ -38,7 +42,7 @@ class LicenceInstallViewTests(AuthAPITestCase):
 
         self.assertEqual(installed_license.installed_by, user)
 
-        data = cast(LicenseData, installed_license.decode())
+        data = cast(LicenseData, installed_license._decode())
         self.assertIsNotNone(data)
         self.assertEqual(license_uuid, data.uuid)
         self.assertEqual(data.fingerprint, InstanceMeta.get_fingerprint())

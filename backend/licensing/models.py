@@ -26,8 +26,8 @@ class LicenseData:
     def from_dict(cls, data: dict) -> Self:
         return cls(
             features=data["features"],
-            issued_at=data["iat"],
-            expires_at=data["exp"],
+            issued_at=datetime.fromisoformat(data["iat"]),
+            expires_at=datetime.fromisoformat(data["exp"]),
             uuid=data["uuid"],
             fingerprint=data["fingerprint"],
         )
@@ -59,7 +59,38 @@ class License(models.Model):
         self.pk = self.SINGLETON_ID
         super().save(*args, **kwargs)
 
-    def decode(self):
+    @property
+    def is_valid(self) -> bool:
+        return self._decode() is not None
+
+    @property
+    def expires_at(self) -> datetime:
+        data = self._decode()
+        if not data:
+            return datetime.fromtimestamp(0)
+        return data.expires_at
+
+    @classmethod
+    def validate_payload(cls, key: str, uuid: str) -> Self | None:
+        data: LicenseData | None = None
+        try:
+            payload = jwt.decode(
+                key,
+                "public_key.pem",  # TODO: load public key from local path
+                algorithms=["RS256"],  # TODO: check the correct algorithm
+            )
+            data = LicenseData.from_dict(payload)
+        except (jwt.InvalidTokenError, KeyError) as e:
+            print(f"{Colors.ORANGE}ERROR{Colors.ENDC}: Invalid license: {e}")
+        else:
+            if data.fingerprint == InstanceMeta.get_fingerprint() and data.uuid == uuid:
+                return cls(
+                    raw_data=key,
+                )
+
+        return None
+
+    def _decode(self):
         data: LicenseData | None = None
         try:
             payload = jwt.decode(
