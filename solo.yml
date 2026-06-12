@@ -1,9 +1,16 @@
 name: zane-ops
 icon: images/logo.png
 processes:
-  api logs:
-    command: docker compose logs -f zane-api
-    working_dir: ./docker
+  dc logs api:
+    command: docker compose -f ./docker/docker-compose.yaml logs -f zane-api
+    working_dir: null
+    auto_start: true
+    auto_restart: false
+    restart_when_changed: []
+    env: {}
+  api:
+    command: make dev-api
+    working_dir: null
     auto_start: true
     auto_restart: false
     restart_when_changed: []
@@ -13,12 +20,5 @@ processes:
     working_dir: ./frontend
     auto_start: true
     auto_restart: true
-    restart_when_changed: []
-    env: {}
-  api:
-    command: make dev-api
-    working_dir: null
-    auto_start: true
-    auto_restart: false
     restart_when_changed: []
     env: {}
