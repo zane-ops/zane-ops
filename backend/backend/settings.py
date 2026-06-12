@@ -465,3 +465,4 @@ LOKI_APP_NAME = "zaneops"
 CI = os.environ.get("CI", "false")
 
 TELEMETRY_ENABLED = os.environ.get("TELEMETRY_ENABLED", "true") == "true"
+ZANEOPS_REMOTE_API_HOST = "https://api.zaneops.dev"
