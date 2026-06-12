@@ -25,7 +25,6 @@ class License(models.Model):
         primary_key=True, default=SINGLETON_ID, editable=False
     )
 
-    uuid = models.UUIDField()
     raw_data = models.TextField(null=False, blank=False)
     installed_at = models.DateTimeField(auto_now_add=True)
     installed_by = models.ForeignKey(
@@ -41,7 +40,7 @@ class License(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"License(id={self.uuid}, installed_at={self.installed_at})"
+        return f"License(installed_at={self.installed_at})"
 
     @classmethod
     def is_feature_enabled(cls, feature: LicenceFeature):
@@ -68,6 +67,7 @@ class LicenseData:
     features: list[str]
     issued_at: datetime
     expires_at: datetime
+    uuid: str
 
     @classmethod
     def from_dict(cls, data: dict) -> Self:
@@ -75,4 +75,5 @@ class LicenseData:
             features=data["features"],
             issued_at=data["iat"],
             expires_at=data["exp"],
+            uuid=data["uuid"],
         )
