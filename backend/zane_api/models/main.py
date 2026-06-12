@@ -121,6 +121,11 @@ class WorkspaceInvitation(TimestampedModel):
         choices=WorkspaceRole.choices,
         default=WorkspaceRole.MEMBER,
     )
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="created_invitations",
+    )
     # Only relevant for GUEST and CONTRIBUTOR
     accessible_projects = models.ManyToManyField("Project", blank=True)
 
