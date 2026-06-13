@@ -1,4 +1,4 @@
-from typing import Self
+from typing import Dict, List, Self
 
 from django.db import models
 from django.conf import settings
@@ -14,9 +14,14 @@ class LicenceFeature(StrEnum):
     UNLIMITED_WORKSPACES = "UNLIMITED_WORKSPACES"
 
 
+LICENSE_TIERS: Dict[str, List[LicenceFeature]] = {
+    "starter": [LicenceFeature.UNLIMITED_WORKSPACES]
+}
+
+
 @dataclass
 class LicenseData:
-    features: list[str]
+    tier: str
     issued_at: datetime
     expires_at: datetime
     uuid: str
@@ -25,7 +30,7 @@ class LicenseData:
     @classmethod
     def from_dict(cls, data: dict) -> Self:
         return cls(
-            features=data["features"],
+            tier=data["tier"],
             issued_at=datetime.fromisoformat(data["iat"]),
             expires_at=datetime.fromisoformat(data["exp"]),
             uuid=data["uuid"],
@@ -123,7 +128,7 @@ class License(models.Model):
             print(f"{Colors.ORANGE}ERROR{Colors.ENDC}: Invalid license: {e}")
             return False
 
-        return feature in data.features
+        return feature in LICENSE_TIERS.get(data.tier, [])
 
 
 class InstanceMeta(models.Model):
