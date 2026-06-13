@@ -1,3 +1,4 @@
+import hashlib
 from typing import Dict, List, Self
 
 from django.db import models
@@ -7,7 +8,10 @@ import jwt
 from dataclasses import dataclass
 from datetime import datetime
 from zane_api.utils import Colors
-from shortuuid.django_fields import ShortUUIDField
+import uuid
+
+
+SINGLETON_ID = 1
 
 
 class LicenceFeature(StrEnum):
@@ -44,8 +48,6 @@ class License(models.Model):
     The decoded payload is stored in data but validated against the global public key
     """
 
-    SINGLETON_ID = 1
-
     id = models.PositiveSmallIntegerField(
         primary_key=True, default=SINGLETON_ID, editable=False
     )
@@ -60,8 +62,16 @@ class License(models.Model):
         related_name="+",
     )
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(id=SINGLETON_ID),
+                name="license_singleton_id",
+            ),
+        ]
+
     def save(self, *args, **kwargs):
-        self.pk = self.SINGLETON_ID
+        self.pk = SINGLETON_ID
         super().save(*args, **kwargs)
 
     @property
@@ -113,7 +123,7 @@ class License(models.Model):
 
     @classmethod
     def get(cls):
-        license = cls.objects.filter(id=cls.SINGLETON_ID).first()
+        license = cls.objects.filter(id=SINGLETON_ID).first()
         return license
 
     def is_feature_enabled(self, feature: LicenceFeature):
@@ -132,26 +142,34 @@ class License(models.Model):
 
 
 class InstanceMeta(models.Model):
-    SINGLETON_ID = 1
-
     id = models.PositiveSmallIntegerField(
         primary_key=True, default=SINGLETON_ID, editable=False
     )
 
-    fingerprint = ShortUUIDField(  # type: ignore
-        length=32,
-        max_length=255,
-        prefix="ist_",
-    )
+    fingerprint = models.TextField()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(id=SINGLETON_ID),
+                name="instance_meta_singleton_id",
+            ),
+        ]
 
     def save(self, *args, **kwargs):
-        self.pk = self.SINGLETON_ID
+        self.pk = SINGLETON_ID
         super().save(*args, **kwargs)
 
     @classmethod
-    def get_fingerprint(cls):
-        settings = cls.objects.filter(pk=cls.SINGLETON_ID).first()
-        if settings is None:
-            settings = cls.objects.create()
+    def _create_fingerprint(cls):
+        instance_id = str(uuid.uuid4())
+        fingerprint_data = "sha256:" + hashlib.sha256(instance_id.encode()).hexdigest()
+        return cls.objects.create(fingerprint=fingerprint_data)
 
-        return settings.fingerprint
+    @classmethod
+    def get_fingerprint(cls):
+        """
+        Return the fingerprint of this ZaneOps instance as `"sha256:<hexdigest>"`.
+        The underlying instance id is a UUID persisted in the database and saved as a singleton object in the DB.
+        """
+        return cls.objects.filter(pk=SINGLETON_ID).first() or cls._create_fingerprint()
