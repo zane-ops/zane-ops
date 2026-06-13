@@ -15,10 +15,13 @@ from django.conf import settings
 import requests
 from .models import License
 from zane_api.views.base import BadRequest
+from zane_api.permissions import IsInstanceOwner
 import traceback
 
 
 class LicenseInstallAPIView(APIView):
+    permission_classes = [IsInstanceOwner]
+
     @extend_schema(
         operation_id="licenseInstall",
         request=LicenseInstallRequestSerializer,
@@ -31,8 +34,8 @@ class LicenseInstallAPIView(APIView):
         data = cast(dict, form.validated_data)
 
         try:
-            url = f"{settings.ZANEOPS_REMOTE_API_HOST}/api/v1/licenses/get"
-            response = requests.post(url=url, json=data)
+            url = f"{settings.ZANEOPS_REMOTE_API_HOST}/api/v1/licenses/{data['uuid']}"
+            response = requests.get(url=url)
             response.raise_for_status()
             response_form = LicenseInstallRemoteResponseSerializer(data=response.json())
             response_form.is_valid(raise_exception=True)
@@ -47,6 +50,7 @@ class LicenseInstallAPIView(APIView):
         if not license:
             raise BadRequest("Invalid license")
 
+        license.installed_by = request.user
         license.save()
 
         serializer = LicenseSerializer(license)

@@ -11,9 +11,15 @@ from dataclasses import dataclass
 from datetime import datetime
 from zane_api.utils import Colors
 import uuid
+from uuid import UUID
 
 
 _PUBLIC_KEY_PATH = Path(__file__).parent / "keys" / "public_key.pem"
+
+
+def _load_public_key() -> str:
+    with open(_PUBLIC_KEY_PATH) as f:
+        return f.read()
 
 
 SINGLETON_ID = 1
@@ -47,8 +53,8 @@ class LicenseData:
     def from_dict(cls, data: dict) -> Self:
         return cls(
             tier=LicenseTiers(data["tier"]),
-            issued_at=datetime.fromisoformat(data["iat"]),
-            expires_at=datetime.fromisoformat(data["exp"]),
+            issued_at=datetime.fromtimestamp(data["iat"]),
+            expires_at=datetime.fromtimestamp(data["exp"]),
             uuid=data["uuid"],
             fingerprint=data["fingerprint"],
         )
@@ -98,21 +104,22 @@ class License(models.Model):
         return data.expires_at
 
     @classmethod
-    def validate_payload(cls, key: str, uuid: str) -> Self | None:
+    def validate_payload(cls, key: str, uuid: str | UUID) -> Self | None:
         data: LicenseData | None = None
         try:
-            with open(_PUBLIC_KEY_PATH) as f:
-                payload = jwt.decode(
-                    key,
-                    f.read(),
-                    algorithms=["RS256"],
-                )
+            payload = jwt.decode(
+                key,
+                _load_public_key(),
+                algorithms=["RS256"],
+            )
             data = LicenseData.from_dict(payload)
         except (jwt.InvalidTokenError, KeyError, ValueError) as e:
             traceback.print_exc()
             print(f"{Colors.ORANGE}ERROR{Colors.ENDC}: Invalid license: {e}")
         else:
-            if data.fingerprint == InstanceMeta.get_fingerprint() and data.uuid == uuid:
+            if data.fingerprint == InstanceMeta.get_fingerprint() and data.uuid == str(
+                uuid
+            ):
                 return cls(
                     raw_data=key,
                 )
@@ -122,12 +129,11 @@ class License(models.Model):
     def _decode(self):
         data: LicenseData | None = None
         try:
-            with open(_PUBLIC_KEY_PATH) as f:
-                payload = jwt.decode(
-                    self.raw_data,
-                    f.read(),
-                    algorithms=["RS256"],
-                )
+            payload = jwt.decode(
+                self.raw_data,
+                _load_public_key(),
+                algorithms=["RS256"],
+            )
             data = LicenseData.from_dict(payload)
         except (jwt.InvalidTokenError, KeyError, ValueError) as e:
             traceback.print_exc()
@@ -186,4 +192,6 @@ class InstanceMeta(models.Model):
         Return the fingerprint of this ZaneOps instance as `"sha256:<hexdigest>"`.
         The underlying instance id is a UUID persisted in the database and saved as a singleton object in the DB.
         """
-        return cls.objects.filter(pk=SINGLETON_ID).first() or cls._create_fingerprint()
+        return (
+            cls.objects.filter(pk=SINGLETON_ID).first() or cls._create_fingerprint()
+        ).fingerprint

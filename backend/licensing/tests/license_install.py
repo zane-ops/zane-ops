@@ -20,7 +20,7 @@ License install workflow:
 
 
 class LicenceInstallViewTests(AuthAPITestCase):
-    @responses.activate()
+    @responses.activate
     def test_install_license_successfully(self):
         mock_remote_api_for_licensing()
         user = self.loginUser()

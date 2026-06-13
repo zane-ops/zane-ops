@@ -1,9 +1,11 @@
 from rest_framework import serializers
-
 from .models import License
+from zane_api.serializers import UserSerializer
 
 
 class LicenseSerializer(serializers.ModelSerializer):
+    installed_by = UserSerializer(read_only=True)
+
     class Meta:
         model = License
         fields = [
