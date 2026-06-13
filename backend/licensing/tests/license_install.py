@@ -35,9 +35,7 @@ class LicenceInstallViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        installed_license = cast(
-            License, License.objects.filter(pk=License.SINGLETON_ID).first()
-        )
+        installed_license = cast(License, License.get())
         self.assertIsNotNone(installed_license)
 
         self.assertEqual(installed_license.installed_by, user)

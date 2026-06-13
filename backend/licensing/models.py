@@ -1,4 +1,6 @@
 import hashlib
+from pathlib import Path
+import traceback
 from typing import Dict, List, Self
 
 from django.db import models
@@ -11,6 +13,9 @@ from zane_api.utils import Colors
 import uuid
 
 
+_PUBLIC_KEY_PATH = Path(__file__).parent / "keys" / "public_key.pem"
+
+
 SINGLETON_ID = 1
 
 
@@ -18,23 +23,30 @@ class LicenceFeature(StrEnum):
     UNLIMITED_WORKSPACES = "UNLIMITED_WORKSPACES"
 
 
-LICENSE_TIERS: Dict[str, List[LicenceFeature]] = {
-    "starter": [LicenceFeature.UNLIMITED_WORKSPACES]
+class LicenseTiers(StrEnum):
+    FREE = "free"  # free license, no paid feature enabled
+    STARTER = "starter"  # base tier
+
+
+TIER_MATRIX: Dict[str, List[LicenceFeature]] = {
+    LicenseTiers.FREE.value: [],
+    LicenseTiers.STARTER.value: [LicenceFeature.UNLIMITED_WORKSPACES],
 }
 
 
 @dataclass
 class LicenseData:
-    tier: str
+    tier: LicenseTiers
     issued_at: datetime
     expires_at: datetime
+    # license remote UUID
     uuid: str
     fingerprint: str
 
     @classmethod
     def from_dict(cls, data: dict) -> Self:
         return cls(
-            tier=data["tier"],
+            tier=LicenseTiers(data["tier"]),
             issued_at=datetime.fromisoformat(data["iat"]),
             expires_at=datetime.fromisoformat(data["exp"]),
             uuid=data["uuid"],
@@ -89,13 +101,15 @@ class License(models.Model):
     def validate_payload(cls, key: str, uuid: str) -> Self | None:
         data: LicenseData | None = None
         try:
-            payload = jwt.decode(
-                key,
-                "public_key.pem",  # TODO: load public key from local path
-                algorithms=["RS256"],  # TODO: check the correct algorithm
-            )
+            with open(_PUBLIC_KEY_PATH) as f:
+                payload = jwt.decode(
+                    key,
+                    f.read(),
+                    algorithms=["RS256"],
+                )
             data = LicenseData.from_dict(payload)
-        except (jwt.InvalidTokenError, KeyError) as e:
+        except (jwt.InvalidTokenError, KeyError, ValueError) as e:
+            traceback.print_exc()
             print(f"{Colors.ORANGE}ERROR{Colors.ENDC}: Invalid license: {e}")
         else:
             if data.fingerprint == InstanceMeta.get_fingerprint() and data.uuid == uuid:
@@ -108,13 +122,15 @@ class License(models.Model):
     def _decode(self):
         data: LicenseData | None = None
         try:
-            payload = jwt.decode(
-                self.raw_data,
-                "public_key.pem",  # TODO: load public key from local path
-                algorithms=["RS256"],  # TODO: check the correct algorithm
-            )
+            with open(_PUBLIC_KEY_PATH) as f:
+                payload = jwt.decode(
+                    self.raw_data,
+                    f.read(),
+                    algorithms=["RS256"],
+                )
             data = LicenseData.from_dict(payload)
-        except (jwt.InvalidTokenError, KeyError) as e:
+        except (jwt.InvalidTokenError, KeyError, ValueError) as e:
+            traceback.print_exc()
             print(f"{Colors.ORANGE}ERROR{Colors.ENDC}: Invalid license: {e}")
         return data
 
@@ -123,22 +139,20 @@ class License(models.Model):
 
     @classmethod
     def get(cls):
-        license = cls.objects.filter(id=SINGLETON_ID).first()
-        return license
+        return cls.objects.filter(id=SINGLETON_ID).first()
+
+    @classmethod
+    async def aget(cls):
+        return await cls.objects.filter(id=SINGLETON_ID).afirst()
+
+    @property
+    def tier(self) -> LicenseTiers:
+        data = self._decode()
+        return data.tier if data is not None else LicenseTiers.FREE
 
     def is_feature_enabled(self, feature: LicenceFeature):
-        try:
-            payload = jwt.decode(
-                self.raw_data,
-                "public_key.pem",  # TODO: load public key from local path
-                algorithms=["RS256"],  # TODO: check the correct algorithm
-            )
-            data = LicenseData.from_dict(payload)
-        except (jwt.InvalidTokenError, KeyError) as e:
-            print(f"{Colors.ORANGE}ERROR{Colors.ENDC}: Invalid license: {e}")
-            return False
-
-        return feature in LICENSE_TIERS.get(data.tier, [])
+        data = self._decode()
+        return data is not None and feature in TIER_MATRIX.get(data.tier, [])
 
 
 class InstanceMeta(models.Model):

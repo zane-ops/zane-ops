@@ -5433,6 +5433,92 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkspaceDetail'
           description: ''
+    delete:
+      operationId: console_workspaces_destroy
+      summary: Delete a workspace (admin)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - console
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleWorkspacesDestroyErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
   /api/console/workspaces/{id}/transfer-ownership/:
     put:
       operationId: consoleTransferWorkspaceOwnership
@@ -6242,6 +6328,87 @@ paths:
                 type: array
                 items:
                   type: string
+          description: ''
+  /api/license/install/:
+    post:
+      operationId: licenseInstall
+      tags:
+      - license
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LicenseInstallRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LicenseInstallRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LicenseInstallRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseInstallErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/License'
           description: ''
   /api/ping/:
     get:
@@ -18514,6 +18681,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleWorkspacesDestroyErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ConsoleWorkspacesListError:
       oneOf:
       - $ref: '#/components/schemas/ConsoleWorkspacesListNameErrorComponent'
@@ -22797,6 +22971,114 @@ components:
       description: |-
         * `ERROR` - Error
         * `INFO` - Info
+    License:
+      type: object
+      properties:
+        installed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        installed_by:
+          type: integer
+          nullable: true
+        is_valid:
+          type: boolean
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+        tier:
+          allOf:
+          - $ref: '#/components/schemas/TierEnum'
+          readOnly: true
+      required:
+      - expires_at
+      - installed_at
+      - installed_by
+      - is_valid
+      - tier
+    LicenseInstallError:
+      oneOf:
+      - $ref: '#/components/schemas/LicenseInstallNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/LicenseInstallUuidErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/LicenseInstallNonFieldErrorsErrorComponent'
+          uuid: '#/components/schemas/LicenseInstallUuidErrorComponent'
+    LicenseInstallErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/LicenseInstallValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/LicenseInstallValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    LicenseInstallNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    LicenseInstallRequestRequest:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+      required:
+      - uuid
+    LicenseInstallUuidErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - uuid
+          type: string
+          description: '* `uuid` - uuid'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    LicenseInstallValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/LicenseInstallError'
+      required:
+      - errors
+      - type
     ListAvailableVolumesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -30975,6 +31257,11 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    TierEnum:
+      enum:
+      - free
+      - starter
+      type: string
     ToggleComposeStackDesiredStateErrorComponent:
       type: object
       properties:

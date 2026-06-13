@@ -11,6 +11,7 @@ class LicenseSerializer(serializers.ModelSerializer):
             "installed_by",
             "is_valid",
             "expires_at",
+            "tier",
         ]
 
 
