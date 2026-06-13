@@ -116,3 +116,36 @@ class LicenceInstallViewTests(AuthAPITestCase):
             (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
         )
         self.assertIsNone(License.get())
+
+    @responses.activate
+    def test_install_license_overwrites_existing_license(self):
+        self.loginUser()
+
+        # install a first license
+        mock_remote_api_for_licensing(tier=LicenseTiers.STARTER)
+        first_uuid = str(uuid4())
+        response = self.client.post(
+            reverse("licensing:license.install"),
+            data={"uuid": first_uuid},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # installing a second license overwrites the first (singleton)
+        responses.reset()
+        mock_remote_api_for_licensing(tier=LicenseTiers.STARTER)
+        second_uuid = str(uuid4())
+        response = self.client.post(
+            reverse("licensing:license.install"),
+            data={"uuid": second_uuid},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        self.assertEqual(1, License.objects.count())
+
+        installed_license = cast(License, License.get())
+        self.assertIsNotNone(installed_license)
+        data = cast(LicenseData, installed_license._decode())
+        self.assertEqual(second_uuid, data.uuid)
+        self.assertEqual(LicenseTiers.STARTER, installed_license.tier)
