@@ -1,22 +1,30 @@
+import traceback
 from typing import cast
 
+import requests
+from django.conf import settings
 from drf_spectacular.utils import extend_schema
-
-from rest_framework.views import APIView
+from rest_framework import status
+from rest_framework.generics import ListAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
-from .serializers import (
-    LicenseSerializer,
-    LicenseInstallRequestSerializer,
-    LicenseInstallRemoteResponseSerializer,
-)
-from rest_framework import status
-from django.conf import settings
-import requests
-from .models import License
-from zane_api.views.base import BadRequest
+from rest_framework.views import APIView
 from zane_api.permissions import IsInstanceOwner
-import traceback
+from zane_api.views.base import BadRequest, DefaultPageNumberPagination
+
+from .models import License
+from .serializers import (
+    LicenseInstallRemoteResponseSerializer,
+    LicenseInstallRequestSerializer,
+    LicenseSerializer,
+)
+
+
+class LicenseListAPIView(ListAPIView):
+    permission_classes = [IsInstanceOwner]
+    serializer_class = LicenseSerializer
+    pagination_class = DefaultPageNumberPagination
+    queryset = License.objects.all()
 
 
 class LicenseInstallAPIView(APIView):
