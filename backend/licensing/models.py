@@ -1,6 +1,5 @@
 import hashlib
 from pathlib import Path
-import traceback
 from typing import Dict, List, Self
 
 from django.db import models
@@ -60,6 +59,14 @@ class LicenseData:
         )
 
 
+class LicenseError(Exception):
+    """
+    Raised when a license token cannot be validated.
+
+    The message is user-facing and explains *why* the license was rejected.
+    """
+
+
 class License(models.Model):
     """
     Singleton row holding the raw license key as installed by the user.
@@ -104,44 +111,56 @@ class License(models.Model):
         return data.expires_at
 
     @classmethod
-    def validate_payload(cls, key: str, uuid: str | UUID) -> Self | None:
-        data: LicenseData | None = None
-        try:
-            payload = jwt.decode(
-                key,
-                _load_public_key(),
-                algorithms=["RS256"],
-            )
-            data = LicenseData.from_dict(payload)
-        except (jwt.InvalidTokenError, KeyError, ValueError) as e:
-            traceback.print_exc()
-            print(f"{Colors.ORANGE}ERROR{Colors.ENDC}: Invalid license: {e}")
-        else:
-            if data.fingerprint == InstanceMeta.get_fingerprint() and data.uuid == str(
-                uuid
-            ):
-                return cls(
-                    raw_data=key,
-                )
+    def validate_payload(cls, key: str, uuid: str | UUID) -> Self:
+        """
+        Decode and validate a license `key` against this instance.
 
-        return None
+        Raises `LicenseError` with a user-facing message when the license is
+        not acceptable (bad signature, expired, malformed, or bound to another
+        instance/license ID).
+        """
+        data = cls._decode_token(key)
 
-    def _decode(self):
-        data: LicenseData | None = None
-        try:
-            payload = jwt.decode(
-                self.raw_data,
-                _load_public_key(),
-                algorithms=["RS256"],
+        if data.fingerprint != InstanceMeta.get_fingerprint():
+            raise LicenseError(
+                "This license key is not bound to this ZaneOps instance."
             )
-            data = LicenseData.from_dict(payload)
-        except (jwt.InvalidTokenError, KeyError, ValueError) as e:
-            traceback.print_exc()
+        if data.uuid != str(uuid):
+            raise LicenseError(
+                "This license key does not match the provided license ID."
+            )
+
+        return cls(raw_data=key)
+
+    @staticmethod
+    def _decode_token(key: str) -> LicenseData:
+        """
+        Decode a raw license `key` with the global public key.
+
+        Raises `LicenseError` describing why the token could not be read:
+        expired, invalid/tampered signature, or malformed payload.
+        """
+        try:
+            payload = jwt.decode(key, _load_public_key(), algorithms=["RS256"])
+        except jwt.ExpiredSignatureError:
+            raise LicenseError("This license has expired.")
+        except jwt.InvalidTokenError:
+            raise LicenseError("This license key is invalid or has been tampered with.")
+
+        try:
+            return LicenseData.from_dict(payload)
+        except (KeyError, ValueError, TypeError):
+            raise LicenseError("This license key is malformed.")
+
+    def _decode(self) -> LicenseData | None:
+        try:
+            return self._decode_token(self.raw_data)
+        except LicenseError as e:
             print(f"{Colors.ORANGE}ERROR{Colors.ENDC}: Invalid license: {e}")
-        return data
+            return None
 
     def __str__(self):
-        return f"License(installed_at={self.installed_at})"
+        return f"License(installed_at={self.installed_at}, expires_at=installed_at={self.expires_at})"
 
     @classmethod
     def get(cls):
