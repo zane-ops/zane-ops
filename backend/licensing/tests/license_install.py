@@ -37,7 +37,10 @@ class LicenceInstallViewTests(AuthAPITestCase):
             self.assertEqual(license_uuid, data.uuid)
             self.assertEqual(data.fingerprint, InstanceMeta.get_fingerprint())
             self.assertTrue(
-                installed_license.is_feature_enabled(LicenceFeature.UNLOCKED_WORKSPACES)
+                installed_license.is_feature_enabled(LicenceFeature.EXTRA_WORKSPACES)
+            )
+            self.assertTrue(
+                installed_license.is_feature_enabled(LicenceFeature.EXTRA_USER_SEATS)
             )
 
     @responses.activate
@@ -58,7 +61,10 @@ class LicenceInstallViewTests(AuthAPITestCase):
             self.assertTrue(installed_license.is_valid)
             self.assertEqual(LicenseTiers.FREE, installed_license.tier)
             self.assertFalse(
-                installed_license.is_feature_enabled(LicenceFeature.UNLOCKED_WORKSPACES)
+                installed_license.is_feature_enabled(LicenceFeature.EXTRA_WORKSPACES)
+            )
+            self.assertFalse(
+                installed_license.is_feature_enabled(LicenceFeature.EXTRA_USER_SEATS)
             )
 
     @responses.activate

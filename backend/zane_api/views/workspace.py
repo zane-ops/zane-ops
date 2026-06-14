@@ -329,7 +329,7 @@ class CreateWorkspaceAPIView(CreateAPIView):
                 "Please install a license that includes this feature."
             )
 
-        if not installed_license.is_feature_enabled(LicenceFeature.UNLOCKED_WORKSPACES):
+        if not installed_license.is_feature_enabled(LicenceFeature.EXTRA_WORKSPACES):
             raise exceptions.PermissionDenied(
                 "Your current license plan doesn't include this feature, "
                 "so you can only have one workspace. Please upgrade your license to create more."

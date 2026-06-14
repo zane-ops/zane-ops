@@ -1,5 +1,5 @@
 import secrets
-from typing import cast
+from typing import List, cast
 
 from django.urls import reverse
 from rest_framework import status
@@ -279,3 +279,131 @@ class WorkspaceLimitsChecksViewTests(AuthAPITestCase):
             )
             jprint(response.json())
             self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+
+class WorkspaceUserLimitOnRegisterViewTests(AuthAPITestCase):
+    """
+    The user limit must also be enforced when an invitation is *consumed*,
+    to close the gap where invitations are created while a license is valid
+    but registered after the license is gone
+    [TOCTOU](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use).
+    """
+
+    def _create_invitations(
+        self,
+        workspace: Workspace,
+        owner: User,
+        usernames: List[str],
+    ):
+        return WorkspaceInvitation.objects.bulk_create(
+            [
+                WorkspaceInvitation(
+                    token=secrets.token_hex(16),
+                    username=username,
+                    role=WorkspaceRole.MEMBER,
+                    expires_at=timezone.now() + timedelta(days=3),
+                    workspace=workspace,
+                    invited_by=owner,
+                )
+                for username in usernames
+            ]
+        )
+
+    @responses.activate
+    def test_cannot_register_into_workspace_beyond_user_limit_without_valid_license(
+        self,
+    ):
+        owner = self.loginUser()  # 1st user (owner)
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        # Invitations created while licensed -> 1 user + 3 invitations = 4 (over limit)
+        invitations = self._create_invitations(
+            workspace, owner, ["mohai", "ahmedbaset", "everx"]
+        )
+
+        # License is now gone, the invitee registers a brand new account
+        self.client.logout()
+        response = self.client.post(
+            reverse(
+                "zane_api:workspace.register",
+                kwargs={"token": invitations[0].token},
+            ),
+            data={"password": "p4$$word"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+        # No new user should have been created
+        self.assertEqual(1, User.objects.count())
+
+    @responses.activate
+    def test_can_register_into_workspace_beyond_user_limit_with_valid_license(self):
+        owner = self.loginUser()  # 1st user (owner)
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        invitations = self._create_invitations(
+            workspace, owner, ["mohai", "ahmedbaset", "everx"]
+        )
+
+        with mock_remote_api_for_licensing():
+            # Install valid license
+            response = self.client.post(
+                reverse("licensing:license.install"),
+                data={"uuid": str(uuid4())},
+            )
+            jprint(response.json())
+            self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+            self.assertIsNotNone(License.get())
+
+            # The invitee registers a brand new account
+            self.client.logout()
+            response = self.client.post(
+                reverse(
+                    "zane_api:workspace.register",
+                    kwargs={"token": invitations[0].token},
+                ),
+                data={"password": "p4$$word"},
+            )
+            jprint(response.json())
+            self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+            self.assertEqual(2, User.objects.count())
+
+    @responses.activate
+    def test_accepting_invitation_for_existing_user_is_allowed_beyond_limit(self):
+        """
+        Accepting an invitation for an *existing* account does not create a new
+        user, so it must not be blocked even when the instance is over the limit.
+        """
+        owner = self.loginUser()  # 1st user (owner)
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        # Existing members -> already over the limit (4 users), no license installed
+        for username in ["ahmedbaset", "everx"]:
+            member = User.objects.create_user(username=username, password="password")
+            WorkspaceMembership.objects.create(
+                role=WorkspaceRole.MEMBER,
+                user=member,
+                workspace=workspace,
+            )
+
+        # `mohai` already has an account but is not yet a member of the workspace
+        User.objects.create_user(username="mohai", password="password")
+
+        invitation = WorkspaceInvitation.objects.create(
+            token=secrets.token_hex(16),
+            username="mohai",
+            role=WorkspaceRole.MEMBER,
+            expires_at=timezone.now() + timedelta(days=3),
+            workspace=workspace,
+            invited_by=owner,
+        )
+
+        self.client.login(username="mohai", password="password")
+        response = self.client.post(
+            reverse(
+                "zane_api:workspace.accept_invitation",
+                kwargs={"token": invitation.token},
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)

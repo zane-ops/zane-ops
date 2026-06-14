@@ -253,7 +253,7 @@ class InviteUserIntoWorkspaceAPIView(APIView):
                     "Install a license to invite more users."
                 )
             if not installed_license.is_feature_enabled(
-                LicenceFeature.UNLOCKED_WORKSPACES
+                LicenceFeature.EXTRA_WORKSPACES
             ):
                 raise exceptions.PermissionDenied(
                     "You've reached the limit of 3 users allowed by your current license plan. "

@@ -18,7 +18,13 @@ SINGLETON_ID = 1
 
 
 class LicenceFeature(StrEnum):
-    UNLOCKED_WORKSPACES = "UNLOCKED_WORKSPACES"
+    """
+    Gated Features behind a valid paid license,
+    the values are just for description, the enum key is the one used
+    """
+
+    EXTRA_WORKSPACES = "Extra workspaces"
+    EXTRA_USER_SEATS = "Extra user seats"
 
 
 class LicenseTiers(StrEnum):
@@ -26,9 +32,12 @@ class LicenseTiers(StrEnum):
     STARTER = "starter"  # base tier
 
 
-TIER_MATRIX: Dict[str, List[LicenceFeature]] = {
-    LicenseTiers.FREE.value: [],
-    LicenseTiers.STARTER.value: [LicenceFeature.UNLOCKED_WORKSPACES],
+TIER_MATRIX: Dict[LicenseTiers, List[LicenceFeature]] = {
+    LicenseTiers.FREE: [],
+    LicenseTiers.STARTER: [
+        LicenceFeature.EXTRA_WORKSPACES,
+        LicenceFeature.EXTRA_USER_SEATS,
+    ],
 }
 
 
