@@ -14,7 +14,7 @@ from zane_api.models import (
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import jprint
 from uuid import uuid4
-from .fixtures import mock_remote_api_for_licensing, LicenseMockScenario
+from .fixtures import mock_remote_api_for_licensing
 import responses
 from django.contrib.auth.models import User
 from django.utils import timezone
