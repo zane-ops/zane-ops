@@ -10,64 +10,60 @@ from uuid import uuid4
 from .fixtures import mock_remote_api_for_licensing, LicenseMockScenario
 import responses
 
-"""
-License install workflow:
-1. Install from a UUID
-2. Download the license data from the remote API (using the UUID)
-3. Validate license data with public key
-4. Save license data in the DB
-"""
-
 
 class LicenceInstallViewTests(AuthAPITestCase):
     @responses.activate
     def test_install_license_successfully(self):
-        mock_remote_api_for_licensing()
         user = self.loginUser()
 
         license_uuid = str(uuid4())
         data = {"uuid": license_uuid}
-        response = self.client.post(
-            reverse("licensing:license.install"),
-            data=data,
-        )
+        with mock_remote_api_for_licensing():
+            response = self.client.post(
+                reverse("licensing:license.install"),
+                data=data,
+            )
 
-        jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+            jprint(response.json())
+            self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        installed_license = cast(License, License.get())
-        self.assertIsNotNone(installed_license)
+            installed_license = cast(License, License.get())
+            self.assertIsNotNone(installed_license)
 
-        self.assertEqual(installed_license.installed_by, user)
+            self.assertEqual(installed_license.installed_by, user)
 
-        data = cast(LicenseData, installed_license._decode())
-        self.assertIsNotNone(data)
-        self.assertEqual(license_uuid, data.uuid)
-        self.assertEqual(data.fingerprint, InstanceMeta.get_fingerprint())
-        self.assertTrue(
-            installed_license.is_feature_enabled(LicenceFeature.UNLIMITED_WORKSPACES)
-        )
+            data = cast(LicenseData, installed_license._decode())
+            self.assertIsNotNone(data)
+            self.assertEqual(license_uuid, data.uuid)
+            self.assertEqual(data.fingerprint, InstanceMeta.get_fingerprint())
+            self.assertTrue(
+                installed_license.is_feature_enabled(
+                    LicenceFeature.UNLIMITED_WORKSPACES
+                )
+            )
 
     @responses.activate
     def test_install_free_tier_license_disables_paid_features(self):
-        mock_remote_api_for_licensing(tier=LicenseTiers.FREE)
         self.loginUser()
 
-        response = self.client.post(
-            reverse("licensing:license.install"),
-            data={"uuid": str(uuid4())},
-        )
+        with mock_remote_api_for_licensing(tier=LicenseTiers.FREE):
+            response = self.client.post(
+                reverse("licensing:license.install"),
+                data={"uuid": str(uuid4())},
+            )
 
-        jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+            jprint(response.json())
+            self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        installed_license = cast(License, License.get())
-        self.assertIsNotNone(installed_license)
-        self.assertTrue(installed_license.is_valid)
-        self.assertEqual(LicenseTiers.FREE, installed_license.tier)
-        self.assertFalse(
-            installed_license.is_feature_enabled(LicenceFeature.UNLIMITED_WORKSPACES)
-        )
+            installed_license = cast(License, License.get())
+            self.assertIsNotNone(installed_license)
+            self.assertTrue(installed_license.is_valid)
+            self.assertEqual(LicenseTiers.FREE, installed_license.tier)
+            self.assertFalse(
+                installed_license.is_feature_enabled(
+                    LicenceFeature.UNLIMITED_WORKSPACES
+                )
+            )
 
     @responses.activate
     def test_install_license_fails_for_invalid_remote_responses(self):
@@ -85,67 +81,65 @@ class LicenceInstallViewTests(AuthAPITestCase):
 
         for scenario in failing_scenarios:
             with self.subTest(scenario=scenario):
-                responses.reset()
-                mock_remote_api_for_licensing(scenario=scenario)
+                responses.reset()  # used to prevent `responses.activate` to raise an error on repeated calls
+                with mock_remote_api_for_licensing(scenario=scenario):
+                    response = self.client.post(
+                        reverse("licensing:license.install"),
+                        data={"uuid": str(uuid4())},
+                    )
 
-                response = self.client.post(
-                    reverse("licensing:license.install"),
-                    data={"uuid": str(uuid4())},
-                )
+                    jprint(response.json())
 
-                jprint(response.json())
-
-                self.assertEqual(
-                    status.HTTP_400_BAD_REQUEST, response.status_code, scenario
-                )
-                self.assertIsNone(License.get(), scenario)
+                    self.assertEqual(
+                        status.HTTP_400_BAD_REQUEST, response.status_code, scenario
+                    )
+                    self.assertIsNone(License.get(), scenario)
 
     @responses.activate
     def test_install_license_requires_instance_owner(self):
-        mock_remote_api_for_licensing()
         # no `loginUser()` -> anonymous request
+        with mock_remote_api_for_licensing():
+            response = self.client.post(
+                reverse("licensing:license.install"),
+                data={"uuid": str(uuid4())},
+            )
 
-        response = self.client.post(
-            reverse("licensing:license.install"),
-            data={"uuid": str(uuid4())},
-        )
-
-        jprint(response.json())
-        self.assertIn(
-            response.status_code,
-            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
-        )
-        self.assertIsNone(License.get())
+            jprint(response.json())
+            self.assertIn(
+                response.status_code,
+                (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+            )
+            self.assertIsNone(License.get())
 
     @responses.activate
     def test_install_license_overwrites_existing_license(self):
         self.loginUser()
 
         # install a first license
-        mock_remote_api_for_licensing(tier=LicenseTiers.STARTER)
-        first_uuid = str(uuid4())
-        response = self.client.post(
-            reverse("licensing:license.install"),
-            data={"uuid": first_uuid},
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        with mock_remote_api_for_licensing(tier=LicenseTiers.STARTER):
+            first_uuid = str(uuid4())
+            response = self.client.post(
+                reverse("licensing:license.install"),
+                data={"uuid": first_uuid},
+            )
+            jprint(response.json())
+            self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         # installing a second license overwrites the first (singleton)
         responses.reset()
-        mock_remote_api_for_licensing(tier=LicenseTiers.STARTER)
-        second_uuid = str(uuid4())
-        response = self.client.post(
-            reverse("licensing:license.install"),
-            data={"uuid": second_uuid},
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        with mock_remote_api_for_licensing(tier=LicenseTiers.STARTER):
+            second_uuid = str(uuid4())
+            response = self.client.post(
+                reverse("licensing:license.install"),
+                data={"uuid": second_uuid},
+            )
+            jprint(response.json())
+            self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        self.assertEqual(1, License.objects.count())
+            self.assertEqual(1, License.objects.count())
 
-        installed_license = cast(License, License.get())
-        self.assertIsNotNone(installed_license)
-        data = cast(LicenseData, installed_license._decode())
-        self.assertEqual(second_uuid, data.uuid)
-        self.assertEqual(LicenseTiers.STARTER, installed_license.tier)
+            installed_license = cast(License, License.get())
+            self.assertIsNotNone(installed_license)
+            data = cast(LicenseData, installed_license._decode())
+            self.assertEqual(second_uuid, data.uuid)
+            self.assertEqual(LicenseTiers.STARTER, installed_license.tier)

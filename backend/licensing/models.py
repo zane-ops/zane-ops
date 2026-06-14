@@ -1,5 +1,5 @@
 import hashlib
-from pathlib import Path
+
 from typing import Dict, List, Self
 
 from django.db import models
@@ -11,14 +11,6 @@ from datetime import datetime
 from zane_api.utils import Colors
 import uuid
 from uuid import UUID
-
-
-_PUBLIC_KEY_PATH = Path(__file__).parent / "keys" / "public_key.pem"
-
-
-def _load_public_key() -> str:
-    with open(_PUBLIC_KEY_PATH) as f:
-        return f.read()
 
 
 SINGLETON_ID = 1
@@ -141,7 +133,9 @@ class License(models.Model):
         expired, invalid/tampered signature, or malformed payload.
         """
         try:
-            payload = jwt.decode(key, _load_public_key(), algorithms=["RS256"])
+            payload = jwt.decode(
+                key, settings.ZANEOPS_LICENSE_PUBLIC_KEY, algorithms=["RS256"]
+            )
         except jwt.ExpiredSignatureError:
             raise LicenseError("This license has expired.")
         except jwt.InvalidTokenError:

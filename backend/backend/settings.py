@@ -466,3 +466,5 @@ CI = os.environ.get("CI", "false")
 
 TELEMETRY_ENABLED = os.environ.get("TELEMETRY_ENABLED", "true") == "true"
 ZANEOPS_REMOTE_API_HOST = "https://api.zaneops.dev"
+# FIXME: Needs to be updated when the licensing server has been implemented
+ZANEOPS_LICENSE_PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----\n-----END PUBLIC KEY-----"""

@@ -1,8 +1,8 @@
 import json
 import re
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from enum import StrEnum
-from unittest.mock import patch
 from uuid import uuid4
 
 import jwt
@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives import serialization
 from rest_framework import status
 
 from ..models import InstanceMeta, LicenseTiers
-from zane_api.utils import jprint
+from django.test import override_settings
 
 
 class LicenseMockScenario(StrEnum):
@@ -48,12 +48,13 @@ def _generate_rsa_keypair() -> tuple[str, str]:
     return private_pem, public_pem
 
 
+@contextmanager
 def mock_remote_api_for_licensing(
     tier: LicenseTiers = LicenseTiers.STARTER,
     scenario: LicenseMockScenario = LicenseMockScenario.VALID,
 ):
     """
-    Mock Remote API for licensing.
+    Mock the Remote API for licensing, for use as a context manager.
 
     Supported endpoints:
       - GET /api/v1/licenses/<uuid>
@@ -63,19 +64,15 @@ def mock_remote_api_for_licensing(
     `LicenseMockScenario`). The happy path (`VALID`) signs a token bound to this
     instance's fingerprint and the requested UUID.
 
-    This also mocks the public key from `_load_public_key()`: an ephemeral RSA
-    keypair is generated per call, its private half signs the token and its
-    public half is patched into the model so `License.validate_payload()` accepts
-    it (the bundled `keys/public_key.pem` is ignored). `INVALID_SIGNATURE` signs
-    with a *different*, untrusted key.
+    For the duration of the context, `settings.ZANEOPS_LICENSE_PUBLIC_KEY` is
+    overridden with an ephemeral public key whose matching private key signs the
+    returned token, so `License.validate_payload()` accepts it.
+    `INVALID_SIGNATURE` signs with a *different*, untrusted key.
     """
     base_url = settings.ZANEOPS_REMOTE_API_HOST
 
     trusted_private_pem, trusted_public_pem = _generate_rsa_keypair()
     untrusted_private_pem, _ = _generate_rsa_keypair()
-
-    # Started patch is torn down by the base test case's `addCleanup(patch.stopall)`.
-    patch("licensing.models._load_public_key", return_value=trusted_public_pem).start()
 
     license_url_pattern = re.compile(
         rf"^{re.escape(base_url)}/api/v1/licenses/(?P<uuid>[^/]+)/?$",
@@ -129,3 +126,6 @@ def mock_remote_api_for_licensing(
         callback=get_license_callback,
         content_type="application/json",
     )
+
+    with override_settings(ZANEOPS_LICENSE_PUBLIC_KEY=trusted_public_pem):
+        yield
