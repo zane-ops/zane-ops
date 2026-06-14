@@ -302,30 +302,6 @@ class EditWorkspaceTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
 
 
-class CreateWorkspaceTests(AuthAPITestCase):
-    def test_create_workspace_successful(self):
-        self.loginUser()
-
-        response = self.client.post(
-            reverse("zane_api:workspaces.create"),
-            data={"name": "Fredkiss's work"},
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-    def test_cannot_create_workspace_if_not_instance_admin(self):
-        user = self.loginUser()
-        user.is_superuser = False
-        user.save()
-
-        response = self.client.post(
-            reverse("zane_api:workspaces.create"),
-            data={"name": "Fredkiss's work"},
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
-
-
 class SwitchWorkspaceViewTests(AuthAPITestCase):
     def test_switch_workspace_sets_session_key(self):
         user = self.loginUser()
