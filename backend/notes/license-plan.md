@@ -3,7 +3,7 @@
 - [x] Implement license install/uninstall
 -  Implement feature checks:
   - [ ] limit of 3 users
-  - [ ] Limit of more than 1 workspace
+  - [x] Limit of more than 1 workspace
 
 - [ ] Write the license for the licensing stuff 
   - [ ] Either writes the license in `licensing/LICENSE` or modify the license file to indicate 
