@@ -10,6 +10,7 @@ from rest_framework.generics import ListAPIView, DestroyAPIView, RetrieveAPIView
 from rest_framework import status, permissions
 
 from .base import ResourceConflict, BadRequest
+from licensing.models import License, LicenceFeature
 
 
 from ..models import WorkspaceMembership, WorkspaceInvitation
@@ -240,6 +241,24 @@ class InviteUserIntoWorkspaceAPIView(APIView):
             workspace=self.request.workspace,  # type: ignore
         ).exists():
             raise ResourceConflict("This user is already a member of the workspace.")
+
+        total_users = User.objects.count()
+        total_invitations = WorkspaceInvitation.objects.count()
+        if (total_users + total_invitations) >= 3:
+            installed_license = License.get()
+
+            if installed_license is None:
+                raise exceptions.PermissionDenied(
+                    "You've reached the limit of 3 users. "
+                    "Install a license to invite more users."
+                )
+            if not installed_license.is_feature_enabled(
+                LicenceFeature.UNLOCKED_WORKSPACES
+            ):
+                raise exceptions.PermissionDenied(
+                    "You've reached the limit of 3 users allowed by your current license plan. "
+                    "Upgrade your license to invite more users."
+                )
 
         try:
             invitation = WorkspaceInvitation.objects.create(
