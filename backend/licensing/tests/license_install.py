@@ -32,7 +32,7 @@ class LicenceInstallViewTests(AuthAPITestCase):
 
             self.assertEqual(installed_license.installed_by, user)
 
-            data = cast(LicenseData, installed_license._decode())
+            data = cast(LicenseData, installed_license._data)
             self.assertIsNotNone(data)
             self.assertEqual(license_uuid, data.uuid)
             self.assertEqual(data.fingerprint, InstanceMeta.get_fingerprint())
@@ -140,6 +140,6 @@ class LicenceInstallViewTests(AuthAPITestCase):
 
             installed_license = cast(License, License.get())
             self.assertIsNotNone(installed_license)
-            data = cast(LicenseData, installed_license._decode())
+            data = cast(LicenseData, installed_license._data)
             self.assertEqual(second_uuid, data.uuid)
             self.assertEqual(LicenseTiers.STARTER, installed_license.tier)

@@ -1,5 +1,6 @@
 import hashlib
 
+from functools import cached_property
 from typing import Dict, List, Self
 
 from django.db import models
@@ -93,11 +94,11 @@ class License(models.Model):
 
     @property
     def is_valid(self) -> bool:
-        return self._decode() is not None
+        return self._data is not None
 
     @property
     def expires_at(self) -> datetime:
-        data = self._decode()
+        data = self._data
         if not data:
             return datetime.fromtimestamp(0)
         return data.expires_at
@@ -146,7 +147,19 @@ class License(models.Model):
         except (KeyError, ValueError, TypeError):
             raise LicenseError("This license key is malformed.")
 
-    def _decode(self) -> LicenseData | None:
+    @cached_property
+    def _data(self) -> LicenseData | None:
+        """
+        The decoded payload, or ``None`` (logged) if the license is invalid.
+
+        Memoized per instance: ``raw_data`` is fixed once loaded, so all
+        accessors share one RS256 verify. The cache lives only for the
+        instance's lifetime, so a fresh request always re-checks ``exp``.
+
+        **Warning**:
+            Do not make this a process-wide/TTL cache! That would bypass
+            PyJWT's ``exp`` check and serve expired licenses as valid.
+        """
         try:
             return self._decode_token(self.raw_data)
         except LicenseError as e:
@@ -166,16 +179,16 @@ class License(models.Model):
 
     @property
     def tier(self) -> LicenseTiers:
-        data = self._decode()
+        data = self._data
         return data.tier if data is not None else LicenseTiers.FREE
 
     @property
     def uuid(self) -> str:
-        data = self._decode()
+        data = self._data
         return data.uuid if data is not None else str(uuid.UUID(int=0))
 
     def is_feature_enabled(self, feature: LicenceFeature):
-        data = self._decode()
+        data = self._data
         return data is not None and feature in TIER_MATRIX.get(data.tier, [])
 
 
