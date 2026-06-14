@@ -17,6 +17,7 @@ from .serializers import (
     LicenseInstallRequestSerializer,
     LicenseSerializer,
 )
+from django.db import transaction
 
 
 class LicenseListAPIView(ListAPIView):
@@ -29,6 +30,7 @@ class LicenseListAPIView(ListAPIView):
 class LicenseInstallAPIView(APIView):
     permission_classes = [IsInstanceOwner]
 
+    @transaction.atomic()
     @extend_schema(
         operation_id="licenseInstall",
         request=LicenseInstallRequestSerializer,
@@ -74,6 +76,11 @@ class LicenseInstallAPIView(APIView):
             license = License.validate_payload(response_data["key"], license_uuid)
         except LicenseError as e:
             raise BadRequest(str(e))
+
+        existing_license = License.get()
+
+        if existing_license:
+            existing_license.delete()
 
         license.installed_by = request.user
         license.save()

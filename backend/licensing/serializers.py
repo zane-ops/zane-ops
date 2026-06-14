@@ -14,6 +14,7 @@ class LicenseSerializer(serializers.ModelSerializer):
             "is_valid",
             "expires_at",
             "tier",
+            "uuid",
         ]
 
 

@@ -169,6 +169,11 @@ class License(models.Model):
         data = self._decode()
         return data.tier if data is not None else LicenseTiers.FREE
 
+    @property
+    def uuid(self) -> str:
+        data = self._decode()
+        return data.uuid if data is not None else str(uuid.UUID(int=0))
+
     def is_feature_enabled(self, feature: LicenceFeature):
         data = self._decode()
         return data is not None and feature in TIER_MATRIX.get(data.tier, [])
