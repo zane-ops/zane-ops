@@ -1,6 +1,6 @@
 ## Implementation plan
 
-- [ ] Implement license install/uninstall
+- [x] Implement license install/uninstall
 -  Implement feature checks:
   - [ ] limit of 3 users
   - [ ] Limit of more than 1 workspace

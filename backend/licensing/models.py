@@ -18,7 +18,7 @@ SINGLETON_ID = 1
 
 
 class LicenceFeature(StrEnum):
-    UNLIMITED_WORKSPACES = "UNLIMITED_WORKSPACES"
+    UNLOCKED_WORKSPACES = "UNLOCKED_WORKSPACES"
 
 
 class LicenseTiers(StrEnum):
@@ -28,7 +28,7 @@ class LicenseTiers(StrEnum):
 
 TIER_MATRIX: Dict[str, List[LicenceFeature]] = {
     LicenseTiers.FREE.value: [],
-    LicenseTiers.STARTER.value: [LicenceFeature.UNLIMITED_WORKSPACES],
+    LicenseTiers.STARTER.value: [LicenceFeature.UNLOCKED_WORKSPACES],
 }
 
 
