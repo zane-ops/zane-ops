@@ -310,18 +310,68 @@ class WorkspaceUserLimitOnRegisterViewTests(AuthAPITestCase):
         )
 
     @responses.activate
-    def test_cannot_register_into_workspace_beyond_user_limit_without_valid_license(
+    def test_can_register_into_workspace_only_up_to_three_users_without_valid_license(
         self,
     ):
         owner = self.loginUser()  # 1st user (owner)
         workspace = cast(Workspace, Workspace.objects.first())
 
-        # Invitations created while licensed -> 1 user + 3 invitations = 4 (over limit)
+        # Over-provisioned invitations (created while licensed), license now gone
         invitations = self._create_invitations(
             workspace, owner, ["mohai", "ahmedbaset", "everx"]
         )
 
-        # License is now gone, the invitee registers a brand new account
+        # Registering is still allowed as long as it doesn't exceed 3 real users
+        for invitation in invitations[:2]:  # 2 first invitations
+            self.client.logout()
+            response = self.client.post(
+                reverse(
+                    "zane_api:workspace.register",
+                    kwargs={"token": invitation.token},
+                ),
+                data={"password": "p4$$word"},
+            )
+            jprint(response.json())
+            self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Only 3 users in total created
+        self.assertEqual(3, User.objects.count())
+
+        # last invitation (4th user)
+        self.client.logout()
+        response = self.client.post(
+            reverse(
+                "zane_api:workspace.register",
+                kwargs={"token": invitations[2].token},
+            ),
+            data={"password": "p4$$word"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+        # No new user should have been created
+        self.assertEqual(3, User.objects.count())
+
+    @responses.activate
+    def test_cannot_register_into_workspace_beyond_three_users_without_valid_license(
+        self,
+    ):
+        owner = self.loginUser()  # 1st user (owner)
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        # 2 existing members -> 3 real users already
+        for username in ["mohai", "ahmedbaset"]:
+            member = User.objects.create_user(username=username, password="password")
+            WorkspaceMembership.objects.create(
+                role=WorkspaceRole.MEMBER,
+                user=member,
+                workspace=workspace,
+            )
+
+        # Invitation created while licensed, license now gone
+        invitations = self._create_invitations(workspace, owner, ["everx"])
+
+        # Registering a 4th real user should be forbidden
         self.client.logout()
         response = self.client.post(
             reverse(
@@ -334,16 +384,23 @@ class WorkspaceUserLimitOnRegisterViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
 
         # No new user should have been created
-        self.assertEqual(1, User.objects.count())
+        self.assertEqual(3, User.objects.count())
 
     @responses.activate
-    def test_can_register_into_workspace_beyond_user_limit_with_valid_license(self):
+    def test_can_register_beyond_three_users_with_valid_license(self):
         owner = self.loginUser()  # 1st user (owner)
         workspace = cast(Workspace, Workspace.objects.first())
 
-        invitations = self._create_invitations(
-            workspace, owner, ["mohai", "ahmedbaset", "everx"]
-        )
+        # 2 existing members -> 3 real users already
+        for username in ["mohai", "ahmedbaset"]:
+            member = User.objects.create_user(username=username, password="password")
+            WorkspaceMembership.objects.create(
+                role=WorkspaceRole.MEMBER,
+                user=member,
+                workspace=workspace,
+            )
+
+        invitations = self._create_invitations(workspace, owner, ["everx"])
 
         with mock_remote_api_for_licensing():
             # Install valid license
@@ -355,7 +412,7 @@ class WorkspaceUserLimitOnRegisterViewTests(AuthAPITestCase):
             self.assertEqual(status.HTTP_201_CREATED, response.status_code)
             self.assertIsNotNone(License.get())
 
-            # The invitee registers a brand new account
+            # Registering a 4th real user should now be allowed
             self.client.logout()
             response = self.client.post(
                 reverse(
@@ -366,7 +423,7 @@ class WorkspaceUserLimitOnRegisterViewTests(AuthAPITestCase):
             )
             jprint(response.json())
             self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-            self.assertEqual(2, User.objects.count())
+            self.assertEqual(4, User.objects.count())
 
     @responses.activate
     def test_accepting_invitation_for_existing_user_is_allowed_beyond_limit(self):

@@ -20,11 +20,11 @@ SINGLETON_ID = 1
 class LicenceFeature(StrEnum):
     """
     Gated Features behind a valid paid license,
-    the values are just for description, the enum key is the one used
+    the values are just for description, the enum key are the one used
     """
 
-    EXTRA_WORKSPACES = "Extra workspaces"
-    EXTRA_USER_SEATS = "Extra user seats"
+    EXTRA_WORKSPACES = "Extra workspaces"  # more than one workspace
+    EXTRA_USER_SEATS = "Extra user seats"  # more than 3 users
 
 
 class LicenseTiers(StrEnum):
