@@ -143,3 +143,42 @@ class LicenceInstallViewTests(AuthAPITestCase):
             data = cast(LicenseData, installed_license._data)
             self.assertEqual(second_uuid, data.uuid)
             self.assertEqual(LicenseTiers.STARTER, installed_license.tier)
+
+
+class LicenceUnInstallViewTests(AuthAPITestCase):
+    @responses.activate
+    def test_uninstall_license_successfully(self):
+        self.loginUser()
+
+        license_uuid = str(uuid4())
+        data = {"uuid": license_uuid}
+        with mock_remote_api_for_licensing():
+            # install license
+            response = self.client.post(
+                reverse("licensing:license.install"),
+                data=data,
+            )
+
+            jprint(response.json())
+            self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+            installed_license = cast(License, License.get())
+            self.assertIsNotNone(installed_license)
+
+            # uninstall license
+            response = self.client.delete(
+                reverse("licensing:license.uninstall"),
+            )
+
+            self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+            self.assertIsNone(License.get())
+
+    @responses.activate
+    def test_uninstall_license_not_being_installed_returns_404(self):
+        self.loginUser()
+        response = self.client.delete(
+            reverse("licensing:license.uninstall"),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)

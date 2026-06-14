@@ -3,8 +3,8 @@ from typing import cast
 import requests
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
-from rest_framework import status
-from rest_framework.generics import ListAPIView
+from rest_framework import status, exceptions
+from rest_framework.generics import ListAPIView, DestroyAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -25,6 +25,17 @@ class LicenseListAPIView(ListAPIView):
     serializer_class = LicenseSerializer
     pagination_class = DefaultPageNumberPagination
     queryset = License.objects.all()
+
+
+class LicenseUninstallAPIView(DestroyAPIView):
+    permission_classes = [IsInstanceOwner]
+    queryset = License.objects.all()
+
+    def get_object(self):  # type: ignore
+        installed_license = License.get()
+        if installed_license is None:
+            raise exceptions.NotFound("No license installed in this ZaneOps instance.")
+        return installed_license
 
 
 class LicenseInstallAPIView(APIView):

@@ -14,4 +14,9 @@ urlpatterns = [
         views.LicenseInstallAPIView.as_view(),
         name="license.install",
     ),
+    re_path(
+        r"^uninstall/?$",
+        views.LicenseUninstallAPIView.as_view(),
+        name="license.uninstall",
+    ),
 ]
