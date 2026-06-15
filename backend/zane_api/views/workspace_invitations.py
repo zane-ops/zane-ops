@@ -10,7 +10,7 @@ from rest_framework.generics import ListAPIView, DestroyAPIView, RetrieveAPIView
 from rest_framework import status, permissions
 
 from .base import ResourceConflict, BadRequest
-from ..licensing.gate import get_license_gate
+from ..licensing.gate import can_add_user
 
 
 from ..models import WorkspaceMembership, WorkspaceInvitation
@@ -144,7 +144,7 @@ class WorkspaceRegisterInvitationAPIView(APIView):
 
         total_users = User.objects.count()
 
-        allowed, error = get_license_gate().can_register_user(total_users)
+        allowed, error = can_add_user(total_users)
         if not allowed:
             raise exceptions.PermissionDenied(error)
 
@@ -252,9 +252,7 @@ class InviteUserIntoWorkspaceAPIView(APIView):
         total_users = User.objects.count()
         total_invitations = WorkspaceInvitation.objects.count()
 
-        allowed, error = get_license_gate().can_invite_user(
-            total_users + total_invitations
-        )
+        allowed, error = can_add_user(total_users + total_invitations)
         if not allowed:
             raise exceptions.PermissionDenied(error)
 

@@ -65,7 +65,7 @@ from django.db.models import QuerySet, Q
 from .base import ResourceConflict, EMPTY_PAGINATED_RESPONSE
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
-from ..licensing.gate import get_license_gate
+from ..licensing.gate import can_create_workspace
 
 
 class WorkspaceMemberDetailAPIView(RetrieveDestroyAPIView):
@@ -321,7 +321,7 @@ class CreateWorkspaceAPIView(CreateAPIView):
     serializer_class = WorkspaceSerializer
 
     def perform_create(self, serializer: WorkspaceSerializer):
-        allowed, error = get_license_gate().can_create_workspace()
+        allowed, error = can_create_workspace(Workspace.objects.count())
         if not allowed:
             raise exceptions.PermissionDenied(error)
 

@@ -6,6 +6,7 @@ from typing import Dict, List, Self
 from django.db import models
 from django.conf import settings
 from enum import StrEnum
+from zane_api.licensing.gate import LicenceFeature
 import jwt
 from dataclasses import dataclass
 from datetime import datetime
@@ -15,16 +16,6 @@ from uuid import UUID
 
 
 SINGLETON_ID = 1
-
-
-class LicenceFeature(StrEnum):
-    """
-    Gated Features behind a valid paid license,
-    the values are just for description, the enum key are the one used
-    """
-
-    EXTRA_WORKSPACES = "Extra workspaces"  # more than one workspace
-    EXTRA_USER_SEATS = "Extra user seats"  # more than 3 users
 
 
 class LicenseTiers(StrEnum):
