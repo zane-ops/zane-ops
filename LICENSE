@@ -1,6 +1,15 @@
-MIT License
-
 Copyright (c) 2024 Adrien KISSIE
+
+Portions of this software are licensed as follows:
+
+- All content that resides under any "ee/" directory of this repository, if
+  such directories exists, are licensed under the license defined in "ee/LICENSE".
+
+- All third-party components included in this repository are licensed under
+  their respective original licenses, as provided by their authors.
+
+- All files without a license header are, by default, licensed under the 
+ "MIT Expat" license as defined below.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
