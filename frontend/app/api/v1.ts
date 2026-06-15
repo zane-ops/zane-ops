@@ -234,6 +234,8 @@ export interface paths {
   };
   "/api/console/workspaces/{id}/": {
     get: operations["console_workspaces_retrieve"];
+    /** Delete a workspace (admin) */
+    delete: operations["console_workspaces_destroy"];
   };
   "/api/console/workspaces/{id}/transfer-ownership/": {
     /** Transfer workspace ownership (admin) */
@@ -278,6 +280,16 @@ export interface paths {
   "/api/http-logs/fields/": {
     /** Get http logs fields values */
     get: operations["http_logs_fields_list"];
+  };
+  "/api/license/install/": {
+    post: operations["licenseInstall"];
+  };
+  "/api/license/list/": {
+    get: operations["license_list_list"];
+  };
+  "/api/license/uninstall/": {
+    /** Delete installed license from this instance. */
+    delete: operations["uninstallLicense"];
   };
   "/api/ping/": {
     /**
@@ -1884,6 +1896,7 @@ export interface components {
       errors: components["schemas"]["ConsoleUsersPartialUpdateError"][];
     };
     ConsoleUsersRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsoleWorkspacesDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsoleWorkspacesListError: components["schemas"]["ConsoleWorkspacesListNameErrorComponent"];
     ConsoleWorkspacesListErrorResponse400: components["schemas"]["ConsoleWorkspacesListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ConsoleWorkspacesListNameErrorComponent: {
@@ -3820,6 +3833,55 @@ export interface components {
      * @enum {string}
      */
     LevelEnum: "ERROR" | "INFO";
+    License: {
+      /** Format: date-time */
+      installed_at: string;
+      installed_by: components["schemas"]["User"];
+      is_valid: boolean;
+      /** Format: date-time */
+      expires_at: string;
+      tier: components["schemas"]["TierEnum"];
+      uuid: string;
+    };
+    LicenseInstallError: components["schemas"]["LicenseInstallNonFieldErrorsErrorComponent"] | components["schemas"]["LicenseInstallUuidErrorComponent"];
+    LicenseInstallErrorResponse400: components["schemas"]["LicenseInstallValidationError"] | components["schemas"]["ParseErrorResponse"];
+    LicenseInstallNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    LicenseInstallRequestRequest: {
+      /** Format: uuid */
+      uuid: string;
+    };
+    LicenseInstallUuidErrorComponent: {
+      /**
+       * @description * `uuid` - uuid
+       * @enum {string}
+       */
+      attr: "uuid";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "required";
+      detail: string;
+    };
+    LicenseInstallValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["LicenseInstallError"][];
+    };
+    LicenseListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ListAvailableVolumesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ListComposeStackDeploymentsError: components["schemas"]["ListComposeStackDeploymentsStatusErrorComponent"] | components["schemas"]["ListComposeStackDeploymentsQueuedAtErrorComponent"];
     ListComposeStackDeploymentsErrorResponse400: components["schemas"]["ListComposeStackDeploymentsValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -4078,6 +4140,21 @@ export interface components {
        */
       previous: string | null;
       results: components["schemas"]["InstanceUser"][];
+    };
+    PaginatedLicenseList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["License"][];
     };
     PaginatedPasswordResetTokenList: {
       /** @example 123 */
@@ -7671,6 +7748,8 @@ export interface components {
       repositories_count: number;
     };
     TestRegistryCredentialsErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    /** @enum {string} */
+    TierEnum: "free" | "starter";
     ToggleComposeStackDesiredStateErrorComponent: {
       /**
        * @description * `desired_state` - desired_state
@@ -7905,6 +7984,7 @@ export interface components {
       redirect_to?: components["schemas"]["URLRedirectRequest"];
       associated_port?: number;
     };
+    UninstallLicenseErrorResponse400: components["schemas"]["ParseErrorResponse"];
     /**
      * @description * `BYTES` - bytes
      * * `KILOBYTES` - kilobytes
@@ -11126,6 +11206,45 @@ export interface operations {
       };
     };
   };
+  /** Delete a workspace (admin) */
+  console_workspaces_destroy: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsoleWorkspacesDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /** Transfer workspace ownership (admin) */
   consoleTransferWorkspaceOwnership: {
     parameters: {
@@ -11477,6 +11596,118 @@ export interface operations {
       403: {
         content: {
           "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  licenseInstall: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LicenseInstallRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LicenseInstallRequestRequest"];
+        "multipart/form-data": components["schemas"]["LicenseInstallRequestRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["License"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["LicenseInstallErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  license_list_list: {
+    parameters: {
+      query?: {
+        /** @description A page number within the paginated result set. */
+        page?: number;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedLicenseList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["LicenseListListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Delete installed license from this instance. */
+  uninstallLicense: {
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["UninstallLicenseErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

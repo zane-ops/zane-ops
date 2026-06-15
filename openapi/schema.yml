@@ -6506,6 +6506,86 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedLicenseList'
           description: ''
+  /api/license/uninstall/:
+    delete:
+      operationId: uninstallLicense
+      summary: Delete installed license from this instance.
+      tags:
+      - license
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UninstallLicenseErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
   /api/ping/:
     get:
       operationId: ping
@@ -23089,12 +23169,16 @@ components:
           allOf:
           - $ref: '#/components/schemas/TierEnum'
           readOnly: true
+        uuid:
+          type: string
+          readOnly: true
       required:
       - expires_at
       - installed_at
       - installed_by
       - is_valid
       - tier
+      - uuid
     LicenseInstallError:
       oneOf:
       - $ref: '#/components/schemas/LicenseInstallNonFieldErrorsErrorComponent'
@@ -31896,6 +31980,13 @@ components:
         associated_port:
           type: integer
           minimum: 1
+    UninstallLicenseErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     UnitEnum:
       enum:
       - BYTES

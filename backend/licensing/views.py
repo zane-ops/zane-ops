@@ -37,6 +37,14 @@ class LicenseUninstallAPIView(DestroyAPIView):
             raise exceptions.NotFound("No license installed in this ZaneOps instance.")
         return installed_license
 
+    @extend_schema(
+        responses={204: None},
+        operation_id="uninstallLicense",
+        summary="Delete installed license from this instance.",
+    )
+    def delete(self, request: Request, *args, **kwargs):
+        return super().delete(request, *args, **kwargs)
+
 
 class LicenseInstallAPIView(APIView):
     permission_classes = [IsInstanceOwner]
