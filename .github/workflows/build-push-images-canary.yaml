@@ -82,7 +82,7 @@ jobs:
   # Parallel app builds for each architecture
   build-push-app:
     if: ${{ github.repository == 'zane-ops/zane-ops' }}
-    name: Build and Push Zane App (${{ matrix.arch }})
+    name: Build and Push Zane App (${{ matrix.build }}, ${{ matrix.arch }})
     needs: build-frontend
     runs-on: ${{ matrix.runner }}
     permissions:
@@ -90,8 +90,12 @@ jobs:
       contents: read
       attestations: write
       id-token: write
+    env:
+      PREFIX: ${{ matrix.build == 'ee' && 'ee-' || '' }}
     strategy:
       matrix:
+        build: [oss, ee]
+        arch: [amd64, arm64]
         include:
           - arch: amd64
             runner: ubuntu-latest
@@ -122,13 +126,14 @@ jobs:
           file: ./docker/app/slim.Dockerfile
           push: true
           platforms: ${{ matrix.platform }}
-          tags: ghcr.io/zane-ops/app:canary-${{ matrix.arch }},ghcr.io/zane-ops/app:${{ github.sha }}-${{ matrix.arch }}
-          cache-from: type=registry,ref=ghcr.io/zane-ops/app:canary-${{ matrix.arch }}
+          tags: ghcr.io/zane-ops/app:${{ env.PREFIX }}canary-${{ matrix.arch }},ghcr.io/zane-ops/app:${{ env.PREFIX }}${{ github.sha }}-${{ matrix.arch }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/app:${{ env.PREFIX }}canary-${{ matrix.arch }}
           cache-to: type=inline
           build-args: |
             COMMIT_SHA=${{ github.sha }}
             IMAGE_VERSION=canary
             GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+            BUILD=${{ matrix.build }}
 
   # Create multi-arch manifests
   create-manifests:
@@ -156,10 +161,12 @@ jobs:
             ghcr.io/zane-ops/proxy:${{ github.sha }}-arm64
       - name: Create and push app manifests
         run: |
-          docker buildx imagetools create -t ghcr.io/zane-ops/app:canary \
-            ghcr.io/zane-ops/app:canary-amd64 \
-            ghcr.io/zane-ops/app:canary-arm64
+          for prefix in "" "ee-"; do
+            docker buildx imagetools create -t ghcr.io/zane-ops/app:${prefix}canary \
+              ghcr.io/zane-ops/app:${prefix}canary-amd64 \
+              ghcr.io/zane-ops/app:${prefix}canary-arm64
 
-          docker buildx imagetools create -t ghcr.io/zane-ops/app:${{ github.sha }} \
-            ghcr.io/zane-ops/app:${{ github.sha }}-amd64 \
-            ghcr.io/zane-ops/app:${{ github.sha }}-arm64
+            docker buildx imagetools create -t ghcr.io/zane-ops/app:${prefix}${{ github.sha }} \
+              ghcr.io/zane-ops/app:${prefix}${{ github.sha }}-amd64 \
+              ghcr.io/zane-ops/app:${prefix}${{ github.sha }}-arm64
+          done
