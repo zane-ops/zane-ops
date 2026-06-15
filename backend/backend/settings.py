@@ -69,7 +69,7 @@ ENABLE_API_SCHEMA = os.environ.get("ENABLE_API_SCHEMA") == "true"
 # Whether the commercial EE layer (`ee/`) is loaded. Set to "false" for a
 # pure-MIT build that ships without the `ee/` directory ; free-tier behavior
 # then applies everywhere.
-ENABLE_EE = os.environ.get("ENABLE_EE", "true") == "true"
+ENABLE_EE = os.environ.get("BUILD", "ee") == "ee"
 
 
 ALLOWED_HOSTS = (
