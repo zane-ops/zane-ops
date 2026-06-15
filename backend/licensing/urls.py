@@ -5,9 +5,9 @@ app_name = "licensing"
 
 urlpatterns = [
     re_path(
-        r"^list/?$",
-        views.LicenseListAPIView.as_view(),
-        name="licenses.list",
+        r"^details/?$",
+        views.LicenseDetailsAPIView.as_view(),
+        name="license.details",
     ),
     re_path(
         r"^install/?$",

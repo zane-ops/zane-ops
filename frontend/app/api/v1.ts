@@ -281,11 +281,11 @@ export interface paths {
     /** Get http logs fields values */
     get: operations["http_logs_fields_list"];
   };
+  "/api/license/details/": {
+    get: operations["license_details_retrieve"];
+  };
   "/api/license/install/": {
     post: operations["licenseInstall"];
-  };
-  "/api/license/list/": {
-    get: operations["license_list_list"];
   };
   "/api/license/uninstall/": {
     /** Delete installed license from this instance. */
@@ -3843,6 +3843,7 @@ export interface components {
       tier: components["schemas"]["TierEnum"];
       uuid: string;
     };
+    LicenseDetailsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     LicenseInstallError: components["schemas"]["LicenseInstallNonFieldErrorsErrorComponent"] | components["schemas"]["LicenseInstallUuidErrorComponent"];
     LicenseInstallErrorResponse400: components["schemas"]["LicenseInstallValidationError"] | components["schemas"]["ParseErrorResponse"];
     LicenseInstallNonFieldErrorsErrorComponent: {
@@ -3881,7 +3882,6 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["LicenseInstallError"][];
     };
-    LicenseListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ListAvailableVolumesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ListComposeStackDeploymentsError: components["schemas"]["ListComposeStackDeploymentsStatusErrorComponent"] | components["schemas"]["ListComposeStackDeploymentsQueuedAtErrorComponent"];
     ListComposeStackDeploymentsErrorResponse400: components["schemas"]["ListComposeStackDeploymentsValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -4140,21 +4140,6 @@ export interface components {
        */
       previous: string | null;
       results: components["schemas"]["InstanceUser"][];
-    };
-    PaginatedLicenseList: {
-      /** @example 123 */
-      count: number;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=4
-       */
-      next: string | null;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=2
-       */
-      previous: string | null;
-      results: components["schemas"]["License"][];
     };
     PaginatedPasswordResetTokenList: {
       /** @example 123 */
@@ -11605,6 +11590,40 @@ export interface operations {
       };
     };
   };
+  license_details_retrieve: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["License"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["LicenseDetailsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   licenseInstall: {
     requestBody: {
       content: {
@@ -11632,48 +11651,6 @@ export interface operations {
       403: {
         content: {
           "application/json": components["schemas"]["ErrorResponse403"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  license_list_list: {
-    parameters: {
-      query?: {
-        /** @description A page number within the paginated result set. */
-        page?: number;
-        /** @description Number of results to return per page. */
-        per_page?: number;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["PaginatedLicenseList"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["LicenseListListErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      403: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse403"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

@@ -4,12 +4,12 @@ import requests
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, exceptions
-from rest_framework.generics import ListAPIView, DestroyAPIView
+from rest_framework.generics import RetrieveAPIView, DestroyAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from zane_api.permissions import IsInstanceOwner
-from zane_api.views.base import BadRequest, DefaultPageNumberPagination
+from zane_api.views.base import BadRequest
 
 from .models import License, LicenseError
 from .serializers import (
@@ -20,11 +20,16 @@ from .serializers import (
 from django.db import transaction
 
 
-class LicenseListAPIView(ListAPIView):
+class LicenseDetailsAPIView(RetrieveAPIView):
     permission_classes = [IsInstanceOwner]
     serializer_class = LicenseSerializer
-    pagination_class = DefaultPageNumberPagination
     queryset = License.objects.all()
+
+    def get_object(self):  # type: ignore
+        installed_license = License.get()
+        if installed_license is None:
+            raise exceptions.NotFound("No license installed in this ZaneOps instance.")
+        return installed_license
 
 
 class LicenseUninstallAPIView(DestroyAPIView):
