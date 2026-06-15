@@ -10,7 +10,7 @@ from rest_framework.generics import ListAPIView, DestroyAPIView, RetrieveAPIView
 from rest_framework import status, permissions
 
 from .base import ResourceConflict, BadRequest
-from licensing.models import License, LicenceFeature
+from ee.licensing.models import License, LicenceFeature
 
 
 from ..models import WorkspaceMembership, WorkspaceInvitation

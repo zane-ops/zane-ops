@@ -65,7 +65,7 @@ from django.db.models import QuerySet, Q
 from .base import ResourceConflict, EMPTY_PAGINATED_RESPONSE
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
-from licensing.models import License, LicenceFeature
+from ee.licensing.models import License, LicenceFeature
 
 
 class WorkspaceMemberDetailAPIView(RetrieveDestroyAPIView):
