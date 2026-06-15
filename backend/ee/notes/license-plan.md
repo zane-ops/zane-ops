@@ -17,10 +17,10 @@
     - https://gitlab.com/gitlab-org/gitlab/-/blob/master/ee/LICENSE
     - https://gitlab.com/gitlab-org/gitlab/-/blob/master/LICENSE
 
-- [ ] Write the code to distributes the enterprise edition or business edition ? probably enterprise edition as people are more 
+- [x] Write the code to distributes the enterprise edition or business edition ? probably enterprise edition as people are more 
   used to that naming
-- [ ] Strip out the enterprise code from the OSS build : 
-  - [ ] Using https://pypi.org/project/pypreprocessor/, some example code:
+- [x] Strip out the enterprise code from the OSS build : 
+  -  ~~Using https://pypi.org/project/pypreprocessor/~~ -> No need, some example code:
     - https://github.com/interpreters/pypreprocessor/blob/main/Examples/debug.py
     - https://github.com/interpreters/pypreprocessor/blob/main/Examples/debug2production.py
     - https://pypi.org/project/pypreprocessor/

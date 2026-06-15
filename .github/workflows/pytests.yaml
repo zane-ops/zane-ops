@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         # Split into parallel jobs
-        apps: 
+        app: 
           - zane_api
           - container_registry
           - git_connectors 
@@ -74,8 +74,12 @@ jobs:
           uv sync --locked --no-dev --no-install-project
           uv sync --locked --no-dev --no-editable
 
-      - name: Run tests for ${{ matrix.apps }} app
+      - name: Remove ee/ folder for non-ee tests
+        if: ${{ !startsWith(matrix.app, 'ee') }}
+        run: rm -rf backend/ee/
+
+      - name: Run tests for ${{ matrix.app }} app
         run: |
           cd backend
           source .venv/bin/activate
-          python manage.py test ${{ matrix.apps }}.tests --parallel --settings=backend.settings_test --keepdb
+          python manage.py test ${{ matrix.app }}.tests --parallel --settings=backend.settings_test --keepdb
