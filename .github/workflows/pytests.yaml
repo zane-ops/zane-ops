@@ -79,6 +79,8 @@ jobs:
         run: rm -rf backend/ee/
 
       - name: Run tests for ${{ matrix.app }} app
+        env:
+          BUILD: ${{ startsWith(matrix.app, 'ee') && 'ee' || 'oss' }}
         run: |
           cd backend
           source .venv/bin/activate
