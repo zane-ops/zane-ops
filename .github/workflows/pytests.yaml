@@ -21,7 +21,7 @@ jobs:
           - git_connectors 
           - compose
           - console
-          - licensing
+          - ee.licensing
 
     services:
       loki:
@@ -74,7 +74,7 @@ jobs:
           uv sync --locked --no-dev --no-install-project
           uv sync --locked --no-dev --no-editable
 
-      - name: Run tests for app ${{ matrix.apps }}
+      - name: Run tests for ${{ matrix.apps }} app
         run: |
           cd backend
           source .venv/bin/activate
