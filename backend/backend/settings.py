@@ -66,6 +66,11 @@ ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "127-0-0-1.sslip.io")
 ZANE_INTERNAL_DOMAIN = "zaneops.internal"
 ENABLE_API_SCHEMA = os.environ.get("ENABLE_API_SCHEMA") == "true"
 
+# Whether the commercial EE layer (`ee/`) is loaded. Set to "false" for a
+# pure-MIT build that ships without the `ee/` directory ; free-tier behavior
+# then applies everywhere.
+ENABLE_EE = os.environ.get("ENABLE_EE", "true") == "true"
+
 
 ALLOWED_HOSTS = (
     [
@@ -134,7 +139,6 @@ INSTALLED_APPS = [
     "container_registry.apps.ContainerRegistryConfig",
     "compose.apps.ComposeConfig",
     "console.apps.ConsoleConfig",
-    "ee.licensing.apps.LicensingConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
@@ -144,6 +148,9 @@ INSTALLED_APPS = [
     "drf_standardized_errors",
     "django_filters",
 ]
+
+if ENABLE_EE:
+    INSTALLED_APPS.append("ee.licensing.apps.LicensingConfig")
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",

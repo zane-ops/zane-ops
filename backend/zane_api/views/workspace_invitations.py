@@ -10,7 +10,7 @@ from rest_framework.generics import ListAPIView, DestroyAPIView, RetrieveAPIView
 from rest_framework import status, permissions
 
 from .base import ResourceConflict, BadRequest
-from ee.licensing.models import License, LicenceFeature
+from ..licensing.gate import get_license_gate
 
 
 from ..models import WorkspaceMembership, WorkspaceInvitation
@@ -144,21 +144,9 @@ class WorkspaceRegisterInvitationAPIView(APIView):
 
         total_users = User.objects.count()
 
-        if total_users >= 3:
-            installed_license = License.get()
-
-            if installed_license is None:
-                raise exceptions.PermissionDenied(
-                    "This ZaneOps instance has reached its limit of 3 users. "
-                    "Ask your ZaneOps admin to install a license before you can join."
-                )
-            if not installed_license.is_feature_enabled(
-                LicenceFeature.EXTRA_WORKSPACES
-            ):
-                raise exceptions.PermissionDenied(
-                    "This ZaneOps instance has reached the limit of 3 users allowed by its current license plan. "
-                    "Ask your ZaneOps admin to upgrade the license before you can join."
-                )
+        allowed, error = get_license_gate().can_register_user(total_users)
+        if not allowed:
+            raise exceptions.PermissionDenied(error)
 
         # Create user
         data = cast(dict, form.validated_data)
@@ -263,21 +251,12 @@ class InviteUserIntoWorkspaceAPIView(APIView):
 
         total_users = User.objects.count()
         total_invitations = WorkspaceInvitation.objects.count()
-        if (total_users + total_invitations) >= 3:
-            installed_license = License.get()
 
-            if installed_license is None:
-                raise exceptions.PermissionDenied(
-                    "This ZaneOps instance has reached its limit of 3 users. "
-                    "Ask your ZaneOps admin to install a license to add more users."
-                )
-            if not installed_license.is_feature_enabled(
-                LicenceFeature.EXTRA_WORKSPACES
-            ):
-                raise exceptions.PermissionDenied(
-                    "This ZaneOps instance has reached the limit of 3 users allowed by its current license plan. "
-                    "Ask your ZaneOps admin to upgrade the license to add more users."
-                )
+        allowed, error = get_license_gate().can_invite_user(
+            total_users + total_invitations
+        )
+        if not allowed:
+            raise exceptions.PermissionDenied(error)
 
         try:
             invitation = WorkspaceInvitation.objects.create(

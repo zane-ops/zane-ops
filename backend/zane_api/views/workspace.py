@@ -65,7 +65,7 @@ from django.db.models import QuerySet, Q
 from .base import ResourceConflict, EMPTY_PAGINATED_RESPONSE
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
-from ee.licensing.models import License, LicenceFeature
+from ..licensing.gate import get_license_gate
 
 
 class WorkspaceMemberDetailAPIView(RetrieveDestroyAPIView):
@@ -321,19 +321,9 @@ class CreateWorkspaceAPIView(CreateAPIView):
     serializer_class = WorkspaceSerializer
 
     def perform_create(self, serializer: WorkspaceSerializer):
-        installed_license = License.get()
-
-        if installed_license is None:
-            raise exceptions.PermissionDenied(
-                "Creating more than one workspace requires a license. "
-                "Please install a license that includes this feature."
-            )
-
-        if not installed_license.is_feature_enabled(LicenceFeature.EXTRA_WORKSPACES):
-            raise exceptions.PermissionDenied(
-                "Your current license plan doesn't include this feature, "
-                "so you can only have one workspace. Please upgrade your license to create more."
-            )
+        allowed, error = get_license_gate().can_create_workspace()
+        if not allowed:
+            raise exceptions.PermissionDenied(error)
 
         super().perform_create(serializer)
 
