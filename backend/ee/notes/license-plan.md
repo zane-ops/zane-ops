@@ -49,7 +49,6 @@
   - [ ] List invitations
 - [ ] Implement Guest UI: show only the accessible projects
 - Implement Instance Admin UI
-  - [ ] List workspaces
-  - [ ] List users
-  - [ ] Buy license from the dashboard
-  - [ ] Show license
+  - [ ] Workspaces CRUD
+  - [ ] Users CRUD
+  - [ ] License CRUD: Show, Install, Uninstall, Buy
