@@ -1,15 +1,17 @@
-Copyright (c) 2024-present ZaneOps
+Copyright (c) 2024-present Fredhel KISSIE (EI), trading under the
+commercial name "ZaneOps"
 
 Portions of this software are licensed as follows:
 
-- All content that resides under any "ee/" directory of this repository, if
-  such directories exists, are licensed under the license defined in "ee/LICENSE".
+- All content that resides under any "ee/" directory of this repository, if any
+  such directory exists, is licensed under the license defined in the
+  "ee/LICENSE" file (the "ZaneOps Commercial License").
 
 - All third-party components included in this repository are licensed under
   their respective original licenses, as provided by their authors.
 
-- All files without a license header are, by default, licensed under the 
- "MIT Expat" license as defined below.
+- All the other files are, by default, licensed under the
+  "MIT Expat" license as defined below.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
