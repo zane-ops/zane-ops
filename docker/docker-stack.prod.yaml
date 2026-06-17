@@ -126,7 +126,7 @@ services:
       - POSTGRES_SEEDS=zane.pgbouncer
       - SERVICES=history,matching,frontend,worker
       - BIND_ON_IP=0.0.0.0
-    image: temporalio/auto-setup:1.24.2
+    image: temporalio/server:1.30
     volumes:
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/dynamicconfig/production-sql.yaml:/etc/temporal/config/dynamicconfig/development-sql.yaml"
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml"
@@ -169,7 +169,7 @@ services:
       start_period: 15s
       retries: 3
   zane-temporal-admin-tools:
-    image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-1.0.0
+    image: temporalio/admin-tools:1.30
     environment:
       - DB=postgres12
       - DB_PORT=5432
