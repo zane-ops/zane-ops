@@ -9,7 +9,7 @@ from enum import StrEnum
 from zane_api.licensing.gate import LicenceFeature
 import jwt
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from zane_api.utils import Colors
 import uuid
 from uuid import UUID
@@ -45,8 +45,8 @@ class LicenseData:
     def from_dict(cls, data: dict) -> Self:
         return cls(
             tier=LicenseTiers(data["tier"]),
-            issued_at=datetime.fromtimestamp(data["iat"]),
-            expires_at=datetime.fromtimestamp(data["exp"]),
+            issued_at=datetime.fromtimestamp(data["iat"], tz=timezone.utc),
+            expires_at=datetime.fromtimestamp(data["exp"], tz=timezone.utc),
             uuid=data["uuid"],
             fingerprint=data["fingerprint"],
         )
