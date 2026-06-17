@@ -25,7 +25,7 @@
     - https://github.com/interpreters/pypreprocessor/blob/main/Examples/debug2production.py
     - https://pypi.org/project/pypreprocessor/
 
-- [ ] Write the terms & privacy policy of ZaneOps in the docs repo, some ideas:
+- [x] Write the terms & privacy policy of ZaneOps in the docs repo, some ideas:
   - https://handbook.gitlab.com/handbook/legal/professional-services-agreement/
   - https://about.gitlab.com/privacy/
   - https://infisical.com/terms/self-hosted
