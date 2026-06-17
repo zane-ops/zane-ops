@@ -117,20 +117,19 @@ services:
       - zane-temporal-server
       - zane-loki
   zane-temporal-server:
-    entrypoint: ["/etc/temporal/entrypoint.sh"]
     environment:
       - DB=postgres12
       - DB_PORT=5432
       - POSTGRES_USER=${ZANE_DB_USER:-zane}
       - POSTGRES_PWD=${ZANE_DB_PASSWORD}
-      - POSTGRES_SEEDS=zane.pgbouncer
+      - POSTGRES_SEEDS=zane.db
       - SERVICES=history,matching,frontend,worker
       - BIND_ON_IP=0.0.0.0
-    image: temporalio/server:1.30
+      - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/config/dynamicconfig/development-sql.yaml
+    image: temporalio/server:1.30.5
     volumes:
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/dynamicconfig/production-sql.yaml:/etc/temporal/config/dynamicconfig/development-sql.yaml"
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml"
-      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh"
     deploy:
       replicas: 1
       update_config:
@@ -157,19 +156,13 @@ services:
     depends_on:
       - zane-db
     healthcheck:
-      test:
-        [
-          "CMD",
-          "bash",
-          "-c",
-          "temporal operator cluster health --address $$(hostname -i):7233",
-        ]
-      interval: 30s
-      timeout: 3m
-      start_period: 15s
-      retries: 3
+      test: ["CMD", "nc", "-z", "localhost", "7233"]
+      interval: 5s
+      timeout: 3s
+      start_period: 30s
+      retries: 60
   zane-temporal-admin-tools:
-    image: temporalio/admin-tools:1.30
+    image: temporalio/admin-tools:1.30.5
     environment:
       - DB=postgres12
       - DB_PORT=5432
@@ -187,7 +180,8 @@ services:
       - BIND_ON_IP=0.0.0.0
     volumes:
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/admin-tools-entrypoint.sh:/etc/temporal/setup.sh"
-    entrypoint: ["/etc/temporal/setup.sh"]
+    entrypoint: ["/bin/sh"]
+    command: "/etc/temporal/setup.sh"
     deploy:
       mode: replicated-job
       restart_policy:
@@ -330,7 +324,7 @@ services:
           cpus: "1"
           memory: 1G
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       retries: 5
       start_period: 5s
