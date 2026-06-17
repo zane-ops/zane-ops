@@ -1,5 +1,4 @@
 import json
-import re
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from enum import StrEnum
@@ -57,7 +56,7 @@ def mock_remote_api_for_licensing(
     Mock the Remote API for licensing, for use as a context manager.
 
     Supported endpoints:
-      - GET /api/v1/licenses/<uuid>
+      - POST /api/v1/license/install  { uuid, fingerprint }
           -> returns a license token (`{"key": <jwt>}`) for the requested UUID.
 
     `scenario` selects which edge of the install flow to exercise (see
@@ -74,14 +73,11 @@ def mock_remote_api_for_licensing(
     trusted_private_pem, trusted_public_pem = _generate_rsa_keypair()
     untrusted_private_pem, _ = _generate_rsa_keypair()
 
-    license_url_pattern = re.compile(
-        rf"^{re.escape(base_url)}/api/v1/licenses/(?P<uuid>[^/]+)/?$",
-        re.IGNORECASE,
-    )
+    install_url = f"{base_url}/api/v1/license/install"
 
     def get_license_callback(request):
-        matched = license_url_pattern.match(request.url)
-        license_uuid = matched.group("uuid")  # type: ignore
+        body = json.loads(request.body)
+        license_uuid = body["uuid"]
 
         if scenario is LicenseMockScenario.NOT_FOUND:
             return (
@@ -121,8 +117,8 @@ def mock_remote_api_for_licensing(
         return (status.HTTP_200_OK, {}, json.dumps({"key": key}))
 
     responses.add_callback(
-        responses.GET,
-        license_url_pattern,
+        responses.POST,
+        install_url,
         callback=get_license_callback,
         content_type="application/json",
     )

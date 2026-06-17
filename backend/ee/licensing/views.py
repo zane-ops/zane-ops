@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from zane_api.permissions import IsInstanceOwner
 from zane_api.views.base import BadRequest
 
-from .models import License, LicenseError
+from .models import License, LicenseError, InstanceMeta
 from .serializers import (
     LicenseInstallRemoteResponseSerializer,
     LicenseInstallRequestSerializer,
@@ -67,9 +67,15 @@ class LicenseInstallAPIView(APIView):
         data = cast(dict, form.validated_data)
         license_uuid = data["uuid"]
 
-        url = f"{settings.ZANEOPS_REMOTE_API_HOST}/api/v1/licenses/{license_uuid}"
+        url = f"{settings.ZANEOPS_REMOTE_API_HOST}/api/v1/license/install"
         try:
-            response = requests.get(url=url)
+            response = requests.post(
+                url=url,
+                json={
+                    "uuid": str(license_uuid),
+                    "fingerprint": InstanceMeta.get_fingerprint(),
+                },
+            )
             response.raise_for_status()
         except requests.HTTPError as e:
             if (
