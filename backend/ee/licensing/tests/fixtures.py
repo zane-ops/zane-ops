@@ -2,17 +2,17 @@ import json
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from enum import StrEnum
+from unittest import mock
 from uuid import uuid4
 
 import jwt
 import responses
-from django.conf import settings
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from rest_framework import status
 
+from ..constants import ZANEOPS_REMOTE_API_HOST
 from ..models import InstanceMeta, LicenseTiers
-from django.test import override_settings
 
 
 class LicenseMockScenario(StrEnum):
@@ -63,12 +63,13 @@ def mock_remote_api_for_licensing(
     `LicenseMockScenario`). The happy path (`VALID`) signs a token bound to this
     instance's fingerprint and the requested UUID.
 
-    For the duration of the context, `settings.ZANEOPS_LICENSE_PUBLIC_KEY` is
-    overridden with an ephemeral public key whose matching private key signs the
-    returned token, so `License.validate_payload()` accepts it.
+    For the duration of the context, the `ZANEOPS_LICENSE_PUBLIC_KEY` constant
+    used by `ee.licensing.models` is patched with an ephemeral public key whose
+    matching private key signs the returned token, so
+    `License.validate_payload()` accepts it.
     `INVALID_SIGNATURE` signs with a *different*, untrusted key.
     """
-    base_url = settings.ZANEOPS_REMOTE_API_HOST
+    base_url = ZANEOPS_REMOTE_API_HOST
 
     trusted_private_pem, trusted_public_pem = _generate_rsa_keypair()
     untrusted_private_pem, _ = _generate_rsa_keypair()
@@ -123,5 +124,7 @@ def mock_remote_api_for_licensing(
         content_type="application/json",
     )
 
-    with override_settings(ZANEOPS_LICENSE_PUBLIC_KEY=trusted_public_pem):
+    with mock.patch(
+        "ee.licensing.models.ZANEOPS_LICENSE_PUBLIC_KEY", trusted_public_pem
+    ):
         yield

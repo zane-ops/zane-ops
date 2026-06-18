@@ -1,7 +1,6 @@
 from typing import cast
 
 import requests
-from django.conf import settings
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, exceptions
 from rest_framework.generics import RetrieveAPIView, DestroyAPIView
@@ -11,6 +10,7 @@ from rest_framework.views import APIView
 from zane_api.permissions import IsInstanceOwner
 from zane_api.views.base import BadRequest
 
+from .constants import ZANEOPS_REMOTE_API_HOST
 from .models import License, LicenseError, InstanceMeta
 from .serializers import (
     LicenseInstallRemoteResponseSerializer,
@@ -67,7 +67,7 @@ class LicenseInstallAPIView(APIView):
         data = cast(dict, form.validated_data)
         license_uuid = data["uuid"]
 
-        url = f"{settings.ZANEOPS_REMOTE_API_HOST}/v1/license/install"
+        url = f"{ZANEOPS_REMOTE_API_HOST}/v1/license/install"
         try:
             response = requests.post(
                 url=url,

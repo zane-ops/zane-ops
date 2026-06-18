@@ -7,6 +7,7 @@ from django.db import models
 from django.conf import settings
 from enum import StrEnum
 from zane_api.licensing.gate import LicenceFeature
+from .constants import ZANEOPS_LICENSE_PUBLIC_KEY
 import jwt
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -135,7 +136,7 @@ class License(models.Model):
         """
         try:
             payload = jwt.decode(
-                key, settings.ZANEOPS_LICENSE_PUBLIC_KEY, algorithms=["RS256"]
+                key, ZANEOPS_LICENSE_PUBLIC_KEY, algorithms=["RS256"]
             )
         except jwt.ExpiredSignatureError:
             raise LicenseError("This license has expired.")
