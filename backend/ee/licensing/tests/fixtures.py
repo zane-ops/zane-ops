@@ -31,6 +31,9 @@ class LicenseMockScenario(StrEnum):
     UNBIND_FINGERPRINT_MISMATCH = "unbind_fingerprint_mismatch"
     UNBIND_REBIND_LIMIT = "unbind_rebind_limit"
 
+    # check-only error case (remote returns `{code, message}` with 4xx)
+    CHECK_FINGERPRINT_MISMATCH = "check_fingerprint_mismatch"
+
 
 def _generate_rsa_keypair() -> tuple[str, str]:
     """Return a `(private_pem, public_pem)` pair for signing/validating tokens."""
@@ -60,8 +63,10 @@ def mock_remote_api_for_licensing(
     Mock the Remote API for licensing, for use as a context manager.
 
     Supported endpoints:
-      - POST /api/v1/license/install  { uuid, fingerprint }
+      - POST /v1/license/install  { uuid, fingerprint }
           -> returns a license token (`{"key": <jwt>}`) for the requested UUID.
+      - POST /v1/license/check  { uuid, fingerprint }
+          -> returns `{"status": "active", "expired": bool, "key": <jwt>}`.
 
     `scenario` selects which edge of the install flow to exercise (see
     `LicenseMockScenario`). The happy path (`VALID`) signs a token bound to this
@@ -80,22 +85,10 @@ def mock_remote_api_for_licensing(
 
     install_url = f"{base_url}/v1/license/install"
     unbind_url = f"{base_url}/v1/license/unbind"
+    check_url = f"{base_url}/v1/license/check"
 
-    def get_license_callback(request):
-        body = json.loads(request.body)
-        license_uuid = body["uuid"]
-
-        if scenario is LicenseMockScenario.NOT_FOUND:
-            return (
-                status.HTTP_404_NOT_FOUND,
-                {},
-                json.dumps({"detail": "License not found"}),
-            )
-
-        if scenario is LicenseMockScenario.MALFORMED_RESPONSE:
-            # 200 OK, but the body does not carry the expected "key" field.
-            return (status.HTTP_200_OK, {}, json.dumps({"detail": "ok"}))
-
+    def build_license_key(license_uuid: str) -> str:
+        """Sign a license token for `license_uuid`, mutated per `scenario`."""
         now = datetime.now(timezone.utc)
         payload = {
             "tier": tier.value,
@@ -119,13 +112,77 @@ def mock_remote_api_for_licensing(
             case LicenseMockScenario.UUID_MISMATCH:
                 payload["uuid"] = str(uuid4())
 
-        key = jwt.encode(payload, signing_key, algorithm="RS256")
+        return jwt.encode(payload, signing_key, algorithm="RS256")
+
+    def get_license_callback(request):
+        body = json.loads(request.body)
+        license_uuid = body["uuid"]
+
+        if scenario is LicenseMockScenario.NOT_FOUND:
+            return (
+                status.HTTP_404_NOT_FOUND,
+                {},
+                json.dumps({"detail": "License not found"}),
+            )
+
+        if scenario is LicenseMockScenario.MALFORMED_RESPONSE:
+            # 200 OK, but the body does not carry the expected "key" field.
+            return (status.HTTP_200_OK, {}, json.dumps({"detail": "ok"}))
+
+        key = build_license_key(license_uuid)
         return (status.HTTP_200_OK, {}, json.dumps({"key": key}))
 
     responses.add_callback(
         responses.POST,
         install_url,
         callback=get_license_callback,
+        content_type="application/json",
+    )
+
+    def check_license_callback(request):
+        body = json.loads(request.body)
+        license_uuid = body["uuid"]
+
+        if scenario is LicenseMockScenario.NOT_FOUND:
+            return (
+                status.HTTP_404_NOT_FOUND,
+                {},
+                json.dumps({"detail": "License not found"}),
+            )
+
+        if scenario is LicenseMockScenario.MALFORMED_RESPONSE:
+            # 200 OK, but the body does not carry the expected "key" field.
+            return (status.HTTP_200_OK, {}, json.dumps({"detail": "ok"}))
+
+        if scenario is LicenseMockScenario.CHECK_FINGERPRINT_MISMATCH:
+            return (
+                status.HTTP_409_CONFLICT,
+                {},
+                json.dumps(
+                    {
+                        "code": "fingerprint_mismatch",
+                        "message": "fingerprint does not match current binding",
+                    }
+                ),
+            )
+
+        key = build_license_key(license_uuid)
+        return (
+            status.HTTP_200_OK,
+            {},
+            json.dumps(
+                {
+                    "status": "active",
+                    "expired": scenario is LicenseMockScenario.EXPIRED,
+                    "key": key,
+                }
+            ),
+        )
+
+    responses.add_callback(
+        responses.POST,
+        check_url,
+        callback=check_license_callback,
         content_type="application/json",
     )
 
