@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from zane_api.utils import Colors
 import uuid
 from uuid import UUID
-
+from asgiref.sync import sync_to_async
 
 SINGLETON_ID = 1
 
@@ -126,6 +126,28 @@ class License(models.Model):
 
         return cls(raw_data=key)
 
+    @classmethod
+    async def avalidate_payload(cls, key: str, uuid: str | UUID) -> Self:
+        """
+        Decode and validate a license `key` against this instance.
+
+        Raises `LicenseError` with a user-facing message when the license is
+        not acceptable (bad signature, expired, malformed, or bound to another
+        instance/license ID).
+        """
+        data = cls._decode_token(key)
+
+        if data.fingerprint != await InstanceMeta.aget_fingerprint():
+            raise LicenseError(
+                "This license key is not bound to this ZaneOps instance."
+            )
+        if data.uuid != str(uuid):
+            raise LicenseError(
+                "This license key does not match the provided license ID."
+            )
+
+        return cls(raw_data=key)
+
     @staticmethod
     def _decode_token(key: str) -> LicenseData:
         """
@@ -174,7 +196,11 @@ class License(models.Model):
 
     @classmethod
     async def aget(cls):
-        return await cls.objects.filter(id=SINGLETON_ID).afirst()
+        return (
+            await cls.objects.filter(id=SINGLETON_ID)
+            .select_related("installed_by")
+            .afirst()
+        )
 
     @property
     def tier(self) -> LicenseTiers:
@@ -217,7 +243,7 @@ class InstanceMeta(models.Model):
         return cls.objects.create(fingerprint=fingerprint_data)
 
     @classmethod
-    def get_fingerprint(cls):
+    def get_fingerprint(cls) -> str:
         """
         Return the fingerprint of this ZaneOps instance as `"sha256:<hexdigest>"`.
         The underlying instance id is a UUID persisted in the database and saved as a singleton object in the DB.
@@ -225,3 +251,12 @@ class InstanceMeta(models.Model):
         return (
             cls.objects.filter(pk=SINGLETON_ID).first() or cls._create_fingerprint()
         ).fingerprint
+
+    @classmethod
+    async def aget_fingerprint(cls) -> str:
+        """
+        Return the fingerprint of this ZaneOps instance as `"sha256:<hexdigest>"`.
+        The underlying instance id is a UUID persisted in the database and saved as a singleton object in the DB.
+        """
+        instance = await cls.objects.filter(pk=SINGLETON_ID).afirst()
+        return (instance or await sync_to_async(cls._create_fingerprint)()).fingerprint

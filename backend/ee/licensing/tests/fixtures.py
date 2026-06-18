@@ -1,5 +1,5 @@
 import json
-from contextlib import contextmanager
+from contextlib import contextmanager, asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from enum import StrEnum
 from unittest import mock
@@ -58,6 +58,7 @@ def _generate_rsa_keypair() -> tuple[str, str]:
 def mock_remote_api_for_licensing(
     tier: LicenseTiers = LicenseTiers.STARTER,
     scenario: LicenseMockScenario = LicenseMockScenario.VALID,
+    fingerprint: str | None = None,
 ):
     """
     Mock the Remote API for licensing, for use as a context manager.
@@ -71,6 +72,14 @@ def mock_remote_api_for_licensing(
     `scenario` selects which edge of the install flow to exercise (see
     `LicenseMockScenario`). The happy path (`VALID`) signs a token bound to this
     instance's fingerprint and the requested UUID.
+
+    `fingerprint` lets the caller pass an already-resolved instance fingerprint,
+    so the `responses` callbacks never touch the ORM. The callbacks run on
+    whatever thread issued the request; for requests made on the event loop
+    (e.g. the `check_license` activity), a sync ORM read would raise
+    `SynchronousOnlyOperation`. Sync callers can leave it as `None` (resolved
+    lazily); async callers should use `amock_remote_api_for_licensing`, which
+    pre-resolves it with `await InstanceMeta.aget_fingerprint()`.
 
     For the duration of the context, the `ZANEOPS_LICENSE_PUBLIC_KEY` constant
     used by `ee.licensing.models` is patched with an ephemeral public key whose
@@ -95,7 +104,11 @@ def mock_remote_api_for_licensing(
             "iat": now.timestamp(),
             "exp": (now + timedelta(days=365)).timestamp(),
             "uuid": license_uuid,
-            "fingerprint": InstanceMeta.get_fingerprint(),
+            "fingerprint": (
+                fingerprint
+                if fingerprint is not None
+                else InstanceMeta.get_fingerprint()
+            ),
         }
         signing_key = trusted_private_pem
 
@@ -221,5 +234,24 @@ def mock_remote_api_for_licensing(
 
     with mock.patch(
         "ee.licensing.models.ZANEOPS_LICENSE_PUBLIC_KEY", trusted_public_pem
+    ):
+        yield
+
+
+@asynccontextmanager
+async def amock_remote_api_for_licensing(
+    tier: LicenseTiers = LicenseTiers.STARTER,
+    scenario: LicenseMockScenario = LicenseMockScenario.VALID,
+):
+    """
+    Async variant of `mock_remote_api_for_licensing` for tests where the mocked
+    request is issued on the event loop (e.g. the `check_license` activity).
+
+    The instance fingerprint is resolved up-front with the async ORM helper so
+    the (synchronous) `responses` callbacks never touch the ORM.
+    """
+    fingerprint = await InstanceMeta.aget_fingerprint()
+    with mock_remote_api_for_licensing(
+        tier=tier, scenario=scenario, fingerprint=fingerprint
     ):
         yield

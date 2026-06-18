@@ -490,7 +490,14 @@ class AuthAPITestCase(APITestCase):
         def collect_commit_callback(func: Callable):
             self.commit_callback = func
 
-        async def create_schedule(
+        def create_schedule(
+            id: str, interval: timedelta, workflow: Any, *args, **kwargs
+        ):
+            self.workflow_schedules.append(
+                WorkflowScheduleHandle(id, interval=interval, workflow=workflow)
+            )
+
+        async def acreate_schedule(
             id: str, interval: timedelta, workflow: Any, *args, **kwargs
         ):
             self.workflow_schedules.append(
@@ -522,6 +529,11 @@ class AuthAPITestCase(APITestCase):
 
         patch_temporal_create_schedule = patch(
             "temporal.activities.TemporalClient.acreate_schedule",
+            side_effect=acreate_schedule,
+        )
+
+        patch_temporal_create_schedule = patch(
+            "temporal.activities.TemporalClient.create_schedule",
             side_effect=create_schedule,
         )
         patch_temporal_pause_schedule = patch(

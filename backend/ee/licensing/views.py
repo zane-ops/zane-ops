@@ -1,17 +1,25 @@
 from typing import cast
 
 import requests
+from django.conf import settings
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, exceptions
 from rest_framework.generics import RetrieveAPIView, DestroyAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from temporalio.service import RPCError
 from zane_api.permissions import IsInstanceOwner
 from zane_api.views.base import BadRequest
 
-from .constants import ZANEOPS_REMOTE_API_HOST
+from temporal.client import TemporalClient
+from .constants import (
+    ZANEOPS_REMOTE_API_HOST,
+    LICENSE_CHECK_SCHEDULE_ID,
+    LICENSE_CHECK_INTERVAL,
+)
 from .models import License, LicenseError, InstanceMeta
+from .schedules import CheckLicenseWorkflow
 from .serializers import (
     LicenseInstallRemoteResponseSerializer,
     LicenseUninstallRemoteErrorResponseSerializer,
@@ -43,6 +51,7 @@ class LicenseUninstallAPIView(DestroyAPIView):
             raise exceptions.NotFound("No license installed in this ZaneOps instance.")
         return installed_license
 
+    @transaction.atomic()
     def perform_destroy(self, instance: License):
         url = f"{ZANEOPS_REMOTE_API_HOST}/v1/license/unbind"
 
@@ -84,7 +93,18 @@ class LicenseUninstallAPIView(DestroyAPIView):
             raise BadRequest(
                 "Could not reach the license server, please check your connection and try again."
             )
-        return super().perform_destroy(instance)
+
+        def commit_callback():
+            """Remove the recurring license-check schedule, if any."""
+            try:
+                TemporalClient.delete_schedule(LICENSE_CHECK_SCHEDULE_ID)
+            except RPCError:
+                # already gone
+                pass
+
+        transaction.on_commit(commit_callback)
+
+        super().perform_destroy(instance)
 
     @extend_schema(
         responses={204: None},
@@ -158,6 +178,30 @@ class LicenseInstallAPIView(APIView):
 
         license.installed_by = request.user
         license.save()
+
+        def commit_callback():
+            """
+            (Re)create the recurring license-check schedule, bound to `license_uuid`.
+
+            Any stale schedule is removed first so a re-install (potentially with a new
+            license id) replaces the previous one.
+            """
+
+            try:
+                TemporalClient.delete_schedule(LICENSE_CHECK_SCHEDULE_ID)
+            except RPCError:
+                # nothing to replace yet
+                pass
+
+            TemporalClient.create_schedule(
+                workflow=CheckLicenseWorkflow.run,
+                args=str(license_uuid),
+                id=LICENSE_CHECK_SCHEDULE_ID,
+                interval=LICENSE_CHECK_INTERVAL,
+                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
+            )
+
+        transaction.on_commit(commit_callback)
 
         serializer = LicenseSerializer(license)
 

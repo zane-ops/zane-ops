@@ -1,4 +1,5 @@
 # Licensing-related constants for the EE package.
+from datetime import timedelta
 
 # FIXME: use the correct URL which is -> "https://api.zaneops.dev"
 ZANEOPS_REMOTE_API_HOST = "http://host.docker.internal:3005"
@@ -20,4 +21,8 @@ BOGuzMfqcAW0zy1qsACaV9sCAwEAAQ==
 -----END PUBLIC KEY-----
 """
 
+# Recurring schedule that periodically re-validates the installed license
+# against the remote API (`POST /v1/license/check`). The instance holds a single
+# license (singleton), so the schedule id is a constant.
 LICENSE_CHECK_SCHEDULE_ID = "license-check"
+LICENSE_CHECK_INTERVAL = timedelta(hours=12)

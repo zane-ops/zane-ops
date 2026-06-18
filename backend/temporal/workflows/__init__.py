@@ -1,4 +1,5 @@
 from temporalio import workflow
+from ..registry import get_extra_workflows, get_extra_activities
 from .system import *
 from .environments import *
 from .services import *
@@ -90,6 +91,7 @@ def get_workflows_and_activities():
 
     return dict(
         workflows=[
+            *get_extra_workflows(),
             ArchiveDockerServiceWorkflow,
             CreateProjectResourcesWorkflow,
             RemoveProjectResourcesWorkflow,
@@ -116,6 +118,7 @@ def get_workflows_and_activities():
             CollectComposeStacksMetricsWorkflow,
         ],
         activities=[
+            *get_extra_activities(),
             git_activities.get_default_build_registry,
             git_activities.login_to_global_build_registry,
             git_activities.push_image_to_remote_registry,
