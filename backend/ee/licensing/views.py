@@ -14,6 +14,7 @@ from .constants import ZANEOPS_REMOTE_API_HOST
 from .models import License, LicenseError, InstanceMeta
 from .serializers import (
     LicenseInstallRemoteResponseSerializer,
+    LicenseUninstallRemoteErrorResponseSerializer,
     LicenseInstallRequestSerializer,
     LicenseSerializer,
 )
@@ -41,6 +42,49 @@ class LicenseUninstallAPIView(DestroyAPIView):
         if installed_license is None:
             raise exceptions.NotFound("No license installed in this ZaneOps instance.")
         return installed_license
+
+    def perform_destroy(self, instance: License):
+        url = f"{ZANEOPS_REMOTE_API_HOST}/v1/license/unbind"
+
+        data = {
+            "uuid": str(instance.uuid),
+            "fingerprint": InstanceMeta.get_fingerprint(),
+        }
+        print(f"{data=}")
+        try:
+            response = requests.post(
+                url=url,
+                json=data,
+            )
+            response.raise_for_status()
+        except requests.HTTPError as e:
+            if e.response is not None:
+                if e.response.status_code == status.HTTP_404_NOT_FOUND:
+                    raise BadRequest(
+                        f"No license was found for the ID `{str(instance.uuid)}`."
+                    )
+                elif 399 < e.response.status_code < 500:
+                    try:
+                        form = LicenseUninstallRemoteErrorResponseSerializer(
+                            data=e.response.json()
+                        )
+                    except Exception:
+                        print("Validation error")
+                    else:
+                        if form.is_valid():
+                            data = cast(dict, form.validated_data)
+                            raise BadRequest(
+                                f"Received error from the remote API: {data['message']}"
+                            )
+
+            raise BadRequest(
+                "The license server returned an unexpected error, please try again later."
+            )
+        except requests.RequestException:
+            raise BadRequest(
+                "Could not reach the license server, please check your connection and try again."
+            )
+        return super().perform_destroy(instance)
 
     @extend_schema(
         responses={204: None},

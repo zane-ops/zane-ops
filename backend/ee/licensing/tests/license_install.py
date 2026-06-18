@@ -176,6 +176,14 @@ class LicenceUnInstallViewTests(AuthAPITestCase):
 
             self.assertIsNone(License.get())
 
+            # uninstall must call the remote unbind endpoint
+            unbind_calls = [
+                call
+                for call in responses.calls
+                if cast(str, call.request.url).endswith("/v1/license/unbind")
+            ]
+            self.assertEqual(1, len(unbind_calls))
+
     @responses.activate
     def test_uninstall_license_not_being_installed_returns_404(self):
         self.loginUser()
@@ -184,3 +192,36 @@ class LicenceUnInstallViewTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    @responses.activate
+    def test_uninstall_license_keeps_license_when_unbind_fails(self):
+        self.loginUser()
+
+        failing_scenarios = [
+            LicenseMockScenario.UNBIND_FINGERPRINT_MISMATCH,
+            LicenseMockScenario.UNBIND_REBIND_LIMIT,
+        ]
+
+        for scenario in failing_scenarios:
+            with self.subTest(scenario=scenario):
+                responses.reset()  # prevent `responses.activate` from raising on repeated calls
+
+                with mock_remote_api_for_licensing(scenario=scenario):
+                    # install license (happy path for the install endpoint)
+                    response = self.client.post(
+                        reverse("licensing:license.install"),
+                        data={"uuid": str(uuid4())},
+                    )
+                    self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+                    self.assertIsNotNone(License.get())
+
+                    # unbind fails -> license must NOT be deleted from the instance
+                    response = self.client.delete(
+                        reverse("licensing:license.uninstall"),
+                    )
+
+                    self.assertEqual(
+                        status.HTTP_400_BAD_REQUEST, response.status_code, scenario
+                    )
+                    jprint(response.json())
+                    self.assertIsNotNone(License.get(), scenario)

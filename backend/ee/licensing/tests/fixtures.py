@@ -27,6 +27,10 @@ class LicenseMockScenario(StrEnum):
     FINGERPRINT_MISMATCH = "fingerprint_mismatch"  # token bound to another instance
     UUID_MISMATCH = "uuid_mismatch"  # token "uuid" != the requested one
 
+    # unbind-only error cases (remote returns `{code, message}` with 4xx)
+    UNBIND_FINGERPRINT_MISMATCH = "unbind_fingerprint_mismatch"
+    UNBIND_REBIND_LIMIT = "unbind_rebind_limit"
+
 
 def _generate_rsa_keypair() -> tuple[str, str]:
     """Return a `(private_pem, public_pem)` pair for signing/validating tokens."""
@@ -75,6 +79,7 @@ def mock_remote_api_for_licensing(
     untrusted_private_pem, _ = _generate_rsa_keypair()
 
     install_url = f"{base_url}/v1/license/install"
+    unbind_url = f"{base_url}/v1/license/unbind"
 
     def get_license_callback(request):
         body = json.loads(request.body)
@@ -121,6 +126,39 @@ def mock_remote_api_for_licensing(
         responses.POST,
         install_url,
         callback=get_license_callback,
+        content_type="application/json",
+    )
+
+    def unbind_license_callback(request):
+        match scenario:
+            case LicenseMockScenario.UNBIND_FINGERPRINT_MISMATCH:
+                return (
+                    status.HTTP_409_CONFLICT,
+                    {},
+                    json.dumps(
+                        {
+                            "code": "fingerprint_mismatch",
+                            "message": "fingerprint does not match current binding",
+                        }
+                    ),
+                )
+            case LicenseMockScenario.UNBIND_REBIND_LIMIT:
+                return (
+                    status.HTTP_429_TOO_MANY_REQUESTS,
+                    {},
+                    json.dumps(
+                        {
+                            "code": "rebind_limit",
+                            "message": "rebind limit reached; contact support for an override",
+                        }
+                    ),
+                )
+        return (status.HTTP_200_OK, {}, json.dumps({"ok": True}))
+
+    responses.add_callback(
+        responses.POST,
+        unbind_url,
+        callback=unbind_license_callback,
         content_type="application/json",
     )
 

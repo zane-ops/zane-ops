@@ -24,3 +24,8 @@ class LicenseInstallRequestSerializer(serializers.Serializer):
 
 class LicenseInstallRemoteResponseSerializer(serializers.Serializer):
     key = serializers.CharField()
+
+
+class LicenseUninstallRemoteErrorResponseSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    message = serializers.CharField()

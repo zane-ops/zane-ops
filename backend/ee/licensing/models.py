@@ -135,9 +135,7 @@ class License(models.Model):
         expired, invalid/tampered signature, or malformed payload.
         """
         try:
-            payload = jwt.decode(
-                key, ZANEOPS_LICENSE_PUBLIC_KEY, algorithms=["RS256"]
-            )
+            payload = jwt.decode(key, ZANEOPS_LICENSE_PUBLIC_KEY, algorithms=["RS256"])
         except jwt.ExpiredSignatureError:
             raise LicenseError("This license has expired.")
         except jwt.InvalidTokenError:
