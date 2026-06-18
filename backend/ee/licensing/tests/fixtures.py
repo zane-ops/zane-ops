@@ -73,7 +73,7 @@ def mock_remote_api_for_licensing(
     trusted_private_pem, trusted_public_pem = _generate_rsa_keypair()
     untrusted_private_pem, _ = _generate_rsa_keypair()
 
-    install_url = f"{base_url}/api/v1/license/install"
+    install_url = f"{base_url}/v1/license/install"
 
     def get_license_callback(request):
         body = json.loads(request.body)

@@ -67,7 +67,7 @@ class LicenseInstallAPIView(APIView):
         data = cast(dict, form.validated_data)
         license_uuid = data["uuid"]
 
-        url = f"{settings.ZANEOPS_REMOTE_API_HOST}/api/v1/license/install"
+        url = f"{settings.ZANEOPS_REMOTE_API_HOST}/v1/license/install"
         try:
             response = requests.post(
                 url=url,
