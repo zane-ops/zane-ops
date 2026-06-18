@@ -1,20 +1,13 @@
-from typing import cast
-
 from django.urls import reverse
 from rest_framework import status
 
-from ..models import License, LicenseData, LicenceFeature, InstanceMeta, LicenseTiers
+from ..models import License
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import jprint
 from uuid import uuid4
-from .fixtures import mock_remote_api_for_licensing, LicenseMockScenario
+from .fixtures import mock_remote_api_for_licensing
 import responses
-
-
-# Recurring schedule that periodically re-checks the installed license against
-# the remote API (see `POST /v1/license/check`). The instance holds a single
-# license (singleton), so the schedule id is a constant.
-LICENSE_CHECK_SCHEDULE_ID = "license-check"
+from ..constants import LICENSE_CHECK_SCHEDULE_ID
 
 
 class LicenceCheckViewTests(AuthAPITestCase):

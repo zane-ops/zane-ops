@@ -19,3 +19,5 @@ tbBuJKXA/1TFOnDxNvgoojXbkjfjyg00lFdAVjqGAhG2JTMgu0utImiQpLmN1yqW
 BOGuzMfqcAW0zy1qsACaV9sCAwEAAQ==
 -----END PUBLIC KEY-----
 """
+
+LICENSE_CHECK_SCHEDULE_ID = "license-check"
