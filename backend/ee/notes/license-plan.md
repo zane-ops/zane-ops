@@ -35,11 +35,11 @@
   - https://pangolin.net/privacy
 
 - Writes the licensing server/API:
-  - [ ] Will require to setting up stripe enterprise tax info
-  - [ ] Using stripe Quick checkout
-  - [ ] Implement the stripe webhook endpoint for when the user buys a license
-  - [ ] Implement the license get endpoint
-  - [ ] Deploy the API on ZaneOps
+  - [x] Will require to setting up stripe enterprise tax info
+  - [x] Using stripe Quick checkout
+  - [x] Implement the stripe webhook endpoint for when the user buys a license
+  - [x] Implement the license get endpoint
+  - [x] Deploy the API on ZaneOps
   - [ ] Test to be sure
 
 - Implement frontend for Workspace admin :
