@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from temporalio.service import RPCError
 from zane_api.permissions import IsInstanceOwner
 from zane_api.views.base import BadRequest
+from asgiref.sync import async_to_sync
 
 from temporal.client import TemporalClient
 from .constants import (
@@ -97,7 +98,10 @@ class LicenseUninstallAPIView(DestroyAPIView):
         def commit_callback():
             """Remove the recurring license-check schedule, if any."""
             try:
-                TemporalClient.delete_schedule(LICENSE_CHECK_SCHEDULE_ID)
+                async_to_sync(TemporalClient.adelete_schedule)(
+                    LICENSE_CHECK_SCHEDULE_ID
+                )
+
             except RPCError:
                 # already gone
                 pass
@@ -193,7 +197,7 @@ class LicenseInstallAPIView(APIView):
                 # nothing to replace yet
                 pass
 
-            TemporalClient.create_schedule(
+            async_to_sync(TemporalClient.acreate_schedule)(
                 workflow=CheckLicenseWorkflow.run,
                 args=str(license_uuid),
                 id=LICENSE_CHECK_SCHEDULE_ID,

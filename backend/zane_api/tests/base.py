@@ -532,10 +532,6 @@ class AuthAPITestCase(APITestCase):
             side_effect=acreate_schedule,
         )
 
-        patch_temporal_create_schedule = patch(
-            "temporal.activities.TemporalClient.create_schedule",
-            side_effect=create_schedule,
-        )
         patch_temporal_pause_schedule = patch(
             "temporal.activities.TemporalClient.apause_schedule",
             side_effect=pause_schedule,
