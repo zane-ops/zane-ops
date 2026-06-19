@@ -2,7 +2,6 @@ from temporalio import workflow, activity
 
 with workflow.unsafe.imports_passed_through():
     import requests
-    from asgiref.sync import sync_to_async
     from ..constants import ZANEOPS_REMOTE_API_HOST
     from ..models import License, LicenseError, InstanceMeta
 
