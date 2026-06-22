@@ -8,3 +8,5 @@ record_requests.py
 seed/
 /test_*.py
 .venv/
+*.pem
+# !public_key.pem

@@ -1,0 +1,47 @@
+The ZaneOps Commercial License (the "Commercial License", also referred to as
+the "EE License")
+
+Copyright (c) 2024-present Fredhel KISSIE, Entrepreneur Individuel (EI), trading
+under the commercial name "ZaneOps" ("ZaneOps").
+
+With regard to the ZaneOps Software:
+
+This software and associated documentation files (the "Software") may only be
+used in production if you (and any entity that you represent) have agreed to,
+and are in compliance with, the ZaneOps Terms of Service available at
+https://zaneops.dev/terms (the "Commercial Terms"), or another agreement
+governing the use of the Software as agreed by you and ZaneOps, and you
+otherwise hold a valid ZaneOps Commercial License for the applicable plan
+(including any limits on users, seats, or instances set out in the Commercial
+Terms). Subject to the foregoing sentence, you are free to modify this Software
+and publish patches to it. You agree that ZaneOps and/or its licensors (as
+applicable) retain all right, title and interest in and to all such
+modifications and/or patches, and that all such modifications and/or patches
+may only be used, copied, modified, displayed, distributed, or otherwise
+exploited with a valid ZaneOps Commercial License for the applicable plan.
+Notwithstanding the foregoing, you may copy and modify the Software for
+development and testing purposes without requiring a license. You are not
+granted any other rights beyond what is expressly stated herein. Subject to the
+foregoing, it is forbidden to copy, merge, publish, distribute, sublicense,
+and/or sell the Software.
+
+This Commercial License applies only to the part of this Software that is not
+distributed as part of the ZaneOps Open Source (OSS) Edition. Any part of this
+Software distributed as part of ZaneOps OSS, or that is served client-side as an
+image, font, cascading stylesheet (CSS), or file which produces or is compiled,
+arranged, augmented, or combined into client-side JavaScript, in whole or in
+part, is licensed under the MIT (Expat) License. The full text of this
+Commercial License shall be included in all copies or substantial portions of
+the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+For all third party components incorporated into the ZaneOps Software, those
+components are licensed under the original license provided by the owner of the
+applicable component.

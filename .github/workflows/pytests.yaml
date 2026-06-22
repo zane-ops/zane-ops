@@ -14,7 +14,14 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        apps: [zane_api, container_registry, git_connectors, compose, console] # Split into parallel jobs
+        # Split into parallel jobs
+        app: 
+          - zane_api
+          - container_registry
+          - git_connectors 
+          - compose
+          - console
+          - ee.licensing
 
     services:
       loki:
@@ -67,8 +74,14 @@ jobs:
           uv sync --locked --no-dev --no-install-project
           uv sync --locked --no-dev --no-editable
 
-      - name: Run tests for app ${{ matrix.apps }}
+      - name: Remove ee/ folder for non-ee tests
+        if: ${{ !startsWith(matrix.app, 'ee') }}
+        run: rm -rf backend/ee/
+
+      - name: Run tests for ${{ matrix.app }} app
+        env:
+          BUILD: ${{ startsWith(matrix.app, 'ee') && 'ee' || 'oss' }}
         run: |
           cd backend
           source .venv/bin/activate
-          python manage.py test ${{ matrix.apps }}.tests --parallel --settings=backend.settings_test --keepdb
+          python manage.py test ${{ matrix.app }}.tests --parallel --settings=backend.settings_test --keepdb

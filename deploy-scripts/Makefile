@@ -115,8 +115,6 @@ deploy: ### Install and deploy zaneops based on MODE (https or http)
 	echo -e "\n> You can now access your ZaneOps dashboard at \x1b[96m$$ACCESS_URL\x1b[0m"; \
 	echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m"
 
-create-user: ### Create the first user to login in into the dashboard
-	@docker exec -it $$(docker ps -qf "name=zane_app") /bin/bash -c "source /app/.venv/bin/activate && python manage.py createsuperuser"
 
 reset-password: ### Reset user password
 	@if [ -z "$(user)" ]; then echo -e "Error: \x1b[33m\$$user\x1b[0m variable is required. Usage: \x1b[96mmake reset-password user=username\x1b[0m"; exit 1; fi

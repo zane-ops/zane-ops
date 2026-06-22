@@ -101,15 +101,19 @@ jobs:
   # Parallel app builds for each architecture
   build-push-app:
     needs: [extract-version, build-frontend]
-    name: Build and Push Zane App (${{ matrix.arch }})
+    name: Build and Push Zane App (${{ matrix.build }}, ${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     permissions:
       packages: write
       contents: read
       attestations: write
       id-token: write
+    env:
+      PREFIX: ${{ matrix.build == 'ee' && 'ee-' || '' }}
     strategy:
       matrix:
+        build: [oss, ee]
+        arch: [amd64, arm64]
         include:
           - arch: amd64
             runner: ubuntu-latest
@@ -141,16 +145,17 @@ jobs:
           push: true
           platforms: ${{ matrix.platform }}
           tags: |
-            ghcr.io/zane-ops/app:latest-${{ matrix.arch }}
-            ghcr.io/zane-ops/app:${{ github.sha }}-${{ matrix.arch }}
-            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.major }}-${{ matrix.arch }}
-            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }}-${{ matrix.arch }}
-          cache-from: type=registry,ref=ghcr.io/zane-ops/app:latest-${{ matrix.arch }}
+            ghcr.io/zane-ops/app:${{ env.PREFIX }}latest-${{ matrix.arch }}
+            ghcr.io/zane-ops/app:${{ env.PREFIX }}${{ github.sha }}-${{ matrix.arch }}
+            ghcr.io/zane-ops/app:${{ env.PREFIX }}${{ needs.extract-version.outputs.major }}-${{ matrix.arch }}
+            ghcr.io/zane-ops/app:${{ env.PREFIX }}${{ needs.extract-version.outputs.tag }}-${{ matrix.arch }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/app:${{ env.PREFIX }}latest-${{ matrix.arch }}
           cache-to: type=inline
           build-args: |
             COMMIT_SHA=${{ github.sha }}
             IMAGE_VERSION=${{ needs.extract-version.outputs.tag }}
             GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+            BUILD=${{ matrix.build }}
 
   # Create multi-arch manifests
   create-manifests:
@@ -186,21 +191,23 @@ jobs:
             ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.tag }}-arm64
       - name: Create and push app manifests
         run: |
-          docker buildx imagetools create -t ghcr.io/zane-ops/app:latest \
-            ghcr.io/zane-ops/app:latest-amd64 \
-            ghcr.io/zane-ops/app:latest-arm64
+          for prefix in "" "ee-"; do
+            docker buildx imagetools create -t ghcr.io/zane-ops/app:${prefix}latest \
+              ghcr.io/zane-ops/app:${prefix}latest-amd64 \
+              ghcr.io/zane-ops/app:${prefix}latest-arm64
 
-          docker buildx imagetools create -t ghcr.io/zane-ops/app:${{ github.sha }} \
-            ghcr.io/zane-ops/app:${{ github.sha }}-amd64 \
-            ghcr.io/zane-ops/app:${{ github.sha }}-arm64
+            docker buildx imagetools create -t ghcr.io/zane-ops/app:${prefix}${{ github.sha }} \
+              ghcr.io/zane-ops/app:${prefix}${{ github.sha }}-amd64 \
+              ghcr.io/zane-ops/app:${prefix}${{ github.sha }}-arm64
 
-          docker buildx imagetools create -t ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.major }} \
-            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.major }}-amd64 \
-            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.major }}-arm64
+            docker buildx imagetools create -t ghcr.io/zane-ops/app:${prefix}${{ needs.extract-version.outputs.major }} \
+              ghcr.io/zane-ops/app:${prefix}${{ needs.extract-version.outputs.major }}-amd64 \
+              ghcr.io/zane-ops/app:${prefix}${{ needs.extract-version.outputs.major }}-arm64
 
-          docker buildx imagetools create -t ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }} \
-            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }}-amd64 \
-            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }}-arm64
+            docker buildx imagetools create -t ghcr.io/zane-ops/app:${prefix}${{ needs.extract-version.outputs.tag }} \
+              ghcr.io/zane-ops/app:${prefix}${{ needs.extract-version.outputs.tag }}-amd64 \
+              ghcr.io/zane-ops/app:${prefix}${{ needs.extract-version.outputs.tag }}-arm64
+          done
 
   create-release:
     if: ${{ github.repository == 'zane-ops/zane-ops' && github.event_name == 'push' }}

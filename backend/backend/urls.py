@@ -42,5 +42,13 @@ urlpatterns += [
     path("api/connectors/", include("git_connectors.urls")),
     path("api/compose/", include("compose.urls")),
     path("api/console/", include("console.urls")),
+]
+
+if settings.ENABLE_EE:
+    urlpatterns += [
+        path("api/license/", include("ee.licensing.urls")),
+    ]
+
+urlpatterns += [
     path("api/", include("zane_api.urls")),
 ]

@@ -10,6 +10,7 @@ from rest_framework.generics import ListAPIView, DestroyAPIView, RetrieveAPIView
 from rest_framework import status, permissions
 
 from .base import ResourceConflict, BadRequest
+from ..licensing.gate import can_add_user
 
 
 from ..models import WorkspaceMembership, WorkspaceInvitation
@@ -141,6 +142,13 @@ class WorkspaceRegisterInvitationAPIView(APIView):
         form = WorkspaceRegisterRequestSerializer(data=request.data)
         form.is_valid(raise_exception=True)
 
+        total_users = User.objects.count()
+
+        allowed, error = can_add_user(total_users)
+        if not allowed:
+            raise exceptions.PermissionDenied(error)
+
+        # Create user
         data = cast(dict, form.validated_data)
 
         user = User.objects.create_user(
@@ -241,6 +249,13 @@ class InviteUserIntoWorkspaceAPIView(APIView):
         ).exists():
             raise ResourceConflict("This user is already a member of the workspace.")
 
+        total_users = User.objects.count()
+        total_invitations = WorkspaceInvitation.objects.count()
+
+        allowed, error = can_add_user(total_users + total_invitations)
+        if not allowed:
+            raise exceptions.PermissionDenied(error)
+
         try:
             invitation = WorkspaceInvitation.objects.create(
                 token=secrets.token_hex(16),
@@ -248,6 +263,7 @@ class InviteUserIntoWorkspaceAPIView(APIView):
                 role=data["role"],
                 expires_at=timezone.now() + timedelta(days=data["valid_for"]),
                 workspace=self.request.workspace,  # type: ignore
+                invited_by=self.request.user,
             )
         except IntegrityError:
             raise ResourceConflict(

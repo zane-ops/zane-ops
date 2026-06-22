@@ -56,15 +56,21 @@ FROM install AS build
 WORKDIR /app
 
 COPY ./backend/ /app
+
 COPY ./frontend/build/client/ /app/staticfiles
 
-# Add daphne socket-based configuration
-RUN mkdir -p /app/logs/daphne
-RUN mkdir -p /app/logs/caddy
-RUN mkdir -p /app/daphne/
-RUN chmod -R 777 /app/daphne/
+ARG BUILD=oss
+ENV BUILD=$BUILD
 
-RUN chmod -R a+x /app/scripts/*.sh
+
+# Remove `ee/` folder for oss build & Add daphne socket-based configuration
+RUN if [ "$BUILD" = "oss" ]; then rm -rf /app/ee/; fi && \
+    mkdir -p /app/logs/daphne && \
+    mkdir -p /app/logs/caddy && \
+    mkdir -p /app/daphne/ && \
+    chmod -R 777 /app/daphne/ && \
+    chmod -R a+x /app/scripts/*.sh
+
 
 # 5. Install Caddy
 FROM ghcr.io/railwayapp/railpack-builder:latest AS packages-caddy
@@ -134,6 +140,7 @@ COPY --from=packages-mise /root/.local/state/mise /root/.local/state/mise
 
 # runtime environment variables
 ARG COMMIT_SHA
+ARG BUILD=oss
 ARG IMAGE_VERSION
 ENV COMMIT_SHA=$COMMIT_SHA \
     IMAGE_VERSION=$IMAGE_VERSION \
@@ -142,7 +149,8 @@ ENV COMMIT_SHA=$COMMIT_SHA \
     VIRTUAL_ENV=/app/.venv \
     DJANGO_SETTINGS_MODULE=backend.settings \
     NIXPACKS_VERSION=1.39.0 \
-    RAILPACK_VERSION=0.6.0
+    RAILPACK_VERSION=0.6.0 \
+    BUILD=$BUILD
 
 EXPOSE 80
 

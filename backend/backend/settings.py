@@ -20,6 +20,7 @@ import uvloop
 
 from .api_description import API_DESCRIPTION
 from .bootstrap import register_zaneops_app_on_proxy
+from dotenv import load_dotenv
 
 
 loop = uvloop.new_event_loop()
@@ -27,6 +28,12 @@ asyncio.set_event_loop(loop)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+PRODUCTION_ENV = "PRODUCTION"
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "DEVELOPMENT")
+
+if ENVIRONMENT != PRODUCTION_ENV:
+    load_dotenv(BASE_DIR / ".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -38,8 +45,6 @@ SECRET_KEY = os.environ.get(
 )
 
 TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
-ENVIRONMENT = os.environ.get("ENVIRONMENT", "DEVELOPMENT")
-PRODUCTION_ENV = "PRODUCTION"
 BACKEND_COMPONENT = os.environ.get("BACKEND_COMPONENT", "API")
 __DANGEROUS_ALLOW_HTTP_SESSION = (
     os.environ.get("__DANGEROUS_ALLOW_HTTP_SESSION") == "true"
@@ -65,6 +70,11 @@ ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "127-0-0-1.sslip.io")
 ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "127-0-0-1.sslip.io")
 ZANE_INTERNAL_DOMAIN = "zaneops.internal"
 ENABLE_API_SCHEMA = os.environ.get("ENABLE_API_SCHEMA") == "true"
+
+# Whether the commercial EE layer (`ee/`) is loaded. Set to "false" for a
+# pure-MIT build that ships without the `ee/` directory ; free-tier behavior
+# then applies everywhere.
+ENABLE_EE = os.environ.get("BUILD", "oss") == "ee"
 
 
 ALLOWED_HOSTS = (
@@ -143,6 +153,9 @@ INSTALLED_APPS = [
     "drf_standardized_errors",
     "django_filters",
 ]
+
+if ENABLE_EE:
+    INSTALLED_APPS.append("ee.licensing.apps.LicensingConfig")
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",

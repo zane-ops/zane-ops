@@ -1,16 +1,16 @@
 name: zane-ops
 icon: images/logo.png
 processes:
-  api logs:
-    command: docker compose logs -f zane-api
-    working_dir: ./docker
-    auto_start: true
-    auto_restart: false
-    restart_when_changed: []
-    env: {}
   react router:
     command: pnpm run dev
     working_dir: ./frontend
+    auto_start: true
+    auto_restart: true
+    restart_when_changed: []
+    env: {}
+  dc logs api:
+    command: docker compose -f ./docker/docker-compose.yaml logs -f zane-api
+    working_dir: null
     auto_start: true
     auto_restart: true
     restart_when_changed: []
