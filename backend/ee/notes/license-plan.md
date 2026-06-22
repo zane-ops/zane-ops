@@ -42,7 +42,8 @@
   - [x] Deploy the API on ZaneOps in DEV
     - [x] Test to be sure
   - [x] Deploy the API on ZaneOps in PROD
-    - [ ] Test to be sure
+    - [x] Test to be sure
+- [x] Setup ZaneOps Email receiving/sending 
 
 
 - Implement frontend for Workspace admin :
