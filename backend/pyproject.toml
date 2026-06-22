@@ -120,6 +120,11 @@ dependencies = [
     "expandvars>=1.1.2",
     "opentelemetry-sdk>=1.42.1",
     "opentelemetry-instrumentation-django>=0.63b1",
+    "opentelemetry-instrumentation-asgi>=0.63b1",
+    "opentelemetry-instrumentation-psycopg>=0.63b1",
+    "opentelemetry-instrumentation-redis>=0.63b1",
+    "opentelemetry-instrumentation-requests>=0.63b1",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.42.1",
 ]
 
 [tool.uv]
@@ -251,5 +256,10 @@ dev-dependencies = [
     "zope-interface==7.2",
     "expandvars>=1.1.2",
     "opentelemetry-sdk>=1.42.1",
+    "opentelemetry-instrumentation-asgi>=0.63b1",
     "opentelemetry-instrumentation-django>=0.63b1",
+    "opentelemetry-instrumentation-psycopg>=0.63b1",
+    "opentelemetry-instrumentation-redis>=0.63b1",
+    "opentelemetry-instrumentation-requests>=0.63b1",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.42.1",
 ]
