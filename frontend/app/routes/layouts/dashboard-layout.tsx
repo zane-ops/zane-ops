@@ -66,7 +66,10 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { ZANE_UPDATE_TOAST_ID } from "~/lib/constants";
 import { queryClient } from "~/root";
-import type { clientAction } from "~/routes/trigger-update";
+import {
+  type clientAction,
+  pollUntilUpdateDone
+} from "~/routes/trigger-update";
 import type { Route } from "./+types/dashboard-layout";
 
 export function meta() {
@@ -115,19 +118,10 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
   const ongoingUpdateQuery = useQuery(serverQueries.ongoingUpdate);
 
   React.useEffect(() => {
-    if (ongoingUpdateQuery.data) {
-      const isUpdating = ongoingUpdateQuery.data.update_ongoing;
-      if (isUpdating) {
-        toast.loading(
-          "ZaneOps is updating on the background... Reload the page when this toast is closed",
-          {
-            id: ZANE_UPDATE_TOAST_ID,
-            closeButton: false
-          }
-        );
-      } else {
-        toast.dismiss(ZANE_UPDATE_TOAST_ID);
-      }
+    // resume polling + loading toast if an update is already ongoing
+    // (e.g. the page was reloaded while ZaneOps was updating)
+    if (ongoingUpdateQuery.data?.update_ongoing) {
+      pollUntilUpdateDone();
     }
   }, [ongoingUpdateQuery.data]);
 
