@@ -7,3 +7,8 @@ datasources:
     url: http://zane.loki:3100
     isDefault: true
     editable: true
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://zane.tempo:3200
+    editable: true

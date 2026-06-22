@@ -1,0 +1,78 @@
+# Optional observability stack for production: Grafana Tempo (traces) + Grafana UI.
+#
+# Deploy AFTER setting these in your root .env and redeploying the main stack:
+#   OTEL_TRACES_ENABLED=true
+#   OTEL_EXPORTER_OTLP_ENDPOINT=http://zane.tempo:4317
+#
+# Then:  make deploy-otel
+# Grafana is exposed on :3004 (admin / change-me-please by default).
+services:
+  zane-tempo:
+    image: grafana/tempo:2.6.1
+    command: -config.file=/etc/tempo/config.yaml
+    volumes:
+      - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/tempo-config.yaml:/etc/tempo/config.yaml
+      - tempo-data:/var/tempo
+    networks:
+      zane:
+        aliases:
+          - zane.tempo
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+
+  zane-grafana:
+    image: grafana/grafana:latest
+    # Uncomment the lines below to expose your grafana dashboard
+    # ports:
+    #   - "3004:3000"
+    environment:
+      - GF_USERS_DEFAULT_THEME=system
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-change-me-please}
+    volumes:
+      - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+      - grafana-data:/var/lib/grafana
+    networks:
+      - zane
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      placement:
+        constraints:
+          - node.role==manager
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 300M
+
+volumes:
+  tempo-data:
+    labels:
+      zane.stack: "true"
+  grafana-data:
+    labels:
+      zane.stack: "true"
+
+networks:
+  zane:
+    external: true

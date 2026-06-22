@@ -21,12 +21,27 @@ services:
       zane:
         aliases:
           - zane.loki
+  zane-tempo:
+    image: grafana/tempo:2.6.1
+    command: -config.file=/etc/tempo/config.yaml
+    ports:
+      - "3200:3200" # tempo http (querying)
+      - "4317:4317" # otlp grpc
+      - "4318:4318" # otlp http
+    volumes:
+      - ./tempo/config.yaml:/etc/tempo/config.yaml
+      - tempo-data:/var/tempo
+    networks:
+      zane:
+        aliases:
+          - zane.tempo
   zane-grafana:
     image: grafana/grafana:latest
     ports:
       - "3004:3000"
     depends_on:
       - zane-loki
+      - zane-tempo
     environment:
       - GF_USERS_DEFAULT_THEME=system
       # Basic Configuration
@@ -109,9 +124,12 @@ services:
       - zane-db
       - zane-redis
       - zane-temporal-server
+      - zane-tempo
     restart: always
     environment:
       <<: *env-vars
+      OTEL_TRACES_ENABLED: ${OTEL_TRACES_ENABLED:-true}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://zane.tempo:4317}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/ping"]
       interval: 1m
@@ -246,6 +264,7 @@ volumes:
   docker-data:
   loki-data:
   grafana-data:
+  tempo-data:
   drizzle-gateway-data:
 networks:
   zane:
