@@ -46,8 +46,8 @@ setup: ### Launch initial setup before installing zaneops
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-http.yaml > ./docker-stack.prod-http.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/fluentd/fluent.conf > ./fluent.conf
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/loki/config.yaml > ./loki-config.yaml
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-otel.yaml > ./docker-stack.prod-otel.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-temporal-ui.yaml > ./docker-stack.prod-temporal-ui.yaml
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-otel.yaml > ./docker-stack.prod-otel.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/tempo/config.yaml > ./tempo-config.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/grafana/datasources/datasource.yaml > ./grafana-datasources.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/pgbouncer/entrypoint.sh > ./pgbouncer/entrypoint.sh
@@ -128,11 +128,11 @@ deploy-otel: ### Deploy the optional observability stack (Tempo + Grafana on :30
 stop-otel: ### Take down the optional observability stack
 	@docker stack rm zane-otel
 
-deploy-temporal-ui: ### Deploy the optional observability stack (Tempo + Grafana on :3004)
+deploy-temporal-ui: ### Deploy the temporal UI stack
 	@set -a; . ./.env; set +a; \
 	docker stack deploy --detach --with-registry-auth --prune --compose-file docker-stack.prod-temporal-ui.yaml zane-temporal
 
-stop-temporal-ui: ### Take down the optional observability stack
+stop-temporal-ui: ### Take down the temporal UI stack
 	@docker stack rm zane-temporal
 
 reset-password: ### Reset user password
