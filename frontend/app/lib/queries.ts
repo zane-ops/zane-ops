@@ -2333,7 +2333,7 @@ export const serverQueries = {
     },
     refetchInterval: (query) => {
       if (query.state.data) {
-        return DEFAULT_QUERY_REFETCH_INTERVAL;
+        return durationToMs(30, "seconds");
       }
       return false;
     }
