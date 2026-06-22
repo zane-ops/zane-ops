@@ -118,6 +118,8 @@ dependencies = [
     "bcrypt>=4.3.0",
     "boto3>=1.41.2",
     "expandvars>=1.1.2",
+    "opentelemetry-sdk>=1.42.1",
+    "opentelemetry-instrumentation-django>=0.63b1",
 ]
 
 [tool.uv]
@@ -248,4 +250,6 @@ dev-dependencies = [
     "yapf==0.43.0",
     "zope-interface==7.2",
     "expandvars>=1.1.2",
+    "opentelemetry-sdk>=1.42.1",
+    "opentelemetry-instrumentation-django>=0.63b1",
 ]
