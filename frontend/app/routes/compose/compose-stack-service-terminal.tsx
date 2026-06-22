@@ -184,26 +184,30 @@ export default function ComposeStackServiceTerminalPage({
             {running.length > 0 && (
               <SelectGroup>
                 <SelectLabel>Current</SelectLabel>
-                {running.map((task) => (
-                  <TaskWithContainerSelectItem
-                    container_id={task.container_id}
-                    status={task.status}
-                    key={task.id}
-                  />
-                ))}
+                {running
+                  .filter((t) => Boolean(t.container_id.trim()))
+                  .map((task) => (
+                    <TaskWithContainerSelectItem
+                      container_id={task.container_id}
+                      status={task.status}
+                      key={task.id}
+                    />
+                  ))}
               </SelectGroup>
             )}
             {old.length > 0 && (
               <SelectGroup>
                 <SelectLabel>Previous</SelectLabel>
 
-                {old.map((task) => (
-                  <TaskWithContainerSelectItem
-                    container_id={task.container_id}
-                    status={task.status}
-                    key={task.id}
-                  />
-                ))}
+                {old
+                  .filter((t) => Boolean(t.container_id.trim()))
+                  .map((task) => (
+                    <TaskWithContainerSelectItem
+                      container_id={task.container_id}
+                      status={task.status}
+                      key={task.id}
+                    />
+                  ))}
               </SelectGroup>
             )}
           </SelectContent>
