@@ -192,7 +192,9 @@ class License(models.Model):
 
     @classmethod
     def get(cls):
-        return cls.objects.filter(id=SINGLETON_ID).first()
+        return (
+            cls.objects.filter(id=SINGLETON_ID).select_related("installed_by").first()
+        )
 
     @classmethod
     async def aget(cls):

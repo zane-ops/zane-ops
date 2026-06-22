@@ -60,7 +60,6 @@ class LicenseUninstallAPIView(DestroyAPIView):
             "uuid": str(instance.uuid),
             "fingerprint": InstanceMeta.get_fingerprint(),
         }
-        print(f"{data=}")
         try:
             response = requests.post(
                 url=url,
