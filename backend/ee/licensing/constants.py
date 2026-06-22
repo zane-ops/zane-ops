@@ -1,23 +1,21 @@
 # Licensing-related constants for the EE package.
 from datetime import timedelta
 
-# FIXME: use the correct URL which is -> "https://api.zaneops.dev"
-ZANEOPS_REMOTE_API_HOST = "http://host.docker.internal:3005"
+ZANEOPS_REMOTE_API_HOST = "https://api.zaneops.dev"
 
-# FIXME: Needs to be updated when the licensing server has been implemented
 ZANEOPS_LICENSE_PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
-MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAyCkRIKi/LFv5tAMPEegh
-rPHosnDG9GbMNRgUU6vyKU4c5ChFlhP2twzYPpE6Au+JWcLpTTMPL3RmeEGs+QGn
-5+oUDL7+IDywiYL8/XBOpJptmZEH+6DTCKr33PrebAX7c0hEDxFcvclB39/B6nNG
-V+laVl0UKWaub4EvDZGPH0WRS8Q5eiRl8NRVY71J2YpHC1LlStEBonlsMw+0kyaP
-fmYN+ijFd+D/JVEYQJVR7KTOT/EvrRILsDLZX9NPyYzvGAkOdKeB/9ighr68HHAX
-b1HYyoxVTgnHJjwIr7JpIiTD3SxpIE5QOUNVGcnQH2Tv3b4wrRAGqwXzWTnez+A5
-wOgiZ5UCCDC9x3uSWQyVUZfMEiRCP+g/tDIwGb9+X4VeFFXmkrTHdrOo1wrytgZK
-Su26IjFgSwxTsjllgpHI8r/08sMZilAfVSLtboqqvbWrxUqe/QCGQDyDPnoK0YVY
-a3WxBji7QR1yXVtMF7INPgiAH0ZkdEyIRcRuBVt/IGI0n9U+cxuq83FOd+BsqB9a
-BptqjbHPDDbj7gsCY91V7h3rLs1fkh3l0OM07i1mTH6jvXsy1gxy26Ha/bBpF8Dq
-tbBuJKXA/1TFOnDxNvgoojXbkjfjyg00lFdAVjqGAhG2JTMgu0utImiQpLmN1yqW
-BOGuzMfqcAW0zy1qsACaV9sCAwEAAQ==
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAuQke5cRU0kAh1la82bgq
+Npba1vKvpNzOmMO33uOkKfUS1Y+pOH5ivpQvTYJ0B61c6JHfcJ1sCz5V2Fe5Fsoi
+Mnn3Gcd4dYnyLTkS8/BtBpgD20IofRN0n65+NK2ItK9Oz/5sBeSmVW1sGPq/zFIl
+6lmKyRgSnwGC09PpbEocwN9Op8z5tsA9uxuVDj3zNJUEhwzRwbn1FHlszlFdDLkR
+ah3R23Dc6H1b3A7pDFkGRAnppPjKFZpQWSoZ8T6ubdYg9P220gj1nQkmHec29toU
+/LdTfSlEPDSzVDOq/FH2qqkcqUplxoFQ0mYtxNbRcPcCJgVy/92fyfCa5yg6n8ab
+2Jlq4cqnnVdTBvuPgEER+Pln31jL3fa8+pqenCwiJu+HU3D+SZTuLx77NqVWFWan
+9lDFxC4vOGzKmKbxWnU1+p7vpbdXNhQCujGD83in2ZXRU8FUefyYLcDPw8XSEqlW
+yOWcajE+OskUCAk3rSweiixaDsjxncp7+9PCFnfV9QImyLZ887m9B4CnpARq7EWO
+7Kd2wflz/7rBv1lqWrtnlDCPjZgbNkpF4bHeTtAUdft6GXZhaO3a6ntu6fN/YZEY
+W6HxRzFYargWaMjoljbeG0bXuf0htl6Kqp0vSHm01F42CuahoA0WR6NGuQitkebv
+I7pRh9THeci07r3zs88WW4sCAwEAAQ==
 -----END PUBLIC KEY-----
 """
 
