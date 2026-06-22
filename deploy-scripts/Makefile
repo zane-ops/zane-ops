@@ -46,6 +46,10 @@ setup: ### Launch initial setup before installing zaneops
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-http.yaml > ./docker-stack.prod-http.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/fluentd/fluent.conf > ./fluent.conf
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/loki/config.yaml > ./loki-config.yaml
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-temporal-ui.yaml > ./docker-stack.prod-temporal-ui.yaml
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-otel.yaml > ./docker-stack.prod-otel.yaml
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/tempo/config.yaml > ./tempo-config.yaml
+	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/grafana/datasources/datasource.yaml > ./grafana-datasources.yaml
 	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/pgbouncer/entrypoint.sh > ./pgbouncer/entrypoint.sh
 	@chmod -R a+x ./temporalio/*.sh
 	@chmod -R a+x ./pgbouncer/*.sh
@@ -115,6 +119,21 @@ deploy: ### Install and deploy zaneops based on MODE (https or http)
 	echo -e "\n> You can now access your ZaneOps dashboard at \x1b[96m$$ACCESS_URL\x1b[0m"; \
 	echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m"
 
+
+deploy-otel: ### Deploy the optional observability stack (Tempo + Grafana on :3004)
+	@set -a; . ./.env; set +a; \
+	docker stack deploy --detach --with-registry-auth --prune --compose-file docker-stack.prod-otel.yaml zane-otel
+	@echo -e "> Observability stack deployed. Set \x1b[96mOTEL_TRACES_ENABLED=true\x1b[0m and \x1b[96mOTEL_EXPORTER_OTLP_ENDPOINT=http://zane.tempo:4317\x1b[0m in .env, then re-run \x1b[96mmake deploy\x1b[0m."
+
+stop-otel: ### Take down the optional observability stack
+	@docker stack rm zane-otel
+
+deploy-temporal-ui: ### Deploy the temporal UI stack
+	@set -a; . ./.env; set +a; \
+	docker stack deploy --detach --with-registry-auth --prune --compose-file docker-stack.prod-temporal-ui.yaml zane-temporal
+
+stop-temporal-ui: ### Take down the temporal UI stack
+	@docker stack rm zane-temporal
 
 reset-password: ### Reset user password
 	@if [ -z "$(user)" ]; then echo -e "Error: \x1b[33m\$$user\x1b[0m variable is required. Usage: \x1b[96mmake reset-password user=username\x1b[0m"; exit 1; fi

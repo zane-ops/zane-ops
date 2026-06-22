@@ -8,8 +8,9 @@ services:
       zane:
         aliases:
           - zane.temporal_ui
-    ports:
-      - 8080:8080
+    # Uncomment the lines below to expose your temporal UI dashboard
+    # ports:
+    #   - 8080:8080
     deploy:
       replicas: 1
       restart_policy:

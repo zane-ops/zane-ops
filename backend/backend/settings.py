@@ -477,3 +477,16 @@ LOKI_APP_NAME = "zaneops"
 CI = os.environ.get("CI", "false")
 
 TELEMETRY_ENABLED = os.environ.get("TELEMETRY_ENABLED", "true") == "true"
+
+# OpenTelemetry instrumentation (traces & optional metrics).
+# Enabled by default in DEV, opt-in in PROD (see docker-stack.prod-otel.yaml).
+OTEL_TRACES_ENABLED = (
+    os.environ.get(
+        "OTEL_TRACES_ENABLED", "false" if ENVIRONMENT == PRODUCTION_ENV else "true"
+    )
+    == "true"
+)
+OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "zane-api")
+OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get(
+    "OTEL_EXPORTER_OTLP_ENDPOINT", "http://zane.tempo:4317"
+)

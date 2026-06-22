@@ -17,7 +17,13 @@ from channels.security.websocket import AllowedHostsOriginValidator
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
 # Initialize Django ASGI application early to ensure the AppRegistry
 # is populated before importing code that may import ORM models.
+# (this also runs `configure_opentelemetry()` via ZaneApiConfig.ready())
 asgi_application = get_asgi_application()
+
+from backend.otel import instrument_asgi_app  # noqa: E402
+
+# wrap with OTel ASGI middleware so inbound HTTP requests produce server spans
+asgi_application = instrument_asgi_app(asgi_application)
 
 from webshell.routing import websocket_urlpatterns  # noqa: E402
 

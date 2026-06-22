@@ -2330,12 +2330,6 @@ export const serverQueries = {
       const { data } = await apiClient.GET("/api/check-ongoing-update-status/");
       if (!data) throw new Error("Unknown error with the API");
       return data;
-    },
-    refetchInterval: (query) => {
-      if (query.state.data) {
-        return DEFAULT_QUERY_REFETCH_INTERVAL;
-      }
-      return false;
     }
   })
 };
