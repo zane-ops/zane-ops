@@ -39,8 +39,11 @@
   - [x] Using stripe Quick checkout
   - [x] Implement the stripe webhook endpoint for when the user buys a license
   - [x] Implement the license get endpoint
-  - [ ] Deploy the API on ZaneOps
-  - [ ] Test to be sure
+  - [x] Deploy the API on ZaneOps in DEV
+    - [x] Test to be sure
+  - [x] Deploy the API on ZaneOps in PROD
+    - [ ] Test to be sure
+
 
 - Implement frontend for Workspace admin :
   - [ ] New dashboard header to show workspace & user profile
