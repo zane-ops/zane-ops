@@ -79,7 +79,8 @@ export function meta() {
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const [user, userExistQuery] = await Promise.all([
     queryClient.ensureQueryData(userQueries.authedUser),
-    queryClient.ensureQueryData(userQueries.checkUserExistence)
+    queryClient.ensureQueryData(userQueries.checkUserExistence),
+    queryClient.ensureQueryData(serverQueries.resourceLimits)
   ]);
 
   if (!userExistQuery.data?.exists) {
