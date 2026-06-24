@@ -42,6 +42,7 @@ async def create_system_cleanup_schedule():
             id="system-cleanup",
             task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
         ),
+        # Every 4h
         spec=ScheduleSpec(cron_expressions=["0 */4 * * *"]),
     )
 
