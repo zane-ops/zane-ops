@@ -79,8 +79,7 @@ export function meta() {
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const [user, userExistQuery] = await Promise.all([
     queryClient.ensureQueryData(userQueries.authedUser),
-    queryClient.ensureQueryData(userQueries.checkUserExistence),
-    queryClient.ensureQueryData(serverQueries.resourceLimits)
+    queryClient.ensureQueryData(userQueries.checkUserExistence)
   ]);
 
   if (!userExistQuery.data?.exists) {
@@ -97,6 +96,9 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
     throw redirect(redirectPathName);
   }
+
+  // this is prefetched only when we are logged in
+  await queryClient.prefetchQuery(serverQueries.resourceLimits);
   return { user };
 }
 
