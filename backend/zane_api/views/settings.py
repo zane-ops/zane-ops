@@ -15,6 +15,7 @@ class SettingsSerializer(serializers.Serializer):
     app_domain = serializers.CharField()
     image_version = serializers.CharField()
     commit_sha = serializers.CharField()
+    build = serializers.ChoiceField(["oss", "ee"])
 
 
 class SettingsView(APIView):
@@ -32,6 +33,7 @@ class SettingsView(APIView):
                 "app_domain": settings.ZANE_APP_DOMAIN,
                 "image_version": settings.IMAGE_VERSION,
                 "commit_sha": settings.COMMIT_SHA,
+                "build": settings.BUILD,
             }
         )
 

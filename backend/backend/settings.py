@@ -71,10 +71,13 @@ ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "127-0-0-1.sslip.io")
 ZANE_INTERNAL_DOMAIN = "zaneops.internal"
 ENABLE_API_SCHEMA = os.environ.get("ENABLE_API_SCHEMA") == "true"
 
+# Using the OSS build or EE build
+BUILD = os.environ.get("BUILD", "oss")
+
 # Whether the commercial EE layer (`ee/`) is loaded. Set to "false" for a
 # pure-MIT build that ships without the `ee/` directory ; free-tier behavior
 # then applies everywhere.
-ENABLE_EE = os.environ.get("BUILD", "oss") == "ee"
+ENABLE_EE = BUILD == "ee"
 
 
 ALLOWED_HOSTS = (
