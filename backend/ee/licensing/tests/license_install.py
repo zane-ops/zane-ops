@@ -3,7 +3,7 @@ from typing import cast
 from django.urls import reverse
 from rest_framework import status
 
-from ..models import License, LicenseData, LicenceFeature, InstanceMeta, LicenseTiers
+from ..models import License, LicenseData, LicenseFeature, InstanceMeta, LicenseTiers
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import jprint
 from uuid import uuid4
@@ -37,10 +37,10 @@ class LicenceInstallViewTests(AuthAPITestCase):
             self.assertEqual(license_uuid, data.uuid)
             self.assertEqual(data.fingerprint, InstanceMeta.get_fingerprint())
             self.assertTrue(
-                installed_license.is_feature_enabled(LicenceFeature.EXTRA_WORKSPACES)
+                installed_license.is_feature_enabled(LicenseFeature.EXTRA_WORKSPACES)
             )
             self.assertTrue(
-                installed_license.is_feature_enabled(LicenceFeature.EXTRA_USER_SEATS)
+                installed_license.is_feature_enabled(LicenseFeature.EXTRA_USER_SEATS)
             )
 
     @responses.activate
@@ -61,10 +61,10 @@ class LicenceInstallViewTests(AuthAPITestCase):
             self.assertTrue(installed_license.is_valid)
             self.assertEqual(LicenseTiers.FREE, installed_license.tier)
             self.assertFalse(
-                installed_license.is_feature_enabled(LicenceFeature.EXTRA_WORKSPACES)
+                installed_license.is_feature_enabled(LicenseFeature.EXTRA_WORKSPACES)
             )
             self.assertFalse(
-                installed_license.is_feature_enabled(LicenceFeature.EXTRA_USER_SEATS)
+                installed_license.is_feature_enabled(LicenseFeature.EXTRA_USER_SEATS)
             )
 
     @responses.activate
