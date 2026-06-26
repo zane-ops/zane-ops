@@ -10,7 +10,7 @@ from .compose import *
 with workflow.unsafe.imports_passed_through():
     from ..activities import (
         DockerSwarmActivities,
-        SystemCleanupActivities,
+        DockerSystemPruneActivities,
         GitActivities,
         delete_env_resources,
         acquire_service_deploy_semaphore,
@@ -42,7 +42,7 @@ with workflow.unsafe.imports_passed_through():
     )
     from . import (
         ArchiveDockerServiceWorkflow,
-        SystemCleanupWorkflow,
+        DockerSystemPruneWorkflow,
         CreateProjectResourcesWorkflow,
         RemoveProjectResourcesWorkflow,
         DeployDockerServiceWorkflow,
@@ -81,7 +81,7 @@ def get_workflows_and_activities():
     swarm_activities = DockerSwarmActivities()
     monitor_activities = MonitorDockerDeploymentActivities()
     cleanup_activites = CleanupActivities()
-    system_cleanup_activities = SystemCleanupActivities()
+    system_cleanup_activities = DockerSystemPruneActivities()
     metrics_activities = DockerDeploymentMetricsActivities()
     git_activities = GitActivities()
     monitor_registry_activites = MonitorRegistryDeploymentActivites()
@@ -99,7 +99,7 @@ def get_workflows_and_activities():
             MonitorDockerDeploymentWorkflow,
             ToggleDockerServiceWorkflow,
             CleanupAppLogsWorkflow,
-            SystemCleanupWorkflow,
+            DockerSystemPruneWorkflow,
             GetDockerDeploymentStatsWorkflow,
             AutoUpdateDockerServiceWorkflow,
             CreateEnvNetworkWorkflow,
@@ -176,10 +176,11 @@ def get_workflows_and_activities():
             monitor_activities.run_deployment_monitor_healthcheck,
             cleanup_activites.cleanup_service_metrics,
             cleanup_activites.cleanup_compose_stack_metrics,
-            system_cleanup_activities.cleanup_images,
-            system_cleanup_activities.cleanup_containers,
-            system_cleanup_activities.cleanup_volumes,
-            system_cleanup_activities.cleanup_networks,
+            system_cleanup_activities.prune_images,
+            system_cleanup_activities.get_prune_settings,
+            system_cleanup_activities.prune_containers,
+            system_cleanup_activities.prune_volumes,
+            system_cleanup_activities.prune_networks,
             monitor_registry_activites.run_registry_swarm_healthcheck,
             monitor_registry_activites.save_registry_health_check_status,
             stack_activites.prepare_stack_deployment,

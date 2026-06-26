@@ -15,15 +15,20 @@ from temporalio.client import (
     ScheduleAlreadyRunningError,
 )
 from temporalio.service import RPCError
+from console.models import SystemSettings
 
 
 async def update_schedule_simple(input: ScheduleUpdateInput):
     schedule = input.description.schedule
 
+    system = await SystemSettings.aget()
+
     # Update the schedule
     new_schedule = Schedule(
         action=schedule.action,
-        spec=ScheduleSpec(cron_expressions=["0 0 * * *"]),  # New schedule spec
+        spec=ScheduleSpec(
+            cron_expressions=[system.metrics_cleanup_cron_schedule]
+        ),  # New schedule spec
         # Keep other properties the same
         policy=schedule.policy,
         state=schedule.state,

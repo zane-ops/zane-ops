@@ -8,9 +8,7 @@ from ..shared import UpdateDetails, UpdateOnGoingDetails
 
 
 with workflow.unsafe.imports_passed_through():
-    from ..activities import (
-        SystemCleanupActivities,
-    )
+    from ..activities import DockerSystemPruneActivities
 
     from ..activities import (
         lock_deploy_semaphore,
@@ -27,7 +25,7 @@ with workflow.unsafe.imports_passed_through():
 
 
 @workflow.defn(name="system-cleanup")
-class SystemCleanupWorkflow:
+class DockerSystemPruneWorkflow:
     def __init__(self):
         self.retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
@@ -42,29 +40,39 @@ class SystemCleanupWorkflow:
         )
 
         try:
-            await workflow.execute_activity_method(
-                SystemCleanupActivities.cleanup_images,
-                start_to_close_timeout=timedelta(minutes=5),
+            settings = await workflow.execute_activity_method(
+                DockerSystemPruneActivities.get_prune_settings,
+                start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
             )
 
-            await workflow.execute_activity_method(
-                SystemCleanupActivities.cleanup_containers,
-                start_to_close_timeout=timedelta(minutes=5),
-                retry_policy=self.retry_policy,
-            )
+            if settings.prune_images:
+                await workflow.execute_activity_method(
+                    DockerSystemPruneActivities.prune_images,
+                    start_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=self.retry_policy,
+                )
 
-            await workflow.execute_activity_method(
-                SystemCleanupActivities.cleanup_volumes,
-                start_to_close_timeout=timedelta(minutes=5),
-                retry_policy=self.retry_policy,
-            )
+            if settings.prune_containers:
+                await workflow.execute_activity_method(
+                    DockerSystemPruneActivities.prune_containers,
+                    start_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=self.retry_policy,
+                )
 
-            await workflow.execute_activity_method(
-                SystemCleanupActivities.cleanup_networks,
-                start_to_close_timeout=timedelta(minutes=5),
-                retry_policy=self.retry_policy,
-            )
+            if settings.prune_volumes:
+                await workflow.execute_activity_method(
+                    DockerSystemPruneActivities.prune_volumes,
+                    start_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=self.retry_policy,
+                )
+
+            if settings.prune_networks:
+                await workflow.execute_activity_method(
+                    DockerSystemPruneActivities.prune_networks,
+                    start_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=self.retry_policy,
+                )
 
         finally:
             # release all deployment locks
