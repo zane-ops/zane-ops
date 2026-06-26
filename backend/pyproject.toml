@@ -125,6 +125,7 @@ dependencies = [
     "opentelemetry-instrumentation-redis>=0.63b1",
     "opentelemetry-instrumentation-requests>=0.63b1",
     "opentelemetry-exporter-otlp-proto-grpc>=1.42.1",
+    "croniter>=6.2.2",
 ]
 
 [tool.uv]
@@ -262,4 +263,5 @@ dev-dependencies = [
     "opentelemetry-instrumentation-redis>=0.63b1",
     "opentelemetry-instrumentation-requests>=0.63b1",
     "opentelemetry-exporter-otlp-proto-grpc>=1.42.1",
+    "croniter>=6.2.2",
 ]
