@@ -152,7 +152,7 @@ class DockerSystemPruneActivities:
 
     @activity.defn
     async def get_prune_settings(self) -> DockerSystemPruneSettings:
-        system = SystemSettings.get()
+        system = await SystemSettings.aget_or_create()
         return DockerSystemPruneSettings(
             prune_images=system.prune_images,
             prune_volumes=system.prune_volumes,

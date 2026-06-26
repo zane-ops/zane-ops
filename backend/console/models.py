@@ -50,12 +50,20 @@ class SystemSettings(TimestampedModel):
     prune_networks = models.BooleanField(default=True)
 
     @classmethod
-    def get(cls) -> Self:
-        return cls.objects.filter(pk=SINGLETON_ID).first() or cls()
+    def get_or_create(cls) -> Self:
+        object = cls.objects.filter(pk=SINGLETON_ID).first()
+        if not object:
+            object = cls()
+            object.save()
+        return object
 
     @classmethod
-    async def aget(cls) -> Self:
-        return (await cls.objects.filter(pk=SINGLETON_ID).afirst()) or cls()
+    async def aget_or_create(cls) -> Self:
+        object = await cls.objects.filter(pk=SINGLETON_ID).afirst()
+        if not object:
+            object = cls()
+            await object.asave()
+        return object
 
     def save(self, *args, **kwargs):
         self.pk = SINGLETON_ID

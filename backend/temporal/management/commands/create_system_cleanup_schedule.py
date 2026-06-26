@@ -21,7 +21,7 @@ from console.models import SystemSettings
 async def update_schedule_simple(input: ScheduleUpdateInput):
     schedule = input.description.schedule
 
-    system = await SystemSettings.aget()
+    system = await SystemSettings.aget_or_create()
 
     # Update the schedule
     new_schedule = Schedule(
