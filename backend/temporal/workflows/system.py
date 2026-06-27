@@ -24,7 +24,7 @@ with workflow.unsafe.imports_passed_through():
     from zane_api.utils import find_item_in_sequence
 
 
-@workflow.defn(name="system-cleanup")
+@workflow.defn(name="docker-system-prune")
 class DockerSystemPruneWorkflow:
     def __init__(self):
         self.retry_policy = RetryPolicy(

@@ -280,7 +280,8 @@ class TemporalClient:
         return async_to_sync(cls.adelete_schedule)(id)
 
     @classmethod
-    async def adelete_schedule(cls, id: str):
+    async def adelete_schedule(cls, id: str, prefix: str | None = "schedule-"):
         client = await cls._ensure_client()
-        handle = client.get_schedule_handle(f"schedule-{id}")
+        schedule_id = id if prefix is None else f"{prefix}{id}"
+        handle = client.get_schedule_handle(schedule_id)
         await handle.delete()
