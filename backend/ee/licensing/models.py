@@ -6,7 +6,7 @@ from typing import Dict, List, Self
 from django.db import models
 from django.conf import settings
 from enum import StrEnum
-from zane_api.licensing.gate import LicenceFeature
+from zane_api.licensing.gate import LicenseFeature
 from .constants import ZANEOPS_LICENSE_PUBLIC_KEY
 import jwt
 from dataclasses import dataclass
@@ -24,11 +24,11 @@ class LicenseTiers(StrEnum):
     STARTER = "starter"  # base tier
 
 
-TIER_MATRIX: Dict[LicenseTiers, List[LicenceFeature]] = {
+TIER_MATRIX: Dict[LicenseTiers, List[LicenseFeature]] = {
     LicenseTiers.FREE: [],
     LicenseTiers.STARTER: [
-        LicenceFeature.EXTRA_WORKSPACES,
-        LicenceFeature.EXTRA_USER_SEATS,
+        LicenseFeature.EXTRA_WORKSPACES,
+        LicenseFeature.EXTRA_USER_SEATS,
     ],
 }
 
@@ -214,7 +214,7 @@ class License(models.Model):
         data = self._data
         return data.uuid if data is not None else str(uuid.UUID(int=0))
 
-    def is_feature_enabled(self, feature: LicenceFeature):
+    def is_feature_enabled(self, feature: LicenseFeature):
         data = self._data
         return data is not None and feature in TIER_MATRIX.get(data.tier, [])
 

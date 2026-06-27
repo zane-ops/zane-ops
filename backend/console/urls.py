@@ -44,4 +44,9 @@ urlpatterns = [
         views.WorkspaceTransferOwnershipAPIView.as_view(),
         name="workspace.transfer_ownership",
     ),
+    re_path(
+        r"^system-settings/?$",
+        views.SystemSettingsAPIView.as_view(),
+        name="system.settings",
+    ),
 ]

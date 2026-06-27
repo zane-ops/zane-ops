@@ -68,6 +68,7 @@ with workflow.unsafe.imports_passed_through():
         get_volume_resource_name,
     )
     from container_registry.models import BuildRegistry
+    from console.models import SystemSettings
 
 
 from zane_api.dtos import (
@@ -92,6 +93,7 @@ from ..shared import (
     SimpleGitDeploymentDetails,
     ScaleBackServiceDetails,
     ScaleDownServiceDetails,
+    DockerSystemPruneSettings,
 )
 from ..constants import ZANEOPS_SLEEP_MANUAL_MARKER, SERVICE_DEPLOY_SEMAPHORE_KEY
 
@@ -144,12 +146,22 @@ async def reset_deploy_semaphore():
     await semaphore.reset()
 
 
-class SystemCleanupActivities:
+class DockerSystemPruneActivities:
     def __init__(self):
         self.docker_client = get_docker_client()
 
     @activity.defn
-    async def cleanup_images(self) -> dict:
+    async def get_prune_settings(self) -> DockerSystemPruneSettings:
+        system = await SystemSettings.aget_or_create()
+        return DockerSystemPruneSettings(
+            prune_images=system.prune_images,
+            prune_volumes=system.prune_volumes,
+            prune_networks=system.prune_networks,
+            prune_containers=system.prune_containers,
+        )
+
+    @activity.defn
+    async def prune_images(self) -> dict:
         return self.docker_client.images.prune(
             filters={
                 "dangling": True,
@@ -158,7 +170,7 @@ class SystemCleanupActivities:
         )
 
     @activity.defn
-    async def cleanup_volumes(self) -> dict:
+    async def prune_volumes(self) -> dict:
         return self.docker_client.volumes.prune(
             filters={
                 "all": True,
@@ -167,11 +179,11 @@ class SystemCleanupActivities:
         )
 
     @activity.defn
-    async def cleanup_containers(self) -> dict:
+    async def prune_containers(self) -> dict:
         return self.docker_client.containers.prune()
 
     @activity.defn
-    async def cleanup_networks(self) -> dict:
+    async def prune_networks(self) -> dict:
         return self.docker_client.networks.prune(
             filters={
                 "label!": ["zane-managed"],
@@ -262,7 +274,7 @@ class DockerSwarmActivities:
                     original_id=service.original_id,
                     urls=[
                         URLDto(
-                            domain=url.domain,
+                            domain=url.domain,  # type: ignore
                             base_path=url.base_path,
                             strip_prefix=url.strip_prefix,
                             id=url.original_id,
@@ -287,7 +299,7 @@ class DockerSwarmActivities:
                     original_id=service.original_id,
                     urls=[
                         URLDto(
-                            domain=url.domain,
+                            domain=url.domain,  # type: ignore
                             base_path=url.base_path,
                             strip_prefix=url.strip_prefix,
                             id=url.original_id,
@@ -335,7 +347,7 @@ class DockerSwarmActivities:
                     original_id=service.original_id,
                     urls=[
                         URLDto(
-                            domain=url.domain,
+                            domain=url.domain,  # type: ignore
                             base_path=url.base_path,
                             strip_prefix=url.strip_prefix,
                             id=url.original_id,
@@ -361,7 +373,7 @@ class DockerSwarmActivities:
                     original_id=service.original_id,
                     urls=[
                         URLDto(
-                            domain=url.domain,
+                            domain=url.domain,  # type: ignore
                             base_path=url.base_path,
                             strip_prefix=url.strip_prefix,
                             id=url.original_id,

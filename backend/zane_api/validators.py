@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.contrib.auth.password_validation import validate_password
+from croniter import croniter
 
 
 def validate_new_password(value: str, user=None):
@@ -80,3 +81,10 @@ def validate_git_commit_sha(value):
     commit_sha_regex = re.compile(r"^(HEAD|[0-9a-f]{7,40})$", re.IGNORECASE)
     if not commit_sha_regex.fullmatch(value):
         raise ValidationError(f"'{value}' is not a valid Git commit SHA.")
+
+
+def validate_cron_schedule(value: str):
+    if not croniter.is_valid(value) or value.startswith(
+        "@"
+    ):  # ignore `@` expressions as temporal doesn't support them
+        raise ValidationError(f"'{value}' is not a valid CRON schedule.")

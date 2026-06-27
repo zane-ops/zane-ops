@@ -96,6 +96,9 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
     throw redirect(redirectPathName);
   }
+
+  // this is prefetched only when we are logged in
+  await queryClient.prefetchQuery(serverQueries.resourceLimits);
   return { user };
 }
 

@@ -655,6 +655,7 @@ class ServiceDeploymentsAPIView(ListAPIView):
         return (
             Deployment.objects.filter(service=service)
             .select_related("service", "is_redeploy_of")
+            .prefetch_related("changes", "urls")
             .annotate(
                 is_healthy=Case(
                     When(status=Deployment.DeploymentStatus.HEALTHY, then=Value(0)),
