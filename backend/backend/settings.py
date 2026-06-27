@@ -493,3 +493,15 @@ OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "zane-api")
 OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get(
     "OTEL_EXPORTER_OTLP_ENDPOINT", "http://zane.tempo:4317"
 )
+
+# Named like this for backwards compatibility, in the past this was used to cleanup logs
+# but since logs are automatically cleaned up by grafana/loki, it is used now for cleaning up metrics
+# FIXME: delete old schedule
+OLD_METRICS_CLEANUP_SCHEDULE_ID = "daily-logs-cleanup"
+METRICS_CLEANUP_SCHEDULE_ID = "daily-metrics-cleanup"
+
+
+# The old name isn't descriptive enough for what the schedule does
+# FIXME: delete old schedule
+OLD_DOCKER_SYSTEM_PRUNE_SCHEDULE_ID = "hourly-system-cleanup"
+DOCKER_SYSTEM_PRUNE_SCHEDULE_ID = "docker-system-prune"

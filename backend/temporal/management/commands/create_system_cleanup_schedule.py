@@ -40,15 +40,17 @@ async def update_schedule_simple(input: ScheduleUpdateInput):
 async def create_docker_system_purge_schedule():
     client = await get_temporalio_client()
 
+    system = await SystemSettings.aget_or_create()
+
     schedule_id = "hourly-system-cleanup"
     schedule = Schedule(
         action=ScheduleActionStartWorkflow(
             DockerSystemPruneWorkflow.run,
-            id="system-cleanup",
+            id="_",
             task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
         ),
         # Every 4h
-        spec=ScheduleSpec(cron_expressions=["0 */4 * * *"]),
+        spec=ScheduleSpec(cron_expressions=[system.docker_system_prune_cron_schedule]),
     )
 
     handle = client.get_schedule_handle(schedule_id)

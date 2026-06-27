@@ -211,8 +211,8 @@ class CollectComposeStacksMetricsWorkflow:
         return metrics_result
 
 
-@workflow.defn(name="cleanup-app-logs")
-class CleanupAppLogsWorkflow:
+@workflow.defn(name="cleanup-app-metrics")
+class CleanupAppMetricsWorkflow:
     @workflow.run
     async def run(self) -> CleanupMetricsResult:
         retry_policy = RetryPolicy(

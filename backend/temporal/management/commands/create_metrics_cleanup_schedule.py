@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 
 from ...client import get_temporalio_client
-from ...schedules import CleanupAppLogsWorkflow
+from ...schedules import CleanupAppMetricsWorkflow
 from temporalio.client import (
     Schedule,
     ScheduleActionStartWorkflow,
@@ -23,9 +23,14 @@ async def update_schedule_simple(input: ScheduleUpdateInput):
 
     system = await SystemSettings.aget_or_create()
 
+    print(f"Updating schedule to new CRON: `{system.metrics_cleanup_cron_schedule}`")
     # Update the schedule
     new_schedule = Schedule(
-        action=schedule.action,
+        action=ScheduleActionStartWorkflow(
+            CleanupAppMetricsWorkflow.run,
+            id="whatever",
+            task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
+        ),  # schedule.action,
         spec=ScheduleSpec(
             cron_expressions=[system.metrics_cleanup_cron_schedule]
         ),  # New schedule spec
@@ -40,14 +45,16 @@ async def update_schedule_simple(input: ScheduleUpdateInput):
 async def create_metrics_cleanup_schedule():
     client = await get_temporalio_client()
 
+    system = await SystemSettings.aget_or_create()
+
     schedule_id = "daily-logs-cleanup"
     schedule = Schedule(
         action=ScheduleActionStartWorkflow(
-            CleanupAppLogsWorkflow.run,
-            id="cleanup-app-logs",
+            CleanupAppMetricsWorkflow.run,
+            id="_",
             task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
         ),
-        spec=ScheduleSpec(cron_expressions=["0 0 * * *"]),
+        spec=ScheduleSpec(cron_expressions=[system.metrics_cleanup_cron_schedule]),
     )
 
     handle = client.get_schedule_handle(schedule_id)
