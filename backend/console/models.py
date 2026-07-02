@@ -3,6 +3,7 @@ from zane_api.models.base import TimestampedModel
 from django.conf import settings
 from typing import Self
 from django.core.validators import MinValueValidator
+from zane_api.utils import convert_value_to_bytes
 
 
 class PasswordResetToken(TimestampedModel):
@@ -25,9 +26,6 @@ class SystemSettings(TimestampedModel):
     docker_system_prune_cron_schedule = models.CharField(
         default="0 */4 * * *"
     )  # default: every 4 hours
-    docker_build_cache_prune_cron_schedule = models.CharField(
-        default="0 */4 * * *"
-    )  # default: every 4 hours
     app_data_cleanup_cron_schedule = models.CharField(
         default="0 0 * * *"
     )  # default: every day at midnight
@@ -37,14 +35,15 @@ class SystemSettings(TimestampedModel):
         null=True, validators=[MinValueValidator(1)]
     )
     build_cache_max_age_days = models.PositiveIntegerField(
-        null=True, validators=[MinValueValidator(1)]
+        null=True,
+        default=30,
+        validators=[MinValueValidator(1)],
     )
-    build_cache_max_use_space_bytes = models.PositiveIntegerField(
-        null=True, validators=[MinValueValidator(1)]
+    build_cache_max_use_space_bytes = models.PositiveBigIntegerField(
+        null=True,
+        default=convert_value_to_bytes(5, "GIGABYTES"),
+        validators=[MinValueValidator(1)],
     )
-    # TODO:
-    # You delete build cache like this
-    # docker buildx prune --force --all --filter until=<days*24>h --max-used-space <bytes>
 
     # Docker system prune config
     prune_images = models.BooleanField(default=True)

@@ -73,6 +73,16 @@ class DockerSystemPruneWorkflow:
                     start_to_close_timeout=timedelta(minutes=5),
                     retry_policy=self.retry_policy,
                 )
+            if (
+                settings.max_cache_days is not None
+                or settings.max_cache_space is not None
+            ):
+                await workflow.execute_activity_method(
+                    DockerSystemPruneActivities.prune_docker_build_cache,
+                    settings,
+                    start_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=self.retry_policy,
+                )
 
         finally:
             # release all deployment locks

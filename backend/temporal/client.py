@@ -213,7 +213,7 @@ class TemporalClient:
         schedule = Schedule(
             action=ScheduleActionStartWorkflow(
                 workflow,
-                id="_",
+                id=f"{schedule_id}-workflow",
                 task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
             ),
             spec=ScheduleSpec(cron_expressions=[schedule_cron]),
@@ -229,7 +229,7 @@ class TemporalClient:
                 spec=ScheduleSpec(cron_expressions=[schedule_cron]),
                 action=ScheduleActionStartWorkflow(
                     workflow,
-                    id="_",
+                    id=f"{schedule_id}-workflow",
                     task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
                 ),
                 # Keep other properties the same

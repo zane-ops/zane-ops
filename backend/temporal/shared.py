@@ -706,3 +706,5 @@ class DockerSystemPruneSettings:
     prune_volumes: bool
     prune_networks: bool
     prune_containers: bool
+    max_cache_days: int | None
+    max_cache_space: int | None
