@@ -182,6 +182,7 @@ def get_workflows_and_activities():
             system_cleanup_activities.prune_containers,
             system_cleanup_activities.prune_volumes,
             system_cleanup_activities.prune_networks,
+            system_cleanup_activities.list_zane_buildx_builders,
             system_cleanup_activities.prune_docker_build_cache,
             monitor_registry_activites.run_registry_swarm_healthcheck,
             monitor_registry_activites.save_registry_health_check_status,

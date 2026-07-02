@@ -4,7 +4,7 @@ from datetime import timedelta
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 
-from ..shared import UpdateDetails, UpdateOnGoingDetails
+from ..shared import UpdateDetails, UpdateOnGoingDetails, BuildCachePruneDetails
 
 
 with workflow.unsafe.imports_passed_through():
@@ -77,11 +77,25 @@ class DockerSystemPruneWorkflow:
                 settings.max_cache_days is not None
                 or settings.max_cache_space is not None
             ):
-                await workflow.execute_activity_method(
-                    DockerSystemPruneActivities.prune_docker_build_cache,
-                    settings,
-                    start_to_close_timeout=timedelta(minutes=5),
+                builder_names = await workflow.execute_activity_method(
+                    DockerSystemPruneActivities.list_zane_buildx_builders,
+                    start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
+                )
+                await asyncio.gather(
+                    *[
+                        workflow.execute_activity_method(
+                            DockerSystemPruneActivities.prune_docker_build_cache,
+                            BuildCachePruneDetails(
+                                builder_name=builder_name,
+                                max_cache_days=settings.max_cache_days,
+                                max_cache_space=settings.max_cache_space,
+                            ),
+                            start_to_close_timeout=timedelta(minutes=5),
+                            retry_policy=self.retry_policy,
+                        )
+                        for builder_name in builder_names
+                    ]
                 )
 
         finally:

@@ -1,7 +1,6 @@
 import asyncio
 import base64
 import os
-import shlex
 import shutil
 
 from typing import Any, Dict, List, Literal, Optional, TypedDict, cast
@@ -35,6 +34,7 @@ from .constants import (
     CADDYFILE_CUSTOM_INDEX_PAGE,
     CADDYFILE_CUSTOM_NOT_FOUND_PAGE,
     SERVICE_DETECTED_PORTS_CACHE_KEY,
+    ZANE_BUILDER_NAME_PREFIX,
 )
 from typing import Protocol, runtime_checkable
 from datetime import timedelta
@@ -151,7 +151,7 @@ def get_config_resource_name(config_id: str, version: int):
 
 
 def get_buildkit_builder_resource_name(env_id: str):
-    return f"builder-zane-{env_id.lower().replace('_', '-')}"
+    return f"{ZANE_BUILDER_NAME_PREFIX}-{env_id.lower().replace('_', '-')}"
 
 
 def get_swarm_service_name_for_deployment(

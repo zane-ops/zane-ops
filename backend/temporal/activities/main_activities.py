@@ -71,6 +71,7 @@ with workflow.unsafe.imports_passed_through():
     )
     from container_registry.models import BuildRegistry
     from console.models import SystemSettings
+    from ..constants import ZANE_BUILDER_NAME_PREFIX
 
 
 from zane_api.dtos import (
@@ -96,6 +97,7 @@ from ..shared import (
     ScaleBackServiceDetails,
     ScaleDownServiceDetails,
     DockerSystemPruneSettings,
+    BuildCachePruneDetails,
     DockerBuildCacheEntry,
     DockerBuildCachePruneResult,
 )
@@ -204,47 +206,77 @@ class DockerSystemPruneActivities:
         )
 
     @activity.defn
+    async def list_zane_buildx_builders(self) -> List[str]:
+        """
+        List the buildx builders created by ZaneOps for each environment,
+        these are named `builder-zane-<env_id>` (see `get_buildkit_builder_resource_name`).
+        """
+        cmd = [
+            DOCKER_BINARY_PATH,
+            "buildx",
+            "ls",
+            "--format",
+            "json",
+        ]
+        print(
+            f"[{Colors.YELLOW}prune_docker_build_cache{Colors.ENDC}]: Running shell command {Colors.YELLOW}{shlex.join(cmd)}{Colors.ENDC}"
+        )
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await process.communicate()
+        builder_names = []
+        for line in stdout.decode().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            name = json.loads(line).get("Name", "")
+            if name.startswith(ZANE_BUILDER_NAME_PREFIX):
+                builder_names.append(name)
+        return builder_names
+
+    @activity.defn
     async def prune_docker_build_cache(
-        self, settings: DockerSystemPruneSettings
+        self, details: BuildCachePruneDetails
     ) -> DockerBuildCachePruneResult:
-        if settings.max_cache_days is not None or settings.max_cache_space is not None:
-            cache_prune_command = [
-                DOCKER_BINARY_PATH,
-                "buildx",
-                "prune",
-                "--force",
-                "--all",
-            ]
-            if settings.max_cache_space is not None:
-                cache_prune_command.extend(
-                    ["--max-used-space", str(settings.max_cache_space)]
-                )
-            if settings.max_cache_days is not None:
-                cache_prune_command.extend(
-                    ["--filter", f"until={settings.max_cache_days * 24}h"]
-                )
+        cmd = [
+            DOCKER_BINARY_PATH,
+            "buildx",
+            "prune",
+            "--force",
+            "--all",
+            "--builder",
+            details.builder_name,
+        ]
+        if details.max_cache_space is not None:
+            cmd.extend(["--max-used-space", str(details.max_cache_space)])
+        if details.max_cache_days is not None:
+            cmd.extend(["--filter", f"until={details.max_cache_days * 24}h"])
 
-            print(
-                f"[{Colors.YELLOW}prune_docker_build_cache{Colors.ENDC}]: Running shell command {Colors.YELLOW}{shlex.join(cache_prune_command)}{Colors.ENDC}"
-            )
-            process = await asyncio.create_subprocess_exec(
-                *cache_prune_command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await process.communicate()
-            info_lines = (stdout or b"").decode()
-            error_lines = (stderr or b"").decode()
-            if info_lines:
-                print(info_lines)
-            if error_lines:
-                print(error_lines)
+        print(
+            f"[{Colors.YELLOW}prune_docker_build_cache{Colors.ENDC}]: Running shell command {Colors.YELLOW}{shlex.join(cmd)}{Colors.ENDC}"
+        )
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate()
+        info_lines = (stdout or b"").decode()
+        error_lines = (stderr or b"").decode()
+        if info_lines:
+            print(info_lines)
+        if error_lines:
+            print(error_lines)
 
-            print("Build cache deleted sucessfully ✅")
-            result = parse_docker_buildx_prune_output(info_lines)
-            result.error = error_lines.strip() or None
-            return result
-        return DockerBuildCachePruneResult()
+        print(
+            f"Build cache for builder {Colors.ORANGE}{details.builder_name}{Colors.ENDC} deleted sucessfully ✅"
+        )
+        result = parse_docker_buildx_prune_output(info_lines)
+        result.error = error_lines.strip() or None
+        return result
 
     @activity.defn
     async def prune_images(self) -> dict:

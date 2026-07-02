@@ -711,6 +711,13 @@ class DockerSystemPruneSettings:
 
 
 @dataclass
+class BuildCachePruneDetails:
+    builder_name: str
+    max_cache_days: int | None
+    max_cache_space: int | None
+
+
+@dataclass
 class DockerBuildCacheEntry:
     id: str
     reclaimable: bool
