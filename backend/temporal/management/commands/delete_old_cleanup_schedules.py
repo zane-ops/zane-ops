@@ -10,7 +10,7 @@ from temporal.client import TemporalClient
 async def delete_schedules():
     await asyncio.gather(
         TemporalClient.adelete_schedule(
-            settings.OLD_METRICS_CLEANUP_SCHEDULE_ID,
+            settings.APP_DATA_CLEANUP_SCHEDULE_ID,
             prefix=None,
         ),
         TemporalClient.adelete_schedule(

@@ -25,7 +25,10 @@ class SystemSettings(TimestampedModel):
     docker_system_prune_cron_schedule = models.CharField(
         default="0 */4 * * *"
     )  # default: every 4 hours
-    metrics_cleanup_cron_schedule = models.CharField(
+    docker_build_cache_prune_cron_schedule = models.CharField(
+        default="0 */4 * * *"
+    )  # default: every 4 hours
+    app_data_cleanup_cron_schedule = models.CharField(
         default="0 0 * * *"
     )  # default: every day at midnight
 

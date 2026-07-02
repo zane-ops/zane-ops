@@ -428,9 +428,10 @@ class CleanupResult:
 
 
 @dataclass
-class CleanupMetricsResult:
+class AppCleanupWorkflowResult:
     service_metrics_deleted_count: int
     stack_metrics_deleted_count: int
+    http_logs_deleted_count: int
 
 
 @dataclass

@@ -496,8 +496,8 @@ OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get(
 
 # Named like this for backwards compatibility, in the past this was used to cleanup logs
 # but since logs are automatically cleaned up by grafana/loki, it is used now for cleaning up metrics
-OLD_METRICS_CLEANUP_SCHEDULE_ID = "daily-logs-cleanup"
-METRICS_CLEANUP_SCHEDULE_ID = "daily-metrics-cleanup"
+OLD_APP_DATA_CLEANUP_SCHEDULE_ID = "daily-logs-cleanup"
+APP_DATA_CLEANUP_SCHEDULE_ID = "daily-app-data-cleanup"
 
 
 # The old name isn't descriptive enough for what the schedule does

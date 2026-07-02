@@ -38,4 +38,4 @@ COPY . code
 EXPOSE 8000
 
 # runs the dev server
-CMD bash -c "source /opt/.venv/bin/activate && python manage.py create_metrics_cleanup_schedule && python manage.py runserver"
+CMD bash -c "source /opt/.venv/bin/activate && python manage.py create_app_data_cleanup_schedule && python manage.py runserver"

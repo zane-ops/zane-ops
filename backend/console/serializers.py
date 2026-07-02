@@ -71,7 +71,10 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
     docker_system_prune_cron_schedule = serializers.CharField(
         validators=[validate_cron_schedule]
     )
-    metrics_cleanup_cron_schedule = serializers.CharField(
+    app_data_cleanup_cron_schedule = serializers.CharField(
+        validators=[validate_cron_schedule]
+    )
+    docker_build_cache_prune_cron_schedule = serializers.CharField(
         validators=[validate_cron_schedule]
     )
 
@@ -79,7 +82,8 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
         model = SystemSettings
         fields = [
             "docker_system_prune_cron_schedule",
-            "metrics_cleanup_cron_schedule",
+            "app_data_cleanup_cron_schedule",
+            "docker_build_cache_prune_cron_schedule",
             "http_log_retention_days",
             "build_cache_max_age_days",
             "build_cache_max_use_space_bytes",
