@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 from datetime import timedelta
 import shlex
 from typing import Any, Coroutine, List, Optional, cast
@@ -95,6 +96,8 @@ from ..shared import (
     ScaleBackServiceDetails,
     ScaleDownServiceDetails,
     DockerSystemPruneSettings,
+    DockerBuildCacheEntry,
+    DockerBuildCachePruneResult,
 )
 from ..constants import (
     ZANEOPS_SLEEP_MANUAL_MARKER,
@@ -151,6 +154,39 @@ async def reset_deploy_semaphore():
     await semaphore.reset()
 
 
+def parse_docker_buildx_prune_output(output: str) -> DockerBuildCachePruneResult:
+    """
+    Parse the output of `docker buildx prune`, e.g.:
+    "ID\t\t\t\t\t\tRECLAIMABLE\tSIZE\t\tLAST ACCESSED\n<id>\ttrue\t\t26B\t4 days ago\n...Total:\t370.6MB\n"
+    """
+    total_reclaimed = "0B"
+    cache_entries: List[DockerBuildCacheEntry] = []
+    for line in output.strip().splitlines():
+        if line.startswith("Total:"):
+            total_reclaimed = line.split("\t")[-1].strip()
+            continue
+        if line.startswith("ID"):
+            continue
+
+        columns = [
+            column.strip() for column in re.split(r"\t+", line) if column.strip()
+        ]
+        if len(columns) >= 4:
+            cache_id, reclaimable, size, last_accessed = columns[:4]
+            cache_entries.append(
+                DockerBuildCacheEntry(
+                    id=cache_id,
+                    reclaimable=reclaimable.lower() == "true",
+                    size=size,
+                    last_accessed=last_accessed,
+                )
+            )
+
+    return DockerBuildCachePruneResult(
+        total_reclaimed=total_reclaimed, cache_entries=cache_entries
+    )
+
+
 class DockerSystemPruneActivities:
     def __init__(self):
         self.docker_client = get_docker_client()
@@ -168,7 +204,9 @@ class DockerSystemPruneActivities:
         )
 
     @activity.defn
-    async def prune_docker_build_cache(self, settings: DockerSystemPruneSettings):
+    async def prune_docker_build_cache(
+        self, settings: DockerSystemPruneSettings
+    ) -> DockerBuildCachePruneResult:
         if settings.max_cache_days is not None or settings.max_cache_space is not None:
             cache_prune_command = [
                 DOCKER_BINARY_PATH,
@@ -176,13 +214,14 @@ class DockerSystemPruneActivities:
                 "prune",
                 "--force",
                 "--all",
-                "--filter",
             ]
-            if settings.max_cache_days is not None:
-                cache_prune_command.append(f"until={settings.max_cache_days * 24}h")
             if settings.max_cache_space is not None:
                 cache_prune_command.extend(
                     ["--max-used-space", str(settings.max_cache_space)]
+                )
+            if settings.max_cache_days is not None:
+                cache_prune_command.extend(
+                    ["--filter", f"until={settings.max_cache_days * 24}h"]
                 )
 
             print(
@@ -191,7 +230,7 @@ class DockerSystemPruneActivities:
             process = await asyncio.create_subprocess_exec(
                 *cache_prune_command,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
+                stderr=asyncio.subprocess.PIPE,
             )
             stdout, stderr = await process.communicate()
             info_lines = (stdout or b"").decode()
@@ -200,9 +239,12 @@ class DockerSystemPruneActivities:
                 print(info_lines)
             if error_lines:
                 print(error_lines)
-            if process.returncode != 0:
-                raise Exception("Error when cleaning up the build cache")
+
             print("Build cache deleted sucessfully ✅")
+            result = parse_docker_buildx_prune_output(info_lines)
+            result.error = error_lines.strip() or None
+            return result
+        return DockerBuildCachePruneResult()
 
     @activity.defn
     async def prune_images(self) -> dict:

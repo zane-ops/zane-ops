@@ -708,3 +708,18 @@ class DockerSystemPruneSettings:
     prune_containers: bool
     max_cache_days: int | None
     max_cache_space: int | None
+
+
+@dataclass
+class DockerBuildCacheEntry:
+    id: str
+    reclaimable: bool
+    size: str
+    last_accessed: str
+
+
+@dataclass
+class DockerBuildCachePruneResult:
+    total_reclaimed: str = "0B"
+    cache_entries: List[DockerBuildCacheEntry] = field(default_factory=list)
+    error: Optional[str] = None

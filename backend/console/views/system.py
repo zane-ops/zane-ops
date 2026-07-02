@@ -29,7 +29,6 @@ class SystemSettingsAPIView(RetrieveUpdateAPIView):
                 workflow=CleanupAppDataWorkflow.run,
                 schedule_cron=instance.app_data_cleanup_cron_schedule,
             )
-            # Only in production
             if settings.ENVIRONMENT == settings.PRODUCTION_ENV:
                 await TemporalClient.create_or_update_schedule(
                     schedule_id=settings.DOCKER_SYSTEM_PRUNE_SCHEDULE_ID,

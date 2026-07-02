@@ -164,7 +164,7 @@ class TemporalClient:
         args: Any,
         id: str,
         interval: timedelta,
-        task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+        task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
         execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
     ):
         return async_to_sync(cls.acreate_schedule)(
@@ -183,7 +183,7 @@ class TemporalClient:
         args: Any,
         id: str,
         interval: timedelta,
-        task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+        task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
         execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
     ):
         client = await cls._ensure_client()
@@ -207,14 +207,13 @@ class TemporalClient:
         schedule_id: str,
         workflow: Callable[..., Awaitable[Any]],
         schedule_cron: str,
+        task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
     ):
         client = await cls._ensure_client()
 
         schedule = Schedule(
             action=ScheduleActionStartWorkflow(
-                workflow,
-                id=f"{schedule_id}-workflow",
-                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
+                workflow, id=f"{schedule_id}-workflow", task_queue=task_queue
             ),
             spec=ScheduleSpec(cron_expressions=[schedule_cron]),
         )
@@ -228,9 +227,7 @@ class TemporalClient:
             new_schedule = Schedule(
                 spec=ScheduleSpec(cron_expressions=[schedule_cron]),
                 action=ScheduleActionStartWorkflow(
-                    workflow,
-                    id=f"{schedule_id}-workflow",
-                    task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
+                    workflow, id=f"{schedule_id}-workflow", task_queue=task_queue
                 ),
                 # Keep other properties the same
                 policy=schedule.policy,
