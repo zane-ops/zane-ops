@@ -215,6 +215,10 @@ export interface paths {
     get: operations["console_password_tokens_retrieve"];
     delete: operations["console_password_tokens_destroy"];
   };
+  "/api/console/system-settings/": {
+    get: operations["console_system_settings_retrieve"];
+    put: operations["console_system_settings_update"];
+  };
   "/api/console/users/": {
     /** List all users in ZaneOps installation */
     get: operations["console_users_list"];
@@ -777,6 +781,12 @@ export interface components {
     AutoUpdateResponse: {
       message: string;
     };
+    /**
+     * @description * `oss` - oss
+     * * `ee` - ee
+     * @enum {string}
+     */
+    BuildEnum: "oss" | "ee";
     BuildRegistryListCreate: {
       id: string;
       name: string;
@@ -1807,6 +1817,166 @@ export interface components {
     ConsolePasswordTokensDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsolePasswordTokensListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsolePasswordTokensRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsoleSystemSettingsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsoleSystemSettingsUpdateBuildCacheMaxAgeDaysErrorComponent: {
+      /**
+       * @description * `build_cache_max_age_days` - build_cache_max_age_days
+       * @enum {string}
+       */
+      attr: "build_cache_max_age_days";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value";
+      detail: string;
+    };
+    ConsoleSystemSettingsUpdateBuildCacheMaxUseSpaceBytesErrorComponent: {
+      /**
+       * @description * `build_cache_max_use_space_bytes` - build_cache_max_use_space_bytes
+       * @enum {string}
+       */
+      attr: "build_cache_max_use_space_bytes";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value";
+      detail: string;
+    };
+    ConsoleSystemSettingsUpdateDockerSystemPruneCronScheduleErrorComponent: {
+      /**
+       * @description * `docker_system_prune_cron_schedule` - docker_system_prune_cron_schedule
+       * @enum {string}
+       */
+      attr: "docker_system_prune_cron_schedule";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ConsoleSystemSettingsUpdateError: components["schemas"]["ConsoleSystemSettingsUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateDockerSystemPruneCronScheduleErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateMetricsCleanupCronScheduleErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateHttpLogRetentionDaysErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateBuildCacheMaxAgeDaysErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateBuildCacheMaxUseSpaceBytesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneImagesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneContainersErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneVolumesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneNetworksErrorComponent"];
+    ConsoleSystemSettingsUpdateErrorResponse400: components["schemas"]["ConsoleSystemSettingsUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ConsoleSystemSettingsUpdateHttpLogRetentionDaysErrorComponent: {
+      /**
+       * @description * `http_log_retention_days` - http_log_retention_days
+       * @enum {string}
+       */
+      attr: "http_log_retention_days";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value";
+      detail: string;
+    };
+    ConsoleSystemSettingsUpdateMetricsCleanupCronScheduleErrorComponent: {
+      /**
+       * @description * `metrics_cleanup_cron_schedule` - metrics_cleanup_cron_schedule
+       * @enum {string}
+       */
+      attr: "metrics_cleanup_cron_schedule";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ConsoleSystemSettingsUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ConsoleSystemSettingsUpdatePruneContainersErrorComponent: {
+      /**
+       * @description * `prune_containers` - prune_containers
+       * @enum {string}
+       */
+      attr: "prune_containers";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ConsoleSystemSettingsUpdatePruneImagesErrorComponent: {
+      /**
+       * @description * `prune_images` - prune_images
+       * @enum {string}
+       */
+      attr: "prune_images";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ConsoleSystemSettingsUpdatePruneNetworksErrorComponent: {
+      /**
+       * @description * `prune_networks` - prune_networks
+       * @enum {string}
+       */
+      attr: "prune_networks";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ConsoleSystemSettingsUpdatePruneVolumesErrorComponent: {
+      /**
+       * @description * `prune_volumes` - prune_volumes
+       * @enum {string}
+       */
+      attr: "prune_volumes";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ConsoleSystemSettingsUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ConsoleSystemSettingsUpdateError"][];
+    };
     ConsoleTransferWorkspaceOwnershipError: components["schemas"]["ConsoleTransferWorkspaceOwnershipNonFieldErrorsErrorComponent"] | components["schemas"]["ConsoleTransferWorkspaceOwnershipOwnerIdErrorComponent"];
     ConsoleTransferWorkspaceOwnershipErrorResponse400: components["schemas"]["ConsoleTransferWorkspaceOwnershipValidationError"] | components["schemas"]["ParseErrorResponse"];
     ConsoleTransferWorkspaceOwnershipNonFieldErrorsErrorComponent: {
@@ -7476,6 +7646,7 @@ export interface components {
       app_domain: string;
       image_version: string;
       commit_sha: string;
+      build: components["schemas"]["BuildEnum"];
     };
     SetupGithubAppErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SetupGitlabAppErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -7720,6 +7891,28 @@ export interface components {
       key: string;
       value: string;
       comment: string;
+    };
+    SystemSettings: {
+      docker_system_prune_cron_schedule: string;
+      metrics_cleanup_cron_schedule: string;
+      http_log_retention_days: number | null;
+      build_cache_max_age_days: number | null;
+      build_cache_max_use_space_bytes: number | null;
+      prune_images: boolean;
+      prune_containers: boolean;
+      prune_volumes: boolean;
+      prune_networks: boolean;
+    };
+    SystemSettingsRequest: {
+      docker_system_prune_cron_schedule: string;
+      metrics_cleanup_cron_schedule: string;
+      http_log_retention_days?: number | null;
+      build_cache_max_age_days?: number | null;
+      build_cache_max_use_space_bytes?: number | null;
+      prune_images?: boolean;
+      prune_containers?: boolean;
+      prune_volumes?: boolean;
+      prune_networks?: boolean;
     };
     TestContainerRegistryCredentialsResponse: {
       success: boolean;
@@ -10877,6 +11070,81 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ConsolePasswordTokensDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  console_system_settings_retrieve: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SystemSettings"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsoleSystemSettingsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  console_system_settings_update: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SystemSettingsRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["SystemSettingsRequest"];
+        "multipart/form-data": components["schemas"]["SystemSettingsRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SystemSettings"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsoleSystemSettingsUpdateErrorResponse400"];
         };
       };
       401: {

@@ -6,6 +6,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.utils import timezone
 import requests
 import socket
+import threading
 import time
 import json
 import logging
@@ -28,6 +29,15 @@ class TelemetryMiddleware:
     def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]) -> None:
         self.get_response = get_response
 
+    @staticmethod
+    def _send_ping():
+        # send `PING`
+        try:
+            requests.post("https://cdn.zaneops.dev/api/ping", timeout=5)
+        except Exception:
+            # we don't want to break the app if the CDN is not accessible from within this node
+            pass
+
     def __call__(self, request: HttpRequest):
         if (
             settings.ENVIRONMENT == settings.PRODUCTION_ENV
@@ -40,12 +50,8 @@ class TelemetryMiddleware:
                 # ping at most every 30 minutes
                 cache.set("zane:last_ping", last_ping, 30 * 60)
 
-                # send `PING`
-                try:
-                    requests.post("https://cdn.zaneops.dev/api/ping")
-                except Exception:
-                    # we don't want to break the app if the CDN is not accessible from within this node
-                    pass
+                # fire-and-forget so the request is never blocked by the ping
+                threading.Thread(target=self._send_ping, daemon=True).start()
         return self.get_response(request)
 
 

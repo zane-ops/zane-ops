@@ -14,6 +14,9 @@ from temporalio.client import (
     ScheduleActionStartWorkflow,
     ScheduleSpec,
     ScheduleIntervalSpec,
+    ScheduleUpdateInput,
+    ScheduleUpdate,
+    ScheduleAlreadyRunningError,
 )
 from temporalio.common import RetryPolicy
 from temporalio.exceptions import WorkflowAlreadyStartedError
@@ -23,6 +26,7 @@ from temporalio.types import (
     ReturnType,
     SelfType,
 )
+
 
 with workflow.unsafe.imports_passed_through():
     from asgiref.sync import async_to_sync
@@ -198,6 +202,60 @@ class TemporalClient:
         )
 
     @classmethod
+    async def create_or_update_schedule(
+        cls,
+        schedule_id: str,
+        workflow: Callable[..., Awaitable[Any]],
+        schedule_cron: str,
+    ):
+        client = await cls._ensure_client()
+
+        schedule = Schedule(
+            action=ScheduleActionStartWorkflow(
+                workflow,
+                id="_",
+                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
+            ),
+            spec=ScheduleSpec(cron_expressions=[schedule_cron]),
+        )
+
+        handle = client.get_schedule_handle(schedule_id)
+
+        def update_schedule_simple(input: ScheduleUpdateInput):
+            schedule = input.description.schedule
+
+            # Update the schedule
+            new_schedule = Schedule(
+                spec=ScheduleSpec(cron_expressions=[schedule_cron]),
+                action=ScheduleActionStartWorkflow(
+                    workflow,
+                    id="_",
+                    task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
+                ),
+                # Keep other properties the same
+                policy=schedule.policy,
+                state=schedule.state,
+            )
+
+            return ScheduleUpdate(schedule=new_schedule)
+
+        try:
+            await handle.update(
+                update_schedule_simple, rpc_timeout=timedelta(seconds=5)
+            )
+        except RPCError:
+            # probably because the schedule doesn't exist
+            try:
+                await client.create_schedule(
+                    schedule_id,
+                    schedule,
+                    rpc_timeout=timedelta(seconds=5),
+                )
+            except ScheduleAlreadyRunningError:
+                # because the schedule already exists and is running, we can ignore it
+                pass
+
+    @classmethod
     def pause_schedule(cls, id: str, note: Optional[str] = None):
         return async_to_sync(cls.apause_schedule)(id, note)
 
@@ -222,7 +280,8 @@ class TemporalClient:
         return async_to_sync(cls.adelete_schedule)(id)
 
     @classmethod
-    async def adelete_schedule(cls, id: str):
+    async def adelete_schedule(cls, id: str, prefix: str | None = "schedule-"):
         client = await cls._ensure_client()
-        handle = client.get_schedule_handle(f"schedule-{id}")
+        schedule_id = id if prefix is None else f"{prefix}{id}"
+        handle = client.get_schedule_handle(schedule_id)
         await handle.delete()

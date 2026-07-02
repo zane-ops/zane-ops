@@ -4775,6 +4775,183 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/console/system-settings/:
+    get:
+      operationId: console_system_settings_retrieve
+      tags:
+      - console
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleSystemSettingsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettings'
+          description: ''
+    put:
+      operationId: console_system_settings_update
+      tags:
+      - console
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemSettingsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SystemSettingsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SystemSettingsRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleSystemSettingsUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettings'
+          description: ''
   /api/console/users/:
     get:
       operationId: console_users_list
@@ -16102,6 +16279,14 @@ components:
           type: string
       required:
       - message
+    BuildEnum:
+      enum:
+      - oss
+      - ee
+      type: string
+      description: |-
+        * `oss` - oss
+        * `ee` - ee
     BuildRegistryListCreate:
       type: object
       properties:
@@ -18637,6 +18822,304 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleSystemSettingsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleSystemSettingsUpdateBuildCacheMaxAgeDaysErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - build_cache_max_age_days
+          type: string
+          description: '* `build_cache_max_age_days` - build_cache_max_age_days'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsUpdateBuildCacheMaxUseSpaceBytesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - build_cache_max_use_space_bytes
+          type: string
+          description: '* `build_cache_max_use_space_bytes` - build_cache_max_use_space_bytes'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsUpdateDockerSystemPruneCronScheduleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - docker_system_prune_cron_schedule
+          type: string
+          description: '* `docker_system_prune_cron_schedule` - docker_system_prune_cron_schedule'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ConsoleSystemSettingsUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsUpdateDockerSystemPruneCronScheduleErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsUpdateMetricsCleanupCronScheduleErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsUpdateHttpLogRetentionDaysErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsUpdateBuildCacheMaxAgeDaysErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsUpdateBuildCacheMaxUseSpaceBytesErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsUpdatePruneImagesErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsUpdatePruneContainersErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsUpdatePruneVolumesErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsUpdatePruneNetworksErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ConsoleSystemSettingsUpdateNonFieldErrorsErrorComponent'
+          docker_system_prune_cron_schedule: '#/components/schemas/ConsoleSystemSettingsUpdateDockerSystemPruneCronScheduleErrorComponent'
+          metrics_cleanup_cron_schedule: '#/components/schemas/ConsoleSystemSettingsUpdateMetricsCleanupCronScheduleErrorComponent'
+          http_log_retention_days: '#/components/schemas/ConsoleSystemSettingsUpdateHttpLogRetentionDaysErrorComponent'
+          build_cache_max_age_days: '#/components/schemas/ConsoleSystemSettingsUpdateBuildCacheMaxAgeDaysErrorComponent'
+          build_cache_max_use_space_bytes: '#/components/schemas/ConsoleSystemSettingsUpdateBuildCacheMaxUseSpaceBytesErrorComponent'
+          prune_images: '#/components/schemas/ConsoleSystemSettingsUpdatePruneImagesErrorComponent'
+          prune_containers: '#/components/schemas/ConsoleSystemSettingsUpdatePruneContainersErrorComponent'
+          prune_volumes: '#/components/schemas/ConsoleSystemSettingsUpdatePruneVolumesErrorComponent'
+          prune_networks: '#/components/schemas/ConsoleSystemSettingsUpdatePruneNetworksErrorComponent'
+    ConsoleSystemSettingsUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ConsoleSystemSettingsUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ConsoleSystemSettingsUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleSystemSettingsUpdateHttpLogRetentionDaysErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - http_log_retention_days
+          type: string
+          description: '* `http_log_retention_days` - http_log_retention_days'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsUpdateMetricsCleanupCronScheduleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - metrics_cleanup_cron_schedule
+          type: string
+          description: '* `metrics_cleanup_cron_schedule` - metrics_cleanup_cron_schedule'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsUpdatePruneContainersErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - prune_containers
+          type: string
+          description: '* `prune_containers` - prune_containers'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsUpdatePruneImagesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - prune_images
+          type: string
+          description: '* `prune_images` - prune_images'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsUpdatePruneNetworksErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - prune_networks
+          type: string
+          description: '* `prune_networks` - prune_networks'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsUpdatePruneVolumesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - prune_volumes
+          type: string
+          description: '* `prune_volumes` - prune_volumes'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsoleSystemSettingsUpdateError'
+      required:
+      - errors
+      - type
     ConsoleTransferWorkspaceOwnershipError:
       oneOf:
       - $ref: '#/components/schemas/ConsoleTransferWorkspaceOwnershipNonFieldErrorsErrorComponent'
@@ -30706,8 +31189,11 @@ components:
           type: string
         commit_sha:
           type: string
+        build:
+          $ref: '#/components/schemas/BuildEnum'
       required:
       - app_domain
+      - build
       - commit_sha
       - image_version
       - root_domain
@@ -31390,6 +31876,81 @@ components:
       - comment
       - key
       - value
+    SystemSettings:
+      type: object
+      properties:
+        docker_system_prune_cron_schedule:
+          type: string
+        metrics_cleanup_cron_schedule:
+          type: string
+        http_log_retention_days:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
+        build_cache_max_age_days:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
+        build_cache_max_use_space_bytes:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
+        prune_images:
+          type: boolean
+        prune_containers:
+          type: boolean
+        prune_volumes:
+          type: boolean
+        prune_networks:
+          type: boolean
+      required:
+      - build_cache_max_age_days
+      - build_cache_max_use_space_bytes
+      - docker_system_prune_cron_schedule
+      - http_log_retention_days
+      - metrics_cleanup_cron_schedule
+      - prune_containers
+      - prune_images
+      - prune_networks
+      - prune_volumes
+    SystemSettingsRequest:
+      type: object
+      properties:
+        docker_system_prune_cron_schedule:
+          type: string
+          minLength: 1
+        metrics_cleanup_cron_schedule:
+          type: string
+          minLength: 1
+        http_log_retention_days:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
+        build_cache_max_age_days:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
+        build_cache_max_use_space_bytes:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
+        prune_images:
+          type: boolean
+        prune_containers:
+          type: boolean
+        prune_volumes:
+          type: boolean
+        prune_networks:
+          type: boolean
+      required:
+      - docker_system_prune_cron_schedule
+      - metrics_cleanup_cron_schedule
     TestContainerRegistryCredentialsResponse:
       type: object
       properties:

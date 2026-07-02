@@ -1,4 +1,4 @@
-from zane_api.licensing.gate import LicenceFeature
+from zane_api.licensing.gate import LicenseFeature
 from .models import License
 
 
@@ -10,7 +10,7 @@ class EELicenseGate:
     includes that feature (see :meth:`License.is_feature_enabled`).
     """
 
-    def is_feature_enabled(self, feature: LicenceFeature) -> bool:
+    def is_feature_enabled(self, feature: LicenseFeature) -> bool:
         installed_license = License.get()
         return installed_license is not None and installed_license.is_feature_enabled(
             feature

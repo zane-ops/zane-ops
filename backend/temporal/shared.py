@@ -428,9 +428,10 @@ class CleanupResult:
 
 
 @dataclass
-class CleanupMetricsResult:
+class AppCleanupWorkflowResult:
     service_metrics_deleted_count: int
     stack_metrics_deleted_count: int
+    http_logs_deleted_count: int
 
 
 @dataclass
@@ -697,3 +698,11 @@ class ToggleComposeStackDetails:
     stack: ComposeStackSnapshot
     desired_state: Literal["start", "stop"]
     only_service: Optional[str] = None
+
+
+@dataclass
+class DockerSystemPruneSettings:
+    prune_images: bool
+    prune_volumes: bool
+    prune_networks: bool
+    prune_containers: bool

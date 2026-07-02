@@ -2,7 +2,8 @@ from rest_framework import serializers
 
 from zane_api.models import Workspace
 from zane_api.serializers import WorkspaceMemberSerializer
-from .models import PasswordResetToken
+from zane_api.validators import validate_cron_schedule
+from .models import PasswordResetToken, SystemSettings
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -64,3 +65,30 @@ class PasswordResetTokenSerializer(serializers.ModelSerializer):
     class Meta:
         model = PasswordResetToken
         fields = ["id", "value", "expires_at", "user"]
+
+
+class SystemSettingsSerializer(serializers.ModelSerializer):
+    docker_system_prune_cron_schedule = serializers.CharField(
+        validators=[validate_cron_schedule]
+    )
+    app_data_cleanup_cron_schedule = serializers.CharField(
+        validators=[validate_cron_schedule]
+    )
+    docker_build_cache_prune_cron_schedule = serializers.CharField(
+        validators=[validate_cron_schedule]
+    )
+
+    class Meta:
+        model = SystemSettings
+        fields = [
+            "docker_system_prune_cron_schedule",
+            "app_data_cleanup_cron_schedule",
+            "docker_build_cache_prune_cron_schedule",
+            "http_log_retention_days",
+            "build_cache_max_age_days",
+            "build_cache_max_use_space_bytes",
+            "prune_images",
+            "prune_containers",
+            "prune_volumes",
+            "prune_networks",
+        ]
