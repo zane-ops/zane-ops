@@ -1818,6 +1818,24 @@ export interface components {
     ConsolePasswordTokensListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsolePasswordTokensRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsoleSystemSettingsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsoleSystemSettingsUpdateAppDataCleanupCronScheduleErrorComponent: {
+      /**
+       * @description * `app_data_cleanup_cron_schedule` - app_data_cleanup_cron_schedule
+       * @enum {string}
+       */
+      attr: "app_data_cleanup_cron_schedule";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     ConsoleSystemSettingsUpdateBuildCacheMaxAgeDaysErrorComponent: {
       /**
        * @description * `build_cache_max_age_days` - build_cache_max_age_days
@@ -1868,7 +1886,7 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    ConsoleSystemSettingsUpdateError: components["schemas"]["ConsoleSystemSettingsUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateDockerSystemPruneCronScheduleErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateMetricsCleanupCronScheduleErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateHttpLogRetentionDaysErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateBuildCacheMaxAgeDaysErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateBuildCacheMaxUseSpaceBytesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneImagesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneContainersErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneVolumesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneNetworksErrorComponent"];
+    ConsoleSystemSettingsUpdateError: components["schemas"]["ConsoleSystemSettingsUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateDockerSystemPruneCronScheduleErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateAppDataCleanupCronScheduleErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateHttpLogRetentionDaysErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateBuildCacheMaxAgeDaysErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateBuildCacheMaxUseSpaceBytesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneImagesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneContainersErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneVolumesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneNetworksErrorComponent"];
     ConsoleSystemSettingsUpdateErrorResponse400: components["schemas"]["ConsoleSystemSettingsUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ConsoleSystemSettingsUpdateHttpLogRetentionDaysErrorComponent: {
       /**
@@ -1884,24 +1902,6 @@ export interface components {
        * @enum {string}
        */
       code: "invalid" | "max_string_length" | "max_value" | "min_value";
-      detail: string;
-    };
-    ConsoleSystemSettingsUpdateMetricsCleanupCronScheduleErrorComponent: {
-      /**
-       * @description * `metrics_cleanup_cron_schedule` - metrics_cleanup_cron_schedule
-       * @enum {string}
-       */
-      attr: "metrics_cleanup_cron_schedule";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ConsoleSystemSettingsUpdateNonFieldErrorsErrorComponent: {
@@ -7894,9 +7894,10 @@ export interface components {
     };
     SystemSettings: {
       docker_system_prune_cron_schedule: string;
-      metrics_cleanup_cron_schedule: string;
+      app_data_cleanup_cron_schedule: string;
       http_log_retention_days: number | null;
       build_cache_max_age_days: number | null;
+      /** Format: int64 */
       build_cache_max_use_space_bytes: number | null;
       prune_images: boolean;
       prune_containers: boolean;
@@ -7905,9 +7906,10 @@ export interface components {
     };
     SystemSettingsRequest: {
       docker_system_prune_cron_schedule: string;
-      metrics_cleanup_cron_schedule: string;
+      app_data_cleanup_cron_schedule: string;
       http_log_retention_days?: number | null;
       build_cache_max_age_days?: number | null;
+      /** Format: int64 */
       build_cache_max_use_space_bytes?: number | null;
       prune_images?: boolean;
       prune_containers?: boolean;

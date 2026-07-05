@@ -18829,6 +18829,36 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleSystemSettingsUpdateAppDataCleanupCronScheduleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - app_data_cleanup_cron_schedule
+          type: string
+          description: '* `app_data_cleanup_cron_schedule` - app_data_cleanup_cron_schedule'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     ConsoleSystemSettingsUpdateBuildCacheMaxAgeDaysErrorComponent:
       type: object
       properties:
@@ -18915,7 +18945,7 @@ components:
       oneOf:
       - $ref: '#/components/schemas/ConsoleSystemSettingsUpdateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/ConsoleSystemSettingsUpdateDockerSystemPruneCronScheduleErrorComponent'
-      - $ref: '#/components/schemas/ConsoleSystemSettingsUpdateMetricsCleanupCronScheduleErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsUpdateAppDataCleanupCronScheduleErrorComponent'
       - $ref: '#/components/schemas/ConsoleSystemSettingsUpdateHttpLogRetentionDaysErrorComponent'
       - $ref: '#/components/schemas/ConsoleSystemSettingsUpdateBuildCacheMaxAgeDaysErrorComponent'
       - $ref: '#/components/schemas/ConsoleSystemSettingsUpdateBuildCacheMaxUseSpaceBytesErrorComponent'
@@ -18928,7 +18958,7 @@ components:
         mapping:
           non_field_errors: '#/components/schemas/ConsoleSystemSettingsUpdateNonFieldErrorsErrorComponent'
           docker_system_prune_cron_schedule: '#/components/schemas/ConsoleSystemSettingsUpdateDockerSystemPruneCronScheduleErrorComponent'
-          metrics_cleanup_cron_schedule: '#/components/schemas/ConsoleSystemSettingsUpdateMetricsCleanupCronScheduleErrorComponent'
+          app_data_cleanup_cron_schedule: '#/components/schemas/ConsoleSystemSettingsUpdateAppDataCleanupCronScheduleErrorComponent'
           http_log_retention_days: '#/components/schemas/ConsoleSystemSettingsUpdateHttpLogRetentionDaysErrorComponent'
           build_cache_max_age_days: '#/components/schemas/ConsoleSystemSettingsUpdateBuildCacheMaxAgeDaysErrorComponent'
           build_cache_max_use_space_bytes: '#/components/schemas/ConsoleSystemSettingsUpdateBuildCacheMaxUseSpaceBytesErrorComponent'
@@ -18965,36 +18995,6 @@ components:
             * `max_string_length` - max_string_length
             * `max_value` - max_value
             * `min_value` - min_value
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ConsoleSystemSettingsUpdateMetricsCleanupCronScheduleErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - metrics_cleanup_cron_schedule
-          type: string
-          description: '* `metrics_cleanup_cron_schedule` - metrics_cleanup_cron_schedule'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
@@ -31881,7 +31881,7 @@ components:
       properties:
         docker_system_prune_cron_schedule:
           type: string
-        metrics_cleanup_cron_schedule:
+        app_data_cleanup_cron_schedule:
           type: string
         http_log_retention_days:
           type: integer
@@ -31895,8 +31895,9 @@ components:
           nullable: true
         build_cache_max_use_space_bytes:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 1
+          format: int64
           nullable: true
         prune_images:
           type: boolean
@@ -31907,11 +31908,11 @@ components:
         prune_networks:
           type: boolean
       required:
+      - app_data_cleanup_cron_schedule
       - build_cache_max_age_days
       - build_cache_max_use_space_bytes
       - docker_system_prune_cron_schedule
       - http_log_retention_days
-      - metrics_cleanup_cron_schedule
       - prune_containers
       - prune_images
       - prune_networks
@@ -31922,7 +31923,7 @@ components:
         docker_system_prune_cron_schedule:
           type: string
           minLength: 1
-        metrics_cleanup_cron_schedule:
+        app_data_cleanup_cron_schedule:
           type: string
           minLength: 1
         http_log_retention_days:
@@ -31937,8 +31938,9 @@ components:
           nullable: true
         build_cache_max_use_space_bytes:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 1
+          format: int64
           nullable: true
         prune_images:
           type: boolean
@@ -31949,8 +31951,8 @@ components:
         prune_networks:
           type: boolean
       required:
+      - app_data_cleanup_cron_schedule
       - docker_system_prune_cron_schedule
-      - metrics_cleanup_cron_schedule
     TestContainerRegistryCredentialsResponse:
       type: object
       properties:
