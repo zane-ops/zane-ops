@@ -1,26 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  BellIcon,
   Building2Icon,
   CheckIcon,
   ChevronsUpDownIcon,
   CommandIcon,
-  GitBranchIcon,
-  KeyRoundIcon,
-  LoaderIcon,
   LogOutIcon,
   SearchIcon,
   ServerIcon,
-  SettingsIcon,
-  TerminalIcon,
-  UserIcon
+  SettingsIcon
 } from "lucide-react";
 import type * as React from "react";
 import { Link, href, useFetcher, useNavigate } from "react-router";
 import type { AuthedUserResponse, WorkspaceMembership } from "~/api/types";
 import { ThemedLogo } from "~/components/logo";
 import { StatusBadge } from "~/components/status-badge";
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -337,16 +330,8 @@ export function UserDropdown(props: UserDropdownProps) {
           </DropdownMenuGroup>
           <DropdownMenuSeparator className="my-1.5" />
           <DropdownMenuGroup>
-            {/* <DropdownMenuItem
-              onClick={() => {
-                navigate("/settings/account");
-              }}
-            >
-              <UserIcon /> 
-              Account
-            </DropdownMenuItem> */}
-
             <DropdownMenuItem
+              className="my-2"
               onClick={() => {
                 navigate("/settings");
               }}
@@ -354,9 +339,9 @@ export function UserDropdown(props: UserDropdownProps) {
               <SettingsIcon />
               Settings
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="my-1.5" />
             {user.is_superuser && (
               <DropdownMenuItem
+                className="my-2"
                 onClick={() => {
                   navigate("/admin");
                 }}
