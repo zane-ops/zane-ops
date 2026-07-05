@@ -24,7 +24,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     userQueries.checkUserExistence
   );
 
-  if (!userExistQuery.data?.exists) {
+  if (userExistQuery.data?.exists) {
     throw redirect("/login");
   }
   return;
