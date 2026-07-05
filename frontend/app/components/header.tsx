@@ -61,7 +61,7 @@ export function Header(props: HeaderProps) {
           <ThemedLogo className="flex-none size-10 mr-3" />
         </Link>
 
-        <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-0"></div>
+        <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15"></div>
 
         {props.user.membership && props.memberships && (
           <>
@@ -70,9 +70,11 @@ export function Header(props: HeaderProps) {
               memberships={props.memberships}
             />
 
-            {/* <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15"></div> */}
+            <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15"></div>
           </>
         )}
+
+        <UserDropdown user={props.user} />
 
         <div className="flex grow  w-full items-center">
           {/* <Button asChild>
@@ -97,7 +99,6 @@ export function Header(props: HeaderProps) {
             <CommandIcon className="size-4 flex-none" /> K
           </span>
         </Button>
-        <UserDropdown user={props.user} />
 
         {/** Mobile */}
         {/* <div className="md:hidden block">
@@ -196,7 +197,7 @@ export function UserDropdown(props: UserDropdownProps) {
         className="hidden"
       />
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex justify-center items-center gap-2 p-0 rounded-full">
+        <DropdownMenuTrigger className="flex justify-center items-center gap-2 p-1">
           <div
             style={
               {
@@ -205,21 +206,21 @@ export function UserDropdown(props: UserDropdownProps) {
               } as React.CSSProperties
             }
             className={cn(
-              "size-10 flex-none rounded-full flex items-center justify-center",
+              "size-6 flex-none rounded-md flex items-center justify-center",
               //   "text-[var(--color-light)] dark:text-[var(--color-dark)]",
               //   "bg-[var(--color-light)]/10 dark:bg-[var(--container-color-dark)]/10",
-              "text-card-foreground bg-grey/10 border border-grey/20"
+              "text-card-foreground bg-grey/10"
             )}
           >
-            <p>{data.user.username.charAt(0).toUpperCase()}</p>
-            {/* <UserIcon className="size-4 flex-none" /> */}
+            {/* <p>{data.user.username.charAt(0).toUpperCase()}</p> */}
+            <UserIcon className="size-4 flex-none" />
           </div>
-          {/* <p>{data.user.username}</p> */}
-          {/* <ChevronsUpDownIcon className="size-3.5 flex-none my-auto text-grey" /> */}
+          <p>{data.user.username}</p>
+          <ChevronsUpDownIcon className="size-3.5 flex-none my-auto text-grey" />
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="border min-w-0  border-border w-34 rounded-lg"
-          align="end"
+          className="border min-w-0  border-border w-36 rounded-lg"
+          align="start"
           alignOffset={-5}
         >
           {/* <MenubarContentItem
