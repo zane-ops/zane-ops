@@ -10,8 +10,6 @@ import {
   FieldSetLabel,
   FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
-import { Input } from "~/components/ui/input";
-import { PasswordToggleInput } from "~/components/ui/password-toggle-input";
 import { userQueries } from "~/lib/queries";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
@@ -35,7 +33,9 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
   if (user) {
     const redirect_to = searchParams.get("redirect_to");
-    let redirectTo = "/";
+    let redirectTo = user.membership
+      ? `/${user.membership.workspace.id}`
+      : "/user";
     if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
       redirectTo = redirect_to;
     }

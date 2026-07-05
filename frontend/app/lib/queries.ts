@@ -60,6 +60,12 @@ export const userQueries = {
     queryFn: async ({ signal }) => {
       const { data } = await apiClient.GET("/api/workspace/", { signal });
       return data ?? null;
+    },
+    refetchInterval: (query) => {
+      if (query.state.data) {
+        return durationToMs(30, "minutes");
+      }
+      return false;
     }
   }),
 
@@ -113,9 +119,9 @@ export const projectSearchSchema = zfd.formData({
 export type ProjectSearch = z.infer<typeof projectSearchSchema>;
 
 export const projectQueries = {
-  list: (filters: ProjectSearch = {}) =>
+  list: (workspaceId: string, filters: ProjectSearch = {}) =>
     queryOptions({
-      queryKey: ["PROJECT_LIST", filters] as const,
+      queryKey: ["WORKSPACE", workspaceId, "PROJECT_LIST", filters] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET("/api/projects/", {
           params: {

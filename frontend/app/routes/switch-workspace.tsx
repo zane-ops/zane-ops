@@ -1,4 +1,4 @@
-import { redirect } from "react-router";
+import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { userQueries } from "~/lib/queries";
@@ -24,21 +24,27 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   });
 
   if (error) {
-    const fullErrorMessage = error.errors.map((err) => err.detail).join(" ");
+    const fullErrorMessage = error.errors
+      .map((err) => `${err.attr}: ${err.detail}`)
+      .join(" ");
 
     toast.error("Error", {
       description: fullErrorMessage,
       closeButton: true
     });
-    throw redirect("/");
+    return;
   }
 
-  queryClient.invalidateQueries({
-    queryKey: userQueries.authedUser.queryKey
-  });
-  queryClient.invalidateQueries({
-    queryKey: userQueries.currentWorkspace.queryKey
-  });
+  await Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: userQueries.authedUser.queryKey
+    }),
+    queryClient.invalidateQueries({
+      predicate(query) {
+        return query.queryKey[0] === userQueries.currentWorkspace.queryKey[0];
+      }
+    })
+  ]);
 
-  throw redirect("/");
+  throw redirect(href("/:workspaceId", { workspaceId: userData.workspace_id }));
 }

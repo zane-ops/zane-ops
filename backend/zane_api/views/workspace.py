@@ -12,7 +12,7 @@ from rest_framework.generics import (
     RetrieveUpdateDestroyAPIView,
 )
 
-from rest_framework import status
+from rest_framework import status, permissions
 from temporal.client import TemporalClient
 from temporal.shared import (
     ArchivedProjectDetails,
@@ -191,6 +191,7 @@ class ListWorkspaceMembersAPIView(ListAPIView):
 class WorkspaceMembershipListAPIView(ListAPIView):
     serializer_class = WorkspaceMembershipSerializer
     pagination_class = None
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self) -> QuerySet[WorkspaceMembership]:  # type: ignore
         return (

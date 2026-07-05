@@ -39,7 +39,7 @@ import type { Route } from "./+types/project-settings";
 export default function ProjectSettingsPage({
   params,
   matches: {
-    "2": {
+    "3": {
       loaderData: { project }
     }
   }
@@ -107,7 +107,7 @@ export async function clientAction({
 
   switch (intent) {
     case "update_project": {
-      return updateProject(params.projectSlug, formData);
+      return updateProject(params, formData);
     }
     case "archive_project": {
       if (
@@ -126,7 +126,7 @@ export async function clientAction({
           } satisfies ErrorResponseFromAPI
         };
       }
-      return archiveProject(params.projectSlug);
+      return archiveProject(params);
     }
     default: {
       throw new Error("Unexpected intent");
@@ -134,7 +134,10 @@ export async function clientAction({
   }
 }
 
-async function updateProject(project_slug: string, formData: FormData) {
+async function updateProject(
+  params: Route.ClientActionArgs["params"],
+  formData: FormData
+) {
   const userData = {
     slug: formData.get("slug")?.toString() ?? "",
     description: formData.get("description")?.toString()
@@ -145,7 +148,7 @@ async function updateProject(project_slug: string, formData: FormData) {
     },
     params: {
       path: {
-        slug: project_slug
+        slug: params.projectSlug
       }
     },
     body: userData
@@ -158,30 +161,31 @@ async function updateProject(project_slug: string, formData: FormData) {
     };
   }
 
-  queryClient.invalidateQueries(projectQueries.single(project_slug));
+  queryClient.invalidateQueries(projectQueries.single(params.projectSlug));
   toast.success("Project updated successfully!", { closeButton: true });
 
-  if (apiResponse.data.slug !== project_slug) {
+  if (apiResponse.data.slug !== params.projectSlug) {
     queryClient.setQueryData(
       projectQueries.single(userData.slug).queryKey,
       apiResponse.data
     );
     throw redirect(
-      href("/project/:projectSlug/settings", {
-        projectSlug: apiResponse.data.slug
+      href("/:workspaceId/project/:projectSlug/settings", {
+        projectSlug: apiResponse.data.slug,
+        workspaceId: params.workspaceId
       })
     );
   }
 }
 
-async function archiveProject(project_slug: string) {
+async function archiveProject(params: Route.ClientActionArgs["params"]) {
   const apiResponse = await apiClient.DELETE("/api/projects/{slug}/", {
     headers: {
       ...(await getCsrfTokenHeader())
     },
     params: {
       path: {
-        slug: project_slug
+        slug: params.projectSlug
       }
     }
   });
@@ -192,22 +196,23 @@ async function archiveProject(project_slug: string) {
     };
   }
 
-  queryClient.invalidateQueries(projectQueries.single(project_slug));
+  queryClient.invalidateQueries(projectQueries.single(params.projectSlug));
   queryClient.invalidateQueries({
     predicate: (query) =>
       query.queryKey[0] === resourceQueries.search().queryKey[0] ||
-      query.queryKey[0] === projectQueries.list().queryKey[0]
+      query.queryKey[0] === projectQueries.list(params.workspaceId).queryKey[0]
   });
 
   toast.success("Success", {
     closeButton: true,
     description: (
       <span>
-        Project `<strong>{project_slug}</strong>` has been successfully deleted.
+        Project `<strong>{params.projectSlug}</strong>` has been successfully
+        deleted.
       </span>
     )
   });
-  throw redirect(`/`);
+  throw redirect(href("/:workspaceId", params));
 }
 
 type ProjectDetailsFormProps = {

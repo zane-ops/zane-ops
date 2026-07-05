@@ -3,7 +3,7 @@ import type { Route } from "./+types/dashboard";
 
 import { ArrowUpDownIcon, LoaderIcon, SearchIcon, XIcon } from "lucide-react";
 
-import { Link, useLoaderData, useSearchParams } from "react-router";
+import { Link, useLoaderData, useParams, useSearchParams } from "react-router";
 import { Input } from "~/components/ui/input";
 
 import { useQuery } from "@tanstack/react-query";
@@ -22,7 +22,10 @@ import {
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 
-export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+export async function clientLoader({
+  request,
+  params
+}: Route.ClientLoaderArgs) {
   const searchParams = new URL(request.url).searchParams;
 
   const search = projectSearchSchema.parse(searchParams);
@@ -34,7 +37,9 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
   // fetch the data on first load to prevent showing the loading fallback
   const [projectList, recentDeployments] = await Promise.all([
-    queryClient.ensureQueryData(projectQueries.list(filters)),
+    queryClient.ensureQueryData(
+      projectQueries.list(params.workspaceId, filters)
+    ),
     queryClient.ensureQueryData(deploymentQueries.recent)
   ]);
   return {
@@ -64,6 +69,7 @@ const sortValueMap = {
 };
 function ProjectsListSection() {
   const loaderData = useLoaderData<typeof clientLoader>();
+  const params = useParams<Route.ComponentProps["params"]>();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const search = projectSearchSchema.parse(searchParams);
@@ -75,7 +81,7 @@ function ProjectsListSection() {
   };
 
   const projectActiveQuery = useQuery({
-    ...projectQueries.list(filters),
+    ...projectQueries.list(params.workspaceId!, filters),
     initialData: loaderData.projectList
   });
 
@@ -172,9 +178,9 @@ function ProjectsListSection() {
             <h3 className="text-2xl font-medium text-card-foreground">
               Welcome to ZaneOps
             </h3>
-            <p>You don't have any project yet</p>
+            <p>This workspace doesn't have any projects yet.</p>
             <Button asChild>
-              <Link prefetch="intent" to="/create-project">
+              <Link prefetch="intent" to="./create-project">
                 Start by creating one
               </Link>
             </Button>
