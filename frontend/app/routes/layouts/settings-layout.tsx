@@ -1,4 +1,5 @@
 import {
+  Building2Icon,
   ContainerIcon,
   CreditCardIcon,
   GitBranchIcon,
@@ -6,7 +7,8 @@ import {
   type LucideIcon,
   TerminalIcon,
   TicketCheckIcon,
-  UserIcon
+  UserIcon,
+  UsersIcon
 } from "lucide-react";
 import { Link, Outlet } from "react-router";
 import { NavLink } from "react-router";
@@ -40,26 +42,37 @@ const sidebarNavItems: NavItem[] = [
     href: "account",
     icon: UserIcon
   },
+
   {
-    title: "SSH Keys",
-    href: "ssh-keys",
-    icon: KeyIcon
+    title: "Workspace",
+    href: "workspace",
+    icon: Building2Icon
   },
   {
-    title: "Console",
-    href: "server-console",
-    icon: TerminalIcon
+    title: "Team",
+    href: "users",
+    icon: UsersIcon
   },
   {
     title: "Git",
     href: "git-apps",
     icon: GitBranchIcon
   },
-  {
-    title: "Registries",
-    href: "build-registries",
-    icon: ContainerIcon
-  },
+  // {
+  //   title: "Registries",
+  //   href: "build-registries",
+  //   icon: ContainerIcon
+  // },
+  // {
+  //   title: "SSH Keys",
+  //   href: "ssh-keys",
+  //   icon: KeyIcon
+  // },
+  // {
+  //   title: "Console",
+  //   href: "server-console",
+  //   icon: TerminalIcon
+  // },
   {
     title: "Shared Credentials",
     href: "shared-credentials",

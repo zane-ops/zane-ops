@@ -5,16 +5,22 @@ import {
   CheckIcon,
   ChevronsUpDownIcon,
   CommandIcon,
+  GitBranchIcon,
+  KeyRoundIcon,
   LoaderIcon,
   LogOutIcon,
   SearchIcon,
+  ServerIcon,
   SettingsIcon,
+  TerminalIcon,
   UserIcon
 } from "lucide-react";
 import type * as React from "react";
-import { Link, useFetcher, useNavigate } from "react-router";
+import { Link, href, useFetcher, useNavigate } from "react-router";
 import type { AuthedUserResponse, WorkspaceMembership } from "~/api/types";
 import { ThemedLogo } from "~/components/logo";
+import { StatusBadge } from "~/components/status-badge";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -28,6 +34,7 @@ import {
 import { userQueries } from "~/lib/queries";
 
 import { cn } from "~/lib/utils";
+import type { clientAction } from "~/routes/switch-workspace";
 import { stringToColor } from "~/utils";
 
 type HeaderProps = {
@@ -35,7 +42,7 @@ type HeaderProps = {
   memberships: WorkspaceMembership[];
 };
 
-export function Header(props: HeaderProps) {
+export function Header({ user, memberships }: HeaderProps) {
   //   const [sheetOpen, setSheetOpen] = React.useState(false);
 
   return (
@@ -53,7 +60,7 @@ export function Header(props: HeaderProps) {
 
       <header
         className={cn(
-          "flex px-6 py-2 items-center gap-4",
+          "flex px-6 py-4 items-center gap-4",
           "border-b border-opacity-65 border-border bg-toggle justify-between sticky top-0 z-60",
           !import.meta.env.PROD && "top-7"
         )}
@@ -62,23 +69,19 @@ export function Header(props: HeaderProps) {
           <ThemedLogo className="flex-none size-10 mr-3" />
         </Link>
 
-        <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15"></div>
+        {/* <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15"></div>
 
         <span className="flex justify-center items-center gap-2 p-1 text-sm font-medium">
           <p className="whitespace-nowrap">Workspaces</p>
-        </span>
+        </span> */}
 
         <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15"></div>
 
-        {props.user.membership && props.memberships && (
-          <>
-            <WorkspaceMembershipList
-              current={props.user.membership}
-              memberships={props.memberships}
-            />
-
-            {/* <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15"></div> */}
-          </>
+        {user.membership && memberships && (
+          <WorkspaceMembershipList
+            current={user.membership}
+            memberships={memberships}
+          />
         )}
 
         <div className="flex grow  w-full items-center"></div>
@@ -96,7 +99,7 @@ export function Header(props: HeaderProps) {
           </span>
         </Button>
 
-        <UserDropdown user={props.user} />
+        <UserDropdown user={user} />
         {/* </div> */}
 
         {/** Mobile */}
@@ -187,63 +190,95 @@ function WorkspaceMembershipList({
   });
   const memberships = data ?? [];
 
+  const fetcher = useFetcher<typeof clientAction>();
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="flex justify-center items-center gap-2 p-1">
-        <div
-          style={
-            {
-              "--color-light": workspaceColor.light,
-              "--color-dark": workspaceColor.dark
-            } as React.CSSProperties
-          }
-          className={cn(
-            "size-6 flex-none rounded-md flex items-center justify-center",
-            "text-[var(--color-light)] dark:text-[var(--color-dark)]",
-            "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10"
-          )}
+    <>
+      <fetcher.Form
+        method="post"
+        action={href("/switch-workspace")}
+        id="switch-workspace-form"
+        className="hidden"
+      />
+      <DropdownMenu>
+        <DropdownMenuTrigger className="flex justify-center items-center gap-2 p-1">
+          <div
+            style={
+              {
+                "--color-light": workspaceColor.light,
+                "--color-dark": workspaceColor.dark
+              } as React.CSSProperties
+            }
+            className={cn(
+              "size-6 flex-none rounded-md flex items-center justify-center",
+              "text-[var(--color-light)] dark:text-[var(--color-dark)]",
+              "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10",
+              "border  border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10"
+            )}
+          >
+            {/* <Building2Icon className="size-4 flex-none" /> */}
+            <span>{current.workspace.name.charAt(0).toUpperCase()}</span>
+          </div>
+          <p className="whitespace-nowrap text-foreground">
+            {current.workspace.name}
+          </p>
+          <ChevronsUpDownIcon className="size-3.5 flex-none my-auto text-grey" />
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent
+          align="start"
+          alignOffset={0}
+          className="border min-w-0 border-border rounded-lg"
         >
-          <Building2Icon className="size-4 flex-none" />
-        </div>
-        <p className="whitespace-nowrap">{current.workspace.name}</p>
-        <ChevronsUpDownIcon className="size-3.5 flex-none my-auto text-grey" />
-      </DropdownMenuTrigger>
-
-      <DropdownMenuContent
-        align="start"
-        alignOffset={0}
-        className="border min-w-0 border-border rounded-lg"
-      >
-        <DropdownMenuGroup className="px-0.5">
-          <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
-          {memberships.map((m) => (
-            <DropdownMenuItem
-              key={m.id}
-              className="flex items-start gap-2 py-2 pl-2.5 pr-3"
-            >
-              <div
-                className={cn(
-                  "size-6 flex-none rounded-md flex items-center justify-center"
-                )}
+          <DropdownMenuGroup className="px-0.5">
+            <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+            {memberships.map((m) => (
+              <DropdownMenuItem
+                key={m.id}
+                className="flex items-start gap-2 py-2 pl-2.5 pr-3"
+                asChild
+                disabled={fetcher.state !== "idle"}
               >
-                <Building2Icon className="!size-4 flex-none" />
-              </div>
+                <button
+                  form="switch-workspace-form"
+                  type="submit"
+                  name="workspace_id"
+                  value={m.workspace.id}
+                  className="w-full"
+                  onClick={(e) => {
+                    e.currentTarget.form?.requestSubmit();
+                  }}
+                >
+                  <div
+                    className={cn(
+                      "size-6 flex-none rounded-md flex items-center justify-center"
+                    )}
+                  >
+                    <Building2Icon className="!size-4 flex-none" />
+                  </div>
 
-              <div className="flex flex-col mr-2">
-                <span className="font-medium">{m.workspace.name}</span>
-                <span className="text-grey">{m.workspace.id}</span>
-              </div>
+                  <div className="flex flex-col mr-2 items-start gap-0.5">
+                    <span className="font-medium">{m.workspace.name}</span>
+                    <StatusBadge
+                      pingState="hidden"
+                      className="py-0.5 px-1.5 text-xs"
+                    >
+                      {m.role_name}
+                    </StatusBadge>
+                  </div>
 
-              <span className="flex size-4 items-center justify-center ml-auto flex-none py-2.5">
-                {m.id === current.id && (
-                  <CheckIcon className="size-full text-teal-600" />
-                )}
-              </span>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+                  <span className="flex size-4 items-center justify-center ml-auto flex-none py-2.5">
+                    {m.id === current.id && (
+                      <CheckIcon className="size-full text-teal-600" />
+                    )}
+                  </span>
+                </button>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 }
 
@@ -266,11 +301,13 @@ export function UserDropdown(props: UserDropdownProps) {
 
   if (!data?.user) return null;
 
+  const user = data.user;
+
   return (
     <>
       <fetcher.Form
         method="post"
-        action="/logout"
+        action={href("/logout")}
         id="logout-form"
         className="hidden"
       />
@@ -282,7 +319,7 @@ export function UserDropdown(props: UserDropdownProps) {
               "text-card-foreground bg-grey/10 border border-grey/20"
             )}
           >
-            <p>{getUserDisplayName(data.user).charAt(0).toUpperCase()}</p>
+            <p>{getUserDisplayName(user).charAt(0).toUpperCase()}</p>
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -293,13 +330,22 @@ export function UserDropdown(props: UserDropdownProps) {
           <DropdownMenuGroup className="px-0.5">
             <DropdownMenuLabel className="flex flex-col">
               <span className="text-sm text-foreground">
-                {getUserDisplayName(data.user)}
+                {getUserDisplayName(user)}
               </span>
-              <span>{data.user.username}</span>
+              <span>{user.username}</span>
             </DropdownMenuLabel>
           </DropdownMenuGroup>
           <DropdownMenuSeparator className="my-1.5" />
           <DropdownMenuGroup>
+            {/* <DropdownMenuItem
+              onClick={() => {
+                navigate("/settings/account");
+              }}
+            >
+              <UserIcon /> 
+              Account
+            </DropdownMenuItem> */}
+
             <DropdownMenuItem
               onClick={() => {
                 navigate("/settings");
@@ -308,6 +354,17 @@ export function UserDropdown(props: UserDropdownProps) {
               <SettingsIcon />
               Settings
             </DropdownMenuItem>
+            <DropdownMenuSeparator className="my-1.5" />
+            {user.is_superuser && (
+              <DropdownMenuItem
+                onClick={() => {
+                  navigate("/admin");
+                }}
+              >
+                <ServerIcon />
+                Server Admin
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator className="my-1.5" />
             <DropdownMenuItem
               variant="destructive"
