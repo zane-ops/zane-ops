@@ -62,11 +62,11 @@ export function Header(props: HeaderProps) {
           <ThemedLogo className="flex-none size-10 mr-3" />
         </Link>
 
-        {/* <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15"></div>
+        <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15"></div>
 
         <span className="flex justify-center items-center gap-2 p-1 text-sm font-medium">
           <p className="whitespace-nowrap">Workspaces</p>
-        </span> */}
+        </span>
 
         <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15"></div>
 
