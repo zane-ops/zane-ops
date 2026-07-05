@@ -16101,6 +16101,7 @@ components:
       oneOf:
       - $ref: '#/components/schemas/AuthCreateInitialUserCreateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/AuthCreateInitialUserCreateUsernameErrorComponent'
+      - $ref: '#/components/schemas/AuthCreateInitialUserCreateFirstNameErrorComponent'
       - $ref: '#/components/schemas/AuthCreateInitialUserCreatePasswordErrorComponent'
       - $ref: '#/components/schemas/AuthCreateInitialUserCreateWorkspaceNameErrorComponent'
       discriminator:
@@ -16108,6 +16109,7 @@ components:
         mapping:
           non_field_errors: '#/components/schemas/AuthCreateInitialUserCreateNonFieldErrorsErrorComponent'
           username: '#/components/schemas/AuthCreateInitialUserCreateUsernameErrorComponent'
+          first_name: '#/components/schemas/AuthCreateInitialUserCreateFirstNameErrorComponent'
           password: '#/components/schemas/AuthCreateInitialUserCreatePasswordErrorComponent'
           workspace_name: '#/components/schemas/AuthCreateInitialUserCreateWorkspaceNameErrorComponent'
     AuthCreateInitialUserCreateErrorResponse400:
@@ -16119,6 +16121,36 @@ components:
         mapping:
           validation_error: '#/components/schemas/AuthCreateInitialUserCreateValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    AuthCreateInitialUserCreateFirstNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - first_name
+          type: string
+          description: '* `first_name` - first_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     AuthCreateInitialUserCreateNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -33093,6 +33125,10 @@ components:
           minLength: 1
           pattern: ^[\w.@+-]+$
           maxLength: 150
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 255
         password:
           type: string
           minLength: 8

@@ -694,8 +694,26 @@ export interface components {
     ArchiveServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     AuthCheckUserExistenceRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    AuthCreateInitialUserCreateError: components["schemas"]["AuthCreateInitialUserCreateNonFieldErrorsErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreateUsernameErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreatePasswordErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreateWorkspaceNameErrorComponent"];
+    AuthCreateInitialUserCreateError: components["schemas"]["AuthCreateInitialUserCreateNonFieldErrorsErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreateUsernameErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreateFirstNameErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreatePasswordErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreateWorkspaceNameErrorComponent"];
     AuthCreateInitialUserCreateErrorResponse400: components["schemas"]["AuthCreateInitialUserCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    AuthCreateInitialUserCreateFirstNameErrorComponent: {
+      /**
+       * @description * `first_name` - first_name
+       * @enum {string}
+       */
+      attr: "first_name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     AuthCreateInitialUserCreateNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -8454,6 +8472,7 @@ export interface components {
     };
     UserCreationRequestRequest: {
       username: string;
+      first_name?: string;
       password: string;
       /** @default Default workspace */
       workspace_name?: string;

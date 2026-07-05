@@ -24,6 +24,7 @@ class UserCreationRequestSerializer(serializers.Serializer):
     username = serializers.CharField(
         min_length=1, max_length=150, validators=[UnicodeUsernameValidator()]
     )
+    first_name = serializers.CharField(max_length=255, required=False)
     password = serializers.CharField(min_length=8)
     workspace_name = serializers.CharField(
         min_length=1, max_length=255, default="Default workspace"

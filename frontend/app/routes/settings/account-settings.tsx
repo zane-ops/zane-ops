@@ -40,7 +40,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   const profileData = {
     username: formData.get("username")?.toString(),
     first_name: formData.get("first_name")?.toString() || "",
-    last_name: formData.get("last_name")?.toString() || ""
+    last_name: "" // we use the first name as the display name
   } satisfies RequestInput<"patch", "/api/auth/update-profile/">;
 
   const { error: errors } = await apiClient.PATCH("/api/auth/update-profile/", {
@@ -150,22 +150,10 @@ function UpdateProfileForm() {
           errors={errors.first_name}
           className="flex flex-col gap-2"
         >
-          <FieldSetLabel className="block">First Name</FieldSetLabel>
+          <FieldSetLabel className="block">Display Name</FieldSetLabel>
           <FieldSetInput
-            placeholder="Enter your first name"
+            placeholder="Enter your display name"
             defaultValue={user?.first_name}
-          />
-        </FieldSet>
-
-        <FieldSet
-          name="last_name"
-          errors={errors.last_name}
-          className="flex flex-col gap-2"
-        >
-          <FieldSetLabel className="block">Last Name</FieldSetLabel>
-          <FieldSetInput
-            placeholder="Enter your last name"
-            defaultValue={user?.last_name}
           />
         </FieldSet>
       </div>

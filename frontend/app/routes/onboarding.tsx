@@ -2,11 +2,12 @@ import { AlertCircle, LoaderIcon } from "lucide-react";
 import * as React from "react";
 import { Form, redirect, useNavigation } from "react-router";
 import { toast } from "sonner";
-import { apiClient } from "~/api/client";
+import { type RequestInput, apiClient } from "~/api/client";
 import { ThemedLogo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { Separator } from "~/components/ui/separator";
 import { userQueries } from "~/lib/queries";
 import {
   type ErrorResponseFromAPI,
@@ -23,7 +24,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     userQueries.checkUserExistence
   );
 
-  if (userExistQuery.data?.exists) {
+  if (!userExistQuery.data?.exists) {
     throw redirect("/login");
   }
   return;
@@ -34,8 +35,12 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 
   const credentials = {
     username: formData.get("username")!.toString(),
+    first_name: formData.get("first_name")!.toString(),
     password: formData.get("password")!.toString(),
+    workspace_name: formData.get("workspace_name")?.toString(),
     password_confirmation: formData.get("password_confirmation")!.toString()
+  } satisfies RequestInput<"post", "/api/auth/create-initial-user/"> & {
+    password_confirmation: string;
   };
 
   if (credentials.password !== credentials.password_confirmation) {
@@ -149,10 +154,31 @@ export default function InitialRegistration({
                 type="text"
                 aria-describedby="username-error"
                 aria-invalid={!!errors.username}
+                autoFocus
               />
               {errors.username && (
                 <span id="username-error" className="text-red-500 text-sm">
                   {errors.username}
+                </span>
+              )}
+            </div>
+
+            <div className="my-2 flex flex-col gap-1">
+              <label htmlFor="first_name" className="">
+                Display Name <span className="text-grey">(optional)</span>
+              </label>
+              <Input
+                id="first_name"
+                name="first_name"
+                placeholder="ex: John Doe"
+                defaultValue={actionData?.userData?.first_name}
+                type="text"
+                aria-describedby="first-name-error"
+                aria-invalid={!!errors.first_name}
+              />
+              {errors.first_name && (
+                <span id="first-name-error" className="text-red-500 text-sm">
+                  {errors.first_name}
                 </span>
               )}
             </div>
@@ -201,6 +227,35 @@ export default function InitialRegistration({
                   className="text-red-500 text-sm"
                 >
                   {errors.password_confirmation}
+                </span>
+              )}
+            </div>
+
+            <Separator className="mt-4" />
+
+            <h3 className="my-2 text-lg text-grey">
+              Let's setup your first workspace
+            </h3>
+
+            <div className="my-2 flex flex-col gap-1">
+              <label htmlFor="workspace_name" className="">
+                Default Workspace Name
+              </label>
+              <Input
+                id="workspace_name"
+                name="workspace_name"
+                placeholder="ex: Default workspace"
+                defaultValue={actionData?.userData?.workspace_name}
+                type="text"
+                aria-describedby="workspace-name-error"
+                aria-invalid={!!errors.workspace_name}
+              />
+              {errors.workspace_name && (
+                <span
+                  id="workspace-name-error"
+                  className="text-red-500 text-sm"
+                >
+                  {errors.workspace_name}
                 </span>
               )}
             </div>

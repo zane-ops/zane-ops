@@ -45,7 +45,7 @@ export const userQueries = {
     queryKey: ["WORKSPACE_MEMBERSHIP", "LIST"] as const,
     queryFn: async ({ signal }) => {
       const { data } = await apiClient.GET("/api/workspaces/list/", { signal });
-      return data;
+      return data ?? null;
     },
     refetchInterval: (query) => {
       if (query.state.data) {
@@ -59,7 +59,7 @@ export const userQueries = {
     queryKey: ["WORKSPACE_MEMBERSHIP", "CURRENT"] as const,
     queryFn: async ({ signal }) => {
       const { data } = await apiClient.GET("/api/workspace/", { signal });
-      return data;
+      return data ?? null;
     }
   }),
 

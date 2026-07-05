@@ -189,10 +189,11 @@ function WorkspaceMembershipList({
 }: WorkspaceMembershipListProps) {
   const workspaceColor = stringToColor(current.workspace.name);
 
-  const { data: memberships = [] } = useQuery({
+  const { data } = useQuery({
     ...userQueries.memberships,
     initialData: props.memberships
   });
+  const memberships = data ?? [];
 
   return (
     <DropdownMenu>
@@ -272,20 +273,7 @@ export type UserDropdownProps = {
 };
 
 function getUserDisplayName(user: AuthedUserResponse["user"]) {
-  const names: string[] = [];
-
-  if (user.first_name) {
-    names.push(user.first_name);
-  }
-
-  if (user.last_name) {
-    names.push(user.last_name);
-  }
-
-  if (names.length === 0) {
-    names.push(user.username);
-  }
-  return names.join(" ");
+  return user.first_name.trim() ? user.first_name : user.username;
 }
 
 export function UserDropdown(props: UserDropdownProps) {
