@@ -27,6 +27,16 @@ export type Service = ApiResponse<
   "get",
   "/api/projects/{project_slug}/{env_slug}/service-details/{slug}/"
 >;
+
+export type AuthedUser = ApiResponse<"get", "/api/auth/me/">;
+
+export type WorkspaceMembership = ApiResponse<
+  "get",
+  "/api/workspaces/list/"
+>[number];
+
+export type SimpleWorkspace = ApiResponse<"get", "/api/workspace/">;
+
 export type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
 
 export type Project = ApiResponse<"get", "/api/projects/{slug}/">;

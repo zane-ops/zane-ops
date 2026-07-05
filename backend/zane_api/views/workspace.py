@@ -193,9 +193,11 @@ class WorkspaceMembershipListAPIView(ListAPIView):
     pagination_class = None
 
     def get_queryset(self) -> QuerySet[WorkspaceMembership]:  # type: ignore
-        return WorkspaceMembership.objects.filter(
-            user=self.request.user
-        ).select_related("workspace")
+        return (
+            WorkspaceMembership.objects.filter(user=self.request.user)
+            .select_related("workspace")
+            .order_by("pk")
+        )
 
 
 class WorkspaceDetailAPIView(RetrieveUpdateDestroyAPIView):

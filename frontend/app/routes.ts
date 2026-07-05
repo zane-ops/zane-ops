@@ -11,6 +11,7 @@ export default [
   route("logout", "./routes/logout.tsx"),
   route("onboarding", "./routes/onboarding.tsx"),
   route("trigger-update", "./routes/trigger-update.tsx"),
+  route("switch-workspace", "./routes/switch-workspace.tsx"),
 
   route(
     "project/:projectSlug/:envSlug/services/:serviceSlug/deploy-docker-service",

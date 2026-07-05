@@ -31,13 +31,35 @@ export const userQueries = {
     queryKey: ["AUTHED_USER"] as const,
     queryFn: async ({ signal }) => {
       const { data } = await apiClient.GET("/api/auth/me/", { signal });
-      return data?.user ?? null;
+      return data ?? null;
     },
     refetchInterval: (query) => {
       if (query.state.data) {
         return durationToMs(30, "minutes");
       }
       return false;
+    }
+  }),
+
+  memberships: queryOptions({
+    queryKey: ["WORKSPACE_MEMBERSHIP", "LIST"] as const,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.GET("/api/workspaces/list/", { signal });
+      return data;
+    },
+    refetchInterval: (query) => {
+      if (query.state.data) {
+        return durationToMs(30, "minutes");
+      }
+      return false;
+    }
+  }),
+
+  currentWorkspace: queryOptions({
+    queryKey: ["WORKSPACE_MEMBERSHIP", "CURRENT"] as const,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.GET("/api/workspace/", { signal });
+      return data;
     }
   }),
 
@@ -2868,3 +2890,11 @@ export const templateQueries = {
       }
     })
 };
+
+/************************************
+ *         Workspace Queries        *
+ ************************************/
+
+// export const workspaceQueries = {
+
+// };

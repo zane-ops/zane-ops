@@ -1,45 +1,17 @@
 import {
   ArrowBigUpDash,
   BookOpen,
-  ChevronDown,
-  CircleUser,
   GitCommitVertical,
   HeartHandshake,
   HeartIcon,
   LaptopMinimalIcon,
   LoaderIcon,
-  LogOut,
-  Menu,
   MoonIcon,
-  SettingsIcon,
   Sparkles,
   SunIcon,
   TagIcon
 } from "lucide-react";
-import {
-  Link,
-  Outlet,
-  href,
-  redirect,
-  useFetcher,
-  useNavigate
-} from "react-router";
-import { ThemedLogo } from "~/components/logo";
-import {
-  Menubar,
-  MenubarContent,
-  MenubarContentItem,
-  MenubarMenu,
-  MenubarSeparator,
-  MenubarTrigger
-} from "~/components/ui/menubar";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetHeader,
-  SheetTrigger
-} from "~/components/ui/sheet";
+import { Outlet, redirect, useFetcher } from "react-router";
 import { serverQueries, userQueries, versionQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { metaTitle } from "~/utils";
@@ -49,12 +21,12 @@ import * as React from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
-import { CommandMenuSearchbar } from "~/components/command-menu-searchbar";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { StatusBadge } from "~/components/status-badge";
 import { type Theme, useTheme } from "~/components/theme-context";
 import { Button, SubmitButton } from "~/components/ui/button";
 
+import { Header } from "~/components/header";
 import {
   Dialog,
   DialogContent,
@@ -77,16 +49,17 @@ export function meta() {
 }
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
-  const [user, userExistQuery] = await Promise.all([
+  const [user, userExistQuery, memberships] = await Promise.all([
     queryClient.ensureQueryData(userQueries.authedUser),
-    queryClient.ensureQueryData(userQueries.checkUserExistence)
+    queryClient.ensureQueryData(userQueries.checkUserExistence),
+    queryClient.ensureQueryData(userQueries.memberships)
   ]);
 
   if (!userExistQuery.data?.exists) {
     throw redirect("/onboarding");
   }
 
-  if (!user) {
+  if (!user || !memberships) {
     let redirectPathName = `/login`;
     const url = new URL(request.url);
     if (url.pathname !== "/" && url.pathname !== "/login") {
@@ -99,7 +72,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
   // this is prefetched only when we are logged in
   await queryClient.prefetchQuery(serverQueries.resourceLimits);
-  return { user };
+  return { user, memberships };
 }
 
 export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
@@ -164,17 +137,12 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
     }
   }, [previousVersion, latestVersion?.tag, ongoingUpdateQuery]);
 
-  const { data: user } = useQuery({
-    ...userQueries.authedUser,
-    initialData: loaderData.user
-  });
-
-  if (!user) return null;
+  if (!loaderData.user || !loaderData.memberships) return null;
 
   return (
     <div className="min-h-screen flex flex-col justify-between">
       <NavigationProgress />
-      <Header user={user} />
+      <Header user={loaderData.user} memberships={loaderData.memberships} />
       <main
         className={cn(
           "grow container p-6 relative overflow-y-clip",
@@ -255,160 +223,160 @@ type HeaderProps = {
   user: Route.ComponentProps["loaderData"]["user"];
 };
 
-function Header({ user }: HeaderProps) {
-  const fetcher = useFetcher();
-  const navigate = useNavigate();
+// function Header({ user }: HeaderProps) {
+//   const fetcher = useFetcher();
+//   const navigate = useNavigate();
 
-  const [sheetOpen, setSheetOpen] = React.useState(false);
+//   const [sheetOpen, setSheetOpen] = React.useState(false);
 
-  return (
-    <>
-      {!import.meta.env.PROD && (
-        <div
-          className={cn(
-            "py-0.5 bg-red-500 text-white text-center fixed top-0 left-0 right-0  z-49",
-            "w-full"
-          )}
-        >
-          <p className="">⚠️ YOU ARE IN DEV ⚠️</p>
-        </div>
-      )}
-      <header
-        className={cn(
-          "flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toggle justify-between gap-4 sticky top-0 z-60",
-          !import.meta.env.PROD && "top-7"
-        )}
-      >
-        <Link to="/">
-          <ThemedLogo className="flex-none size-10 mr-8" />
-        </Link>
-        <div className="md:flex hidden  w-full items-center">
-          <Button asChild>
-            <Link to="/create-project" prefetch="intent">
-              Create project
-            </Link>
-          </Button>
+//   return (
+//     <>
+//       {!import.meta.env.PROD && (
+//         <div
+//           className={cn(
+//             "py-0.5 bg-red-500 text-white text-center fixed top-0 left-0 right-0  z-49",
+//             "w-full"
+//           )}
+//         >
+//           <p className="">⚠️ YOU ARE IN DEV ⚠️</p>
+//         </div>
+//       )}
+//       <header
+//         className={cn(
+//           "flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toggle justify-between gap-4 sticky top-0 z-60",
+//           !import.meta.env.PROD && "top-7"
+//         )}
+//       >
+//         <Link to="/">
+//           <ThemedLogo className="flex-none size-10 mr-8" />
+//         </Link>
+//         <div className="md:flex hidden  w-full items-center">
+//           {/* <Button asChild>
+//             <Link to="/create-project" prefetch="intent">
+//               Create project
+//             </Link>
+//           </Button> */}
 
-          <div className="flex mx-2 w-full justify-center items-center">
-            <CommandMenuSearchbar />
-          </div>
-        </div>
+//           {/* <div className="flex mx-2 w-full justify-center items-center">
+//             <CommandMenuSearchbar />
+//           </div> */}
+//         </div>
 
-        <fetcher.Form
-          method="post"
-          action="/logout"
-          id="logout-form"
-          className="hidden"
-        />
-        <Menubar className="border-none md:block hidden w-fit">
-          <MenubarMenu>
-            <MenubarTrigger className="flex justify-center items-center gap-2">
-              <CircleUser className="w-5 opacity-70" />
-              <p>{user.username}</p>
-              <ChevronDown className="w-4 my-auto" />
-            </MenubarTrigger>
-            <MenubarContent className="border min-w-0 mx-9  border-border">
-              <MenubarContentItem
-                icon={SettingsIcon}
-                text="Settings"
-                onClick={() => {
-                  navigate("/settings");
-                }}
-              />
+//         <fetcher.Form
+//           method="post"
+//           action="/logout"
+//           id="logout-form"
+//           className="hidden"
+//         />
+//         <Menubar className="border-none md:block hidden w-fit">
+//           <MenubarMenu>
+//             <MenubarTrigger className="flex justify-center items-center gap-2">
+//               <CircleUser className="w-5 opacity-70" />
+//               <p>{user.username}</p>
+//               <ChevronDown className="w-4 my-auto" />
+//             </MenubarTrigger>
+//             <MenubarContent className="border min-w-0 mx-9  border-border">
+//               <MenubarContentItem
+//                 icon={SettingsIcon}
+//                 text="Settings"
+//                 onClick={() => {
+//                   navigate("/settings");
+//                 }}
+//               />
 
-              <MenubarSeparator />
-              <button
-                className="w-full"
-                onClick={(e) => {
-                  e.currentTarget.form?.requestSubmit();
-                }}
-                form="logout-form"
-                disabled={fetcher.state !== "idle"}
-              >
-                {fetcher.state !== "idle" ? (
-                  "Logging out..."
-                ) : (
-                  <MenubarContentItem
-                    icon={LogOut}
-                    text="Logout"
-                    className="text-red-400"
-                  />
-                )}
-              </button>
-            </MenubarContent>
-          </MenubarMenu>
-        </Menubar>
+//               <MenubarSeparator />
+//               <button
+//                 className="w-full"
+//                 onClick={(e) => {
+//                   e.currentTarget.form?.requestSubmit();
+//                 }}
+//                 form="logout-form"
+//                 disabled={fetcher.state !== "idle"}
+//               >
+//                 {fetcher.state !== "idle" ? (
+//                   "Logging out..."
+//                 ) : (
+//                   <MenubarContentItem
+//                     icon={LogOut}
+//                     text="Logout"
+//                     className="text-red-400"
+//                   />
+//                 )}
+//               </button>
+//             </MenubarContent>
+//           </MenubarMenu>
+//         </Menubar>
 
-        {/** Mobile */}
-        <div className="md:hidden block">
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <SheetTrigger>
-              <Menu />
-            </SheetTrigger>
-            <SheetContent className="border flex rounded-xl  flex-col gap-5 w-full h-[calc(100dvh-100px)] border-border">
-              <SheetHeader>
-                <div className="absolute w-full top-3.5">
-                  <div className="flex justify-between w-[78%] items-center">
-                    <Link to="/">
-                      <ThemedLogo className="w-10 flex-none h-10 mr-8" />
-                    </Link>
-                  </div>
-                </div>
-              </SheetHeader>
-              <div className="flex mt-14 flex-col gap-3">
-                <CommandMenuSearchbar onSelect={() => setSheetOpen(false)} />
+//         {/** Mobile */}
+//         {/* <div className="md:hidden block">
+//           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+//             <SheetTrigger>
+//               <Menu />
+//             </SheetTrigger>
+//             <SheetContent className="border flex rounded-xl  flex-col gap-5 w-full h-[calc(100dvh-100px)] border-border">
+//               <SheetHeader>
+//                 <div className="absolute w-full top-3.5">
+//                   <div className="flex justify-between w-[78%] items-center">
+//                     <Link to="/">
+//                       <ThemedLogo className="w-10 flex-none h-10 mr-8" />
+//                     </Link>
+//                   </div>
+//                 </div>
+//               </SheetHeader>
+//               <div className="flex mt-14 flex-col gap-3">
+//                 <CommandMenuSearchbar onSelect={() => setSheetOpen(false)} />
 
-                <div className="flex items-center  w-full">
-                  <SheetClose asChild>
-                    <Button
-                      asChild
-                      className="flex w-full justify-between text-sm items-center gap-1"
-                    >
-                      <Link to="/create-project">Create Project</Link>
-                    </Button>
-                  </SheetClose>
-                </div>
-              </div>
+//                 <div className="flex items-center  w-full">
+//                   <SheetClose asChild>
+//                     <Button
+//                       asChild
+//                       className="flex w-full justify-between text-sm items-center gap-1"
+//                     >
+//                       <Link to="/create-project">Create Project</Link>
+//                     </Button>
+//                   </SheetClose>
+//                 </div>
+//               </div>
 
-              <div className="flex flex-col">
-                <div className="flex justify-between px-2 py-3 items-center border-b border-border">
-                  <p>{user.username}</p>
-                  <CircleUser className="w-8 opacity-70" />
-                </div>
+//               <div className="flex flex-col">
+//                 <div className="flex justify-between px-2 py-3 items-center border-b border-border">
+//                   <p>{user.username}</p>
+//                   <CircleUser className="w-8 opacity-70" />
+//                 </div>
 
-                <SheetClose asChild>
-                  <Link
-                    to={href("/settings")}
-                    className="flex items-center gap-1 p-2 hover:bg-muted transition rounded-md"
-                  >
-                    <SettingsIcon size={15} />
-                    <span>Settings</span>
-                  </Link>
-                </SheetClose>
-              </div>
+//                 <SheetClose asChild>
+//                   <Link
+//                     to={href("/settings")}
+//                     className="flex items-center gap-1 p-2 hover:bg-muted transition rounded-md"
+//                   >
+//                     <SettingsIcon size={15} />
+//                     <span>Settings</span>
+//                   </Link>
+//                 </SheetClose>
+//               </div>
 
-              <SheetClose asChild>
-                <Button
-                  type="submit"
-                  form="logout-form"
-                  variant="outline"
-                  className="p-2 border text-red-400 hover:text-red-500 hover:bg-muted"
-                  disabled={fetcher.state !== "idle"}
-                >
-                  {fetcher.state !== "idle" ? (
-                    "Logging out..."
-                  ) : (
-                    <div>Log Out</div>
-                  )}
-                </Button>
-              </SheetClose>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </header>
-    </>
-  );
-}
+//               <SheetClose asChild>
+//                 <Button
+//                   type="submit"
+//                   form="logout-form"
+//                   variant="outline"
+//                   className="p-2 border text-red-400 hover:text-red-500 hover:bg-muted"
+//                   disabled={fetcher.state !== "idle"}
+//                 >
+//                   {fetcher.state !== "idle" ? (
+//                     "Logging out..."
+//                   ) : (
+//                     <div>Log Out</div>
+//                   )}
+//                 </Button>
+//               </SheetClose>
+//             </SheetContent>
+//           </Sheet>
+//         </div> */}
+//       </header>
+//     </>
+//   );
+// }
 
 export const Discord = () => (
   <svg

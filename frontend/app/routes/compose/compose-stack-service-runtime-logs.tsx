@@ -56,8 +56,6 @@ import {
 } from "~/lib/queries";
 import { cn, formatLogTime } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { TASK_STATUS_COLOR_MAP } from "~/routes/compose/components/compose-stack-service-replica-card";
-import { stringToColor } from "~/utils";
 import type { Route } from "./+types/compose-stack-service-runtime-logs";
 
 export async function clientLoader({
