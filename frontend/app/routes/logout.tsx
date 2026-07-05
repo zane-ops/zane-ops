@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { userQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
-import { deleteCookie, getCsrfTokenHeader } from "~/utils";
+import { deleteCookie, getCsrfTokenHeader, wait } from "~/utils";
 
 export async function clientAction() {
   const { error } = await apiClient.DELETE("/api/auth/logout/", {
