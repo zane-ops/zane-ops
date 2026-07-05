@@ -111,13 +111,15 @@ export default function UserSettingsPage({}: Route.ComponentProps) {
 function UpdateProfileForm() {
   const loaderData = useLoaderData<typeof clientLoader>();
   const fetcher = useFetcher<typeof clientAction>();
-  const { data: user } = useQuery({
+  const { data } = useQuery({
     ...userQueries.authedUser,
     initialData: loaderData.user
   });
 
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+
+  const user = data?.user;
 
   return (
     <fetcher.Form method="POST" className="flex flex-col gap-6">

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import type * as React from "react";
 import { Link, useFetcher, useNavigate } from "react-router";
-import type { AuthedUser, WorkspaceMembership } from "~/api/types";
+import type { AuthedUserResponse, WorkspaceMembership } from "~/api/types";
 import { ThemedLogo } from "~/components/logo";
 import { Button } from "~/components/ui/button";
 import {
@@ -30,7 +30,7 @@ import { cn } from "~/lib/utils";
 import { stringToColor } from "~/utils";
 
 type HeaderProps = {
-  user: AuthedUser;
+  user: AuthedUserResponse;
   memberships: WorkspaceMembership[];
 };
 
@@ -171,9 +171,115 @@ export function Header(props: HeaderProps) {
   );
 }
 
-export type UserDropdownProps = {
-  user: AuthedUser;
+export type WorkspaceMembershipListProps = {
+  current: WorkspaceMembership;
+  memberships: WorkspaceMembership[];
 };
+
+function WorkspaceMembershipList({
+  current,
+  ...props
+}: WorkspaceMembershipListProps) {
+  const workspaceColor = stringToColor(current.workspace.name);
+
+  const { data: memberships = [] } = useQuery({
+    ...userQueries.memberships,
+    initialData: props.memberships
+  });
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="flex justify-center items-center gap-2 p-1">
+        <div
+          style={
+            {
+              "--color-light": workspaceColor.light,
+              "--color-dark": workspaceColor.dark
+            } as React.CSSProperties
+          }
+          className={cn(
+            "size-6 flex-none rounded-md flex items-center justify-center",
+            // "text-[var(--color-light)] dark:text-[var(--color-dark)]",
+            // "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10",
+            "text-grey bg-grey/10"
+          )}
+        >
+          <Building2Icon className="size-4 flex-none" />
+        </div>
+        <p className="whitespace-nowrap">{current.workspace.name}</p>
+        <ChevronsUpDownIcon className="size-3.5 flex-none my-auto text-grey" />
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        align="start"
+        alignOffset={0}
+        className="border min-w-0 border-border rounded-lg"
+      >
+        <DropdownMenuGroup className="px-0.5">
+          <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+          {memberships.map((m) => {
+            const color = stringToColor(m.workspace.name);
+            return (
+              <DropdownMenuItem
+                key={m.id}
+                className="flex items-start gap-2 py-2 pl-2.5 pr-3"
+              >
+                <div
+                  style={
+                    {
+                      "--color-light": color.light,
+                      "--color-dark": color.dark
+                    } as React.CSSProperties
+                  }
+                  className={cn(
+                    "size-6 flex-none rounded-md flex items-center justify-center",
+                    // "text-[var(--color-light)] dark:text-[var(--color-dark)]",
+                    // "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10"
+                    "text-grey bg-grey/10"
+                  )}
+                >
+                  <Building2Icon className="!size-4 flex-none" />
+                </div>
+
+                <div className="flex flex-col mr-2">
+                  <span className="font-medium">{m.workspace.name}</span>
+                  <span className="text-grey">{m.workspace.id}</span>
+                </div>
+
+                <span className="flex size-4 items-center justify-center ml-auto flex-none py-2.5">
+                  {m.id === current.id && (
+                    <CheckIcon className="size-full text-teal-600" />
+                  )}
+                </span>
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export type UserDropdownProps = {
+  user: AuthedUserResponse;
+};
+
+function getUserDisplayName(user: AuthedUserResponse["user"]) {
+  const names: string[] = [];
+
+  if (user.first_name) {
+    names.push(user.first_name);
+  }
+
+  if (user.last_name) {
+    names.push(user.last_name);
+  }
+
+  if (names.length === 0) {
+    names.push(user.username);
+  }
+  return names.join(" ");
+}
 
 export function UserDropdown(props: UserDropdownProps) {
   const fetcher = useFetcher();
@@ -209,13 +315,13 @@ export function UserDropdown(props: UserDropdownProps) {
               "size-6 flex-none rounded-md flex items-center justify-center",
               //   "text-[var(--color-light)] dark:text-[var(--color-dark)]",
               //   "bg-[var(--color-light)]/10 dark:bg-[var(--container-color-dark)]/10",
-              "text-card-foreground bg-grey/10"
+              "text-grey bg-grey/10"
             )}
           >
             {/* <p>{data.user.username.charAt(0).toUpperCase()}</p> */}
             <UserIcon className="size-4 flex-none" />
           </div>
-          <p>{data.user.username}</p>
+          <p className="whitespace-nowrap">{getUserDisplayName(data.user)}</p>
           <ChevronsUpDownIcon className="size-3.5 flex-none my-auto text-grey" />
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -275,92 +381,5 @@ export function UserDropdown(props: UserDropdownProps) {
         </DropdownMenuContent>
       </DropdownMenu>
     </>
-  );
-}
-
-export type WorkspaceMembershipListProps = {
-  current: WorkspaceMembership;
-  memberships: WorkspaceMembership[];
-};
-
-function WorkspaceMembershipList({
-  current,
-  ...props
-}: WorkspaceMembershipListProps) {
-  const workspaceColor = stringToColor(current.workspace.name);
-
-  const { data: memberships = [] } = useQuery({
-    ...userQueries.memberships,
-    initialData: props.memberships
-  });
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="flex justify-center items-center gap-2 p-1">
-        <div
-          style={
-            {
-              "--color-light": workspaceColor.light,
-              "--color-dark": workspaceColor.dark
-            } as React.CSSProperties
-          }
-          className={cn(
-            "size-6 flex-none rounded-md flex items-center justify-center",
-            "text-[var(--color-light)] dark:text-[var(--color-dark)]",
-            "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10"
-          )}
-        >
-          <Building2Icon className="size-4 flex-none" />
-        </div>
-        <p className="whitespace-nowrap">{current.workspace.name}</p>
-        <ChevronsUpDownIcon className="size-3.5 flex-none my-auto text-grey" />
-      </DropdownMenuTrigger>
-
-      <DropdownMenuContent
-        align="start"
-        alignOffset={0}
-        className="border min-w-0 border-border rounded-lg"
-      >
-        <DropdownMenuGroup className="px-0.5">
-          <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
-          {memberships.map((m) => {
-            const color = stringToColor(m.workspace.name);
-            return (
-              <DropdownMenuItem
-                key={m.id}
-                className="flex items-start gap-2 py-2 pl-2.5 pr-3"
-              >
-                <div
-                  style={
-                    {
-                      "--color-light": color.light,
-                      "--color-dark": color.dark
-                    } as React.CSSProperties
-                  }
-                  className={cn(
-                    "size-6 flex-none rounded-md flex items-center justify-center",
-                    "text-[var(--color-light)] dark:text-[var(--color-dark)]",
-                    "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10"
-                  )}
-                >
-                  <Building2Icon className="!size-4 flex-none" />
-                </div>
-
-                <div className="flex flex-col mr-2">
-                  <span className="font-medium">{m.workspace.name}</span>
-                  <span className="text-grey">{m.workspace.id}</span>
-                </div>
-
-                <span className="flex size-4 items-center justify-center ml-auto flex-none py-2.5">
-                  {m.id === current.id && (
-                    <CheckIcon className="size-full text-grey" />
-                  )}
-                </span>
-              </DropdownMenuItem>
-            );
-          })}
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }

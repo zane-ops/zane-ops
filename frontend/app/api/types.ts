@@ -28,7 +28,7 @@ export type Service = ApiResponse<
   "/api/projects/{project_slug}/{env_slug}/service-details/{slug}/"
 >;
 
-export type AuthedUser = ApiResponse<"get", "/api/auth/me/">;
+export type AuthedUserResponse = ApiResponse<"get", "/api/auth/me/">;
 
 export type WorkspaceMembership = ApiResponse<
   "get",
