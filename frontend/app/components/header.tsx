@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  BellIcon,
   Building2Icon,
   CheckIcon,
   ChevronsUpDownIcon,
@@ -88,17 +89,23 @@ export function Header(props: HeaderProps) {
           </div> */}
         </div>
 
-        <Button
-          variant="outline"
-          className="pl-3 pr-4 py-1 rounded-lg text-grey border-grey/20 gap-2"
-        >
-          <SearchIcon className="size-4 flex-none" />
-          <span>Search for projects, services...</span>
-          &nbsp;
-          <span className="font-mono px-1.5 gap-0.5 inline-flex items-center bg-muted rounded-md py-0.5 text-foreground">
-            <CommandIcon className="size-4 flex-none" /> K
-          </span>
-        </Button>
+        <div className="flex items-center gap-2 ">
+          <Button
+            variant="outline"
+            className="pl-3 pr-4 py-1 rounded-lg text-grey border-grey/20 gap-2"
+          >
+            <SearchIcon className="size-4 flex-none" />
+            <span>Search for projects, services...</span>
+            &nbsp;
+            <span className="font-mono px-1.5 gap-0.5 inline-flex items-center bg-muted rounded-md py-0.5 text-foreground">
+              <CommandIcon className="size-4 flex-none" /> K
+            </span>
+          </Button>
+
+          <Button variant="ghost" size="icon">
+            <BellIcon className="size-4 flex-none" />
+          </Button>
+        </div>
 
         {/** Mobile */}
         {/* <div className="md:hidden block">
