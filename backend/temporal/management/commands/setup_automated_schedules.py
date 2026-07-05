@@ -35,24 +35,26 @@ async def setup_jobs():
     print(
         f"Creating or updating schedule {Colors.ORANGE}{settings.APP_DATA_CLEANUP_SCHEDULE_ID}{Colors.BLUE}...🔄{Colors.ENDC}"
     )
-    if settings.ENVIRONMENT == settings.PRODUCTION_ENV:
-        print(
-            f"Creating or updating schedule {Colors.ORANGE}{settings.DOCKER_SYSTEM_PRUNE_SCHEDULE_ID}{Colors.BLUE}...🔄{Colors.ENDC}"
-        )
-    await asyncio.gather(
+    schedules = [
         TemporalClient.create_or_update_schedule(
             schedule_id=settings.APP_DATA_CLEANUP_SCHEDULE_ID,
             workflow=CleanupAppDataWorkflow.run,
             schedule_cron=system.app_data_cleanup_cron_schedule,
-        ),
-        TemporalClient.create_or_update_schedule(
-            schedule_id=settings.DOCKER_SYSTEM_PRUNE_SCHEDULE_ID,
-            workflow=DockerSystemPruneWorkflow.run,
-            schedule_cron=system.docker_system_prune_cron_schedule,
         )
-        if settings.ENVIRONMENT == settings.PRODUCTION_ENV
-        else noop(),
-    )
+    ]
+    if settings.ENVIRONMENT == settings.PRODUCTION_ENV:
+        print(
+            f"Creating or updating schedule {Colors.ORANGE}{settings.DOCKER_SYSTEM_PRUNE_SCHEDULE_ID}{Colors.BLUE}...🔄{Colors.ENDC}"
+        )
+        schedules.append(
+            TemporalClient.create_or_update_schedule(
+                schedule_id=settings.DOCKER_SYSTEM_PRUNE_SCHEDULE_ID,
+                workflow=DockerSystemPruneWorkflow.run,
+                schedule_cron=system.docker_system_prune_cron_schedule,
+            )
+        )
+
+    await asyncio.gather(*schedules)
     print("Schedules created/updated successfully ✅")
 
 
