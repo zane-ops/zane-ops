@@ -11,7 +11,7 @@ import {
   UserIcon
 } from "lucide-react";
 import type * as React from "react";
-import { Link, href, useFetcher, useNavigate } from "react-router";
+import { Link, href, useFetcher, useNavigate, useParams } from "react-router";
 import type { AuthedUserResponse, WorkspaceMembership } from "~/api/types";
 import { CommandBarTrigger } from "~/components/commandbar/commandbar-trigger";
 import { ThemedLogo } from "~/components/logo";
@@ -77,23 +77,29 @@ export function Header({ leftSlot, rigthSlot }: HeaderProps) {
 }
 
 export type WorkspaceMembershipListProps = {
-  current: WorkspaceMembership;
   memberships: WorkspaceMembership[];
 };
 
 export function WorkspaceMembershipList({
-  current,
   ...props
 }: WorkspaceMembershipListProps) {
-  const workspaceColor = stringToColor(current.workspace.name);
+  const params = useParams<{ workspaceId: string }>();
+
+  const workspaceId = params.workspaceId;
+
+  const current = props.memberships.find((m) => m.workspace.id === workspaceId);
 
   const { data } = useQuery({
     ...userQueries.memberships,
     initialData: props.memberships
   });
-  const memberships = data ?? [];
 
   const fetcher = useFetcher<typeof clientAction>();
+
+  if (!workspaceId || !current) return null;
+
+  const memberships = data ?? [];
+  const workspaceColor = stringToColor(current.workspace.name);
 
   return (
     <>
@@ -234,7 +240,7 @@ export function UserDropdown(props: UserDropdownProps) {
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="border border-border min-w-42 rounded-lg"
+          className="border border-border min-w-48 rounded-lg"
           align="end"
           alignOffset={-5}
         >

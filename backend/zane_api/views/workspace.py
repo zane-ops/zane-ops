@@ -59,6 +59,7 @@ from ..permissions import (
     HasWorkspace,
     IsWorkspaceOwner,
     IsWorkspaceAdmin,
+    IsWorkspaceGuest,
 )
 
 from django.db.models import QuerySet, Q
@@ -202,12 +203,16 @@ class WorkspaceMembershipListAPIView(ListAPIView):
 
 
 class WorkspaceDetailAPIView(RetrieveUpdateDestroyAPIView):
-    permission_classes = [HasWorkspace, IsWorkspaceOwner]
     serializer_class = WorkspaceSerializer
     http_method_names = ["put", "delete", "get"]
 
     def get_object(self) -> Workspace:  # type: ignore
         return self.request.workspace  # type: ignore
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [HasWorkspace(), IsWorkspaceGuest()]
+        return [HasWorkspace(), IsWorkspaceOwner()]
 
     @transaction.atomic()
     def perform_destroy(self, instance):

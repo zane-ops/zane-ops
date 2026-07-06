@@ -119,21 +119,13 @@ export default function DashboardLayout({
     }
   }, [previousVersion, latestVersion?.tag, ongoingUpdateQuery]);
 
-  if (
-    !loaderData.user ||
-    !loaderData.user.membership ||
-    !loaderData.memberships
-  )
-    return null;
+  if (!loaderData.user || !loaderData.memberships) return null;
 
   return (
     <>
       <Header
         leftSlot={
-          <WorkspaceMembershipList
-            current={loaderData.user.membership}
-            memberships={loaderData.memberships}
-          />
+          <WorkspaceMembershipList memberships={loaderData.memberships} />
         }
         rigthSlot={
           <>

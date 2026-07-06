@@ -7,23 +7,24 @@ import { queryClient } from "~/root";
 import type { Route } from "./+types/home";
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
-  const user = await queryClient.ensureQueryData(userQueries.authedUser);
+  const workspace = await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  );
 
-  if (!user) {
-    throw redirect(href("/login"));
-  }
-
-  if (user.membership) {
+  if (workspace) {
     throw redirect(
       href("/:workspaceId", {
-        workspaceId: user.membership.workspace.id
+        workspaceId: workspace.id
       })
     );
   }
-  return { user };
 }
 
-export default function HomePage({ loaderData }: Route.ComponentProps) {
+export default function HomePage({
+  matches: {
+    "1": { loaderData }
+  }
+}: Route.ComponentProps) {
   const { data: user } = useQuery({
     ...userQueries.authedUser,
     initialData: loaderData.user
