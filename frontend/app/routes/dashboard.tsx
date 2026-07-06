@@ -19,13 +19,14 @@ import {
   projectQueries,
   projectSearchSchema
 } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
 
 export async function clientLoader({
   request,
   params
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const searchParams = new URL(request.url).searchParams;
 
   const search = projectSearchSchema.parse(searchParams);

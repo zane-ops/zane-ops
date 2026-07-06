@@ -25,7 +25,7 @@ import {
   DialogTitle
 } from "~/components/ui/dialog";
 import { ZANE_UPDATE_TOAST_ID } from "~/lib/constants";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import {
   type clientAction,
   pollUntilUpdateDone
@@ -37,6 +37,7 @@ export function meta() {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const memberships = await queryClient.ensureQueryData(
     userQueries.memberships
   );

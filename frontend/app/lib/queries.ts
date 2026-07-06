@@ -38,7 +38,8 @@ export const userQueries = {
         return durationToMs(30, "minutes");
       }
       return false;
-    }
+    },
+    staleTime: durationToMs(30, "minutes")
   }),
 
   memberships: queryOptions({

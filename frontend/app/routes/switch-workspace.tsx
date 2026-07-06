@@ -2,7 +2,8 @@ import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { userQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
+
+import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/switch-workspace";
 
@@ -35,10 +36,10 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     return;
   }
 
+  const queryClient = getQueryClient();
+
   await Promise.all([
-    queryClient.invalidateQueries({
-      queryKey: userQueries.authedUser.queryKey
-    }),
+    queryClient.invalidateQueries(userQueries.authedUser),
     queryClient.invalidateQueries({
       predicate(query) {
         return query.queryKey[0] === userQueries.currentWorkspace.queryKey[0];

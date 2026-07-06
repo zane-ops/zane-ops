@@ -35,10 +35,10 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { composeStackQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import type { ValueOf } from "~/lib/types";
 import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
 import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 import {
   durationToMs,
@@ -415,6 +415,7 @@ async function toggleStateToast({
 
   let currentState: ToggleStackState | null = null;
 
+  const queryClient = getQueryClient();
   while (total_tries < MAX_TRIES && currentState !== desiredState) {
     total_tries++;
 

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LogOutIcon, ServerIcon, SettingsIcon, UserIcon } from "lucide-react";
 import { href, useFetcher, useNavigate } from "react-router";
 import type { AuthedUserResponse } from "~/api/types";

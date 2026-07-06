@@ -27,6 +27,7 @@ import { ThemeProvider, getThemePreference } from "~/components/theme-context";
 import { Button } from "~/components/ui/button";
 import { Toaster } from "~/components/ui/sonner";
 import { THEME_STORAGE_KEY } from "~/lib/constants";
+import { getQueryClient } from "~/lib/query-client";
 import { durationToMs } from "~/utils";
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
@@ -50,20 +51,6 @@ export function links() {
 export function meta() {
   return [{ title: "ZaneOps" }] satisfies ReturnType<Route.MetaFunction>;
 }
-
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      placeholderData: keepPreviousData,
-      gcTime: durationToMs(3, "days"),
-      retry(failureCount, error) {
-        // error responses are valid responses that react router can handle, so we don't want to retry them
-        return !(error instanceof Response) && failureCount < 3;
-      }
-    }
-  }
-});
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -118,6 +105,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const queryClient = getQueryClient();
+
   // we don't need persistence in DEV, because it might cause cache issues
   if (import.meta.env.DEV) {
     return (

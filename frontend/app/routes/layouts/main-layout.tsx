@@ -16,10 +16,13 @@ import { Button } from "~/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { serverQueries, userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
+
+import { getQueryClient } from "~/lib/query-client";
 import type { Route } from "./+types/main-layout";
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+
   const [user, userExistQuery, memberships] = await Promise.all([
     queryClient.ensureQueryData(userQueries.authedUser),
     queryClient.ensureQueryData(userQueries.checkUserExistence),

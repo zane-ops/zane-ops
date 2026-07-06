@@ -4,10 +4,13 @@ import { Header } from "~/components/header/header";
 import { UserDropdown } from "~/components/header/user-header-dropdown";
 import { userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
+
+import { getQueryClient } from "~/lib/query-client";
 import type { Route } from "./+types/home";
 
-export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+export async function clientLoader({}: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+
   const workspace = await queryClient.ensureQueryData(
     userQueries.currentWorkspace
   );
