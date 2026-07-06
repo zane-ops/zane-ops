@@ -130,7 +130,7 @@ class WorkspaceInvitation(TimestampedModel):
     accessible_projects = models.ManyToManyField("Project", blank=True)
 
     @property
-    def role_name(self) -> Literal["Owner", "Admin", "Member", "Contributor", "Guest"]:
+    def role_name(self) -> Literal["Owner", "Admin", "Member", "Guest"]:
         return self.get_role_display()
 
     @property
@@ -167,7 +167,7 @@ class WorkspaceMembership(models.Model):
     accessible_projects = models.ManyToManyField("Project", blank=True)
 
     @property
-    def role_name(self) -> Literal["Owner", "Admin", "Member", "Contributor", "Guest"]:
+    def role_name(self) -> Literal["Owner", "Admin", "Member", "Guest"]:
         return self.get_role_display()
 
     class Meta:

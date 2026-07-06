@@ -30,7 +30,7 @@ import { userQueries } from "~/lib/queries";
 
 import { cn } from "~/lib/utils";
 import type { clientAction } from "~/routes/switch-workspace";
-import { stringToColor } from "~/utils";
+import { hasMinRole, stringToColor } from "~/utils";
 
 type HeaderProps = {
   leftSlot?: React.ReactNode;
@@ -119,7 +119,6 @@ export function WorkspaceMembershipList({
               "border  border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10"
             )}
           >
-            {/* <Building2Icon className="size-4 flex-none" /> */}
             <span>{current.workspace.name.charAt(0).toUpperCase()}</span>
           </div>
           <p className="whitespace-nowrap text-foreground">
@@ -256,18 +255,22 @@ export function UserDropdown(props: UserDropdownProps) {
               }}
             >
               <UserIcon />
-              Account
+              Account Settings
             </DropdownMenuItem>
-            <DropdownMenuItem
-              className="my-2"
-              onClick={() => {
-                navigate("/settings");
-              }}
-            >
-              <SettingsIcon />
-              Settings
-            </DropdownMenuItem>
-            {user.is_superuser && (
+
+            {hasMinRole(props.user, "Member") && (
+              <DropdownMenuItem
+                className="my-2"
+                onClick={() => {
+                  navigate("/settings");
+                }}
+              >
+                <SettingsIcon />
+                Workspace Settings
+              </DropdownMenuItem>
+            )}
+
+            {hasMinRole(props.user, "ServerAdmin") && (
               <>
                 <DropdownMenuSeparator className="my-1.5" />
                 <DropdownMenuItem
@@ -281,22 +284,15 @@ export function UserDropdown(props: UserDropdownProps) {
                 </DropdownMenuItem>
               </>
             )}
+
             <DropdownMenuSeparator className="my-1.5" />
             <DropdownMenuItem
               variant="destructive"
               disabled={fetcher.state !== "idle"}
               className="whitespace-nowrap"
-              onClick={() => fetcher.submit(new FormData())}
               asChild
             >
-              <button
-                form="logout-form"
-                type="submit"
-                className="w-full"
-                onClick={(e) => {
-                  e.currentTarget.form?.requestSubmit();
-                }}
-              >
+              <button form="logout-form" type="submit" className="w-full">
                 <LogOutIcon />
                 Log out
               </button>

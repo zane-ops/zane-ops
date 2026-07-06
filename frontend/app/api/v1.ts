@@ -7437,7 +7437,7 @@ export interface components {
      */
     RoleEnum: 10 | 30 | 40 | 50;
     /** @enum {string} */
-    RoleNameEnum: "Owner" | "Admin" | "Member" | "Contributor" | "Guest";
+    RoleNameEnum: "Owner" | "Admin" | "Member" | "Guest";
     RuntimeLog: {
       id: string;
       service_id: string | null;
@@ -16039,11 +16039,6 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      403: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {

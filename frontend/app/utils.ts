@@ -1,3 +1,4 @@
+import type { AuthedUserResponse, WorkspaceMembership } from "~/api/types";
 import { apiClient } from "./api/client";
 
 export function excerpt(text: string, maxLength: number): string {
@@ -448,4 +449,25 @@ export function getMaxDomainForStorageValue(maxValueInBytes: number) {
             ? _10Mb
             : _100Kb)
   );
+}
+
+export function hasMinRole(
+  user: AuthedUserResponse,
+  roleName: WorkspaceMembership["role_name"] | "ServerAdmin"
+) {
+  if (roleName === "ServerAdmin") {
+    return user.user.is_superuser;
+  }
+
+  const roleMapping = {
+    Guest: 10,
+    Member: 30,
+    Admin: 40,
+    Owner: 50
+  } satisfies Record<
+    WorkspaceMembership["role_name"],
+    WorkspaceMembership["role"]
+  >;
+
+  return user.membership && user.membership.role >= roleMapping[roleName];
 }
