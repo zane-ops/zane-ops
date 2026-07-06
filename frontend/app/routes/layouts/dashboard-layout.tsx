@@ -13,11 +13,9 @@ import { StatusBadge } from "~/components/status-badge";
 import { Button, SubmitButton } from "~/components/ui/button";
 
 import { CommandBarTrigger } from "~/components/commandbar/commandbar-trigger";
-import {
-  Header,
-  UserDropdown,
-  WorkspaceMembershipList
-} from "~/components/header";
+import { Header } from "~/components/header/header";
+import { UserDropdown } from "~/components/header/user-header-dropdown";
+import { WorkspaceMembershipList } from "~/components/header/workpace-list-header-dropdown";
 import {
   Dialog,
   DialogContent,

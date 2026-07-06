@@ -15,7 +15,7 @@ import { type Theme, useTheme } from "~/components/theme-context";
 import { Button } from "~/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { serverQueries, userQueries } from "~/lib/queries";
-import { cn, notFound } from "~/lib/utils";
+import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import type { Route } from "./+types/main-layout";
 

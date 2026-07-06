@@ -63,10 +63,11 @@ const sortKeyMap: Record<string, string> = {
   "-updated_at": "Last Updated"
 };
 
-const sortValueMap = {
+const sortValueMap: Record<string, string> = {
   Alphabetical: "slug",
   "Last Updated": "-updated_at"
 };
+
 function ProjectsListSection() {
   const loaderData = useLoaderData<typeof clientLoader>();
   const params = useParams<Route.ComponentProps["params"]>();
@@ -149,7 +150,6 @@ function ProjectsListSection() {
             searchParams.delete("sort_by");
 
             for (const value of newVal) {
-              // @ts-expect-error
               const field = sortValueMap[value];
               searchParams.append("sort_by", field);
             }
