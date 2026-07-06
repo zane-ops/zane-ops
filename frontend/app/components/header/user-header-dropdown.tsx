@@ -24,7 +24,7 @@ function getUserDisplayName(user: AuthedUserResponse["user"]) {
   return user.first_name.trim() ? user.first_name : user.username;
 }
 
-export function UserDropdown(props: UserDropdownProps) {
+export function UserHeaderDropdown(props: UserDropdownProps) {
   const fetcher = useFetcher();
   const navigate = useNavigate();
 

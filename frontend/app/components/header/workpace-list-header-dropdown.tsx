@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
 import type * as React from "react";
-import { href, useFetcher, useParams } from "react-router";
+import { Link, href, useFetcher, useParams } from "react-router";
 import type { WorkspaceMembership } from "~/api/types";
 import { StatusBadge } from "~/components/status-badge";
+import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +23,7 @@ export type WorkspaceMembershipListProps = {
   memberships: WorkspaceMembership[];
 };
 
-export function WorkspaceMembershipList({
+export function WorkspaceMembershipListHeaderDropdown({
   ...props
 }: WorkspaceMembershipListProps) {
   const params = useParams<{ workspaceId: string }>();
@@ -44,15 +45,19 @@ export function WorkspaceMembershipList({
   const workspaceColor = stringToColor(current.workspace.name);
 
   return (
-    <>
+    <div className="inline-flex items-center gap-1">
       <fetcher.Form
         method="post"
         action={href("/switch-workspace")}
         id="switch-workspace-form"
         className="hidden"
       />
-      <DropdownMenu>
-        <DropdownMenuTrigger className="flex justify-center items-center gap-2 p-1">
+      <Button
+        variant="ghost"
+        asChild
+        className="inline-flex gap-0.5 p-1 rounded-sm text-sm h-8"
+      >
+        <Link to={href("/:workspaceId", { workspaceId })}>
           <div
             style={
               {
@@ -72,7 +77,19 @@ export function WorkspaceMembershipList({
           <p className="whitespace-nowrap text-foreground">
             {current.workspace.name}
           </p>
-          <ChevronsUpDownIcon className="size-3.5 flex-none my-auto text-grey" />
+          <StatusBadge pingState="hidden" className="py-0.5 px-1.5 text-xs">
+            {current.role_name}
+          </StatusBadge>
+        </Link>
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className="inline-flex justify-center items-center gap-2 p-1 h-8 w-6"
+          >
+            <ChevronsUpDownIcon className="size-3.5 flex-none my-auto text-grey" />
+          </Button>
         </DropdownMenuTrigger>
 
         <DropdownMenuContent
@@ -137,6 +154,6 @@ export function WorkspaceMembershipList({
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
-    </>
+    </div>
   );
 }

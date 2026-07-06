@@ -14,8 +14,8 @@ import { Button, SubmitButton } from "~/components/ui/button";
 
 import { CommandBarTrigger } from "~/components/commandbar/commandbar-trigger";
 import { Header } from "~/components/header/header";
-import { UserDropdown } from "~/components/header/user-header-dropdown";
-import { WorkspaceMembershipList } from "~/components/header/workpace-list-header-dropdown";
+import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
+import { WorkspaceMembershipListHeaderDropdown } from "~/components/header/workpace-list-header-dropdown";
 import {
   Dialog,
   DialogContent,
@@ -124,12 +124,14 @@ export default function DashboardLayout({
     <>
       <Header
         leftSlot={
-          <WorkspaceMembershipList memberships={loaderData.memberships} />
+          <WorkspaceMembershipListHeaderDropdown
+            memberships={loaderData.memberships}
+          />
         }
         rigthSlot={
           <>
             <CommandBarTrigger />
-            <UserDropdown user={loaderData.user} />
+            <UserHeaderDropdown user={loaderData.user} />
           </>
         }
       />

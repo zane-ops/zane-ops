@@ -35,10 +35,11 @@ export function Header({ leftSlot, rigthSlot }: HeaderProps) {
         </Link>
 
         {leftSlot && (
-          <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15" />
+          <>
+            <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15" />
+            {leftSlot}
+          </>
         )}
-
-        {leftSlot}
 
         <div className="flex grow  w-full items-center"></div>
 
