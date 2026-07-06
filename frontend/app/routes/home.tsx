@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Navigate, href, redirect } from "react-router";
+import { href, redirect } from "react-router";
 import { Header, UserDropdown } from "~/components/header";
 import { userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
