@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router";
 import { GitBranchIcon } from "lucide-react";
 import * as React from "react";
+import { useParams } from "react-router";
 import {
   Command,
   CommandInput,

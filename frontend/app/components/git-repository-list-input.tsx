@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router";
 import { GithubIcon, GitlabIcon, LockIcon } from "lucide-react";
 import React from "react";
+import { useParams } from "react-router";
 import { useDebounce } from "use-debounce";
 import type { GitRepository } from "~/api/types";
 import {

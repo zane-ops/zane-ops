@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router";
 import {
   AlertCircleIcon,
   ExternalLinkIcon,
@@ -10,6 +9,7 @@ import {
   Undo2Icon
 } from "lucide-react";
 import * as React from "react";
+import { useParams } from "react-router";
 import type { Service } from "~/api/types";
 import { Code } from "~/components/code";
 import {
