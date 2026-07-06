@@ -67,7 +67,7 @@ export async function clientLoader({
 export default function ServiceMetricsPage({
   loaderData,
   matches: {
-    "2": {
+    "3": {
       loaderData: { limits, service }
     }
   },

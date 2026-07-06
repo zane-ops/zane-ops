@@ -454,7 +454,11 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
               value={selectedRegistry}
               onValueChange={(value) => {
                 if (value === "add-new") {
-                  navigate(href("/settings/shared-credentials/new"));
+                  navigate(
+                    href("/:workspaceId/settings/shared-credentials/new", {
+                      workspaceId: params.workspaceId!
+                    })
+                  );
                 } else {
                   setSelectedRegistry(value);
                 }

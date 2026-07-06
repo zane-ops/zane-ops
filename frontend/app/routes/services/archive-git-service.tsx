@@ -86,8 +86,7 @@ export async function clientAction({
     environmentQueries.serviceList(workspaceId, project_slug, env_slug)
   );
   queryClient.invalidateQueries({
-    predicate: (query) =>
-      query.queryKey[0] === resourceQueries.search(workspaceId).queryKey[0]
+    queryKey: resourceQueries.search(workspaceId).queryKey.slice(0, 3)
   });
 
   toast.success("Success", {

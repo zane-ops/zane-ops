@@ -6,7 +6,7 @@ import {
   Undo2Icon
 } from "lucide-react";
 import React from "react";
-import { href, useFetcher, useNavigate } from "react-router";
+import { href, useFetcher, useNavigate, useParams } from "react-router";
 import type { ComposeStack } from "~/api/types";
 import { EnvVariableChangeItem } from "~/components/change-fields";
 import {
@@ -46,6 +46,7 @@ export function ComposeStackChangesModal({
   ...params
 }: ComposeStackChangesModalProps) {
   const fetcher = useFetcher<typeof clientAction>();
+  const routeParams = useParams();
   const [isOpen, setIsOpen] = React.useState(false);
   const isDeploying = fetcher.state !== "idle";
   const navigate = useNavigate();
@@ -58,9 +59,10 @@ export function ComposeStackChangesModal({
         setIsOpen(false);
         navigate(
           href(
-            "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
+            "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
             {
               ...params,
+              workspaceId: routeParams.workspaceId!,
               composeStackSlug: stack.slug
             }
           )

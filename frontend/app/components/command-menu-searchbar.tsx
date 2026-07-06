@@ -11,7 +11,7 @@ import {
   Search
 } from "lucide-react";
 import * as React from "react";
-import { href, useNavigate } from "react-router";
+import { href, useNavigate, useParams } from "react-router";
 import { useDebounce } from "use-debounce";
 import {
   Command,
@@ -29,6 +29,7 @@ export type CommandMenuSearchbarProps = {
 };
 
 export function CommandMenuSearchbar({ onSelect }: CommandMenuSearchbarProps) {
+  const params = useParams();
   const [open, setOpen] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -131,21 +132,30 @@ export function CommandMenuSearchbar({ onSelect }: CommandMenuSearchbarProps) {
 
                   switch (resource.type) {
                     case "project":
-                      targetUrl = href("/project/:projectSlug/:envSlug", {
-                        projectSlug: resource.slug,
-                        envSlug: "production"
-                      });
+                      targetUrl = href(
+                        "/:workspaceId/project/:projectSlug/:envSlug",
+                        {
+                          workspaceId: params.workspaceId!,
+                          projectSlug: resource.slug,
+                          envSlug: "production"
+                        }
+                      );
                       break;
                     case "environment":
-                      targetUrl = href("/project/:projectSlug/:envSlug", {
-                        projectSlug: resource.project_slug,
-                        envSlug: resource.name
-                      });
+                      targetUrl = href(
+                        "/:workspaceId/project/:projectSlug/:envSlug",
+                        {
+                          workspaceId: params.workspaceId!,
+                          projectSlug: resource.project_slug,
+                          envSlug: resource.name
+                        }
+                      );
                       break;
                     case "service":
                       targetUrl = href(
-                        "/project/:projectSlug/:envSlug/services/:serviceSlug",
+                        "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
                         {
+                          workspaceId: params.workspaceId!,
                           projectSlug: resource.project_slug,
                           envSlug: resource.environment,
                           serviceSlug: resource.slug
@@ -154,8 +164,9 @@ export function CommandMenuSearchbar({ onSelect }: CommandMenuSearchbarProps) {
                       break;
                     case "compose_stack":
                       targetUrl = href(
-                        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+                        "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
                         {
+                          workspaceId: params.workspaceId!,
                           projectSlug: resource.project_slug,
                           envSlug: resource.environment,
                           composeStackSlug: resource.slug

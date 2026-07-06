@@ -202,10 +202,10 @@ async function archiveProject(params: Route.ClientActionArgs["params"]) {
     projectQueries.single(params.workspaceId, params.projectSlug)
   );
   queryClient.invalidateQueries({
-    predicate: (query) =>
-      query.queryKey[0] ===
-        resourceQueries.search(params.workspaceId).queryKey[0] ||
-      query.queryKey[0] === projectQueries.list(params.workspaceId).queryKey[0]
+    queryKey: resourceQueries.search(params.workspaceId).queryKey.slice(0, 3)
+  });
+  queryClient.invalidateQueries({
+    queryKey: projectQueries.list(params.workspaceId).queryKey.slice(0, 3)
   });
 
   toast.success("Success", {

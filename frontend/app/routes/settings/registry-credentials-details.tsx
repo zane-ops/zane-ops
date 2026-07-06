@@ -296,7 +296,9 @@ async function deleteCredentials(
       description: fullErrorMessage,
       closeButton: true
     });
-    throw redirect(href("/settings/shared-credentials"));
+    throw redirect(
+      href("/:workspaceId/settings/shared-credentials", { workspaceId })
+    );
   }
   toast.success("Success", {
     description: (
@@ -343,7 +345,9 @@ async function testCredentials(
       closeButton: true
     });
 
-    throw redirect(href("/settings/shared-credentials"));
+    throw redirect(
+      href("/:workspaceId/settings/shared-credentials", { workspaceId })
+    );
   }
   await queryClient.invalidateQueries(
     sharedRegistryCredentialsQueries.list(workspaceId)
@@ -408,5 +412,7 @@ async function updateCredentials(
   await queryClient.invalidateQueries(
     sharedRegistryCredentialsQueries.list(workspaceId)
   );
-  throw redirect(href("/settings/shared-credentials"));
+  throw redirect(
+    href("/:workspaceId/settings/shared-credentials", { workspaceId })
+  );
 }

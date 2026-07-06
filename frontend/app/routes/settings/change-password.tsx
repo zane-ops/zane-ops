@@ -20,7 +20,10 @@ export const meta: Route.MetaFunction = () => [
   metaTitle("Update your password")
 ];
 
-export async function clientAction({ request }: Route.ClientActionArgs) {
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
   const formData = await request.formData();
   const credentials = {
     current_password: formData.get("current_password")!.toString(),
@@ -41,7 +44,9 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     description: "Password updated successfully"
   });
 
-  throw redirect(href("/settings/account"));
+  throw redirect(
+    href("/:workspaceId/settings/account", { workspaceId: params.workspaceId })
+  );
 }
 
 export default function UserSettingsPage({}: Route.ComponentProps) {

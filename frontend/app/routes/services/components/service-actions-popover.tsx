@@ -52,6 +52,7 @@ export function ServiceActionsPopover({
   projectSlug,
   envSlug
 }: ServiceActionsPopoverProps) {
+  const workspaceId = useParams().workspaceId!;
   const deployFetcher = useFetcher<typeof deployClientAction>();
 
   const navigate = useNavigate();
@@ -60,11 +61,15 @@ export function ServiceActionsPopover({
     if (deployFetcher.state === "idle" && deployFetcher.data) {
       if (!deployFetcher.data.errors) {
         navigate(
-          href("/project/:projectSlug/:envSlug/services/:serviceSlug", {
-            projectSlug,
-            envSlug,
-            serviceSlug: service.slug
-          })
+          href(
+            "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
+            {
+              workspaceId,
+              projectSlug,
+              envSlug,
+              serviceSlug: service.slug
+            }
+          )
         );
       }
     }
@@ -333,11 +338,15 @@ async function toggleStateToast({
   const serviceLink = (
     <Link
       className="text-link underline inline break-all"
-      to={href("/project/:projectSlug/:envSlug/services/:serviceSlug", {
-        projectSlug,
-        envSlug,
-        serviceSlug
-      })}
+      to={href(
+        "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
+        {
+          workspaceId,
+          projectSlug,
+          envSlug,
+          serviceSlug
+        }
+      )}
     >
       {projectSlug}/{envSlug}/{serviceSlug}
     </Link>

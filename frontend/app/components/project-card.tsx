@@ -1,5 +1,5 @@
 import { SettingsIcon } from "lucide-react";
-import { Link, href } from "react-router";
+import { Link, href, useParams } from "react-router";
 import type { Project } from "~/api/types";
 import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
@@ -18,6 +18,7 @@ export type ProjectCardProps = {
 };
 
 export function ProjectCard({ project }: ProjectCardProps) {
+  const params = useParams();
   const healthy_services =
     project.healthy_services + project.healthy_stack_services;
   const total_services = project.total_services + project.total_stack_services;
@@ -33,7 +34,8 @@ export function ProjectCard({ project }: ProjectCardProps) {
     >
       <div className="flex items-center justify-between gap-2 text-lg font-semibold">
         <Link
-          to={href("/project/:projectSlug/:envSlug", {
+          to={href("/:workspaceId/project/:projectSlug/:envSlug", {
+            workspaceId: params.workspaceId!,
             envSlug: "production",
             projectSlug: project.slug
           })}
@@ -47,7 +49,8 @@ export function ProjectCard({ project }: ProjectCardProps) {
             <TooltipTrigger asChild>
               <Button asChild variant="ghost" size="sm" className="w-9">
                 <Link
-                  to={href("/project/:projectSlug/settings", {
+                  to={href("/:workspaceId/project/:projectSlug/settings", {
+                    workspaceId: params.workspaceId!,
                     projectSlug: project.slug
                   })}
                   className="relative z-10"

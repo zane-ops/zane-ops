@@ -11,7 +11,7 @@ import {
   UserIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, href, redirect, useFetcher } from "react-router";
+import { Link, href, redirect, useFetcher, useParams } from "react-router";
 import { apiClient } from "~/api/client";
 import type { SSHKey } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
@@ -49,7 +49,10 @@ export async function clientLoader() {
   return { sshKeys };
 }
 
-export async function clientAction({ request }: Route.ClientActionArgs) {
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
   const formData = await request.formData();
 
   const { error: errors } = await apiClient.DELETE(
@@ -73,7 +76,9 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   }
 
   await queryClient.invalidateQueries(sshKeysQueries.list);
-  throw redirect(href("/settings/ssh-keys"));
+  throw redirect(
+    href("/:workspaceId/settings/ssh-keys", { workspaceId: params.workspaceId })
+  );
 }
 
 export default function SSHKeysPagePage({ loaderData }: Route.ComponentProps) {
@@ -119,6 +124,7 @@ type SSHKeyCardProps = {
 };
 
 function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
+  const params = useParams<Route.ComponentProps["params"]>();
   return (
     <Card>
       <CardContent className="rounded-md p-4 gap-4 flex flex-col items-start md:flex-row md:items-center bg-toggle">
@@ -155,7 +161,9 @@ function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
                 <Button size="sm" variant="ghost" asChild>
                   <Link
                     to={{
-                      pathname: href("/settings/server-console"),
+                      pathname: href("/:workspaceId/settings/server-console", {
+                        workspaceId: params.workspaceId!
+                      }),
                       search: `?ssh_key_slug=${encodeURIComponent(ssh_key.slug)}`
                     }}
                   >

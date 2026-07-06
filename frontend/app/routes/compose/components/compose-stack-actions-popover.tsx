@@ -49,6 +49,7 @@ export function ComposeStackActionsPopover({
   projectSlug,
   envSlug
 }: ComposeStackActionsPopoverProps) {
+  const workspaceId = useParams().workspaceId!;
   const deployFetcher = useFetcher<typeof deployClientAction>();
 
   const navigate = useNavigate();
@@ -58,8 +59,9 @@ export function ComposeStackActionsPopover({
       if (!deployFetcher.data.errors) {
         navigate(
           href(
-            "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
+            "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
             {
+              workspaceId,
               projectSlug,
               envSlug,
               composeStackSlug: stack.slug
@@ -243,8 +245,9 @@ async function toggleStateToast({
     <Link
       className="text-link underline inline break-all"
       to={href(
-        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+        "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
         {
+          workspaceId,
           projectSlug,
           envSlug,
           composeStackSlug: stackSlug

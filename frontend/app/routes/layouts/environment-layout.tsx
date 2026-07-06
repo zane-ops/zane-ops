@@ -162,7 +162,8 @@ export default function EnvironmentLayout({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={href("/project/:projectSlug/:envSlug", {
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
+                  workspaceId: params.workspaceId,
                   projectSlug: params.projectSlug,
                   envSlug: "production"
                 })}
@@ -211,7 +212,8 @@ export default function EnvironmentLayout({
       <div className="pt-5">
         <nav>
           <Link
-            to={href("/project/:projectSlug/settings", {
+            to={href("/:workspaceId/project/:projectSlug/settings", {
+              workspaceId: params.workspaceId,
               projectSlug: project.slug
             })}
             className="underline inline-flex gap-0.5 px-0 items-center text-sm"
@@ -262,7 +264,7 @@ export default function EnvironmentLayout({
                     onClick={() => {
                       navigate(
                         href(
-                          "/project/:projectSlug/:envSlug/create-service",
+                          "/:workspaceId/project/:projectSlug/:envSlug/create-service",
                           params
                         )
                       );
@@ -275,7 +277,7 @@ export default function EnvironmentLayout({
                     onClick={() => {
                       navigate(
                         href(
-                          "/project/:projectSlug/:envSlug/create-compose-stack",
+                          "/:workspaceId/project/:projectSlug/:envSlug/create-compose-stack",
                           params
                         )
                       );

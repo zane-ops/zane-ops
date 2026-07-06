@@ -144,8 +144,9 @@ export default function EnvironmentServiceListPage({
                   method="post"
                   className="bg-popover flex flex-col items-stretch"
                   action={href(
-                    "/project/:projectSlug/:envSlug/bulk-deploy-services",
+                    "/:workspaceId/project/:projectSlug/:envSlug/bulk-deploy-services",
                     {
+                      workspaceId,
                       envSlug: env_slug,
                       projectSlug: project_slug
                     }
@@ -177,8 +178,9 @@ export default function EnvironmentServiceListPage({
                   method="post"
                   className="bg-popover flex flex-col items-stretch"
                   action={href(
-                    "/project/:projectSlug/:envSlug/bulk-toggle-service-state",
+                    "/:workspaceId/project/:projectSlug/:envSlug/bulk-toggle-service-state",
                     {
+                      workspaceId,
                       envSlug: env_slug,
                       projectSlug: project_slug
                     }
@@ -317,8 +319,9 @@ export default function EnvironmentServiceListPage({
                           onClick={() => {
                             navigate(
                               href(
-                                "/project/:projectSlug/:envSlug/create-service",
+                                "/:workspaceId/project/:projectSlug/:envSlug/create-service",
                                 {
+                                  workspaceId,
                                   projectSlug: project_slug,
                                   envSlug: env_slug
                                 }
@@ -333,8 +336,9 @@ export default function EnvironmentServiceListPage({
                           onClick={() => {
                             navigate(
                               href(
-                                "/project/:projectSlug/:envSlug/create-compose-stack",
+                                "/:workspaceId/project/:projectSlug/:envSlug/create-compose-stack",
                                 {
+                                  workspaceId,
                                   projectSlug: project_slug,
                                   envSlug: env_slug
                                 }

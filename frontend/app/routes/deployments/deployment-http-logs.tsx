@@ -112,7 +112,7 @@ export default function DeploymentHttpLogsPage({
     envSlug: env_slug
   },
   matches: {
-    2: {
+    3: {
       loaderData: { deployment }
     }
   }

@@ -9,7 +9,7 @@ import type { Route } from "./+types/toggle-compose-stack";
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     href(
-      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+      "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
       params
     )
   );

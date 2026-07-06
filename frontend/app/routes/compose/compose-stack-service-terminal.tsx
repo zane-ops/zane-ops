@@ -29,7 +29,7 @@ import type { Route } from "./+types/compose-stack-service-terminal";
 export default function ComposeStackServiceTerminalPage({
   params,
   matches: {
-    2: { loaderData }
+    3: { loaderData }
   }
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -52,7 +52,7 @@ export default function ComposeStackServiceTerminalPage({
     return (
       <Navigate
         to={href(
-          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+          "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
           params
         )}
       />

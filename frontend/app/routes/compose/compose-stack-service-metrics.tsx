@@ -72,7 +72,7 @@ export default function ComposeStackServiceMetricsPage({
   loaderData,
   params,
   matches: {
-    "2": {
+    "3": {
       loaderData: { stack }
     }
   }

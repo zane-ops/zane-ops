@@ -68,7 +68,7 @@ export default function CreatePrivateGitServicePage({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={href("/project/:projectSlug/:envSlug", {
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
                   ...params,
                   envSlug: "production"
                 })}
@@ -92,7 +92,7 @@ export default function CreatePrivateGitServicePage({
               )}
             >
               <Link
-                to={href("/project/:projectSlug/:envSlug", params)}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
                 prefetch="intent"
               >
                 {params.envSlug}
@@ -166,7 +166,14 @@ export default function CreatePrivateGitServicePage({
                       icon={GithubIcon}
                       text="GitHub app"
                       onClick={() => {
-                        navigate(href("/settings/git-apps/create-github-app"));
+                        navigate(
+                          href(
+                            "/:workspaceId/settings/git-apps/create-github-app",
+                            {
+                              workspaceId: params.workspaceId
+                            }
+                          )
+                        );
                       }}
                     />
 
@@ -174,7 +181,14 @@ export default function CreatePrivateGitServicePage({
                       icon={GitlabIcon}
                       text="gitlab app"
                       onClick={() => {
-                        navigate(href("/settings/git-apps/create-gitlab-app"));
+                        navigate(
+                          href(
+                            "/:workspaceId/settings/git-apps/create-gitlab-app",
+                            {
+                              workspaceId: params.workspaceId
+                            }
+                          )
+                        );
                       }}
                     />
                   </MenubarContent>

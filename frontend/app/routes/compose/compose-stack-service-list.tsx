@@ -9,7 +9,7 @@ import type { Route } from "./+types/compose-stack-service-list";
 export default function ComposeStackServicesPage({
   params,
   matches: {
-    2: { loaderData }
+    3: { loaderData }
   }
 }: Route.ComponentProps) {
   const { data: stack } = useQuery({

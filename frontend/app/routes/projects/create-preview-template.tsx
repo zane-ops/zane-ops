@@ -60,7 +60,7 @@ export function meta({ error, params }: Route.MetaArgs) {
 export default function CreatePreviewTemplatePage({
   params,
   matches: {
-    "2": {
+    "3": {
       loaderData: { project }
     }
   }
@@ -660,7 +660,8 @@ export async function clientAction({
     description: "Preview template created succesfully"
   });
   throw redirect(
-    href("/project/:projectSlug/settings/preview-templates", {
+    href("/:workspaceId/project/:projectSlug/settings/preview-templates", {
+      workspaceId: params.workspaceId,
       projectSlug: params.projectSlug
     })
   );

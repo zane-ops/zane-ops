@@ -7,7 +7,9 @@ import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/github-app-details";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
-  throw redirect(href("/settings/git-apps"));
+  throw redirect(
+    href("/:workspaceId/settings/git-apps", { workspaceId: params.workspaceId })
+  );
 }
 
 export async function clientAction({
@@ -93,11 +95,7 @@ async function renameGithubApp(
   }
 
   await queryClient.invalidateQueries({
-    predicate(query) {
-      return query.queryKey.includes(
-        gitAppsQueries.list(params.workspaceId).queryKey[0]
-      );
-    }
+    queryKey: gitAppsQueries.list(params.workspaceId).queryKey
   });
 
   toast.success("Success", {

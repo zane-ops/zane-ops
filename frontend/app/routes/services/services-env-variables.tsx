@@ -79,7 +79,7 @@ export default function ServiceEnvVariablesPage({
     envSlug: env_slug
   },
   matches: {
-    "2": {
+    "3": {
       loaderData: { service: initialData }
     }
   }

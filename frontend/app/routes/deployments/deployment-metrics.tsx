@@ -69,7 +69,7 @@ export async function clientLoader({
 export default function DeploymentMetricsPage({
   loaderData,
   matches: {
-    "2": {
+    "3": {
       loaderData: { limits, service }
     }
   },

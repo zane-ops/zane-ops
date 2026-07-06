@@ -80,7 +80,8 @@ export default function ProjectLayout({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={href("/project/:projectSlug/:envSlug", {
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
+                  workspaceId: params.workspaceId,
                   projectSlug: params.projectSlug,
                   envSlug: "production"
                 })}

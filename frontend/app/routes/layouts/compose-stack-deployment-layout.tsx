@@ -103,7 +103,7 @@ export default function ComposeStackDeploymentLayoutPage({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={href("/project/:projectSlug/:envSlug", {
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
                   ...params,
                   envSlug: "production"
                 })}
@@ -126,7 +126,7 @@ export default function ComposeStackDeploymentLayoutPage({
               )}
             >
               <Link
-                to={href("/project/:projectSlug/:envSlug", params)}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
                 prefetch="intent"
               >
                 {params.envSlug}
@@ -138,7 +138,7 @@ export default function ComposeStackDeploymentLayoutPage({
           <BreadcrumbItem>
             <Link
               to={href(
-                "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+                "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
                 params
               )}
             >
@@ -151,7 +151,7 @@ export default function ComposeStackDeploymentLayoutPage({
             <Link
               to={
                 href(
-                  "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
+                  "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
                   params
                 ) + "/"
               }

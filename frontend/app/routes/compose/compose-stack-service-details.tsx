@@ -55,7 +55,7 @@ import type { Route } from "./+types/compose-stack-service-details";
 export default function ComposeStackServiceDetailsPage({
   params,
   matches: {
-    2: { loaderData }
+    3: { loaderData }
   }
 }: Route.ComponentProps) {
   const { data: stack } = useQuery({
@@ -75,7 +75,7 @@ export default function ComposeStackServiceDetailsPage({
     return (
       <Navigate
         to={href(
-          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+          "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
           params
         )}
       />

@@ -122,7 +122,7 @@ export default function ServiceHttpLogsPage({
     envSlug: env_slug
   },
   matches: {
-    2: {
+    3: {
       loaderData: { service }
     }
   }

@@ -60,7 +60,7 @@ import type { Route } from "./+types/environments-settings";
 export default function EnvironmentSettingsPage({
   params,
   matches: {
-    "2": { loaderData }
+    "3": { loaderData }
   }
 }: Route.ComponentProps) {
   const { data: env } = useQuery({
@@ -527,7 +527,7 @@ export default function EnvironmentSettingsPage({
 function EnvironmentNameForm({
   environment: env
 }: {
-  environment: Route.ComponentProps["matches"][2]["loaderData"]["environment"];
+  environment: Route.ComponentProps["matches"][3]["loaderData"]["environment"];
 }) {
   const isModifiable = !env.is_preview && env.name !== "production";
   const fetcher = useFetcher<typeof clientAction>();
@@ -714,8 +714,7 @@ async function archiveEnvironment(
       projectQueries.single(workspaceId, project_slug)
     ),
     queryClient.invalidateQueries({
-      predicate: (query) =>
-        query.queryKey[0] === resourceQueries.search(workspaceId).queryKey[0]
+      queryKey: resourceQueries.search(workspaceId).queryKey.slice(0, 3)
     })
   ]);
 
@@ -729,7 +728,8 @@ async function archiveEnvironment(
   });
 
   throw redirect(
-    href("/project/:projectSlug/:envSlug", {
+    href("/:workspaceId/project/:projectSlug/:envSlug", {
+      workspaceId,
       projectSlug: project_slug,
       envSlug: "production"
     })
@@ -765,7 +765,8 @@ function EnvironmentDeleteFormDialog({ environment }: { environment: string }) {
 
       setIsOpen(false);
       navigate(
-        href("/project/:projectSlug/settings/environments", {
+        href("/:workspaceId/project/:projectSlug/settings/environments", {
+          workspaceId: params.workspaceId!,
           projectSlug: params.projectSlug!
         }),
         { replace: true }

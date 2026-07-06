@@ -105,7 +105,7 @@ export default function ComposeStackServiceLayoutPage({
     return (
       <Navigate
         to={href(
-          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+          "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
           params
         )}
       />
@@ -165,7 +165,7 @@ export default function ComposeStackServiceLayoutPage({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={href("/project/:projectSlug/:envSlug", {
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
                   ...params,
                   envSlug: "production"
                 })}
@@ -188,7 +188,7 @@ export default function ComposeStackServiceLayoutPage({
               )}
             >
               <Link
-                to={href("/project/:projectSlug/:envSlug", params)}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
                 prefetch="intent"
               >
                 {params.envSlug}
@@ -200,7 +200,7 @@ export default function ComposeStackServiceLayoutPage({
           <BreadcrumbItem>
             <Link
               to={href(
-                "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+                "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
                 params
               )}
             >
@@ -443,7 +443,7 @@ function ToggleServiceForm({
 
     await fetcher.submit(formData, {
       action: href(
-        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
+        "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
         params
       ),
       method: "POST"
@@ -495,7 +495,7 @@ async function toggleStateToast({
     <Link
       className="text-link underline inline break-all"
       to={href(
-        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/services/:serviceSlug",
+        "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/services/:serviceSlug",
         params
       )}
     >

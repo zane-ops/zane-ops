@@ -108,7 +108,7 @@ export default function DeploymentListPage({
   },
   loaderData,
   matches: {
-    "2": {
+    "3": {
       loaderData: { service }
     }
   }

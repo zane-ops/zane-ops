@@ -245,5 +245,9 @@ export async function clientAction({
   await queryClient.invalidateQueries(
     sharedRegistryCredentialsQueries.list(params.workspaceId)
   );
-  throw redirect(href("/settings/shared-credentials"));
+  throw redirect(
+    href("/:workspaceId/settings/shared-credentials", {
+      workspaceId: params.workspaceId
+    })
+  );
 }

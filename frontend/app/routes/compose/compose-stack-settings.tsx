@@ -26,7 +26,7 @@ import type { Route } from "./+types/compose-stack-settings";
 export default function ComposeStackSettingsPage({
   params,
   matches: {
-    2: { loaderData }
+    3: { loaderData }
   }
 }: Route.ComponentProps) {
   const { data: stack } = useQuery({
@@ -293,8 +293,7 @@ async function updateStackSlug({
       environmentQueries.composeStackList(workspaceId, project_slug, env_slug)
     ),
     queryClient.invalidateQueries({
-      predicate: (query) =>
-        query.queryKey[0] === resourceQueries.search(workspaceId).queryKey[0]
+      queryKey: resourceQueries.search(workspaceId).queryKey.slice(0, 3)
     })
   ]);
 

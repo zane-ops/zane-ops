@@ -9,7 +9,7 @@ import {
   PlusIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, href, redirect, useFetcher } from "react-router";
+import { Link, href, redirect, useFetcher, useParams } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import type { Project } from "~/api/types";
@@ -80,7 +80,7 @@ export function meta({ error, params }: Route.MetaArgs) {
 
 export default function ProjectEnvironmentsPage({
   matches: {
-    "2": { loaderData }
+    "3": { loaderData }
   },
   params
 }: Route.ComponentProps) {
@@ -121,6 +121,7 @@ type EnvironmentListProps = {
   projectSlug: string;
 };
 function EnvironmentList({ environments, projectSlug }: EnvironmentListProps) {
+  const params = useParams();
   return (
     <div className="grid gap-6 w-full">
       <section>
@@ -137,7 +138,8 @@ function EnvironmentList({ environments, projectSlug }: EnvironmentListProps) {
               <TableRow key={env.id}>
                 <TableCell className="p-2">
                   <Link
-                    to={href("/project/:projectSlug/:envSlug", {
+                    to={href("/:workspaceId/project/:projectSlug/:envSlug", {
+                      workspaceId: params.workspaceId!,
                       projectSlug,
                       envSlug: env.name
                     })}
@@ -335,8 +337,7 @@ async function archiveEnvironment(
       projectQueries.single(workspaceId, project_slug)
     ),
     queryClient.invalidateQueries({
-      predicate: (query) =>
-        query.queryKey[0] === resourceQueries.search(workspaceId).queryKey[0]
+      queryKey: resourceQueries.search(workspaceId).queryKey.slice(0, 3)
     })
   ]);
 
@@ -350,7 +351,8 @@ async function archiveEnvironment(
   });
 
   throw redirect(
-    href("/project/:projectSlug/settings/environments", {
+    href("/:workspaceId/project/:projectSlug/settings/environments", {
+      workspaceId,
       projectSlug: project_slug
     })
   );

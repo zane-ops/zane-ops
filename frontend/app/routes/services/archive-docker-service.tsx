@@ -13,9 +13,12 @@ import type { Route } from "./+types/archive-docker-service";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href("/project/:projectSlug/:envSlug/services/:serviceSlug/settings", {
-      ...params
-    })
+    href(
+      "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/settings",
+      {
+        ...params
+      }
+    )
   );
 }
 
@@ -85,8 +88,7 @@ export async function clientAction({
     environmentQueries.serviceList(workspaceId, project_slug, env_slug)
   );
   queryClient.invalidateQueries({
-    predicate: (query) =>
-      query.queryKey[0] === resourceQueries.search(workspaceId).queryKey[0]
+    queryKey: resourceQueries.search(workspaceId).queryKey.slice(0, 3)
   });
 
   toast.success("Success", {
@@ -98,7 +100,8 @@ export async function clientAction({
     )
   });
   throw redirect(
-    href("/project/:projectSlug/:envSlug", {
+    href("/:workspaceId/project/:projectSlug/:envSlug", {
+      workspaceId,
       projectSlug: project_slug,
       envSlug: env_slug
     })

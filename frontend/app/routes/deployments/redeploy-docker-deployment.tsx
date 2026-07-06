@@ -8,7 +8,10 @@ import type { Route } from "./+types/redeploy-docker-deployment";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href("/project/:projectSlug/:envSlug/services/:serviceSlug", params)
+    href(
+      "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
+      params
+    )
   );
 }
 

@@ -94,7 +94,10 @@ export default function CreateGitServiceFromGitHubPage({
       closeButton: true
     });
     navigate(
-      href("/project/:projectSlug/:envSlug/create-service/git-private", params),
+      href(
+        "/:workspaceId/project/:projectSlug/:envSlug/create-service/git-private",
+        params
+      ),
       { replace: true }
     );
 
@@ -150,7 +153,7 @@ export default function CreateGitServiceFromGitHubPage({
             <BreadcrumbLink asChild>
               <Link
                 to={href(
-                  "/project/:projectSlug/:envSlug/create-service",
+                  "/:workspaceId/project/:projectSlug/:envSlug/create-service",
                   params
                 )}
                 prefetch="intent"
@@ -165,7 +168,7 @@ export default function CreateGitServiceFromGitHubPage({
             <BreadcrumbLink asChild>
               <Link
                 to={href(
-                  "/project/:projectSlug/:envSlug/create-service/git-private",
+                  "/:workspaceId/project/:projectSlug/:envSlug/create-service/git-private",
                   params
                 )}
                 prefetch="intent"

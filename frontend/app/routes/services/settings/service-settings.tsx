@@ -71,7 +71,7 @@ export default function ServiceSettingsPage({
     envSlug: env_slug
   },
   matches: {
-    "2": {
+    "3": {
       loaderData: { service }
     }
   }
@@ -525,7 +525,7 @@ export function useServiceQuery({
 }: { project_slug: string; service_slug: string; env_slug: string }) {
   const workspaceId = useParams<Route.ComponentProps["params"]>().workspaceId!;
   const {
-    "2": {
+    "3": {
       loaderData: { service: initialData }
     }
   } = useMatches() as Route.ComponentProps["matches"];
@@ -761,8 +761,7 @@ async function updateServiceSlug({
       environmentQueries.serviceList(workspaceId, project_slug, env_slug)
     ),
     queryClient.invalidateQueries({
-      predicate: (query) =>
-        query.queryKey[0] === resourceQueries.search(workspaceId).queryKey[0]
+      queryKey: resourceQueries.search(workspaceId).queryKey.slice(0, 3)
     })
   ]);
 

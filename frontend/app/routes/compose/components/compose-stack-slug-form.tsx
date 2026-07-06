@@ -1,7 +1,7 @@
 import { CheckIcon, LoaderIcon, PencilLineIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { flushSync } from "react-dom";
-import { href, useFetcher, useNavigate } from "react-router";
+import { href, useFetcher, useNavigate, useParams } from "react-router";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
@@ -22,6 +22,7 @@ export function ComposeStackSlugForm({
   env_slug,
   stack_slug
 }: ComposeStackSlugFormProps) {
+  const routeParams = useParams();
   const [isEditing, setIsEditing] = React.useState(false);
   const fetcher = useFetcher<typeof clientAction>();
   const isPending = fetcher.state !== "idle";
@@ -37,8 +38,9 @@ export function ComposeStackSlugForm({
     if (fetcher.state === "idle" && newSlug) {
       navigate(
         href(
-          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
+          "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
           {
+            workspaceId: routeParams.workspaceId!,
             projectSlug: project_slug,
             envSlug: env_slug,
             composeStackSlug: newSlug

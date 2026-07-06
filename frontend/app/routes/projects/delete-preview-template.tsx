@@ -28,10 +28,14 @@ import type { Route } from "./+types/delete-preview-template";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href("/project/:projectSlug/settings/preview-templates/:templateSlug", {
-      projectSlug: params.projectSlug,
-      templateSlug: params.templateSlug
-    })
+    href(
+      "/:workspaceId/project/:projectSlug/settings/preview-templates/:templateSlug",
+      {
+        workspaceId: params.workspaceId,
+        projectSlug: params.projectSlug,
+        templateSlug: params.templateSlug
+      }
+    )
   );
 }
 
@@ -116,8 +120,9 @@ export function DeleteConfirmationFormDialog() {
           id="delete-form"
           ref={formRef}
           action={href(
-            "/project/:projectSlug/settings/preview-templates/:templateSlug/delete",
+            "/:workspaceId/project/:projectSlug/settings/preview-templates/:templateSlug/delete",
             {
+              workspaceId: params.workspaceId!,
               projectSlug: params.projectSlug!,
               templateSlug: params.templateSlug!
             }
@@ -229,7 +234,8 @@ export async function clientAction({
     )
   });
   throw redirect(
-    href("/project/:projectSlug/settings/preview-templates", {
+    href("/:workspaceId/project/:projectSlug/settings/preview-templates", {
+      workspaceId: params.workspaceId,
       projectSlug: params.projectSlug
     })
   );

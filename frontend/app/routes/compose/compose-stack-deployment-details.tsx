@@ -43,7 +43,7 @@ hljs.registerLanguage("json", json);
 export default function ComposeStackDeploymentDetailsPage({
   params,
   matches: {
-    2: { loaderData }
+    3: { loaderData }
   }
 }: Route.ComponentProps) {
   const { data: deployment } = useQuery({
@@ -125,7 +125,7 @@ export default function ComposeStackDeploymentDetailsPage({
                   (Redeploy of&nbsp;
                   <Link
                     to={href(
-                      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
+                      "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
                       params
                     )}
                     className="text-link underline"

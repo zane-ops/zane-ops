@@ -10,7 +10,7 @@ import type { Route } from "./+types/archive-compose-stack";
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     href(
-      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
+      "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
       params
     )
   );
@@ -80,5 +80,5 @@ export async function clientAction({
     closeButton: true
   });
 
-  throw redirect(href("/project/:projectSlug/:envSlug", params));
+  throw redirect(href("/:workspaceId/project/:projectSlug/:envSlug", params));
 }

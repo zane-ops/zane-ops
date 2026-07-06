@@ -88,7 +88,11 @@ export default function GitConnectorsListPage({
                 icon={GithubIcon}
                 text="GitHub app"
                 onClick={() => {
-                  navigate(href("/settings/git-apps/create-github-app"));
+                  navigate(
+                    href("/:workspaceId/settings/git-apps/create-github-app", {
+                      workspaceId: params.workspaceId
+                    })
+                  );
                 }}
               />
 
@@ -96,7 +100,11 @@ export default function GitConnectorsListPage({
                 icon={GitlabIcon}
                 text="gitlab app"
                 onClick={() => {
-                  navigate(href("/settings/git-apps/create-gitlab-app"));
+                  navigate(
+                    href("/:workspaceId/settings/git-apps/create-gitlab-app", {
+                      workspaceId: params.workspaceId
+                    })
+                  );
                 }}
               />
             </MenubarContent>
@@ -261,11 +269,7 @@ export async function clientAction({
   });
 
   await queryClient.invalidateQueries({
-    predicate(query) {
-      return query.queryKey.includes(
-        gitAppsQueries.list(params.workspaceId).queryKey[0]
-      );
-    }
+    queryKey: gitAppsQueries.list(params.workspaceId).queryKey
   });
   return { data };
 }

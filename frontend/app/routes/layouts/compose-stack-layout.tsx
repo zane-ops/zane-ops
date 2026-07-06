@@ -102,7 +102,7 @@ export default function ComposeStackLayoutPage({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={href("/project/:projectSlug/:envSlug", {
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
                   ...params,
                   envSlug: "production"
                 })}
@@ -125,7 +125,7 @@ export default function ComposeStackLayoutPage({
               )}
             >
               <Link
-                to={href("/project/:projectSlug/:envSlug", params)}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
                 prefetch="intent"
               >
                 {params.envSlug}

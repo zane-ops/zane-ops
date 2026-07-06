@@ -94,7 +94,7 @@ export default function ComposeStackTemplateListPage({
             <BreadcrumbLink>
               <Link
                 to={href(
-                  "/project/:projectSlug/:envSlug/create-compose-stack",
+                  "/:workspaceId/project/:projectSlug/:envSlug/create-compose-stack",
                   params
                 )}
                 prefetch="intent"

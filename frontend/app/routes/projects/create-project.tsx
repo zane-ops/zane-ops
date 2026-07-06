@@ -73,10 +73,7 @@ export async function clientAction({
   }
 
   queryClient.invalidateQueries({
-    predicate: (query) =>
-      query.queryKey.includes(
-        projectQueries.list(params.workspaceId).queryKey[0]
-      )
+    queryKey: projectQueries.list(params.workspaceId).queryKey.slice(0, 3)
   });
   throw redirect(`/project/${apiResponse.data.slug}/production`);
 }

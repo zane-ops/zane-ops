@@ -448,7 +448,7 @@ const HeaderSection = React.memo(function HeaderSection({
 
   const params = useParams() as Route.ComponentProps["params"];
   const {
-    2: { loaderData }
+    3: { loaderData }
   } = useMatches() as Route.ComponentProps["matches"];
 
   const { data: stack } = useQuery({
@@ -535,7 +535,7 @@ const HeaderSection = React.memo(function HeaderSection({
     return (
       <Navigate
         to={href(
-          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+          "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
           params
         )}
       />
