@@ -38,13 +38,13 @@ import {
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import { environmentQueries, previewTemplatesQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import type { Writeable } from "~/lib/types";
 import {
   cn,
   getFormErrorsFromResponseData,
   isNotFoundError
 } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/preview-template-details";
 import { DeleteConfirmationFormDialog } from "./delete-preview-template";
@@ -59,6 +59,7 @@ export function meta({ error, params }: Route.MetaArgs) {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const template = await queryClient.ensureQueryData(
     previewTemplatesQueries.single(
       params.workspaceId,
@@ -641,6 +642,7 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
 
   const ttl_seconds_string = formData.get("ttl_seconds")?.toString();

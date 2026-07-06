@@ -15,8 +15,8 @@ import { Separator } from "~/components/ui/separator";
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { serverQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-gitlab-app";
 
@@ -25,6 +25,7 @@ export function meta() {
 }
 
 export async function clientLoader() {
+  const queryClient = getQueryClient();
   const settings = await queryClient.ensureQueryData(serverQueries.settings);
 
   return { settings };

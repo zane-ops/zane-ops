@@ -2,7 +2,7 @@ import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { composeStackQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/toggle-compose-stack";
 
@@ -29,6 +29,7 @@ export async function clientAction({
     envSlug: env_slug
   }
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
 
   const service = formData.get("service_name")?.toString().trim();

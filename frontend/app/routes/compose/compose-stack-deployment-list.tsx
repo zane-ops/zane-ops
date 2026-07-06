@@ -51,8 +51,8 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { composeStackQueries, stackDeploymentListFilters } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
 import {
   capitalizeText,
   formatElapsedTime,
@@ -65,6 +65,7 @@ export async function clientLoader({
   request,
   params
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const searchParams = new URL(request.url).searchParams;
   const search = stackDeploymentListFilters.parse(searchParams);
   const filters = {

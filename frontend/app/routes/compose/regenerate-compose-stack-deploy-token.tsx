@@ -4,7 +4,7 @@ import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { composeStackQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/utils";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
@@ -24,6 +24,7 @@ export async function clientAction({
     composeStackSlug: stack_slug
   }
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const { error, data } = await apiClient.PUT(
     "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/regenerate-deploy-token/",
     {

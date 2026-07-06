@@ -17,12 +17,12 @@ import {
 } from "~/components/ui/dialog";
 import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import { previewTemplatesQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/delete-preview-template";
 
@@ -176,6 +176,7 @@ export async function clientAction({
   params,
   request
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
 
   if (

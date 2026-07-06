@@ -22,8 +22,8 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import { sharedRegistryCredentialsQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-registry-credentials";
 
@@ -208,6 +208,7 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
 
   const userData = {

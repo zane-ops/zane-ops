@@ -48,12 +48,12 @@ import {
   projectQueries,
   resourceQueries
 } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/environments-settings";
 
@@ -640,6 +640,7 @@ async function renameEnvironment(
   env_slug: string,
   formData: FormData
 ) {
+  const queryClient = getQueryClient();
   const userData = {
     name: formData.get("name")?.toString() ?? ""
   };
@@ -688,6 +689,7 @@ async function archiveEnvironment(
   project_slug: string,
   env_slug: string
 ) {
+  const queryClient = getQueryClient();
   const apiResponse = await apiClient.DELETE(
     "/api/projects/{slug}/environment-details/{env_slug}/",
     {

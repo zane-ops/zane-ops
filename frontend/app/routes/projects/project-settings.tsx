@@ -27,12 +27,12 @@ import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { Textarea } from "~/components/ui/textarea";
 import { projectQueries, resourceQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/project-settings";
 
@@ -138,6 +138,7 @@ async function updateProject(
   params: Route.ClientActionArgs["params"],
   formData: FormData
 ) {
+  const queryClient = getQueryClient();
   const userData = {
     slug: formData.get("slug")?.toString() ?? "",
     description: formData.get("description")?.toString()
@@ -181,6 +182,7 @@ async function updateProject(
 }
 
 async function archiveProject(params: Route.ClientActionArgs["params"]) {
+  const queryClient = getQueryClient();
   const apiResponse = await apiClient.DELETE("/api/projects/{slug}/", {
     headers: {
       ...(await getCsrfTokenHeader())

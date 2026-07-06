@@ -32,9 +32,9 @@ import {
   DialogTrigger
 } from "~/components/ui/dialog";
 import { composeStackQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
 import type { clientAction as deployClientAction } from "~/routes/compose/deploy-compose-stack";
 import { durationToMs, wait } from "~/utils";
 
@@ -241,6 +241,7 @@ async function toggleStateToast({
   stackSlug: string;
   envSlug: string;
 }) {
+  const queryClient = getQueryClient();
   const stackLink = (
     <Link
       className="text-link underline inline break-all"

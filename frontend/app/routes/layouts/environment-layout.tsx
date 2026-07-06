@@ -48,8 +48,8 @@ import {
 } from "~/components/ui/select";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { environmentQueries, projectQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn, isNotFoundError } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/environment-layout";
 
@@ -66,6 +66,7 @@ export async function clientLoader({
   request,
   params
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const searchParams = new URL(request.url).searchParams;
 
   const queryString = searchParams.get("query") ?? "";

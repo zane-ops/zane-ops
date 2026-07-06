@@ -2,8 +2,8 @@ import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { environmentQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import type { ErrorResponseFromAPI } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/archive-compose-stack";
 
@@ -20,6 +20,7 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
 
   if (

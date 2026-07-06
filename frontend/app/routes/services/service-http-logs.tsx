@@ -42,9 +42,9 @@ import {
   httpLogSearchSchema,
   serviceQueries
 } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
 import { cn, formatLogTime, notFound } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { formatDuration } from "~/utils";
 import type { Route } from "./+types/service-http-logs";
 
@@ -57,6 +57,7 @@ export async function clientLoader({
     envSlug: env_slug
   }
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const service = await queryClient.ensureQueryData(
     serviceQueries.single({
       workspaceId,
@@ -127,6 +128,7 @@ export default function ServiceHttpLogsPage({
     }
   }
 }: Route.ComponentProps) {
+  const queryClient = getQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);

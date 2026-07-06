@@ -11,8 +11,8 @@ import {
   FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
 import { userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 import type { Route } from "./+types/login";
@@ -20,6 +20,7 @@ import type { Route } from "./+types/login";
 export const meta: Route.MetaFunction = () => [metaTitle("Login")];
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const [user, userExistQuery] = await Promise.all([
     queryClient.ensureQueryData(userQueries.authedUser),
     queryClient.ensureQueryData(userQueries.checkUserExistence)
@@ -46,6 +47,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
   const searchParams = new URL(request.url).searchParams;
 

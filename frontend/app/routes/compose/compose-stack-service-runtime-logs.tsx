@@ -54,8 +54,8 @@ import {
   composeStackQueries,
   stackRuntimeLogSearchSchema
 } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn, formatLogTime } from "~/lib/utils";
-import { queryClient } from "~/root";
 import type { Route } from "./+types/compose-stack-service-runtime-logs";
 
 export async function clientLoader({
@@ -68,6 +68,7 @@ export async function clientLoader({
   },
   request
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const searchParams = new URL(request.url).searchParams;
   const search = stackRuntimeLogSearchSchema.parse(searchParams);
   const filters = {

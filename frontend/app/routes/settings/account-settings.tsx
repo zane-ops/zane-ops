@@ -18,14 +18,15 @@ import {
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
 import { userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/account-settings";
 
 export const meta: Route.MetaFunction = () => [metaTitle("Account Settings")];
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const user = await queryClient.ensureQueryData(userQueries.authedUser);
 
   if (!user) {
@@ -36,6 +37,7 @@ export async function clientLoader({}: Route.ClientLoaderArgs) {
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
   const profileData = {
     username: formData.get("username")?.toString(),

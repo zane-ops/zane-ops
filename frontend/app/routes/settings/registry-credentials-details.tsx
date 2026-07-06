@@ -29,8 +29,8 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import { sharedRegistryCredentialsQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/registry-credentials-details";
 
@@ -41,6 +41,7 @@ export function meta() {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const credentials = await queryClient.ensureQueryData(
     sharedRegistryCredentialsQueries.single(params.workspaceId, params.id)
   );
@@ -325,6 +326,7 @@ async function testCredentials(
   id: string,
   formData: FormData
 ) {
+  const queryClient = getQueryClient();
   const userData = {
     username: formData.get("username")?.toString() ?? "",
     url: formData.get("url")?.toString() ?? ""
@@ -376,6 +378,7 @@ async function updateCredentials(
   id: string,
   formData: FormData
 ) {
+  const queryClient = getQueryClient();
   const password = formData.get("password")?.toString();
   const userData = {
     url: formData.get("url")?.toString() ?? "",

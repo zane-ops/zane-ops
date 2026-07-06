@@ -12,7 +12,7 @@ import { GithubLogo } from "~/components/github-logo";
 import { ThemedLogo } from "~/components/logo";
 import { SubmitButton } from "~/components/ui/button";
 import { environmentQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/review-deployment";
 
@@ -26,6 +26,7 @@ type DeploymentDecision = RequestInput<
 >["decision"];
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const environment = await queryClient.ensureQueryData(
     environmentQueries.pendingReview(
       params.workspaceId,
@@ -172,6 +173,7 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const environment = queryClient.getQueryData(
     environmentQueries.pendingReview(
       params.workspaceId,

@@ -13,8 +13,8 @@ import {
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
 import { gitAppsQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/gitlab-app-details";
 
@@ -25,6 +25,7 @@ export function meta() {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const app = await queryClient.ensureQueryData(
     gitAppsQueries.gitlab(params.workspaceId, params.id)
   );
@@ -240,6 +241,7 @@ async function updateGitlabApp(
   params: Route.ClientActionArgs["params"],
   formData: FormData
 ) {
+  const queryClient = getQueryClient();
   const app_secret = formData.get("app_secret")?.toString()?.trim() ?? "";
   const userData = {
     name: formData.get("name")?.toString()?.toString() ?? "",

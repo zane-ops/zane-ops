@@ -44,9 +44,9 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { composeStackQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import { cn, notFound } from "~/lib/utils";
-import { queryClient } from "~/root";
 import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 import {
   durationToMs,
@@ -59,6 +59,7 @@ import {
 import type { Route } from "./+types/compose-stack-service-layout";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const stack = await queryClient.ensureQueryData(
     composeStackQueries.single({
       workspaceId: params.workspaceId,
@@ -491,6 +492,7 @@ async function toggleStateToast({
 }: {
   desiredState: "stop" | "start";
 } & Route.ComponentProps["params"]) {
+  const queryClient = getQueryClient();
   const stackLink = (
     <Link
       className="text-link underline inline break-all"

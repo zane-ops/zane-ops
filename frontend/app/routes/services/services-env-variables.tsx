@@ -58,8 +58,8 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { serviceQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader, pluralize, wait } from "~/utils";
 import type { Route } from "./+types/services-env-variables";
 
@@ -280,6 +280,7 @@ async function createEnvVariable({
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const userData = {
     key: (formData.get("key") ?? "").toString(),
     value: (formData.get("value") ?? "").toString()
@@ -338,6 +339,7 @@ async function updateEnvVariable({
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const userData = {
     key: (formData.get("key") ?? "").toString(),
     value: (formData.get("value") ?? "").toString()
@@ -397,6 +399,7 @@ async function deleteEnvVariable({
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const toasId = toast.loading(`Sending change request...`);
   const { error } = await apiClient.PUT(
     "/api/projects/{project_slug}/{env_slug}/request-service-changes/{service_slug}/",
@@ -457,6 +460,7 @@ async function addDotEnvVariables({
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const { error: errors, data } = await apiClient.PUT(
     "/api/projects/{project_slug}/{env_slug}/request-env-changes/{service_slug}/",
     {
@@ -512,6 +516,7 @@ async function cancelEnvVariable({
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const toasId = toast.loading(`Cancelling env variable change...`);
   const { error } = await apiClient.DELETE(
     "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/{service_slug}/{change_id}/",

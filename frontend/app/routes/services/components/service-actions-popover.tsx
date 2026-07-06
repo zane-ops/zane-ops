@@ -34,9 +34,9 @@ import {
   DialogTitle,
   DialogTrigger
 } from "~/components/ui/dialog";
+import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { ServiceCleanupQueueConfirmModal } from "~/routes/services/components/service-cleanup-queue-confirm-modal";
 import type { clientAction as deployClientAction } from "~/routes/services/deploy-docker-service";
 import { durationToMs, wait } from "~/utils";
@@ -335,6 +335,7 @@ async function toggleStateToast({
   serviceSlug: string;
   envSlug: string;
 }) {
+  const queryClient = getQueryClient();
   const serviceLink = (
     <Link
       className="text-link underline inline break-all"

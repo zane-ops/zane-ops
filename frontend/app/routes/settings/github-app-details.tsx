@@ -2,7 +2,7 @@ import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { gitAppsQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/github-app-details";
 
@@ -67,6 +67,7 @@ async function renameGithubApp(
   formData: FormData,
   params: Route.ClientActionArgs["params"]
 ) {
+  const queryClient = getQueryClient();
   const userData = {
     name: formData.get("name")?.toString()
   } satisfies RequestInput<"patch", "/api/connectors/github/{id}/">;

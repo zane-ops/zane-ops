@@ -19,7 +19,7 @@ import {
   buildRegistryImageListFilters,
   buildRegistryQueries
 } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/build-registry-image-list";
 
@@ -33,6 +33,7 @@ export async function clientLoader({
   params,
   request
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const searchParams = new URL(request.url).searchParams;
   const search = buildRegistryImageListFilters.parse(searchParams);
 

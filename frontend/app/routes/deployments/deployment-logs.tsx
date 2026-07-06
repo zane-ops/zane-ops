@@ -44,8 +44,8 @@ import {
   deploymentLogSearchSchema,
   deploymentQueries
 } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn, formatLogTime } from "~/lib/utils";
-import { queryClient } from "~/root";
 import type { Route } from "./+types/deployment-logs";
 
 export async function clientLoader({
@@ -58,6 +58,7 @@ export async function clientLoader({
   },
   request
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const searchParams = new URL(request.url).searchParams;
   const search = deploymentLogSearchSchema.parse(searchParams);
   const filters = {

@@ -48,12 +48,12 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { environmentQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader, pluralize } from "~/utils";
 import type { Route } from "./+types/environment-variables";
 
@@ -563,6 +563,7 @@ async function addEnvVariable(
   env_slug: string,
   formData: FormData
 ) {
+  const queryClient = getQueryClient();
   const userData = {
     key: formData.get("key")!.toString(),
     value: formData.get("value")!.toString()
@@ -622,6 +623,7 @@ async function updateEnvVariable(
   env_id: string,
   formData: FormData
 ) {
+  const queryClient = getQueryClient();
   const userData = {
     key: formData.get("key")!.toString(),
     value: formData.get("value")!.toString()
@@ -681,6 +683,7 @@ async function deleteEnvVariable(
   env_slug: string,
   env_id: string
 ) {
+  const queryClient = getQueryClient();
   const { data, error, response } = await apiClient.DELETE(
     "/api/projects/{project_slug}/{env_slug}/variables/{id}/",
     {

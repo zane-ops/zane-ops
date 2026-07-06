@@ -29,7 +29,7 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { deploymentQueries, metrisSearch } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import {
   convertValueToBytes,
   formatStorageValue,
@@ -47,6 +47,7 @@ export async function clientLoader({
     envSlug: env_slug
   }
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const searchParams = new URL(request.url).searchParams;
   const filters = metrisSearch.parse({
     time_range: searchParams.get("time_range")

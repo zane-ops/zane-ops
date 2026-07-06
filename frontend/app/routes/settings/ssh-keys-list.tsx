@@ -35,8 +35,8 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { sshKeysQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/ssh-keys-list";
 
@@ -45,6 +45,7 @@ export function meta() {
 }
 
 export async function clientLoader() {
+  const queryClient = getQueryClient();
   const sshKeys = await queryClient.ensureQueryData(sshKeysQueries.list);
   return { sshKeys };
 }
@@ -53,6 +54,7 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
 
   const { error: errors } = await apiClient.DELETE(

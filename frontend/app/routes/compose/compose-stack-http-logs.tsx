@@ -30,9 +30,9 @@ import {
   composeStackQueries,
   httpLogSearchSchema
 } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
 import { cn, formatLogTime, notFound } from "~/lib/utils";
-import { queryClient } from "~/root";
 import type { Route } from "./+types/compose-stack-http-logs";
 
 import type { DateRange } from "react-day-picker";
@@ -59,6 +59,7 @@ export async function clientLoader({
     envSlug: env_slug
   }
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const stack = await queryClient.ensureQueryData(
     composeStackQueries.single({
       workspaceId,
@@ -124,6 +125,7 @@ export default function ComposeStackHttpLogsPage({
     envSlug: env_slug
   }
 }: Route.ComponentProps) {
+  const queryClient = getQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);

@@ -14,7 +14,7 @@ import {
   environmentQueries,
   resourceQueries
 } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import { ComposeStackDangerZoneForm } from "~/routes/compose/components/compose-stack-danger-zone-form";
 import { ComposeStackDeployURLForm } from "~/routes/compose/components/compose-stack-deploy-url-form";
 import { ComposeStackEnvForm } from "~/routes/compose/components/compose-stack-env-form";
@@ -239,6 +239,7 @@ async function updateStackSlug({
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const userData = {
     slug: formData.get("slug")?.toString()
   } satisfies RequestInput<
@@ -340,6 +341,7 @@ async function requestStackChange({
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const field = formData
     .get("change_field")
     ?.toString() as ChangeRequestBody["field"];
@@ -442,6 +444,7 @@ async function cancelStackChange({
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const change_id = formData.get("change_id")?.toString() ?? "";
 
   const toastId = toast.loading("Discarding change request...");

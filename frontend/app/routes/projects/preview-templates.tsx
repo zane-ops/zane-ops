@@ -18,8 +18,8 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
 import { previewTemplatesQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { isNotFoundError } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/preview-templates";
 
@@ -33,6 +33,7 @@ export function meta({ error, params }: Route.MetaArgs) {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const templates = await queryClient.ensureQueryData(
     previewTemplatesQueries.list(params.workspaceId, params.projectSlug)
   );

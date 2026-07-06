@@ -34,7 +34,7 @@ import {
   serverQueries,
   stackMetrisSearch
 } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import {
   formatStorageValue,
   getMaxDomainForStorageValue,
@@ -46,6 +46,7 @@ export async function clientLoader({
   request,
   params
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const searchParams = new URL(request.url).searchParams;
   const filters = stackMetrisSearch.parse({
     time_range: searchParams.get("time_range"),

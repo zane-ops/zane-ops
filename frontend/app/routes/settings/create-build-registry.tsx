@@ -23,8 +23,8 @@ import {
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import { buildRegistryQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-build-registry";
 
@@ -367,6 +367,7 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
 
   const storage_backend = formData

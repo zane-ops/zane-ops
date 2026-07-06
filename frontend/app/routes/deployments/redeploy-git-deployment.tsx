@@ -2,7 +2,7 @@ import { redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { serviceQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/utils";
 import { type Route } from "./+types/redeploy-git-deployment";
 
@@ -13,6 +13,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 }
 
 export async function clientAction({ params }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const toasId = toast.loading(
     `Queueing redeployment for #${params.deploymentHash}...`
   );

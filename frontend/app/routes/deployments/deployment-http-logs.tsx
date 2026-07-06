@@ -43,9 +43,9 @@ import {
   deploymentQueries,
   httpLogSearchSchema
 } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection } from "~/lib/types";
 import { cn, formatLogTime } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { formatDuration } from "~/utils";
 import type { Route } from "./+types/deployment-http-logs";
 
@@ -59,6 +59,7 @@ export async function clientLoader({
     envSlug: env_slug
   }
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const searchParams = new URL(request.url).searchParams;
   const search = httpLogSearchSchema.parse(searchParams);
   const filters = {
@@ -117,6 +118,7 @@ export default function DeploymentHttpLogsPage({
     }
   }
 }: Route.ComponentProps) {
+  const queryClient = getQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);

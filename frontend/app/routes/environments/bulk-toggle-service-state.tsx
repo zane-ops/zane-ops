@@ -2,7 +2,7 @@ import { redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { environmentQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/utils";
 import { type Route } from "./+types/bulk-toggle-service-state";
 
@@ -14,6 +14,7 @@ export async function clientAction({
   params: { workspaceId, projectSlug: project_slug, envSlug: env_slug },
   request
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
   const userData = {
     desired_state: formData.get("desired_state")?.toString()! as

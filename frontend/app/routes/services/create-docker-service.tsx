@@ -54,8 +54,8 @@ import {
   dockerHubQueries,
   sharedRegistryCredentialsQueries
 } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-docker-service";
 
@@ -66,6 +66,7 @@ export function meta() {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const registries = await queryClient.ensureQueryData(
     sharedRegistryCredentialsQueries.list(params.workspaceId)
   );

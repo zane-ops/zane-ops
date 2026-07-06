@@ -28,7 +28,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { buildRegistryListFilters, buildRegistryQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/build-registry-list";
 
@@ -53,6 +53,7 @@ export function meta() {
 }
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const searchParams = new URL(request.url).searchParams;
   const search = buildRegistryListFilters.parse(searchParams);
 

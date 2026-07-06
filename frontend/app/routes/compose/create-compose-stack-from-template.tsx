@@ -36,8 +36,8 @@ import {
 } from "~/components/ui/fieldset";
 import { TEMPLATE_API_HOST } from "~/lib/constants";
 import { templateQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-compose-stack-from-template";
 
@@ -48,6 +48,7 @@ export function meta({ params }: Route.MetaArgs) {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const template = await queryClient.ensureQueryData(
     templateQueries.single(params.templateSlug)
   );

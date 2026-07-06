@@ -21,8 +21,8 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import { gitAppsQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/create-private-git-service";
 
@@ -33,6 +33,7 @@ export function meta() {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const gitAppList = await queryClient.ensureQueryData(
     gitAppsQueries.list(params.workspaceId)
   );

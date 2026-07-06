@@ -40,8 +40,8 @@ import {
 } from "~/components/ui/tooltip";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import { sharedRegistryCredentialsQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/registry-credentials-list";
 
@@ -52,6 +52,7 @@ export function meta() {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const credentials = await queryClient.ensureQueryData(
     sharedRegistryCredentialsQueries.list(params.workspaceId)
   );

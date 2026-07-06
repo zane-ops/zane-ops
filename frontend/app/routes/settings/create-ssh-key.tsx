@@ -32,8 +32,8 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { sshKeysQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-ssh-key";
 
@@ -203,6 +203,7 @@ function CreateSSHKeyForm({
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
 
   const userData = {

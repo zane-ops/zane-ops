@@ -34,7 +34,7 @@ import {
   resourceQueries,
   serviceQueries
 } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import { ServiceAutoDeployForm } from "~/routes/services/components/service-auto-deploy-form";
 import { ServiceBuilderForm } from "~/routes/services/components/service-builder-form";
 import { ServiceCommandForm } from "~/routes/services/components/service-command-form";
@@ -57,6 +57,7 @@ import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/service-settings";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const gitAppList = await queryClient.ensureQueryData(
     gitAppsQueries.list(params.workspaceId)
   );
@@ -649,6 +650,7 @@ async function regenerateDeployToken({
   service_slug: string;
   env_slug: string;
 }) {
+  const queryClient = getQueryClient();
   const toastId = toast.loading("Regenerating service deploy URL...");
   const { error: errors, data } = await apiClient.PATCH(
     "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/regenerate-deploy-token/",
@@ -707,6 +709,7 @@ async function updateServiceSlug({
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const userData = {
     slug: formData.get("slug")?.toString()
   } satisfies RequestInput<
@@ -798,6 +801,7 @@ async function updateServiceAutoDeployOptions({
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   let userData: RequestInput<
     "patch",
     "/api/projects/{project_slug}/{env_slug}/service-details/{slug}/"
@@ -897,6 +901,7 @@ async function requestServiceChange({
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const field = formData
     .get("change_field")
     ?.toString() as ChangeRequestBody["field"];
@@ -1164,6 +1169,7 @@ async function cancelServiceChange({
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const toastId = toast.loading("Discarding service change...");
   const change_id = formData.get("change_id")?.toString();
   const { error: errors, data } = await apiClient.DELETE(

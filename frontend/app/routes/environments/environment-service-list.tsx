@@ -31,8 +31,8 @@ import {
 } from "~/components/ui/menubar";
 import { Popover, PopoverTrigger } from "~/components/ui/popover";
 import { environmentQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { timeAgoFormatter } from "~/utils";
 import type { Route } from "./+types/environment-service-list";
 
@@ -40,6 +40,7 @@ export async function clientLoader({
   request,
   params
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const searchParams = new URL(request.url).searchParams;
 
   const queryString = searchParams.get("query") ?? "";

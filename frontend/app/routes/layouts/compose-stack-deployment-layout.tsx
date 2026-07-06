@@ -19,13 +19,14 @@ import {
 } from "~/components/ui/breadcrumb";
 import { SubmitButton } from "~/components/ui/button";
 import { composeStackQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn, notFound } from "~/lib/utils";
-import { queryClient } from "~/root";
 import type { clientAction as cancelDeploymentAction } from "~/routes/compose/cancel-compose-deployment";
 import { formattedTime, metaTitle } from "~/utils";
 import type { Route } from "./+types/compose-stack-deployment-layout";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const [stack, deployment] = await Promise.all([
     queryClient.ensureQueryData(
       composeStackQueries.single({

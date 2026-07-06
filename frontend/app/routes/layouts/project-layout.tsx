@@ -15,8 +15,8 @@ import {
 } from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { projectQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn, isNotFoundError } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/project-layout";
 
@@ -55,6 +55,7 @@ const sidebarNavItems: NavItem[] = [
 ];
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const project = await queryClient.ensureQueryData(
     projectQueries.single(params.workspaceId, params.projectSlug)
   );

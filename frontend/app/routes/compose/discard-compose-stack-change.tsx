@@ -2,7 +2,7 @@ import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { composeStackQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/discard-compose-stack-change";
 
@@ -23,6 +23,7 @@ export async function clientAction({
     envSlug: env_slug
   }
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
   const toastId = toast.loading("Discarding stack change...");
   const change_id = formData.get("change_id")?.toString()!;

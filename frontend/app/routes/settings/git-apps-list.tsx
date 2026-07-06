@@ -38,8 +38,8 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { gitAppsQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/git-apps-list";
 
@@ -48,6 +48,7 @@ export function meta() {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const gitAppList = await queryClient.ensureQueryData(
     gitAppsQueries.list(params.workspaceId)
   );
@@ -241,6 +242,7 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
 
   const { data, error } = await apiClient.DELETE("/api/connectors/{id}/", {

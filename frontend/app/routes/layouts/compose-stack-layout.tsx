@@ -29,8 +29,8 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { composeStackQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
-import { queryClient } from "~/root";
 import { ComposeStackActionsPopover } from "~/routes/compose/components/compose-stack-actions-popover";
 import { ComposeStackChangesModal } from "~/routes/compose/components/compose-stack-changes-modal";
 import { metaTitle } from "~/utils";
@@ -46,6 +46,7 @@ export function meta({ params, error }: Route.MetaArgs) {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const stack = await queryClient.ensureQueryData(
     composeStackQueries.single({
       workspaceId: params.workspaceId,

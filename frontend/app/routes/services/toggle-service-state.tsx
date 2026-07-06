@@ -2,7 +2,7 @@ import { redirect } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { serviceQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import { durationToMs, getCsrfTokenHeader, wait } from "~/utils";
 import type { Route } from "./+types/toggle-service-state";
 
@@ -26,6 +26,7 @@ export async function clientAction({
   },
   request
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
   const userData = {
     desired_state: formData
