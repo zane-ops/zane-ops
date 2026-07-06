@@ -36,6 +36,7 @@ export default function ComposeStackServiceTerminalPage({
   const [counter, setCounter] = React.useState(0);
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug

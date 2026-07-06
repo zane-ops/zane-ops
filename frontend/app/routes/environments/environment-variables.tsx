@@ -64,7 +64,11 @@ export default function EnvironmentVariablesPage({
   params
 }: Route.ComponentProps) {
   const { data: environment } = useQuery({
-    ...environmentQueries.single(params.projectSlug, params.envSlug),
+    ...environmentQueries.single(
+      params.workspaceId,
+      params.projectSlug,
+      params.envSlug
+    ),
     initialData: matchData.environment
   });
   const { variables: env_variables } = environment;
@@ -523,10 +527,16 @@ export async function clientAction({
 
   switch (intent) {
     case "add-env-variable": {
-      return addEnvVariable(params.projectSlug, env_slug, formData);
+      return addEnvVariable(
+        params.workspaceId,
+        params.projectSlug,
+        env_slug,
+        formData
+      );
     }
     case "update-env-variable": {
       return updateEnvVariable(
+        params.workspaceId,
         params.projectSlug,
         env_slug,
         variable_id,
@@ -534,7 +544,12 @@ export async function clientAction({
       );
     }
     case "delete-env-variable": {
-      return deleteEnvVariable(params.projectSlug, env_slug, variable_id);
+      return deleteEnvVariable(
+        params.workspaceId,
+        params.projectSlug,
+        env_slug,
+        variable_id
+      );
     }
     default: {
       throw new Error("Unexpected intent");
@@ -543,6 +558,7 @@ export async function clientAction({
 }
 
 async function addEnvVariable(
+  workspaceId: string,
   project_slug: string,
   env_slug: string,
   formData: FormData
@@ -588,7 +604,7 @@ async function addEnvVariable(
   }
 
   await queryClient.invalidateQueries(
-    environmentQueries.single(project_slug, env_slug)
+    environmentQueries.single(workspaceId, project_slug, env_slug)
   );
 
   toast.success("Success", {
@@ -600,6 +616,7 @@ async function addEnvVariable(
 }
 
 async function updateEnvVariable(
+  workspaceId: string,
   project_slug: string,
   env_slug: string,
   env_id: string,
@@ -647,7 +664,7 @@ async function updateEnvVariable(
   }
 
   await queryClient.invalidateQueries(
-    environmentQueries.single(project_slug, env_slug)
+    environmentQueries.single(workspaceId, project_slug, env_slug)
   );
 
   toast.success("Success", {
@@ -659,6 +676,7 @@ async function updateEnvVariable(
 }
 
 async function deleteEnvVariable(
+  workspaceId: string,
   project_slug: string,
   env_slug: string,
   env_id: string
@@ -686,7 +704,7 @@ async function deleteEnvVariable(
   }
 
   await queryClient.invalidateQueries(
-    environmentQueries.single(project_slug, env_slug)
+    environmentQueries.single(workspaceId, project_slug, env_slug)
   );
 
   toast.success("Success", {

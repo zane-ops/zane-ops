@@ -69,7 +69,11 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    environmentQueries.composeStackList(params.projectSlug, params.envSlug)
+    environmentQueries.composeStackList(
+      params.workspaceId,
+      params.projectSlug,
+      params.envSlug
+    )
   );
   toast.success("Success", {
     description: "Compose Stack deleted succesfully !",

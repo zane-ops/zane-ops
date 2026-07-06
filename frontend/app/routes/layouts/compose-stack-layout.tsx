@@ -48,6 +48,7 @@ export function meta({ params, error }: Route.MetaArgs) {
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const stack = await queryClient.ensureQueryData(
     composeStackQueries.single({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -66,6 +67,7 @@ export default function ComposeStackLayoutPage({
 }: Route.ComponentProps) {
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug

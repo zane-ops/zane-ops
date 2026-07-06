@@ -56,7 +56,7 @@ const sidebarNavItems: NavItem[] = [
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const project = await queryClient.ensureQueryData(
-    projectQueries.single(params.projectSlug)
+    projectQueries.single(params.workspaceId, params.projectSlug)
   );
   return { project };
 }

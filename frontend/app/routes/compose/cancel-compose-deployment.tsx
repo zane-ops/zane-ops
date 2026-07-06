@@ -51,6 +51,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
   await Promise.all([
     queryClient.invalidateQueries({
       ...composeStackQueries.singleDeployment({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -60,6 +61,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     }),
     queryClient.invalidateQueries(
       composeStackQueries.deploymentList({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug

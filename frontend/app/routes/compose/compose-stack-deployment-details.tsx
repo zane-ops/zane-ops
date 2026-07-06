@@ -48,6 +48,7 @@ export default function ComposeStackDeploymentDetailsPage({
 }: Route.ComponentProps) {
   const { data: deployment } = useQuery({
     ...composeStackQueries.singleDeployment({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug,

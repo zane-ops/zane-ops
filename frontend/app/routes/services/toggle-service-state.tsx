@@ -19,6 +19,7 @@ export type ToggleServiceState = RequestInput<
 
 export async function clientAction({
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -60,7 +61,7 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    serviceQueries.single({ project_slug, service_slug, env_slug })
+    serviceQueries.single({ workspaceId, project_slug, service_slug, env_slug })
   );
 
   return {

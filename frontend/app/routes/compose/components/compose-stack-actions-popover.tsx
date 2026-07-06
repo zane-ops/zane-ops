@@ -7,7 +7,7 @@ import {
   RocketIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, href, useFetcher, useNavigate } from "react-router";
+import { Link, href, useFetcher, useNavigate, useParams } from "react-router";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Popover,
@@ -138,6 +138,7 @@ function ToggleStackForm({
   projectSlug,
   envSlug
 }: ToggleStackFormProps) {
+  const workspaceId = useParams().workspaceId!;
   const fetcher = useFetcher<typeof toggleClientAction>();
 
   const { queue, queueToggleItem, dequeueToggleItem } =
@@ -171,6 +172,7 @@ function ToggleStackForm({
     const desiredState = formData.get("desired_state") as "stop" | "start";
     queueToggleItem(stack.id);
     toggleStateToast({
+      workspaceId,
       desiredState,
       projectSlug,
       stackSlug: stack.slug,
@@ -225,11 +227,13 @@ function ToggleStackForm({
 }
 
 async function toggleStateToast({
+  workspaceId,
   desiredState,
   projectSlug,
   stackSlug,
   envSlug
 }: {
+  workspaceId: string;
   desiredState: "stop" | "start";
   projectSlug: string;
   stackSlug: string;
@@ -275,6 +279,7 @@ async function toggleStateToast({
     try {
       stack = await queryClient.fetchQuery(
         composeStackQueries.single({
+          workspaceId,
           project_slug: projectSlug,
           stack_slug: stackSlug,
           env_slug: envSlug

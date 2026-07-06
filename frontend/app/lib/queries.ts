@@ -118,10 +118,23 @@ export const projectSearchSchema = zfd.formData({
 
 export type ProjectSearch = z.infer<typeof projectSearchSchema>;
 
+/**
+ * Base query key for all resources scoped to a workspace.
+ * The current workspace is server-side session state, so the react-query
+ * cache must be partitioned by `workspaceId` to avoid leaking data across
+ * workspaces.
+ */
+export const workspaceKey = (workspaceId: string) =>
+  ["WORKSPACE", workspaceId] as const;
+
 export const projectQueries = {
   list: (workspaceId: string, filters: ProjectSearch = {}) =>
     queryOptions({
-      queryKey: ["WORKSPACE", workspaceId, "PROJECT_LIST", filters] as const,
+      queryKey: [
+        ...workspaceKey(workspaceId),
+        "PROJECT_LIST",
+        filters
+      ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET("/api/projects/", {
           params: {
@@ -144,9 +157,9 @@ export const projectQueries = {
         return false;
       }
     }),
-  single: (slug: string) =>
+  single: (workspaceId: string, slug: string) =>
     queryOptions({
-      queryKey: ["PROJECT_SINGLE", slug] as const,
+      queryKey: [...workspaceKey(workspaceId), "PROJECT_SINGLE", slug] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET("/api/projects/{slug}/", {
           params: {
@@ -168,10 +181,10 @@ export const projectQueries = {
 };
 
 export const environmentQueries = {
-  single: (project_slug: string, env_slug: string) =>
+  single: (workspaceId: string, project_slug: string, env_slug: string) =>
     queryOptions({
       queryKey: [
-        ...projectQueries.single(project_slug).queryKey,
+        ...projectQueries.single(workspaceId, project_slug).queryKey,
         env_slug
       ] as const,
       queryFn: async ({ signal }) => {
@@ -201,13 +214,15 @@ export const environmentQueries = {
     }),
 
   serviceList: (
+    workspaceId: string,
     project_slug: string,
     env_slug: string,
     filters: ProjectServiceListSearch = {}
   ) =>
     queryOptions({
       queryKey: [
-        ...environmentQueries.single(project_slug, env_slug).queryKey,
+        ...environmentQueries.single(workspaceId, project_slug, env_slug)
+          .queryKey,
         "SERVICE_LIST",
         filters
       ] as const,
@@ -242,13 +257,15 @@ export const environmentQueries = {
     }),
 
   composeStackList: (
+    workspaceId: string,
     project_slug: string,
     env_slug: string,
     filters: ProjectSearch = {}
   ) =>
     queryOptions({
       queryKey: [
-        ...environmentQueries.single(project_slug, env_slug).queryKey,
+        ...environmentQueries.single(workspaceId, project_slug, env_slug)
+          .queryKey,
         "COMPOSE_STACK_LIST",
         filters
       ] as const,
@@ -282,10 +299,14 @@ export const environmentQueries = {
       }
     }),
 
-  pendingReview: (project_slug: string, env_slug: string) =>
+  pendingReview: (
+    workspaceId: string,
+    project_slug: string,
+    env_slug: string
+  ) =>
     queryOptions({
       queryKey: [
-        ...projectQueries.single(project_slug).queryKey,
+        ...projectQueries.single(workspaceId, project_slug).queryKey,
         env_slug,
         "PENDING_REVIEW"
       ] as const,
@@ -412,17 +433,19 @@ export type ComposeStackRuntimeLogFilters = z.infer<
 
 export const composeStackQueries = {
   single: ({
+    workspaceId,
     project_slug,
     stack_slug,
     env_slug
   }: {
+    workspaceId: string;
     project_slug: string;
     env_slug: string;
     stack_slug: string;
   }) =>
     queryOptions({
       queryKey: [
-        ...projectQueries.single(project_slug).queryKey,
+        ...projectQueries.single(workspaceId, project_slug).queryKey,
         env_slug,
         "COMPOSE_STACK_DETAILS",
         stack_slug
@@ -458,11 +481,13 @@ export const composeStackQueries = {
       refetchIntervalInBackground: true
     }),
   singleDeployment: ({
+    workspaceId,
     project_slug,
     stack_slug,
     env_slug,
     deployment_hash
   }: {
+    workspaceId: string;
     project_slug: string;
     env_slug: string;
     stack_slug: string;
@@ -471,6 +496,7 @@ export const composeStackQueries = {
     queryOptions({
       queryKey: [
         ...composeStackQueries.deploymentList({
+          workspaceId,
           project_slug,
           env_slug,
           stack_slug
@@ -510,6 +536,7 @@ export const composeStackQueries = {
       refetchIntervalInBackground: true
     }),
   deploymentLogs: ({
+    workspaceId,
     project_slug,
     stack_slug,
     env_slug,
@@ -517,6 +544,7 @@ export const composeStackQueries = {
     queryClient,
     autoRefetchEnabled
   }: {
+    workspaceId: string;
     project_slug: string;
     env_slug: string;
     stack_slug: string;
@@ -527,6 +555,7 @@ export const composeStackQueries = {
     infiniteQueryOptions({
       queryKey: [
         ...composeStackQueries.singleDeployment({
+          workspaceId,
           project_slug,
           stack_slug,
           env_slug,
@@ -642,11 +671,13 @@ export const composeStackQueries = {
       staleTime: Number.POSITIVE_INFINITY
     }),
   deploymentList: ({
+    workspaceId,
     project_slug,
     stack_slug,
     env_slug,
     filters = {}
   }: {
+    workspaceId: string;
     project_slug: string;
     env_slug: string;
     stack_slug: string;
@@ -654,8 +685,12 @@ export const composeStackQueries = {
   }) =>
     queryOptions({
       queryKey: [
-        ...composeStackQueries.single({ project_slug, env_slug, stack_slug })
-          .queryKey,
+        ...composeStackQueries.single({
+          workspaceId,
+          project_slug,
+          env_slug,
+          stack_slug
+        }).queryKey,
         "DEPLOYMENT_LIST",
         filters
       ] as const,
@@ -694,6 +729,7 @@ export const composeStackQueries = {
       }
     }),
   httpLogs: ({
+    workspaceId,
     project_slug,
     stack_slug,
     env_slug,
@@ -703,6 +739,7 @@ export const composeStackQueries = {
     autoRefetchEnabled = true,
     filters = {}
   }: {
+    workspaceId: string;
     stack_id: string;
     project_slug: string;
     stack_slug: string;
@@ -715,6 +752,7 @@ export const composeStackQueries = {
     infiniteQueryOptions({
       queryKey: [
         ...composeStackQueries.single({
+          workspaceId,
           project_slug,
           stack_slug,
           env_slug
@@ -834,11 +872,13 @@ export const composeStackQueries = {
       staleTime: Number.POSITIVE_INFINITY
     }),
   singleHttpLog: ({
+    workspaceId,
     project_slug,
     stack_slug,
     env_slug,
     request_uuid
   }: {
+    workspaceId: string;
     project_slug: string;
     stack_slug: string;
     env_slug: string;
@@ -847,6 +887,7 @@ export const composeStackQueries = {
     queryOptions({
       queryKey: [
         ...composeStackQueries.single({
+          workspaceId,
           project_slug,
           stack_slug,
           env_slug
@@ -867,6 +908,7 @@ export const composeStackQueries = {
       }
     }),
   filterHttpLogFields: ({
+    workspaceId,
     project_slug,
     env_slug,
     stack_id,
@@ -874,6 +916,7 @@ export const composeStackQueries = {
     field,
     value
   }: {
+    workspaceId: string;
     project_slug: string;
     stack_id: string;
     stack_slug: string;
@@ -884,6 +927,7 @@ export const composeStackQueries = {
     queryOptions({
       queryKey: [
         ...composeStackQueries.single({
+          workspaceId,
           project_slug,
           stack_slug,
           env_slug
@@ -908,11 +952,13 @@ export const composeStackQueries = {
       }
     }),
   metrics: ({
+    workspaceId,
     project_slug,
     stack_slug,
     env_slug,
     filters
   }: {
+    workspaceId: string;
     project_slug: string;
     stack_slug: string;
     env_slug: string;
@@ -921,6 +967,7 @@ export const composeStackQueries = {
     queryOptions({
       queryKey: [
         ...composeStackQueries.single({
+          workspaceId,
           project_slug,
           stack_slug,
           env_slug
@@ -959,6 +1006,7 @@ export const composeStackQueries = {
       }
     }),
   runtimeLogs: ({
+    workspaceId,
     project_slug,
     service_name,
     stack_slug,
@@ -967,6 +1015,7 @@ export const composeStackQueries = {
     filters = {},
     queryClient
   }: {
+    workspaceId: string;
     project_slug: string;
     service_name: string;
     stack_slug: string;
@@ -978,6 +1027,7 @@ export const composeStackQueries = {
     infiniteQueryOptions({
       queryKey: [
         ...composeStackQueries.single({
+          workspaceId,
           project_slug,
           stack_slug,
           env_slug
@@ -1097,6 +1147,7 @@ export const composeStackQueries = {
       staleTime: Number.POSITIVE_INFINITY
     }),
   logWithContext: ({
+    workspaceId,
     project_slug,
     stack_slug,
     env_slug,
@@ -1104,6 +1155,7 @@ export const composeStackQueries = {
     time,
     context_lines = 20
   }: {
+    workspaceId: string;
     project_slug: string;
     service_name: string;
     stack_slug: string;
@@ -1114,6 +1166,7 @@ export const composeStackQueries = {
     queryOptions({
       queryKey: [
         ...composeStackQueries.single({
+          workspaceId,
           project_slug,
           stack_slug,
           env_slug
@@ -1157,17 +1210,19 @@ export const composeStackQueries = {
 
 export const serviceQueries = {
   single: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug
   }: {
+    workspaceId: string;
     project_slug: string;
     env_slug: string;
     service_slug: string;
   }) =>
     queryOptions({
       queryKey: [
-        ...projectQueries.single(project_slug).queryKey,
+        ...projectQueries.single(workspaceId, project_slug).queryKey,
         env_slug,
         "SERVICE_DETAILS",
         service_slug
@@ -1202,11 +1257,13 @@ export const serviceQueries = {
       }
     }),
   deploymentList: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug,
     filters = {}
   }: {
+    workspaceId: string;
     project_slug: string;
     service_slug: string;
     env_slug: string;
@@ -1214,8 +1271,12 @@ export const serviceQueries = {
   }) =>
     queryOptions({
       queryKey: [
-        ...serviceQueries.single({ project_slug, service_slug, env_slug })
-          .queryKey,
+        ...serviceQueries.single({
+          workspaceId,
+          project_slug,
+          service_slug,
+          env_slug
+        }).queryKey,
         "DEPLOYMENT_LIST",
         filters
       ] as const,
@@ -1252,6 +1313,7 @@ export const serviceQueries = {
       }
     }),
   httpLogs: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug,
@@ -1260,6 +1322,7 @@ export const serviceQueries = {
     filters = {},
     queryClient
   }: {
+    workspaceId: string;
     service_id: string;
     project_slug: string;
     service_slug: string;
@@ -1271,6 +1334,7 @@ export const serviceQueries = {
     infiniteQueryOptions({
       queryKey: [
         ...serviceQueries.single({
+          workspaceId,
           project_slug,
           service_slug,
           env_slug
@@ -1381,11 +1445,13 @@ export const serviceQueries = {
       staleTime: Number.POSITIVE_INFINITY
     }),
   metrics: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug,
     filters
   }: {
+    workspaceId: string;
     project_slug: string;
     service_slug: string;
     env_slug: string;
@@ -1394,6 +1460,7 @@ export const serviceQueries = {
     queryOptions({
       queryKey: [
         ...serviceQueries.single({
+          workspaceId,
           project_slug,
           service_slug,
           env_slug
@@ -1432,10 +1499,12 @@ export const serviceQueries = {
       }
     }),
   detectedPorts: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug
   }: {
+    workspaceId: string;
     project_slug: string;
     service_slug: string;
     env_slug: string;
@@ -1443,6 +1512,7 @@ export const serviceQueries = {
     queryOptions({
       queryKey: [
         ...serviceQueries.single({
+          workspaceId,
           project_slug,
           service_slug,
           env_slug
@@ -1477,10 +1547,12 @@ export const serviceQueries = {
       }
     }),
   availableVolumes: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug
   }: {
+    workspaceId: string;
     project_slug: string;
     service_slug: string;
     env_slug: string;
@@ -1488,6 +1560,7 @@ export const serviceQueries = {
     queryOptions({
       queryKey: [
         ...serviceQueries.single({
+          workspaceId,
           project_slug,
           service_slug,
           env_slug
@@ -1517,11 +1590,13 @@ export const serviceQueries = {
       placeholderData: keepPreviousData
     }),
   singleHttpLog: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug,
     request_uuid
   }: {
+    workspaceId: string;
     project_slug: string;
     service_slug: string;
     env_slug: string;
@@ -1531,6 +1606,7 @@ export const serviceQueries = {
     queryOptions({
       queryKey: [
         ...serviceQueries.single({
+          workspaceId,
           project_slug,
           service_slug,
           env_slug
@@ -1551,6 +1627,7 @@ export const serviceQueries = {
       }
     }),
   filterHttpLogFields: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug,
@@ -1558,6 +1635,7 @@ export const serviceQueries = {
     field,
     value
   }: {
+    workspaceId: string;
     project_slug: string;
     service_slug: string;
     service_id: string;
@@ -1568,6 +1646,7 @@ export const serviceQueries = {
     queryOptions({
       queryKey: [
         ...serviceQueries.single({
+          workspaceId,
           project_slug,
           service_slug,
           env_slug
@@ -1676,30 +1755,33 @@ export const httpLogSearchSchema = zfd.formData({
 export type HTTPLogFilters = z.infer<typeof httpLogSearchSchema>;
 
 export const deploymentQueries = {
-  recent: queryOptions({
-    queryKey: ["RECENT_DEPLOYMENTS"] as const,
-    queryFn: async ({ signal }) => {
-      const { data } = await apiClient.GET("/api/recent-deployments/", {
-        signal
-      });
-      if (!data) {
-        throw notFound(`This deployment does not exist in this service.`);
+  recent: (workspaceId: string) =>
+    queryOptions({
+      queryKey: [...workspaceKey(workspaceId), "RECENT_DEPLOYMENTS"] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/recent-deployments/", {
+          signal
+        });
+        if (!data) {
+          throw notFound(`This deployment does not exist in this service.`);
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
       }
-      return data;
-    },
-    refetchInterval: (query) => {
-      if (query.state.data) {
-        return DEFAULT_QUERY_REFETCH_INTERVAL;
-      }
-      return false;
-    }
-  }),
+    }),
   single: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug,
     deployment_hash
   }: {
+    workspaceId: string;
     project_slug: string;
     service_slug: string;
     env_slug: string;
@@ -1707,7 +1789,7 @@ export const deploymentQueries = {
   }) =>
     queryOptions({
       queryKey: [
-        ...projectQueries.single(project_slug).queryKey,
+        ...projectQueries.single(workspaceId, project_slug).queryKey,
         env_slug,
         "SERVICE_DETAILS",
         service_slug,
@@ -1743,6 +1825,7 @@ export const deploymentQueries = {
       refetchIntervalInBackground: true
     }),
   logs: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug,
@@ -1751,6 +1834,7 @@ export const deploymentQueries = {
     filters = {},
     queryClient
   }: {
+    workspaceId: string;
     project_slug: string;
     service_slug: string;
     env_slug: string;
@@ -1762,6 +1846,7 @@ export const deploymentQueries = {
     infiniteQueryOptions({
       queryKey: [
         ...deploymentQueries.single({
+          workspaceId,
           project_slug,
           service_slug,
           env_slug,
@@ -1881,6 +1966,7 @@ export const deploymentQueries = {
       staleTime: Number.POSITIVE_INFINITY
     }),
   logWithContext: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug,
@@ -1888,6 +1974,7 @@ export const deploymentQueries = {
     time,
     context_lines = 20
   }: {
+    workspaceId: string;
     project_slug: string;
     service_slug: string;
     env_slug: string;
@@ -1898,6 +1985,7 @@ export const deploymentQueries = {
     queryOptions({
       queryKey: [
         ...deploymentQueries.single({
+          workspaceId,
           project_slug,
           service_slug,
           env_slug,
@@ -1939,6 +2027,7 @@ export const deploymentQueries = {
       placeholderData: keepPreviousData
     }),
   buildLogs: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug,
@@ -1946,6 +2035,7 @@ export const deploymentQueries = {
     autoRefetchEnabled = true,
     queryClient
   }: {
+    workspaceId: string;
     project_slug: string;
     service_slug: string;
     env_slug: string;
@@ -1956,6 +2046,7 @@ export const deploymentQueries = {
     infiniteQueryOptions({
       queryKey: [
         ...deploymentQueries.single({
+          workspaceId,
           project_slug,
           service_slug,
           env_slug,
@@ -2071,12 +2162,14 @@ export const deploymentQueries = {
       staleTime: Number.POSITIVE_INFINITY
     }),
   metrics: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug,
     deployment_hash,
     filters
   }: {
+    workspaceId: string;
     project_slug: string;
     deployment_hash: string;
     service_slug: string;
@@ -2086,6 +2179,7 @@ export const deploymentQueries = {
     queryOptions({
       queryKey: [
         ...deploymentQueries.single({
+          workspaceId,
           project_slug,
           service_slug,
           env_slug,
@@ -2126,6 +2220,7 @@ export const deploymentQueries = {
       }
     }),
   httpLogs: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug,
@@ -2134,6 +2229,7 @@ export const deploymentQueries = {
     filters = {},
     queryClient
   }: {
+    workspaceId: string;
     project_slug: string;
     service_slug: string;
     env_slug: string;
@@ -2145,6 +2241,7 @@ export const deploymentQueries = {
     infiniteQueryOptions({
       queryKey: [
         ...deploymentQueries.single({
+          workspaceId,
           project_slug,
           service_slug,
           env_slug,
@@ -2255,12 +2352,14 @@ export const deploymentQueries = {
       staleTime: Number.POSITIVE_INFINITY
     }),
   singleHttpLog: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug,
     deployment_hash,
     request_uuid
   }: {
+    workspaceId: string;
     project_slug: string;
     service_slug: string;
     env_slug: string;
@@ -2270,6 +2369,7 @@ export const deploymentQueries = {
     queryOptions({
       queryKey: [
         ...deploymentQueries.single({
+          workspaceId,
           project_slug,
           service_slug,
           env_slug,
@@ -2291,6 +2391,7 @@ export const deploymentQueries = {
       }
     }),
   filterHttpLogFields: ({
+    workspaceId,
     project_slug,
     service_slug,
     env_slug,
@@ -2298,6 +2399,7 @@ export const deploymentQueries = {
     field,
     value
   }: {
+    workspaceId: string;
     project_slug: string;
     service_slug: string;
     env_slug: string;
@@ -2308,6 +2410,7 @@ export const deploymentQueries = {
     queryOptions({
       queryKey: [
         ...deploymentQueries.single({
+          workspaceId,
           project_slug,
           service_slug,
           env_slug,
@@ -2404,9 +2507,9 @@ export type HttpLog = Awaited<
 >["results"][number];
 
 export const resourceQueries = {
-  search: (query?: string) =>
+  search: (workspaceId: string, query?: string) =>
     queryOptions({
-      queryKey: ["RESOURCES", query] as const,
+      queryKey: [...workspaceKey(workspaceId), "RESOURCES", query] as const,
       queryFn: ({ signal }) => {
         return apiClient.GET("/api/search-resources/", {
           params: {
@@ -2467,27 +2570,35 @@ export const sshKeysQueries = {
 };
 
 export const sharedRegistryCredentialsQueries = {
-  list: queryOptions({
-    queryKey: ["SHARED_REGISTRY_CREDENTIALS"] as const,
-    queryFn: async ({ signal }) => {
-      const { data } = await apiClient.GET("/api/registries/credentials/", {
-        signal
-      });
-      if (!data) {
-        throw notFound("Oops !");
-      }
-      return data;
-    },
-    refetchInterval: (query) => {
-      if (query.state.data) {
-        return DEFAULT_QUERY_REFETCH_INTERVAL;
-      }
-      return false;
-    }
-  }),
-  single: (id: string) =>
+  list: (workspaceId: string) =>
     queryOptions({
-      queryKey: ["SHARED_REGISTRY_CREDENTIALS", id] as const,
+      queryKey: [
+        ...workspaceKey(workspaceId),
+        "SHARED_REGISTRY_CREDENTIALS"
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/registries/credentials/", {
+          signal
+        });
+        if (!data) {
+          throw notFound("Oops !");
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
+  single: (workspaceId: string, id: string) =>
+    queryOptions({
+      queryKey: [
+        ...workspaceKey(workspaceId),
+        "SHARED_REGISTRY_CREDENTIALS",
+        id
+      ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
           "/api/registries/credentials/{id}/",
@@ -2517,27 +2628,28 @@ export const sharedRegistryCredentialsQueries = {
 };
 
 export const gitAppsQueries = {
-  list: queryOptions({
-    queryKey: ["GIT_APPS"] as const,
-    queryFn: async ({ signal }) => {
-      const { data } = await apiClient.GET("/api/connectors/list/", {
-        signal
-      });
-      if (!data) {
-        throw notFound("Oops !");
-      }
-      return data;
-    },
-    refetchInterval: (query) => {
-      if (query.state.data) {
-        return DEFAULT_QUERY_REFETCH_INTERVAL;
-      }
-      return false;
-    }
-  }),
-  single: (id: string) =>
+  list: (workspaceId: string) =>
     queryOptions({
-      queryKey: ["GIT_APPS", id] as const,
+      queryKey: [...workspaceKey(workspaceId), "GIT_APPS"] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/connectors/list/", {
+          signal
+        });
+        if (!data) {
+          throw notFound("Oops !");
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
+  single: (workspaceId: string, id: string) =>
+    queryOptions({
+      queryKey: [...workspaceKey(workspaceId), "GIT_APPS", id] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET("/api/connectors/{id}/", {
           params: { path: { id } },
@@ -2555,9 +2667,13 @@ export const gitAppsQueries = {
         return false;
       }
     }),
-  github: (id: string) =>
+  github: (workspaceId: string, id: string) =>
     queryOptions({
-      queryKey: [...gitAppsQueries.list.queryKey, "GITHUB", id] as const,
+      queryKey: [
+        ...gitAppsQueries.list(workspaceId).queryKey,
+        "GITHUB",
+        id
+      ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET("/api/connectors/github/{id}/", {
           signal,
@@ -2577,9 +2693,13 @@ export const gitAppsQueries = {
         return false;
       }
     }),
-  gitlab: (id: string) =>
+  gitlab: (workspaceId: string, id: string) =>
     queryOptions({
-      queryKey: [...gitAppsQueries.list.queryKey, "GITLAB", id] as const,
+      queryKey: [
+        ...gitAppsQueries.list(workspaceId).queryKey,
+        "GITLAB",
+        id
+      ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET("/api/connectors/gitlab/{id}/", {
           signal,
@@ -2599,9 +2719,17 @@ export const gitAppsQueries = {
         return false;
       }
     }),
-  repositoryBranches: (repoUrl: string, gitAppId?: string) =>
+  repositoryBranches: (
+    workspaceId: string,
+    repoUrl: string,
+    gitAppId?: string
+  ) =>
     queryOptions({
-      queryKey: ["GIT_REPOSITORY_BRANCHES", repoUrl] as const,
+      queryKey: [
+        ...workspaceKey(workspaceId),
+        "GIT_REPOSITORY_BRANCHES",
+        repoUrl
+      ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
           "/api/connectors/repository-branches/",
@@ -2621,10 +2749,14 @@ export const gitAppsQueries = {
       staleTime: durationToMs(30, "seconds"),
       placeholderData: keepPreviousData
     }),
-  repositories: (id: string, filters: { query?: string } = {}) =>
+  repositories: (
+    workspaceId: string,
+    id: string,
+    filters: { query?: string } = {}
+  ) =>
     queryOptions({
       queryKey: [
-        ...gitAppsQueries.single(id).queryKey,
+        ...gitAppsQueries.single(workspaceId, id).queryKey,
         "REPOSITORIES",
         filters
       ] as const,
@@ -2656,10 +2788,10 @@ export const gitAppsQueries = {
 };
 
 export const previewTemplatesQueries = {
-  list: (project_slug: string) =>
+  list: (workspaceId: string, project_slug: string) =>
     queryOptions({
       queryKey: [
-        ...projectQueries.single(project_slug).queryKey,
+        ...projectQueries.single(workspaceId, project_slug).queryKey,
         "PREVIEW_TEMPLATES"
       ] as const,
       queryFn: async ({ signal }) => {
@@ -2686,10 +2818,10 @@ export const previewTemplatesQueries = {
         return false;
       }
     }),
-  single: (project_slug: string, template_slug: string) =>
+  single: (workspaceId: string, project_slug: string, template_slug: string) =>
     queryOptions({
       queryKey: [
-        ...previewTemplatesQueries.list(project_slug).queryKey,
+        ...previewTemplatesQueries.list(workspaceId, project_slug).queryKey,
         template_slug
       ] as const,
       queryFn: async ({ signal }) => {

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useParams } from "react-router";
 import { GitBranchIcon } from "lucide-react";
 import * as React from "react";
 import {
@@ -35,10 +36,11 @@ export function GitRepositoryBranchListInput({
   searchQuery: branchQuery,
   setSearchQuery: setBranchQuery
 }: GitRepositoryBranchListInputProps) {
+  const workspaceId = useParams().workspaceId!;
   const [isComboxOpen, setComboxOpen] = React.useState(false);
 
   const branchesListQuery = useQuery(
-    gitAppsQueries.repositoryBranches(repositoryURL, appId)
+    gitAppsQueries.repositoryBranches(workspaceId, repositoryURL, appId)
   );
 
   const branches = branchesListQuery.data ?? [];

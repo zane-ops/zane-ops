@@ -60,7 +60,11 @@ export function meta({ error, params }: Route.MetaArgs) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const template = await queryClient.ensureQueryData(
-    previewTemplatesQueries.single(params.projectSlug, params.templateSlug)
+    previewTemplatesQueries.single(
+      params.workspaceId,
+      params.projectSlug,
+      params.templateSlug
+    )
   );
 
   return {
@@ -78,7 +82,11 @@ export default function PreviewTemplateDetailsPage({
   }
 }: Route.ComponentProps) {
   const { data: template } = useQuery({
-    ...previewTemplatesQueries.single(params.projectSlug, params.templateSlug),
+    ...previewTemplatesQueries.single(
+      params.workspaceId,
+      params.projectSlug,
+      params.templateSlug
+    ),
     initialData: loaderData.template
   });
 
@@ -128,10 +136,15 @@ function EditPreviewTemplateForm({
   );
 
   const { data: serviceList } = useQuery(
-    environmentQueries.serviceList(params.projectSlug!, baseEnvironment.name)
+    environmentQueries.serviceList(
+      params.workspaceId!,
+      params.projectSlug!,
+      baseEnvironment.name
+    )
   );
   const { data: stackList } = useQuery(
     environmentQueries.composeStackList(
+      params.workspaceId!,
       params.projectSlug!,
       baseEnvironment.name
     )
@@ -703,7 +716,7 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    previewTemplatesQueries.list(params.projectSlug)
+    previewTemplatesQueries.list(params.workspaceId, params.projectSlug)
   );
 
   toast.success("Success", {

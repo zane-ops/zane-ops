@@ -41,6 +41,7 @@ import type { Route } from "./+types/services-deployment-list";
 
 export async function clientLoader({
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -61,6 +62,7 @@ export async function clientLoader({
 
   const deploymentList = await queryClient.ensureQueryData(
     serviceQueries.deploymentList({
+      workspaceId,
       project_slug,
       service_slug,
       filters,
@@ -99,6 +101,7 @@ function DeployForm({ service_type }: { service_type: Service["type"] }) {
 
 export default function DeploymentListPage({
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -127,6 +130,7 @@ export default function DeploymentListPage({
     data: { results: deploymentList, count: totalDeployments }
   } = useQuery({
     ...serviceQueries.deploymentList({
+      workspaceId,
       project_slug,
       service_slug,
       filters,

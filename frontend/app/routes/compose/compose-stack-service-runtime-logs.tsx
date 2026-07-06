@@ -60,6 +60,7 @@ import type { Route } from "./+types/compose-stack-service-runtime-logs";
 
 export async function clientLoader({
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_name,
     envSlug: env_slug,
@@ -79,6 +80,7 @@ export async function clientLoader({
 
   queryClient.prefetchInfiniteQuery(
     composeStackQueries.runtimeLogs({
+      workspaceId,
       stack_slug,
       project_slug,
       service_name,
@@ -114,6 +116,7 @@ export default function ComposeStackRuntimeLogsPage({
   const queryClient = useQueryClient();
   const logsQuery = useInfiniteQuery({
     ...composeStackQueries.runtimeLogs({
+      workspaceId: params.workspaceId,
       service_name: params.serviceSlug,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
@@ -127,6 +130,7 @@ export default function ComposeStackRuntimeLogsPage({
 
   const logsWithContextQuery = useQuery({
     ...composeStackQueries.logWithContext({
+      workspaceId: params.workspaceId,
       service_name: params.serviceSlug,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
@@ -449,6 +453,7 @@ const HeaderSection = React.memo(function HeaderSection({
 
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug

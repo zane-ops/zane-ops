@@ -73,6 +73,7 @@ type EnvVariableUI = {
 
 export default function ServiceEnvVariablesPage({
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -84,7 +85,12 @@ export default function ServiceEnvVariablesPage({
   }
 }: Route.ComponentProps) {
   const { data: service } = useQuery({
-    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+    ...serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }),
     initialData
   });
 
@@ -207,6 +213,7 @@ export async function clientAction({
   switch (intent) {
     case "create-env-variable": {
       return createEnvVariable({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -215,6 +222,7 @@ export async function clientAction({
     }
     case "update-env-variable": {
       return updateEnvVariable({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -223,6 +231,7 @@ export async function clientAction({
     }
     case "cancel-env-change": {
       return cancelEnvVariable({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -231,6 +240,7 @@ export async function clientAction({
     }
     case "delete-env-variable": {
       return deleteEnvVariable({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -239,6 +249,7 @@ export async function clientAction({
     }
     case "add-dotenv-values": {
       return addDotEnvVariables({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -257,11 +268,13 @@ type EnVariableRowProps = EnvVariableUI & {
 };
 
 async function createEnvVariable({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
@@ -300,7 +313,12 @@ async function createEnvVariable({
 
   if (data) {
     await queryClient.invalidateQueries({
-      ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+      ...serviceQueries.single({
+        workspaceId,
+        project_slug,
+        service_slug,
+        env_slug
+      }),
       exact: true
     });
     return { data };
@@ -308,11 +326,13 @@ async function createEnvVariable({
 }
 
 async function updateEnvVariable({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
@@ -352,7 +372,12 @@ async function updateEnvVariable({
 
   if (data) {
     await queryClient.invalidateQueries({
-      ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+      ...serviceQueries.single({
+        workspaceId,
+        project_slug,
+        service_slug,
+        env_slug
+      }),
       exact: true
     });
     return { data };
@@ -360,11 +385,13 @@ async function updateEnvVariable({
 }
 
 async function deleteEnvVariable({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
@@ -402,7 +429,12 @@ async function deleteEnvVariable({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+    ...serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }),
     exact: true
   });
   toast.success("Success", {
@@ -413,11 +445,13 @@ async function deleteEnvVariable({
 }
 
 async function addDotEnvVariables({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
@@ -448,7 +482,12 @@ async function addDotEnvVariables({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+    ...serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }),
     exact: true
   });
   toast.success("Success", {
@@ -461,11 +500,13 @@ async function addDotEnvVariables({
 }
 
 async function cancelEnvVariable({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
@@ -499,7 +540,12 @@ async function cancelEnvVariable({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+    ...serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }),
     exact: true
   });
   toast.success("Success", {

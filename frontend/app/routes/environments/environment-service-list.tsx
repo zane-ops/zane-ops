@@ -45,38 +45,53 @@ export async function clientLoader({
   const queryString = searchParams.get("query") ?? "";
 
   const serviceList = await queryClient.ensureQueryData(
-    environmentQueries.serviceList(params.projectSlug, params.envSlug, {
-      query: queryString
-    })
+    environmentQueries.serviceList(
+      params.workspaceId,
+      params.projectSlug,
+      params.envSlug,
+      {
+        query: queryString
+      }
+    )
   );
 
   const composeStackList = await queryClient.ensureQueryData(
-    environmentQueries.composeStackList(params.projectSlug, params.envSlug, {
-      slug: queryString
-    })
+    environmentQueries.composeStackList(
+      params.workspaceId,
+      params.projectSlug,
+      params.envSlug,
+      {
+        slug: queryString
+      }
+    )
   );
 
   return { serviceList, composeStackList };
 }
 
 export default function EnvironmentServiceListPage({
-  params: { projectSlug: project_slug, envSlug: env_slug },
+  params: { workspaceId, projectSlug: project_slug, envSlug: env_slug },
   loaderData
 }: Route.ComponentProps) {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("query") ?? "";
 
   const { data: serviceList = loaderData.serviceList } = useQuery({
-    ...environmentQueries.serviceList(project_slug, env_slug, {
+    ...environmentQueries.serviceList(workspaceId, project_slug, env_slug, {
       query
     }),
     initialData: loaderData.serviceList
   });
 
   const { data: composeStackList = loaderData.composeStackList } = useQuery({
-    ...environmentQueries.composeStackList(project_slug, env_slug, {
-      slug: query
-    }),
+    ...environmentQueries.composeStackList(
+      workspaceId,
+      project_slug,
+      env_slug,
+      {
+        slug: query
+      }
+    ),
     initialData: loaderData.composeStackList
   });
 

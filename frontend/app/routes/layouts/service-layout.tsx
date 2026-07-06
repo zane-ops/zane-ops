@@ -73,6 +73,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const [service, limits, detectedPorts] = await Promise.all([
     queryClient.ensureQueryData(
       serviceQueries.single({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug
@@ -81,6 +82,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     queryClient.ensureQueryData(serverQueries.resourceLimits),
     queryClient.ensureQueryData(
       serviceQueries.detectedPorts({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug
@@ -105,6 +107,7 @@ const TABS = {
 export default function ServiceDetailsLayout({
   loaderData,
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -114,6 +117,7 @@ export default function ServiceDetailsLayout({
 
   const { data: service } = useQuery({
     ...serviceQueries.single({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug
@@ -123,6 +127,7 @@ export default function ServiceDetailsLayout({
 
   const { data: detectedPorts } = useQuery({
     ...serviceQueries.detectedPorts({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug

@@ -14,7 +14,7 @@ import {
   TerminalIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, href, useFetcher, useNavigate } from "react-router";
+import { Link, href, useFetcher, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import type { ComposeStack } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
@@ -320,6 +320,7 @@ function ToggleServiceForm({
   ref,
   ...params
 }: ToggleServiceFormProps) {
+  const workspaceId = useParams().workspaceId!;
   const fetcher = useFetcher();
 
   const { queue, queueToggleItem, dequeueToggleItem } =
@@ -345,6 +346,7 @@ function ToggleServiceForm({
     const desiredState = formData.get("desired_state") as "stop" | "start";
     queueToggleItem(queue_id);
     toggleStateToast({
+      workspaceId,
       desiredState,
       ...params
     }).finally(() => dequeueToggleItem(queue_id));
@@ -378,9 +380,11 @@ function ToggleServiceForm({
 
 async function toggleStateToast({
   desiredState,
+  workspaceId,
   ...params
 }: {
   desiredState: "stop" | "start";
+  workspaceId: string;
 } & Omit<ToggleServiceFormProps, "stackId" | "current_state" | "ref">) {
   const stackLink = (
     <Link
@@ -419,6 +423,7 @@ async function toggleStateToast({
     try {
       stack = await queryClient.fetchQuery(
         composeStackQueries.single({
+          workspaceId,
           project_slug: params.projectSlug,
           stack_slug: params.composeStackSlug,
           env_slug: params.envSlug

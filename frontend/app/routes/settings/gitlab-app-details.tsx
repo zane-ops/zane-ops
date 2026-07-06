@@ -26,7 +26,7 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const app = await queryClient.ensureQueryData(
-    gitAppsQueries.gitlab(params.id)
+    gitAppsQueries.gitlab(params.workspaceId, params.id)
   );
   return { app };
 }
@@ -269,7 +269,7 @@ async function updateGitlabApp(
   const { state } = data;
 
   const app = await queryClient.getQueryData(
-    gitAppsQueries.gitlab(params.id).queryKey
+    gitAppsQueries.gitlab(params.workspaceId, params.id).queryKey
   )!;
 
   const redirectURL = new URL(`${app.gitlab_url}/oauth/authorize`);

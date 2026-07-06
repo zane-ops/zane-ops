@@ -47,6 +47,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
 
   await queryClient.invalidateQueries(
     serviceQueries.single({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       service_slug: params.serviceSlug,
       env_slug: params.envSlug

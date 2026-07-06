@@ -51,18 +51,19 @@ export function meta() {
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader() {
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const credentials = await queryClient.ensureQueryData(
-    sharedRegistryCredentialsQueries.list
+    sharedRegistryCredentialsQueries.list(params.workspaceId)
   );
   return { credentials };
 }
 
 export default function ContainerRegistryCredentialsPage({
-  loaderData
+  loaderData,
+  params
 }: Route.ComponentProps) {
   const { data: credentials } = useQuery({
-    ...sharedRegistryCredentialsQueries.list,
+    ...sharedRegistryCredentialsQueries.list(params.workspaceId),
     initialData: loaderData.credentials
   });
 

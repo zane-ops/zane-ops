@@ -32,8 +32,10 @@ export function meta() {
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader({}: Route.ClientLoaderArgs) {
-  const gitAppList = await queryClient.ensureQueryData(gitAppsQueries.list);
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const gitAppList = await queryClient.ensureQueryData(
+    gitAppsQueries.list(params.workspaceId)
+  );
 
   return {
     gitAppList
@@ -45,7 +47,7 @@ export default function CreatePrivateGitServicePage({
   loaderData
 }: Route.ComponentProps) {
   const { data: gitAppList } = useQuery({
-    ...gitAppsQueries.list,
+    ...gitAppsQueries.list(params.workspaceId),
     initialData: loaderData.gitAppList
   });
 

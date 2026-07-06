@@ -29,6 +29,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const [stack, deployment] = await Promise.all([
     queryClient.ensureQueryData(
       composeStackQueries.single({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug
@@ -36,6 +37,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     ),
     queryClient.ensureQueryData(
       composeStackQueries.singleDeployment({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -57,6 +59,7 @@ export default function ComposeStackDeploymentLayoutPage({
 }: Route.ComponentProps) {
   const { data: deployment } = useQuery({
     ...composeStackQueries.singleDeployment({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug,

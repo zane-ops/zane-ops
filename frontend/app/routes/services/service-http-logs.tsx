@@ -51,6 +51,7 @@ import type { Route } from "./+types/service-http-logs";
 export async function clientLoader({
   request,
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -58,6 +59,7 @@ export async function clientLoader({
 }: Route.ClientLoaderArgs) {
   const service = await queryClient.ensureQueryData(
     serviceQueries.single({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug
@@ -86,6 +88,7 @@ export async function clientLoader({
   const [httpLogs, httpLog] = await Promise.all([
     queryClient.ensureInfiniteQueryData(
       serviceQueries.httpLogs({
+        workspaceId,
         project_slug,
         service_slug,
         env_slug,
@@ -97,6 +100,7 @@ export async function clientLoader({
     search.request_id
       ? queryClient.ensureQueryData(
           serviceQueries.singleHttpLog({
+            workspaceId,
             project_slug,
             request_uuid: search.request_id,
             service_slug,
@@ -112,6 +116,7 @@ export async function clientLoader({
 export default function ServiceHttpLogsPage({
   loaderData,
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -142,6 +147,7 @@ export default function ServiceHttpLogsPage({
 
   const logsQuery = useInfiniteQuery({
     ...serviceQueries.httpLogs({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,
@@ -928,6 +934,7 @@ type HostFilterProps = {
 
 function HostFilter({ hosts }: HostFilterProps) {
   const {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -939,6 +946,7 @@ function HostFilter({ hosts }: HostFilterProps) {
 
   const { data: hostList = [] } = useQuery(
     serviceQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,
@@ -975,6 +983,7 @@ type PathFilterProps = {
 
 function PathFilter({ paths }: PathFilterProps) {
   const {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -985,6 +994,7 @@ function PathFilter({ paths }: PathFilterProps) {
 
   const { data: hostList = [] } = useQuery(
     serviceQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,
@@ -1021,6 +1031,7 @@ type ClientIpFilterProps = {
 
 function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
   const {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -1032,6 +1043,7 @@ function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
 
   const { data: ipList = [] } = useQuery(
     serviceQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,
@@ -1066,6 +1078,7 @@ type UserAgentFilterProps = {
 
 function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
   const {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -1076,6 +1089,7 @@ function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
 
   const { data: uaList = [] } = useQuery(
     serviceQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,

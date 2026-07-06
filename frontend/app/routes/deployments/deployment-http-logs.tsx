@@ -52,6 +52,7 @@ import type { Route } from "./+types/deployment-http-logs";
 export async function clientLoader({
   request,
   params: {
+    workspaceId,
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -76,6 +77,7 @@ export async function clientLoader({
   const [httpLogs, httpLog] = await Promise.all([
     queryClient.ensureInfiniteQueryData(
       deploymentQueries.httpLogs({
+        workspaceId,
         deployment_hash,
         project_slug,
         service_slug,
@@ -87,6 +89,7 @@ export async function clientLoader({
     search.request_id
       ? queryClient.ensureQueryData(
           deploymentQueries.singleHttpLog({
+            workspaceId,
             deployment_hash,
             project_slug,
             service_slug,
@@ -102,6 +105,7 @@ export async function clientLoader({
 export default function DeploymentHttpLogsPage({
   loaderData,
   params: {
+    workspaceId,
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -133,6 +137,7 @@ export default function DeploymentHttpLogsPage({
 
   const logsQuery = useInfiniteQuery({
     ...deploymentQueries.httpLogs({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,
@@ -917,6 +922,7 @@ type HostFilterProps = {
 
 function HostFilter({ hosts }: HostFilterProps) {
   const {
+    workspaceId,
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -927,6 +933,7 @@ function HostFilter({ hosts }: HostFilterProps) {
 
   const { data: hostList = [] } = useQuery(
     deploymentQueries.filterHttpLogFields({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,
@@ -963,6 +970,7 @@ type PathFilterProps = {
 
 function PathFilter({ paths }: PathFilterProps) {
   const {
+    workspaceId,
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -973,6 +981,7 @@ function PathFilter({ paths }: PathFilterProps) {
 
   const { data: hostList = [] } = useQuery(
     deploymentQueries.filterHttpLogFields({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,
@@ -1009,6 +1018,7 @@ type ClientIpFilterProps = {
 
 function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
   const {
+    workspaceId,
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -1019,6 +1029,7 @@ function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
 
   const { data: ipList = [] } = useQuery(
     deploymentQueries.filterHttpLogFields({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,
@@ -1053,6 +1064,7 @@ type UserAgentFilterProps = {
 
 function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
   const {
+    workspaceId,
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -1063,6 +1075,7 @@ function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
 
   const { data: uaList = [] } = useQuery(
     deploymentQueries.filterHttpLogFields({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,

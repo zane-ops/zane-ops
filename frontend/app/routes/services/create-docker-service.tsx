@@ -16,7 +16,8 @@ import {
   useFetcher,
   useLoaderData,
   useNavigate,
-  useNavigation
+  useNavigation,
+  useParams
 } from "react-router";
 import { useDebounce } from "use-debounce";
 import { type RequestInput, apiClient } from "~/api/client";
@@ -64,9 +65,9 @@ export function meta() {
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader() {
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const registries = await queryClient.ensureQueryData(
-    sharedRegistryCredentialsQueries.list
+    sharedRegistryCredentialsQueries.list(params.workspaceId)
   );
   return { registries };
 }
@@ -293,8 +294,9 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   );
 
   const loaderData = useLoaderData<typeof clientLoader>();
+  const params = useParams<Route.ComponentProps["params"]>();
   const { data: registries } = useQuery({
-    ...sharedRegistryCredentialsQueries.list,
+    ...sharedRegistryCredentialsQueries.list(params.workspaceId!),
     initialData: loaderData.registries
   });
   const navigate = useNavigate();

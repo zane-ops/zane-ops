@@ -40,7 +40,7 @@ export async function clientLoader({
     queryClient.ensureQueryData(
       projectQueries.list(params.workspaceId, filters)
     ),
-    queryClient.ensureQueryData(deploymentQueries.recent)
+    queryClient.ensureQueryData(deploymentQueries.recent(params.workspaceId))
   ]);
   return {
     projectList,
@@ -214,8 +214,10 @@ function ProjectsListSection() {
 function RecentDeploymentsSection() {
   const loaderData = useLoaderData<typeof clientLoader>();
 
+  const params = useParams<Route.ComponentProps["params"]>();
+
   const { data: recentDeployments } = useQuery({
-    ...deploymentQueries.recent,
+    ...deploymentQueries.recent(params.workspaceId!),
     initialData: loaderData.recentDeployments
   });
 

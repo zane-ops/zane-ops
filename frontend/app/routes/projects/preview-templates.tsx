@@ -34,7 +34,7 @@ export function meta({ error, params }: Route.MetaArgs) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const templates = await queryClient.ensureQueryData(
-    previewTemplatesQueries.list(params.projectSlug)
+    previewTemplatesQueries.list(params.workspaceId, params.projectSlug)
   );
 
   return {
@@ -47,7 +47,7 @@ export default function PreviewTemplatesPage({
   params
 }: Route.ComponentProps) {
   const { data: templates } = useQuery({
-    ...previewTemplatesQueries.list(params.projectSlug),
+    ...previewTemplatesQueries.list(params.workspaceId, params.projectSlug),
     initialData: loaderData.templates
   });
 

@@ -61,6 +61,7 @@ import type { Route } from "./+types/compose-stack-service-layout";
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const stack = await queryClient.ensureQueryData(
     composeStackQueries.single({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -88,6 +89,7 @@ export default function ComposeStackServiceLayoutPage({
 }: Route.ComponentProps) {
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -526,6 +528,7 @@ async function toggleStateToast({
     try {
       stack = await queryClient.fetchQuery(
         composeStackQueries.single({
+          workspaceId: params.workspaceId,
           project_slug: params.projectSlug,
           stack_slug: params.composeStackSlug,
           env_slug: params.envSlug

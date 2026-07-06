@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useParams } from "react-router";
 import {
   AlertCircleIcon,
   ExternalLinkIcon,
@@ -140,13 +141,14 @@ function ServiceSharedVolumeItem({
   change_id,
   ...props
 }: SharedVolumeItem & ServiceSharedVolumesFormProps) {
+  const workspaceId = useParams().workspaceId!;
   const [accordionValue, setAccordionValue] = React.useState("");
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const [changedVolumeId, setChangedVolumeId] = React.useState(volume_id);
   const SelectTriggerRef =
     React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
   const { data: volumes = [] } = useQuery(
-    serviceQueries.availableVolumes(props)
+    serviceQueries.availableVolumes({ ...props, workspaceId })
   );
 
   const volumeMap = React.useMemo(() => {
@@ -417,11 +419,12 @@ function ServiceSharedVolumeItem({
 }
 
 function NewServiceSharedVolumeForm(props: ServiceSharedVolumesFormProps) {
+  const workspaceId = useParams().workspaceId!;
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const SelectTriggerRef =
     React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
   const { data: volumes = [], isLoading } = useQuery(
-    serviceQueries.availableVolumes(props)
+    serviceQueries.availableVolumes({ ...props, workspaceId })
   );
 
   const [selectedVolumeId, setSelectedVolumeId] = React.useState<

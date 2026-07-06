@@ -47,8 +47,10 @@ export function meta() {
   return [metaTitle("Git apps")] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader({}: Route.ClientLoaderArgs) {
-  const gitAppList = await queryClient.ensureQueryData(gitAppsQueries.list);
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const gitAppList = await queryClient.ensureQueryData(
+    gitAppsQueries.list(params.workspaceId)
+  );
 
   return {
     gitAppList
@@ -56,12 +58,13 @@ export async function clientLoader({}: Route.ClientLoaderArgs) {
 }
 
 export default function GitConnectorsListPage({
-  loaderData
+  loaderData,
+  params
 }: Route.ComponentProps) {
   const navigate = useNavigate();
 
   const { data: gitAppList } = useQuery({
-    ...gitAppsQueries.list,
+    ...gitAppsQueries.list(params.workspaceId),
     initialData: loaderData.gitAppList
   });
 
@@ -226,7 +229,10 @@ function DeleteConfirmationFormDialog({
   );
 }
 
-export async function clientAction({ request }: Route.ClientActionArgs) {
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
   const formData = await request.formData();
 
   const { data, error } = await apiClient.DELETE("/api/connectors/{id}/", {
@@ -256,7 +262,9 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 
   await queryClient.invalidateQueries({
     predicate(query) {
-      return query.queryKey.includes(gitAppsQueries.list.queryKey[0]);
+      return query.queryKey.includes(
+        gitAppsQueries.list(params.workspaceId).queryKey[0]
+      );
     }
   });
   return { data };

@@ -78,6 +78,7 @@ hljs.registerLanguage("json", json);
 
 export default function DeploymentDetailsPage({
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     deploymentHash: deployment_hash,
@@ -89,6 +90,7 @@ export default function DeploymentDetailsPage({
 }: Route.ComponentProps) {
   const { data: deployment } = useQuery({
     ...deploymentQueries.single({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,

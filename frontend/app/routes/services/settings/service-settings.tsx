@@ -11,7 +11,7 @@ import {
   HardDriveIcon,
   InfoIcon
 } from "lucide-react";
-import { Link, useFetcher, useMatches } from "react-router";
+import { Link, useFetcher, useMatches, useParams } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
 
 import * as React from "react";
@@ -56,13 +56,16 @@ import { ServiceVolumesForm } from "~/routes/services/components/service-volumes
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/service-settings";
 
-export async function clientLoader({}: Route.ClientLoaderArgs) {
-  const gitAppList = await queryClient.ensureQueryData(gitAppsQueries.list);
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const gitAppList = await queryClient.ensureQueryData(
+    gitAppsQueries.list(params.workspaceId)
+  );
   return { gitAppList };
 }
 
 export default function ServiceSettingsPage({
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -520,6 +523,7 @@ export function useServiceQuery({
   service_slug,
   env_slug
 }: { project_slug: string; service_slug: string; env_slug: string }) {
+  const workspaceId = useParams<Route.ComponentProps["params"]>().workspaceId!;
   const {
     "2": {
       loaderData: { service: initialData }
@@ -527,7 +531,12 @@ export function useServiceQuery({
   } = useMatches() as Route.ComponentProps["matches"];
 
   return useQuery({
-    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+    ...serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }),
     initialData
   });
 }
@@ -579,6 +588,7 @@ export async function clientAction({
   switch (intent) {
     case "update-slug": {
       return updateServiceSlug({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -587,6 +597,7 @@ export async function clientAction({
     }
     case "update-auto-deploy": {
       return updateServiceAutoDeployOptions({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -597,6 +608,7 @@ export async function clientAction({
     case "remove-service-healthcheck":
     case "remove-service-resource-limits": {
       return requestServiceChange({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -605,6 +617,7 @@ export async function clientAction({
     }
     case "cancel-service-change": {
       return cancelServiceChange({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -613,6 +626,7 @@ export async function clientAction({
     }
     case "regenerate-deploy-token": {
       return regenerateDeployToken({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug
@@ -625,10 +639,12 @@ export async function clientAction({
 }
 
 async function regenerateDeployToken({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
@@ -663,7 +679,12 @@ async function regenerateDeployToken({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+    ...serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }),
     exact: true
   });
 
@@ -674,11 +695,13 @@ async function regenerateDeployToken({
 }
 
 async function updateServiceSlug({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
@@ -692,8 +715,12 @@ async function updateServiceSlug({
   >;
 
   await queryClient.cancelQueries({
-    queryKey: serviceQueries.single({ project_slug, service_slug, env_slug })
-      .queryKey,
+    queryKey: serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }).queryKey,
     exact: true
   });
 
@@ -724,17 +751,18 @@ async function updateServiceSlug({
   await Promise.all([
     queryClient.invalidateQueries(
       serviceQueries.single({
+        workspaceId,
         project_slug,
         service_slug,
         env_slug
       })
     ),
     queryClient.invalidateQueries(
-      environmentQueries.serviceList(project_slug, env_slug)
+      environmentQueries.serviceList(workspaceId, project_slug, env_slug)
     ),
     queryClient.invalidateQueries({
       predicate: (query) =>
-        query.queryKey[0] === resourceQueries.search().queryKey[0]
+        query.queryKey[0] === resourceQueries.search(workspaceId).queryKey[0]
     })
   ]);
 
@@ -744,8 +772,12 @@ async function updateServiceSlug({
   });
   if (data.slug !== service_slug) {
     queryClient.setQueryData(
-      serviceQueries.single({ project_slug, service_slug: data.slug, env_slug })
-        .queryKey,
+      serviceQueries.single({
+        workspaceId,
+        project_slug,
+        service_slug: data.slug,
+        env_slug
+      }).queryKey,
       data
     );
   }
@@ -755,11 +787,13 @@ async function updateServiceSlug({
 }
 
 async function updateServiceAutoDeployOptions({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
@@ -789,8 +823,12 @@ async function updateServiceAutoDeployOptions({
   }
 
   await queryClient.cancelQueries({
-    queryKey: serviceQueries.single({ project_slug, service_slug, env_slug })
-      .queryKey,
+    queryKey: serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }).queryKey,
     exact: true
   });
 
@@ -820,6 +858,7 @@ async function updateServiceAutoDeployOptions({
 
   await queryClient.invalidateQueries(
     serviceQueries.single({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug
@@ -847,11 +886,13 @@ type BodyOf<Type extends ChangeRequestBody["field"]> = FindByType<
 >;
 
 async function requestServiceChange({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
@@ -1094,6 +1135,7 @@ async function requestServiceChange({
 
   await queryClient.invalidateQueries({
     ...serviceQueries.single({
+      workspaceId,
       project_slug,
       service_slug: service_slug,
       env_slug
@@ -1111,11 +1153,13 @@ async function requestServiceChange({
 }
 
 async function cancelServiceChange({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
@@ -1153,7 +1197,12 @@ async function cancelServiceChange({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+    ...serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }),
     exact: true
   });
   toast.success("Change discarded successfully", {

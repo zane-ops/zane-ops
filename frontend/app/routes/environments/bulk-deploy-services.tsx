@@ -11,7 +11,7 @@ export function clientLoader({ params }: Route.ClientLoaderArgs) {
 }
 
 export async function clientAction({
-  params: { projectSlug: project_slug, envSlug: env_slug },
+  params: { workspaceId, projectSlug: project_slug, envSlug: env_slug },
   request
 }: Route.ClientActionArgs) {
   const formData = await request.formData();
@@ -46,7 +46,7 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    environmentQueries.serviceList(project_slug, env_slug)
+    environmentQueries.serviceList(workspaceId, project_slug, env_slug)
   );
 
   toast.success("Success", {

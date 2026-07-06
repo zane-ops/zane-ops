@@ -57,6 +57,7 @@ export async function clientAction({
 
   await queryClient.invalidateQueries({
     ...serviceQueries.single({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       service_slug: params.serviceSlug,
       env_slug: params.envSlug

@@ -42,7 +42,7 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const credentials = await queryClient.ensureQueryData(
-    sharedRegistryCredentialsQueries.single(params.id)
+    sharedRegistryCredentialsQueries.single(params.workspaceId, params.id)
   );
 
   return {
@@ -69,7 +69,7 @@ function EditRegistryCredentialsForm() {
   const loaderData = useLoaderData<typeof clientLoader>();
 
   const { data: credentials } = useQuery({
-    ...sharedRegistryCredentialsQueries.single(params.id!),
+    ...sharedRegistryCredentialsQueries.single(params.workspaceId!, params.id!),
     initialData: loaderData.credentials
   });
 
@@ -259,17 +259,21 @@ export async function clientAction({
 
   switch (intent) {
     case "update":
-      return updateCredentials(params.id, formData);
+      return updateCredentials(params.workspaceId, params.id, formData);
     case "delete":
-      return deleteCredentials(params.id, formData);
+      return deleteCredentials(params.workspaceId, params.id, formData);
     case "test":
-      return testCredentials(params.id, formData);
+      return testCredentials(params.workspaceId, params.id, formData);
     default:
       throw new Error(`invalid intent ${intent}`);
   }
 }
 
-async function deleteCredentials(id: string, formData: FormData) {
+async function deleteCredentials(
+  workspaceId: string,
+  id: string,
+  formData: FormData
+) {
   const userData = {
     username: formData.get("username")?.toString() ?? "",
     url: formData.get("url")?.toString() ?? ""
@@ -314,7 +318,11 @@ async function deleteCredentials(id: string, formData: FormData) {
   return { data: { success: true }, errors: undefined };
 }
 
-async function testCredentials(id: string, formData: FormData) {
+async function testCredentials(
+  workspaceId: string,
+  id: string,
+  formData: FormData
+) {
   const userData = {
     username: formData.get("username")?.toString() ?? "",
     url: formData.get("url")?.toString() ?? ""
@@ -337,7 +345,9 @@ async function testCredentials(id: string, formData: FormData) {
 
     throw redirect(href("/settings/shared-credentials"));
   }
-  await queryClient.invalidateQueries(sharedRegistryCredentialsQueries.list);
+  await queryClient.invalidateQueries(
+    sharedRegistryCredentialsQueries.list(workspaceId)
+  );
   toast.success("Success", {
     description: (
       <span>
@@ -357,7 +367,11 @@ async function testCredentials(id: string, formData: FormData) {
   return { data, errors: undefined };
 }
 
-async function updateCredentials(id: string, formData: FormData) {
+async function updateCredentials(
+  workspaceId: string,
+  id: string,
+  formData: FormData
+) {
   const password = formData.get("password")?.toString();
   const userData = {
     url: formData.get("url")?.toString() ?? "",
@@ -391,6 +405,8 @@ async function updateCredentials(id: string, formData: FormData) {
     closeButton: true,
     description: "Container Registry Credentials updated succesfully"
   });
-  await queryClient.invalidateQueries(sharedRegistryCredentialsQueries.list);
+  await queryClient.invalidateQueries(
+    sharedRegistryCredentialsQueries.list(workspaceId)
+  );
   throw redirect(href("/settings/shared-credentials"));
 }

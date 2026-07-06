@@ -60,6 +60,7 @@ export default function ComposeStackServiceDetailsPage({
 }: Route.ComponentProps) {
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug

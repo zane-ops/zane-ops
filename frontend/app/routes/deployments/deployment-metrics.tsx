@@ -40,6 +40,7 @@ import type { Route } from "./+types/deployment-metrics";
 export async function clientLoader({
   request,
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     deploymentHash: deployment_hash,
@@ -53,6 +54,7 @@ export async function clientLoader({
 
   const metrics = await queryClient.ensureQueryData(
     deploymentQueries.metrics({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,
@@ -72,6 +74,7 @@ export default function DeploymentMetricsPage({
     }
   },
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     deploymentHash: deployment_hash,
@@ -84,6 +87,7 @@ export default function DeploymentMetricsPage({
   });
   const { data: metrics } = useQuery({
     ...deploymentQueries.metrics({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,

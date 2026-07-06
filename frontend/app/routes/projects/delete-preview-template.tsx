@@ -216,7 +216,7 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    previewTemplatesQueries.list(params.projectSlug)
+    previewTemplatesQueries.list(params.workspaceId, params.projectSlug)
   );
 
   toast.success("Success", {

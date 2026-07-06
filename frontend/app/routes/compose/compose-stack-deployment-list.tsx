@@ -77,6 +77,7 @@ export async function clientLoader({
 
   const deploymentList = await queryClient.ensureQueryData(
     composeStackQueries.deploymentList({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       env_slug: params.envSlug,
       stack_slug: params.composeStackSlug,
@@ -104,6 +105,7 @@ export default function ComposeStackDeploymentListPage({
     data: { results: deploymentList, count: totalDeployments }
   } = useQuery({
     ...composeStackQueries.deploymentList({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       env_slug: params.envSlug,
       stack_slug: params.composeStackSlug,

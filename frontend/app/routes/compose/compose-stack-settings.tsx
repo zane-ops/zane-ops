@@ -31,6 +31,7 @@ export default function ComposeStackSettingsPage({
 }: Route.ComponentProps) {
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -194,6 +195,7 @@ export async function clientAction({
   switch (intent) {
     case "update-slug": {
       return updateStackSlug({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -202,6 +204,7 @@ export async function clientAction({
     }
     case "request-stack-change": {
       return requestStackChange({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -210,6 +213,7 @@ export async function clientAction({
     }
     case "cancel-stack-change": {
       return cancelStackChange({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -223,11 +227,13 @@ export async function clientAction({
 }
 
 async function updateStackSlug({
+  workspaceId,
   project_slug,
   stack_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   stack_slug: string;
   env_slug: string;
@@ -241,8 +247,12 @@ async function updateStackSlug({
   >;
 
   await queryClient.cancelQueries({
-    queryKey: composeStackQueries.single({ project_slug, stack_slug, env_slug })
-      .queryKey,
+    queryKey: composeStackQueries.single({
+      workspaceId,
+      project_slug,
+      stack_slug,
+      env_slug
+    }).queryKey,
     exact: true
   });
 
@@ -273,17 +283,18 @@ async function updateStackSlug({
   await Promise.all([
     queryClient.invalidateQueries(
       composeStackQueries.single({
+        workspaceId,
         project_slug,
         stack_slug,
         env_slug
       })
     ),
     queryClient.invalidateQueries(
-      environmentQueries.composeStackList(project_slug, env_slug)
+      environmentQueries.composeStackList(workspaceId, project_slug, env_slug)
     ),
     queryClient.invalidateQueries({
       predicate: (query) =>
-        query.queryKey[0] === resourceQueries.search().queryKey[0]
+        query.queryKey[0] === resourceQueries.search(workspaceId).queryKey[0]
     })
   ]);
 
@@ -294,6 +305,7 @@ async function updateStackSlug({
   if (data.slug !== stack_slug) {
     queryClient.setQueryData(
       composeStackQueries.single({
+        workspaceId,
         project_slug,
         stack_slug: data.slug,
         env_slug
@@ -317,11 +329,13 @@ type BodyOf<Type extends ChangeRequestBody["field"]> = FindByType<
 >;
 
 async function requestStackChange({
+  workspaceId,
   project_slug,
   stack_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   stack_slug: string;
   env_slug: string;
@@ -399,6 +413,7 @@ async function requestStackChange({
 
   await queryClient.invalidateQueries({
     ...composeStackQueries.single({
+      workspaceId,
       project_slug,
       stack_slug,
       env_slug
@@ -416,11 +431,13 @@ async function requestStackChange({
 }
 
 async function cancelStackChange({
+  workspaceId,
   project_slug,
   stack_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   stack_slug: string;
   env_slug: string;
@@ -463,6 +480,7 @@ async function cancelStackChange({
 
   await queryClient.invalidateQueries({
     ...composeStackQueries.single({
+      workspaceId,
       project_slug,
       stack_slug,
       env_slug

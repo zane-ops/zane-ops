@@ -50,6 +50,7 @@ import type { Route } from "./+types/deployment-logs";
 
 export async function clientLoader({
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug,
@@ -68,6 +69,7 @@ export async function clientLoader({
 
   queryClient.prefetchInfiniteQuery(
     deploymentQueries.logs({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,
@@ -81,6 +83,7 @@ export async function clientLoader({
 export default function DeploymentLogsPage({
   // loaderData,
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug,
@@ -106,6 +109,7 @@ export default function DeploymentLogsPage({
   const queryClient = useQueryClient();
   const logsQuery = useInfiniteQuery({
     ...deploymentQueries.logs({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,
@@ -119,6 +123,7 @@ export default function DeploymentLogsPage({
 
   const logsWithContextQuery = useQuery({
     ...deploymentQueries.logWithContext({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,

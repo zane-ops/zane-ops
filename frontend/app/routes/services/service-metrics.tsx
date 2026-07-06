@@ -40,6 +40,7 @@ import type { Route } from "./+types/service-metrics";
 export async function clientLoader({
   request,
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -52,6 +53,7 @@ export async function clientLoader({
 
   const metrics = await queryClient.ensureQueryData(
     serviceQueries.metrics({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,
@@ -70,6 +72,7 @@ export default function ServiceMetricsPage({
     }
   },
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -81,6 +84,7 @@ export default function ServiceMetricsPage({
   });
   const { data } = useQuery({
     ...serviceQueries.metrics({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,

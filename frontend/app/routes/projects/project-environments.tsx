@@ -85,7 +85,7 @@ export default function ProjectEnvironmentsPage({
   params
 }: Route.ComponentProps) {
   const { data: project } = useQuery({
-    ...projectQueries.single(params.projectSlug),
+    ...projectQueries.single(params.workspaceId, params.projectSlug),
     initialData: loaderData.project
   });
   return (
@@ -200,14 +200,27 @@ export async function clientAction({
 
   switch (intent) {
     case "rename_environment": {
-      return renameEnvironment(params.projectSlug, formData);
+      return renameEnvironment(
+        params.workspaceId,
+        params.projectSlug,
+        formData
+      );
     }
     case "create_environment": {
-      return createEnvironment(params.projectSlug, formData);
+      return createEnvironment(
+        params.workspaceId,
+        params.projectSlug,
+        formData
+      );
     }
     case "clone_environment": {
       const clone_from = formData.get("clone_from")?.toString()!;
-      return cloneEnvironment(params.projectSlug, clone_from, formData);
+      return cloneEnvironment(
+        params.workspaceId,
+        params.projectSlug,
+        clone_from,
+        formData
+      );
     }
     case "archive_environment": {
       if (
@@ -228,6 +241,7 @@ export async function clientAction({
         };
       }
       return archiveEnvironment(
+        params.workspaceId,
         params.projectSlug,
         formData.get("environment")!.toString()
       );
@@ -238,7 +252,11 @@ export async function clientAction({
   }
 }
 
-async function renameEnvironment(project_slug: string, formData: FormData) {
+async function renameEnvironment(
+  workspaceId: string,
+  project_slug: string,
+  formData: FormData
+) {
   const userData = {
     name: formData.get("name")?.toString() ?? ""
   };
@@ -271,16 +289,26 @@ async function renameEnvironment(project_slug: string, formData: FormData) {
 
   if (data.name !== currentEnvironment) {
     await Promise.all([
-      queryClient.invalidateQueries(projectQueries.single(project_slug)),
       queryClient.invalidateQueries(
-        environmentQueries.serviceList(project_slug, currentEnvironment)
+        projectQueries.single(workspaceId, project_slug)
+      ),
+      queryClient.invalidateQueries(
+        environmentQueries.serviceList(
+          workspaceId,
+          project_slug,
+          currentEnvironment
+        )
       )
     ]);
   }
   return { data };
 }
 
-async function archiveEnvironment(project_slug: string, env_slug: string) {
+async function archiveEnvironment(
+  workspaceId: string,
+  project_slug: string,
+  env_slug: string
+) {
   const apiResponse = await apiClient.DELETE(
     "/api/projects/{slug}/environment-details/{env_slug}/",
     {
@@ -303,10 +331,12 @@ async function archiveEnvironment(project_slug: string, env_slug: string) {
   }
 
   await Promise.all([
-    queryClient.invalidateQueries(projectQueries.single(project_slug)),
+    queryClient.invalidateQueries(
+      projectQueries.single(workspaceId, project_slug)
+    ),
     queryClient.invalidateQueries({
       predicate: (query) =>
-        query.queryKey[0] === resourceQueries.search().queryKey[0]
+        query.queryKey[0] === resourceQueries.search(workspaceId).queryKey[0]
     })
   ]);
 
@@ -326,7 +356,11 @@ async function archiveEnvironment(project_slug: string, env_slug: string) {
   );
 }
 
-async function createEnvironment(project_slug: string, formData: FormData) {
+async function createEnvironment(
+  workspaceId: string,
+  project_slug: string,
+  formData: FormData
+) {
   const userData = {
     name: formData.get("name")?.toString() ?? ""
   };
@@ -358,12 +392,15 @@ async function createEnvironment(project_slug: string, formData: FormData) {
   });
 
   await Promise.all([
-    queryClient.invalidateQueries(projectQueries.single(project_slug))
+    queryClient.invalidateQueries(
+      projectQueries.single(workspaceId, project_slug)
+    )
   ]);
   throw redirect(`/project/${project_slug}/${data.name}`);
 }
 
 async function cloneEnvironment(
+  workspaceId: string,
   project_slug: string,
   cloned_environment: string,
   formData: FormData
@@ -420,7 +457,9 @@ async function cloneEnvironment(
   });
 
   await Promise.all([
-    queryClient.invalidateQueries(projectQueries.single(project_slug))
+    queryClient.invalidateQueries(
+      projectQueries.single(workspaceId, project_slug)
+    )
   ]);
   throw redirect(`/project/${project_slug}/${data.name}`);
 }

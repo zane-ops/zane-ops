@@ -22,6 +22,7 @@ export function clientLoader({ params }: Route.ClientLoaderArgs) {
 export async function clientAction({
   request,
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -73,15 +74,19 @@ export async function clientAction({
   }
 
   queryClient.removeQueries({
-    queryKey: serviceQueries.single({ project_slug, service_slug, env_slug })
-      .queryKey
+    queryKey: serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }).queryKey
   });
   queryClient.invalidateQueries(
-    environmentQueries.serviceList(project_slug, env_slug)
+    environmentQueries.serviceList(workspaceId, project_slug, env_slug)
   );
   queryClient.invalidateQueries({
     predicate: (query) =>
-      query.queryKey[0] === resourceQueries.search().queryKey[0]
+      query.queryKey[0] === resourceQueries.search(workspaceId).queryKey[0]
   });
 
   toast.success("Success", {

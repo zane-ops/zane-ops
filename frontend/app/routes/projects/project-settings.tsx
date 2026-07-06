@@ -161,12 +161,14 @@ async function updateProject(
     };
   }
 
-  queryClient.invalidateQueries(projectQueries.single(params.projectSlug));
+  queryClient.invalidateQueries(
+    projectQueries.single(params.workspaceId, params.projectSlug)
+  );
   toast.success("Project updated successfully!", { closeButton: true });
 
   if (apiResponse.data.slug !== params.projectSlug) {
     queryClient.setQueryData(
-      projectQueries.single(userData.slug).queryKey,
+      projectQueries.single(params.workspaceId, userData.slug).queryKey,
       apiResponse.data
     );
     throw redirect(
@@ -196,10 +198,13 @@ async function archiveProject(params: Route.ClientActionArgs["params"]) {
     };
   }
 
-  queryClient.invalidateQueries(projectQueries.single(params.projectSlug));
+  queryClient.invalidateQueries(
+    projectQueries.single(params.workspaceId, params.projectSlug)
+  );
   queryClient.invalidateQueries({
     predicate: (query) =>
-      query.queryKey[0] === resourceQueries.search().queryKey[0] ||
+      query.queryKey[0] ===
+        resourceQueries.search(params.workspaceId).queryKey[0] ||
       query.queryKey[0] === projectQueries.list(params.workspaceId).queryKey[0]
   });
 

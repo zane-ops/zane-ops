@@ -94,7 +94,9 @@ async function renameGithubApp(
 
   await queryClient.invalidateQueries({
     predicate(query) {
-      return query.queryKey.includes(gitAppsQueries.list.queryKey[0]);
+      return query.queryKey.includes(
+        gitAppsQueries.list(params.workspaceId).queryKey[0]
+      );
     }
   });
 

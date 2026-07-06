@@ -71,23 +71,36 @@ export async function clientLoader({
   const queryString = searchParams.get("query") ?? "";
 
   let environment = queryClient.getQueryData(
-    environmentQueries.single(params.projectSlug, params.envSlug).queryKey
+    environmentQueries.single(
+      params.workspaceId,
+      params.projectSlug,
+      params.envSlug
+    ).queryKey
   );
 
   const project = await queryClient.ensureQueryData(
-    projectQueries.single(params.projectSlug)
+    projectQueries.single(params.workspaceId, params.projectSlug)
   );
 
   if (!environment) {
     // fetch the data on first load to prevent showing the loading fallback
     [environment] = await Promise.all([
       queryClient.ensureQueryData(
-        environmentQueries.single(params.projectSlug, params.envSlug)
+        environmentQueries.single(
+          params.workspaceId,
+          params.projectSlug,
+          params.envSlug
+        )
       ),
       queryClient.ensureQueryData(
-        environmentQueries.serviceList(params.projectSlug, params.envSlug, {
-          query: queryString
-        })
+        environmentQueries.serviceList(
+          params.workspaceId,
+          params.projectSlug,
+          params.envSlug,
+          {
+            query: queryString
+          }
+        )
       )
     ]);
   }
@@ -99,11 +112,11 @@ export default function EnvironmentLayout({
   params,
   loaderData
 }: Route.ComponentProps) {
-  const { projectSlug: slug, envSlug } = params;
+  const { workspaceId, projectSlug: slug, envSlug } = params;
   const navigate = useNavigate();
 
   const { data: project } = useQuery({
-    ...projectQueries.single(params.projectSlug),
+    ...projectQueries.single(params.workspaceId, params.projectSlug),
     initialData: loaderData.project
   });
 
@@ -111,7 +124,7 @@ export default function EnvironmentLayout({
   const query = searchParams.get("query") ?? "";
 
   const projectServiceListQuery = useQuery(
-    environmentQueries.serviceList(slug, envSlug, {
+    environmentQueries.serviceList(workspaceId, slug, envSlug, {
       query
     })
   );

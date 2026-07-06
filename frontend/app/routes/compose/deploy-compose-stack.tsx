@@ -18,6 +18,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 export async function clientAction({
   request,
   params: {
+    workspaceId,
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
     envSlug: env_slug
@@ -60,10 +61,20 @@ export async function clientAction({
 
   await Promise.all([
     queryClient.invalidateQueries(
-      composeStackQueries.single({ project_slug, stack_slug, env_slug })
+      composeStackQueries.single({
+        workspaceId,
+        project_slug,
+        stack_slug,
+        env_slug
+      })
     ),
     queryClient.invalidateQueries(
-      composeStackQueries.deploymentList({ project_slug, stack_slug, env_slug })
+      composeStackQueries.deploymentList({
+        workspaceId,
+        project_slug,
+        stack_slug,
+        env_slug
+      })
     )
   ]);
   toast.success("Success", {

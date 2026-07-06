@@ -25,6 +25,7 @@ import type { Route } from "./+types/compose-stack-deployment-logs";
 
 export async function clientLoader({
   params: {
+    workspaceId,
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
     envSlug: env_slug,
@@ -33,6 +34,7 @@ export async function clientLoader({
 }: Route.ClientLoaderArgs) {
   queryClient.prefetchInfiniteQuery(
     composeStackQueries.deploymentLogs({
+      workspaceId,
       deployment_hash,
       project_slug,
       stack_slug,
@@ -52,6 +54,7 @@ export default function ComposeStackDeploymentLogsPage({
   const queryClient = useQueryClient();
   const logsQuery = useInfiniteQuery({
     ...composeStackQueries.deploymentLogs({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug,

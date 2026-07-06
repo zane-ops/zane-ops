@@ -100,10 +100,15 @@ function EditPreviewTemplateForm({
     React.useState<PreviewTemplate["clone_strategy"]>("ALL");
 
   const { data: serviceList } = useQuery(
-    environmentQueries.serviceList(params.projectSlug!, baseEnvironment.name)
+    environmentQueries.serviceList(
+      params.workspaceId!,
+      params.projectSlug!,
+      baseEnvironment.name
+    )
   );
   const { data: stackList } = useQuery(
     environmentQueries.composeStackList(
+      params.workspaceId!,
       params.projectSlug!,
       baseEnvironment.name
     )
@@ -646,7 +651,7 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    previewTemplatesQueries.list(params.projectSlug)
+    previewTemplatesQueries.list(params.workspaceId, params.projectSlug)
   );
 
   toast.success("Success", {

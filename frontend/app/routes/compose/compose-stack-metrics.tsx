@@ -55,6 +55,7 @@ export async function clientLoader({
   const [metrics, limits] = await Promise.all([
     queryClient.ensureQueryData(
       composeStackQueries.metrics({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -83,6 +84,7 @@ export default function ComposeStackMetricsPage({
   });
   const { data } = useQuery({
     ...composeStackQueries.metrics({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug,

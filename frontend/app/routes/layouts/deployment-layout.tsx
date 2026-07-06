@@ -47,6 +47,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const [service, limits, deployment] = await Promise.all([
     queryClient.ensureQueryData(
       serviceQueries.single({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug
@@ -55,6 +56,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     queryClient.ensureQueryData(serverQueries.resourceLimits),
     queryClient.ensureQueryData(
       deploymentQueries.single({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -73,6 +75,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 export default function DeploymentLayoutPage({
   loaderData,
   params: {
+    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug,
@@ -81,6 +84,7 @@ export default function DeploymentLayoutPage({
 }: Route.ComponentProps) {
   const { data: deployment } = useQuery({
     ...deploymentQueries.single({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,

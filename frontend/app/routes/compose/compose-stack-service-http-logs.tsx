@@ -57,6 +57,7 @@ export async function clientLoader({
 }: Route.ClientLoaderArgs) {
   const stack = await queryClient.ensureQueryData(
     composeStackQueries.single({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -93,6 +94,7 @@ export async function clientLoader({
   const [httpLogs, httpLog] = await Promise.all([
     queryClient.ensureInfiniteQueryData(
       composeStackQueries.httpLogs({
+        workspaceId: params.workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -105,6 +107,7 @@ export async function clientLoader({
     search.request_id
       ? queryClient.ensureQueryData(
           composeStackQueries.singleHttpLog({
+            workspaceId: params.workspaceId,
             project_slug: params.projectSlug,
             stack_slug: params.composeStackSlug,
             env_slug: params.envSlug,
@@ -140,6 +143,7 @@ export default function ComposeStackServiceHttpLogsPage({
 
   const logsQuery = useInfiniteQuery({
     ...composeStackQueries.httpLogs({
+      workspaceId: params.workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug,
@@ -926,6 +930,7 @@ type HostFilterProps = {
 
 function HostFilter({ hosts }: HostFilterProps) {
   const {
+    workspaceId,
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
     envSlug: env_slug
@@ -937,6 +942,7 @@ function HostFilter({ hosts }: HostFilterProps) {
 
   const { data: hostList = [] } = useQuery(
     composeStackQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       env_slug,
       stack_slug,
@@ -973,6 +979,7 @@ type PathFilterProps = {
 
 function PathFilter({ paths }: PathFilterProps) {
   const {
+    workspaceId,
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
     envSlug: env_slug
@@ -983,6 +990,7 @@ function PathFilter({ paths }: PathFilterProps) {
 
   const { data: hostList = [] } = useQuery(
     composeStackQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       stack_slug,
       env_slug,
@@ -1019,6 +1027,7 @@ type ClientIpFilterProps = {
 
 function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
   const {
+    workspaceId,
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
     envSlug: env_slug
@@ -1030,6 +1039,7 @@ function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
 
   const { data: ipList = [] } = useQuery(
     composeStackQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       stack_slug,
       env_slug,
@@ -1064,6 +1074,7 @@ type UserAgentFilterProps = {
 
 function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
   const {
+    workspaceId,
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
     envSlug: env_slug
@@ -1074,6 +1085,7 @@ function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
 
   const { data: uaList = [] } = useQuery(
     composeStackQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       stack_slug,
       env_slug,

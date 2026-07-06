@@ -27,7 +27,11 @@ type DeploymentDecision = RequestInput<
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const environment = await queryClient.ensureQueryData(
-    environmentQueries.pendingReview(params.projectSlug, params.envSlug)
+    environmentQueries.pendingReview(
+      params.workspaceId,
+      params.projectSlug,
+      params.envSlug
+    )
   );
 
   return {
@@ -169,8 +173,11 @@ export async function clientAction({
   params
 }: Route.ClientActionArgs) {
   const environment = queryClient.getQueryData(
-    environmentQueries.pendingReview(params.projectSlug, params.envSlug)
-      .queryKey
+    environmentQueries.pendingReview(
+      params.workspaceId,
+      params.projectSlug,
+      params.envSlug
+    ).queryKey
   );
 
   if (!environment) {
@@ -219,7 +226,11 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    environmentQueries.single(params.projectSlug, params.envSlug)
+    environmentQueries.single(
+      params.workspaceId,
+      params.projectSlug,
+      params.envSlug
+    )
   );
 
   throw redirect(environment.preview_metadata!.external_url);

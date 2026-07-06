@@ -67,7 +67,7 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const gitApp = await queryClient.ensureQueryData(
-    gitAppsQueries.single(params.gitAppId)
+    gitAppsQueries.single(params.workspaceId, params.gitAppId)
   );
 
   return { gitApp };

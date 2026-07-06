@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { flushSync } from "react-dom";
-import { useFetcher } from "react-router";
+import { useFetcher, useParams } from "react-router";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import type { Service } from "~/api/types";
@@ -55,6 +55,7 @@ export function ServiceSourceForm({
   project_slug,
   env_slug
 }: ServiceFormProps) {
+  const workspaceId = useParams().workspaceId!;
   const fetcher = useFetcher<typeof clientAction>();
   const isPending = fetcher.state !== "idle";
 
@@ -105,7 +106,7 @@ export function ServiceSourceForm({
     dockerHubQueries.images(debouncedValue)
   );
   const { data: registries = [] } = useQuery(
-    sharedRegistryCredentialsQueries.list
+    sharedRegistryCredentialsQueries.list(workspaceId)
   );
 
   const imageList = imageListData?.data?.images ?? [];

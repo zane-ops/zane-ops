@@ -48,7 +48,10 @@ export default function CreateProjectPage({
   );
 }
 
-export async function clientAction({ request }: Route.ClientActionArgs) {
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
   let formData = await request.formData();
   const userData = {
     slug: formData.get("slug")?.toString().trim(),
@@ -71,7 +74,9 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 
   queryClient.invalidateQueries({
     predicate: (query) =>
-      query.queryKey.includes(projectQueries.list().queryKey[0])
+      query.queryKey.includes(
+        projectQueries.list(params.workspaceId).queryKey[0]
+      )
   });
   throw redirect(`/project/${apiResponse.data.slug}/production`);
 }

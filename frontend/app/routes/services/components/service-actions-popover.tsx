@@ -8,7 +8,7 @@ import {
   RocketIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, href, useFetcher, useNavigate } from "react-router";
+import { Link, href, useFetcher, useNavigate, useParams } from "react-router";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
 import {
@@ -146,9 +146,11 @@ function ToggleServiceForm({
   projectSlug,
   envSlug
 }: ToggleServiceFormProps) {
+  const workspaceId = useParams().workspaceId!;
   const fetcher = useFetcher<typeof toggleClientAction>();
   const deploymentListQuery = useQuery(
     serviceQueries.deploymentList({
+      workspaceId,
       project_slug: projectSlug,
       service_slug: service.slug,
       env_slug: envSlug
@@ -187,6 +189,7 @@ function ToggleServiceForm({
     const desiredState = formData.get("desired_state") as "stop" | "start";
     queueToggleItem(service.id);
     toggleStateToast({
+      workspaceId,
       desiredState,
       projectSlug,
       serviceSlug: service.slug,
@@ -315,11 +318,13 @@ function StopServiceConfirmationDialog({
 }
 
 async function toggleStateToast({
+  workspaceId,
   desiredState,
   projectSlug,
   serviceSlug,
   envSlug
 }: {
+  workspaceId: string;
   desiredState: "stop" | "start";
   projectSlug: string;
   serviceSlug: string;
@@ -354,6 +359,7 @@ async function toggleStateToast({
   const deploymentList =
     queryClient.getQueryData(
       serviceQueries.deploymentList({
+        workspaceId,
         project_slug: projectSlug,
         service_slug: serviceSlug,
         env_slug: envSlug
@@ -377,6 +383,7 @@ async function toggleStateToast({
       (
         await queryClient.fetchQuery(
           serviceQueries.deploymentList({
+            workspaceId,
             project_slug: projectSlug,
             service_slug: serviceSlug,
             env_slug: envSlug

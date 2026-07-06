@@ -204,7 +204,10 @@ function CreateRegistryCredentialsForm() {
   );
 }
 
-export async function clientAction({ request }: Route.ClientActionArgs) {
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
   const formData = await request.formData();
 
   const userData = {
@@ -239,6 +242,8 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     closeButton: true,
     description: "Container Registry Credentials created succesfully"
   });
-  await queryClient.invalidateQueries(sharedRegistryCredentialsQueries.list);
+  await queryClient.invalidateQueries(
+    sharedRegistryCredentialsQueries.list(params.workspaceId)
+  );
   throw redirect(href("/settings/shared-credentials"));
 }
