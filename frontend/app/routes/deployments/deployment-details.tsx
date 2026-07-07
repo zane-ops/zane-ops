@@ -32,7 +32,7 @@ import {
   UserIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link } from "react-router";
+import { Link, href } from "react-router";
 import { StatusBadge } from "~/components/status-badge";
 import {
   Accordion,
@@ -206,7 +206,16 @@ export default function DeploymentDetailsPage({
                 <span className="text-grey">
                   (Redeploy of&nbsp;
                   <Link
-                    to={`/project/${project_slug}/services/${service_slug}/deployments/${deployment.redeploy_hash}`}
+                    to={href(
+                      "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
+                      {
+                        workspaceId,
+                        projectSlug: project_slug,
+                        envSlug: env_slug,
+                        serviceSlug: service_slug,
+                        deploymentHash: deployment.redeploy_hash
+                      }
+                    )}
                     className="text-link underline"
                   >
                     #{deployment.redeploy_hash}

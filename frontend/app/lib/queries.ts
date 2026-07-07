@@ -129,7 +129,15 @@ export const workspaceKey = (workspaceId: string) =>
   ["WORKSPACE", workspaceId] as const;
 
 export const projectQueries = {
-  list: (workspaceId: string, filters: ProjectSearch = {}) =>
+  list: ({
+    workspaceId,
+    filters = {},
+    refetchInterval = DEFAULT_QUERY_REFETCH_INTERVAL
+  }: {
+    workspaceId: string;
+    filters?: ProjectSearch;
+    refetchInterval?: number;
+  }) =>
     queryOptions({
       queryKey: [
         ...workspaceKey(workspaceId),
@@ -153,7 +161,7 @@ export const projectQueries = {
       placeholderData: keepPreviousData,
       refetchInterval: (query) => {
         if (query.state.data) {
-          return DEFAULT_QUERY_REFETCH_INTERVAL;
+          return refetchInterval;
         }
         return false;
       }

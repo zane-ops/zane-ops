@@ -62,7 +62,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   return { success: true };
 }
 
-export default function UserSettingsPage({}: Route.ComponentProps) {
+export default function UserSettingsPage({ params }: Route.ComponentProps) {
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
@@ -95,7 +95,9 @@ export default function UserSettingsPage({}: Route.ComponentProps) {
               <h3 className="text-lg text-grey">Change Password</h3>
               <div>
                 <Link
-                  to="/settings/account/change-password"
+                  to={href("/:workspaceId/settings/account/change-password", {
+                    workspaceId: params.workspaceId
+                  })}
                   className="hover:underline text-sm py-2 flex items-center gap-0.5 text-link"
                 >
                   <span>Change your password here</span>

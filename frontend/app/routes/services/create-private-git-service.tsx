@@ -60,7 +60,7 @@ export default function CreatePrivateGitServicePage({
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
+              <Link to={href("/:workspaceId", params)} prefetch="intent">
                 Projects
               </Link>
             </BreadcrumbLink>
@@ -105,7 +105,10 @@ export default function CreatePrivateGitServicePage({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={`/project/${params.projectSlug}/${params.envSlug}/create-service`}
+                to={href(
+                  "/:workspaceId/project/:projectSlug/:envSlug/create-service",
+                  params
+                )}
                 prefetch="intent"
               >
                 Create service

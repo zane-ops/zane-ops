@@ -17,6 +17,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  href,
   isRouteErrorResponse,
   useRouteError
 } from "react-router";
@@ -195,7 +196,7 @@ export function ErrorBoundary() {
           <code>{stack}</code>
         </pre>
       ) : (
-        <Link to="/">
+        <Link to={href("/")}>
           <Button>Go home</Button>
         </Link>
       )}

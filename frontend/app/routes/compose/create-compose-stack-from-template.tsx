@@ -73,7 +73,7 @@ export default function CreateComposeStackFromTemplatePage({
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
+              <Link to={href("/:workspaceId", params)} prefetch="intent">
                 Projects
               </Link>
             </BreadcrumbLink>
@@ -82,7 +82,10 @@ export default function CreateComposeStackFromTemplatePage({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={`/project/${params.projectSlug}/production`}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
+                  ...params,
+                  envSlug: "production"
+                })}
                 prefetch="intent"
               >
                 {params.projectSlug}
@@ -103,7 +106,7 @@ export default function CreateComposeStackFromTemplatePage({
               )}
             >
               <Link
-                to={`/project/${params.projectSlug}/${params.envSlug}`}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
                 prefetch="intent"
               >
                 {params.envSlug}

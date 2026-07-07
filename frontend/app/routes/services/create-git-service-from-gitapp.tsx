@@ -15,7 +15,8 @@ import {
   href,
   useFetcher,
   useNavigate,
-  useNavigation
+  useNavigation,
+  useParams
 } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
@@ -111,7 +112,7 @@ export default function CreateGitServiceFromGitHubPage({
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
+              <Link to={href("/:workspaceId", params)} prefetch="intent">
                 Projects
               </Link>
             </BreadcrumbLink>
@@ -120,7 +121,10 @@ export default function CreateGitServiceFromGitHubPage({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={`/project/${params.projectSlug}/production`}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
+                  ...params,
+                  envSlug: "production"
+                })}
                 prefetch="intent"
               >
                 {params.projectSlug}
@@ -141,7 +145,7 @@ export default function CreateGitServiceFromGitHubPage({
               )}
             >
               <Link
-                to={`/project/${params.projectSlug}/${params.envSlug}`}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
                 prefetch="intent"
               >
                 {params.envSlug}
@@ -959,6 +963,7 @@ function StepServiceCreated({
   const fetcher = useFetcher<typeof clientAction>();
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
   const isPending = fetcher.state !== "idle";
+  const { workspaceId } = useParams();
 
   if (fetcher.data?.deploymentHash) {
     onSuccess(fetcher.data.deploymentHash);
@@ -1006,7 +1011,10 @@ function StepServiceCreated({
 
           <Button asChild className="flex-1" variant="outline">
             <Link
-              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}`}
+              to={href(
+                "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
+                { workspaceId: workspaceId!, projectSlug, envSlug, serviceSlug }
+              )}
               className="flex gap-2  items-center"
             >
               Go to service details <ArrowRightIcon size={20} />
@@ -1032,6 +1040,7 @@ function StepServiceDeployed({
   deploymentHash
 }: StepServiceDeployedProps) {
   const navigation = useNavigation();
+  const { workspaceId } = useParams();
   return (
     <div className="flex  flex-col h-[70vh] justify-center items-center">
       <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
@@ -1047,7 +1056,16 @@ function StepServiceDeployed({
         <div className="flex gap-3 md:flex-row flex-col items-stretch">
           <Button asChild className="flex-1">
             <Link
-              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}/deployments/${deploymentHash}/build-logs`}
+              to={href(
+                "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
+                {
+                  workspaceId: workspaceId!,
+                  projectSlug,
+                  envSlug,
+                  serviceSlug,
+                  deploymentHash
+                }
+              )}
               className="flex gap-2  items-center"
             >
               {navigation.state !== "idle" && (

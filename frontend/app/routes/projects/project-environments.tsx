@@ -401,7 +401,13 @@ async function createEnvironment(
       projectQueries.single(workspaceId, project_slug)
     )
   ]);
-  throw redirect(`/project/${project_slug}/${data.name}`);
+  throw redirect(
+    href("/:workspaceId/project/:projectSlug/:envSlug", {
+      workspaceId,
+      projectSlug: project_slug,
+      envSlug: data.name
+    })
+  );
 }
 
 async function cloneEnvironment(
@@ -467,7 +473,13 @@ async function cloneEnvironment(
       projectQueries.single(workspaceId, project_slug)
     )
   ]);
-  throw redirect(`/project/${project_slug}/${data.name}`);
+  throw redirect(
+    href("/:workspaceId/project/:projectSlug/:envSlug", {
+      workspaceId,
+      projectSlug: project_slug,
+      envSlug: data.name
+    })
+  );
 }
 
 function CreateEnvironmentFormDialog({

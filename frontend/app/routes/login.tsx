@@ -1,5 +1,5 @@
 import { AlertCircle, LoaderIcon } from "lucide-react";
-import { Form, redirect, useNavigation } from "react-router";
+import { Form, href, redirect, useNavigation } from "react-router";
 import { apiClient } from "~/api/client";
 import { ThemedLogo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -27,7 +27,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   ]);
 
   if (!userExistQuery.data?.exists) {
-    throw redirect("/onboarding");
+    throw redirect(href("/onboarding"));
   }
 
   const searchParams = new URL(request.url).searchParams;
@@ -35,7 +35,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   if (user) {
     const redirect_to = searchParams.get("redirect_to");
     let redirectTo = user.membership
-      ? `/${user.membership.workspace.id}`
+      ? href("/:workspaceId", { workspaceId: user.membership.workspace.id })
       : "/user";
     if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
       redirectTo = redirect_to;
@@ -72,7 +72,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     queryClient.removeQueries(userQueries.authedUser);
 
     const redirect_to = searchParams.get("redirect_to");
-    let redirectTo = "/";
+    let redirectTo = href("/");
     if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
       redirectTo = redirect_to;
     }

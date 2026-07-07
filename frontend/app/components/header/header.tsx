@@ -1,12 +1,12 @@
 import * as React from "react";
-import { Link } from "react-router";
+import { Link, href } from "react-router";
 import { ThemedLogo } from "~/components/logo";
 
 import { cn } from "~/lib/utils";
 
 type HeaderProps = {
-  leftSlot?: React.ReactNode[];
-  rigthSlot?: React.ReactNode[];
+  leftSlot?: React.ReactNode;
+  rigthSlot?: React.ReactNode;
 };
 
 export function Header({ leftSlot, rigthSlot }: HeaderProps) {
@@ -31,7 +31,7 @@ export function Header({ leftSlot, rigthSlot }: HeaderProps) {
         )}
       >
         <Link
-          to="/"
+          to={href("/")}
           className={cn(
             "focus-visible:outline-hidden focus-visible:ring-2",
             "focus-visible:ring-ring focus-visible:ring-offset-2",
@@ -42,16 +42,18 @@ export function Header({ leftSlot, rigthSlot }: HeaderProps) {
           <ThemedLogo className="flex-none size-10 mr-3" />
         </Link>
 
-        {(leftSlot ?? []).filter(Boolean).map((child, idx) => (
-          <React.Fragment key={idx}>
-            <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15" />
-            {child}
-          </React.Fragment>
-        ))}
+        {React.Children.toArray(leftSlot)
+          .filter(Boolean)
+          .map((child, idx) => (
+            <React.Fragment key={idx}>
+              <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15" />
+              {child}
+            </React.Fragment>
+          ))}
 
         <div className="flex grow  w-full items-center" />
 
-        {rigthSlot ?? []}
+        {rigthSlot}
       </header>
     </>
   );

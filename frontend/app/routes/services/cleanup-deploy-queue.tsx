@@ -1,4 +1,4 @@
-import { redirect } from "react-router";
+import { href, redirect } from "react-router";
 
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
@@ -9,7 +9,10 @@ import type { Route } from "./+types/cleanup-deploy-queue";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}/settings`
+    href(
+      "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/settings",
+      { ...params }
+    )
   );
 }
 

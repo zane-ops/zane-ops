@@ -1,4 +1,4 @@
-import { redirect } from "react-router";
+import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import {
@@ -13,7 +13,10 @@ import { type Route } from "./+types/archive-git-service";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}/settings`
+    href(
+      "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/settings",
+      { ...params }
+    )
   );
 }
 
@@ -98,5 +101,11 @@ export async function clientAction({
       </span>
     )
   });
-  throw redirect(`/project/${project_slug}/${env_slug}`);
+  throw redirect(
+    href("/:workspaceId/project/:projectSlug/:envSlug", {
+      workspaceId,
+      projectSlug: project_slug,
+      envSlug: env_slug
+    })
+  );
 }

@@ -1,4 +1,4 @@
-import { redirect } from "react-router";
+import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { userQueries } from "~/lib/queries";
@@ -19,16 +19,16 @@ export async function clientAction() {
       description: fullErrorMessage,
       closeButton: true
     });
-    throw redirect("/");
+    throw redirect(href("/"));
   }
 
   queryClient.removeQueries({
     queryKey: userQueries.authedUser.queryKey
   });
   deleteCookie("csrftoken");
-  throw redirect("/login");
+  throw redirect(href("/login"));
 }
 
 export async function clientLoader() {
-  throw redirect("/");
+  throw redirect(href("/"));
 }

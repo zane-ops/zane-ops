@@ -10,7 +10,7 @@ import {
   TerminalIcon,
   TextSearchIcon
 } from "lucide-react";
-import { Link, Outlet, useFetcher } from "react-router";
+import { Link, Outlet, href, useFetcher } from "react-router";
 import { NavLink } from "~/components/nav-link";
 import {
   Breadcrumb,
@@ -123,18 +123,22 @@ export default function DeploymentLayoutPage({
   return (
     <>
       <title>{`${status_emoji_map[deployment.status]} ${service_slug} / ${deployment_hash} | ZaneOps`}</title>
-      <Breadcrumb>
+      {/* <Breadcrumb>
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/">Projects</Link>
+              <Link to={href("/:workspaceId", { workspaceId })}>Projects</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={`/project/${project_slug}/production`}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
+                  workspaceId,
+                  projectSlug: project_slug,
+                  envSlug: "production"
+                })}
                 prefetch="intent"
               >
                 {project_slug}
@@ -154,7 +158,11 @@ export default function DeploymentLayoutPage({
               )}
             >
               <Link
-                to={`/project/${project_slug}/${env_slug}`}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
+                  workspaceId,
+                  projectSlug: project_slug,
+                  envSlug: env_slug
+                })}
                 prefetch="intent"
               >
                 {env_slug}
@@ -165,7 +173,15 @@ export default function DeploymentLayoutPage({
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <Link
-              to={`/project/${project_slug}/${env_slug}/services/${service_slug}`}
+              to={href(
+                "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
+                {
+                  workspaceId,
+                  projectSlug: project_slug,
+                  envSlug: env_slug,
+                  serviceSlug: service_slug
+                }
+              )}
             >
               {service_slug}
             </Link>
@@ -176,14 +192,14 @@ export default function DeploymentLayoutPage({
             <BreadcrumbPage>{deployment_hash}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
-      </Breadcrumb>
+      </Breadcrumb> */}
 
       <>
         <section
           id="header"
           className="flex flex-col md:flex-row md:items-center gap-4 justify-between"
         >
-          <div className="md:mt-10 mt-5 flex flex-col gap-2 md:gap-0">
+          <div className="flex flex-col gap-2 md:gap-0">
             <div className="inline-flex flex-wrap gap-1">
               <h1 className="text-xl md:text-2xl inline-flex gap-1.5">
                 <span className="text-grey sr-only md:not-sr-only flex-none">

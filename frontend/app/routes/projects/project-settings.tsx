@@ -199,16 +199,17 @@ async function archiveProject(params: Route.ClientActionArgs["params"]) {
       errors: apiResponse.error
     };
   }
-
-  queryClient.invalidateQueries(
-    projectQueries.single(params.workspaceId, params.projectSlug)
-  );
-  queryClient.invalidateQueries({
-    queryKey: resourceQueries.search(params.workspaceId).queryKey.slice(0, 3)
-  });
-  queryClient.invalidateQueries({
-    queryKey: projectQueries.list(params.workspaceId).queryKey.slice(0, 3)
-  });
+  await Promise.all([
+    queryClient.invalidateQueries(
+      projectQueries.single(params.workspaceId, params.projectSlug)
+    ),
+    queryClient.invalidateQueries({
+      queryKey: resourceQueries.search(params.workspaceId).queryKey.slice(0, 3)
+    }),
+    queryClient.invalidateQueries({
+      queryKey: projectQueries.list(params).queryKey.slice(0, 3)
+    })
+  ]);
 
   toast.success("Success", {
     closeButton: true,

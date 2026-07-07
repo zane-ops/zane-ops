@@ -10,7 +10,7 @@ import {
   UserIcon,
   UsersIcon
 } from "lucide-react";
-import { Link, Outlet } from "react-router";
+import { Link, Outlet, href } from "react-router";
 import { NavLink } from "react-router";
 import {
   Breadcrumb,
@@ -80,14 +80,16 @@ const sidebarNavItems: NavItem[] = [
   }
 ];
 
-export default function SettingsLayoutPage({}: Route.ComponentProps) {
+export default function SettingsLayoutPage({
+  params
+}: Route.ComponentProps) {
   return (
     <>
       <Breadcrumb>
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
+              <Link to={href("/:workspaceId", params)} prefetch="intent">
                 Projects
               </Link>
             </BreadcrumbLink>

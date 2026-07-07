@@ -69,7 +69,7 @@ export default function CreateComposeStackFromDokployPage({
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
+              <Link to={href("/:workspaceId", params)} prefetch="intent">
                 Projects
               </Link>
             </BreadcrumbLink>

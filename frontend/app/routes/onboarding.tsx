@@ -1,6 +1,6 @@
 import { AlertCircle, LoaderIcon } from "lucide-react";
 import * as React from "react";
-import { Form, redirect, useNavigation } from "react-router";
+import { Form, href, redirect, useNavigation } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { ThemedLogo } from "~/components/logo";
@@ -26,7 +26,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   );
 
   if (userExistQuery.data?.exists) {
-    throw redirect("/login");
+    throw redirect(href("/login"));
   }
   return;
 }
@@ -90,7 +90,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     closeButton: true
   });
 
-  throw redirect("/");
+  throw redirect(href("/"));
 }
 
 export default function InitialRegistration({

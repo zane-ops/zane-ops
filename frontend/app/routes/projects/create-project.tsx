@@ -1,5 +1,5 @@
 import { AlertCircleIcon, LoaderIcon } from "lucide-react";
-import { Form, Link, redirect, useNavigation } from "react-router";
+import { Form, Link, href, redirect, useNavigation } from "react-router";
 import { apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
@@ -17,14 +17,15 @@ import { projectQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
-import { type Route } from "./+types/create-project";
+import type { Route } from "./+types/create-project";
 
 export function meta() {
   return [metaTitle("Create Project")] satisfies ReturnType<Route.MetaFunction>;
 }
 
 export default function CreateProjectPage({
-  actionData
+  actionData,
+  params
 }: Route.ComponentProps) {
   return (
     <div>
@@ -32,7 +33,7 @@ export default function CreateProjectPage({
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
+              <Link to={href("/:workspaceId", params)} prefetch="intent">
                 Projects
               </Link>
             </BreadcrumbLink>
@@ -53,7 +54,7 @@ export async function clientAction({
   params
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
-  let formData = await request.formData();
+  const formData = await request.formData();
   const userData = {
     slug: formData.get("slug")?.toString().trim(),
     description: formData.get("description")?.toString() || undefined
@@ -73,10 +74,16 @@ export async function clientAction({
     };
   }
 
-  queryClient.invalidateQueries({
-    queryKey: projectQueries.list(params.workspaceId).queryKey.slice(0, 3)
+  await queryClient.invalidateQueries({
+    queryKey: projectQueries.list(params).queryKey.slice(0, 3) // 0...3 include the workspace id & project list key
   });
-  throw redirect(`/project/${apiResponse.data.slug}/production`);
+  throw redirect(
+    href(`/:workspaceId/project/:projectSlug/:envSlug`, {
+      ...params,
+      projectSlug: apiResponse.data.slug,
+      envSlug: "production"
+    })
+  );
 }
 
 function CreateForm({ actionData }: Pick<Route.ComponentProps, "actionData">) {

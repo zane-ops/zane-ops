@@ -9,7 +9,7 @@ import {
   SunIcon,
   TagIcon
 } from "lucide-react";
-import { Outlet, redirect } from "react-router";
+import { Outlet, href, redirect } from "react-router";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { type Theme, useTheme } from "~/components/theme-context";
 import { Button } from "~/components/ui/button";
@@ -29,15 +29,15 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   ]);
 
   if (!userExistQuery.data?.exists) {
-    throw redirect("/onboarding");
+    throw redirect(href("/onboarding"));
   }
 
   if (!user) {
-    let redirectPathName = `/login`;
+    let redirectPathName = href("/login");
     const url = new URL(request.url);
     if (url.pathname !== "/" && url.pathname !== "/login") {
       const params = new URLSearchParams([["redirect_to", url.pathname]]);
-      redirectPathName = `/login?${params.toString()}`;
+      redirectPathName = `${href("/login")}?${params.toString()}`;
     }
 
     throw redirect(redirectPathName);

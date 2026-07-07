@@ -16,7 +16,7 @@ import {
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
-import { Link, Outlet, useLocation, useParams } from "react-router";
+import { Link, Outlet, href, useLocation, useParams } from "react-router";
 import { NavLink } from "~/components/nav-link";
 import { StatusBadge } from "~/components/status-badge";
 import {
@@ -240,11 +240,14 @@ export default function ServiceDetailsLayout({
 
   return (
     <>
-      <Breadcrumb>
+      {/* <Breadcrumb>
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
+              <Link
+                to={href("/:workspaceId", { workspaceId })}
+                prefetch="intent"
+              >
                 Projects
               </Link>
             </BreadcrumbLink>
@@ -253,7 +256,11 @@ export default function ServiceDetailsLayout({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={`/project/${project_slug}/production`}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
+                  workspaceId,
+                  projectSlug: project_slug,
+                  envSlug: "production"
+                })}
                 prefetch="intent"
               >
                 {project_slug}
@@ -273,7 +280,11 @@ export default function ServiceDetailsLayout({
               )}
             >
               <Link
-                to={`/project/${project_slug}/${env_slug}`}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
+                  workspaceId,
+                  projectSlug: project_slug,
+                  envSlug: env_slug
+                })}
                 prefetch="intent"
               >
                 {env_slug}
@@ -286,13 +297,13 @@ export default function ServiceDetailsLayout({
             <BreadcrumbPage>{service_slug}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
-      </Breadcrumb>
+      </Breadcrumb> */}
 
       <section
         id="header"
         className="flex flex-col sm:flex-row md:items-center gap-4 justify-between"
       >
-        <div className="mt-10 flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-x-4 flex-wrap">
             <h1 className="text-2xl">{service.slug}</h1>
 

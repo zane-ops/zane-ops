@@ -1,5 +1,5 @@
 import { ArrowRightIcon, FileTextIcon } from "lucide-react";
-import { Link } from "react-router";
+import { Link, href } from "react-router";
 import { DokployLogo } from "~/components/dokploy-logo";
 import { ZaneOpsLogo } from "~/components/logo";
 import {
@@ -30,7 +30,7 @@ export default function CreateComposeStackPage({
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
+              <Link to={href("/:workspaceId", params)} prefetch="intent">
                 Projects
               </Link>
             </BreadcrumbLink>
@@ -39,7 +39,10 @@ export default function CreateComposeStackPage({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={`/project/${params.projectSlug}/production`}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
+                  ...params,
+                  envSlug: "production"
+                })}
                 prefetch="intent"
               >
                 {params.projectSlug}
@@ -60,7 +63,7 @@ export default function CreateComposeStackPage({
               )}
             >
               <Link
-                to={`/project/${params.projectSlug}/${params.envSlug}`}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
                 prefetch="intent"
               >
                 {params.envSlug}

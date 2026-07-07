@@ -159,7 +159,7 @@ export default function ComposeStackServiceLayoutPage({
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/">Projects</Link>
+              <Link to={href("/:workspaceId", params)}>Projects</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />

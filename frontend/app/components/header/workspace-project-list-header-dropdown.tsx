@@ -25,7 +25,7 @@ import {
 import { projectQueries } from "~/lib/queries";
 import { useDeviceSize } from "~/lib/use-device-size";
 import { cn } from "~/lib/utils";
-import { stringToColor } from "~/utils";
+import { durationToMs, stringToColor } from "~/utils";
 
 export type WorkspaceProjectListHeaderDropdownProps = {
   projectList: Project[];
@@ -38,7 +38,10 @@ export function WorkspaceProjectListHeaderDropdown(
   const params = useParams() as { workspaceId: string; projectSlug: string };
 
   const { data: projectList } = useQuery({
-    ...projectQueries.list(params.workspaceId),
+    ...projectQueries.list({
+      ...params,
+      refetchInterval: durationToMs(5, "minutes")
+    }),
     initialData: props.projectList
   });
   const { data: current } = useQuery({

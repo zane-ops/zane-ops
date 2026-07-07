@@ -8,7 +8,7 @@ import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/switch-workspace";
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
-  throw redirect(`/`);
+  throw redirect(href("/"));
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {

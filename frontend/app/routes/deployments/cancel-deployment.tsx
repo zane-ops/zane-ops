@@ -1,14 +1,17 @@
-import { redirect } from "react-router";
+import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { serviceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/utils";
-import { type Route } from "./+types/cancel-deployment";
+import type { Route } from "./+types/cancel-deployment";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}/deployments/${params.deploymentHash}`
+    href(
+      `/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash`,
+      params
+    )
   );
 }
 
@@ -50,7 +53,10 @@ export async function clientAction({
     });
     if (shouldRedirect) {
       throw redirect(
-        `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
+        href(
+          `/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug`,
+          params
+        )
       );
     }
     return;
@@ -72,7 +78,10 @@ export async function clientAction({
   });
   if (shouldRedirect) {
     throw redirect(
-      `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
+      href(
+        `/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug`,
+        params
+      )
     );
   }
 }

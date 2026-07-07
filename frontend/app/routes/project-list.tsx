@@ -44,9 +44,7 @@ export async function clientLoader({
 
   // fetch the data on first load to prevent showing the loading fallback
   const [projectList, recentDeployments] = await Promise.all([
-    queryClient.ensureQueryData(
-      projectQueries.list(params.workspaceId, filters)
-    ),
+    queryClient.ensureQueryData(projectQueries.list({ ...params, filters })),
     queryClient.ensureQueryData(deploymentQueries.recent(params.workspaceId))
   ]);
   return {
@@ -99,7 +97,10 @@ function ProjectsListSection() {
   };
 
   const projectActiveQuery = useQuery({
-    ...projectQueries.list(params.workspaceId!, filters),
+    ...projectQueries.list({
+      workspaceId: params.workspaceId!,
+      filters
+    }),
     initialData: loaderData.projectList
   });
 

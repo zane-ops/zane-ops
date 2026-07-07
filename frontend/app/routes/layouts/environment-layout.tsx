@@ -6,6 +6,7 @@ import {
   ContainerIcon,
   KeyRoundIcon,
   LoaderIcon,
+  PlusIcon,
   Search,
   SettingsIcon
 } from "lucide-react";
@@ -50,7 +51,7 @@ import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { environmentQueries, projectQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, isNotFoundError } from "~/lib/utils";
-import { metaTitle } from "~/utils";
+import { metaTitle, stringToColor } from "~/utils";
 import type { Route } from "./+types/environment-layout";
 
 export function meta({ error, params }: Route.MetaArgs) {
@@ -148,13 +149,15 @@ export default function EnvironmentLayout({
     }
   }, [query]);
 
+  const projectColor = stringToColor(project.slug);
+
   return (
     <section>
-      <Breadcrumb>
+      {/* <Breadcrumb>
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
+              <Link to={href("/:workspaceId", params)} prefetch="intent">
                 Projects
               </Link>
             </BreadcrumbLink>
@@ -182,7 +185,17 @@ export default function EnvironmentLayout({
               name="environment"
               onValueChange={(env) => {
                 navigate(
-                  `/project/${params.projectSlug}/${env}?${searchParams.toString()}`,
+                  {
+                    pathname: href(
+                      "/:workspaceId/project/:projectSlug/:envSlug",
+                      {
+                        workspaceId: params.workspaceId,
+                        projectSlug: params.projectSlug,
+                        envSlug: env
+                      }
+                    ),
+                    search: searchParams.toString()
+                  },
                   {
                     replace: true
                   }
@@ -209,8 +222,8 @@ export default function EnvironmentLayout({
             </Select>
           </BreadcrumbItem>
         </BreadcrumbList>
-      </Breadcrumb>
-      <div className="pt-5">
+      </Breadcrumb> */}
+      <div className="pt-0">
         <nav>
           <Link
             to={href("/:workspaceId/project/:projectSlug/settings", {
@@ -229,28 +242,47 @@ export default function EnvironmentLayout({
           id="header"
           className="flex items-center md:flex-nowrap lg:my-0 md:my-1 my-5 flex-wrap gap-3 justify-between"
         >
-          <div className="flex items-center gap-4">
-            <div className={cn("flex gap-1 items-center flex-wrap")}>
-              <h1 className="text-3xl font-medium">{project.slug}</h1>
-              <StatusBadge
-                color={
-                  envSlug == "production"
-                    ? "green"
-                    : envSlug.startsWith("preview")
-                      ? "blue"
-                      : "gray"
+          <div className="flex items-start gap-4">
+            <div className={cn("flex gap-2 items-center flex-wrap")}>
+              <div
+                style={
+                  {
+                    "--color-light": projectColor.light,
+                    "--color-dark": projectColor.dark
+                  } as React.CSSProperties
                 }
-                pingState="hidden"
+                className={cn(
+                  "size-12 text-xl flex-none rounded-md flex items-center justify-center",
+                  "text-[var(--color-light)] dark:text-[var(--color-dark)]",
+                  "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10",
+                  "border  border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10"
+                )}
               >
-                {envSlug}
-              </StatusBadge>
+                <span>{project.slug.charAt(0).toUpperCase()}</span>
+              </div>
+              <div className="flex flex-col gap-0 items-start relative -top-0.5">
+                <h1 className="text-3xl font-medium">{project.slug}</h1>
+                <StatusBadge
+                  color={
+                    envSlug == "production"
+                      ? "green"
+                      : envSlug.startsWith("preview")
+                        ? "blue"
+                        : "gray"
+                  }
+                  pingState="hidden"
+                  className="text-xs px-2 py-0"
+                >
+                  {envSlug}
+                </StatusBadge>
+              </div>
             </div>
 
             <Menubar className="border-none w-fit">
               <MenubarMenu>
                 <MenubarTrigger asChild>
                   <Button variant="secondary" className="flex gap-2">
-                    New <ChevronDownIcon size={18} />
+                    New <PlusIcon size={18} />
                   </Button>
                 </MenubarTrigger>
                 <MenubarContent
@@ -359,7 +391,7 @@ export function ErrorBoundary() {
             <h1 className="text-3xl font-bold">Error 404</h1>
             <p className="text-lg">This project does not exist</p>
           </div>
-          <Link to="/" prefetch="intent">
+          <Link to={href("/")} prefetch="intent">
             <Button>Go home</Button>
           </Link>
         </div>

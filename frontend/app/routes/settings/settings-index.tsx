@@ -1,5 +1,8 @@
-import { redirect } from "react-router";
+import { href, redirect } from "react-router";
+import type { Route } from "./+types/settings-index";
 
-export function clientLoader() {
-  throw redirect("/settings/account");
+export function clientLoader({ params }: Route.ClientLoaderArgs) {
+  throw redirect(
+    href("/:workspaceId/settings/account", { workspaceId: params.workspaceId })
+  );
 }

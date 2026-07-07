@@ -5,7 +5,7 @@ import {
   SirenIcon
 } from "lucide-react";
 import * as React from "react";
-import { Form, redirect, useNavigation } from "react-router";
+import { Form, href, redirect, useNavigation } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { GithubLogo } from "~/components/github-logo";
@@ -187,7 +187,7 @@ export async function clientAction({
       description: `No pending environment to review exists at \`${params.projectSlug}/${params.envSlug}\` `,
       closeButton: true
     });
-    throw redirect("/");
+    throw redirect(href("/:workspaceId", { workspaceId: params.workspaceId }));
   }
 
   const formData = await request.formData();

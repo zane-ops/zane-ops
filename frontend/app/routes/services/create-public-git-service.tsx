@@ -8,7 +8,14 @@ import {
   LoaderIcon
 } from "lucide-react";
 import * as React from "react";
-import { Form, Link, useFetcher, useNavigation } from "react-router";
+import {
+  Form,
+  Link,
+  href,
+  useFetcher,
+  useNavigation,
+  useParams
+} from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
 import type { ServiceBuilder } from "~/api/types";
 import { GitRepositoryBranchListInput } from "~/components/git-repository-branch-list-input";
@@ -70,7 +77,7 @@ export default function CreateServicePage({
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
+              <Link to={href("/:workspaceId", params)} prefetch="intent">
                 Projects
               </Link>
             </BreadcrumbLink>
@@ -79,7 +86,10 @@ export default function CreateServicePage({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={`/project/${params.projectSlug}/production`}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
+                  ...params,
+                  envSlug: "production"
+                })}
                 prefetch="intent"
               >
                 {params.projectSlug}
@@ -100,7 +110,7 @@ export default function CreateServicePage({
               )}
             >
               <Link
-                to={`/project/${params.projectSlug}/${params.envSlug}`}
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
                 prefetch="intent"
               >
                 {params.envSlug}
@@ -112,7 +122,10 @@ export default function CreateServicePage({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={`/project/${params.projectSlug}/${params.envSlug}/create-service`}
+                to={href(
+                  "/:workspaceId/project/:projectSlug/:envSlug/create-service",
+                  params
+                )}
                 prefetch="intent"
               >
                 Create service
@@ -972,6 +985,7 @@ function StepServiceCreated({
   const fetcher = useFetcher<typeof clientAction>();
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
   const isPending = fetcher.state !== "idle";
+  const { workspaceId } = useParams();
 
   if (fetcher.data?.deploymentHash) {
     onSuccess(fetcher.data.deploymentHash);
@@ -1019,7 +1033,10 @@ function StepServiceCreated({
 
           <Button asChild className="flex-1" variant="outline">
             <Link
-              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}`}
+              to={href(
+                "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
+                { workspaceId: workspaceId!, projectSlug, envSlug, serviceSlug }
+              )}
               className="flex gap-2  items-center"
             >
               Go to service details <ArrowRightIcon size={20} />
@@ -1045,6 +1062,7 @@ function StepServiceDeployed({
   deploymentHash
 }: StepServiceDeployedProps) {
   const navigation = useNavigation();
+  const { workspaceId } = useParams();
   return (
     <div className="flex  flex-col h-[70vh] justify-center items-center">
       <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
@@ -1060,7 +1078,16 @@ function StepServiceDeployed({
         <div className="flex gap-3 md:flex-row flex-col items-stretch">
           <Button asChild className="flex-1">
             <Link
-              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}/deployments/${deploymentHash}/build-logs`}
+              to={href(
+                "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
+                {
+                  workspaceId: workspaceId!,
+                  projectSlug,
+                  envSlug,
+                  serviceSlug,
+                  deploymentHash
+                }
+              )}
               className="flex gap-2  items-center"
             >
               {navigation.state !== "idle" && (

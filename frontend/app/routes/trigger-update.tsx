@@ -1,4 +1,4 @@
-import { redirect } from "react-router";
+import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { ZANE_UPDATE_TOAST_ID } from "~/lib/constants";
@@ -9,7 +9,7 @@ import { durationToMs, getCsrfTokenHeader, wait } from "~/utils";
 import type { Route } from "./+types/trigger-update";
 
 export function clientLoader({}: Route.ClientLoaderArgs) {
-  throw redirect(`/`);
+  throw redirect(href("/"));
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {

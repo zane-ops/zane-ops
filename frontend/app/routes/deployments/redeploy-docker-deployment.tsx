@@ -45,7 +45,10 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
       closeButton: true
     });
     throw redirect(
-      `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
+      href(
+        "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
+        params
+      )
     );
   }
 
@@ -63,6 +66,6 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     closeButton: true
   });
   throw redirect(
-    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
+    href("/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug", params)
   );
 }

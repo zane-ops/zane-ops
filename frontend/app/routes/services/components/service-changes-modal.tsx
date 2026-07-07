@@ -6,7 +6,7 @@ import {
   Undo2Icon
 } from "lucide-react";
 import * as React from "react";
-import { useFetcher, useNavigate } from "react-router";
+import { href, useFetcher, useNavigate, useParams } from "react-router";
 import type { Service } from "~/api/types";
 import {
   BuilderChangeField,
@@ -59,6 +59,7 @@ export function ServiceChangesModal({
   const [isOpen, setIsOpen] = React.useState(false);
   const isDeploying = fetcher.state !== "idle";
   const navigate = useNavigate();
+  const { workspaceId } = useParams();
 
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
 
@@ -67,7 +68,12 @@ export function ServiceChangesModal({
       if (!fetcher.data.errors) {
         setIsOpen(false);
         navigate(
-          `/project/${project_slug}/${service.environment.name}/services/${service.slug}`
+          href("/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug", {
+            workspaceId: workspaceId!,
+            projectSlug: project_slug,
+            envSlug: service.environment.name,
+            serviceSlug: service.slug
+          })
         );
       }
     }
