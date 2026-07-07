@@ -77,23 +77,21 @@ export function UserHeaderDropdown(props: UserDropdownProps) {
             <DropdownMenuItem
               className="my-2"
               onClick={() => {
-                navigate(
-                  href("/:workspaceId/settings/account", {
-                    workspaceId: workspaceId!
-                  })
-                );
+                navigate(href("/account"));
               }}
             >
               <UserIcon />
               Account Settings
             </DropdownMenuItem>
 
-            {hasMinRole(props.user, "Member") && (
+            {workspaceId && hasMinRole(props.user, "Member") && (
               <DropdownMenuItem
                 className="my-2"
                 onClick={() => {
                   navigate(
-                    href("/:workspaceId/settings", { workspaceId: workspaceId! })
+                    href("/:workspaceId/settings", {
+                      workspaceId: workspaceId!
+                    })
                   );
                 }}
               >

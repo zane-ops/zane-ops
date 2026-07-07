@@ -1,17 +1,12 @@
 import {
   Building2Icon,
-  ContainerIcon,
   CreditCardIcon,
   GitBranchIcon,
-  KeyIcon,
   type LucideIcon,
-  TerminalIcon,
-  TicketCheckIcon,
   UserIcon,
   UsersIcon
 } from "lucide-react";
-import { Link, Outlet, href } from "react-router";
-import { NavLink } from "react-router";
+import { Link, NavLink, Outlet, href } from "react-router";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -38,14 +33,8 @@ type NavItem = {
 
 const sidebarNavItems: NavItem[] = [
   {
-    title: "Account",
-    href: "account",
-    icon: UserIcon
-  },
-
-  {
-    title: "Workspace",
-    href: "workspace",
+    title: "General",
+    href: "",
     icon: Building2Icon
   },
   {
@@ -80,26 +69,9 @@ const sidebarNavItems: NavItem[] = [
   }
 ];
 
-export default function SettingsLayoutPage({
-  params
-}: Route.ComponentProps) {
+export default function SettingsLayoutPage({ params }: Route.ComponentProps) {
   return (
     <>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to={href("/:workspaceId", params)} prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Settings</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
       <div className="my-6 grid md:grid-cols-12 gap-6 md:gap-4 relative max-w-full">
         <div className="md:col-span-full">
           <h1 className="text-3xl font-medium">Settings</h1>

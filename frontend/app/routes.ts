@@ -14,7 +14,13 @@ export default [
   route("switch-workspace", "./routes/switch-workspace.tsx"),
 
   layout("./routes/layouts/main-layout.tsx", [
-    index("./routes/home.tsx"),
+    layout("./routes/layouts/home-layout.tsx", [
+      index("./routes/home.tsx"),
+      ...prefix("account", [
+        index("./routes/settings/account-settings.tsx"),
+        route("change-password", "./routes/settings/change-password.tsx")
+      ])
+    ]),
 
     ...prefix(":workspaceId", [
       route(
@@ -67,12 +73,8 @@ export default [
         ),
 
         route("settings", "./routes/layouts/settings-layout.tsx", [
-          index("./routes/settings/settings-index.tsx"),
-          route("account", "./routes/settings/account-settings.tsx"),
-          route(
-            "account/change-password",
-            "./routes/settings/change-password.tsx"
-          ),
+          index("./routes/settings/workspace-settings.tsx"),
+
           route("ssh-keys", "./routes/settings/ssh-keys-list.tsx"),
           route("ssh-keys/new", "./routes/settings/create-ssh-key.tsx"),
           route("server-console", "./routes/settings/server-terminal.tsx"),

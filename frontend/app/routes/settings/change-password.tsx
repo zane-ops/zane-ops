@@ -1,5 +1,5 @@
-import { AlertCircle, LoaderIcon } from "lucide-react";
-import { href, redirect, useFetcher } from "react-router";
+import { AlertCircle, ArrowLeftIcon, LoaderIcon } from "lucide-react";
+import { Link, href, redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -12,7 +12,7 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/change-password";
 
@@ -45,20 +45,31 @@ export async function clientAction({
     description: "Password updated successfully"
   });
 
-  throw redirect(
-    href("/:workspaceId/settings/account", { workspaceId: params.workspaceId })
-  );
+  throw redirect(href("/account"));
 }
 
 export default function UserSettingsPage({}: Route.ComponentProps) {
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex items-center gap-4">
-        <h2 className="text-2xl">Change Password</h2>
+      <div className="flex flex-col">
+        <Link
+          to={href("/account")}
+          className={cn(
+            "text-sm text-grey w-full",
+            "flex items-center gap-0.5 hover:underline"
+          )}
+        >
+          <ArrowLeftIcon className="size-4" />
+          Account Settings
+        </Link>
+
+        <div className="flex items-center gap-4">
+          <h2 className="text-3xl font-medium">Update your password</h2>
+        </div>
       </div>
       <Separator />
 
-      <p className="text-gray">
+      <p className="text-grey">
         Update your account password. Make sure to use a strong password
       </p>
 
