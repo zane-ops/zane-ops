@@ -319,6 +319,42 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
 
+    def test_admin_cannot_edit_owner_permissions(self):
+        admin = self.loginUser()
+
+        # Set ourself to Admin
+        workspace = cast(Workspace, Workspace.objects.first())
+        WorkspaceMembership.objects.update(
+            user=admin,
+            workspace=workspace,
+            role=WorkspaceRole.ADMIN,
+        )
+
+        # Create new Owner user
+        owner = User.objects.create_user(username="mohai", password="password")
+        owner_membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.OWNER,
+            user=owner,
+            workspace=workspace,
+        )
+
+        # Try to update their role
+        data = {"role": WorkspaceRole.MEMBER}
+        response = self.client.put(
+            reverse(
+                "zane_api:workspace.edit_membership_permissions",
+                kwargs={"membership_id": owner_membership.pk},
+            ),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+        owner_membership = WorkspaceMembership.objects.get(
+            user=owner, workspace=workspace
+        )
+        self.assertEqual(WorkspaceRole.OWNER, owner_membership.role)
+
 
 class RemoveUserFromWorkspaceViewtests(AuthAPITestCase):
     def test_remove_user_from_workspace(self):

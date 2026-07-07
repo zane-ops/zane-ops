@@ -133,6 +133,10 @@ class EditWorkspaceMemberPermissionsAPIView(APIView):
         except WorkspaceMembership.DoesNotExist:
             raise exceptions.NotFound()
 
+        if membership.role >= WorkspaceRole.OWNER:
+            raise ResourceConflict(
+                "You cannot edit the permissions of the workspace owner."
+            )
         if membership.user == self.request.user:
             raise ResourceConflict(
                 "You cannot edit your own permissions in the workspace."
