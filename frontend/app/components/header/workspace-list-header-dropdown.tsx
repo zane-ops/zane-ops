@@ -74,10 +74,13 @@ export function WorkspaceMembershipListHeaderDropdown({
           >
             <span>{current.workspace.name.charAt(0).toUpperCase()}</span>
           </div>
-          <p className="whitespace-nowrap text-foreground">
+          <p className="whitespace-nowrap text-foreground hidden lg:block">
             {current.workspace.name}
           </p>
-          <StatusBadge pingState="hidden" className="py-0.5 px-1.5 text-xs">
+          <StatusBadge
+            pingState="hidden"
+            className="py-0.5 px-1.5 text-xs hidden lg:inline-flex"
+          >
             {current.role_name}
           </StatusBadge>
         </Link>

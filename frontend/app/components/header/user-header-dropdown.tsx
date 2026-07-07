@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger
 } from "~/components/ui/dropdown-menu";
 import { userQueries } from "~/lib/queries";
+import { useDeviceSize } from "~/lib/use-device-size";
 
 import { cn } from "~/lib/utils";
 import { hasMinRole } from "~/utils";
@@ -27,6 +28,7 @@ function getUserDisplayName(user: AuthedUserResponse["user"]) {
 export function UserHeaderDropdown(props: UserDropdownProps) {
   const fetcher = useFetcher();
   const navigate = useNavigate();
+  const deviceSize = useDeviceSize();
 
   const { data } = useQuery({
     ...userQueries.authedUser,
@@ -59,7 +61,7 @@ export function UserHeaderDropdown(props: UserDropdownProps) {
         <DropdownMenuContent
           className="border border-border min-w-48 rounded-lg"
           align="end"
-          alignOffset={-5}
+          alignOffset={deviceSize === "phone" ? 0 : -5}
         >
           <DropdownMenuGroup className="px-0.5">
             <DropdownMenuLabel className="flex flex-col">

@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { useDebounce } from "@uidotdev/usehooks";
 import { Command as CommandPrimitive } from "cmdk";
 import {
   CheckIcon,
@@ -13,9 +12,7 @@ import type { Project } from "~/api/types";
 import { Button } from "~/components/ui/button";
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
   CommandSeparator
@@ -26,6 +23,7 @@ import {
   PopoverTrigger
 } from "~/components/ui/popover";
 import { projectQueries } from "~/lib/queries";
+import { useDeviceSize } from "~/lib/use-device-size";
 import { cn } from "~/lib/utils";
 import { stringToColor } from "~/utils";
 
@@ -36,6 +34,7 @@ export type WorkspaceProjectListHeaderDropdownProps = {
 export function WorkspaceProjectListHeaderDropdown(
   props: WorkspaceProjectListHeaderDropdownProps
 ) {
+  const deviceSize = useDeviceSize();
   const params = useParams() as { workspaceId: string; projectSlug: string };
 
   const { data: projectList } = useQuery({
@@ -84,7 +83,15 @@ export function WorkspaceProjectListHeaderDropdown(
           >
             <span>{current.slug.charAt(0).toUpperCase()}</span>
           </div>
-          <p className="whitespace-nowrap text-foreground">{current.slug}</p>
+          <p
+            className={cn(
+              "whitespace-nowrap text-foreground",
+              "whitespace-nowrap overflow-x-hidden text-ellipsis",
+              "max-w-16 md:max-w-36 lg:max-w-max"
+            )}
+          >
+            {current.slug}
+          </p>
         </Link>
       </Button>
 
@@ -103,7 +110,7 @@ export function WorkspaceProjectListHeaderDropdown(
             "[&_[data-slot='command-list-wrapper']_*]:static",
             "[&_[data-slot='command-input-wrapper']]:px-2"
           )}
-          align="start"
+          align={deviceSize === "phone" ? "end" : "start"}
         >
           <Command
             loop
@@ -129,7 +136,7 @@ export function WorkspaceProjectListHeaderDropdown(
               />
             </div>
             <hr className="w-full border-border" />
-            <CommandList className="max-h-max px-0 flex flex-col gap-2 min-w-42 w-full bg-transparent border-none">
+            <CommandList className="max-h-max px-0 flex flex-col gap-2 min-w-32 md:min-w-42 w-full bg-transparent border-none">
               <CommandGroup
                 heading="projects"
                 className="max-h-[300px] overflow-y-auto overflow-x-clip"

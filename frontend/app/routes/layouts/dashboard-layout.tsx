@@ -20,7 +20,7 @@ import { Button, SubmitButton } from "~/components/ui/button";
 import { CommandBarTrigger } from "~/components/commandbar/commandbar-trigger";
 import { Header } from "~/components/header/header";
 import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
-import { WorkspaceMembershipListHeaderDropdown } from "~/components/header/workpace-list-header-dropdown";
+import { WorkspaceMembershipListHeaderDropdown } from "~/components/header/workspace-list-header-dropdown";
 import { WorkspaceProjectListHeaderDropdown } from "~/components/header/workspace-project-list-header-dropdown";
 import {
   Dialog,
