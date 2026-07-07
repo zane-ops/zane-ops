@@ -88,9 +88,8 @@ export function WorkspaceProjectListHeaderDropdown(
           </div>
           <p
             className={cn(
-              "whitespace-nowrap text-foreground",
-              "whitespace-nowrap overflow-x-hidden text-ellipsis",
-              "max-w-16 md:max-w-36 lg:max-w-max"
+              "text-foreground whitespace-nowrap overflow-x-hidden text-ellipsis",
+              "max-w-16 md:max-w-24"
             )}
           >
             {current.slug}

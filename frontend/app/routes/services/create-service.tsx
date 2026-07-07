@@ -4,79 +4,19 @@ import {
   GithubIcon,
   LinkIcon
 } from "lucide-react";
-import { Link, href } from "react-router";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
+import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
 import { metaTitle } from "~/utils";
-import { type Route } from "./+types/create-service";
+import type { Route } from "./+types/create-service";
 
 export function meta() {
   return [metaTitle("Create Service")] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export default function CreateServicePage({ params }: Route.ComponentProps) {
+export default function CreateServicePage({}: Route.ComponentProps) {
   return (
     <div>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to={href("/:workspaceId", params)} prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-                  ...params,
-                  envSlug: "production"
-                })}
-                prefetch="intent"
-              >
-                {params.projectSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                params.envSlug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : params.envSlug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
-                prefetch="intent"
-              >
-                {params.envSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Create service</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
-      <div className="flex h-[70vh] grow justify-center items-center">
+      <div className="mt-5 flex h-[70vh] grow justify-center items-center">
         <div className="card  flex  md:w-[50%] lg:w-[30%] w-full flex-col gap-6">
           <h1 className="text-3xl font-bold">New Service</h1>
           <div className="flex flex-col gap-3">

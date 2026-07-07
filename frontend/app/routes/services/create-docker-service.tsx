@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
+  ArrowLeftIcon,
   ArrowRightIcon,
   CheckIcon,
   ClockArrowUpIcon,
@@ -86,72 +87,19 @@ export default function CreateServicePage({
 
   return (
     <>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to={href("/:workspaceId", params)} prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-                  ...params,
-                  envSlug: "production"
-                })}
-                prefetch="intent"
-              >
-                {params.projectSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                params.envSlug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : params.envSlug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
-                prefetch="intent"
-              >
-                {params.envSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href(
-                  "/:workspaceId/project/:projectSlug/:envSlug/create-service",
-                  params
-                )}
-                prefetch="intent"
-              >
-                Create service
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>From Docker Image</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      <Link
+        to={href(
+          "/:workspaceId/project/:projectSlug/:envSlug/create-service",
+          params
+        )}
+        className={cn(
+          "text-sm text-grey lg:w-[30%] md:w-[50%] w-full mx-auto mb-2",
+          "flex items-center gap-0.5 hover:underline"
+        )}
+      >
+        <ArrowLeftIcon className="size-4" />
+        Create service
+      </Link>
 
       {currentStep === "FORM" && (
         <StepServiceForm
@@ -338,7 +286,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
     <Form
       ref={formRef}
       method="post"
-      className="flex my-10 grow justify-center items-center"
+      className="flex grow justify-center items-center"
     >
       <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
         <h1 className="text-3xl font-bold">New Docker Service</h1>

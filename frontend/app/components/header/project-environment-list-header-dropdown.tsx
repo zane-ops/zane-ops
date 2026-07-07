@@ -60,7 +60,14 @@ export function ProjectEnvironmentListHeaderHeaderDropdown(
           >
             <NetworkIcon size={16} className="flex-none" />
           </div>
-          <span>{envSlug}</span>
+          <p
+            className={cn(
+              "text-foreground whitespace-nowrap overflow-x-hidden text-ellipsis",
+              "max-w-16 md:max-w-24"
+            )}
+          >
+            {envSlug}
+          </p>
         </Link>
       </Button>
       <DropdownMenu>

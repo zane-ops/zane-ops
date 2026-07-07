@@ -27,26 +27,7 @@ export default function CreateProjectPage({
   actionData,
   params
 }: Route.ComponentProps) {
-  return (
-    <div>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to={href("/:workspaceId", params)} prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Create project</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-      <CreateForm actionData={actionData} />
-    </div>
-  );
+  return <CreateForm actionData={actionData} />;
 }
 
 export async function clientAction({

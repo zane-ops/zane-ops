@@ -1,5 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDownIcon, GithubIcon, GitlabIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ChevronDownIcon,
+  GithubIcon,
+  GitlabIcon
+} from "lucide-react";
 
 import { Link, href, useNavigate } from "react-router";
 import { GithubAppCardLink } from "~/components/github-app-cards";
@@ -56,84 +61,28 @@ export default function CreatePrivateGitServicePage({
 
   return (
     <>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to={href("/:workspaceId", params)} prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-                  ...params,
-                  envSlug: "production"
-                })}
-                prefetch="intent"
-              >
-                {params.projectSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                params.envSlug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : params.envSlug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
-                prefetch="intent"
-              >
-                {params.envSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href(
-                  "/:workspaceId/project/:projectSlug/:envSlug/create-service",
-                  params
-                )}
-                prefetch="intent"
-              >
-                Create service
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>From Git provider</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <div
         className={cn(
           "flex flex-col my-10 grow justify-center items-center mx-auto",
-          "gap-10"
+          "gap-6"
         )}
       >
-        <div className="flex w-full flex-col gap-3 md:w-1/2">
-          <div className="flex flex-col items-start gap-1">
-            <h1 className="text-3xl font-bold">New Git Service</h1>
-            <h2 className="text-grey">Select a git app</h2>
-          </div>
+        <div className="flex w-full flex-col gap-1 md:w-1/2">
+          <Link
+            to={href(
+              "/:workspaceId/project/:projectSlug/:envSlug/create-service",
+              params
+            )}
+            className={cn(
+              "text-sm text-grey",
+              "flex items-center gap-0.5 hover:underline"
+            )}
+          >
+            <ArrowLeftIcon className="size-4" />
+            Create service
+          </Link>
+
+          <h1 className="text-3xl font-bold">New Git Service</h1>
         </div>
 
         <ul
@@ -142,6 +91,8 @@ export default function CreatePrivateGitServicePage({
             gitAppList.length === 0 ? "my-20" : "my-6"
           )}
         >
+          <h2 className="text-grey">Select a git app</h2>
+
           {gitAppList.length === 0 && (
             <div
               className={cn(

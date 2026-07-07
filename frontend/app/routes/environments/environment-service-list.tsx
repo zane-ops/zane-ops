@@ -282,7 +282,7 @@ export default function EnvironmentServiceListPage({
               {query.length > 0 ? (
                 <>
                   <h2 className="text-2xl font-medium">
-                    No services or stacks match the filter criteria
+                    No services or compose stacks match the filter criteria
                   </h2>
                   <h3 className="text-lg text-gray-500">
                     Your search for <em>`{query}`</em> did not return any
@@ -297,7 +297,7 @@ export default function EnvironmentServiceListPage({
               ) : (
                 <>
                   <h1 className="text-2xl font-bold">
-                    No services or stacks found in this environment
+                    No services or compose stacks found in this environment
                   </h1>
                   <h2 className="text-lg">
                     Would you like to start by creating one?

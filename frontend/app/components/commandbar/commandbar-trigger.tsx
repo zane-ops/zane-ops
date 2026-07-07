@@ -7,7 +7,7 @@ export function CommandBarTrigger({}: CommandBarTriggerProps) {
   return (
     <Button
       variant="outline"
-      className="h-8 text-sm pl-3 pr-4 py-1 rounded-lg text-grey border-grey/20 gap-2 hidden md:inline-flex"
+      className="h-8 text-sm pl-3 pr-2 py-1 rounded-lg text-grey border-grey/20 gap-2 hidden md:inline-flex"
     >
       <SearchIcon className="size-3 flex-none" />
       <span>Command palette</span>

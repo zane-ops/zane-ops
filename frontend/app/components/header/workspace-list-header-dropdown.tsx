@@ -74,7 +74,13 @@ export function WorkspaceMembershipListHeaderDropdown({
           >
             <span>{current.workspace.name.charAt(0).toUpperCase()}</span>
           </div>
-          <p className="whitespace-nowrap text-foreground hidden lg:block">
+          <p
+            className={cn(
+              "text-foreground hidden lg:block",
+              "whitespace-nowrap overflow-x-hidden text-ellipsis",
+              "max-w-24"
+            )}
+          >
             {current.workspace.name}
           </p>
           <StatusBadge
@@ -140,9 +146,9 @@ export function WorkspaceMembershipListHeaderDropdown({
                         <span className="font-medium">{m.workspace.name}</span>
                         <StatusBadge
                           pingState="hidden"
-                          className="py-0.5 px-1.5 text-xs"
+                          className="py-0 px-1.5 text-xs"
                         >
-                          {m.role_name}
+                          {m.role_name.toLowerCase()}
                         </StatusBadge>
                       </div>
 
