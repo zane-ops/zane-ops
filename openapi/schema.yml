@@ -5328,7 +5328,7 @@ paths:
           description: ''
         '204':
           description: No response body
-  /api/console/users/{id}/generate-password-reset-code/:
+  /api/console/users/{id}/generate-password-token/:
     post:
       operationId: generatePasswordResetToken
       summary: Generate password reset token for user

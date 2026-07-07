@@ -228,7 +228,7 @@ export interface paths {
     delete: operations["console_users_destroy"];
     patch: operations["console_users_partial_update"];
   };
-  "/api/console/users/{id}/generate-password-reset-code/": {
+  "/api/console/users/{id}/generate-password-token/": {
     /** Generate password reset token for user */
     post: operations["generatePasswordResetToken"];
   };

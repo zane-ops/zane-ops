@@ -15,7 +15,7 @@ urlpatterns = [
         name="user.details",
     ),
     re_path(
-        r"^users/(?P<id>\d+)/generate-password-reset-code/?$",
+        r"^users/(?P<id>\d+)/generate-password-token/?$",
         views.GeneratePasswordTokenAPIView.as_view(),
         name="user.generate_password_reset",
     ),
