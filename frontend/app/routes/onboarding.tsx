@@ -132,9 +132,36 @@ export default function InitialRegistration({
         <Form
           method="POST"
           ref={formRef}
-          className="p-7 my-2 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
+          className="p-7 my-2 lg:px-32 md:px-20 md:w-2/3 xl:md:w-1/2  flex flex-col w-full"
         >
-          <p className="my-2 text-lg text-grey">Let's setup your first user</p>
+          <h3 className="mt-2 text-lg text-grey">
+            Let's setup your first workspace
+          </h3>
+
+          <div className="my-2 flex flex-col gap-1">
+            <label htmlFor="workspace_name" className="">
+              Workspace Name
+            </label>
+            <Input
+              id="workspace_name"
+              name="workspace_name"
+              placeholder="ex: Default workspace"
+              defaultValue={actionData?.userData?.workspace_name}
+              type="text"
+              aria-describedby="workspace-name-error"
+              aria-invalid={!!errors.workspace_name}
+              autoFocus
+            />
+            {errors.workspace_name && (
+              <span id="workspace-name-error" className="text-red-500 text-sm">
+                {errors.workspace_name}
+              </span>
+            )}
+          </div>
+
+          <Separator className="mt-4" />
+
+          <p className="my-2 text-lg text-grey">Create your first user</p>
           <div className="card flex flex-col gap-3">
             {errors.non_field_errors && (
               <Alert variant="destructive">
@@ -156,7 +183,6 @@ export default function InitialRegistration({
                 type="text"
                 aria-describedby="username-error"
                 aria-invalid={!!errors.username}
-                autoFocus
               />
               {errors.username && (
                 <span id="username-error" className="text-red-500 text-sm">
@@ -229,35 +255,6 @@ export default function InitialRegistration({
                   className="text-red-500 text-sm"
                 >
                   {errors.password_confirmation}
-                </span>
-              )}
-            </div>
-
-            <Separator className="mt-4" />
-
-            <h3 className="my-2 text-lg text-grey">
-              Let's setup your first workspace
-            </h3>
-
-            <div className="my-2 flex flex-col gap-1">
-              <label htmlFor="workspace_name" className="">
-                Default Workspace Name
-              </label>
-              <Input
-                id="workspace_name"
-                name="workspace_name"
-                placeholder="ex: Default workspace"
-                defaultValue={actionData?.userData?.workspace_name}
-                type="text"
-                aria-describedby="workspace-name-error"
-                aria-invalid={!!errors.workspace_name}
-              />
-              {errors.workspace_name && (
-                <span
-                  id="workspace-name-error"
-                  className="text-red-500 text-sm"
-                >
-                  {errors.workspace_name}
                 </span>
               )}
             </div>
