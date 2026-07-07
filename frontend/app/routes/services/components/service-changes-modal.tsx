@@ -68,12 +68,15 @@ export function ServiceChangesModal({
       if (!fetcher.data.errors) {
         setIsOpen(false);
         navigate(
-          href("/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug", {
-            workspaceId: workspaceId!,
-            projectSlug: project_slug,
-            envSlug: service.environment.name,
-            serviceSlug: service.slug
-          })
+          href(
+            "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
+            {
+              workspaceId: workspaceId!,
+              projectSlug: project_slug,
+              envSlug: service.environment.name,
+              serviceSlug: service.slug
+            }
+          )
         );
       }
     }

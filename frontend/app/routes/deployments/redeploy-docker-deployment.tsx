@@ -66,6 +66,9 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     closeButton: true
   });
   throw redirect(
-    href("/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug", params)
+    href(
+      "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
+      params
+    )
   );
 }

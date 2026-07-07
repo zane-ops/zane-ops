@@ -7,9 +7,7 @@ import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/bulk-deploy-services";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
-  throw redirect(
-    href("/:workspaceId/project/:projectSlug/:envSlug", params)
-  );
+  throw redirect(href("/:workspaceId/project/:projectSlug/:envSlug", params));
 }
 
 export async function clientAction({

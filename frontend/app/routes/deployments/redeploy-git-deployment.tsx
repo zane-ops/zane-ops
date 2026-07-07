@@ -8,7 +8,10 @@ import { type Route } from "./+types/redeploy-git-deployment";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href("/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug", params)
+    href(
+      "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
+      params
+    )
   );
 }
 
