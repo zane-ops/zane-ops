@@ -244,7 +244,11 @@ export default function EnvironmentLayout({
         >
           <div className="flex items-start gap-4">
             <div className={cn("flex gap-2 items-center flex-wrap")}>
-              <div
+              <Link
+                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
+                  ...params,
+                  envSlug: "production"
+                })}
                 style={
                   {
                     "--color-light": projectColor.light,
@@ -255,11 +259,14 @@ export default function EnvironmentLayout({
                   "size-12 text-xl flex-none rounded-md flex items-center justify-center",
                   "text-[var(--color-light)] dark:text-[var(--color-dark)]",
                   "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10",
-                  "border  border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10"
+                  "border  border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10",
+                  "focus-visible:outline-hidden focus-visible:ring-2",
+                  "focus-visible:ring-ring focus-visible:ring-offset-2",
+                  "ring-offset-background transition-colors"
                 )}
               >
                 <span>{project.slug.charAt(0).toUpperCase()}</span>
-              </div>
+              </Link>
               <div className="flex flex-col gap-0 items-start relative -top-0.5">
                 <h1 className="text-3xl font-medium">{project.slug}</h1>
                 <StatusBadge

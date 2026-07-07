@@ -46,7 +46,7 @@ export function Header({ leftSlot, rigthSlot }: HeaderProps) {
           .filter(Boolean)
           .map((child, idx) => (
             <React.Fragment key={idx}>
-              <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15" />
+              <div className="relative top-0.5 h-5 w-[2px] bg-grey/30 rounded-md rotate-15 flex-none" />
               {child}
             </React.Fragment>
           ))}

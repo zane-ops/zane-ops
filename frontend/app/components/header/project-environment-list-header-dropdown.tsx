@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
+import { CheckIcon, ChevronsUpDownIcon, NetworkIcon } from "lucide-react";
 import { Link, href, useFetcher, useNavigate, useParams } from "react-router";
 import type { Project } from "~/api/types";
 import { StatusBadge } from "~/components/status-badge";
@@ -39,7 +39,7 @@ export function ProjectEnvironmentListHeaderHeaderDropdown(
       <Button
         variant="ghost"
         asChild
-        className="inline-flex gap-1.5 py-0 px-2 rounded-sm text-sm h-8"
+        className="inline-flex gap-1.5 py-0 px-2 rounded-sm text-sm h-8 text-foreground"
       >
         <Link
           to={href("/:workspaceId/project/:projectSlug/:envSlug", {
@@ -47,26 +47,18 @@ export function ProjectEnvironmentListHeaderHeaderDropdown(
             projectSlug,
             envSlug
           })}
-          className={cn(
-            "text-foreground"
-            // envSlug === "production"
-            //   ? "text-green-500 dark:text-primary"
-            //   : envSlug.startsWith("preview")
-            //     ? "text-link"
-            //     : "text-foreground"
-          )}
         >
           <div
             className={cn(
               "size-6 flex-none rounded-md flex items-center justify-center",
               envSlug === "production"
-                ? "text-green-500 dark:text-primary"
+                ? "text-teal-500 dark:text-primary"
                 : envSlug.startsWith("preview")
                   ? "text-link"
                   : "text-foreground"
             )}
           >
-            <span></span>
+            <NetworkIcon size={16} className="flex-none" />
           </div>
           <span>{envSlug}</span>
         </Link>
@@ -103,16 +95,18 @@ export function ProjectEnvironmentListHeaderHeaderDropdown(
                     )
                   }
                 >
-                  {/* <div
-                      className={cn(
-                        "size-6 flex-none rounded-md flex items-center justify-center",
-                        "text-[var(--color-light)] dark:text-[var(--color-dark)]",
-                        "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10",
-                        "border border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10"
-                      )}
-                    >
-                      <span>{m.workspace.name.charAt(0).toUpperCase()}</span>
-                    </div> */}
+                  <div
+                    className={cn(
+                      "flex-none rounded-md flex items-center justify-center relative top-0.5",
+                      env.name === "production"
+                        ? "text-teal-500 dark:text-primary"
+                        : env.name.startsWith("preview")
+                          ? "text-link"
+                          : "text-foreground"
+                    )}
+                  >
+                    <NetworkIcon size={16} className="flex-none" />
+                  </div>
 
                   <div className="flex items-start gap-8 justify-between w-full">
                     <div className="flex flex-col mr-2 items-start gap-0.5">
