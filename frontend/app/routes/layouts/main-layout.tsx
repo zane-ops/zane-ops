@@ -23,17 +23,16 @@ import type { Route } from "./+types/main-layout";
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
 
-  const [user, userExistQuery, memberships] = await Promise.all([
+  const [user, userExistQuery] = await Promise.all([
     queryClient.ensureQueryData(userQueries.authedUser),
-    queryClient.ensureQueryData(userQueries.checkUserExistence),
-    queryClient.ensureQueryData(userQueries.memberships)
+    queryClient.ensureQueryData(userQueries.checkUserExistence)
   ]);
 
   if (!userExistQuery.data?.exists) {
     throw redirect("/onboarding");
   }
 
-  if (!user || memberships === null) {
+  if (!user) {
     let redirectPathName = `/login`;
     const url = new URL(request.url);
     if (url.pathname !== "/" && url.pathname !== "/login") {
@@ -44,7 +43,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     throw redirect(redirectPathName);
   }
 
-  return { user, memberships };
+  return { user };
 }
 
 export default function MainLayout({}: Route.ComponentProps) {

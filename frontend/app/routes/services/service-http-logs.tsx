@@ -1,4 +1,8 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient
+} from "@tanstack/react-query";
 import { notUndefined, useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowDown01Icon,
@@ -128,7 +132,7 @@ export default function ServiceHttpLogsPage({
     }
   }
 }: Route.ComponentProps) {
-  const queryClient = getQueryClient();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);

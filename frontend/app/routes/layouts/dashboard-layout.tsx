@@ -1,6 +1,11 @@
 import { ArrowBigUpDash, LoaderIcon, Sparkles } from "lucide-react";
 import { Outlet, redirect, useFetcher } from "react-router";
-import { serverQueries, userQueries, versionQueries } from "~/lib/queries";
+import {
+  projectQueries,
+  serverQueries,
+  userQueries,
+  versionQueries
+} from "~/lib/queries";
 import { cn, notFound } from "~/lib/utils";
 import { metaTitle } from "~/utils";
 
@@ -16,6 +21,7 @@ import { CommandBarTrigger } from "~/components/commandbar/commandbar-trigger";
 import { Header } from "~/components/header/header";
 import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
 import { WorkspaceMembershipListHeaderDropdown } from "~/components/header/workpace-list-header-dropdown";
+import { WorkspaceProjectListHeaderDropdown } from "~/components/header/workspace-project-list-header-dropdown";
 import {
   Dialog,
   DialogContent,
@@ -38,9 +44,10 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const memberships = await queryClient.ensureQueryData(
-    userQueries.memberships
-  );
+  const [memberships, projects] = await Promise.all([
+    queryClient.ensureQueryData(userQueries.memberships),
+    queryClient.ensureQueryData(projectQueries.list(params.workspaceId))
+  ]);
 
   if (memberships === null) {
     throw redirect("/login");
@@ -50,11 +57,20 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   if (!workspaces.includes(params.workspaceId)) {
     throw notFound("Workspace Not found");
   }
+
+  return {
+    projects,
+    memberships
+  };
 }
 
 export default function DashboardLayout({
+  loaderData,
+  params,
   matches: {
-    "1": { loaderData }
+    "1": {
+      loaderData: { user }
+    }
   }
 }: Route.ComponentProps) {
   const [showUpdateDialog, setshowUpdateDialog] = React.useState(false);
@@ -118,22 +134,22 @@ export default function DashboardLayout({
     }
   }, [previousVersion, latestVersion?.tag, ongoingUpdateQuery]);
 
-  if (!loaderData.user || !loaderData.memberships) return null;
+  if (!user || !loaderData.memberships) return null;
 
   return (
     <>
       <Header
-        leftSlot={
+        leftSlot={[
           <WorkspaceMembershipListHeaderDropdown
             memberships={loaderData.memberships}
-          />
-        }
-        rigthSlot={
-          <>
-            <CommandBarTrigger />
-            <UserHeaderDropdown user={loaderData.user} />
-          </>
-        }
+          />,
+          params.projectSlug ? (
+            <WorkspaceProjectListHeaderDropdown
+              projectList={loaderData.projects}
+            />
+          ) : undefined
+        ]}
+        rigthSlot={[<CommandBarTrigger />, <UserHeaderDropdown user={user} />]}
       />
       <main
         className={cn(

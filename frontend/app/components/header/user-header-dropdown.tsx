@@ -49,7 +49,7 @@ export function UserHeaderDropdown(props: UserDropdownProps) {
         <DropdownMenuTrigger className="flex justify-center items-center gap-2 p-0 rounded-full">
           <div
             className={cn(
-              "size-10 flex-none rounded-full flex items-center justify-center",
+              "size-8 flex-none rounded-full flex items-center justify-center",
               "text-card-foreground bg-grey/10 border border-grey/20"
             )}
           >

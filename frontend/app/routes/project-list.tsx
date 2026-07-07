@@ -1,9 +1,15 @@
 import * as React from "react";
-import type { Route } from "./+types/dashboard";
+import type { Route } from "./+types/project-list";
 
 import { ArrowUpDownIcon, LoaderIcon, SearchIcon, XIcon } from "lucide-react";
 
-import { Link, useLoaderData, useParams, useSearchParams } from "react-router";
+import {
+  Link,
+  useLoaderData,
+  useMatches,
+  useParams,
+  useSearchParams
+} from "react-router";
 import { Input } from "~/components/ui/input";
 
 import { useQuery } from "@tanstack/react-query";
@@ -71,7 +77,17 @@ const sortValueMap: Record<string, string> = {
 
 function ProjectsListSection() {
   const loaderData = useLoaderData<typeof clientLoader>();
+  const {
+    "2": {
+      loaderData: { memberships }
+    }
+  } = useMatches() as Route.ComponentProps["matches"];
+
   const params = useParams<Route.ComponentProps["params"]>();
+
+  const currentWorkspace = memberships.find(
+    (m) => m.workspace.id === params.workspaceId
+  );
 
   const [searchParams, setSearchParams] = useSearchParams();
   const search = projectSearchSchema.parse(searchParams);
@@ -177,7 +193,9 @@ function ProjectsListSection() {
             )}
           >
             <h3 className="text-2xl font-medium text-card-foreground">
-              Welcome to ZaneOps
+              Welcome to <span className="text-grey">`</span>
+              {currentWorkspace!.workspace.name}
+              <span className="text-grey">`</span>
             </h3>
             <p>This workspace doesn't have any projects yet.</p>
             <Button asChild>

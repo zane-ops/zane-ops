@@ -59,7 +59,7 @@ export default [
       ),
 
       layout("./routes/layouts/dashboard-layout.tsx", [
-        index("./routes/dashboard.tsx"),
+        index("./routes/project-list.tsx"),
 
         route(
           "/project/:projectSlug/:envSlug/review-deployment",

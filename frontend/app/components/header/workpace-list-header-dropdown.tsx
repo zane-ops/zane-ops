@@ -55,7 +55,7 @@ export function WorkspaceMembershipListHeaderDropdown({
       <Button
         variant="ghost"
         asChild
-        className="inline-flex gap-0.5 p-1 rounded-sm text-sm h-8"
+        className="inline-flex gap-1.5 py-1 px-2 rounded-sm text-sm h-8"
       >
         <Link to={href("/:workspaceId", { workspaceId })}>
           <div
@@ -132,21 +132,23 @@ export function WorkspaceMembershipListHeaderDropdown({
                       <span>{m.workspace.name.charAt(0).toUpperCase()}</span>
                     </div>
 
-                    <div className="flex flex-col mr-2 items-start gap-0.5">
-                      <span className="font-medium">{m.workspace.name}</span>
-                      <StatusBadge
-                        pingState="hidden"
-                        className="py-0.5 px-1.5 text-xs"
-                      >
-                        {m.role_name}
-                      </StatusBadge>
-                    </div>
+                    <div className="flex items-start gap-8 justify-between w-full">
+                      <div className="flex flex-col mr-2 items-start gap-0.5">
+                        <span className="font-medium">{m.workspace.name}</span>
+                        <StatusBadge
+                          pingState="hidden"
+                          className="py-0.5 px-1.5 text-xs"
+                        >
+                          {m.role_name}
+                        </StatusBadge>
+                      </div>
 
-                    <span className="flex size-4 items-center justify-center ml-auto flex-none py-2.5">
-                      {m.id === current.id && (
-                        <CheckIcon className="size-full text-teal-600" />
-                      )}
-                    </span>
+                      <span className="flex size-4 items-center justify-center ml-auto flex-none py-2.5">
+                        {m.id === current.id && (
+                          <CheckIcon className="size-full text-teal-600 dark:text-teal-400" />
+                        )}
+                      </span>
+                    </div>
                   </button>
                 </DropdownMenuItem>
               );
