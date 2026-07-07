@@ -1,10 +1,17 @@
 import * as React from "react";
 import type { Route } from "./+types/project-list";
 
-import { ArrowUpDownIcon, LoaderIcon, SearchIcon, XIcon } from "lucide-react";
+import {
+  ArrowUpDownIcon,
+  LoaderIcon,
+  PlusIcon,
+  SearchIcon,
+  XIcon
+} from "lucide-react";
 
 import {
   Link,
+  href,
   useLoaderData,
   useMatches,
   useParams,
@@ -53,10 +60,22 @@ export async function clientLoader({
   };
 }
 
-export default function ProjectList() {
+export default function ProjectList({ params }: Route.ComponentProps) {
   return (
     <main className="flex flex-col gap-10">
-      <h1 className="text-2xl font-medium">Dashboard</h1>
+      <div className="flex items-center gap-4">
+        <h1 className="text-2xl font-medium">Dashboard</h1>
+        <Button
+          asChild
+          variant="secondary"
+          className="inline-flex items-center gap-1"
+        >
+          <Link to={href("/:workspaceId/create-project", params)}>
+            <span>New project</span>
+            <PlusIcon size={16} className="flex-none" />
+          </Link>
+        </Button>
+      </div>
       <ProjectsListSection />
       <RecentDeploymentsSection />
     </main>

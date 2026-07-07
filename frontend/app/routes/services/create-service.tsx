@@ -1,11 +1,13 @@
 import {
+  ArrowLeftIcon,
   ArrowRightIcon,
   ContainerIcon,
   GithubIcon,
   LinkIcon
 } from "lucide-react";
-import { Link } from "react-router";
+import { Link, href } from "react-router";
 import { Button } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/create-service";
 
@@ -13,12 +15,24 @@ export function meta() {
   return [metaTitle("Create Service")] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export default function CreateServicePage({}: Route.ComponentProps) {
+export default function CreateServicePage({ params }: Route.ComponentProps) {
   return (
     <div>
       <div className="mt-5 flex h-[70vh] grow justify-center items-center">
         <div className="card  flex  md:w-[50%] lg:w-[30%] w-full flex-col gap-6">
-          <h1 className="text-3xl font-bold">New Service</h1>
+          <div className="flex flex-col gap-2">
+            <Link
+              to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
+              className={cn(
+                "text-sm text-grey w-full",
+                "flex items-center gap-0.5 hover:underline"
+              )}
+            >
+              <ArrowLeftIcon className="size-4" />
+              Services
+            </Link>
+            <h1 className="text-3xl font-bold">New Service</h1>
+          </div>
           <div className="flex flex-col gap-3">
             <Button
               asChild

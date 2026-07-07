@@ -1,4 +1,4 @@
-import { AlertCircleIcon, LoaderIcon } from "lucide-react";
+import { AlertCircleIcon, ArrowLeftIcon, LoaderIcon } from "lucide-react";
 import { Form, Link, href, redirect, useNavigation } from "react-router";
 import { apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -15,19 +15,12 @@ import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { projectQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-project";
 
 export function meta() {
   return [metaTitle("Create Project")] satisfies ReturnType<Route.MetaFunction>;
-}
-
-export default function CreateProjectPage({
-  actionData,
-  params
-}: Route.ComponentProps) {
-  return <CreateForm actionData={actionData} />;
 }
 
 export async function clientAction({
@@ -67,7 +60,10 @@ export async function clientAction({
   );
 }
 
-function CreateForm({ actionData }: Pick<Route.ComponentProps, "actionData">) {
+export default function CreateProjectPage({
+  actionData,
+  params
+}: Route.ComponentProps) {
   const navigation = useNavigation();
   const isPending =
     navigation.state === "loading" || navigation.state === "submitting";
@@ -78,6 +74,16 @@ function CreateForm({ actionData }: Pick<Route.ComponentProps, "actionData">) {
       className="flex h-[60vh] grow justify-center items-center"
     >
       <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
+        <Link
+          to={href("/:workspaceId", params)}
+          className={cn(
+            "text-sm text-grey w-full",
+            "flex items-center gap-0.5 hover:underline"
+          )}
+        >
+          <ArrowLeftIcon className="size-4" />
+          Project List
+        </Link>
         <h1 className="text-3xl font-bold">New Project</h1>
 
         {errors.non_field_errors && (
