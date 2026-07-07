@@ -69,7 +69,7 @@ const sidebarNavItems: NavItem[] = [
   }
 ];
 
-export default function SettingsLayoutPage({ params }: Route.ComponentProps) {
+export default function SettingsLayoutPage({}: Route.ComponentProps) {
   return (
     <>
       <div className="my-6 grid md:grid-cols-12 gap-6 md:gap-4 relative max-w-full">
