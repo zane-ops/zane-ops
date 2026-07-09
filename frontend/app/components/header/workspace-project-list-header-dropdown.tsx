@@ -128,11 +128,11 @@ export function WorkspaceProjectListHeaderDropdown(
               return 0;
             }}
           >
-            <div className="flex px-4 py-4 items-center gap-1">
+            <div className="flex px-3 py-3.5 items-center gap-1">
               <SearchIcon className="size-4 flex-none text-grey" />
               <CommandPrimitive.Input
                 placeholder="Search projects"
-                className="bg-inherit focus-visible:outline-hidden px-2 w-42"
+                className="text-sm bg-inherit focus-visible:outline-hidden px-2 w-42"
                 onValueChange={setQuery}
                 value={query}
               />

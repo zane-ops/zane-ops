@@ -10,7 +10,7 @@ const alertVariants = cva(
       variant: {
         default: "bg-background text-foreground border-foreground",
         warning:
-          "border-amber-600 text-amber-600 dark:bg-yellow-800 dark:text-white dark:border-transparent",
+          "border-amber-600 text-white bg-amber-600 dark:bg-yellow-800 dark:border-transparent",
         success: "border-teal-500 text-teal-500",
         info: "border-link text-link",
         destructive:
@@ -38,20 +38,24 @@ const Alert = ({
 );
 Alert.displayName = "Alert";
 
-const AlertTitle = ({
+function AlertTitle({
   ref,
   className,
   ...props
 }: React.HTMLAttributes<HTMLHeadingElement> & {
   ref?: React.RefObject<HTMLParagraphElement>;
-}) => (
-  <h5
-    ref={ref}
-    className={cn("mb-1 font-medium leading-none tracking-tight", className)}
-    {...props}
-  />
-);
-AlertTitle.displayName = "AlertTitle";
+}) {
+  return (
+    <h5
+      ref={ref}
+      className={cn(
+        "mb-1 font-semibold leading-none tracking-tight",
+        className
+      )}
+      {...props}
+    />
+  );
+}
 
 const AlertDescription = ({
   ref,
