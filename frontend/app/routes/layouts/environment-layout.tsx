@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRightIcon,
   BoxesIcon,
-  ChevronDownIcon,
   ContainerIcon,
   KeyRoundIcon,
   LoaderIcon,
@@ -24,13 +23,6 @@ import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
 import { NavLink } from "~/components/nav-link";
 import { StatusBadge } from "~/components/status-badge";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
@@ -40,13 +32,6 @@ import {
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "~/components/ui/select";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { environmentQueries, projectQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
@@ -153,76 +138,6 @@ export default function EnvironmentLayout({
 
   return (
     <section>
-      {/* <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to={href("/:workspaceId", params)} prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-                  workspaceId: params.workspaceId,
-                  projectSlug: params.projectSlug,
-                  envSlug: "production"
-                })}
-                prefetch="intent"
-              >
-                {slug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-
-          <BreadcrumbItem>
-            <Select
-              name="environment"
-              onValueChange={(env) => {
-                navigate(
-                  {
-                    pathname: href(
-                      "/:workspaceId/project/:projectSlug/:envSlug",
-                      {
-                        workspaceId: params.workspaceId,
-                        projectSlug: params.projectSlug,
-                        envSlug: env
-                      }
-                    ),
-                    search: searchParams.toString()
-                  },
-                  {
-                    replace: true
-                  }
-                );
-              }}
-              value={params.envSlug}
-            >
-              <SelectTrigger
-                className={cn(
-                  "data-disabled:bg-secondary/60 dark:data-disabled:bg-secondary-foreground",
-                  "data-disabled:opacity-100 data-disabled:border-transparent",
-                  "text-card-foreground"
-                )}
-              >
-                <SelectValue placeholder="Select an environment" />
-              </SelectTrigger>
-              <SelectContent>
-                {project.environments.map((env) => (
-                  <SelectItem key={env.id} value={env.name}>
-                    {env.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb> */}
       <div className="pt-0">
         <nav>
           <Link

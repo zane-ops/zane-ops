@@ -155,72 +155,12 @@ export default function ComposeStackServiceLayoutPage({
   return (
     <>
       <title>{title}</title>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to={href("/:workspaceId", params)}>Projects</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-                  ...params,
-                  envSlug: "production"
-                })}
-                prefetch="intent"
-              >
-                {params.projectSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                params.envSlug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : params.envSlug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
-                prefetch="intent"
-              >
-                {params.envSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <Link
-              to={href(
-                "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
-                params
-              )}
-            >
-              {params.composeStackSlug}
-            </Link>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{params.serviceSlug}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
 
       <section
         id="header"
         className="flex flex-col sm:flex-row md:items-center gap-4 justify-between"
       >
-        <div className="mt-10 flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-x-2">
             <h1 className="text-xl md:text-2xl inline-flex gap-1 items-center">
               {is_job ? (
@@ -231,9 +171,9 @@ export default function ComposeStackServiceLayoutPage({
               <span className="text-grey sr-only md:not-sr-only flex-none">
                 <Link to={`./../..`} className="hover:underline">
                   {params.composeStackSlug}
-                </Link>{" "}
-                /
+                </Link>
               </span>
+              <span>/</span>
               <span>{params.serviceSlug}</span>
             </h1>
             <span className="inline-block rounded-full size-0.5 bg-foreground relative top-0.5" />

@@ -12,14 +12,6 @@ import {
 } from "lucide-react";
 import { Link, Outlet, href, useFetcher } from "react-router";
 import { NavLink } from "~/components/nav-link";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
 import { SubmitButton } from "~/components/ui/button";
 
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
@@ -75,14 +67,16 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 
 export default function DeploymentLayoutPage({
   loaderData,
-  params: {
+  params
+}: Route.ComponentProps) {
+  const {
     workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug,
     deploymentHash: deployment_hash
-  }
-}: Route.ComponentProps) {
+  } = params;
+
   const { data: deployment } = useQuery({
     ...deploymentQueries.single({
       workspaceId,
@@ -123,169 +117,100 @@ export default function DeploymentLayoutPage({
   return (
     <>
       <title>{`${status_emoji_map[deployment.status]} ${service_slug} / ${deployment_hash} | ZaneOps`}</title>
-      {/* <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to={href("/:workspaceId", { workspaceId })}>Projects</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-                  workspaceId,
-                  projectSlug: project_slug,
-                  envSlug: "production"
-                })}
-                prefetch="intent"
-              >
-                {project_slug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                env_slug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : env_slug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-                  workspaceId,
-                  projectSlug: project_slug,
-                  envSlug: env_slug
-                })}
-                prefetch="intent"
-              >
-                {env_slug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
 
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <Link
-              to={href(
-                "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
-                {
-                  workspaceId,
-                  projectSlug: project_slug,
-                  envSlug: env_slug,
-                  serviceSlug: service_slug
-                }
-              )}
-            >
-              {service_slug}
-            </Link>
-          </BreadcrumbItem>
+      <section
+        id="header"
+        className="flex flex-col md:flex-row md:items-center gap-4 justify-between"
+      >
+        <div className="flex flex-col gap-2 md:gap-0">
+          <div className="inline-flex flex-wrap gap-1">
+            <h1 className="text-xl md:text-2xl inline-flex gap-1.5">
+              <span className="text-grey sr-only md:not-sr-only flex-none">
+                <Link
+                  to={href(
+                    "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
+                    params
+                  )}
+                  className="hover:underline"
+                >
+                  {service_slug}
+                </Link>
+              </span>
+              <span>/</span>
+              <span>{deployment.hash}</span>
+            </h1>
 
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{deployment_hash}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb> */}
-
-      <>
-        <section
-          id="header"
-          className="flex flex-col md:flex-row md:items-center gap-4 justify-between"
-        >
-          <div className="flex flex-col gap-2 md:gap-0">
-            <div className="inline-flex flex-wrap gap-1">
-              <h1 className="text-xl md:text-2xl inline-flex gap-1.5">
-                <span className="text-grey sr-only md:not-sr-only flex-none">
-                  <Link to={`./../..`} className="hover:underline">
-                    {service_slug}
-                  </Link>{" "}
-                  /
-                </span>
-                <span>{deployment.hash}</span>
-              </h1>
-
-              <DeploymentStatusBadge status={deployment.status} />
-              {deployment.is_current_production && (
-                <div className="relative top-0.5 rounded-md bg-link/20 text-link px-2  inline-flex gap-1 items-center">
-                  <RocketIcon size={15} className="flex-none" />
-                  <p>current</p>
-                </div>
-              )}
-              {isCancellable && <DeploymentCancelForm />}
-            </div>
-
-            <p className="flex gap-1 items-center">
-              <HistoryIcon size={15} />
-              <span className="sr-only">Deployed at :</span>
-              <time
-                dateTime={deployment.queued_at}
-                className="text-grey text-sm"
-              >
-                {formattedTime(deployment.queued_at)}
-              </time>
-            </p>
-          </div>
-        </section>
-
-        <nav className="mt-5">
-          <ul
-            className={cn(
-              "overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start rounded-none border-b border-border ",
-              "inline-flex items-stretch p-0.5 text-muted-foreground"
+            <DeploymentStatusBadge status={deployment.status} />
+            {deployment.is_current_production && (
+              <div className="relative top-0.5 rounded-md bg-link/20 text-link px-2  inline-flex gap-1 items-center">
+                <RocketIcon size={15} className="flex-none" />
+                <p>current</p>
+              </div>
             )}
-          >
-            <li>
-              <NavLink to="./build-logs" prefetch="viewport">
-                <span>Deployment logs</span>
-                <SquareChartGanttIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
-            <li>
-              <NavLink to="." prefetch="viewport">
-                <span>Runtime logs</span>
-                <TextSearchIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
+            {isCancellable && <DeploymentCancelForm />}
+          </div>
 
-            <li>
-              <NavLink to="./http-logs" prefetch="viewport">
-                <span>HTTP logs</span>
-                <GlobeIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
-            <li>
-              <NavLink to="./terminal" prefetch="viewport">
-                <span>Terminal</span>
-                <TerminalIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
+          <p className="flex gap-1 items-center">
+            <HistoryIcon size={15} />
+            <span className="sr-only">Deployed at :</span>
+            <time dateTime={deployment.queued_at} className="text-grey text-sm">
+              {formattedTime(deployment.queued_at)}
+            </time>
+          </p>
+        </div>
+      </section>
 
-            <li>
-              <NavLink to="./metrics">
-                <span>Metrics</span>
-                <ChartNoAxesColumnIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
+      <nav className="mt-5">
+        <ul
+          className={cn(
+            "overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start rounded-none border-b border-border ",
+            "inline-flex items-stretch p-0.5 text-muted-foreground"
+          )}
+        >
+          <li>
+            <NavLink to="./build-logs" prefetch="viewport">
+              <span>Deployment logs</span>
+              <SquareChartGanttIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="." prefetch="viewport">
+              <span>Runtime logs</span>
+              <TextSearchIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
 
-            <li>
-              <NavLink to="./details">
-                <span>Details</span>
-                <InfoIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
-          </ul>
-        </nav>
-        <section className="mt-2">
-          <Outlet />
-        </section>
-      </>
+          <li>
+            <NavLink to="./http-logs" prefetch="viewport">
+              <span>HTTP logs</span>
+              <GlobeIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="./terminal" prefetch="viewport">
+              <span>Terminal</span>
+              <TerminalIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
+
+          <li>
+            <NavLink to="./metrics">
+              <span>Metrics</span>
+              <ChartNoAxesColumnIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
+
+          <li>
+            <NavLink to="./details">
+              <span>Details</span>
+              <InfoIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
+        </ul>
+      </nav>
+      <section className="mt-2">
+        <Outlet />
+      </section>
     </>
   );
 }

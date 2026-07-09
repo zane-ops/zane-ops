@@ -78,7 +78,7 @@ export function WorkspaceMembershipListHeaderDropdown({
             className={cn(
               "text-foreground hidden lg:block",
               "whitespace-nowrap overflow-x-hidden text-ellipsis",
-              "max-w-24"
+              "max-w-24 xl:max-w-32"
             )}
           >
             {current.workspace.name}

@@ -8,20 +8,12 @@ import {
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
-import { Link, Outlet, href, useFetcher, useLocation } from "react-router";
+import { Outlet, useFetcher } from "react-router";
 import type { ComposeStack } from "~/api/types";
 import { getComposeStackStatus } from "~/components/compose-stack-cards";
 import { CopyButton } from "~/components/copy-button";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
 import { NavLink } from "~/components/nav-link";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
 import {
   Tooltip,
   TooltipContent,
@@ -90,62 +82,12 @@ export default function ComposeStackLayoutPage({
   return (
     <>
       <title>{title}</title>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to={href("/:workspaceId", params)} prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-                  ...params,
-                  envSlug: "production"
-                })}
-                prefetch="intent"
-              >
-                {params.projectSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                params.envSlug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : params.envSlug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
-                prefetch="intent"
-              >
-                {params.envSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{params.composeStackSlug}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
 
       <section
         id="header"
         className="flex flex-col sm:flex-row md:items-center gap-4 justify-between"
       >
-        <div className="mt-10 flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-x-2 flex-wrap">
             <h1 className="text-2xl inline-flex gap-1 items-center">
               <BoxesIcon className="size-6 flex-none" />

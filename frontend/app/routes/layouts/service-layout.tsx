@@ -16,17 +16,9 @@ import {
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
-import { Link, Outlet, href, useLocation, useParams } from "react-router";
+import { Outlet, useLocation, useParams } from "react-router";
 import { NavLink } from "~/components/nav-link";
 import { StatusBadge } from "~/components/status-badge";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { ServiceChangesModal } from "~/routes/services/components/service-changes-modal";
 
@@ -240,65 +232,6 @@ export default function ServiceDetailsLayout({
 
   return (
     <>
-      {/* <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href("/:workspaceId", { workspaceId })}
-                prefetch="intent"
-              >
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-                  workspaceId,
-                  projectSlug: project_slug,
-                  envSlug: "production"
-                })}
-                prefetch="intent"
-              >
-                {project_slug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                env_slug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : env_slug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-                  workspaceId,
-                  projectSlug: project_slug,
-                  envSlug: env_slug
-                })}
-                prefetch="intent"
-              >
-                {env_slug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{service_slug}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb> */}
-
       <section
         id="header"
         className="flex flex-col sm:flex-row md:items-center gap-4 justify-between"

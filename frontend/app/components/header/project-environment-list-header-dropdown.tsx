@@ -63,7 +63,7 @@ export function ProjectEnvironmentListHeaderHeaderDropdown(
           <p
             className={cn(
               "text-foreground whitespace-nowrap overflow-x-hidden text-ellipsis",
-              "max-w-16 md:max-w-24"
+              "max-w-16 md:max-w-24 xl:max-w-32"
             )}
           >
             {envSlug}

@@ -5,14 +5,6 @@ import {
   SettingsIcon
 } from "lucide-react";
 import { Link, NavLink, Outlet, href } from "react-router";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { projectQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
@@ -69,36 +61,6 @@ export default function ProjectLayout({
   const projectColor = stringToColor(project.slug);
   return (
     <>
-      {/* <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to={href("/:workspaceId", params)} prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-                  workspaceId: params.workspaceId,
-                  projectSlug: params.projectSlug,
-                  envSlug: "production"
-                })}
-                prefetch="intent"
-              >
-                {project.slug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Settings</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb> */}
       <div className="mt-11.5 my-6 grid md:grid-cols-12 gap-6 relative max-w-full">
         <div className="md:col-span-12">
           <div className="flex items-center gap-4">

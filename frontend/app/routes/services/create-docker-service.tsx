@@ -80,7 +80,7 @@ export default function CreateServicePage({
 }: Route.ComponentProps) {
   const [currentStep, setCurrentStep] = React.useState<
     "FORM" | "CREATED" | "DEPLOYED"
-  >("FORM");
+  >("CREATED");
 
   const [serviceSlug, setServiceSlug] = React.useState("");
   const [deploymentHash, setDeploymentHash] = React.useState("");
