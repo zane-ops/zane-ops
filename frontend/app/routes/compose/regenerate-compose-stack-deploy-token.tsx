@@ -3,14 +3,14 @@ import type { Route } from "./+types/regenerate-compose-stack-deploy-token";
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { composeStackQueries } from "~/lib/queries";
+import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/utils";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     href(
-      "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
+      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
       params
     )
   );
@@ -18,13 +18,15 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 
 export async function clientAction({
   params: {
-    workspaceId,
     projectSlug: project_slug,
     envSlug: env_slug,
     composeStackSlug: stack_slug
   }
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const { error, data } = await apiClient.PUT(
     "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/regenerate-deploy-token/",
     {

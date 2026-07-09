@@ -4,7 +4,8 @@ import { apiClient } from "~/api/client";
 import {
   environmentQueries,
   resourceQueries,
-  serviceQueries
+  serviceQueries,
+  userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { ErrorResponseFromAPI } from "~/lib/utils";
@@ -13,23 +14,24 @@ import { type Route } from "./+types/archive-git-service";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href(
-      "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/settings",
-      { ...params }
-    )
+    href("/project/:projectSlug/:envSlug/services/:serviceSlug/settings", {
+      ...params
+    })
   );
 }
 
 export async function clientAction({
   request,
   params: {
-    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
   }
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const formData = await request.formData();
 
   console.log({
@@ -102,8 +104,7 @@ export async function clientAction({
     )
   });
   throw redirect(
-    href("/:workspaceId/project/:projectSlug/:envSlug", {
-      workspaceId,
+    href("/project/:projectSlug/:envSlug", {
       projectSlug: project_slug,
       envSlug: env_slug
     })

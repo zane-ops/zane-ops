@@ -25,6 +25,7 @@ import {
 import { projectQueries } from "~/lib/queries";
 import { useDeviceSize } from "~/lib/use-device-size";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { durationToMs, stringToColor } from "~/utils";
 
 export type WorkspaceProjectListHeaderDropdownProps = {
@@ -35,17 +36,18 @@ export function WorkspaceProjectListHeaderDropdown(
   props: WorkspaceProjectListHeaderDropdownProps
 ) {
   const deviceSize = useDeviceSize();
-  const params = useParams() as { workspaceId: string; projectSlug: string };
+  const workspaceId = useCurrentWorkspaceId();
+  const params = useParams() as { projectSlug: string };
 
   const { data: projectList } = useQuery({
     ...projectQueries.list({
-      ...params,
+      workspaceId,
       refetchInterval: durationToMs(5, "minutes")
     }),
     initialData: props.projectList
   });
   const { data: current } = useQuery({
-    ...projectQueries.single(params.workspaceId, params.projectSlug)
+    ...projectQueries.single(workspaceId, params.projectSlug)
   });
 
   const navigate = useNavigate();
@@ -65,8 +67,8 @@ export function WorkspaceProjectListHeaderDropdown(
         className="inline-flex gap-1.5 px-2 py-1 rounded-sm text-sm h-8"
       >
         <Link
-          to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-            ...params,
+          to={href("/project/:projectSlug/:envSlug", {
+            projectSlug: params.projectSlug,
             envSlug: "production"
           })}
         >
@@ -153,8 +155,7 @@ export function WorkspaceProjectListHeaderDropdown(
                       value={project.slug}
                       onSelect={() => {
                         navigate(
-                          href("/:workspaceId/project/:projectSlug/:envSlug", {
-                            ...params,
+                          href("/project/:projectSlug/:envSlug", {
                             projectSlug: project.slug,
                             envSlug: "production"
                           })
@@ -202,11 +203,7 @@ export function WorkspaceProjectListHeaderDropdown(
                   value="CREATE_PROJECT"
                   className="cursor-pointer flex gap-1.5"
                   onSelect={() => {
-                    navigate(
-                      href("/:workspaceId/create-project", {
-                        ...params
-                      })
-                    );
+                    navigate(href("/create-project"));
                     setQuery("");
                     setPopoverOpen(false);
                   }}

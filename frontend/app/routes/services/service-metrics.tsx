@@ -28,8 +28,9 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import { metrisSearch, serviceQueries } from "~/lib/queries";
+import { metrisSearch, serviceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import {
   convertValueToBytes,
   formatStorageValue,
@@ -40,13 +41,15 @@ import type { Route } from "./+types/service-metrics";
 export async function clientLoader({
   request,
   params: {
-    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
   }
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const searchParams = new URL(request.url).searchParams;
   const filters = metrisSearch.parse({
     time_range: searchParams.get("time_range")
@@ -73,12 +76,12 @@ export default function ServiceMetricsPage({
     }
   },
   params: {
-    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = metrisSearch.parse({
     time_range: searchParams.get("time_range")

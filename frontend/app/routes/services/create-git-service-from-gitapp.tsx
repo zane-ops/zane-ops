@@ -16,8 +16,7 @@ import {
   href,
   useFetcher,
   useNavigate,
-  useNavigation,
-  useParams
+  useNavigation
 } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
@@ -55,7 +54,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
-import { gitAppsQueries } from "~/lib/queries";
+import { gitAppsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
@@ -69,8 +68,11 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const gitApp = await queryClient.ensureQueryData(
-    gitAppsQueries.single(params.workspaceId, params.gitAppId)
+    gitAppsQueries.single(workspaceId, params.gitAppId)
   );
 
   return { gitApp };
@@ -97,10 +99,7 @@ export default function CreateGitServiceFromGitHubPage({
       closeButton: true
     });
     navigate(
-      href(
-        "/:workspaceId/project/:projectSlug/:envSlug/create-service/git-private",
-        params
-      ),
+      href("/project/:projectSlug/:envSlug/create-service/git-private", params),
       { replace: true }
     );
 
@@ -116,7 +115,7 @@ export default function CreateGitServiceFromGitHubPage({
     >
       <Link
         to={href(
-          "/:workspaceId/project/:projectSlug/:envSlug/create-service/git-private",
+          "/project/:projectSlug/:envSlug/create-service/git-private",
           params
         )}
         className={cn(
@@ -901,7 +900,6 @@ function StepServiceCreated({
   const fetcher = useFetcher<typeof clientAction>();
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
   const isPending = fetcher.state !== "idle";
-  const { workspaceId } = useParams();
 
   if (fetcher.data?.deploymentHash) {
     onSuccess(fetcher.data.deploymentHash);
@@ -949,10 +947,11 @@ function StepServiceCreated({
 
           <Button asChild className="flex-1" variant="outline">
             <Link
-              to={href(
-                "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
-                { workspaceId: workspaceId!, projectSlug, envSlug, serviceSlug }
-              )}
+              to={href("/project/:projectSlug/:envSlug/services/:serviceSlug", {
+                projectSlug,
+                envSlug,
+                serviceSlug
+              })}
               className="flex gap-2  items-center"
             >
               Go to service details <ArrowRightIcon size={20} />
@@ -978,7 +977,6 @@ function StepServiceDeployed({
   deploymentHash
 }: StepServiceDeployedProps) {
   const navigation = useNavigation();
-  const { workspaceId } = useParams();
   return (
     <div className="flex  flex-col w-full justify-center items-center">
       <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
@@ -995,9 +993,8 @@ function StepServiceDeployed({
           <Button asChild className="flex-1">
             <Link
               to={href(
-                "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
+                "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
                 {
-                  workspaceId: workspaceId!,
                   projectSlug,
                   envSlug,
                   serviceSlug,

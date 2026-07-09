@@ -50,9 +50,14 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { composeStackQueries, stackDeploymentListFilters } from "~/lib/queries";
+import {
+  composeStackQueries,
+  stackDeploymentListFilters,
+  userQueries
+} from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import {
   capitalizeText,
   formatElapsedTime,
@@ -76,9 +81,12 @@ export async function clientLoader({
     queued_at_before: search.queued_at_before
   };
 
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const deploymentList = await queryClient.ensureQueryData(
     composeStackQueries.deploymentList({
-      workspaceId: params.workspaceId,
+      workspaceId: workspaceId,
       project_slug: params.projectSlug,
       env_slug: params.envSlug,
       stack_slug: params.composeStackSlug,
@@ -102,11 +110,12 @@ export default function ComposeStackDeploymentListPage({
     queued_at_after: search.queued_at_after,
     queued_at_before: search.queued_at_before
   };
+  const workspaceId = useCurrentWorkspaceId();
   const {
     data: { results: deploymentList, count: totalDeployments }
   } = useQuery({
     ...composeStackQueries.deploymentList({
-      workspaceId: params.workspaceId,
+      workspaceId: workspaceId,
       project_slug: params.projectSlug,
       env_slug: params.envSlug,
       stack_slug: params.composeStackSlug,

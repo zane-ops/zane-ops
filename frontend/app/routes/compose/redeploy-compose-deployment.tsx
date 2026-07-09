@@ -1,7 +1,7 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { composeStackQueries } from "~/lib/queries";
+import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/redeploy-compose-deployment";
@@ -9,7 +9,7 @@ import type { Route } from "./+types/redeploy-compose-deployment";
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     href(
-      "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
+      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
       params
     )
   );
@@ -17,6 +17,9 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 
 export async function clientAction({ params }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const toastId = toast.loading(
     `Queueing redeployment for #${params.deploymentHash}...`
   );
@@ -48,7 +51,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     });
     throw redirect(
       href(
-        "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
+        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
         params
       )
     );
@@ -57,7 +60,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
   await Promise.all([
     queryClient.invalidateQueries({
       ...composeStackQueries.singleDeployment({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -67,7 +70,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     }),
     queryClient.invalidateQueries(
       composeStackQueries.deploymentList({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug

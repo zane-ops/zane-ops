@@ -32,9 +32,11 @@ import {
 import {
   composeStackQueries,
   serverQueries,
-  stackMetrisSearch
+  stackMetrisSearch,
+  userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import {
   formatStorageValue,
   getMaxDomainForStorageValue,
@@ -53,10 +55,13 @@ export async function clientLoader({
     service_names: searchParams.getAll("service_names")
   });
 
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const [metrics, limits] = await Promise.all([
     queryClient.ensureQueryData(
       composeStackQueries.metrics({
-        workspaceId: params.workspaceId,
+        workspaceId: workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -83,9 +88,10 @@ export default function ComposeStackMetricsPage({
     time_range: searchParams.get("time_range"),
     service_names: searchParams.getAll("service_names")
   });
+  const workspaceId = useCurrentWorkspaceId();
   const { data } = useQuery({
     ...composeStackQueries.metrics({
-      workspaceId: params.workspaceId,
+      workspaceId: workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug,

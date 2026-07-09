@@ -34,9 +34,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
   if (user) {
     const redirect_to = searchParams.get("redirect_to");
-    let redirectTo = user.membership
-      ? href("/:workspaceId", { workspaceId: user.membership.workspace.id })
-      : "/user";
+    let redirectTo = href("/");
     if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
       redirectTo = redirect_to;
     }

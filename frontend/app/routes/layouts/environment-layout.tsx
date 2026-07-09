@@ -33,9 +33,10 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
-import { environmentQueries, projectQueries } from "~/lib/queries";
+import { environmentQueries, projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, isNotFoundError } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { metaTitle, stringToColor } from "~/utils";
 import type { Route } from "./+types/environment-layout";
 
@@ -53,20 +54,20 @@ export async function clientLoader({
   params
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const searchParams = new URL(request.url).searchParams;
 
   const queryString = searchParams.get("query") ?? "";
 
   let environment = queryClient.getQueryData(
-    environmentQueries.single(
-      params.workspaceId,
-      params.projectSlug,
-      params.envSlug
-    ).queryKey
+    environmentQueries.single(workspaceId, params.projectSlug, params.envSlug)
+      .queryKey
   );
 
   const project = await queryClient.ensureQueryData(
-    projectQueries.single(params.workspaceId, params.projectSlug)
+    projectQueries.single(workspaceId, params.projectSlug)
   );
 
   if (!environment) {
@@ -74,14 +75,14 @@ export async function clientLoader({
     [environment] = await Promise.all([
       queryClient.ensureQueryData(
         environmentQueries.single(
-          params.workspaceId,
+          workspaceId,
           params.projectSlug,
           params.envSlug
         )
       ),
       queryClient.ensureQueryData(
         environmentQueries.serviceList(
-          params.workspaceId,
+          workspaceId,
           params.projectSlug,
           params.envSlug,
           {
@@ -99,11 +100,12 @@ export default function EnvironmentLayout({
   params,
   loaderData
 }: Route.ComponentProps) {
-  const { workspaceId, projectSlug: slug, envSlug } = params;
+  const { projectSlug: slug, envSlug } = params;
+  const workspaceId = useCurrentWorkspaceId();
   const navigate = useNavigate();
 
   const { data: project } = useQuery({
-    ...projectQueries.single(params.workspaceId, params.projectSlug),
+    ...projectQueries.single(workspaceId, params.projectSlug),
     initialData: loaderData.project
   });
 
@@ -141,8 +143,7 @@ export default function EnvironmentLayout({
       <div className="pt-0">
         <nav>
           <Link
-            to={href("/:workspaceId/project/:projectSlug/settings", {
-              workspaceId: params.workspaceId,
+            to={href("/project/:projectSlug/settings", {
               projectSlug: project.slug
             })}
             className="underline inline-flex gap-0.5 px-0 items-center text-sm"
@@ -160,7 +161,7 @@ export default function EnvironmentLayout({
           <div className="flex items-start gap-4">
             <div className={cn("flex gap-2 items-center flex-wrap")}>
               <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
+                to={href("/project/:projectSlug/:envSlug", {
                   ...params,
                   envSlug: "production"
                 })}
@@ -219,7 +220,7 @@ export default function EnvironmentLayout({
                     onClick={() => {
                       navigate(
                         href(
-                          "/:workspaceId/project/:projectSlug/:envSlug/create-service",
+                          "/project/:projectSlug/:envSlug/create-service",
                           params
                         )
                       );
@@ -232,7 +233,7 @@ export default function EnvironmentLayout({
                     onClick={() => {
                       navigate(
                         href(
-                          "/:workspaceId/project/:projectSlug/:envSlug/create-compose-stack",
+                          "/project/:projectSlug/:envSlug/create-compose-stack",
                           params
                         )
                       );

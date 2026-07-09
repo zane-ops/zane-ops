@@ -9,7 +9,7 @@ import { WorkspaceProjectListHeaderDropdown } from "~/components/header/workspac
 import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
 import { projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, notFound } from "~/lib/utils";
+import { cn } from "~/lib/utils";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/workspace-layout";
 
@@ -17,29 +17,37 @@ export function meta() {
   return [metaTitle("Dashboard")] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+export async function clientLoader() {
   const queryClient = getQueryClient();
-  const [memberships, projects] = await Promise.all([
+  const [memberships, workspace] = await Promise.all([
     queryClient.ensureQueryData(userQueries.memberships),
-    queryClient.ensureQueryData(projectQueries.list(params))
+    queryClient.ensureQueryData(userQueries.currentWorkspace)
   ]);
 
   if (memberships === null) {
     throw redirect(href("/login"));
   }
 
-  const workspaces = memberships.map((m) => m.workspace.id);
-  if (!workspaces.includes(params.workspaceId)) {
-    throw notFound("Workspace Not found");
+  if (!workspace) {
+    return {
+      workspace: null,
+      projects: [],
+      memberships
+    };
   }
 
+  const projects = await queryClient.ensureQueryData(
+    projectQueries.list({ workspaceId: workspace.id })
+  );
+
   return {
+    workspace,
     projects,
     memberships
   };
 }
 
-export default function DashboardLayout({
+export default function WorkspaceLayout({
   loaderData,
   params,
   matches: {

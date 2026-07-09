@@ -28,8 +28,9 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import { deploymentQueries, metrisSearch } from "~/lib/queries";
+import { deploymentQueries, metrisSearch, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import {
   convertValueToBytes,
   formatStorageValue,
@@ -40,7 +41,6 @@ import type { Route } from "./+types/deployment-metrics";
 export async function clientLoader({
   request,
   params: {
-    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     deploymentHash: deployment_hash,
@@ -48,6 +48,9 @@ export async function clientLoader({
   }
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const searchParams = new URL(request.url).searchParams;
   const filters = metrisSearch.parse({
     time_range: searchParams.get("time_range")
@@ -75,13 +78,13 @@ export default function DeploymentMetricsPage({
     }
   },
   params: {
-    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     deploymentHash: deployment_hash,
     envSlug: env_slug
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = metrisSearch.parse({
     time_range: searchParams.get("time_range")

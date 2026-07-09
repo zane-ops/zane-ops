@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { flushSync } from "react-dom";
-import { useFetcher, useParams } from "react-router";
+import { useFetcher } from "react-router";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import type { Service } from "~/api/types";
@@ -39,6 +39,7 @@ import {
   sharedRegistryCredentialsQueries
 } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import {
   type clientAction,
   useServiceQuery
@@ -55,7 +56,7 @@ export function ServiceSourceForm({
   project_slug,
   env_slug
 }: ServiceFormProps) {
-  const workspaceId = useParams().workspaceId!;
+  const workspaceId = useCurrentWorkspaceId();
   const fetcher = useFetcher<typeof clientAction>();
   const isPending = fetcher.state !== "idle";
 

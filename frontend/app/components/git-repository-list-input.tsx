@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { GithubIcon, GitlabIcon, LockIcon } from "lucide-react";
 import React from "react";
-import { useParams } from "react-router";
 import { useDebounce } from "use-debounce";
 import type { GitRepository } from "~/api/types";
 import {
@@ -12,6 +11,7 @@ import {
 } from "~/components/ui/command";
 import { gitAppsQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 
 type GitRepositoryListInputProps = {
   appId: string;
@@ -38,7 +38,7 @@ export function GitRepositoryListInput({
   repoSearchQuery,
   setRepoSearchQuery
 }: GitRepositoryListInputProps) {
-  const workspaceId = useParams().workspaceId!;
+  const workspaceId = useCurrentWorkspaceId();
   const [isComboxOpen, setComboxOpen] = React.useState(false);
   const [debouncedValue] = useDebounce(repoSearchQuery, 150);
 

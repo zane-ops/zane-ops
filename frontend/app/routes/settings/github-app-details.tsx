@@ -1,21 +1,23 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
-import { gitAppsQueries } from "~/lib/queries";
+import { gitAppsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/github-app-details";
 
-export function clientLoader({ params }: Route.ClientLoaderArgs) {
-  throw redirect(
-    href("/:workspaceId/settings/git-apps", { workspaceId: params.workspaceId })
-  );
+export function clientLoader() {
+  throw redirect(href("/settings/git-apps"));
 }
 
 export async function clientAction({
   params,
   request
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const formData = await request.formData();
 
   const intent = formData.get("intent")?.toString();
@@ -25,7 +27,7 @@ export async function clientAction({
       return testGithubAppConnection(params);
     }
     case "rename_github_app": {
-      return renameGithubApp(formData, params);
+      return renameGithubApp(formData, params, workspaceId);
     }
     default: {
       throw new Error("Unexpected intent");
@@ -65,7 +67,8 @@ async function testGithubAppConnection(
 
 async function renameGithubApp(
   formData: FormData,
-  params: Route.ClientActionArgs["params"]
+  params: Route.ClientActionArgs["params"],
+  workspaceId: string
 ) {
   const queryClient = getQueryClient();
   const userData = {
@@ -96,7 +99,7 @@ async function renameGithubApp(
   }
 
   await queryClient.invalidateQueries({
-    queryKey: gitAppsQueries.list(params.workspaceId).queryKey
+    queryKey: gitAppsQueries.list(workspaceId).queryKey
   });
 
   toast.success("Success", {

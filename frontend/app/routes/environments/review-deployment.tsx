@@ -11,7 +11,7 @@ import { type RequestInput, apiClient } from "~/api/client";
 import { GithubLogo } from "~/components/github-logo";
 import { ThemedLogo } from "~/components/logo";
 import { SubmitButton } from "~/components/ui/button";
-import { environmentQueries } from "~/lib/queries";
+import { environmentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/review-deployment";
@@ -27,9 +27,12 @@ type DeploymentDecision = RequestInput<
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const environment = await queryClient.ensureQueryData(
     environmentQueries.pendingReview(
-      params.workspaceId,
+      workspaceId,
       params.projectSlug,
       params.envSlug
     )
@@ -174,9 +177,12 @@ export async function clientAction({
   params
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const environment = queryClient.getQueryData(
     environmentQueries.pendingReview(
-      params.workspaceId,
+      workspaceId,
       params.projectSlug,
       params.envSlug
     ).queryKey
@@ -187,7 +193,7 @@ export async function clientAction({
       description: `No pending environment to review exists at \`${params.projectSlug}/${params.envSlug}\` `,
       closeButton: true
     });
-    throw redirect(href("/:workspaceId", { workspaceId: params.workspaceId }));
+    throw redirect(href("/"));
   }
 
   const formData = await request.formData();
@@ -228,11 +234,7 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    environmentQueries.single(
-      params.workspaceId,
-      params.projectSlug,
-      params.envSlug
-    )
+    environmentQueries.single(workspaceId, params.projectSlug, params.envSlug)
   );
 
   throw redirect(environment.preview_metadata!.external_url);

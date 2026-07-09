@@ -30,8 +30,9 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
-import { sharedRegistryCredentialsQueries } from "~/lib/queries";
+import { sharedRegistryCredentialsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/registry-credentials-list";
 
@@ -41,20 +42,23 @@ export function meta() {
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+export async function clientLoader() {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const credentials = await queryClient.ensureQueryData(
-    sharedRegistryCredentialsQueries.list(params.workspaceId)
+    sharedRegistryCredentialsQueries.list(workspaceId)
   );
   return { credentials };
 }
 
 export default function ContainerRegistryCredentialsPage({
-  loaderData,
-  params
+  loaderData
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const { data: credentials } = useQuery({
-    ...sharedRegistryCredentialsQueries.list(params.workspaceId),
+    ...sharedRegistryCredentialsQueries.list(workspaceId),
     initialData: loaderData.credentials
   });
 

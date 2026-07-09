@@ -18,14 +18,14 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER } from "~/lib/constants";
-import { deploymentQueries } from "~/lib/queries";
+import { deploymentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import type { Route } from "./+types/deployment-build-logs";
 
 export async function clientLoader({
   params: {
-    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug,
@@ -33,6 +33,9 @@ export async function clientLoader({
   }
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   queryClient.prefetchInfiniteQuery(
     deploymentQueries.buildLogs({
       workspaceId,
@@ -48,13 +51,13 @@ export async function clientLoader({
 
 export default function DeploymentBuildLogsPage({
   params: {
-    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug,
     deploymentHash: deployment_hash
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
 

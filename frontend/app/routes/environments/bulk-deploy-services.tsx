@@ -1,20 +1,23 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { environmentQueries } from "~/lib/queries";
+import { environmentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/bulk-deploy-services";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
-  throw redirect(href("/:workspaceId/project/:projectSlug/:envSlug", params));
+  throw redirect(href("/project/:projectSlug/:envSlug", params));
 }
 
 export async function clientAction({
-  params: { workspaceId, projectSlug: project_slug, envSlug: env_slug },
+  params: { projectSlug: project_slug, envSlug: env_slug },
   request
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const formData = await request.formData();
   const userData = {
     service_ids: formData.getAll("service_id").map((data) => data.toString())

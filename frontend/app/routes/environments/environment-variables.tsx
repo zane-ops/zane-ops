@@ -47,13 +47,14 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { environmentQueries } from "~/lib/queries";
+import { environmentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { getCsrfTokenHeader, pluralize } from "~/utils";
 import type { Route } from "./+types/environment-variables";
 
@@ -63,9 +64,10 @@ export default function EnvironmentVariablesPage({
   },
   params
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const { data: environment } = useQuery({
     ...environmentQueries.single(
-      params.workspaceId,
+      workspaceId,
       params.projectSlug,
       params.envSlug
     ),
@@ -519,6 +521,10 @@ export async function clientAction({
   params,
   request
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const formData = await request.formData();
 
   const intent = formData.get("intent")?.toString();
@@ -528,7 +534,7 @@ export async function clientAction({
   switch (intent) {
     case "add-env-variable": {
       return addEnvVariable(
-        params.workspaceId,
+        workspaceId,
         params.projectSlug,
         env_slug,
         formData
@@ -536,7 +542,7 @@ export async function clientAction({
     }
     case "update-env-variable": {
       return updateEnvVariable(
-        params.workspaceId,
+        workspaceId,
         params.projectSlug,
         env_slug,
         variable_id,
@@ -545,7 +551,7 @@ export async function clientAction({
     }
     case "delete-env-variable": {
       return deleteEnvVariable(
-        params.workspaceId,
+        workspaceId,
         params.projectSlug,
         env_slug,
         variable_id

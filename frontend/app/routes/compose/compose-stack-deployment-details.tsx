@@ -35,6 +35,7 @@ import {
 } from "~/components/ui/tooltip";
 import { composeStackQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { formatElapsedTime, formattedTime } from "~/utils";
 import type { Route } from "./+types/compose-stack-deployment-details";
 
@@ -46,9 +47,10 @@ export default function ComposeStackDeploymentDetailsPage({
     3: { loaderData }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const { data: deployment } = useQuery({
     ...composeStackQueries.singleDeployment({
-      workspaceId: params.workspaceId,
+      workspaceId: workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug,
@@ -125,7 +127,7 @@ export default function ComposeStackDeploymentDetailsPage({
                   (Redeploy of&nbsp;
                   <Link
                     to={href(
-                      "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
+                      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
                       params
                     )}
                     className="text-link underline"

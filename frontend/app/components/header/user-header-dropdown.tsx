@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LogOutIcon, ServerIcon, SettingsIcon, UserIcon } from "lucide-react";
-import { href, useFetcher, useNavigate, useParams } from "react-router";
+import { href, useFetcher, useNavigate } from "react-router";
 import type { AuthedUserResponse } from "~/api/types";
 import {
   DropdownMenu,
@@ -15,6 +15,7 @@ import { userQueries } from "~/lib/queries";
 import { useDeviceSize } from "~/lib/use-device-size";
 
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { hasMinRole } from "~/utils";
 
 export type UserDropdownProps = {
@@ -28,7 +29,7 @@ function getUserDisplayName(user: AuthedUserResponse["user"]) {
 export function UserHeaderDropdown(props: UserDropdownProps) {
   const fetcher = useFetcher();
   const navigate = useNavigate();
-  const { workspaceId } = useParams();
+  const workspaceId = useCurrentWorkspaceId();
   const deviceSize = useDeviceSize();
 
   const { data } = useQuery({
@@ -88,11 +89,7 @@ export function UserHeaderDropdown(props: UserDropdownProps) {
               <DropdownMenuItem
                 className="my-2"
                 onClick={() => {
-                  navigate(
-                    href("/:workspaceId/settings", {
-                      workspaceId: workspaceId!
-                    })
-                  );
+                  navigate(href("/settings"));
                 }}
               >
                 <SettingsIcon />

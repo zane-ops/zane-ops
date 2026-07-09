@@ -14,7 +14,7 @@ import {
   TerminalIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, href, useFetcher, useNavigate, useParams } from "react-router";
+import { Link, href, useFetcher, useNavigate } from "react-router";
 import { toast } from "sonner";
 import type { ComposeStack } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
@@ -39,6 +39,7 @@ import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import type { ValueOf } from "~/lib/types";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 import {
   durationToMs,
@@ -320,7 +321,7 @@ function ToggleServiceForm({
   ref,
   ...params
 }: ToggleServiceFormProps) {
-  const workspaceId = useParams().workspaceId!;
+  const workspaceId = useCurrentWorkspaceId();
   const fetcher = useFetcher();
 
   const { queue, queueToggleItem, dequeueToggleItem } =
@@ -337,8 +338,8 @@ function ToggleServiceForm({
 
     await fetcher.submit(formData, {
       action: href(
-        "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
-        { ...params, workspaceId }
+        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
+        { ...params }
       ),
       method: "POST"
     });
@@ -390,8 +391,8 @@ async function toggleStateToast({
     <Link
       className="text-link underline inline break-all"
       to={href(
-        "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/services/:serviceSlug",
-        { ...params, workspaceId }
+        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/services/:serviceSlug",
+        { ...params }
       )}
     >
       {params.projectSlug}/{params.envSlug}/{params.composeStackSlug}/

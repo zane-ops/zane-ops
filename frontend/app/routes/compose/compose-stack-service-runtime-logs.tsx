@@ -52,15 +52,16 @@ import {
   type ComposeStackRuntimeLogFilters,
   LOG_LEVELS,
   composeStackQueries,
-  stackRuntimeLogSearchSchema
+  stackRuntimeLogSearchSchema,
+  userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, formatLogTime } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-service-runtime-logs";
 
 export async function clientLoader({
   params: {
-    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_name,
     envSlug: env_slug,
@@ -69,6 +70,9 @@ export async function clientLoader({
   request
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const searchParams = new URL(request.url).searchParams;
   const search = stackRuntimeLogSearchSchema.parse(searchParams);
   const filters = {
@@ -96,6 +100,7 @@ export async function clientLoader({
 export default function ComposeStackRuntimeLogsPage({
   params
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = stackRuntimeLogSearchSchema.parse(searchParams);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
@@ -117,7 +122,7 @@ export default function ComposeStackRuntimeLogsPage({
   const queryClient = useQueryClient();
   const logsQuery = useInfiniteQuery({
     ...composeStackQueries.runtimeLogs({
-      workspaceId: params.workspaceId,
+      workspaceId,
       service_name: params.serviceSlug,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
@@ -131,7 +136,7 @@ export default function ComposeStackRuntimeLogsPage({
 
   const logsWithContextQuery = useQuery({
     ...composeStackQueries.logWithContext({
-      workspaceId: params.workspaceId,
+      workspaceId,
       service_name: params.serviceSlug,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
@@ -448,13 +453,14 @@ const HeaderSection = React.memo(function HeaderSection({
   const search = stackRuntimeLogSearchSchema.parse(searchParams);
 
   const params = useParams() as Route.ComponentProps["params"];
+  const workspaceId = useCurrentWorkspaceId();
   const {
     3: { loaderData }
   } = useMatches() as Route.ComponentProps["matches"];
 
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
-      workspaceId: params.workspaceId,
+      workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -536,7 +542,7 @@ const HeaderSection = React.memo(function HeaderSection({
     return (
       <Navigate
         to={href(
-          "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
           params
         )}
       />

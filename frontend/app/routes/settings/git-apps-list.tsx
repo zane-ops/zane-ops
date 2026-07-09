@@ -27,8 +27,9 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { gitAppsQueries } from "~/lib/queries";
+import { gitAppsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/git-apps-list";
 
@@ -36,10 +37,13 @@ export function meta() {
   return [metaTitle("Git apps")] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+export async function clientLoader() {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const gitAppList = await queryClient.ensureQueryData(
-    gitAppsQueries.list(params.workspaceId)
+    gitAppsQueries.list(workspaceId)
   );
 
   return {
@@ -48,13 +52,13 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 }
 
 export default function GitConnectorsListPage({
-  loaderData,
-  params
+  loaderData
 }: Route.ComponentProps) {
   const navigate = useNavigate();
+  const workspaceId = useCurrentWorkspaceId();
 
   const { data: gitAppList } = useQuery({
-    ...gitAppsQueries.list(params.workspaceId),
+    ...gitAppsQueries.list(workspaceId),
     initialData: loaderData.gitAppList
   });
 
@@ -78,11 +82,7 @@ export default function GitConnectorsListPage({
                 icon={GithubIcon}
                 text="GitHub app"
                 onClick={() => {
-                  navigate(
-                    href("/:workspaceId/settings/git-apps/create-github-app", {
-                      workspaceId: params.workspaceId
-                    })
-                  );
+                  navigate(href("/settings/git-apps/create-github-app"));
                 }}
               />
 
@@ -90,11 +90,7 @@ export default function GitConnectorsListPage({
                 icon={GitlabIcon}
                 text="gitlab app"
                 onClick={() => {
-                  navigate(
-                    href("/:workspaceId/settings/git-apps/create-gitlab-app", {
-                      workspaceId: params.workspaceId
-                    })
-                  );
+                  navigate(href("/settings/git-apps/create-gitlab-app"));
                 }}
               />
             </MenubarContent>
@@ -180,11 +176,11 @@ function DeleteConfirmationFormDialog({
   );
 }
 
-export async function clientAction({
-  request,
-  params
-}: Route.ClientActionArgs) {
+export async function clientAction({ request }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const formData = await request.formData();
 
   const { data, error } = await apiClient.DELETE("/api/connectors/{id}/", {
@@ -213,7 +209,7 @@ export async function clientAction({
   });
 
   await queryClient.invalidateQueries({
-    queryKey: gitAppsQueries.list(params.workspaceId).queryKey
+    queryKey: gitAppsQueries.list(workspaceId).queryKey
   });
   return { data };
 }

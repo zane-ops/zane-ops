@@ -45,18 +45,19 @@ import {
   type HttpLog,
   REQUEST_METHODS,
   deploymentQueries,
-  httpLogSearchSchema
+  httpLogSearchSchema,
+  userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection } from "~/lib/types";
 import { cn, formatLogTime } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { formatDuration } from "~/utils";
 import type { Route } from "./+types/deployment-http-logs";
 
 export async function clientLoader({
   request,
   params: {
-    workspaceId,
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -64,6 +65,9 @@ export async function clientLoader({
   }
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const searchParams = new URL(request.url).searchParams;
   const search = httpLogSearchSchema.parse(searchParams);
   const filters = {
@@ -110,7 +114,6 @@ export async function clientLoader({
 export default function DeploymentHttpLogsPage({
   loaderData,
   params: {
-    workspaceId,
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -122,6 +125,7 @@ export default function DeploymentHttpLogsPage({
     }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
@@ -928,12 +932,12 @@ type HostFilterProps = {
 
 function HostFilter({ hosts }: HostFilterProps) {
   const {
-    workspaceId,
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const workspaceId = useCurrentWorkspaceId();
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
@@ -976,12 +980,12 @@ type PathFilterProps = {
 
 function PathFilter({ paths }: PathFilterProps) {
   const {
-    workspaceId,
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const workspaceId = useCurrentWorkspaceId();
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
@@ -1024,12 +1028,12 @@ type ClientIpFilterProps = {
 
 function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
   const {
-    workspaceId,
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const workspaceId = useCurrentWorkspaceId();
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
@@ -1070,12 +1074,12 @@ type UserAgentFilterProps = {
 
 function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
   const {
-    workspaceId,
     deploymentHash: deployment_hash,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const workspaceId = useCurrentWorkspaceId();
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 

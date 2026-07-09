@@ -8,7 +8,7 @@ import {
   RocketIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, href, useFetcher, useNavigate, useParams } from "react-router";
+import { Link, href, useFetcher, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
 import {
@@ -17,6 +17,7 @@ import {
   PopoverTrigger
 } from "~/components/ui/popover";
 import { serviceQueries } from "~/lib/queries";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import type {
   ToggleServiceState,
   clientAction as toggleClientAction
@@ -52,7 +53,6 @@ export function ServiceActionsPopover({
   projectSlug,
   envSlug
 }: ServiceActionsPopoverProps) {
-  const workspaceId = useParams().workspaceId!;
   const deployFetcher = useFetcher<typeof deployClientAction>();
 
   const navigate = useNavigate();
@@ -61,15 +61,11 @@ export function ServiceActionsPopover({
     if (deployFetcher.state === "idle" && deployFetcher.data) {
       if (!deployFetcher.data.errors) {
         navigate(
-          href(
-            "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
-            {
-              workspaceId,
-              projectSlug,
-              envSlug,
-              serviceSlug: service.slug
-            }
-          )
+          href("/project/:projectSlug/:envSlug/services/:serviceSlug", {
+            projectSlug,
+            envSlug,
+            serviceSlug: service.slug
+          })
         );
       }
     }
@@ -151,7 +147,7 @@ function ToggleServiceForm({
   projectSlug,
   envSlug
 }: ToggleServiceFormProps) {
-  const workspaceId = useParams().workspaceId!;
+  const workspaceId = useCurrentWorkspaceId();
   const fetcher = useFetcher<typeof toggleClientAction>();
   const deploymentListQuery = useQuery(
     serviceQueries.deploymentList({
@@ -339,15 +335,11 @@ async function toggleStateToast({
   const serviceLink = (
     <Link
       className="text-link underline inline break-all"
-      to={href(
-        "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
-        {
-          workspaceId,
-          projectSlug,
-          envSlug,
-          serviceSlug
-        }
-      )}
+      to={href("/project/:projectSlug/:envSlug/services/:serviceSlug", {
+        projectSlug,
+        envSlug,
+        serviceSlug
+      })}
     >
       {projectSlug}/{envSlug}/{serviceSlug}
     </Link>

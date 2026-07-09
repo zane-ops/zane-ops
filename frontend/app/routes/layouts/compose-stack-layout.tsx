@@ -20,9 +20,10 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { composeStackQueries } from "~/lib/queries";
+import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { ComposeStackActionsPopover } from "~/routes/compose/components/compose-stack-actions-popover";
 import { ComposeStackChangesModal } from "~/routes/compose/components/compose-stack-changes-modal";
 import { metaTitle } from "~/utils";
@@ -39,9 +40,12 @@ export function meta({ params, error }: Route.MetaArgs) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const stack = await queryClient.ensureQueryData(
     composeStackQueries.single({
-      workspaceId: params.workspaceId,
+      workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -58,9 +62,10 @@ export default function ComposeStackLayoutPage({
   params,
   loaderData
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
-      workspaceId: params.workspaceId,
+      workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug

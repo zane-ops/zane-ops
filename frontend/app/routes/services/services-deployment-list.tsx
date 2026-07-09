@@ -34,14 +34,18 @@ import {
   PopoverTrigger
 } from "~/components/ui/popover";
 import { DEPLOYMENT_STATUSES } from "~/lib/constants";
-import { serviceDeploymentListFilters, serviceQueries } from "~/lib/queries";
+import {
+  serviceDeploymentListFilters,
+  serviceQueries,
+  userQueries
+} from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import type { Route } from "./+types/services-deployment-list";
 
 export async function clientLoader({
   params: {
-    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -49,6 +53,9 @@ export async function clientLoader({
   request
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const searchParams = new URL(request.url).searchParams;
   const search = serviceDeploymentListFilters.parse(searchParams);
   const filters = {
@@ -102,7 +109,6 @@ function DeployForm({ service_type }: { service_type: Service["type"] }) {
 
 export default function DeploymentListPage({
   params: {
-    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -114,6 +120,7 @@ export default function DeploymentListPage({
     }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = serviceDeploymentListFilters.parse(searchParams);
 

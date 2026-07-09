@@ -1,7 +1,7 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { environmentQueries } from "~/lib/queries";
+import { environmentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { ErrorResponseFromAPI } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/utils";
@@ -10,7 +10,7 @@ import type { Route } from "./+types/archive-compose-stack";
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     href(
-      "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
+      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
       params
     )
   );
@@ -69,9 +69,12 @@ export async function clientAction({
     };
   }
 
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   await queryClient.invalidateQueries(
     environmentQueries.composeStackList(
-      params.workspaceId,
+      workspaceId,
       params.projectSlug,
       params.envSlug
     )
@@ -81,5 +84,5 @@ export async function clientAction({
     closeButton: true
   });
 
-  throw redirect(href("/:workspaceId/project/:projectSlug/:envSlug", params));
+  throw redirect(href("/project/:projectSlug/:envSlug", params));
 }

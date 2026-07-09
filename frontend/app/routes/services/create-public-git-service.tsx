@@ -9,14 +9,7 @@ import {
   LoaderIcon
 } from "lucide-react";
 import * as React from "react";
-import {
-  Form,
-  Link,
-  href,
-  useFetcher,
-  useNavigation,
-  useParams
-} from "react-router";
+import { Form, Link, href, useFetcher, useNavigation } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
 import type { ServiceBuilder } from "~/api/types";
 import { GitRepositoryBranchListInput } from "~/components/git-repository-branch-list-input";
@@ -80,10 +73,7 @@ export default function CreateServicePage({
       )}
     >
       <Link
-        to={href(
-          "/:workspaceId/project/:projectSlug/:envSlug/create-service",
-          params
-        )}
+        to={href("/project/:projectSlug/:envSlug/create-service", params)}
         className={cn(
           "text-sm text-grey mx-auto mb-2",
           "flex items-center gap-0.5 hover:underline",
@@ -939,7 +929,6 @@ function StepServiceCreated({
   const fetcher = useFetcher<typeof clientAction>();
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
   const isPending = fetcher.state !== "idle";
-  const { workspaceId } = useParams();
 
   if (fetcher.data?.deploymentHash) {
     onSuccess(fetcher.data.deploymentHash);
@@ -987,10 +976,11 @@ function StepServiceCreated({
 
           <Button asChild className="flex-1" variant="outline">
             <Link
-              to={href(
-                "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
-                { workspaceId: workspaceId!, projectSlug, envSlug, serviceSlug }
-              )}
+              to={href("/project/:projectSlug/:envSlug/services/:serviceSlug", {
+                projectSlug,
+                envSlug,
+                serviceSlug
+              })}
               className="flex gap-2  items-center"
             >
               Go to service details <ArrowRightIcon size={20} />
@@ -1016,7 +1006,6 @@ function StepServiceDeployed({
   deploymentHash
 }: StepServiceDeployedProps) {
   const navigation = useNavigation();
-  const { workspaceId } = useParams();
   return (
     <div className="flex  flex-col w-full justify-center items-center">
       <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
@@ -1033,9 +1022,8 @@ function StepServiceDeployed({
           <Button asChild className="flex-1">
             <Link
               to={href(
-                "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
+                "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
                 {
-                  workspaceId: workspaceId!,
                   projectSlug,
                   envSlug,
                   serviceSlug,

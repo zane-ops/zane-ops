@@ -12,9 +12,11 @@ import { type RequestInput, apiClient } from "~/api/client";
 import {
   composeStackQueries,
   environmentQueries,
-  resourceQueries
+  resourceQueries,
+  userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { ComposeStackDangerZoneForm } from "~/routes/compose/components/compose-stack-danger-zone-form";
 import { ComposeStackDeployURLForm } from "~/routes/compose/components/compose-stack-deploy-url-form";
 import { ComposeStackEnvForm } from "~/routes/compose/components/compose-stack-env-form";
@@ -29,9 +31,10 @@ export default function ComposeStackSettingsPage({
     3: { loaderData }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
-      workspaceId: params.workspaceId,
+      workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -191,11 +194,15 @@ export async function clientAction({
 }: Route.ClientActionArgs) {
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
 
   switch (intent) {
     case "update-slug": {
       return updateStackSlug({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -204,7 +211,7 @@ export async function clientAction({
     }
     case "request-stack-change": {
       return requestStackChange({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -213,7 +220,7 @@ export async function clientAction({
     }
     case "cancel-stack-change": {
       return cancelStackChange({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,

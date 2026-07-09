@@ -18,10 +18,12 @@ import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
 import {
   deploymentQueries,
   serverQueries,
-  serviceQueries
+  serviceQueries,
+  userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
 import { formattedTime, metaTitle } from "~/utils";
 import type { Route } from "./+types/deployment-layout";
@@ -37,10 +39,13 @@ export function meta({ params, error }: Route.MetaArgs) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const [service, limits, deployment] = await Promise.all([
     queryClient.ensureQueryData(
       serviceQueries.single({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug
@@ -49,7 +54,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     queryClient.ensureQueryData(serverQueries.resourceLimits),
     queryClient.ensureQueryData(
       deploymentQueries.single({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -70,12 +75,12 @@ export default function DeploymentLayoutPage({
   params
 }: Route.ComponentProps) {
   const {
-    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug,
     deploymentHash: deployment_hash
   } = params;
+  const workspaceId = useCurrentWorkspaceId();
 
   const { data: deployment } = useQuery({
     ...deploymentQueries.single({
@@ -128,7 +133,7 @@ export default function DeploymentLayoutPage({
               <span className="text-grey sr-only md:not-sr-only flex-none">
                 <Link
                   to={href(
-                    "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
+                    "/project/:projectSlug/:envSlug/services/:serviceSlug",
                     params
                   )}
                   className="hover:underline"

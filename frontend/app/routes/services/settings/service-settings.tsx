@@ -11,7 +11,7 @@ import {
   HardDriveIcon,
   InfoIcon
 } from "lucide-react";
-import { Link, useFetcher, useMatches, useParams } from "react-router";
+import { Link, useFetcher, useMatches } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
 
 import * as React from "react";
@@ -32,9 +32,11 @@ import {
   environmentQueries,
   gitAppsQueries,
   resourceQueries,
-  serviceQueries
+  serviceQueries,
+  userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { ServiceAutoDeployForm } from "~/routes/services/components/service-auto-deploy-form";
 import { ServiceBuilderForm } from "~/routes/services/components/service-builder-form";
 import { ServiceCommandForm } from "~/routes/services/components/service-command-form";
@@ -58,15 +60,17 @@ import type { Route } from "./+types/service-settings";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const gitAppList = await queryClient.ensureQueryData(
-    gitAppsQueries.list(params.workspaceId)
+    gitAppsQueries.list(workspaceId)
   );
   return { gitAppList };
 }
 
 export default function ServiceSettingsPage({
   params: {
-    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -524,7 +528,7 @@ export function useServiceQuery({
   service_slug,
   env_slug
 }: { project_slug: string; service_slug: string; env_slug: string }) {
-  const workspaceId = useParams<Route.ComponentProps["params"]>().workspaceId!;
+  const workspaceId = useCurrentWorkspaceId();
   const {
     "3": {
       loaderData: { service: initialData }
@@ -583,13 +587,17 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
 
   switch (intent) {
     case "update-slug": {
       return updateServiceSlug({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -598,7 +606,7 @@ export async function clientAction({
     }
     case "update-auto-deploy": {
       return updateServiceAutoDeployOptions({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -609,7 +617,7 @@ export async function clientAction({
     case "remove-service-healthcheck":
     case "remove-service-resource-limits": {
       return requestServiceChange({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -618,7 +626,7 @@ export async function clientAction({
     }
     case "cancel-service-change": {
       return cancelServiceChange({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -627,7 +635,7 @@ export async function clientAction({
     }
     case "regenerate-deploy-token": {
       return regenerateDeployToken({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug

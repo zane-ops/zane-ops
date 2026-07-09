@@ -14,7 +14,6 @@ import {
   href,
   useLoaderData,
   useMatches,
-  useParams,
   useSearchParams
 } from "react-router";
 import { Input } from "~/components/ui/input";
@@ -30,16 +29,23 @@ import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import {
   deploymentQueries,
   projectQueries,
-  projectSearchSchema
+  projectSearchSchema,
+  userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 
-export async function clientLoader({
-  request,
-  params
-}: Route.ClientLoaderArgs) {
+export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const workspace = await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  );
+
+  if (!workspace) {
+    return { projectList: [], recentDeployments: [] };
+  }
+
   const searchParams = new URL(request.url).searchParams;
 
   const search = projectSearchSchema.parse(searchParams);
@@ -51,8 +57,10 @@ export async function clientLoader({
 
   // fetch the data on first load to prevent showing the loading fallback
   const [projectList, recentDeployments] = await Promise.all([
-    queryClient.ensureQueryData(projectQueries.list({ ...params, filters })),
-    queryClient.ensureQueryData(deploymentQueries.recent(params.workspaceId))
+    queryClient.ensureQueryData(
+      projectQueries.list({ workspaceId: workspace.id, filters })
+    ),
+    queryClient.ensureQueryData(deploymentQueries.recent(workspace.id))
   ]);
   return {
     projectList,
@@ -60,7 +68,40 @@ export async function clientLoader({
   };
 }
 
-export default function ProjectList({ params }: Route.ComponentProps) {
+export default function ProjectList({
+  matches: {
+    "2": {
+      loaderData: { workspace }
+    }
+  }
+}: Route.ComponentProps) {
+  if (!workspace) {
+    return (
+      <main className="flex flex-col gap-10">
+        <h1 className="text-2xl font-medium">Dashboard</h1>
+
+        <div
+          className={cn(
+            "flex flex-col items-center justify-center gap-2 px-6 py-20",
+            "border-border rounded-lg w-full border-dashed border-1 text-grey",
+            "col-span-full"
+          )}
+        >
+          <h3 className="text-2xl font-medium text-card-foreground">
+            Welcome to ZaneOps
+          </h3>
+          <p>
+            Your account isn't part of any workspace yet, so there's nothing to
+            show here.
+          </p>
+          <p>
+            Ask your administrator to invite you to a workspace to get started.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="flex flex-col gap-10">
       <div className="flex items-center gap-4">
@@ -70,7 +111,7 @@ export default function ProjectList({ params }: Route.ComponentProps) {
           variant="secondary"
           className="inline-flex items-center gap-1"
         >
-          <Link to={href("/:workspaceId/create-project", params)}>
+          <Link to={href("/create-project")}>
             <span>New project</span>
             <PlusIcon size={16} className="flex-none" />
           </Link>
@@ -100,10 +141,10 @@ function ProjectsListSection() {
     }
   } = useMatches() as Route.ComponentProps["matches"];
 
-  const params = useParams<Route.ComponentProps["params"]>();
+  const workspaceId = useCurrentWorkspaceId();
 
   const currentWorkspace = memberships.find(
-    (m) => m.workspace.id === params.workspaceId
+    (m) => m.workspace.id === workspaceId
   );
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -117,7 +158,7 @@ function ProjectsListSection() {
 
   const projectActiveQuery = useQuery({
     ...projectQueries.list({
-      workspaceId: params.workspaceId!,
+      workspaceId,
       filters
     }),
     initialData: loaderData.projectList
@@ -253,10 +294,10 @@ function ProjectsListSection() {
 function RecentDeploymentsSection() {
   const loaderData = useLoaderData<typeof clientLoader>();
 
-  const params = useParams<Route.ComponentProps["params"]>();
+  const workspaceId = useCurrentWorkspaceId();
 
   const { data: recentDeployments } = useQuery({
-    ...deploymentQueries.recent(params.workspaceId!),
+    ...deploymentQueries.recent(workspaceId),
     initialData: loaderData.recentDeployments
   });
 

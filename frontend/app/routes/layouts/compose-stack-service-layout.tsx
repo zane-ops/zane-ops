@@ -43,10 +43,11 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { composeStackQueries } from "~/lib/queries";
+import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import { cn, notFound } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 import {
   durationToMs,
@@ -60,9 +61,12 @@ import type { Route } from "./+types/compose-stack-service-layout";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const stack = await queryClient.ensureQueryData(
     composeStackQueries.single({
-      workspaceId: params.workspaceId,
+      workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -88,9 +92,10 @@ export default function ComposeStackServiceLayoutPage({
   params,
   loaderData
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
-      workspaceId: params.workspaceId,
+      workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -106,7 +111,7 @@ export default function ComposeStackServiceLayoutPage({
     return (
       <Navigate
         to={href(
-          "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
           params
         )}
       />
@@ -292,6 +297,7 @@ export default function ComposeStackServiceLayoutPage({
           <div>
             <ToggleServiceForm
               params={params}
+              workspaceId={workspaceId}
               current_state={service.status}
               stack_id={stack.id}
             />
@@ -358,12 +364,14 @@ export default function ComposeStackServiceLayoutPage({
 
 type RestartServiceFormProps = {
   params: Route.ComponentProps["params"];
+  workspaceId: string;
   current_state: ComposeStackService["status"];
   stack_id: string;
 };
 
 function ToggleServiceForm({
   params,
+  workspaceId,
   current_state,
   stack_id
 }: RestartServiceFormProps) {
@@ -384,7 +392,7 @@ function ToggleServiceForm({
 
     await fetcher.submit(formData, {
       action: href(
-        "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
+        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
         params
       ),
       method: "POST"
@@ -394,6 +402,7 @@ function ToggleServiceForm({
     queueToggleItem(queue_id);
     toggleStateToast({
       desiredState,
+      workspaceId,
       ...params
     }).finally(() => dequeueToggleItem(queue_id));
   }
@@ -428,16 +437,18 @@ function ToggleServiceForm({
 
 async function toggleStateToast({
   desiredState,
+  workspaceId,
   ...params
 }: {
   desiredState: "stop" | "start";
+  workspaceId: string;
 } & Route.ComponentProps["params"]) {
   const queryClient = getQueryClient();
   const stackLink = (
     <Link
       className="text-link underline inline break-all"
       to={href(
-        "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/services/:serviceSlug",
+        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/services/:serviceSlug",
         params
       )}
     >
@@ -470,7 +481,7 @@ async function toggleStateToast({
     try {
       stack = await queryClient.fetchQuery(
         composeStackQueries.single({
-          workspaceId: params.workspaceId,
+          workspaceId,
           project_slug: params.projectSlug,
           stack_slug: params.composeStackSlug,
           env_slug: params.envSlug

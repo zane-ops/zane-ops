@@ -37,7 +37,11 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
-import { environmentQueries, previewTemplatesQueries } from "~/lib/queries";
+import {
+  environmentQueries,
+  previewTemplatesQueries,
+  userQueries
+} from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { Writeable } from "~/lib/types";
 import {
@@ -45,6 +49,7 @@ import {
   getFormErrorsFromResponseData,
   isNotFoundError
 } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/preview-template-details";
 import { DeleteConfirmationFormDialog } from "./delete-preview-template";
@@ -60,9 +65,12 @@ export function meta({ error, params }: Route.MetaArgs) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const template = await queryClient.ensureQueryData(
     previewTemplatesQueries.single(
-      params.workspaceId,
+      workspaceId,
       params.projectSlug,
       params.templateSlug
     )
@@ -82,9 +90,10 @@ export default function PreviewTemplateDetailsPage({
     }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const { data: template } = useQuery({
     ...previewTemplatesQueries.single(
-      params.workspaceId,
+      workspaceId,
       params.projectSlug,
       params.templateSlug
     ),
@@ -119,6 +128,7 @@ function EditPreviewTemplateForm({
 }: EditPreviewTemplateFormProps) {
   const fetcher = useFetcher<typeof clientAction>();
   const params = useParams<Route.ComponentProps["params"]>();
+  const workspaceId = useCurrentWorkspaceId();
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const [authEnabled, setAuthEnabled] = React.useState(template.auth_enabled);
@@ -138,14 +148,14 @@ function EditPreviewTemplateForm({
 
   const { data: serviceList } = useQuery(
     environmentQueries.serviceList(
-      params.workspaceId!,
+      workspaceId,
       params.projectSlug!,
       baseEnvironment.name
     )
   );
   const { data: stackList } = useQuery(
     environmentQueries.composeStackList(
-      params.workspaceId!,
+      workspaceId,
       params.projectSlug!,
       baseEnvironment.name
     )
@@ -643,6 +653,9 @@ export async function clientAction({
   params
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const formData = await request.formData();
 
   const ttl_seconds_string = formData.get("ttl_seconds")?.toString();
@@ -718,7 +731,7 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    previewTemplatesQueries.list(params.workspaceId, params.projectSlug)
+    previewTemplatesQueries.list(workspaceId, params.projectSlug)
   );
 
   toast.success("Success", {
@@ -727,8 +740,7 @@ export async function clientAction({
     description: "Preview template udpated succesfully"
   });
   throw redirect(
-    href("/:workspaceId/project/:projectSlug/settings/preview-templates", {
-      workspaceId: params.workspaceId,
+    href("/project/:projectSlug/settings/preview-templates", {
       projectSlug: params.projectSlug
     })
   );

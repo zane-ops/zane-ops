@@ -7,14 +7,7 @@ import {
   LoaderIcon
 } from "lucide-react";
 import * as React from "react";
-import {
-  Form,
-  Link,
-  href,
-  redirect,
-  useNavigation,
-  useParams
-} from "react-router";
+import { Form, Link, href, redirect, useNavigation } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
 import { CopyButton } from "~/components/copy-button";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -56,7 +49,6 @@ export default function CreateSSHKeyPage({ actionData }: Route.ComponentProps) {
 function CreateSSHKeyForm({
   actionData
 }: Pick<Route.ComponentProps, "actionData">) {
-  const params = useParams<Route.ComponentProps["params"]>();
   const navigation = useNavigation();
   const errors = getFormErrorsFromResponseData(actionData?.errors);
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
@@ -116,9 +108,7 @@ function CreateSSHKeyForm({
         <div className="flex items-center gap-4 justify-end">
           <Button asChild variant="outline">
             <Link
-              to={href("/:workspaceId/settings/ssh-keys", {
-                workspaceId: params.workspaceId!
-              })}
+              to={href("/settings/ssh-keys")}
               className="items-center gap-2"
             >
               <ChevronLeftIcon className="size-4 flex-none" />
@@ -129,9 +119,7 @@ function CreateSSHKeyForm({
           <Button asChild>
             <Link
               to={{
-                pathname: href("/:workspaceId/settings/server-console", {
-                  workspaceId: params.workspaceId!
-                }),
+                pathname: href("/settings/server-console"),
                 search: `?ssh_key_slug=${actionData.data.slug}`
               }}
               className="items-center gap-2"

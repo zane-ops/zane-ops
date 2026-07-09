@@ -57,9 +57,10 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { serviceQueries } from "~/lib/queries";
+import { serviceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { getCsrfTokenHeader, pluralize, wait } from "~/utils";
 import type { Route } from "./+types/services-env-variables";
 
@@ -73,7 +74,6 @@ type EnvVariableUI = {
 
 export default function ServiceEnvVariablesPage({
   params: {
-    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
@@ -84,6 +84,7 @@ export default function ServiceEnvVariablesPage({
     }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const { data: service } = useQuery({
     ...serviceQueries.single({
       workspaceId,
@@ -207,13 +208,17 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
 
   switch (intent) {
     case "create-env-variable": {
       return createEnvVariable({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -222,7 +227,7 @@ export async function clientAction({
     }
     case "update-env-variable": {
       return updateEnvVariable({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -231,7 +236,7 @@ export async function clientAction({
     }
     case "cancel-env-change": {
       return cancelEnvVariable({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -240,7 +245,7 @@ export async function clientAction({
     }
     case "delete-env-variable": {
       return deleteEnvVariable({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -249,7 +254,7 @@ export async function clientAction({
     }
     case "add-dotenv-values": {
       return addDotEnvVariables({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,

@@ -38,10 +38,11 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { serverQueries, serviceQueries } from "~/lib/queries";
+import { serverQueries, serviceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { ValueOf } from "~/lib/types";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { ServiceActionsPopover } from "~/routes/services/components/service-actions-popover";
 import {
   durationToMs,
@@ -63,10 +64,13 @@ export function meta({ params, error }: Route.MetaArgs) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const [service, limits, detectedPorts] = await Promise.all([
     queryClient.ensureQueryData(
       serviceQueries.single({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug
@@ -75,7 +79,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     queryClient.ensureQueryData(serverQueries.resourceLimits),
     queryClient.ensureQueryData(
       serviceQueries.detectedPorts({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug
@@ -100,12 +104,12 @@ const TABS = {
 export default function ServiceDetailsLayout({
   loaderData,
   params: {
-    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const location = useLocation();
 
   const { data: service } = useQuery({

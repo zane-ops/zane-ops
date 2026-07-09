@@ -17,8 +17,7 @@ import {
   useFetcher,
   useLoaderData,
   useNavigate,
-  useNavigation,
-  useParams
+  useNavigation
 } from "react-router";
 import { useDebounce } from "use-debounce";
 import { type RequestInput, apiClient } from "~/api/client";
@@ -53,10 +52,12 @@ import {
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import {
   dockerHubQueries,
-  sharedRegistryCredentialsQueries
+  sharedRegistryCredentialsQueries,
+  userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-docker-service";
 
@@ -68,8 +69,11 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const registries = await queryClient.ensureQueryData(
-    sharedRegistryCredentialsQueries.list(params.workspaceId)
+    sharedRegistryCredentialsQueries.list(workspaceId)
   );
   return { registries };
 }
@@ -93,10 +97,7 @@ export default function CreateServicePage({
       )}
     >
       <Link
-        to={href(
-          "/:workspaceId/project/:projectSlug/:envSlug/create-service",
-          params
-        )}
+        to={href("/project/:projectSlug/:envSlug/create-service", params)}
         className={cn(
           "text-sm text-grey lg:w-1/3 md:w-1/2 w-full mx-auto mb-2",
           "flex items-center gap-0.5 hover:underline"
@@ -254,9 +255,9 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   );
 
   const loaderData = useLoaderData<typeof clientLoader>();
-  const params = useParams<Route.ComponentProps["params"]>();
+  const workspaceId = useCurrentWorkspaceId();
   const { data: registries } = useQuery({
-    ...sharedRegistryCredentialsQueries.list(params.workspaceId!),
+    ...sharedRegistryCredentialsQueries.list(workspaceId),
     initialData: loaderData.registries
   });
   const navigate = useNavigate();
@@ -414,11 +415,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
               value={selectedRegistry}
               onValueChange={(value) => {
                 if (value === "add-new") {
-                  navigate(
-                    href("/:workspaceId/settings/shared-credentials/new", {
-                      workspaceId: params.workspaceId!
-                    })
-                  );
+                  navigate(href("/settings/shared-credentials/new"));
                 } else {
                   setSelectedRegistry(value);
                 }
@@ -501,7 +498,6 @@ function StepServiceCreated({
   const fetcher = useFetcher<typeof clientAction>();
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
   const isPending = fetcher.state !== "idle";
-  const { workspaceId } = useParams();
 
   if (fetcher.data?.deploymentHash) {
     onSuccess(fetcher.data.deploymentHash);
@@ -549,10 +545,11 @@ function StepServiceCreated({
 
           <Button asChild className="flex-1" variant="outline">
             <Link
-              to={href(
-                "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
-                { workspaceId: workspaceId!, projectSlug, envSlug, serviceSlug }
-              )}
+              to={href("/project/:projectSlug/:envSlug/services/:serviceSlug", {
+                projectSlug,
+                envSlug,
+                serviceSlug
+              })}
               className="flex gap-2  items-center"
             >
               Go to service details <ArrowRightIcon size={20} />
@@ -578,7 +575,6 @@ function StepServiceDeployed({
   deploymentHash
 }: StepServiceDeployedProps) {
   const navigation = useNavigation();
-  const { workspaceId } = useParams();
   return (
     <div className="flex  flex-col justify-center items-center w-full">
       <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
@@ -595,9 +591,8 @@ function StepServiceDeployed({
           <Button asChild className="flex-1">
             <Link
               to={href(
-                "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
+                "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
                 {
-                  workspaceId: workspaceId!,
                   projectSlug,
                   envSlug,
                   serviceSlug,

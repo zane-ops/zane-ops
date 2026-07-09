@@ -1,7 +1,7 @@
 import { CheckIcon, LoaderIcon, PencilLineIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { flushSync } from "react-dom";
-import { href, useFetcher, useNavigate, useParams } from "react-router";
+import { href, useFetcher, useNavigate } from "react-router";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
@@ -26,7 +26,6 @@ export function ServiceSlugForm({
   const fetcher = useFetcher<typeof clientAction>();
   const isPending = fetcher.state !== "idle";
   const navigate = useNavigate();
-  const { workspaceId } = useParams();
   const [data, setData] = React.useState(fetcher.data);
   const errors = getFormErrorsFromResponseData(data?.errors);
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
@@ -36,15 +35,11 @@ export function ServiceSlugForm({
 
     if (fetcher.state === "idle" && fetcher.data?.data?.slug) {
       navigate(
-        href(
-          "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/settings",
-          {
-            workspaceId: workspaceId!,
-            projectSlug: project_slug,
-            envSlug: env_slug,
-            serviceSlug: fetcher.data.data.slug
-          }
-        ),
+        href("/project/:projectSlug/:envSlug/services/:serviceSlug/settings", {
+          projectSlug: project_slug,
+          envSlug: env_slug,
+          serviceSlug: fetcher.data.data.slug
+        }),
         {
           replace: true
         }

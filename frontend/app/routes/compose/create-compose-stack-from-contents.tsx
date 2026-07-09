@@ -7,14 +7,7 @@ import {
   LoaderIcon
 } from "lucide-react";
 import * as React from "react";
-import {
-  Form,
-  Link,
-  href,
-  useFetcher,
-  useNavigation,
-  useParams
-} from "react-router";
+import { Form, Link, href, useFetcher, useNavigation } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
@@ -118,10 +111,7 @@ export default function CreateComposeStackFromContentsPage({
       )}
     >
       <Link
-        to={href(
-          "/:workspaceId/project/:projectSlug/:envSlug/create-compose-stack",
-          params
-        )}
+        to={href("/project/:projectSlug/:envSlug/create-compose-stack", params)}
         className={cn(
           "text-sm text-grey mx-auto mb-2",
           "flex items-center gap-0.5 hover:underline",
@@ -372,7 +362,6 @@ function StackCreatedStep({
   envSlug,
   onSuccess
 }: StackCreatedStepProps) {
-  const routeParams = useParams();
   const fetcher = useFetcher<typeof clientAction>();
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
   const isPending = fetcher.state !== "idle";
@@ -425,9 +414,8 @@ function StackCreatedStep({
           <Button asChild className="flex-1" variant="outline">
             <Link
               to={href(
-                "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+                "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
                 {
-                  workspaceId: routeParams.workspaceId!,
                   composeStackSlug,
                   envSlug,
                   projectSlug
@@ -457,7 +445,6 @@ function StackDeployedStep({
   envSlug,
   deploymentHash
 }: StackDeployedStepProps) {
-  const routeParams = useParams();
   const navigation = useNavigation();
   return (
     <div className="flex  flex-col w-full justify-center items-center">
@@ -476,9 +463,8 @@ function StackDeployedStep({
           <Button asChild className="flex-1">
             <Link
               to={href(
-                "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
+                "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
                 {
-                  workspaceId: routeParams.workspaceId!,
                   composeStackSlug,
                   envSlug,
                   projectSlug,

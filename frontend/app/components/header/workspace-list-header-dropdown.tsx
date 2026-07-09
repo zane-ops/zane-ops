@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
 import type * as React from "react";
-import { Link, href, useFetcher, useParams } from "react-router";
+import { Link, href, useFetcher } from "react-router";
 import type { WorkspaceMembership } from "~/api/types";
 import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
@@ -16,6 +16,7 @@ import {
 import { userQueries } from "~/lib/queries";
 
 import { cn } from "~/lib/utils";
+import { useWorkspaceStore } from "~/lib/workspace-store";
 import type { clientAction } from "~/routes/switch-workspace";
 import { stringToColor } from "~/utils";
 
@@ -26,9 +27,7 @@ export type WorkspaceMembershipListProps = {
 export function WorkspaceMembershipListHeaderDropdown({
   ...props
 }: WorkspaceMembershipListProps) {
-  const params = useParams<{ workspaceId: string }>();
-
-  const workspaceId = params.workspaceId;
+  const workspaceId = useWorkspaceStore((s) => s.workspace?.id);
 
   const current = props.memberships.find((m) => m.workspace.id === workspaceId);
 
@@ -57,7 +56,7 @@ export function WorkspaceMembershipListHeaderDropdown({
         asChild
         className="inline-flex gap-1.5 py-1 px-2 rounded-sm text-sm h-8"
       >
-        <Link to={href("/:workspaceId", { workspaceId })}>
+        <Link to={href("/")}>
           <div
             style={
               {

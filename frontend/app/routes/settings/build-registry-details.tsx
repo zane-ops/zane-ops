@@ -435,7 +435,7 @@ export async function clientAction({
 
   switch (intent) {
     case "update":
-      return updateRegistry(params.workspaceId, params.id, formData);
+      return updateRegistry(params.id, formData);
     case "delete":
       return deleteRegistry(params.id, formData);
     default:
@@ -497,11 +497,7 @@ async function deleteRegistry(id: string, formData: FormData) {
   return { data: { success: true }, errors: undefined };
 }
 
-export async function updateRegistry(
-  workspaceId: string,
-  id: string,
-  formData: FormData
-) {
+export async function updateRegistry(id: string, formData: FormData) {
   const queryClient = getQueryClient();
   const storage_backend = formData
     .get("storage_backend")
@@ -567,7 +563,5 @@ export async function updateRegistry(
       return query.queryKey.includes(key);
     }
   });
-  throw redirect(
-    href("/:workspaceId/settings/build-registries", { workspaceId })
-  );
+  throw redirect(href("/settings/build-registries"));
 }

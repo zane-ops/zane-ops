@@ -17,7 +17,7 @@ import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { Textarea } from "~/components/ui/textarea";
-import { projectQueries, resourceQueries } from "~/lib/queries";
+import { projectQueries, resourceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
@@ -211,12 +211,16 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
 
   switch (intent) {
     case "update_project": {
-      return updateProject(params, formData);
+      return updateProject(workspaceId, params, formData);
     }
     case "archive_project": {
       if (
@@ -235,7 +239,7 @@ export async function clientAction({
           } satisfies ErrorResponseFromAPI
         };
       }
-      return archiveProject(params);
+      return archiveProject(workspaceId, params);
     }
     default: {
       throw new Error("Unexpected intent");
@@ -244,6 +248,7 @@ export async function clientAction({
 }
 
 async function updateProject(
+  workspaceId: string,
   params: Route.ClientActionArgs["params"],
   formData: FormData
 ) {
@@ -272,25 +277,27 @@ async function updateProject(
   }
 
   queryClient.invalidateQueries(
-    projectQueries.single(params.workspaceId, params.projectSlug)
+    projectQueries.single(workspaceId, params.projectSlug)
   );
   toast.success("Project updated successfully!", { closeButton: true });
 
   if (apiResponse.data.slug !== params.projectSlug) {
     queryClient.setQueryData(
-      projectQueries.single(params.workspaceId, userData.slug).queryKey,
+      projectQueries.single(workspaceId, userData.slug).queryKey,
       apiResponse.data
     );
     throw redirect(
-      href("/:workspaceId/project/:projectSlug/settings", {
-        projectSlug: apiResponse.data.slug,
-        workspaceId: params.workspaceId
+      href("/project/:projectSlug/settings", {
+        projectSlug: apiResponse.data.slug
       })
     );
   }
 }
 
-async function archiveProject(params: Route.ClientActionArgs["params"]) {
+async function archiveProject(
+  workspaceId: string,
+  params: Route.ClientActionArgs["params"]
+) {
   const queryClient = getQueryClient();
   const apiResponse = await apiClient.DELETE("/api/projects/{slug}/", {
     headers: {
@@ -310,13 +317,13 @@ async function archiveProject(params: Route.ClientActionArgs["params"]) {
   }
   await Promise.all([
     queryClient.invalidateQueries(
-      projectQueries.single(params.workspaceId, params.projectSlug)
+      projectQueries.single(workspaceId, params.projectSlug)
     ),
     queryClient.invalidateQueries({
-      queryKey: resourceQueries.search(params.workspaceId).queryKey.slice(0, 3)
+      queryKey: resourceQueries.search(workspaceId).queryKey.slice(0, 3)
     }),
     queryClient.invalidateQueries({
-      queryKey: projectQueries.list(params).queryKey.slice(0, 3)
+      queryKey: projectQueries.list({ workspaceId }).queryKey.slice(0, 3)
     })
   ]);
 
@@ -329,5 +336,5 @@ async function archiveProject(params: Route.ClientActionArgs["params"]) {
       </span>
     )
   });
-  throw redirect(href("/:workspaceId", params));
+  throw redirect(href("/"));
 }

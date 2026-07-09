@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { Link, NavLink, Outlet, href } from "react-router";
 import { Button } from "~/components/ui/button";
-import { projectQueries } from "~/lib/queries";
+import { projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, isNotFoundError } from "~/lib/utils";
 import { metaTitle, stringToColor } from "~/utils";
@@ -48,8 +48,11 @@ const sidebarNavItems: NavItem[] = [
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const project = await queryClient.ensureQueryData(
-    projectQueries.single(params.workspaceId, params.projectSlug)
+    projectQueries.single(workspaceId, params.projectSlug)
   );
   return { project };
 }
@@ -65,7 +68,7 @@ export default function ProjectLayout({
         <div className="md:col-span-12">
           <div className="flex items-center gap-4">
             <Link
-              to={href("/:workspaceId/project/:projectSlug/:envSlug", {
+              to={href("/project/:projectSlug/:envSlug", {
                 ...params,
                 envSlug: "production"
               })}

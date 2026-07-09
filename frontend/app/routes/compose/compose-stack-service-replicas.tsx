@@ -10,6 +10,7 @@ import {
 } from "~/components/ui/accordion";
 import { composeStackQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { ComposeStackServiceReplicaCard } from "~/routes/compose/components/compose-stack-service-replica-card";
 import type { Route } from "./+types/compose-stack-service-replicas";
 
@@ -19,9 +20,10 @@ export default function ComposeStackServiceReplicasPage({
     3: { loaderData }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
-      workspaceId: params.workspaceId,
+      workspaceId: workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -37,7 +39,7 @@ export default function ComposeStackServiceReplicasPage({
     return (
       <Navigate
         to={href(
-          "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
           params
         )}
       />

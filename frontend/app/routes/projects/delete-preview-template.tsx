@@ -6,7 +6,7 @@ import { DeleteConfirmationDialog } from "~/components/delete-confirmation-dialo
 import { Button } from "~/components/ui/button";
 import { DialogTrigger } from "~/components/ui/dialog";
 import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
-import { previewTemplatesQueries } from "~/lib/queries";
+import { previewTemplatesQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
@@ -18,14 +18,10 @@ import type { Route } from "./+types/delete-preview-template";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href(
-      "/:workspaceId/project/:projectSlug/settings/preview-templates/:templateSlug",
-      {
-        workspaceId: params.workspaceId,
-        projectSlug: params.projectSlug,
-        templateSlug: params.templateSlug
-      }
-    )
+    href("/project/:projectSlug/settings/preview-templates/:templateSlug", {
+      projectSlug: params.projectSlug,
+      templateSlug: params.templateSlug
+    })
   );
 }
 
@@ -50,7 +46,7 @@ export function DeleteConfirmationFormDialog() {
         <fetcher.Form
           method="post"
           action={href(
-            "/:workspaceId/project/:projectSlug/settings/preview-templates/:templateSlug/delete",
+            "/project/:projectSlug/settings/preview-templates/:templateSlug/delete",
             params
           )}
         >
@@ -80,6 +76,9 @@ export async function clientAction({
   request
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const formData = await request.formData();
 
   if (
@@ -125,7 +124,7 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    previewTemplatesQueries.list(params.workspaceId, params.projectSlug)
+    previewTemplatesQueries.list(workspaceId, params.projectSlug)
   );
 
   toast.success("Success", {
@@ -138,8 +137,7 @@ export async function clientAction({
     )
   });
   throw redirect(
-    href("/:workspaceId/project/:projectSlug/settings/preview-templates", {
-      workspaceId: params.workspaceId,
+    href("/project/:projectSlug/settings/preview-templates", {
       projectSlug: params.projectSlug
     })
   );

@@ -78,7 +78,6 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
   );
 
   const routeParams = useParams<{
-    workspaceId: string;
     projectSlug: string;
     envSlug: string;
     serviceSlug: string;
@@ -110,9 +109,8 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
               <Link
                 className="text-link underline"
                 to={href(
-                  "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
+                  "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
                   {
-                    workspaceId: routeParams.workspaceId!,
                     projectSlug: routeParams.projectSlug!,
                     envSlug: routeParams.envSlug!,
                     serviceSlug: routeParams.serviceSlug!,

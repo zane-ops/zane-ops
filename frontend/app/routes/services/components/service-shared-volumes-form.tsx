@@ -9,7 +9,6 @@ import {
   Undo2Icon
 } from "lucide-react";
 import * as React from "react";
-import { useParams } from "react-router";
 import type { Service } from "~/api/types";
 import { Code } from "~/components/code";
 import {
@@ -40,6 +39,7 @@ import {
 } from "~/components/ui/tooltip";
 import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
@@ -141,7 +141,7 @@ function ServiceSharedVolumeItem({
   change_id,
   ...props
 }: SharedVolumeItem & ServiceSharedVolumesFormProps) {
-  const workspaceId = useParams().workspaceId!;
+  const workspaceId = useCurrentWorkspaceId();
   const [accordionValue, setAccordionValue] = React.useState("");
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const [changedVolumeId, setChangedVolumeId] = React.useState(volume_id);
@@ -419,7 +419,7 @@ function ServiceSharedVolumeItem({
 }
 
 function NewServiceSharedVolumeForm(props: ServiceSharedVolumesFormProps) {
-  const workspaceId = useParams().workspaceId!;
+  const workspaceId = useCurrentWorkspaceId();
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const SelectTriggerRef =
     React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);

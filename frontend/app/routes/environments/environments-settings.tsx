@@ -46,7 +46,8 @@ import { PasswordToggleInput } from "~/components/ui/password-toggle-input";
 import {
   environmentQueries,
   projectQueries,
-  resourceQueries
+  resourceQueries,
+  userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -54,6 +55,7 @@ import {
   cn,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/environments-settings";
 
@@ -63,9 +65,10 @@ export default function EnvironmentSettingsPage({
     "3": { loaderData }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const { data: env } = useQuery({
     ...environmentQueries.single(
-      params.workspaceId,
+      workspaceId,
       params.projectSlug,
       params.envSlug
     ),
@@ -592,13 +595,17 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
 
   switch (intent) {
     case "rename_environment": {
       return renameEnvironment(
-        params.workspaceId,
+        workspaceId,
         params.projectSlug,
         params.envSlug,
         formData
@@ -623,7 +630,7 @@ export async function clientAction({
         };
       }
       return archiveEnvironment(
-        params.workspaceId,
+        workspaceId,
         params.projectSlug,
         formData.get("environment")!.toString()
       );
@@ -730,8 +737,7 @@ async function archiveEnvironment(
   });
 
   throw redirect(
-    href("/:workspaceId/project/:projectSlug/:envSlug", {
-      workspaceId,
+    href("/project/:projectSlug/:envSlug", {
       projectSlug: project_slug,
       envSlug: "production"
     })
@@ -767,8 +773,7 @@ function EnvironmentDeleteFormDialog({ environment }: { environment: string }) {
 
       setIsOpen(false);
       navigate(
-        href("/:workspaceId/project/:projectSlug/settings/environments", {
-          workspaceId: params.workspaceId!,
+        href("/project/:projectSlug/settings/environments", {
           projectSlug: params.projectSlug!
         }),
         { replace: true }

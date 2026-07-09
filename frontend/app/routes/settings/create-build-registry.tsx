@@ -363,10 +363,7 @@ function CreateBuildRegistryForm() {
   );
 }
 
-export async function clientAction({
-  request,
-  params
-}: Route.ClientActionArgs) {
+export async function clientAction({ request }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
   const formData = await request.formData();
 
@@ -418,9 +415,5 @@ export async function clientAction({
     description: "Build Registry created succesfully"
   });
   await queryClient.invalidateQueries(buildRegistryQueries.list({}));
-  throw redirect(
-    href("/:workspaceId/settings/build-registries", {
-      workspaceId: params.workspaceId
-    })
-  );
+  throw redirect(href("/settings/build-registries"));
 }

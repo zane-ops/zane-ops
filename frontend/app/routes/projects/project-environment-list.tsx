@@ -9,7 +9,7 @@ import {
   PlusIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, href, redirect, useFetcher, useParams } from "react-router";
+import { Link, href, redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import type { Project } from "~/api/types";
@@ -57,7 +57,8 @@ import {
 import {
   environmentQueries,
   projectQueries,
-  resourceQueries
+  resourceQueries,
+  userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -66,6 +67,7 @@ import {
   getFormErrorsFromResponseData,
   isNotFoundError
 } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/project-environment-list";
 
@@ -84,8 +86,9 @@ export default function ProjectEnvironmentsPage({
   },
   params
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const { data: project } = useQuery({
-    ...projectQueries.single(params.workspaceId, params.projectSlug),
+    ...projectQueries.single(workspaceId, params.projectSlug),
     initialData: loaderData.project
   });
   return (
@@ -121,7 +124,6 @@ type EnvironmentListProps = {
   projectSlug: string;
 };
 function EnvironmentList({ environments, projectSlug }: EnvironmentListProps) {
-  const params = useParams();
   return (
     <div className="grid gap-6 w-full">
       <section>
@@ -138,8 +140,7 @@ function EnvironmentList({ environments, projectSlug }: EnvironmentListProps) {
               <TableRow key={env.id}>
                 <TableCell className="p-2">
                   <Link
-                    to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-                      workspaceId: params.workspaceId!,
+                    to={href("/project/:projectSlug/:envSlug", {
                       projectSlug,
                       envSlug: env.name
                     })}
@@ -197,28 +198,24 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
 
   switch (intent) {
     case "rename_environment": {
-      return renameEnvironment(
-        params.workspaceId,
-        params.projectSlug,
-        formData
-      );
+      return renameEnvironment(workspaceId, params.projectSlug, formData);
     }
     case "create_environment": {
-      return createEnvironment(
-        params.workspaceId,
-        params.projectSlug,
-        formData
-      );
+      return createEnvironment(workspaceId, params.projectSlug, formData);
     }
     case "clone_environment": {
       const clone_from = formData.get("clone_from")?.toString()!;
       return cloneEnvironment(
-        params.workspaceId,
+        workspaceId,
         params.projectSlug,
         clone_from,
         formData
@@ -243,7 +240,7 @@ export async function clientAction({
         };
       }
       return archiveEnvironment(
-        params.workspaceId,
+        workspaceId,
         params.projectSlug,
         formData.get("environment")!.toString()
       );
@@ -353,8 +350,7 @@ async function archiveEnvironment(
   });
 
   throw redirect(
-    href("/:workspaceId/project/:projectSlug/settings/environments", {
-      workspaceId,
+    href("/project/:projectSlug/settings/environments", {
       projectSlug: project_slug
     })
   );
@@ -402,8 +398,7 @@ async function createEnvironment(
     )
   ]);
   throw redirect(
-    href("/:workspaceId/project/:projectSlug/:envSlug", {
-      workspaceId,
+    href("/project/:projectSlug/:envSlug", {
       projectSlug: project_slug,
       envSlug: data.name
     })
@@ -474,8 +469,7 @@ async function cloneEnvironment(
     )
   ]);
   throw redirect(
-    href("/:workspaceId/project/:projectSlug/:envSlug", {
-      workspaceId,
+    href("/project/:projectSlug/:envSlug", {
       projectSlug: project_slug,
       envSlug: data.name
     })

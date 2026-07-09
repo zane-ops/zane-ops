@@ -21,7 +21,7 @@ import {
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
-import { sharedRegistryCredentialsQueries } from "~/lib/queries";
+import { sharedRegistryCredentialsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
@@ -204,11 +204,11 @@ function CreateRegistryCredentialsForm() {
   );
 }
 
-export async function clientAction({
-  request,
-  params
-}: Route.ClientActionArgs) {
+export async function clientAction({ request }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const formData = await request.formData();
 
   const userData = {
@@ -244,11 +244,7 @@ export async function clientAction({
     description: "Container Registry Credentials created succesfully"
   });
   await queryClient.invalidateQueries(
-    sharedRegistryCredentialsQueries.list(params.workspaceId)
+    sharedRegistryCredentialsQueries.list(workspaceId)
   );
-  throw redirect(
-    href("/:workspaceId/settings/shared-credentials", {
-      workspaceId: params.workspaceId
-    })
-  );
+  throw redirect(href("/settings/shared-credentials"));
 }

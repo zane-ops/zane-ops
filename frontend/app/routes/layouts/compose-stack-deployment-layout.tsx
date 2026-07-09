@@ -10,19 +10,23 @@ import { Link, Outlet, useFetcher } from "react-router";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
 import { NavLink } from "~/components/nav-link";
 import { SubmitButton } from "~/components/ui/button";
-import { composeStackQueries } from "~/lib/queries";
+import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, notFound } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import type { clientAction as cancelDeploymentAction } from "~/routes/compose/cancel-compose-deployment";
 import { formattedTime, metaTitle } from "~/utils";
 import type { Route } from "./+types/compose-stack-deployment-layout";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const [stack, deployment] = await Promise.all([
     queryClient.ensureQueryData(
       composeStackQueries.single({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug
@@ -30,7 +34,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     ),
     queryClient.ensureQueryData(
       composeStackQueries.singleDeployment({
-        workspaceId: params.workspaceId,
+        workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -50,9 +54,10 @@ export default function ComposeStackDeploymentLayoutPage({
   loaderData,
   params
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const { data: deployment } = useQuery({
     ...composeStackQueries.singleDeployment({
-      workspaceId: params.workspaceId,
+      workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug,

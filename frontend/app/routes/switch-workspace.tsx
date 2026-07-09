@@ -44,5 +44,5 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     queryClient.invalidateQueries(userQueries.memberships)
   ]);
 
-  throw redirect(href("/:workspaceId", { workspaceId: userData.workspace_id }));
+  throw redirect(href("/"));
 }

@@ -13,7 +13,7 @@ import {
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { projectQueries } from "~/lib/queries";
+import { projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
@@ -28,6 +28,9 @@ export async function clientAction({
   params
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const formData = await request.formData();
   const userData = {
     slug: formData.get("slug")?.toString().trim(),
@@ -49,10 +52,10 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries({
-    queryKey: projectQueries.list(params).queryKey.slice(0, 3) // 0...3 include the workspace id & project list key
+    queryKey: projectQueries.list({ workspaceId }).queryKey.slice(0, 3) // 0...3 include the workspace id & project list key
   });
   throw redirect(
-    href(`/:workspaceId/project/:projectSlug/:envSlug`, {
+    href(`/project/:projectSlug/:envSlug`, {
       ...params,
       projectSlug: apiResponse.data.slug,
       envSlug: "production"
@@ -61,8 +64,7 @@ export async function clientAction({
 }
 
 export default function CreateProjectPage({
-  actionData,
-  params
+  actionData
 }: Route.ComponentProps) {
   const navigation = useNavigation();
   const isPending =
@@ -75,7 +77,7 @@ export default function CreateProjectPage({
     >
       <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
         <Link
-          to={href("/:workspaceId", params)}
+          to={href("/")}
           className={cn(
             "text-sm text-grey w-full",
             "flex items-center gap-0.5 hover:underline"

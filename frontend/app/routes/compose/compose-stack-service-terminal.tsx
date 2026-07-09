@@ -24,6 +24,7 @@ import {
 } from "~/components/ui/tooltip";
 import { composeStackQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-service-terminal";
 
 export default function ComposeStackServiceTerminalPage({
@@ -34,9 +35,10 @@ export default function ComposeStackServiceTerminalPage({
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [counter, setCounter] = React.useState(0);
+  const workspaceId = useCurrentWorkspaceId();
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
-      workspaceId: params.workspaceId,
+      workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -52,7 +54,7 @@ export default function ComposeStackServiceTerminalPage({
     return (
       <Navigate
         to={href(
-          "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
           params
         )}
       />

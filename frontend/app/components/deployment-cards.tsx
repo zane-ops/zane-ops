@@ -21,7 +21,7 @@ import {
   ZapOffIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, href, useFetcher, useNavigate, useParams } from "react-router";
+import { Link, href, useFetcher, useNavigate } from "react-router";
 import type { Deployment } from "~/api/types";
 import { Code } from "~/components/code";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
@@ -787,7 +787,6 @@ export function RecentDeploymentCard({
   env_slug,
   className
 }: RecentDockerDeploymentCardProps) {
-  const params = useParams();
   const now = new Date();
   const [timeElapsed, setTimeElapsed] = React.useState(
     started_at ? Math.ceil((now.getTime() - started_at.getTime()) / 1000) : 0
@@ -855,9 +854,8 @@ export function RecentDeploymentCard({
           to={
             isPending || status === "FAILED" || status === "CANCELLED"
               ? href(
-                  "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
+                  "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
                   {
-                    workspaceId: params.workspaceId!,
                     deploymentHash: hash,
                     projectSlug: project_slug,
                     envSlug: env_slug,
@@ -865,9 +863,8 @@ export function RecentDeploymentCard({
                   }
                 )
               : href(
-                  "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
+                  "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
                   {
-                    workspaceId: params.workspaceId!,
                     deploymentHash: hash,
                     projectSlug: project_slug,
                     envSlug: env_slug,

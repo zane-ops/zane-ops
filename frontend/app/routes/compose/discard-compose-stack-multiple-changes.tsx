@@ -1,7 +1,7 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { composeStackQueries } from "~/lib/queries";
+import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/discard-compose-stack-multiple-changes";
@@ -9,7 +9,7 @@ import type { Route } from "./+types/discard-compose-stack-multiple-changes";
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     href(
-      `/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug`,
+      `/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug`,
       params
     )
   );
@@ -17,13 +17,15 @@ export function clientLoader({ params }: Route.ClientLoaderArgs) {
 export async function clientAction({
   request,
   params: {
-    workspaceId,
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
     envSlug: env_slug
   }
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const formData = await request.formData();
   const changes = formData.getAll("change_id");
   let fullErrorMessage = "";

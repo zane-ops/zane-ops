@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { flushSync } from "react-dom";
-import { useLoaderData, useParams } from "react-router";
+import { useLoaderData } from "react-router";
 import type { Service } from "~/api/types";
 import { Code } from "~/components/code";
 import { GitRepositoryBranchListInput } from "~/components/git-repository-branch-list-input";
@@ -39,6 +39,7 @@ import {
 } from "~/components/ui/tooltip";
 import { gitAppsQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
@@ -57,7 +58,7 @@ export function ServiceGitSourceForm({
   env_slug
 }: ServiceGitSourceFormProps) {
   const loaderData = useLoaderData<Route.ComponentProps["loaderData"]>();
-  const workspaceId = useParams().workspaceId!;
+  const workspaceId = useCurrentWorkspaceId();
   const { data: gitAppList } = useQuery({
     ...gitAppsQueries.list(workspaceId),
     initialData: loaderData.gitAppList

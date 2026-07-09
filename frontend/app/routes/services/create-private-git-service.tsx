@@ -17,9 +17,10 @@ import {
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
-import { gitAppsQueries } from "~/lib/queries";
+import { gitAppsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/create-private-git-service";
 
@@ -31,8 +32,11 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const gitAppList = await queryClient.ensureQueryData(
-    gitAppsQueries.list(params.workspaceId)
+    gitAppsQueries.list(workspaceId)
   );
 
   return {
@@ -44,8 +48,9 @@ export default function CreatePrivateGitServicePage({
   params,
   loaderData
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const { data: gitAppList } = useQuery({
-    ...gitAppsQueries.list(params.workspaceId),
+    ...gitAppsQueries.list(workspaceId),
     initialData: loaderData.gitAppList
   });
 
@@ -60,10 +65,7 @@ export default function CreatePrivateGitServicePage({
     >
       <div className="flex w-full flex-col gap-1 md:w-1/2">
         <Link
-          to={href(
-            "/:workspaceId/project/:projectSlug/:envSlug/create-service",
-            params
-          )}
+          to={href("/project/:projectSlug/:envSlug/create-service", params)}
           className={cn(
             "text-sm text-grey",
             "flex items-center gap-0.5 hover:underline"
@@ -112,14 +114,7 @@ export default function CreatePrivateGitServicePage({
                     icon={GithubIcon}
                     text="GitHub app"
                     onClick={() => {
-                      navigate(
-                        href(
-                          "/:workspaceId/settings/git-apps/create-github-app",
-                          {
-                            workspaceId: params.workspaceId
-                          }
-                        )
-                      );
+                      navigate(href("/settings/git-apps/create-github-app"));
                     }}
                   />
 
@@ -127,14 +122,7 @@ export default function CreatePrivateGitServicePage({
                     icon={GitlabIcon}
                     text="gitlab app"
                     onClick={() => {
-                      navigate(
-                        href(
-                          "/:workspaceId/settings/git-apps/create-gitlab-app",
-                          {
-                            workspaceId: params.workspaceId
-                          }
-                        )
-                      );
+                      navigate(href("/settings/git-apps/create-gitlab-app"));
                     }}
                   />
                 </MenubarContent>

@@ -73,12 +73,12 @@ import {
 } from "~/components/ui/tooltip";
 import { deploymentQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 
 hljs.registerLanguage("json", json);
 
 export default function DeploymentDetailsPage({
   params: {
-    workspaceId,
     projectSlug: project_slug,
     serviceSlug: service_slug,
     deploymentHash: deployment_hash,
@@ -88,6 +88,7 @@ export default function DeploymentDetailsPage({
     "3": { loaderData: initialData }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const { data: deployment } = useQuery({
     ...deploymentQueries.single({
       workspaceId,
@@ -207,9 +208,8 @@ export default function DeploymentDetailsPage({
                   (Redeploy of&nbsp;
                   <Link
                     to={href(
-                      "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
+                      "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
                       {
-                        workspaceId,
                         projectSlug: project_slug,
                         envSlug: env_slug,
                         serviceSlug: service_slug,

@@ -1,17 +1,14 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { serviceQueries } from "~/lib/queries";
+import { serviceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/redeploy-docker-deployment";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href(
-      "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
-      params
-    )
+    href("/project/:projectSlug/:envSlug/services/:serviceSlug", params)
   );
 }
 
@@ -45,16 +42,16 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
       closeButton: true
     });
     throw redirect(
-      href(
-        "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
-        params
-      )
+      href("/project/:projectSlug/:envSlug/services/:serviceSlug", params)
     );
   }
 
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   await queryClient.invalidateQueries(
     serviceQueries.single({
-      workspaceId: params.workspaceId,
+      workspaceId,
       project_slug: params.projectSlug,
       service_slug: params.serviceSlug,
       env_slug: params.envSlug
@@ -66,9 +63,6 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     closeButton: true
   });
   throw redirect(
-    href(
-      "/:workspaceId/project/:projectSlug/:envSlug/services/:serviceSlug",
-      params
-    )
+    href("/project/:projectSlug/:envSlug/services/:serviceSlug", params)
   );
 }

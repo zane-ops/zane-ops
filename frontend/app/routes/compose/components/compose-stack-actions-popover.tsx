@@ -7,7 +7,7 @@ import {
   RocketIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, href, useFetcher, useNavigate, useParams } from "react-router";
+import { Link, href, useFetcher, useNavigate } from "react-router";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Popover,
@@ -35,6 +35,7 @@ import { composeStackQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import type { clientAction as deployClientAction } from "~/routes/compose/deploy-compose-stack";
 import { durationToMs, wait } from "~/utils";
 
@@ -49,7 +50,6 @@ export function ComposeStackActionsPopover({
   projectSlug,
   envSlug
 }: ComposeStackActionsPopoverProps) {
-  const workspaceId = useParams().workspaceId!;
   const deployFetcher = useFetcher<typeof deployClientAction>();
 
   const navigate = useNavigate();
@@ -59,9 +59,8 @@ export function ComposeStackActionsPopover({
       if (!deployFetcher.data.errors) {
         navigate(
           href(
-            "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
+            "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
             {
-              workspaceId,
               projectSlug,
               envSlug,
               composeStackSlug: stack.slug
@@ -140,7 +139,7 @@ function ToggleStackForm({
   projectSlug,
   envSlug
 }: ToggleStackFormProps) {
-  const workspaceId = useParams().workspaceId!;
+  const workspaceId = useCurrentWorkspaceId();
   const fetcher = useFetcher<typeof toggleClientAction>();
 
   const { queue, queueToggleItem, dequeueToggleItem } =
@@ -246,9 +245,8 @@ async function toggleStateToast({
     <Link
       className="text-link underline inline break-all"
       to={href(
-        "/:workspaceId/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
         {
-          workspaceId,
           projectSlug,
           envSlug,
           composeStackSlug: stackSlug

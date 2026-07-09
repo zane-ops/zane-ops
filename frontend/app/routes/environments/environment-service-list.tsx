@@ -30,9 +30,10 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import { Popover, PopoverTrigger } from "~/components/ui/popover";
-import { environmentQueries } from "~/lib/queries";
+import { environmentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 import { timeAgoFormatter } from "~/utils";
 import type { Route } from "./+types/environment-service-list";
 
@@ -41,13 +42,16 @@ export async function clientLoader({
   params
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  const { id: workspaceId } = (await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  ))!;
   const searchParams = new URL(request.url).searchParams;
 
   const queryString = searchParams.get("query") ?? "";
 
   const serviceList = await queryClient.ensureQueryData(
     environmentQueries.serviceList(
-      params.workspaceId,
+      workspaceId,
       params.projectSlug,
       params.envSlug,
       {
@@ -58,7 +62,7 @@ export async function clientLoader({
 
   const composeStackList = await queryClient.ensureQueryData(
     environmentQueries.composeStackList(
-      params.workspaceId,
+      workspaceId,
       params.projectSlug,
       params.envSlug,
       {
@@ -71,9 +75,10 @@ export async function clientLoader({
 }
 
 export default function EnvironmentServiceListPage({
-  params: { workspaceId, projectSlug: project_slug, envSlug: env_slug },
+  params: { projectSlug: project_slug, envSlug: env_slug },
   loaderData
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspaceId();
   const [searchParams] = useSearchParams();
   const query = searchParams.get("query") ?? "";
 
@@ -145,9 +150,8 @@ export default function EnvironmentServiceListPage({
                   method="post"
                   className="bg-popover flex flex-col items-stretch"
                   action={href(
-                    "/:workspaceId/project/:projectSlug/:envSlug/bulk-deploy-services",
+                    "/project/:projectSlug/:envSlug/bulk-deploy-services",
                     {
-                      workspaceId,
                       envSlug: env_slug,
                       projectSlug: project_slug
                     }
@@ -179,9 +183,8 @@ export default function EnvironmentServiceListPage({
                   method="post"
                   className="bg-popover flex flex-col items-stretch"
                   action={href(
-                    "/:workspaceId/project/:projectSlug/:envSlug/bulk-toggle-service-state",
+                    "/project/:projectSlug/:envSlug/bulk-toggle-service-state",
                     {
-                      workspaceId,
                       envSlug: env_slug,
                       projectSlug: project_slug
                     }
@@ -320,9 +323,8 @@ export default function EnvironmentServiceListPage({
                           onClick={() => {
                             navigate(
                               href(
-                                "/:workspaceId/project/:projectSlug/:envSlug/create-service",
+                                "/project/:projectSlug/:envSlug/create-service",
                                 {
-                                  workspaceId,
                                   projectSlug: project_slug,
                                   envSlug: env_slug
                                 }
@@ -337,9 +339,8 @@ export default function EnvironmentServiceListPage({
                           onClick={() => {
                             navigate(
                               href(
-                                "/:workspaceId/project/:projectSlug/:envSlug/create-compose-stack",
+                                "/project/:projectSlug/:envSlug/create-compose-stack",
                                 {
-                                  workspaceId,
                                   projectSlug: project_slug,
                                   envSlug: env_slug
                                 }

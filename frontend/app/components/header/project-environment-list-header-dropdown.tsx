@@ -14,14 +14,15 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { projectQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspaceId } from "~/lib/workspace-store";
 
 export type ProjectEnvironmentListHeaderHeaderDropdownProps = {};
 
 export function ProjectEnvironmentListHeaderHeaderDropdown(
   props: ProjectEnvironmentListHeaderHeaderDropdownProps
 ) {
-  const { envSlug, workspaceId, projectSlug } = useParams() as {
-    workspaceId: string;
+  const workspaceId = useCurrentWorkspaceId();
+  const { envSlug, projectSlug } = useParams() as {
     projectSlug: string;
     envSlug: string;
   };
@@ -42,8 +43,7 @@ export function ProjectEnvironmentListHeaderHeaderDropdown(
         className="inline-flex gap-1.5 py-0 px-2 rounded-sm text-sm h-8 text-foreground"
       >
         <Link
-          to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-            workspaceId,
+          to={href("/project/:projectSlug/:envSlug", {
             projectSlug,
             envSlug
           })}
@@ -94,8 +94,7 @@ export function ProjectEnvironmentListHeaderHeaderDropdown(
                   className="flex items-start gap-2 py-2 pl-2.5 pr-3"
                   onClick={() =>
                     navigate(
-                      href("/:workspaceId/project/:projectSlug/:envSlug", {
-                        workspaceId,
+                      href("/project/:projectSlug/:envSlug", {
                         projectSlug,
                         envSlug: env.name
                       })
