@@ -279,7 +279,7 @@ async function transferWorkspaceOwnership(formData: FormData) {
       queryKey: workspaceQueries.members(workspace.id).queryKey.slice(0, 3)
     })
   ]);
-  toast.success("Workspace ownership transfered successfully!", {
+  toast.success("Workspace ownership transferred successfully!", {
     closeButton: true
   });
 

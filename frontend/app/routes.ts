@@ -64,7 +64,7 @@ export default [
         "./routes/environments/bulk-deploy-services.tsx"
       ),
 
-      layout("./routes/layouts/dashboard-layout.tsx", [
+      layout("./routes/layouts/workspace-layout.tsx", [
         index("./routes/project-list.tsx"),
 
         route(

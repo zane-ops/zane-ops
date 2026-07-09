@@ -11,7 +11,7 @@ import { projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, notFound } from "~/lib/utils";
 import { metaTitle } from "~/utils";
-import type { Route } from "./+types/dashboard-layout";
+import type { Route } from "./+types/workspace-layout";
 
 export function meta() {
   return [metaTitle("Dashboard")] satisfies ReturnType<Route.MetaFunction>;
