@@ -17,7 +17,7 @@ import {
 } from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
-import { metaTitle } from "~/utils";
+import { hasMinRole, metaTitle } from "~/utils";
 import type { Route } from "./+types/settings-layout";
 
 export function meta() {
@@ -31,45 +31,59 @@ type NavItem = {
   disabled?: boolean;
 };
 
-const sidebarNavItems: NavItem[] = [
-  {
-    title: "General",
-    href: "",
-    icon: Building2Icon
-  },
-  {
-    title: "Team",
-    href: "users",
-    icon: UsersIcon
-  },
-  {
-    title: "Git",
-    href: "git-apps",
-    icon: GitBranchIcon
-  },
-  // {
-  //   title: "Registries",
-  //   href: "build-registries",
-  //   icon: ContainerIcon
-  // },
-  // {
-  //   title: "SSH Keys",
-  //   href: "ssh-keys",
-  //   icon: KeyIcon
-  // },
-  // {
-  //   title: "Console",
-  //   href: "server-console",
-  //   icon: TerminalIcon
-  // },
-  {
-    title: "Shared Credentials",
-    href: "shared-credentials",
-    icon: CreditCardIcon
+export default function SettingsLayoutPage({
+  matches: {
+    "1": {
+      loaderData: { user }
+    }
   }
-];
+}: Route.ComponentProps) {
+  const sidebarNavItems: NavItem[] = [
+    {
+      title: "General",
+      href: "",
+      icon: Building2Icon
+    }
+  ];
 
-export default function SettingsLayoutPage({}: Route.ComponentProps) {
+  if (hasMinRole(user, "Member")) {
+    sidebarNavItems.push({
+      title: "Team",
+      href: "users",
+      icon: UsersIcon
+    });
+  }
+
+  if (hasMinRole(user, "Owner")) {
+    sidebarNavItems.push({
+      title: "Git",
+      href: "git-apps",
+      icon: GitBranchIcon
+    });
+    sidebarNavItems.push({
+      title: "Shared Credentials",
+      href: "shared-credentials",
+      icon: CreditCardIcon
+    });
+
+    // Only in server admin
+    // {
+    //   title: "Registries",
+    //   href: "build-registries",
+    //   icon: ContainerIcon
+    // },
+    // {
+    //   title: "SSH Keys",
+    //   href: "ssh-keys",
+    //   icon: KeyIcon
+    // },
+    // {
+    //   title: "Console",
+    //   href: "server-console",
+    //   icon: TerminalIcon
+    // },
+  }
+
   return (
     <>
       <div className="my-6 grid md:grid-cols-12 gap-6 md:gap-4 relative max-w-full">
