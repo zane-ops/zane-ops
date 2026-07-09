@@ -67,7 +67,7 @@ import {
   isNotFoundError
 } from "~/lib/utils";
 import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/utils";
-import type { Route } from "./+types/project-environments";
+import type { Route } from "./+types/project-environment-list";
 
 export function meta({ error, params }: Route.MetaArgs) {
   const title = !error
