@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  AlertCircleIcon,
   ExternalLinkIcon,
   LayoutListIcon,
   LoaderIcon,
@@ -32,19 +31,10 @@ import { getQueryClient } from "~/lib/query-client";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/build-registry-list";
 
-import React from "react";
 import type { BuildRegistry } from "~/api/types";
+import { SimpleConfirmationDialog } from "~/components/delete-confirmation-dialog";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "~/components/ui/dialog";
-import { cn } from "~/lib/utils";
+import { DialogTrigger } from "~/components/ui/dialog";
 
 export function meta() {
   return [
@@ -249,102 +239,50 @@ export default function BuildRegistryListPage({
 function DeleteConfirmationFormDialog({
   registry
 }: { registry: BuildRegistry }) {
-  const [isOpen, setIsOpen] = React.useState(false);
   const fetcher = useFetcher();
 
-  const isPending = fetcher.state !== "idle";
-
-  React.useEffect(() => {
-    // only focus on the correct input in case of error
-    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
-      setIsOpen(false);
-    }
-  }, [fetcher.state, fetcher.data]);
-
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <TooltipProvider>
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <Button
-                variant="ghost"
-                className="text-red-400 inline-flex gap-2 items-center disabled:opacity-50"
-                size="sm"
-                disabled={registry.is_default}
-              >
-                <Trash2Icon className="size-4 flex-none" />
-                <span className="sr-only">Delete Registry</span>
-              </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent>Delete Registry</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <DialogContent className="gap-0">
-        <DialogHeader>
-          <DialogTitle>Delete this Build Registry ?</DialogTitle>
-
-          <Alert variant="danger" className="my-5">
-            <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Warning</AlertTitle>
-            <AlertDescription>
-              This action <strong>CANNOT be undone</strong>. Deleting this
-              registry will permanently remove all stored container images.
-            </AlertDescription>
-          </Alert>
-        </DialogHeader>
-
-        <DialogFooter className="-mx-6 px-6">
-          <fetcher.Form
-            method="post"
-            action={`./${registry.id}`}
-            className="flex items-center gap-4 w-full"
-          >
-            <input type="hidden" name="intent" value="delete" />
-            <input type="hidden" name="name" value={registry.name} />
-            <input
-              type="hidden"
-              name="domain"
-              value={registry.registry_domain}
-            />
-            <input
-              type="hidden"
-              name="scheme"
-              value={registry.is_secure ? "https" : "http"}
-            />
-
-            <SubmitButton
-              isPending={isPending}
-              variant="destructive"
-              className={cn(
-                "inline-flex gap-1 items-center",
-                isPending ? "bg-red-400" : "bg-red-500"
-              )}
-            >
-              {isPending ? (
-                <>
-                  <LoaderIcon className="animate-spin flex-none" size={15} />
-                  <span>Submitting...</span>
-                </>
-              ) : (
-                <>
-                  <span>Confirm</span>
-                </>
-              )}
-            </SubmitButton>
-
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => setIsOpen(false)}
-            >
-              Cancel
-            </Button>
-          </fetcher.Form>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <SimpleConfirmationDialog
+      fetcher={fetcher}
+      title="Delete this Build Registry ?"
+      message={
+        <>
+          This action <strong>CANNOT be undone</strong>. Deleting this registry
+          will permanently remove all stored container images.
+        </>
+      }
+      form={
+        <fetcher.Form method="post" action={`./${registry.id}`}>
+          <input type="hidden" name="intent" value="delete" />
+          <input type="hidden" name="name" value={registry.name} />
+          <input type="hidden" name="domain" value={registry.registry_domain} />
+          <input
+            type="hidden"
+            name="scheme"
+            value={registry.is_secure ? "https" : "http"}
+          />
+        </fetcher.Form>
+      }
+      trigger={
+        <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="text-red-400 inline-flex gap-2 items-center disabled:opacity-50"
+                  size="sm"
+                  disabled={registry.is_default}
+                >
+                  <Trash2Icon className="size-4 flex-none" />
+                  <span className="sr-only">Delete Registry</span>
+                </Button>
+              </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Delete Registry</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      }
+    />
   );
 }

@@ -6,22 +6,13 @@ import {
   LoaderIcon,
   Trash2Icon
 } from "lucide-react";
-import * as React from "react";
 import { href, redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { CopyButton } from "~/components/copy-button";
+import { DeleteConfirmationDialog } from "~/components/delete-confirmation-dialog";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "~/components/ui/dialog";
+import { DialogTrigger } from "~/components/ui/dialog";
 import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
@@ -317,128 +308,36 @@ function ProjectDangerZoneForm({ project_slug }: { project_slug: string }) {
 function DeleteConfirmationFormDialog({
   project_slug
 }: { project_slug: string }) {
-  const [isOpen, setIsOpen] = React.useState(false);
   const fetcher = useFetcher<typeof clientAction>();
-  const formRef = React.useRef<React.ComponentRef<"form">>(null);
-
-  const [data, setData] = React.useState(fetcher.data);
-  const isPending = fetcher.state !== "idle";
-  const errors = getFormErrorsFromResponseData(data?.errors);
-
-  React.useEffect(() => {
-    setData(fetcher.data);
-
-    // only focus on the correct input in case of error
-    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
-      formRef.current?.reset();
-      setIsOpen(false);
-    }
-  }, [fetcher.state, fetcher.data]);
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
 
   return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={(open) => {
-        if (isPending) return; // prevent closing if form is being submitted
-        setIsOpen(open);
-        if (!open) {
-          setData(undefined);
-        }
-      }}
-    >
-      <DialogTrigger asChild>
-        <Button
-          variant="destructive"
-          type="button"
-          className={cn("inline-flex gap-1 items-center")}
-        >
-          <Trash2Icon size={15} className="flex-none" />
-          <span>Delete this project</span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="gap-0">
-        <DialogHeader className="pb-4">
-          <DialogTitle>Delete this project ?</DialogTitle>
-
-          <Alert variant="danger" className="my-5">
-            <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Attention !</AlertTitle>
-            <AlertDescription>
-              Deleting this project will also delete all its services and delete
-              all the deployments related to the services, This action is
-              irreversible.
-            </AlertDescription>
-          </Alert>
-
-          <DialogDescription className="inline-flex gap-1 items-center flex-wrap">
-            <span className="whitespace-nowrap">Please type</span>
-            <CopyButton
-              variant="outline"
-              size="sm"
-              showLabel
-              value={project_slug}
-              label={project_slug}
-            />
-            <span className="whitespace-nowrap">to confirm :</span>
-          </DialogDescription>
-        </DialogHeader>
-
-        {errors.non_field_errors && (
-          <Alert variant="destructive">
-            <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{errors.non_field_errors}</AlertDescription>
-          </Alert>
-        )}
-
-        <fetcher.Form
-          className="flex flex-col w-full mb-5 gap-1"
-          method="post"
-          id="delete-form"
-          ref={formRef}
-        >
+    <DeleteConfirmationDialog
+      fetcher={fetcher}
+      title="Delete this project ?"
+      message="Deleting this project will also delete all its services and delete all the deployments related to the services, This action is irreversible."
+      confirmationValue={project_slug}
+      confirmationFieldName="project_slug"
+      form={
+        <fetcher.Form method="post">
           <FieldSet name="project_slug" errors={errors.project_slug}>
             <FieldSetInput />
           </FieldSet>
+          <input type="hidden" name="intent" value="archive_project" />
         </fetcher.Form>
-
-        <DialogFooter className="-mx-6 px-6 pt-4">
-          <div className="flex items-center gap-4 w-full">
-            <SubmitButton
-              variant="destructive"
-              className={cn(
-                "inline-flex gap-1 items-center",
-                isPending ? "bg-red-400" : "bg-red-500"
-              )}
-              value="archive_project"
-              name="intent"
-              form="delete-form"
-              isPending={isPending}
-            >
-              {isPending ? (
-                <>
-                  <LoaderIcon className="animate-spin flex-none" size={15} />
-                  <span>Deleting...</span>
-                </>
-              ) : (
-                <>
-                  <span>Delete</span>
-                </>
-              )}
-            </SubmitButton>
-
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsOpen(false);
-                setData(undefined);
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      }
+      trigger={
+        <DialogTrigger asChild>
+          <Button
+            variant="destructive"
+            type="button"
+            className={cn("inline-flex gap-1 items-center")}
+          >
+            <Trash2Icon size={15} className="flex-none" />
+            <span>Delete this project</span>
+          </Button>
+        </DialogTrigger>
+      }
+    />
   );
 }

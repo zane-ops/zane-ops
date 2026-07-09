@@ -1,28 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  AlertCircleIcon,
   ChevronDownIcon,
   GithubIcon,
   GitlabIcon,
-  LoaderIcon,
   Trash2Icon
 } from "lucide-react";
-import * as React from "react";
 import { href, useFetcher, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
+import { SimpleConfirmationDialog } from "~/components/delete-confirmation-dialog";
 import { GithubAppCard } from "~/components/github-app-cards";
 import { GitlabAppCard } from "~/components/gitlab-app.cards";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { Button, SubmitButton } from "~/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "~/components/ui/dialog";
+import { Button } from "~/components/ui/button";
+import { DialogTrigger } from "~/components/ui/dialog";
 import {
   Menubar,
   MenubarContent,
@@ -39,7 +29,6 @@ import {
 } from "~/components/ui/tooltip";
 import { gitAppsQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/git-apps-list";
 
@@ -154,87 +143,40 @@ function DeleteConfirmationFormDialog({
   git_app_id,
   type
 }: { git_app_id: string; type: "github" | "gitlab" }) {
-  const [isOpen, setIsOpen] = React.useState(false);
   const fetcher = useFetcher<typeof clientAction>();
 
-  const isPending = fetcher.state !== "idle";
-
-  React.useEffect(() => {
-    // only focus on the correct input in case of error
-    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
-      setIsOpen(false);
-    }
-  }, [fetcher.state, fetcher.data]);
-
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <TooltipProvider>
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <Button size="sm" variant="ghost">
-                <Trash2Icon className="text-red-400" size={15} />
-                <span className="sr-only">Delete application</span>
-              </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent>Delete application</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <DialogContent className="gap-0">
-        <DialogHeader>
-          <DialogTitle>Delete this Git application ?</DialogTitle>
-
-          <Alert variant="destructive" className="my-5">
-            <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Warning</AlertTitle>
-            <AlertDescription>
-              This action <strong>CANNOT</strong> be undone. This will
-              permanently delete the git app in ZaneOps. This will not delete
-              the app in {type === "github" ? "GitHub" : "Gitlab"}.
-            </AlertDescription>
-          </Alert>
-        </DialogHeader>
-
-        <DialogFooter className="-mx-6 px-6">
-          <fetcher.Form
-            method="post"
-            className="flex items-center gap-4 w-full"
-          >
-            <input type="hidden" name="id" value={git_app_id} />
-
-            <SubmitButton
-              isPending={isPending}
-              variant="destructive"
-              className={cn(
-                "inline-flex gap-1 items-center",
-                isPending ? "bg-red-400" : "bg-red-500"
-              )}
-            >
-              {isPending ? (
-                <>
-                  <LoaderIcon className="animate-spin flex-none" size={15} />
-                  <span>Submitting...</span>
-                </>
-              ) : (
-                <>
-                  <span>Confirm</span>
-                </>
-              )}
-            </SubmitButton>
-
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => setIsOpen(false)}
-            >
-              Cancel
-            </Button>
-          </fetcher.Form>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <SimpleConfirmationDialog
+      fetcher={fetcher}
+      title="Delete this Git application ?"
+      message={
+        <>
+          This action <strong>CANNOT</strong> be undone. This will permanently
+          delete the git app in ZaneOps. This will not delete the app in{" "}
+          {type === "github" ? "GitHub" : "Gitlab"}.
+        </>
+      }
+      form={
+        <fetcher.Form method="post">
+          <input type="hidden" name="id" value={git_app_id} />
+        </fetcher.Form>
+      }
+      trigger={
+        <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="ghost">
+                  <Trash2Icon className="text-red-400" size={15} />
+                  <span className="sr-only">Delete application</span>
+                </Button>
+              </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Delete application</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      }
+    />
   );
 }
 

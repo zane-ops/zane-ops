@@ -1,10 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  AlertCircleIcon,
   ClockIcon,
   FingerprintIcon,
   KeyRoundIcon,
-  LoaderIcon,
   PlusIcon,
   TerminalIcon,
   Trash2Icon,
@@ -15,18 +13,11 @@ import { Link, href, redirect, useFetcher, useParams } from "react-router";
 import { apiClient } from "~/api/client";
 import type { SSHKey } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { SimpleConfirmationDialog } from "~/components/delete-confirmation-dialog";
 import { Badge } from "~/components/ui/badge";
-import { Button, SubmitButton } from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "~/components/ui/dialog";
+import { DialogTrigger } from "~/components/ui/dialog";
 import { Separator } from "~/components/ui/separator";
 import {
   Tooltip,
@@ -36,7 +27,6 @@ import {
 } from "~/components/ui/tooltip";
 import { sshKeysQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn } from "~/lib/utils";
 import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/ssh-keys-list";
 
@@ -197,85 +187,38 @@ function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
 }
 
 function DeleteConfirmationFormDialog({ key_slug }: { key_slug: string }) {
-  const [isOpen, setIsOpen] = React.useState(false);
   const fetcher = useFetcher<typeof clientAction>();
 
-  const isPending = fetcher.state !== "idle";
-
-  React.useEffect(() => {
-    // only focus on the correct input in case of error
-    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
-      setIsOpen(false);
-    }
-  }, [fetcher.state, fetcher.data]);
-
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <TooltipProvider>
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <Button size="sm" variant="ghost">
-                <Trash2Icon className="text-red-400" size={15} />
-                <span className="sr-only">Delete SSH key</span>
-              </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent>Delete Key</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <DialogContent className="gap-0">
-        <DialogHeader>
-          <DialogTitle>Delete this SSH Key ?</DialogTitle>
-
-          <Alert variant="destructive" className="my-5">
-            <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Warning</AlertTitle>
-            <AlertDescription>
-              This action <strong>CANNOT</strong> be undone. This will
-              permanently delete the SSH key.
-            </AlertDescription>
-          </Alert>
-        </DialogHeader>
-
-        <DialogFooter className="-mx-6 px-6">
-          <fetcher.Form
-            method="post"
-            className="flex items-center gap-4 w-full"
-          >
-            <input type="hidden" name="slug" value={key_slug} />
-
-            <SubmitButton
-              isPending={isPending}
-              variant="destructive"
-              className={cn(
-                "inline-flex gap-1 items-center",
-                isPending ? "bg-red-400" : "bg-red-500"
-              )}
-            >
-              {isPending ? (
-                <>
-                  <LoaderIcon className="animate-spin flex-none" size={15} />
-                  <span>Submitting...</span>
-                </>
-              ) : (
-                <>
-                  <span>Confirm</span>
-                </>
-              )}
-            </SubmitButton>
-
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => setIsOpen(false)}
-            >
-              Cancel
-            </Button>
-          </fetcher.Form>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <SimpleConfirmationDialog
+      fetcher={fetcher}
+      title="Delete this SSH Key ?"
+      message={
+        <>
+          This action <strong>CANNOT</strong> be undone. This will permanently
+          delete the SSH key.
+        </>
+      }
+      form={
+        <fetcher.Form method="post">
+          <input type="hidden" name="slug" value={key_slug} />
+        </fetcher.Form>
+      }
+      trigger={
+        <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="ghost">
+                  <Trash2Icon className="text-red-400" size={15} />
+                  <span className="sr-only">Delete SSH key</span>
+                </Button>
+              </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Delete Key</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      }
+    />
   );
 }

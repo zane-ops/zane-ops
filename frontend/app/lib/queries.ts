@@ -180,7 +180,7 @@ export const projectQueries = {
         });
         if (!data) {
           throw notFound(
-            `The project \`${slug}\` does not exist on this server`
+            `The project \`${slug}\` does not exist on this workspace`
           );
         }
         return data;
