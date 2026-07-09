@@ -3,18 +3,9 @@ import {
   CreditCardIcon,
   GitBranchIcon,
   type LucideIcon,
-  UserIcon,
   UsersIcon
 } from "lucide-react";
-import { Link, NavLink, Outlet, href } from "react-router";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
+import { NavLink, Outlet } from "react-router";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 import { hasMinRole, metaTitle } from "~/utils";
@@ -49,7 +40,7 @@ export default function SettingsLayoutPage({
   if (hasMinRole(user, "Member")) {
     sidebarNavItems.push({
       title: "Team",
-      href: "users",
+      href: "team",
       icon: UsersIcon
     });
   }

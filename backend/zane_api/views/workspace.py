@@ -60,6 +60,7 @@ from ..permissions import (
     IsWorkspaceOwner,
     IsWorkspaceAdmin,
     IsWorkspaceGuest,
+    IsWorkspaceMember,
 )
 
 from django.db.models import QuerySet, Q
@@ -168,7 +169,7 @@ class ListWorkspaceMembersAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend]
     pagination_class = WorkspaceMembershipPagination
     filterset_class = WorkspaceMembershipFilterSet
-    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     queryset = WorkspaceMembership.objects.all()  # just used for the openAPI docs
 

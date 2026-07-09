@@ -8,7 +8,7 @@ import { cn } from "~/lib/utils";
 import type { Route } from "./+types/home-layout";
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
-  const queryClient = getQueryClient();
+  return;
 }
 
 export default function HomeLayoutPage({

@@ -50,7 +50,7 @@ export default function ProjectSettingsPage({
         <h2 className="text-2xl">General</h2>
       </div>
       <Separator />
-      <p className="text-grey">Update the general details of your service</p>
+      <p className="text-grey">Update the general details of your project</p>
       <div className="grid lg:grid-cols-12 gap-10 relative">
         <div className="lg:col-span-10 flex flex-col">
           <section id="details" className="flex gap-1 scroll-mt-20">
