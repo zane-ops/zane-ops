@@ -108,7 +108,12 @@ export default function CreateGitServiceFromGitHubPage({
   }
 
   return (
-    <>
+    <div
+      className={cn(
+        currentStep !== "FORM" &&
+          "h-[70vh] flex flex-col items-center justify-center w-full"
+      )}
+    >
       <Link
         to={href(
           "/:workspaceId/project/:projectSlug/:envSlug/create-service/git-private",
@@ -117,7 +122,7 @@ export default function CreateGitServiceFromGitHubPage({
         className={cn(
           "text-sm text-grey mx-auto mb-2",
           "flex items-center gap-0.5 hover:underline",
-          "lg:w-[35%] md:w-[50%] w-full"
+          "lg:w-1/3 md:w-1/2 w-full"
         )}
       >
         <ArrowLeftIcon className="size-4" />
@@ -154,7 +159,7 @@ export default function CreateGitServiceFromGitHubPage({
           deploymentHash={deploymentHash}
         />
       )}
-    </>
+    </div>
   );
 }
 
@@ -902,7 +907,7 @@ function StepServiceCreated({
     onSuccess(fetcher.data.deploymentHash);
   }
   return (
-    <div className="flex flex-col h-[70vh] justify-center items-center">
+    <div className="flex flex-col w-full justify-center items-center">
       {errors.non_field_errors && (
         <Alert variant="destructive">
           <AlertCircleIcon className="h-4 w-4" />
@@ -975,7 +980,7 @@ function StepServiceDeployed({
   const navigation = useNavigation();
   const { workspaceId } = useParams();
   return (
-    <div className="flex  flex-col h-[70vh] justify-center items-center">
+    <div className="flex  flex-col w-full justify-center items-center">
       <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
         <Alert variant="info">
           <ClockArrowUpIcon className="h-5 w-5" />

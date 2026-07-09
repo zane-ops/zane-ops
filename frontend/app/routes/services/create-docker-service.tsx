@@ -80,20 +80,25 @@ export default function CreateServicePage({
 }: Route.ComponentProps) {
   const [currentStep, setCurrentStep] = React.useState<
     "FORM" | "CREATED" | "DEPLOYED"
-  >("CREATED");
+  >("FORM");
 
   const [serviceSlug, setServiceSlug] = React.useState("");
   const [deploymentHash, setDeploymentHash] = React.useState("");
 
   return (
-    <>
+    <div
+      className={cn(
+        currentStep !== "FORM" &&
+          "h-[70vh] flex flex-col items-center justify-center w-full"
+      )}
+    >
       <Link
         to={href(
           "/:workspaceId/project/:projectSlug/:envSlug/create-service",
           params
         )}
         className={cn(
-          "text-sm text-grey lg:w-[30%] md:w-[50%] w-full mx-auto mb-2",
+          "text-sm text-grey lg:w-1/3 md:w-1/2 w-full mx-auto mb-2",
           "flex items-center gap-0.5 hover:underline"
         )}
       >
@@ -131,7 +136,7 @@ export default function CreateServicePage({
           deploymentHash={deploymentHash}
         />
       )}
-    </>
+    </div>
   );
 }
 
@@ -286,9 +291,9 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
     <Form
       ref={formRef}
       method="post"
-      className="flex grow justify-center items-center"
+      className="flex grow w-full justify-center"
     >
-      <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
+      <div className="card flex lg:w-1/3 md:w-1/2 w-full flex-col gap-3">
         <h1 className="text-3xl font-bold">New Docker Service</h1>
 
         {errors.non_field_errors && (
@@ -502,7 +507,7 @@ function StepServiceCreated({
     onSuccess(fetcher.data.deploymentHash);
   }
   return (
-    <div className="flex flex-col h-[70vh] justify-center items-center">
+    <div className="flex flex-col w-full justify-center items-center">
       {errors.non_field_errors && (
         <Alert variant="destructive">
           <AlertCircleIcon className="h-4 w-4" />
@@ -575,7 +580,7 @@ function StepServiceDeployed({
   const navigation = useNavigation();
   const { workspaceId } = useParams();
   return (
-    <div className="flex  flex-col h-[70vh] justify-center items-center">
+    <div className="flex  flex-col justify-center items-center w-full">
       <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
         <Alert variant="info">
           <ClockArrowUpIcon className="h-5 w-5" />
