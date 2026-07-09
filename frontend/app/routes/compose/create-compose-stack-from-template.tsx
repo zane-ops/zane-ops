@@ -1,5 +1,6 @@
 import {
   AlertCircleIcon,
+  ArrowLeftIcon,
   ArrowRightIcon,
   ArrowUpRightIcon,
   CheckIcon,
@@ -68,85 +69,29 @@ export default function CreateComposeStackFromTemplatePage({
   >("FORM");
 
   return (
-    <>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to={href("/:workspaceId", params)} prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-                  ...params,
-                  envSlug: "production"
-                })}
-                prefetch="intent"
-              >
-                {params.projectSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                params.envSlug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : params.envSlug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
-                prefetch="intent"
-              >
-                {params.envSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink>
-              <Link
-                to={href(
-                  "/:workspaceId/project/:projectSlug/:envSlug/create-compose-stack",
-                  params
-                )}
-                prefetch="intent"
-              >
-                Create compose stack
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink>
-              <Link
-                to={href(
-                  "/:workspaceId/project/:projectSlug/:envSlug/create-compose-stack/template",
-                  params
-                )}
-                prefetch="intent"
-              >
-                From ZaneOps template
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{params.templateSlug}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+    <div
+      className={cn(
+        currentStep !== "FORM" &&
+          "h-[70vh] flex flex-col items-center justify-center w-full"
+      )}
+    >
+      <Link
+        to={href(
+          "/:workspaceId/project/:projectSlug/:envSlug/create-compose-stack/template",
+          params
+        )}
+        className={cn(
+          "text-sm text-grey mx-auto mb-2",
+          "flex items-center gap-0.5 hover:underline",
+          "w-full",
+          currentStep === "FORM"
+            ? "xl:w-1/2 lg:w-[60%] md:w-2/3"
+            : "lg:w-1/3 md:w-1/2"
+        )}
+      >
+        <ArrowLeftIcon className="size-4" />
+        Template List
+      </Link>
 
       {currentStep === "FORM" && (
         <FormStep
@@ -179,7 +124,7 @@ export default function CreateComposeStackFromTemplatePage({
           deploymentHash={deploymentHash}
         />
       )}
-    </>
+    </div>
   );
 }
 
@@ -305,7 +250,7 @@ function FormStep({
     <Form
       ref={formRef}
       method="post"
-      className="flex my-10 grow justify-center items-center"
+      className="flex grow justify-center items-center w-full"
     >
       <div className="card flex xl:w-1/2 lg:w-[60%] md:w-2/3 w-full flex-col gap-5 items-stretch">
         <h1 className="text-3xl font-semibold">
@@ -437,7 +382,7 @@ function StackCreatedStep({
     onSuccess(fetcher.data.deploymentHash);
   }
   return (
-    <div className="flex flex-col h-[70vh] justify-center items-center">
+    <div className="flex flex-col w-full justify-center items-center">
       {errors.non_field_errors && (
         <Alert variant="destructive">
           <AlertCircleIcon className="h-4 w-4" />
@@ -516,7 +461,7 @@ function StackDeployedStep({
   const routeParams = useParams();
   const navigation = useNavigation();
   return (
-    <div className="flex  flex-col h-[70vh] justify-center items-center">
+    <div className="flex flex-col w-full justify-center items-center">
       <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
         <Alert variant="info">
           <ClockArrowUpIcon className="h-5 w-5" />

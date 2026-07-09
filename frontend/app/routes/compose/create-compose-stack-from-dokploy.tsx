@@ -1,5 +1,6 @@
 import {
   AlertCircleIcon,
+  ArrowLeftIcon,
   ArrowRightIcon,
   CheckIcon,
   ClockArrowUpIcon,
@@ -18,14 +19,6 @@ import {
 } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
 import { Button, SubmitButton } from "~/components/ui/button";
 import { CodeEditor } from "~/components/ui/code-editor";
 import {
@@ -42,7 +35,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import type { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-compose-stack-from-dokploy";
@@ -64,71 +56,29 @@ export default function CreateComposeStackFromDokployPage({
   const [composeStackSlug, setComposeStackSlug] = React.useState("");
   const [deploymentHash, setDeploymentHash] = React.useState("");
   return (
-    <>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to={href("/:workspaceId", params)} prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", {
-                  ...params,
-                  envSlug: "production"
-                })}
-                prefetch="intent"
-              >
-                {params.projectSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                params.envSlug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : params.envSlug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={href("/:workspaceId/project/:projectSlug/:envSlug", params)}
-                prefetch="intent"
-              >
-                {params.envSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink>
-              <Link
-                to={href(
-                  "/:workspaceId/project/:projectSlug/:envSlug/create-compose-stack",
-                  params
-                )}
-                prefetch="intent"
-              >
-                Create compose stack
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>From dokploy template</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+    <div
+      className={cn(
+        currentStep !== "FORM" &&
+          "h-[70vh] flex flex-col items-center justify-center w-full"
+      )}
+    >
+      <Link
+        to={href(
+          "/:workspaceId/project/:projectSlug/:envSlug/create-compose-stack",
+          params
+        )}
+        className={cn(
+          "text-sm text-grey mx-auto mb-2",
+          "flex items-center gap-0.5 hover:underline",
+          "w-full",
+          currentStep === "FORM"
+            ? "xl:w-1/2 lg:w-[60%] md:w-2/3"
+            : "lg:w-1/3 md:w-1/2"
+        )}
+      >
+        <ArrowLeftIcon className="size-4" />
+        Create Compose Stack
+      </Link>
 
       {currentStep === "FORM" && (
         <FormStep
@@ -160,7 +110,7 @@ export default function CreateComposeStackFromDokployPage({
           deploymentHash={deploymentHash}
         />
       )}
-    </>
+    </div>
   );
 }
 
@@ -305,6 +255,15 @@ type FormStepProps = {
   actionData?: Route.ComponentProps["actionData"];
 };
 
+const DEFAULT_CONFIG_CONTENTS = `# your template.toml config here
+[variables]
+
+[config]
+[[config.domains]]
+
+[[config.env]]
+`;
+
 function FormStep({ actionData, onSuccess }: FormStepProps) {
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const navigation = useNavigation();
@@ -317,11 +276,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
     "# your docker-compose.yml content here"
   );
   const [configContent, setConfigContent] = React.useState(
-    "# your template.toml config here\n" +
-      "[variables]\n\n" +
-      "[config]\n" +
-      "[[config.domains]]\n\n" +
-      "[[config.env]]\n"
+    DEFAULT_CONFIG_CONTENTS
   );
 
   const errors = getFormErrorsFromResponseData(actionData?.errors);
@@ -340,7 +295,7 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
     <Form
       ref={formRef}
       method="post"
-      className="flex my-10 grow justify-center items-center"
+      className="flex grow justify-center items-center"
     >
       <div className="card flex xl:max-w-xl lg:w-1/2 md:w-2/3 w-full flex-col gap-5 items-stretch">
         <h1 className="text-3xl font-bold">New Dokploy Compose stack</h1>
@@ -563,7 +518,7 @@ function StackCreatedStep({
     onSuccess(fetcher.data.deploymentHash);
   }
   return (
-    <div className="flex flex-col h-[70vh] justify-center items-center">
+    <div className="flex flex-col w-full justify-center items-center">
       {errors.non_field_errors && (
         <Alert variant="destructive">
           <AlertCircleIcon className="h-4 w-4" />
@@ -642,7 +597,7 @@ function StackDeployedStep({
   const routeParams = useParams();
   const navigation = useNavigation();
   return (
-    <div className="flex  flex-col h-[70vh] justify-center items-center">
+    <div className="flex  flex-col w-full justify-center items-center">
       <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
         <Alert variant="info">
           <ClockArrowUpIcon className="h-5 w-5" />
