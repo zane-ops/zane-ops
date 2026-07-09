@@ -78,7 +78,7 @@ export default function ProjectSettingsPage({
                       services
                     </p>
                   </div>
-                  <ProjectDangerZoneForm project_slug={params.projectSlug} />
+                  <ProjectDeleteForm project_slug={params.projectSlug} />
                 </div>
               </div>
             </div>
@@ -86,6 +86,124 @@ export default function ProjectSettingsPage({
         </div>
       </div>
     </section>
+  );
+}
+
+type ProjectDetailsFormProps = {
+  description: string;
+  project_slug: string;
+};
+
+function ProjectDetailsForm({
+  description,
+  project_slug
+}: ProjectDetailsFormProps) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const isPending = fetcher.state !== "idle";
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+
+  return (
+    <fetcher.Form method="post" className="flex flex-col gap-4">
+      {errors.non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errors.non_field_errors}</AlertDescription>
+        </Alert>
+      )}
+
+      <fieldset className="flex flex-col gap-1.5 flex-1">
+        <label htmlFor="slug">Project slug</label>
+        <Input
+          id="slug"
+          name="slug"
+          placeholder="project slug"
+          defaultValue={project_slug}
+          aria-labelledby="slug-error"
+          aria-invalid={!!errors.slug}
+        />
+
+        {errors.slug && (
+          <span id="slug-error" className="text-red-500 text-sm">
+            {errors.slug}
+          </span>
+        )}
+      </fieldset>
+
+      <fieldset className="my-2 flex flex-col gap-1">
+        <label htmlFor="description">Description</label>
+        <Textarea
+          className="placeholder:text-gray-400"
+          name="description"
+          id="description"
+          placeholder="Ex: A self hosted PaaS"
+          defaultValue={description}
+          aria-describedby="description-error"
+        />
+        {errors.description && (
+          <span id="description-error" className="text-red-500 text-sm">
+            {errors.description}
+          </span>
+        )}
+      </fieldset>
+
+      <SubmitButton
+        isPending={isPending}
+        variant="secondary"
+        className="self-start"
+        name="intent"
+        value="update_project"
+      >
+        {isPending ? (
+          <>
+            <LoaderIcon className="animate-spin" size={15} />
+            <span>Updating ...</span>
+          </>
+        ) : (
+          <>
+            <CheckIcon size={15} className="flex-none" />
+            <span>Update</span>
+          </>
+        )}
+      </SubmitButton>
+    </fetcher.Form>
+  );
+}
+
+function ProjectDeleteForm({ project_slug }: { project_slug: string }) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+
+  return (
+    <div className="flex flex-col gap-2 items-start">
+      <DeleteConfirmationDialog
+        fetcher={fetcher}
+        title="Delete this project ?"
+        message="Deleting this project will also delete all its services and delete all the deployments related to the services, This action is irreversible."
+        confirmationValue={project_slug}
+        confirmationFieldName="project_slug"
+        form={
+          <fetcher.Form method="post">
+            <FieldSet name="project_slug" errors={errors.project_slug}>
+              <FieldSetInput />
+            </FieldSet>
+            <input type="hidden" name="intent" value="archive_project" />
+          </fetcher.Form>
+        }
+        trigger={
+          <DialogTrigger asChild>
+            <Button
+              variant="destructive"
+              type="button"
+              className={cn("inline-flex gap-1 items-center")}
+            >
+              <Trash2Icon size={15} className="flex-none" />
+              <span>Delete this project</span>
+            </Button>
+          </DialogTrigger>
+        }
+      />
+    </div>
   );
 }
 
@@ -212,132 +330,4 @@ async function archiveProject(params: Route.ClientActionArgs["params"]) {
     )
   });
   throw redirect(href("/:workspaceId", params));
-}
-
-type ProjectDetailsFormProps = {
-  description: string;
-  project_slug: string;
-};
-
-function ProjectDetailsForm({
-  description,
-  project_slug
-}: ProjectDetailsFormProps) {
-  const fetcher = useFetcher<typeof clientAction>();
-  const isPending = fetcher.state !== "idle";
-  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
-
-  return (
-    <fetcher.Form method="post" className="flex flex-col gap-4">
-      {errors.non_field_errors && (
-        <Alert variant="destructive">
-          <AlertCircleIcon className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{errors.non_field_errors}</AlertDescription>
-        </Alert>
-      )}
-
-      <fieldset className="flex flex-col gap-1.5 flex-1">
-        <label htmlFor="slug">Project slug</label>
-        <Input
-          id="slug"
-          name="slug"
-          placeholder="project slug"
-          defaultValue={project_slug}
-          aria-labelledby="slug-error"
-          aria-invalid={!!errors.slug}
-        />
-
-        {errors.slug && (
-          <span id="slug-error" className="text-red-500 text-sm">
-            {errors.slug}
-          </span>
-        )}
-      </fieldset>
-
-      <fieldset className="my-2 flex flex-col gap-1">
-        <label htmlFor="description">Description</label>
-        <Textarea
-          className="placeholder:text-gray-400"
-          name="description"
-          id="description"
-          placeholder="Ex: A self hosted PaaS"
-          defaultValue={description}
-          aria-describedby="description-error"
-        />
-        {errors.description && (
-          <span id="description-error" className="text-red-500 text-sm">
-            {errors.description}
-          </span>
-        )}
-      </fieldset>
-
-      <SubmitButton
-        isPending={isPending}
-        variant="secondary"
-        className="self-start"
-        name="intent"
-        value="update_project"
-      >
-        {isPending ? (
-          <>
-            <LoaderIcon className="animate-spin" size={15} />
-            <span>Updating ...</span>
-          </>
-        ) : (
-          <>
-            <CheckIcon size={15} className="flex-none" />
-            <span>Update</span>
-          </>
-        )}
-      </SubmitButton>
-    </fetcher.Form>
-  );
-}
-
-function ProjectDangerZoneForm({ project_slug }: { project_slug: string }) {
-  const fetcher = useFetcher<typeof clientAction>();
-
-  return (
-    <fetcher.Form method="post" className="flex flex-col gap-2 items-start">
-      <DeleteConfirmationFormDialog project_slug={project_slug} />
-    </fetcher.Form>
-  );
-}
-
-function DeleteConfirmationFormDialog({
-  project_slug
-}: { project_slug: string }) {
-  const fetcher = useFetcher<typeof clientAction>();
-  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
-
-  return (
-    <DeleteConfirmationDialog
-      fetcher={fetcher}
-      title="Delete this project ?"
-      message="Deleting this project will also delete all its services and delete all the deployments related to the services, This action is irreversible."
-      confirmationValue={project_slug}
-      confirmationFieldName="project_slug"
-      form={
-        <fetcher.Form method="post">
-          <FieldSet name="project_slug" errors={errors.project_slug}>
-            <FieldSetInput />
-          </FieldSet>
-          <input type="hidden" name="intent" value="archive_project" />
-        </fetcher.Form>
-      }
-      trigger={
-        <DialogTrigger asChild>
-          <Button
-            variant="destructive"
-            type="button"
-            className={cn("inline-flex gap-1 items-center")}
-          >
-            <Trash2Icon size={15} className="flex-none" />
-            <span>Delete this project</span>
-          </Button>
-        </DialogTrigger>
-      }
-    />
-  );
 }
