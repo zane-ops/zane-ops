@@ -8,11 +8,12 @@ import {
 } from "@tanstack/react-query";
 import { preprocess, z } from "zod";
 import { zfd } from "zod-form-data";
-import type { ApiResponse, RequestParams } from "~/api/client";
+import type { ApiResponse, RequestInput, RequestParams } from "~/api/client";
 import { apiClient } from "~/api/client";
 import type {
   TemplateDetailsApiResponse,
-  TemplateSearchAPIResponse
+  TemplateSearchAPIResponse,
+  WorkspaceMembership
 } from "~/api/types";
 import {
   DEFAULT_LOGS_PER_PAGE,
@@ -20,7 +21,8 @@ import {
   DEPLOYMENT_STATUSES,
   LOGS_QUERY_REFETCH_INTERVAL,
   METRICS_TIME_RANGES,
-  TEMPLATE_API_HOST
+  TEMPLATE_API_HOST,
+  WORKSPACE_ROLE_MAPPING
 } from "~/lib/constants";
 import type { Writeable } from "~/lib/types";
 import { notFound } from "~/lib/utils";
@@ -3042,6 +3044,44 @@ export const templateQueries = {
  *         Workspace Queries        *
  ************************************/
 
-// export const workspaceQueries = {
+export const workspaceMemberListFilters = zfd.formData({
+  page: zfd.numeric().optional().catch(1).optional(),
+  query: z.string().optional(),
+  per_page: zfd.numeric().optional().catch(10).optional(),
+  role: z
+    .enum(["Guest", "Member", "Admin", "Owner"])
+    .optional()
+    .catch(undefined)
+});
 
-// };
+export const workspaceQueries = {
+  members: (
+    workspaceId: string,
+    filters: z.infer<typeof workspaceMemberListFilters> = {}
+  ) =>
+    queryOptions({
+      queryKey: [...workspaceKey(workspaceId), "MEMBERS", filters] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/workspace/members/", {
+          signal,
+          params: {
+            query: {
+              ...filters,
+              role: filters.role
+                ? WORKSPACE_ROLE_MAPPING[filters.role]
+                : undefined
+            }
+          }
+        });
+        if (!data) throw notFound("Not found");
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (!query.state.data) {
+          return false;
+        }
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData
+    })
+};

@@ -10,6 +10,7 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from ...validators import validate_new_password
 import django_filters
 from rest_framework import pagination
+from django.db.models import QuerySet, Q
 
 
 class SwitchWorkspaceRequestSerializer(serializers.Serializer):
@@ -167,10 +168,16 @@ class WorkspaceTransferOwnershipRequestSerializer(serializers.Serializer):
 
 class WorkspaceMembershipFilterSet(django_filters.FilterSet):
     role = django_filters.ChoiceFilter(choices=WorkspaceRole.choices)
+    query = django_filters.CharFilter(method="filter_query")
+
+    def filter_query(self, qs: QuerySet, name: str, value: str):
+        return qs.filter(
+            Q(user__username__icontains=value) | Q(user__first_name__icontains=value)
+        )
 
     class Meta:
         model = WorkspaceMembership
-        fields = ["role"]
+        fields = ["role", "query"]
 
 
 class WorkspaceMembershipPagination(pagination.PageNumberPagination):

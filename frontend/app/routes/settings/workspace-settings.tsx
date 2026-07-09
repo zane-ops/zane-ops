@@ -1,24 +1,33 @@
 import { useQuery } from "@tanstack/react-query";
+import { useDebounce } from "@uidotdev/usehooks";
+import { Command as CommandPrimitive } from "cmdk";
 import {
   AlertCircleIcon,
   CheckIcon,
+  ChevronDownIcon,
   ChevronsRightIcon,
   FlameIcon,
   InfoIcon,
   LoaderIcon,
+  SearchIcon,
   Trash2Icon
 } from "lucide-react";
 import * as React from "react";
 import { href, redirect, useFetcher, useMatches } from "react-router";
 import { toast } from "sonner";
-import { apiClient } from "~/api/client";
+import { type RequestInput, apiClient } from "~/api/client";
 import { DeleteConfirmationDialog } from "~/components/delete-confirmation-dialog";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
+  Command,
+  CommandEmpty,
+  CommandItem,
+  CommandList
+} from "~/components/ui/command";
+import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -27,18 +36,16 @@ import {
 import {
   FieldSet,
   FieldSetInput,
-  FieldSetLabel,
-  FieldSetSelect
+  FieldSetLabel
 } from "~/components/ui/fieldset";
 import {
-  type Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "~/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "~/components/ui/popover";
+import type { Select } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
-import { userQueries } from "~/lib/queries";
+import { userQueries, workspaceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
@@ -140,7 +147,7 @@ export default function WorkspaceSettingsPage({
                         Transfer ownership of this workspace to another member
                       </p>
                     </div>
-                    <TransferOwnershipForm />
+                    <TransferOwnershipForm workspaceId={workspace.id} />
                   </div>
                 </div>
               </div>
@@ -154,9 +161,10 @@ export default function WorkspaceSettingsPage({
 
 async function updateWorkspace(formData: FormData) {
   const queryClient = getQueryClient();
+
   const userData = {
     name: formData.get("name")?.toString() ?? ""
-  };
+  } satisfies RequestInput<"put", "/api/workspace/">;
   const apiResponse = await apiClient.PUT("/api/workspace/", {
     headers: {
       ...(await getCsrfTokenHeader())
@@ -235,6 +243,52 @@ async function archiveWorkspace(formData: FormData) {
   throw redirect(href("/"));
 }
 
+async function transferWorkspaceOwnership(formData: FormData) {
+  const queryClient = getQueryClient();
+
+  const workspace = await queryClient.fetchQuery(userQueries.currentWorkspace);
+  if (!workspace) {
+    throw redirect("/");
+  }
+
+  const userData = {
+    new_owner_id: Number(formData.get("new_owner_id")?.toString() ?? "")
+  } satisfies RequestInput<"post", "/api/workspace/transfer-ownership/">;
+
+  const apiResponse = await apiClient.POST(
+    "/api/workspace/transfer-ownership/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      body: userData
+    }
+  );
+
+  if (apiResponse.error) {
+    return {
+      userData,
+      errors: apiResponse.error
+    };
+  }
+
+  await Promise.all([
+    queryClient.invalidateQueries(userQueries.currentWorkspace),
+    queryClient.invalidateQueries(userQueries.memberships),
+    queryClient.invalidateQueries({
+      queryKey: workspaceQueries.members(workspace.id).queryKey.slice(0, 3)
+    })
+  ]);
+  toast.success("Workspace ownership transfered successfully!", {
+    closeButton: true
+  });
+
+  return {
+    userData,
+    errors: apiResponse.error
+  };
+}
+
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
@@ -245,6 +299,9 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     }
     case "archive_workspace": {
       return archiveWorkspace(formData);
+    }
+    case "transfer_workspace_ownership": {
+      return transferWorkspaceOwnership(formData);
     }
     default: {
       throw new Error("Unexpected intent");
@@ -354,7 +411,11 @@ function WorkspaceDeleteForm({ name }: { name: string }) {
   );
 }
 
-function TransferOwnershipForm() {
+type TransferOwnershipFormProps = {
+  workspaceId: string;
+};
+
+function TransferOwnershipForm({ workspaceId }: TransferOwnershipFormProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
   const fetcher = useFetcher<typeof clientAction>();
@@ -364,6 +425,23 @@ function TransferOwnershipForm() {
   const [data, setData] = React.useState(fetcher.data);
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(data?.errors);
+  const [isPopoverOpen, setPopoverOpen] = React.useState(false);
+  const [query, setQuery] = React.useState("");
+
+  const debouncedQuery = useDebounce(query, 300);
+
+  const { data: membersResponse } = useQuery(
+    workspaceQueries.members(workspaceId, {
+      // role: "Admin",
+      query: debouncedQuery
+    })
+  );
+
+  const memberList = membersResponse?.results ?? [];
+
+  const [selectedOwner, setSelectedOwner] = React.useState<
+    (typeof memberList)[number] | null
+  >(null);
 
   React.useEffect(() => {
     setData(fetcher.data);
@@ -388,6 +466,8 @@ function TransferOwnershipForm() {
   const close = React.useCallback(() => {
     setIsOpen(false);
     setData(undefined);
+    setQuery("");
+    setSelectedOwner(null);
   }, []);
 
   return (
@@ -436,30 +516,112 @@ function TransferOwnershipForm() {
           id="transfer-ownership"
           ref={formRef}
         >
-          <FieldSet
-            name="new_owner_id"
-            // errors={errors.new_owner_id}
-            className="flex flex-col gap-2 flex-1"
-            required
-          >
-            <FieldSetLabel htmlFor="new_owner_id">New owner</FieldSetLabel>
+          <fieldset className="flex flex-col gap-2 flex-1">
+            <label htmlFor="new_owner_id">New owner</label>
             <small className="text-grey">
               Only admins of this workspace can be selected
             </small>
 
-            <FieldSetSelect>
-              <SelectTrigger id="new_owner_id" ref={selectTriggerRef}>
-                <SelectValue placeholder="Select new owner" />
-              </SelectTrigger>
-              <SelectContent className="z-999">
-                {/* {environments.map((env) => (
-                                <SelectItem value={env.name} key={env.id}>
-                                  {env.name}
-                                </SelectItem>
-                              ))} */}
-              </SelectContent>
-            </FieldSetSelect>
-          </FieldSet>
+            {selectedOwner && (
+              <input
+                type="hidden"
+                name="new_owner_id"
+                value={selectedOwner?.id}
+              />
+            )}
+
+            <Popover open={isPopoverOpen} onOpenChange={setPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  ref={selectTriggerRef}
+                  variant="outline"
+                  className="justify-between"
+                  aria-describedby="new-owner-error"
+                  aria-invalid={!!errors.new_owner_id}
+                >
+                  {selectedOwner ? (
+                    <span className="whitespace-nowrap">
+                      <span>{selectedOwner.user.first_name}</span>
+                      &nbsp;
+                      <span>&middot;</span>
+                      &nbsp;
+                      <span className="text-grey text-xs">
+                        {selectedOwner.user.username}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-sm">Select new owner</span>
+                  )}
+                  <ChevronDownIcon className="size-4 flex-none" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className={cn(
+                  "!w-(--radix-popover-trigger-width) p-0 z-999 shadow-md rounded-lg",
+                  "[&_[data-slot='command-list-wrapper']_*]:static",
+                  "[&_[data-slot='command-input-wrapper']]:px-2"
+                )}
+                align="center"
+              >
+                <Command shouldFilter={false} className="w-full">
+                  <div className="flex px-3 py-3.5 items-center gap-1">
+                    <SearchIcon className="size-4 flex-none text-grey" />
+                    <CommandPrimitive.Input
+                      placeholder="Search members"
+                      className="text-sm bg-inherit focus-visible:outline-hidden px-2 w-42"
+                      onValueChange={setQuery}
+                      value={query}
+                    />
+                  </div>
+                  <hr className="w-full border-border" />
+                  <CommandList className="flex flex-col gap-2 min-w-32 md:min-w-42 w-full bg-transparent border-none">
+                    <CommandEmpty>No admin members found.</CommandEmpty>
+
+                    {memberList.map((member) => {
+                      const isSelected = member.id === selectedOwner?.id;
+
+                      return (
+                        <CommandItem
+                          key={member.id}
+                          value={member.id.toString()}
+                          onSelect={() => {
+                            setSelectedOwner(member);
+                            setQuery("");
+                            setPopoverOpen(false);
+                          }}
+                          className="cursor-pointer flex gap-1.5"
+                        >
+                          <div className="flex items-center justify-between w-full gap-4">
+                            <span className="whitespace-nowrap">
+                              <span>{member.user.first_name}</span>
+                              &nbsp;
+                              <span>&middot;</span>
+                              &nbsp;
+                              <span className="text-grey text-xs">
+                                {member.user.username}
+                              </span>
+                            </span>
+
+                            <span className="flex size-4 items-center justify-center flex-none py-2.5">
+                              {isSelected && (
+                                <CheckIcon className="size-4 text-grey" />
+                              )}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+
+            {errors.new_owner_id && (
+              <span id="new-owner-error" className="text-red-500 text-sm">
+                {errors.new_owner_id}
+              </span>
+            )}
+          </fieldset>
         </fetcher.Form>
 
         <DialogFooter className="-mx-6 px-6 pt-4 ">

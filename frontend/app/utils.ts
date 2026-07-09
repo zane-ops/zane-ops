@@ -1,4 +1,5 @@
 import type { AuthedUserResponse, WorkspaceMembership } from "~/api/types";
+import { WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
 import { apiClient } from "./api/client";
 
 export function excerpt(text: string, maxLength: number): string {
@@ -459,15 +460,7 @@ export function hasMinRole(
     return user.user.is_superuser;
   }
 
-  const roleMapping = {
-    Guest: 10,
-    Member: 30,
-    Admin: 40,
-    Owner: 50
-  } satisfies Record<
-    WorkspaceMembership["role_name"],
-    WorkspaceMembership["role"]
-  >;
-
-  return user.membership && user.membership.role >= roleMapping[roleName];
+  return (
+    user.membership && user.membership.role >= WORKSPACE_ROLE_MAPPING[roleName]
+  );
 }

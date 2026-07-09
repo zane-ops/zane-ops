@@ -15245,6 +15245,10 @@ paths:
         schema:
           type: integer
       - in: query
+        name: query
+        schema:
+          type: string
+      - in: query
         name: role
         schema:
           type: integer
@@ -34146,10 +34150,12 @@ components:
     WorkspaceMembersListError:
       oneOf:
       - $ref: '#/components/schemas/WorkspaceMembersListRoleErrorComponent'
+      - $ref: '#/components/schemas/WorkspaceMembersListQueryErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           role: '#/components/schemas/WorkspaceMembersListRoleErrorComponent'
+          query: '#/components/schemas/WorkspaceMembersListQueryErrorComponent'
     WorkspaceMembersListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/WorkspaceMembersListValidationError'
@@ -34159,6 +34165,25 @@ components:
         mapping:
           validation_error: '#/components/schemas/WorkspaceMembersListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    WorkspaceMembersListQueryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - query
+          type: string
+          description: '* `query` - query'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     WorkspaceMembersListRoleErrorComponent:
       type: object
       properties:

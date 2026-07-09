@@ -1,6 +1,6 @@
 import { type LucideProps, PackageIcon } from "lucide-react";
 import type { useSpinDelay } from "spin-delay";
-import type { ContainerRegistryType } from "~/api/types";
+import type { ContainerRegistryType, WorkspaceMembership } from "~/api/types";
 import { AWSECSLogo } from "~/components/aws-ecs-logo";
 import { DockerHubLogo } from "~/components/docker-hub-logo";
 import { GithubLogo } from "~/components/github-logo";
@@ -195,3 +195,13 @@ export const THEME_STORAGE_KEY = "__theme";
 export const ZANE_UPDATE_TOAST_ID = "zaneops-update-toast";
 export const ZANEOPS_INTERNAL_DOMAIN = "zaneops.internal";
 export const TEMPLATE_API_HOST = "https://templates.zaneops.dev";
+
+export const WORKSPACE_ROLE_MAPPING = {
+  Guest: 10,
+  Member: 30,
+  Admin: 40,
+  Owner: 50
+} satisfies Record<
+  WorkspaceMembership["role_name"],
+  WorkspaceMembership["role"]
+>;

@@ -8938,8 +8938,21 @@ export interface components {
       user: components["schemas"]["SimpleWorkspaceUser"];
     };
     WorkspaceMembersDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    WorkspaceMembersListError: components["schemas"]["WorkspaceMembersListRoleErrorComponent"];
+    WorkspaceMembersListError: components["schemas"]["WorkspaceMembersListRoleErrorComponent"] | components["schemas"]["WorkspaceMembersListQueryErrorComponent"];
     WorkspaceMembersListErrorResponse400: components["schemas"]["WorkspaceMembersListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    WorkspaceMembersListQueryErrorComponent: {
+      /**
+       * @description * `query` - query
+       * @enum {string}
+       */
+      attr: "query";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
     WorkspaceMembersListRoleErrorComponent: {
       /**
        * @description * `role` - role
@@ -15737,6 +15750,7 @@ export interface operations {
         page?: number;
         /** @description Number of results to return per page. */
         per_page?: number;
+        query?: string;
         /**
          * @description * `10` - Guest
          * * `30` - Member
