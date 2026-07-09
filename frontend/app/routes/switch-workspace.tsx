@@ -40,11 +40,8 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 
   await Promise.all([
     queryClient.invalidateQueries(userQueries.authedUser),
-    queryClient.invalidateQueries({
-      predicate(query) {
-        return query.queryKey[0] === userQueries.currentWorkspace.queryKey[0];
-      }
-    })
+    queryClient.invalidateQueries(userQueries.currentWorkspace),
+    queryClient.invalidateQueries(userQueries.memberships)
   ]);
 
   throw redirect(href("/:workspaceId", { workspaceId: userData.workspace_id }));
