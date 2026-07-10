@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { LogOutIcon, ServerIcon, SettingsIcon, UserIcon } from "lucide-react";
 import { href, useFetcher, useNavigate } from "react-router";
 import type { AuthedUserResponse } from "~/api/types";
@@ -15,7 +15,7 @@ import { userQueries } from "~/lib/queries";
 import { useDeviceSize } from "~/lib/use-device-size";
 
 import { cn } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import { useWorkspaceStore } from "~/lib/workspace-store";
 import { hasMinRole } from "~/utils";
 
 export type UserDropdownProps = {
@@ -29,7 +29,7 @@ function getUserDisplayName(user: AuthedUserResponse["user"]) {
 export function UserHeaderDropdown(props: UserDropdownProps) {
   const fetcher = useFetcher();
   const navigate = useNavigate();
-  const workspaceId = useCurrentWorkspace().id;
+  const workspaceId = useWorkspaceStore((s) => s.workspace?.id);
   const deviceSize = useDeviceSize();
 
   const { data } = useQuery({
@@ -85,7 +85,7 @@ export function UserHeaderDropdown(props: UserDropdownProps) {
               Account Settings
             </DropdownMenuItem>
 
-            {workspaceId && hasMinRole(props.user, "Member") && (
+            {workspaceId && hasMinRole(data, "Member") && (
               <DropdownMenuItem
                 className="my-2"
                 onClick={() => {
@@ -97,7 +97,7 @@ export function UserHeaderDropdown(props: UserDropdownProps) {
               </DropdownMenuItem>
             )}
 
-            {hasMinRole(props.user, "ServerAdmin") && (
+            {hasMinRole(data, "ServerAdmin") && (
               <>
                 <DropdownMenuSeparator className="my-1.5" />
                 <DropdownMenuItem
