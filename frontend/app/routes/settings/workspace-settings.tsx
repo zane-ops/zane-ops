@@ -186,7 +186,7 @@ async function archiveWorkspace(formData: FormData) {
 
   const workspace = await getCurrentWorkspace(queryClient);
 
-  if (formData.get("name")?.toString().trim() !== workspace.name) {
+  if (formData.get("workspace_name")?.toString().trim() !== workspace.name) {
     return {
       errors: {
         type: "validation_error",
