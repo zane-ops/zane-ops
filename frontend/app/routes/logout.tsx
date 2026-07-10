@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { deleteCookie, getCsrfTokenHeader, wait } from "~/utils";
+import { deleteCookie, getCsrfTokenHeader } from "~/utils";
 
 export async function clientAction() {
   const queryClient = getQueryClient();
