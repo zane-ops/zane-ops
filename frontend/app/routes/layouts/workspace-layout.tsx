@@ -15,7 +15,7 @@ export function meta() {
   return [metaTitle("Dashboard")] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader() {
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
   const [memberships, workspace, user] = await Promise.all([
     queryClient.ensureQueryData(userQueries.memberships),
@@ -27,14 +27,22 @@ export async function clientLoader() {
     throw redirect(href("/login"));
   }
 
-  const projects = await queryClient.ensureQueryData(
-    projectQueries.list({ workspaceId: workspace.id })
-  );
+  const [projects, currentProject] = await Promise.all([
+    queryClient.ensureQueryData(
+      projectQueries.list({ workspaceId: workspace.id })
+    ),
+    params.projectSlug
+      ? queryClient.ensureQueryData(
+          projectQueries.single(workspace.id, params.projectSlug)
+        )
+      : undefined
+  ]);
 
   return {
     user,
     workspace,
     projects,
+    currentProject,
     memberships
   };
 }
@@ -55,7 +63,11 @@ export default function WorkspaceLayout({
               projectList={loaderData.projects}
             />
           ) : null,
-          params.envSlug ? <ProjectEnvironmentListHeaderHeaderDropdown /> : null
+          params.envSlug ? (
+            <ProjectEnvironmentListHeaderHeaderDropdown
+              currentProject={loaderData.currentProject}
+            />
+          ) : null
         ]}
         rigthSlot={[
           <CommandBarTrigger />,

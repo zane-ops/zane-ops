@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, ChevronsUpDownIcon, NetworkIcon } from "lucide-react";
-import { Link, href, useFetcher, useNavigate, useParams } from "react-router";
+import { Link, href, useNavigate, useParams } from "react-router";
 import type { Project } from "~/api/types";
-import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -16,7 +15,9 @@ import { projectQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { useCurrentWorkspace } from "~/lib/workspace-store";
 
-export type ProjectEnvironmentListHeaderHeaderDropdownProps = {};
+export type ProjectEnvironmentListHeaderHeaderDropdownProps = {
+  currentProject?: Project;
+};
 
 export function ProjectEnvironmentListHeaderHeaderDropdown(
   props: ProjectEnvironmentListHeaderHeaderDropdownProps
@@ -28,7 +29,8 @@ export function ProjectEnvironmentListHeaderHeaderDropdown(
   };
 
   const { data: project } = useQuery({
-    ...projectQueries.single(workspaceId, projectSlug)
+    ...projectQueries.single(workspaceId, projectSlug),
+    initialData: props.currentProject
   });
 
   const navigate = useNavigate();
