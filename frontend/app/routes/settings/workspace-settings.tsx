@@ -438,7 +438,7 @@ function TransferOwnershipForm({ workspaceId }: TransferOwnershipFormProps) {
 
   const { data: membersResponse } = useQuery(
     workspaceQueries.members(workspaceId, {
-      // role: "Admin",
+      role: "Admin",
       query: debouncedQuery
     })
   );
