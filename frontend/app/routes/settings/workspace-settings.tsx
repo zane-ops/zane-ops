@@ -43,17 +43,18 @@ import {
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
-import type { Select } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import { userQueries, workspaceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
-  getFormErrorsFromResponseData,
-  notFound
+  getFormErrorsFromResponseData
 } from "~/lib/utils";
-import { getCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import { getCsrfTokenHeader, hasMinRole, metaTitle } from "~/utils";
 import type { Route } from "./+types/workspace-settings";
 
@@ -70,19 +71,13 @@ export async function clientLoader({}: Route.ClientLoaderArgs) {
 }
 
 export default function WorkspaceSettingsPage({
-  loaderData,
   matches: {
     "1": {
       loaderData: { user }
     }
   }
 }: Route.ComponentProps) {
-  const { data: workspace } = useQuery({
-    ...userQueries.currentWorkspace,
-    initialData: loaderData.workspace
-  });
-
-  if (!workspace) return null;
+  const workspace = useCurrentWorkspace();
 
   return (
     <section className="flex flex-col gap-4">
@@ -176,7 +171,6 @@ async function updateWorkspace(formData: FormData) {
 
   await Promise.all([
     queryClient.invalidateQueries(userQueries.authedUser),
-    queryClient.invalidateQueries(userQueries.currentWorkspace),
     queryClient.invalidateQueries(userQueries.memberships)
   ]);
   toast.success("Workspace updated successfully!", { closeButton: true });
@@ -221,7 +215,6 @@ async function archiveWorkspace(formData: FormData) {
 
   await Promise.all([
     queryClient.invalidateQueries(userQueries.authedUser),
-    queryClient.invalidateQueries(userQueries.currentWorkspace),
     queryClient.invalidateQueries(userQueries.memberships)
   ]);
 
@@ -265,7 +258,6 @@ async function transferWorkspaceOwnership(formData: FormData) {
 
   await Promise.all([
     queryClient.invalidateQueries(userQueries.authedUser),
-    queryClient.invalidateQueries(userQueries.currentWorkspace),
     queryClient.invalidateQueries(userQueries.memberships),
     queryClient.invalidateQueries({
       queryKey: workspaceQueries.members(workspace.id).queryKey.slice(0, 3)

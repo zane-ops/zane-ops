@@ -58,20 +58,6 @@ export const userQueries = {
     }
   }),
 
-  currentWorkspace: queryOptions({
-    queryKey: ["WORKSPACE_MEMBERSHIP", "CURRENT"] as const,
-    queryFn: async ({ signal }) => {
-      const { data } = await apiClient.GET("/api/workspace/", { signal });
-      return data ?? null;
-    },
-    refetchInterval: (query) => {
-      if (query.state.data) {
-        return durationToMs(30, "minutes");
-      }
-      return false;
-    }
-  }),
-
   checkUserExistence: queryOptions({
     queryKey: ["CHECK_USER_EXISTENCE"] as const,
     queryFn: async ({ signal }) => {

@@ -17,13 +17,13 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const [memberships, workspace, user] = await Promise.all([
+  const [memberships, user] = await Promise.all([
     queryClient.ensureQueryData(userQueries.memberships),
-    queryClient.ensureQueryData(userQueries.currentWorkspace),
     queryClient.ensureQueryData(userQueries.authedUser)
   ]);
 
-  if (!memberships || !workspace || !user?.membership) {
+  const workspace = user?.membership?.workspace;
+  if (memberships === null || !workspace) {
     throw redirect(href("/login"));
   }
 

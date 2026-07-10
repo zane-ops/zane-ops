@@ -40,7 +40,6 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 
   await Promise.all([
     queryClient.invalidateQueries(userQueries.authedUser),
-    queryClient.invalidateQueries(userQueries.currentWorkspace),
     queryClient.invalidateQueries(userQueries.memberships)
   ]);
 
