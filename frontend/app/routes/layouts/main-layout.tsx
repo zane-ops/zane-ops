@@ -17,8 +17,11 @@ import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { serverQueries, userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
+import { Header } from "~/components/header/header";
+import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
 import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
 import { getQueryClient } from "~/lib/query-client";
+import { hasMinRole } from "~/utils";
 import type { Route } from "./+types/main-layout";
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
@@ -48,14 +51,59 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   return { user };
 }
 
-export default function MainLayout({}: Route.ComponentProps) {
+export default function MainLayout({
+  loaderData: { user }
+}: Route.ComponentProps) {
   return (
     <div className="min-h-screen flex flex-col justify-between">
       <NavigationProgress />
-      <Outlet />
-      <ZaneUpdateNotifier />
+      {user.membership ? (
+        <Outlet />
+      ) : (
+        <>
+          <Header rigthSlot={<UserHeaderDropdown user={user} />} />
+          <main
+            className={cn(
+              "grow container p-6 relative overflow-y-clip",
+              "flex flex-col gap-10",
+              !import.meta.env.PROD ? "my-14" : "my-7"
+            )}
+          >
+            <EmptyWorkspacesHome />
+          </main>
+        </>
+      )}
       <Footer />
+
+      {hasMinRole(user, "ServerAdmin") && <ZaneUpdateNotifier />}
     </div>
+  );
+}
+
+function EmptyWorkspacesHome() {
+  return (
+    <>
+      <h1 className="text-2xl font-medium">Dashboard</h1>
+
+      <div
+        className={cn(
+          "flex flex-col items-center justify-center gap-2 px-6 py-20",
+          "border-border rounded-lg w-full border-dashed border-1 text-grey",
+          "col-span-full"
+        )}
+      >
+        <h3 className="text-2xl font-medium text-card-foreground">
+          Welcome to ZaneOps
+        </h3>
+        <p>
+          Your account isn't part of any workspace yet, so there's nothing to
+          show here.
+        </p>
+        <p>
+          Ask your administrator to invite you to a workspace to get started.
+        </p>
+      </div>
+    </>
   );
 }
 
@@ -123,114 +171,112 @@ function Footer() {
   const { setTheme, theme } = useTheme();
 
   return (
-    <>
-      <footer className="flex flex-wrap justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
-        <div className="items-center gap-4 md:gap-10 flex flex-wrap">
-          {socialLinks.map((link) =>
-            link.id === "sponsor" ? (
-              <Button
-                asChild
-                key={link.id}
-                variant="outline"
-                className="bg-grey/20 border-grey/20"
-              >
-                <a
-                  className="flex items-center gap-2 pl-2.5"
-                  href={link.url}
-                  target="_blank"
-                >
-                  {link.icon}
-                  {link.name}
-                </a>
-              </Button>
-            ) : (
+    <footer className="flex flex-wrap justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
+      <div className="items-center gap-4 md:gap-10 flex flex-wrap">
+        {socialLinks.map((link) =>
+          link.id === "sponsor" ? (
+            <Button
+              asChild
+              key={link.id}
+              variant="outline"
+              className="bg-grey/20 border-grey/20"
+            >
               <a
-                key={link.id}
-                className={cn("flex underline items-center gap-2")}
+                className="flex items-center gap-2 pl-2.5"
                 href={link.url}
                 target="_blank"
               >
                 {link.icon}
                 {link.name}
               </a>
-            )
-          )}
-        </div>
+            </Button>
+          ) : (
+            <a
+              key={link.id}
+              className={cn("flex underline items-center gap-2")}
+              href={link.url}
+              target="_blank"
+            >
+              {link.icon}
+              {link.name}
+            </a>
+          )
+        )}
+      </div>
 
-        <div className="flex gap-4 flex-wrap items-center">
-          <ToggleGroup
-            variant="outline"
-            type="single"
-            value={theme}
-            onValueChange={(value) => value && setTheme(value as Theme)}
-            className="gap-0 relative top-0.5 rounded-full border border-border p-0.5"
+      <div className="flex gap-4 flex-wrap items-center">
+        <ToggleGroup
+          variant="outline"
+          type="single"
+          value={theme}
+          onValueChange={(value) => value && setTheme(value as Theme)}
+          className="gap-0 relative top-0.5 rounded-full border border-border p-0.5"
+        >
+          <ToggleGroupItem
+            className={cn(
+              "rounded-full border-none text-grey cursor-pointer",
+              "hover:text-card-foreground hover:bg-transparent",
+              "data-[state=on]:text-card-foreground shadow-none"
+            )}
+            value="LIGHT"
           >
-            <ToggleGroupItem
-              className={cn(
-                "rounded-full border-none text-grey cursor-pointer",
-                "hover:text-card-foreground hover:bg-transparent",
-                "data-[state=on]:text-card-foreground shadow-none"
-              )}
-              value="LIGHT"
-            >
-              <span className="sr-only">light theme</span>
-              <SunIcon size={16} />
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              className={cn(
-                "rounded-full border-none text-grey cursor-pointer",
-                "hover:text-card-foreground hover:bg-transparent",
-                "data-[state=on]:text-card-foreground shadow-none"
-              )}
-              value="SYSTEM"
-            >
-              <span className="sr-only">system theme</span>
-              <LaptopMinimalIcon size={16} />
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              className={cn(
-                "rounded-full border-none text-grey cursor-pointer",
-                "hover:text-card-foreground hover:bg-transparent",
-                "data-[state=on]:text-card-foreground shadow-none"
-              )}
-              value="DARK"
-            >
-              <span className="sr-only">dark theme</span>
-              <MoonIcon size={16} />
-            </ToggleGroupItem>
-          </ToggleGroup>
+            <span className="sr-only">light theme</span>
+            <SunIcon size={16} />
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            className={cn(
+              "rounded-full border-none text-grey cursor-pointer",
+              "hover:text-card-foreground hover:bg-transparent",
+              "data-[state=on]:text-card-foreground shadow-none"
+            )}
+            value="SYSTEM"
+          >
+            <span className="sr-only">system theme</span>
+            <LaptopMinimalIcon size={16} />
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            className={cn(
+              "rounded-full border-none text-grey cursor-pointer",
+              "hover:text-card-foreground hover:bg-transparent",
+              "data-[state=on]:text-card-foreground shadow-none"
+            )}
+            value="DARK"
+          >
+            <span className="sr-only">dark theme</span>
+            <MoonIcon size={16} />
+          </ToggleGroupItem>
+        </ToggleGroup>
 
-          {data?.commit_sha && (
-            <span className="flex items-center gap-2">
-              <GitCommitVerticalIcon size={15} />
-              <span>
-                commit&nbsp;
-                <a
-                  className="underline font-semibold"
-                  href={`https://github.com/zane-ops/zane-ops/tree/${data.commit_sha}`}
-                  target="_blank"
-                >
-                  #{data.commit_sha.substring(0, 7)}
-                </a>
-              </span>
+        {data?.commit_sha && (
+          <span className="flex items-center gap-2">
+            <GitCommitVerticalIcon size={15} />
+            <span>
+              commit&nbsp;
+              <a
+                className="underline font-semibold"
+                href={`https://github.com/zane-ops/zane-ops/tree/${data.commit_sha}`}
+                target="_blank"
+              >
+                #{data.commit_sha.substring(0, 7)}
+              </a>
             </span>
-          )}
-          {data?.image_version && image_version_url && (
-            <span className="flex items-center gap-2">
-              <TagIcon size={15} />
-              <span>
-                <a
-                  className="underline font-semibold"
-                  href={image_version_url}
-                  target="_blank"
-                >
-                  {data.image_version}
-                </a>
-              </span>
+          </span>
+        )}
+        {data?.image_version && image_version_url && (
+          <span className="flex items-center gap-2">
+            <TagIcon size={15} />
+            <span>
+              <a
+                className="underline font-semibold"
+                href={image_version_url}
+                target="_blank"
+              >
+                {data.image_version}
+              </a>
             </span>
-          )}
-        </div>
-      </footer>
-    </>
+          </span>
+        )}
+      </div>
+    </footer>
   );
 }
