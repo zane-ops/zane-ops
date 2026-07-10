@@ -20,7 +20,7 @@ import { Separator } from "~/components/ui/separator";
 import { previewTemplatesQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { isNotFoundError } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/preview-templates";
 
@@ -51,7 +51,7 @@ export default function PreviewTemplatesPage({
   loaderData,
   params
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { data: templates } = useQuery({
     ...previewTemplatesQueries.list(workspaceId, params.projectSlug),
     initialData: loaderData.templates

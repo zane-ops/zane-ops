@@ -31,7 +31,7 @@ import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import { sharedRegistryCredentialsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/registry-credentials-details";
 
@@ -71,7 +71,7 @@ export default function ContainerRegistryCredentialDetailsPage() {
 function EditRegistryCredentialsForm() {
   const fetcher = useFetcher<typeof clientAction>();
   const params = useParams<Route.ComponentProps["params"]>();
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const loaderData = useLoaderData<typeof clientLoader>();
 
   const { data: credentials } = useQuery({

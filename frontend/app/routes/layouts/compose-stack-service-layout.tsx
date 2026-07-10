@@ -47,7 +47,7 @@ import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import { cn, notFound } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 import {
   durationToMs,
@@ -92,7 +92,7 @@ export default function ComposeStackServiceLayoutPage({
   params,
   loaderData
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
       workspaceId,

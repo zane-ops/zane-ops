@@ -67,7 +67,7 @@ import {
   getFormErrorsFromResponseData,
   isNotFoundError
 } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/project-environment-list";
 
@@ -86,7 +86,7 @@ export default function ProjectEnvironmentsPage({
   },
   params
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { data: project } = useQuery({
     ...projectQueries.single(workspaceId, params.projectSlug),
     initialData: loaderData.project

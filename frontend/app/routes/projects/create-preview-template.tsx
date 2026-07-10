@@ -49,7 +49,7 @@ import {
   getFormErrorsFromResponseData,
   isNotFoundError
 } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-preview-template";
 
@@ -93,7 +93,7 @@ function EditPreviewTemplateForm({
 }: EditPreviewTemplateFormProps) {
   const fetcher = useFetcher<typeof clientAction>();
   const params = useParams<Route.ComponentProps["params"]>();
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const [authEnabled, setAuthEnabled] = React.useState(false);

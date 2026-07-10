@@ -51,7 +51,7 @@ import {
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection } from "~/lib/types";
 import { cn, formatLogTime } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { formatDuration } from "~/utils";
 import type { Route } from "./+types/deployment-http-logs";
 
@@ -125,7 +125,7 @@ export default function DeploymentHttpLogsPage({
     }
   }
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
@@ -937,7 +937,7 @@ function HostFilter({ hosts }: HostFilterProps) {
     serviceSlug: service_slug,
     envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
@@ -985,7 +985,7 @@ function PathFilter({ paths }: PathFilterProps) {
     serviceSlug: service_slug,
     envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
@@ -1033,7 +1033,7 @@ function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
     serviceSlug: service_slug,
     envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
@@ -1079,7 +1079,7 @@ function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
     serviceSlug: service_slug,
     envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 

@@ -23,7 +23,7 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
 import { formattedTime, metaTitle } from "~/utils";
 import type { Route } from "./+types/deployment-layout";
@@ -80,7 +80,7 @@ export default function DeploymentLayoutPage({
     envSlug: env_slug,
     deploymentHash: deployment_hash
   } = params;
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
 
   const { data: deployment } = useQuery({
     ...deploymentQueries.single({

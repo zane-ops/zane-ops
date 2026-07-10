@@ -15,7 +15,7 @@ import { userQueries } from "~/lib/queries";
 import { useDeviceSize } from "~/lib/use-device-size";
 
 import { cn } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { hasMinRole } from "~/utils";
 
 export type UserDropdownProps = {
@@ -29,7 +29,7 @@ function getUserDisplayName(user: AuthedUserResponse["user"]) {
 export function UserHeaderDropdown(props: UserDropdownProps) {
   const fetcher = useFetcher();
   const navigate = useNavigate();
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const deviceSize = useDeviceSize();
 
   const { data } = useQuery({

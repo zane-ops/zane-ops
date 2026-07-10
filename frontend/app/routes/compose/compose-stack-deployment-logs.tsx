@@ -21,7 +21,7 @@ import { REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER } from "~/lib/cons
 import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-deployment-logs";
 
 export async function clientLoader({
@@ -54,7 +54,7 @@ export default function ComposeStackDeploymentLogsPage({
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
 
   const queryClient = useQueryClient();
   const logsQuery = useInfiniteQuery({

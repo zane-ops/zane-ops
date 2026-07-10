@@ -4,7 +4,7 @@ import { useFetcher } from "react-router";
 import { ComposeStackServiceCard } from "~/components/compose-stack-service-card";
 import { SubmitButton } from "~/components/ui/button";
 import { composeStackQueries } from "~/lib/queries";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-service-list";
 
 export default function ComposeStackServicesPage({
@@ -13,7 +13,7 @@ export default function ComposeStackServicesPage({
     3: { loaderData }
   }
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
       workspaceId: workspaceId,

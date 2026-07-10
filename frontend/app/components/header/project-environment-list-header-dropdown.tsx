@@ -14,14 +14,14 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { projectQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 
 export type ProjectEnvironmentListHeaderHeaderDropdownProps = {};
 
 export function ProjectEnvironmentListHeaderHeaderDropdown(
   props: ProjectEnvironmentListHeaderHeaderDropdownProps
 ) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { envSlug, projectSlug } = useParams() as {
     projectSlug: string;
     envSlug: string;

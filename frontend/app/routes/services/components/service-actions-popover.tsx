@@ -17,7 +17,7 @@ import {
   PopoverTrigger
 } from "~/components/ui/popover";
 import { serviceQueries } from "~/lib/queries";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type {
   ToggleServiceState,
   clientAction as toggleClientAction
@@ -147,7 +147,7 @@ function ToggleServiceForm({
   projectSlug,
   envSlug
 }: ToggleServiceFormProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const fetcher = useFetcher<typeof toggleClientAction>();
   const deploymentListQuery = useQuery(
     serviceQueries.deploymentList({

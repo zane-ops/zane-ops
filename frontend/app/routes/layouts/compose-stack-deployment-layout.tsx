@@ -13,7 +13,7 @@ import { SubmitButton } from "~/components/ui/button";
 import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, notFound } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { clientAction as cancelDeploymentAction } from "~/routes/compose/cancel-compose-deployment";
 import { formattedTime, metaTitle } from "~/utils";
 import type { Route } from "./+types/compose-stack-deployment-layout";
@@ -54,7 +54,7 @@ export default function ComposeStackDeploymentLayoutPage({
   loaderData,
   params
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { data: deployment } = useQuery({
     ...composeStackQueries.singleDeployment({
       workspaceId,

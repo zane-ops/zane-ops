@@ -36,7 +36,7 @@ import {
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
 import { cn, formatLogTime, notFound } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-service-http-logs";
 
 import type { DateRange } from "react-day-picker";
@@ -130,7 +130,7 @@ export default function ComposeStackServiceHttpLogsPage({
   params
 }: Route.ComponentProps) {
   const queryClient = getQueryClient();
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
@@ -937,7 +937,7 @@ type HostFilterProps = {
 };
 
 function HostFilter({ hosts }: HostFilterProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
@@ -986,7 +986,7 @@ type PathFilterProps = {
 };
 
 function PathFilter({ paths }: PathFilterProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
@@ -1034,7 +1034,7 @@ type ClientIpFilterProps = {
 };
 
 function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
@@ -1081,7 +1081,7 @@ type UserAgentFilterProps = {
 };
 
 function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     composeStackSlug: stack_slug,

@@ -35,7 +35,7 @@ import { composeStackQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import { cn } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { clientAction as deployClientAction } from "~/routes/compose/deploy-compose-stack";
 import { durationToMs, wait } from "~/utils";
 
@@ -139,7 +139,7 @@ function ToggleStackForm({
   projectSlug,
   envSlug
 }: ToggleStackFormProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const fetcher = useFetcher<typeof toggleClientAction>();
 
   const { queue, queueToggleItem, dequeueToggleItem } =

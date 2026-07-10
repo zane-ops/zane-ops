@@ -9,7 +9,7 @@ import {
 } from "~/components/ui/command";
 import { gitAppsQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 
 export type GitRepositoryBranchListInputProps = {
   appId?: string;
@@ -36,7 +36,7 @@ export function GitRepositoryBranchListInput({
   searchQuery: branchQuery,
   setSearchQuery: setBranchQuery
 }: GitRepositoryBranchListInputProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const [isComboxOpen, setComboxOpen] = React.useState(false);
 
   const branchesListQuery = useQuery(

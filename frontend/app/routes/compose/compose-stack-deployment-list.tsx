@@ -57,7 +57,7 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import {
   capitalizeText,
   formatElapsedTime,
@@ -110,7 +110,7 @@ export default function ComposeStackDeploymentListPage({
     queued_at_after: search.queued_at_after,
     queued_at_before: search.queued_at_before
   };
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const {
     data: { results: deploymentList, count: totalDeployments }
   } = useQuery({

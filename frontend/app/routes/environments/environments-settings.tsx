@@ -55,7 +55,7 @@ import {
   cn,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/environments-settings";
 
@@ -65,7 +65,7 @@ export default function EnvironmentSettingsPage({
     "3": { loaderData }
   }
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { data: env } = useQuery({
     ...environmentQueries.single(
       workspaceId,

@@ -17,6 +17,7 @@ import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { serverQueries, userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
+import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
 import { getQueryClient } from "~/lib/query-client";
 import type { Route } from "./+types/main-layout";
 
@@ -37,7 +38,8 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     const url = new URL(request.url);
     if (url.pathname !== "/" && url.pathname !== "/login") {
       const params = new URLSearchParams([["redirect_to", url.pathname]]);
-      redirectPathName = `${href("/login")}?${params.toString()}`;
+
+      redirectPathName = [href("/login"), "?", params.toString()].join();
     }
 
     throw redirect(redirectPathName);
@@ -51,6 +53,7 @@ export default function MainLayout({}: Route.ComponentProps) {
     <div className="min-h-screen flex flex-col justify-between">
       <NavigationProgress />
       <Outlet />
+      <ZaneUpdateNotifier />
       <Footer />
     </div>
   );

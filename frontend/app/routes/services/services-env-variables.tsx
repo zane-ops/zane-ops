@@ -60,7 +60,7 @@ import {
 import { serviceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader, pluralize, wait } from "~/utils";
 import type { Route } from "./+types/services-env-variables";
 
@@ -84,7 +84,7 @@ export default function ServiceEnvVariablesPage({
     }
   }
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { data: service } = useQuery({
     ...serviceQueries.single({
       workspaceId,

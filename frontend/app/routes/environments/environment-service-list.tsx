@@ -33,7 +33,7 @@ import { Popover, PopoverTrigger } from "~/components/ui/popover";
 import { environmentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { timeAgoFormatter } from "~/utils";
 import type { Route } from "./+types/environment-service-list";
 
@@ -78,7 +78,7 @@ export default function EnvironmentServiceListPage({
   params: { projectSlug: project_slug, envSlug: env_slug },
   loaderData
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams] = useSearchParams();
   const query = searchParams.get("query") ?? "";
 

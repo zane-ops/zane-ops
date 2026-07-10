@@ -39,7 +39,7 @@ import {
   sharedRegistryCredentialsQueries
 } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import {
   type clientAction,
   useServiceQuery
@@ -56,7 +56,7 @@ export function ServiceSourceForm({
   project_slug,
   env_slug
 }: ServiceFormProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const fetcher = useFetcher<typeof clientAction>();
   const isPending = fetcher.state !== "idle";
 

@@ -25,7 +25,7 @@ import {
 import { projectQueries } from "~/lib/queries";
 import { useDeviceSize } from "~/lib/use-device-size";
 import { cn } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { durationToMs, stringToColor } from "~/utils";
 
 export type WorkspaceProjectListHeaderDropdownProps = {
@@ -36,7 +36,7 @@ export function WorkspaceProjectListHeaderDropdown(
   props: WorkspaceProjectListHeaderDropdownProps
 ) {
   const deviceSize = useDeviceSize();
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const params = useParams() as { projectSlug: string };
 
   const { data: projectList } = useQuery({

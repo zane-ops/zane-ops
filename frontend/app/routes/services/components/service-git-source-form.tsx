@@ -39,7 +39,7 @@ import {
 } from "~/components/ui/tooltip";
 import { gitAppsQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
@@ -58,7 +58,7 @@ export function ServiceGitSourceForm({
   env_slug
 }: ServiceGitSourceFormProps) {
   const loaderData = useLoaderData<Route.ComponentProps["loaderData"]>();
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { data: gitAppList } = useQuery({
     ...gitAppsQueries.list(workspaceId),
     initialData: loaderData.gitAppList

@@ -57,7 +57,7 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, formatLogTime } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-service-runtime-logs";
 
 export async function clientLoader({
@@ -100,7 +100,7 @@ export async function clientLoader({
 export default function ComposeStackRuntimeLogsPage({
   params
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const search = stackRuntimeLogSearchSchema.parse(searchParams);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
@@ -453,7 +453,7 @@ const HeaderSection = React.memo(function HeaderSection({
   const search = stackRuntimeLogSearchSchema.parse(searchParams);
 
   const params = useParams() as Route.ComponentProps["params"];
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const {
     3: { loaderData }
   } = useMatches() as Route.ComponentProps["matches"];

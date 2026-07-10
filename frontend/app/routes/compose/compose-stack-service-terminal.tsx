@@ -24,7 +24,7 @@ import {
 } from "~/components/ui/tooltip";
 import { composeStackQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-service-terminal";
 
 export default function ComposeStackServiceTerminalPage({
@@ -35,7 +35,7 @@ export default function ComposeStackServiceTerminalPage({
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [counter, setCounter] = React.useState(0);
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
       workspaceId,

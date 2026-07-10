@@ -20,7 +20,7 @@ import {
 import { gitAppsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/create-private-git-service";
 
@@ -48,7 +48,7 @@ export default function CreatePrivateGitServicePage({
   params,
   loaderData
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { data: gitAppList } = useQuery({
     ...gitAppsQueries.list(workspaceId),
     initialData: loaderData.gitAppList

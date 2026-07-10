@@ -30,7 +30,7 @@ import {
 } from "~/components/ui/select";
 import { deploymentQueries, metrisSearch, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import {
   convertValueToBytes,
   formatStorageValue,
@@ -84,7 +84,7 @@ export default function DeploymentMetricsPage({
     envSlug: env_slug
   }
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = metrisSearch.parse({
     time_range: searchParams.get("time_range")
@@ -377,9 +377,10 @@ export default function DeploymentMetricsPage({
                     domain={[
                       0,
                       Math.max(
-                        ...metrics
-                          .map((m) => [m.total_net_rx, m.total_net_tx])
-                          .flat()
+                        ...metrics.flatMap((m) => [
+                          m.total_net_rx,
+                          m.total_net_tx
+                        ])
                       ) + convertValueToBytes(10, "MEGABYTES")
                     ]}
                     tickFormatter={(value) => {
@@ -514,9 +515,10 @@ export default function DeploymentMetricsPage({
                     domain={[
                       0,
                       Math.max(
-                        ...metrics
-                          .map((m) => [m.total_disk_write, m.total_disk_read])
-                          .flat()
+                        ...metrics.flatMap((m) => [
+                          m.total_disk_write,
+                          m.total_disk_read
+                        ])
                       ) + convertValueToBytes(10, "MEGABYTES")
                     ]}
                     tickFormatter={(value) => {

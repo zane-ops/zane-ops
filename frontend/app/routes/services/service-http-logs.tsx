@@ -50,7 +50,7 @@ import {
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
 import { cn, formatLogTime, notFound } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { formatDuration } from "~/utils";
 import type { Route } from "./+types/service-http-logs";
 
@@ -135,7 +135,7 @@ export default function ServiceHttpLogsPage({
     }
   }
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
@@ -943,7 +943,7 @@ type HostFilterProps = {
 };
 
 function HostFilter({ hosts }: HostFilterProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -992,7 +992,7 @@ type PathFilterProps = {
 };
 
 function PathFilter({ paths }: PathFilterProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -1040,7 +1040,7 @@ type ClientIpFilterProps = {
 };
 
 function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -1087,7 +1087,7 @@ type UserAgentFilterProps = {
 };
 
 function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     serviceSlug: service_slug,

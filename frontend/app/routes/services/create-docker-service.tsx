@@ -57,7 +57,7 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-docker-service";
 
@@ -255,7 +255,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   );
 
   const loaderData = useLoaderData<typeof clientLoader>();
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { data: registries } = useQuery({
     ...sharedRegistryCredentialsQueries.list(workspaceId),
     initialData: loaderData.registries

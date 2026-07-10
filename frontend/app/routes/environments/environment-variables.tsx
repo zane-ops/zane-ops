@@ -54,7 +54,7 @@ import {
   cn,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader, pluralize } from "~/utils";
 import type { Route } from "./+types/environment-variables";
 
@@ -64,7 +64,7 @@ export default function EnvironmentVariablesPage({
   },
   params
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { data: environment } = useQuery({
     ...environmentQueries.single(
       workspaceId,

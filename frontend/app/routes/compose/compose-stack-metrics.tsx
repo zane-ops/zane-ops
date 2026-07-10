@@ -36,7 +36,7 @@ import {
   userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import {
   formatStorageValue,
   getMaxDomainForStorageValue,
@@ -88,7 +88,7 @@ export default function ComposeStackMetricsPage({
     time_range: searchParams.get("time_range"),
     service_names: searchParams.getAll("service_names")
   });
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { data } = useQuery({
     ...composeStackQueries.metrics({
       workspaceId: workspaceId,

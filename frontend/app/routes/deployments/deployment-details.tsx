@@ -73,7 +73,7 @@ import {
 } from "~/components/ui/tooltip";
 import { deploymentQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 
 hljs.registerLanguage("json", json);
 
@@ -88,7 +88,7 @@ export default function DeploymentDetailsPage({
     "3": { loaderData: initialData }
   }
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { data: deployment } = useQuery({
     ...deploymentQueries.single({
       workspaceId,

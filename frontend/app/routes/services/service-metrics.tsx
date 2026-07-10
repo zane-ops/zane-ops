@@ -30,7 +30,7 @@ import {
 } from "~/components/ui/select";
 import { metrisSearch, serviceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import {
   convertValueToBytes,
   formatStorageValue,
@@ -81,7 +81,7 @@ export default function ServiceMetricsPage({
     envSlug: env_slug
   }
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = metrisSearch.parse({
     time_range: searchParams.get("time_range")

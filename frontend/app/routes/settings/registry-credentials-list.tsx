@@ -32,7 +32,7 @@ import {
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import { sharedRegistryCredentialsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/registry-credentials-list";
 
@@ -56,7 +56,7 @@ export async function clientLoader() {
 export default function ContainerRegistryCredentialsPage({
   loaderData
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const { data: credentials } = useQuery({
     ...sharedRegistryCredentialsQueries.list(workspaceId),
     initialData: loaderData.credentials

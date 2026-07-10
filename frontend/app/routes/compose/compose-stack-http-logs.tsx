@@ -34,7 +34,7 @@ import {
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
 import { cn, formatLogTime, notFound } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-http-logs";
 
 import type { DateRange } from "react-day-picker";
@@ -128,7 +128,7 @@ export default function ComposeStackHttpLogsPage({
     envSlug: env_slug
   }
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const queryClient = getQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
@@ -961,7 +961,7 @@ type HostFilterProps = {
 };
 
 function HostFilter({ hosts }: HostFilterProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
@@ -1010,7 +1010,7 @@ type PathFilterProps = {
 };
 
 function PathFilter({ paths }: PathFilterProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
@@ -1058,7 +1058,7 @@ type ClientIpFilterProps = {
 };
 
 function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
@@ -1105,7 +1105,7 @@ type UserAgentFilterProps = {
 };
 
 function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     composeStackSlug: stack_slug,

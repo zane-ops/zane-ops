@@ -29,7 +29,7 @@ import {
 } from "~/components/ui/tooltip";
 import { gitAppsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/git-apps-list";
 
@@ -55,7 +55,7 @@ export default function GitConnectorsListPage({
   loaderData
 }: Route.ComponentProps) {
   const navigate = useNavigate();
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
 
   const { data: gitAppList } = useQuery({
     ...gitAppsQueries.list(workspaceId),

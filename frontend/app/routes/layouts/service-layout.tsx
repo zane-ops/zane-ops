@@ -42,7 +42,7 @@ import { serverQueries, serviceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { ValueOf } from "~/lib/types";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { ServiceActionsPopover } from "~/routes/services/components/service-actions-popover";
 import {
   durationToMs,
@@ -109,7 +109,7 @@ export default function ServiceDetailsLayout({
     envSlug: env_slug
   }
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
   const location = useLocation();
 
   const { data: service } = useQuery({
