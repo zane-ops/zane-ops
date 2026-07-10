@@ -1,8 +1,9 @@
-import { hashKey } from "@tanstack/react-query";
+import { type QueryClient, hashKey } from "@tanstack/react-query";
 import { create } from "zustand";
 import type { AuthedUserResponse, WorkspaceMembership } from "~/api/types";
 import { userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { notFound } from "~/lib/utils";
 
 type Workspace = NonNullable<
   Awaited<ReturnType<NonNullable<typeof userQueries.currentWorkspace.queryFn>>>
@@ -44,10 +45,6 @@ export function useCurrentWorkspace() {
   return workspace;
 }
 
-/**
- * Only for components rendered within workspace-scoped routes
- * (workspace-layout.tsx and below), where a current workspace is guaranteed.
- */
 export function useCurrentWorkspaceMembership() {
   const membership = useWorkspaceMembershipStore((s) => s.membership);
   if (!membership) {
@@ -56,6 +53,23 @@ export function useCurrentWorkspaceMembership() {
     );
   }
   return membership;
+}
+
+/**
+ * Only for `clientLoader`/`clientAction` (run outside React, so the hooks
+ * above can't be used there). Fetches the current workspace the same way
+ * every other query in this codebase is fetched, but centralizes the
+ * "what if there isn't one" case instead of leaving it to each call site to
+ * null-check or non-null-assert.
+ */
+export async function getCurrentWorkspace(queryClient: QueryClient) {
+  const workspace = await queryClient.ensureQueryData(
+    userQueries.currentWorkspace
+  );
+  if (!workspace) {
+    throw notFound("Workspace not found");
+  }
+  return workspace;
 }
 
 /**
@@ -69,10 +83,17 @@ export function useCurrentWorkspaceMembership() {
  * update the store in that same window, well before any component reads it.
  */
 const authedUserHash = hashKey(userQueries.authedUser.queryKey);
+const currentWorkspaceHash = hashKey(userQueries.currentWorkspace.queryKey);
 
 getQueryClient()
   .getQueryCache()
   .subscribe((event) => {
+    if (event.query.queryHash === currentWorkspaceHash) {
+      useWorkspaceStore.setState({
+        workspace: (event.query.state.data as Workspace | undefined) ?? null
+      });
+    }
+
     if (event.query.queryHash === authedUserHash) {
       const authedUser = event.query.state.data as
         | AuthedUserResponse

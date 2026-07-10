@@ -57,6 +57,7 @@ import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
 import { gitAppsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-git-service-from-gitapp";
 
@@ -68,9 +69,7 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const gitApp = await queryClient.ensureQueryData(
     gitAppsQueries.single(workspaceId, params.gitAppId)
   );

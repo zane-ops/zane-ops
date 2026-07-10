@@ -23,7 +23,10 @@ import {
 import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import { ComposeStackActionsPopover } from "~/routes/compose/components/compose-stack-actions-popover";
 import { ComposeStackChangesModal } from "~/routes/compose/components/compose-stack-changes-modal";
 import { metaTitle } from "~/utils";
@@ -40,9 +43,7 @@ export function meta({ params, error }: Route.MetaArgs) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const stack = await queryClient.ensureQueryData(
     composeStackQueries.single({
       workspaceId,

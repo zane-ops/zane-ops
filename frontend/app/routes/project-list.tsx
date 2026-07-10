@@ -27,18 +27,15 @@ import {
   userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, notFound } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import { cn } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const workspace = await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  );
-
-  if (!workspace) {
-    throw notFound("Oops");
-  }
+  const workspace = await getCurrentWorkspace(queryClient);
 
   const searchParams = new URL(request.url).searchParams;
 

@@ -47,7 +47,10 @@ import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import { cn, notFound } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 import {
   durationToMs,
@@ -61,9 +64,7 @@ import type { Route } from "./+types/compose-stack-service-layout";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const stack = await queryClient.ensureQueryData(
     composeStackQueries.single({
       workspaceId,

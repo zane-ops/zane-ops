@@ -7,6 +7,7 @@ import {
   userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/deploy-compose-stack";
 
@@ -28,9 +29,7 @@ export async function clientAction({
   }
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
 
   const commit_message = formData.get("commit_message")?.toString();

@@ -23,7 +23,10 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
 import { formattedTime, metaTitle } from "~/utils";
 import type { Route } from "./+types/deployment-layout";
@@ -39,9 +42,7 @@ export function meta({ params, error }: Route.MetaArgs) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const [service, limits, deployment] = await Promise.all([
     queryClient.ensureQueryData(
       serviceQueries.single({

@@ -50,7 +50,10 @@ import {
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
 import { cn, formatLogTime, notFound } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import { formatDuration } from "~/utils";
 import type { Route } from "./+types/service-http-logs";
 
@@ -63,9 +66,7 @@ export async function clientLoader({
   }
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const service = await queryClient.ensureQueryData(
     serviceQueries.single({
       workspaceId,

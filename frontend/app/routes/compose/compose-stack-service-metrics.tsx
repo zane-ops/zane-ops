@@ -34,7 +34,10 @@ import {
   userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import {
   formatStorageValue,
   getMaxDomainForStorageValue,
@@ -47,9 +50,7 @@ export async function clientLoader({
   params
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const searchParams = new URL(request.url).searchParams;
   const filters = stackMetrisSearch.parse({
     time_range: searchParams.get("time_range")

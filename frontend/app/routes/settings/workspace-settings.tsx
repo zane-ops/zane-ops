@@ -53,6 +53,7 @@ import {
   getFormErrorsFromResponseData,
   notFound
 } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader, hasMinRole, metaTitle } from "~/utils";
 import type { Route } from "./+types/workspace-settings";
 
@@ -64,13 +65,7 @@ export function meta() {
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-
-  const workspace = await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  );
-  if (!workspace) {
-    throw notFound("Oops !");
-  }
+  const workspace = await getCurrentWorkspace(queryClient);
   return { workspace };
 }
 
@@ -180,6 +175,7 @@ async function updateWorkspace(formData: FormData) {
   }
 
   await Promise.all([
+    queryClient.invalidateQueries(userQueries.authedUser),
     queryClient.invalidateQueries(userQueries.currentWorkspace),
     queryClient.invalidateQueries(userQueries.memberships)
   ]);
@@ -194,10 +190,7 @@ async function updateWorkspace(formData: FormData) {
 async function archiveWorkspace(formData: FormData) {
   const queryClient = getQueryClient();
 
-  const workspace = await queryClient.fetchQuery(userQueries.currentWorkspace);
-  if (!workspace) {
-    throw redirect("/");
-  }
+  const workspace = await getCurrentWorkspace(queryClient);
 
   if (formData.get("name")?.toString().trim() !== workspace.name) {
     return {
@@ -227,6 +220,7 @@ async function archiveWorkspace(formData: FormData) {
   }
 
   await Promise.all([
+    queryClient.invalidateQueries(userQueries.authedUser),
     queryClient.invalidateQueries(userQueries.currentWorkspace),
     queryClient.invalidateQueries(userQueries.memberships)
   ]);
@@ -246,10 +240,7 @@ async function archiveWorkspace(formData: FormData) {
 async function transferWorkspaceOwnership(formData: FormData) {
   const queryClient = getQueryClient();
 
-  const workspace = await queryClient.fetchQuery(userQueries.currentWorkspace);
-  if (!workspace) {
-    throw redirect("/");
-  }
+  const workspace = await getCurrentWorkspace(queryClient);
 
   const userData = {
     new_owner_id: Number(formData.get("new_owner_id")?.toString() ?? "")
@@ -273,6 +264,7 @@ async function transferWorkspaceOwnership(formData: FormData) {
   }
 
   await Promise.all([
+    queryClient.invalidateQueries(userQueries.authedUser),
     queryClient.invalidateQueries(userQueries.currentWorkspace),
     queryClient.invalidateQueries(userQueries.memberships),
     queryClient.invalidateQueries({
@@ -426,8 +418,7 @@ function TransferOwnershipForm({ workspaceId }: TransferOwnershipFormProps) {
 
   const fetcher = useFetcher<typeof clientAction>();
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
-  const selectTriggerRef =
-    React.useRef<React.ComponentRef<typeof Select>>(null);
+  const selectOwnerBtnRef = React.useRef<React.ComponentRef<"button">>(null);
   const [data, setData] = React.useState(fetcher.data);
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(data?.errors);
@@ -457,14 +448,9 @@ function TransferOwnershipForm({ workspaceId }: TransferOwnershipFormProps) {
       if (!fetcher.data.errors) {
         formRef.current?.reset();
         setIsOpen(false);
+      } else {
+        selectOwnerBtnRef.current?.focus();
       }
-      // else if (focusFieldName) {
-      //   (
-      //     formRef.current?.elements.namedItem(
-      //       focusFieldName
-      //     ) as HTMLInputElement | null
-      //   )?.focus();
-      // }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetcher.state, fetcher.data]);
@@ -539,8 +525,9 @@ function TransferOwnershipForm({ workspaceId }: TransferOwnershipFormProps) {
             <Popover open={isPopoverOpen} onOpenChange={setPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
-                  ref={selectTriggerRef}
+                  ref={selectOwnerBtnRef}
                   variant="outline"
+                  type="button"
                   className="justify-between"
                   aria-describedby="new-owner-error"
                   aria-invalid={!!errors.new_owner_id}

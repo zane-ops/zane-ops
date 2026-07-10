@@ -36,7 +36,10 @@ import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { environmentQueries, projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, isNotFoundError } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import { metaTitle, stringToColor } from "~/utils";
 import type { Route } from "./+types/environment-layout";
 
@@ -54,9 +57,7 @@ export async function clientLoader({
   params
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const searchParams = new URL(request.url).searchParams;
 
   const queryString = searchParams.get("query") ?? "";

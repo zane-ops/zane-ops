@@ -32,7 +32,10 @@ import {
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import { sharedRegistryCredentialsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/registry-credentials-list";
 
@@ -44,9 +47,7 @@ export function meta() {
 
 export async function clientLoader() {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const credentials = await queryClient.ensureQueryData(
     sharedRegistryCredentialsQueries.list(workspaceId)
   );

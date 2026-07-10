@@ -57,7 +57,10 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import {
   capitalizeText,
   formatElapsedTime,
@@ -81,9 +84,7 @@ export async function clientLoader({
     queued_at_before: search.queued_at_before
   };
 
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const deploymentList = await queryClient.ensureQueryData(
     composeStackQueries.deploymentList({
       workspaceId: workspaceId,

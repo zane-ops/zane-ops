@@ -36,7 +36,10 @@ import {
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
 import { cn, formatLogTime, notFound } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-service-http-logs";
 
 import type { DateRange } from "react-day-picker";
@@ -58,9 +61,7 @@ export async function clientLoader({
   request
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const stack = await queryClient.ensureQueryData(
     composeStackQueries.single({
       workspaceId: workspaceId,

@@ -15,6 +15,7 @@ import { Separator } from "~/components/ui/separator";
 import { gitAppsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/gitlab-app-details";
 
@@ -26,9 +27,7 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const app = await queryClient.ensureQueryData(
     gitAppsQueries.gitlab(workspaceId, params.id)
   );
@@ -186,9 +185,7 @@ export async function clientAction({
   request
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
 
   const intent = formData.get("intent")?.toString();

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { serviceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/deploy-docker-service";
 
@@ -21,9 +22,7 @@ export async function clientAction({
   }
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
 
   const { error, data } = await apiClient.PUT(

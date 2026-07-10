@@ -36,7 +36,10 @@ import {
   userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import { ServiceAutoDeployForm } from "~/routes/services/components/service-auto-deploy-form";
 import { ServiceBuilderForm } from "~/routes/services/components/service-builder-form";
 import { ServiceCommandForm } from "~/routes/services/components/service-command-form";
@@ -60,9 +63,7 @@ import type { Route } from "./+types/service-settings";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const gitAppList = await queryClient.ensureQueryData(
     gitAppsQueries.list(workspaceId)
   );
@@ -588,9 +589,7 @@ export async function clientAction({
   params
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
 

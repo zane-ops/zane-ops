@@ -13,16 +13,17 @@ import { SubmitButton } from "~/components/ui/button";
 import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, notFound } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { clientAction as cancelDeploymentAction } from "~/routes/compose/cancel-compose-deployment";
 import { formattedTime, metaTitle } from "~/utils";
 import type { Route } from "./+types/compose-stack-deployment-layout";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const [stack, deployment] = await Promise.all([
     queryClient.ensureQueryData(
       composeStackQueries.single({

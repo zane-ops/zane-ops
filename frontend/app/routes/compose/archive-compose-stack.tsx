@@ -4,6 +4,7 @@ import { apiClient } from "~/api/client";
 import { environmentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { ErrorResponseFromAPI } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/archive-compose-stack";
 
@@ -69,9 +70,7 @@ export async function clientAction({
     };
   }
 
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   await queryClient.invalidateQueries(
     environmentQueries.composeStackList(
       workspaceId,

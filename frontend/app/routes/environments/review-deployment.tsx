@@ -13,6 +13,7 @@ import { ThemedLogo } from "~/components/logo";
 import { SubmitButton } from "~/components/ui/button";
 import { environmentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/review-deployment";
 
@@ -27,9 +28,7 @@ type DeploymentDecision = RequestInput<
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const environment = await queryClient.ensureQueryData(
     environmentQueries.pendingReview(
       workspaceId,
@@ -177,9 +176,7 @@ export async function clientAction({
   params
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const environment = queryClient.getQueryData(
     environmentQueries.pendingReview(
       workspaceId,

@@ -49,7 +49,10 @@ import {
   getFormErrorsFromResponseData,
   isNotFoundError
 } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/preview-template-details";
 import { DeleteConfirmationFormDialog } from "./delete-preview-template";
@@ -65,9 +68,7 @@ export function meta({ error, params }: Route.MetaArgs) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const template = await queryClient.ensureQueryData(
     previewTemplatesQueries.single(
       workspaceId,
@@ -653,9 +654,7 @@ export async function clientAction({
   params
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
 
   const ttl_seconds_string = formData.get("ttl_seconds")?.toString();

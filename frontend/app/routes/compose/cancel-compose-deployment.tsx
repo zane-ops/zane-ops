@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/cancel-compose-deployment";
 
@@ -49,9 +50,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     return;
   }
 
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   await Promise.all([
     queryClient.invalidateQueries({
       ...composeStackQueries.singleDeployment({

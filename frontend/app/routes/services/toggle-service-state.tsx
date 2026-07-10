@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { serviceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import { durationToMs, getCsrfTokenHeader, wait } from "~/utils";
 import type { Route } from "./+types/toggle-service-state";
 
@@ -28,9 +29,7 @@ export async function clientAction({
   request
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
   const userData = {
     desired_state: formData

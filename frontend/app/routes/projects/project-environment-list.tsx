@@ -67,7 +67,10 @@ import {
   getFormErrorsFromResponseData,
   isNotFoundError
 } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/project-environment-list";
 
@@ -199,9 +202,7 @@ export async function clientAction({
   params
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
 

@@ -9,6 +9,7 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { ErrorResponseFromAPI } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import { getCsrfTokenHeader } from "~/utils";
 import { type Route } from "./+types/archive-git-service";
 
@@ -29,9 +30,7 @@ export async function clientAction({
   }
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
 
   console.log({

@@ -42,7 +42,10 @@ import { serverQueries, serviceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { ValueOf } from "~/lib/types";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import { ServiceActionsPopover } from "~/routes/services/components/service-actions-popover";
 import {
   durationToMs,
@@ -64,9 +67,7 @@ export function meta({ params, error }: Route.MetaArgs) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const [service, limits, detectedPorts] = await Promise.all([
     queryClient.ensureQueryData(
       serviceQueries.single({

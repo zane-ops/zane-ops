@@ -9,6 +9,7 @@ import { Button } from "~/components/ui/button";
 import { projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, isNotFoundError } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import { metaTitle, stringToColor } from "~/utils";
 import type { Route } from "./+types/project-settings-layout";
 
@@ -48,9 +49,7 @@ const sidebarNavItems: NavItem[] = [
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const project = await queryClient.ensureQueryData(
     projectQueries.single(workspaceId, params.projectSlug)
   );

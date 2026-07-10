@@ -36,7 +36,10 @@ import {
   userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import {
   formatStorageValue,
   getMaxDomainForStorageValue,
@@ -55,9 +58,7 @@ export async function clientLoader({
     service_names: searchParams.getAll("service_names")
   });
 
-  const { id: workspaceId } = (await queryClient.ensureQueryData(
-    userQueries.currentWorkspace
-  ))!;
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const [metrics, limits] = await Promise.all([
     queryClient.ensureQueryData(
       composeStackQueries.metrics({
