@@ -9,13 +9,7 @@ import {
   XIcon
 } from "lucide-react";
 
-import {
-  Link,
-  href,
-  useLoaderData,
-  useMatches,
-  useSearchParams
-} from "react-router";
+import { Link, href, useLoaderData, useSearchParams } from "react-router";
 import { Input } from "~/components/ui/input";
 
 import { useQuery } from "@tanstack/react-query";
