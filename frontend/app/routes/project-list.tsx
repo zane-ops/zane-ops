@@ -33,8 +33,8 @@ import {
   userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn } from "~/lib/utils";
-import { useCurrentWorkspaceId } from "~/lib/workspace-store";
+import { cn, notFound } from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
@@ -43,7 +43,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   );
 
   if (!workspace) {
-    return { projectList: [], recentDeployments: [] };
+    throw notFound("Oops");
   }
 
   const searchParams = new URL(request.url).searchParams;
@@ -135,17 +135,7 @@ const sortValueMap: Record<string, string> = {
 
 function ProjectsListSection() {
   const loaderData = useLoaderData<typeof clientLoader>();
-  const {
-    "2": {
-      loaderData: { memberships }
-    }
-  } = useMatches() as Route.ComponentProps["matches"];
-
-  const workspaceId = useCurrentWorkspaceId();
-
-  const currentWorkspace = memberships.find(
-    (m) => m.workspace.id === workspaceId
-  );
+  const currentWorkspace = useCurrentWorkspace();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const search = projectSearchSchema.parse(searchParams);
@@ -158,7 +148,7 @@ function ProjectsListSection() {
 
   const projectActiveQuery = useQuery({
     ...projectQueries.list({
-      workspaceId,
+      workspaceId: currentWorkspace.id,
       filters
     }),
     initialData: loaderData.projectList
@@ -255,7 +245,7 @@ function ProjectsListSection() {
           >
             <h3 className="text-2xl font-medium text-card-foreground">
               Welcome to <span className="text-grey">`</span>
-              {currentWorkspace!.workspace.name}
+              {currentWorkspace.name}
               <span className="text-grey">`</span>
             </h3>
             <p>This workspace doesn't have any projects yet.</p>
@@ -294,7 +284,7 @@ function ProjectsListSection() {
 function RecentDeploymentsSection() {
   const loaderData = useLoaderData<typeof clientLoader>();
 
-  const workspaceId = useCurrentWorkspaceId();
+  const workspaceId = useCurrentWorkspace().id;
 
   const { data: recentDeployments } = useQuery({
     ...deploymentQueries.recent(workspaceId),

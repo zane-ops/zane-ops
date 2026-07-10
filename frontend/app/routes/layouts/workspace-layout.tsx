@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { Outlet, href, redirect } from "react-router";
 import { CommandBarTrigger } from "~/components/commandbar/commandbar-trigger";
 import { Header } from "~/components/header/header";
@@ -6,7 +5,6 @@ import { ProjectEnvironmentListHeaderHeaderDropdown } from "~/components/header/
 import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
 import { WorkspaceMembershipListHeaderDropdown } from "~/components/header/workspace-list-header-dropdown";
 import { WorkspaceProjectListHeaderDropdown } from "~/components/header/workspace-project-list-header-dropdown";
-import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
 import { projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
@@ -19,21 +17,14 @@ export function meta() {
 
 export async function clientLoader() {
   const queryClient = getQueryClient();
-  const [memberships, workspace] = await Promise.all([
+  const [memberships, workspace, user] = await Promise.all([
     queryClient.ensureQueryData(userQueries.memberships),
-    queryClient.ensureQueryData(userQueries.currentWorkspace)
+    queryClient.ensureQueryData(userQueries.currentWorkspace),
+    queryClient.ensureQueryData(userQueries.authedUser)
   ]);
 
-  if (memberships === null) {
+  if (!memberships || !workspace || !user?.membership) {
     throw redirect(href("/login"));
-  }
-
-  if (!workspace) {
-    return {
-      workspace: null,
-      projects: [],
-      memberships
-    };
   }
 
   const projects = await queryClient.ensureQueryData(
@@ -41,6 +32,7 @@ export async function clientLoader() {
   );
 
   return {
+    user,
     workspace,
     projects,
     memberships
@@ -49,15 +41,8 @@ export async function clientLoader() {
 
 export default function WorkspaceLayout({
   loaderData,
-  params,
-  matches: {
-    "1": {
-      loaderData: { user }
-    }
-  }
+  params
 }: Route.ComponentProps) {
-  if (!user || !loaderData.memberships) return null;
-
   return (
     <>
       <Header
@@ -72,7 +57,10 @@ export default function WorkspaceLayout({
           ) : null,
           params.envSlug ? <ProjectEnvironmentListHeaderHeaderDropdown /> : null
         ]}
-        rigthSlot={[<CommandBarTrigger />, <UserHeaderDropdown user={user} />]}
+        rigthSlot={[
+          <CommandBarTrigger />,
+          <UserHeaderDropdown user={loaderData.user} />
+        ]}
       />
       <main
         className={cn(
@@ -81,7 +69,6 @@ export default function WorkspaceLayout({
         )}
       >
         <Outlet />
-        <ZaneUpdateNotifier />
       </main>
     </>
   );

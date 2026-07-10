@@ -16,7 +16,10 @@ import {
 import { userQueries } from "~/lib/queries";
 
 import { cn } from "~/lib/utils";
-import { useWorkspaceStore } from "~/lib/workspace-store";
+import {
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/workspace-store";
 import type { clientAction } from "~/routes/switch-workspace";
 import { stringToColor } from "~/utils";
 
@@ -27,9 +30,8 @@ export type WorkspaceMembershipListProps = {
 export function WorkspaceMembershipListHeaderDropdown({
   ...props
 }: WorkspaceMembershipListProps) {
-  const workspaceId = useWorkspaceStore((s) => s.workspace?.id);
-
-  const current = props.memberships.find((m) => m.workspace.id === workspaceId);
+  const currentWorkspace = useCurrentWorkspace();
+  const currentMembership = useCurrentWorkspaceMembership();
 
   const { data } = useQuery({
     ...userQueries.memberships,
@@ -38,10 +40,8 @@ export function WorkspaceMembershipListHeaderDropdown({
 
   const fetcher = useFetcher<typeof clientAction>();
 
-  if (!workspaceId || !current) return null;
-
   const memberships = data ?? [];
-  const workspaceColor = stringToColor(current.workspace.name);
+  const workspaceColor = stringToColor(currentWorkspace.name);
 
   return (
     <div className="inline-flex items-center gap-1">
@@ -71,7 +71,7 @@ export function WorkspaceMembershipListHeaderDropdown({
               "border  border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10"
             )}
           >
-            <span>{current.workspace.name.charAt(0).toUpperCase()}</span>
+            <span>{currentWorkspace.name.charAt(0).toUpperCase()}</span>
           </div>
           <p
             className={cn(
@@ -80,13 +80,13 @@ export function WorkspaceMembershipListHeaderDropdown({
               "max-w-24 xl:max-w-32"
             )}
           >
-            {current.workspace.name}
+            {currentWorkspace.name}
           </p>
           <StatusBadge
             pingState="hidden"
             className="py-0.5 px-1.5 text-xs hidden lg:inline-flex"
           >
-            {current.role_name}
+            {currentMembership.role_name}
           </StatusBadge>
         </Link>
       </Button>
@@ -152,7 +152,7 @@ export function WorkspaceMembershipListHeaderDropdown({
                       </div>
 
                       <span className="flex size-4 items-center justify-center ml-auto flex-none py-2.5">
-                        {m.id === current.id && (
+                        {m.id === currentMembership.id && (
                           <CheckIcon className="size-full text-teal-600 dark:text-teal-400" />
                         )}
                       </span>
