@@ -29,10 +29,10 @@ export const LOGS_QUERY_REFETCH_INTERVAL = durationToMs(3, "seconds");
 export const DEFAULT_LOGS_PER_PAGE = 50;
 export const MAX_VISIBLE_LOG_CHARS_LIMIT = 1_000;
 
-export const SPIN_DELAY_DEFAULT_OPTIONS: Parameters<typeof useSpinDelay>[1] = {
+export const SPIN_DELAY_DEFAULT_OPTIONS = {
   delay: 150,
   minDuration: 150
-};
+} as const satisfies Parameters<typeof useSpinDelay>[1];
 export const METRICS_TIME_RANGES = [
   "LAST_HOUR",
   "LAST_6HOURS",

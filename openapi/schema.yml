@@ -34134,11 +34134,20 @@ components:
           allOf:
           - $ref: '#/components/schemas/SimpleWorkspaceUser'
           readOnly: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
       required:
       - accessible_projects
+      - created_at
       - id
       - role
       - role_name
+      - updated_at
       - user
     WorkspaceMembersDestroyErrorResponse400:
       oneOf:

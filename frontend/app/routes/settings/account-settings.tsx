@@ -6,7 +6,7 @@ import {
   LoaderIcon,
   UserIcon
 } from "lucide-react";
-import { Link, href, redirect, useFetcher, useLoaderData } from "react-router";
+import { Link, useFetcher, useLoaderData } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -17,7 +17,7 @@ import {
   FieldSetLabel
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
-import { userQueries } from "~/lib/queries";
+import { ensureAuthedUser, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
@@ -27,11 +27,7 @@ export const meta: Route.MetaFunction = () => [metaTitle("Account Settings")];
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const user = await queryClient.ensureQueryData(userQueries.authedUser);
-
-  if (!user) {
-    throw redirect(href("/login"));
-  }
+  const user = await ensureAuthedUser(queryClient);
 
   return { user };
 }

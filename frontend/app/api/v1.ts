@@ -8936,6 +8936,10 @@ export interface components {
       role: components["schemas"]["RoleEnum"];
       accessible_projects: readonly components["schemas"]["AccessibleWorkspaceProject"][];
       user: components["schemas"]["SimpleWorkspaceUser"];
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
     };
     WorkspaceMembersDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceMembersListError: components["schemas"]["WorkspaceMembersListRoleErrorComponent"] | components["schemas"]["WorkspaceMembersListQueryErrorComponent"];

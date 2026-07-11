@@ -3,9 +3,10 @@ import {
   CreditCardIcon,
   GitBranchIcon,
   type LucideIcon,
+  MailIcon,
   UsersIcon
 } from "lucide-react";
-import { NavLink, Outlet } from "react-router";
+import { NavLink, Outlet, href } from "react-router";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 import { hasMinRole, metaTitle } from "~/utils";
@@ -32,7 +33,7 @@ export default function SettingsLayoutPage({
   const sidebarNavItems: NavItem[] = [
     {
       title: "General",
-      href: "",
+      href: href("/settings"),
       icon: Building2Icon
     }
   ];
@@ -40,20 +41,27 @@ export default function SettingsLayoutPage({
   if (hasMinRole(user, "Member")) {
     sidebarNavItems.push({
       title: "Team",
-      href: "team",
+      href: href("/settings/team"),
       icon: UsersIcon
+    });
+  }
+  if (hasMinRole(user, "Admin")) {
+    sidebarNavItems.push({
+      title: "User Invitations",
+      href: href("/settings/invitations"),
+      icon: MailIcon
     });
   }
 
   if (hasMinRole(user, "Owner")) {
     sidebarNavItems.push({
       title: "Git",
-      href: "git-apps",
+      href: href("/settings/git-apps"),
       icon: GitBranchIcon
     });
     sidebarNavItems.push({
       title: "Shared Credentials",
-      href: "shared-credentials",
+      href: href("/settings/shared-credentials"),
       icon: CreditCardIcon
     });
 
@@ -81,7 +89,7 @@ export default function SettingsLayoutPage({
         <div className="md:col-span-full">
           <h1 className="text-3xl font-medium">Settings</h1>
           <h4 className="text-sm mt-2 opacity-60">
-            Manage your global settings
+            Manage your workspace settings
           </h4>
         </div>
         <aside className="md:col-span-3">
@@ -99,7 +107,7 @@ export default function SettingsLayoutPage({
                       )}
                       aria-disabled={item.disabled}
                       // if we don't do this, the default route "/settings" would always be active
-                      end={item.href.length === 0}
+                      end={item.href === href("/settings")}
                     >
                       <item.icon size={15} className="text-grey flex-none" />
                       {item.title}

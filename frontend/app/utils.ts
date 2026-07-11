@@ -460,7 +460,7 @@ export function hasMinRole(
     return user.user.is_superuser;
   }
 
-  return (
+  return Boolean(
     user.membership && user.membership.role >= WORKSPACE_ROLE_MAPPING[roleName]
   );
 }

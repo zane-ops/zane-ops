@@ -34,11 +34,7 @@ import {
   PopoverTrigger
 } from "~/components/ui/popover";
 import { DEPLOYMENT_STATUSES } from "~/lib/constants";
-import {
-  serviceDeploymentListFilters,
-  serviceQueries,
-  userQueries
-} from "~/lib/queries";
+import { serviceDeploymentListFilters, serviceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
 import {

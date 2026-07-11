@@ -118,14 +118,12 @@ export default function WorkspaceSettingsPage({
                 <div className="flex flex-col gap-4 items-start max-w-4xl w-full rounded-md border border-border py-4">
                   <div className="flex md:flex-row gap-4 justify-between items-center w-full px-4">
                     <div className="flex flex-col gap-1">
-                      <h3 className="text-lg font-medium">Delete workspace</h3>
-                      <p>
-                        Deletes this workspace along with all its project and
-                        services
-                      </p>
+                      <h3 className="text-lg font-medium">Leave Workspace</h3>
+                      <p>Remove yourself as a member of this workspace</p>
                     </div>
-                    <WorkspaceDeleteForm name={workspace.name} />
+                    {/* <TransferOwnershipForm workspaceId={workspace.id} /> */}
                   </div>
+
                   <Separator />
 
                   <div className="flex md:flex-row gap-4 justify-between items-center w-full px-4">
@@ -138,6 +136,19 @@ export default function WorkspaceSettingsPage({
                       </p>
                     </div>
                     <TransferOwnershipForm workspaceId={workspace.id} />
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex md:flex-row gap-4 justify-between items-center w-full px-4">
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-lg font-medium">Delete workspace</h3>
+                      <p>
+                        Deletes this workspace along with all its project and
+                        services
+                      </p>
+                    </div>
+                    <WorkspaceDeleteForm name={workspace.name} />
                   </div>
                 </div>
               </div>
@@ -638,4 +649,8 @@ function TransferOwnershipForm({ workspaceId }: TransferOwnershipFormProps) {
       </DialogContent>
     </Dialog>
   );
+}
+
+function WorkspaceLeaveForm() {
+  return;
 }

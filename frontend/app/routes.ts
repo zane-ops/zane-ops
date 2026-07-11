@@ -73,9 +73,8 @@ export default [
       route("settings", "./routes/layouts/settings-layout.tsx", [
         index("./routes/settings/workspace-settings.tsx"),
 
-        route("ssh-keys", "./routes/settings/ssh-keys-list.tsx"),
-        route("ssh-keys/new", "./routes/settings/create-ssh-key.tsx"),
-        route("server-console", "./routes/settings/server-terminal.tsx"),
+        route("team", "./routes/settings/workspace-team-settings.tsx"),
+        route("invitations", "./routes/settings/workspace-invitation-list.tsx"),
         route("git-apps", "./routes/settings/git-apps-list.tsx"),
         route(
           "git-apps/create-github-app",
@@ -104,20 +103,23 @@ export default [
         route(
           "shared-credentials/:id",
           "./routes/settings/registry-credentials-details.tsx"
-        ),
-        route("build-registries", "./routes/settings/build-registry-list.tsx"),
-        route(
-          "build-registries/new",
-          "./routes/settings/create-build-registry.tsx"
-        ),
-        route(
-          "build-registries/:id/list-images",
-          "./routes/settings/build-registry-image-list.tsx"
-        ),
-        route(
-          "build-registries/:id",
-          "./routes/settings/build-registry-details.tsx"
         )
+        // route("ssh-keys", "./routes/settings/ssh-keys-list.tsx"),
+        // route("ssh-keys/new", "./routes/settings/create-ssh-key.tsx"),
+        // route("server-console", "./routes/settings/server-terminal.tsx"),
+        // route("build-registries", "./routes/settings/build-registry-list.tsx"),
+        // route(
+        //   "build-registries/new",
+        //   "./routes/settings/create-build-registry.tsx"
+        // ),
+        // route(
+        //   "build-registries/:id/list-images",
+        //   "./routes/settings/build-registry-image-list.tsx"
+        // ),
+        // route(
+        //   "build-registries/:id",
+        //   "./routes/settings/build-registry-details.tsx"
+        // )
       ]),
       route("create-project", "./routes/projects/create-project.tsx"),
 

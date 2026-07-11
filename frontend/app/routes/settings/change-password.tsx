@@ -10,7 +10,7 @@ import {
   FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
-import { userQueries } from "~/lib/queries";
+import { ensureAuthedUser, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
@@ -19,6 +19,11 @@ import type { Route } from "./+types/change-password";
 export const meta: Route.MetaFunction = () => [
   metaTitle("Update your password")
 ];
+
+export async function clientLoader({}: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  await ensureAuthedUser(queryClient);
+}
 
 export async function clientAction({
   request,

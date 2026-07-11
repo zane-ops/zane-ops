@@ -6,6 +6,7 @@ import {
   queryOptions,
   type skipToken
 } from "@tanstack/react-query";
+import { href, redirect } from "react-router";
 import { preprocess, z } from "zod";
 import { zfd } from "zod-form-data";
 import type { ApiResponse, RequestInput, RequestParams } from "~/api/client";
@@ -77,6 +78,19 @@ export const userQueries = {
     }
   })
 };
+
+/**
+ * Fetches the authed user and redirects to `/login` if there isn't one.
+ * Centralizes the "what if there isn't one" case instead of leaving it to
+ * each `clientLoader` to null-check and redirect on its own.
+ */
+export async function ensureAuthedUser(queryClient: QueryClient) {
+  const user = await queryClient.ensureQueryData(userQueries.authedUser);
+  if (!user) {
+    throw redirect(href("/login"));
+  }
+  return user;
+}
 
 export const dockerHubQueries = {
   images: (query: string) =>

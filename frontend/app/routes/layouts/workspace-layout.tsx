@@ -5,7 +5,7 @@ import { ProjectEnvironmentListHeaderHeaderDropdown } from "~/components/header/
 import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
 import { WorkspaceMembershipListHeaderDropdown } from "~/components/header/workspace-list-header-dropdown";
 import { WorkspaceProjectListHeaderDropdown } from "~/components/header/workspace-project-list-header-dropdown";
-import { projectQueries, userQueries } from "~/lib/queries";
+import { ensureAuthedUser, projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
 import { metaTitle } from "~/utils";
@@ -19,10 +19,10 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
   const [memberships, user] = await Promise.all([
     queryClient.ensureQueryData(userQueries.memberships),
-    queryClient.ensureQueryData(userQueries.authedUser)
+    ensureAuthedUser(queryClient)
   ]);
 
-  const workspace = user?.membership?.workspace;
+  const workspace = user.membership?.workspace;
   if (memberships === null || !workspace) {
     throw redirect(href("/login"));
   }
