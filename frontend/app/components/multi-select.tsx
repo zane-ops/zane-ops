@@ -90,6 +90,7 @@ interface MultiSelectProps
   popoverClassName?: string;
   itemClassName?: string;
   value: string[];
+  sideOffset?: number;
   align?: React.ComponentProps<typeof PopoverContent>["align"];
   order?: "icon-label" | "label-icon";
   Icon?: React.ComponentType<LucideProps>;
@@ -112,6 +113,7 @@ export const MultiSelect = ({
   asChild = false,
   className,
   align = "end",
+  sideOffset = 0,
   Icon = ChevronDownIcon,
   closeOnSelect,
   acceptArbitraryValues = false,
@@ -170,10 +172,7 @@ export const MultiSelect = ({
         >
           <div className="flex items-center gap-1 w-full mx-auto">
             {order === "icon-label" && (
-              <Icon
-                size={15}
-                className="cursor-pointer text-muted-foreground"
-              />
+              <Icon size={15} className="cursor-pointer text-grey" />
             )}
             <div className="flex items-center gap-1">
               <span className="text-sm text-card-foreground">{label}</span>
@@ -204,10 +203,7 @@ export const MultiSelect = ({
               )}
             </div>
             {order === "label-icon" && (
-              <Icon
-                size={15}
-                className="cursor-pointer text-muted-foreground"
-              />
+              <Icon size={15} className="cursor-pointer text-grey" />
             )}
           </div>
         </Button>
@@ -215,7 +211,7 @@ export const MultiSelect = ({
       <PopoverContent
         className={cn("min-w-[200px] p-0 border-0 w-full", popoverClassName)}
         align={align}
-        sideOffset={0}
+        sideOffset={sideOffset}
         side="bottom"
         onEscapeKeyDown={() => setIsPopoverOpen(false)}
       >

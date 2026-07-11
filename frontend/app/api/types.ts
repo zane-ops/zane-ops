@@ -42,6 +42,9 @@ export type WorkspaceMember = ApiResponse<
   "/api/workspace/members/"
 >["results"][number];
 
+export type WorkspaceRoleName = WorkspaceMember["role_name"];
+export type WorkspaceRoleValue = WorkspaceMember["role"];
+
 export type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
 
 export type Project = ApiResponse<"get", "/api/projects/{slug}/">;

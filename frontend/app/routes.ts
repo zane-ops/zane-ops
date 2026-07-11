@@ -8,6 +8,7 @@ import {
 
 export default [
   route("login", "./routes/login.tsx"),
+  route("register/:token", "./routes/register.tsx"),
   route("logout", "./routes/logout.tsx"),
   route("onboarding", "./routes/onboarding.tsx"),
   route("trigger-update", "./routes/trigger-update.tsx"),
@@ -74,6 +75,10 @@ export default [
         index("./routes/settings/workspace-settings.tsx"),
 
         route("team", "./routes/settings/workspace-team-settings.tsx"),
+        route(
+          "team/invite",
+          "./routes/settings/invite-user-into-workspace.tsx"
+        ),
         route("invitations", "./routes/settings/workspace-invitation-list.tsx"),
         route("git-apps", "./routes/settings/git-apps-list.tsx"),
         route(

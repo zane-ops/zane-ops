@@ -3053,6 +3053,11 @@ export const workspaceMemberListFilters = zfd.formData({
     .catch(undefined)
 });
 
+export const paginationListFilters = zfd.formData({
+  page: zfd.numeric().optional().catch(1).optional(),
+  per_page: zfd.numeric().optional().catch(10).optional()
+});
+
 export const workspaceQueries = {
   members: (
     workspaceId: string,
@@ -3070,6 +3075,30 @@ export const workspaceQueries = {
                 ? WORKSPACE_ROLE_MAPPING[filters.role]
                 : undefined
             }
+          }
+        });
+        if (!data) throw notFound("Not found");
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (!query.state.data) {
+          return false;
+        }
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData
+    }),
+  invitations: (
+    workspaceId: string,
+    filters: z.infer<typeof paginationListFilters> = {}
+  ) =>
+    queryOptions({
+      queryKey: [...workspaceKey(workspaceId), "INVITATIONS", filters] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/workspace/invitations/", {
+          signal,
+          params: {
+            query: filters
           }
         });
         if (!data) throw notFound("Not found");

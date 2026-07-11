@@ -86,7 +86,7 @@ export function getFormErrorsFromResponseData<T extends ErrorResponseFromAPI>(
   return errors as any;
 }
 
-export function notFound(message: string = "Not Found") {
+export function notFound(message = "Not Found") {
   return new Response(message, { status: 404, statusText: message });
 }
 
@@ -116,4 +116,35 @@ export function formatLogTime(time: string | Date) {
   }).format(date);
 
   return { dateFormat, hourFormat };
+}
+
+export function calculateDuration(
+  dateBegin: Date | string,
+  dateEnd: Date | string
+) {
+  const begin = new Date(dateBegin);
+  const end = new Date(dateEnd);
+
+  let totalSeconds = Math.floor((end.getTime() - begin.getTime()) / 1000);
+
+  const SECONDS_IN_MINUTE = 60;
+  const SECONDS_IN_HOUR = 60 * SECONDS_IN_MINUTE;
+  const SECONDS_IN_DAY = 24 * SECONDS_IN_HOUR;
+  const SECONDS_IN_YEAR = 365 * SECONDS_IN_DAY;
+
+  const years = Math.floor(totalSeconds / SECONDS_IN_YEAR);
+  totalSeconds -= years * SECONDS_IN_YEAR;
+
+  const days = Math.floor(totalSeconds / SECONDS_IN_DAY);
+  totalSeconds -= days * SECONDS_IN_DAY;
+
+  const hours = Math.floor(totalSeconds / SECONDS_IN_HOUR);
+  totalSeconds -= hours * SECONDS_IN_HOUR;
+
+  const minutes = Math.floor(totalSeconds / SECONDS_IN_MINUTE);
+  totalSeconds -= minutes * SECONDS_IN_MINUTE;
+
+  const seconds = totalSeconds;
+
+  return { years, days, hours, minutes, seconds };
 }

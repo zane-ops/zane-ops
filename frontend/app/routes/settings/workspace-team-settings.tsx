@@ -163,8 +163,6 @@ export default function WorkspaceTeamSettingsPage({
     !searchParams.get("per_page") &&
     !searchParams.get("page");
 
-  console.log({ filters });
-
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
@@ -200,9 +198,7 @@ export default function WorkspaceTeamSettingsPage({
         </FieldSet>
 
         <FieldSet name="role">
-          <FieldSetLabel htmlFor="role" className="sr-only">
-            Role
-          </FieldSetLabel>
+          <FieldSetLabel className="sr-only">Role</FieldSetLabel>
 
           <FieldSetSelect
             value={filters.role ?? "ALL"}
@@ -394,22 +390,6 @@ export function WorkspaceMemberActions({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      {/* <TooltipProvider>
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <Button size="sm" variant="ghost" asChild className="gap-1">
-              <Link to={`./${member.id}`}>
-                <span>Edit permissions</span>
-                <UserKeyIcon className="flex-none size-4" />
-              </Link>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Edit Member permissions</TooltipContent>
-        </Tooltip>
-        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
-
-        <RemoveConfirmationFormDialog member={member} />
-      </TooltipProvider> */}
     </div>
   );
 }
