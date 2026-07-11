@@ -145,6 +145,9 @@ class WorkspaceInvitation(TimestampedModel):
 class WorkspaceMembership(models.Model):
     workspace_id: str
 
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
     if TYPE_CHECKING:
         accessible_projects: RelatedManager["Project"]
 

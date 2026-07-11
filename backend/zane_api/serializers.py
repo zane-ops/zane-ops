@@ -158,6 +158,8 @@ class WorkspaceMemberSerializer(serializers.ModelSerializer):
             "role",
             "accessible_projects",
             "user",
+            "created_at",
+            "updated_at",
         ]
 
 
