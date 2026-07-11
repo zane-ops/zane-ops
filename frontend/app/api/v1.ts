@@ -3,6 +3,7 @@
  * Do not make direct changes to the file.
  */
 
+
 export interface paths {
   "/api/auth/change-password/": {
     /**
@@ -693,15 +694,8 @@ export interface components {
     ArchiveServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     AuthCheckUserExistenceRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    AuthCreateInitialUserCreateError:
-      | components["schemas"]["AuthCreateInitialUserCreateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["AuthCreateInitialUserCreateUsernameErrorComponent"]
-      | components["schemas"]["AuthCreateInitialUserCreateFirstNameErrorComponent"]
-      | components["schemas"]["AuthCreateInitialUserCreatePasswordErrorComponent"]
-      | components["schemas"]["AuthCreateInitialUserCreateWorkspaceNameErrorComponent"];
-    AuthCreateInitialUserCreateErrorResponse400:
-      | components["schemas"]["AuthCreateInitialUserCreateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    AuthCreateInitialUserCreateError: components["schemas"]["AuthCreateInitialUserCreateNonFieldErrorsErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreateUsernameErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreateFirstNameErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreatePasswordErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreateWorkspaceNameErrorComponent"];
+    AuthCreateInitialUserCreateErrorResponse400: components["schemas"]["AuthCreateInitialUserCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     AuthCreateInitialUserCreateFirstNameErrorComponent: {
       /**
        * @description * `first_name` - first_name
@@ -717,13 +711,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     AuthCreateInitialUserCreateNonFieldErrorsErrorComponent: {
@@ -755,14 +743,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "min_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     AuthCreateInitialUserCreateUsernameErrorComponent: {
@@ -782,15 +763,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "min_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     AuthCreateInitialUserCreateValidationError: {
@@ -813,14 +786,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "min_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     AuthedSuccessResponse: {
@@ -910,13 +876,8 @@ export interface components {
     BulkDeployServiceRequestRequest: {
       service_ids: string[];
     };
-    BulkDeployServicesError:
-      | components["schemas"]["BulkDeployServicesNonFieldErrorsErrorComponent"]
-      | components["schemas"]["BulkDeployServicesServiceIdsErrorComponent"]
-      | components["schemas"]["BulkDeployServicesServiceIdsINDEXErrorComponent"];
-    BulkDeployServicesErrorResponse400:
-      | components["schemas"]["BulkDeployServicesValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    BulkDeployServicesError: components["schemas"]["BulkDeployServicesNonFieldErrorsErrorComponent"] | components["schemas"]["BulkDeployServicesServiceIdsErrorComponent"] | components["schemas"]["BulkDeployServicesServiceIdsINDEXErrorComponent"];
+    BulkDeployServicesErrorResponse400: components["schemas"]["BulkDeployServicesValidationError"] | components["schemas"]["ParseErrorResponse"];
     BulkDeployServicesNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -960,13 +921,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     BulkDeployServicesValidationError: {
@@ -992,14 +947,8 @@ export interface components {
       code: "invalid_choice" | "null" | "required";
       detail: string;
     };
-    BulkToggleServicesError:
-      | components["schemas"]["BulkToggleServicesNonFieldErrorsErrorComponent"]
-      | components["schemas"]["BulkToggleServicesDesiredStateErrorComponent"]
-      | components["schemas"]["BulkToggleServicesServiceIdsErrorComponent"]
-      | components["schemas"]["BulkToggleServicesServiceIdsINDEXErrorComponent"];
-    BulkToggleServicesErrorResponse400:
-      | components["schemas"]["BulkToggleServicesValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    BulkToggleServicesError: components["schemas"]["BulkToggleServicesNonFieldErrorsErrorComponent"] | components["schemas"]["BulkToggleServicesDesiredStateErrorComponent"] | components["schemas"]["BulkToggleServicesServiceIdsErrorComponent"] | components["schemas"]["BulkToggleServicesServiceIdsINDEXErrorComponent"];
+    BulkToggleServicesErrorResponse400: components["schemas"]["BulkToggleServicesValidationError"] | components["schemas"]["ParseErrorResponse"];
     BulkToggleServicesNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -1043,13 +992,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     BulkToggleServicesValidationError: {
@@ -1076,14 +1019,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "min_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ChangePasswordCurrentPasswordErrorComponent: {
@@ -1102,24 +1038,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "min_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    ChangePasswordError:
-      | components["schemas"]["ChangePasswordNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ChangePasswordCurrentPasswordErrorComponent"]
-      | components["schemas"]["ChangePasswordNewPasswordErrorComponent"]
-      | components["schemas"]["ChangePasswordConfirmPasswordErrorComponent"];
-    ChangePasswordErrorResponse400:
-      | components["schemas"]["ChangePasswordValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ChangePasswordError: components["schemas"]["ChangePasswordNonFieldErrorsErrorComponent"] | components["schemas"]["ChangePasswordCurrentPasswordErrorComponent"] | components["schemas"]["ChangePasswordNewPasswordErrorComponent"] | components["schemas"]["ChangePasswordConfirmPasswordErrorComponent"];
+    ChangePasswordErrorResponse400: components["schemas"]["ChangePasswordValidationError"] | components["schemas"]["ParseErrorResponse"];
     ChangePasswordNewPasswordErrorComponent: {
       /**
        * @description * `new_password` - new_password
@@ -1136,14 +1059,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "min_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ChangePasswordNonFieldErrorsErrorComponent: {
@@ -1186,12 +1102,8 @@ export interface components {
       code: "invalid" | "null";
       detail: string;
     };
-    CleanupDeploymentQueueError:
-      | components["schemas"]["CleanupDeploymentQueueNonFieldErrorsErrorComponent"]
-      | components["schemas"]["CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent"];
-    CleanupDeploymentQueueErrorResponse400:
-      | components["schemas"]["CleanupDeploymentQueueValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    CleanupDeploymentQueueError: components["schemas"]["CleanupDeploymentQueueNonFieldErrorsErrorComponent"] | components["schemas"]["CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent"];
+    CleanupDeploymentQueueErrorResponse400: components["schemas"]["CleanupDeploymentQueueValidationError"] | components["schemas"]["ParseErrorResponse"];
     CleanupDeploymentQueueNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -1228,13 +1140,8 @@ export interface components {
       code: "invalid" | "null";
       detail: string;
     };
-    CloneEnvironmentError:
-      | components["schemas"]["CloneEnvironmentNonFieldErrorsErrorComponent"]
-      | components["schemas"]["CloneEnvironmentDeployAfterCloneErrorComponent"]
-      | components["schemas"]["CloneEnvironmentNameErrorComponent"];
-    CloneEnvironmentErrorResponse400:
-      | components["schemas"]["CloneEnvironmentValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    CloneEnvironmentError: components["schemas"]["CloneEnvironmentNonFieldErrorsErrorComponent"] | components["schemas"]["CloneEnvironmentDeployAfterCloneErrorComponent"] | components["schemas"]["CloneEnvironmentNameErrorComponent"];
+    CloneEnvironmentErrorResponse400: components["schemas"]["CloneEnvironmentValidationError"] | components["schemas"]["ParseErrorResponse"];
     CloneEnvironmentNameErrorComponent: {
       /**
        * @description * `name` - name
@@ -1251,14 +1158,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CloneEnvironmentNonFieldErrorsErrorComponent: {
@@ -1391,9 +1291,7 @@ export interface components {
       finished_at: string | null;
       redeploy_hash: string | null;
     };
-    ComposeStackDeploymentChangeRequestRequest:
-      | components["schemas"]["ComposeContentFieldChangeRequest"]
-      | components["schemas"]["ComposeEnvOverrideItemChangeRequest"];
+    ComposeStackDeploymentChangeRequestRequest: components["schemas"]["ComposeContentFieldChangeRequest"] | components["schemas"]["ComposeEnvOverrideItemChangeRequest"];
     /**
      * @description * `QUEUED` - Queued
      * * `DEPLOYING` - Deploying
@@ -1402,12 +1300,7 @@ export interface components {
      * * `CANCELLED` - Cancelled
      * @enum {string}
      */
-    ComposeStackDeploymentStatusEnum:
-      | "QUEUED"
-      | "DEPLOYING"
-      | "FINISHED"
-      | "FAILED"
-      | "CANCELLED";
+    ComposeStackDeploymentStatusEnum: "QUEUED" | "DEPLOYING" | "FINISHED" | "FAILED" | "CANCELLED";
     ComposeStackEnvOverride: {
       id: string;
       key: string;
@@ -1510,9 +1403,7 @@ export interface components {
       volumes: components["schemas"]["ComposeStackServiceVolume"][];
       configs: components["schemas"]["ComposeStackServiceConfig"][];
       ports: components["schemas"]["ComposeStackServicePort"][];
-      healthcheck:
-        | components["schemas"]["ComposeStackServiceHealthCheck"]
-        | null;
+      healthcheck: components["schemas"]["ComposeStackServiceHealthCheck"] | null;
     };
     /**
      * @description * `replicated` - replicated
@@ -1521,11 +1412,7 @@ export interface components {
      * * `global-job` - global-job
      * @enum {string}
      */
-    ComposeStackServiceStatusModeEnum:
-      | "replicated"
-      | "global"
-      | "replicated-job"
-      | "global-job";
+    ComposeStackServiceStatusModeEnum: "replicated" | "global" | "replicated-job" | "global-job";
     ComposeStackServiceStatusRequest: {
       id: string;
       status: components["schemas"]["ComposeStackServiceStatusStatusEnum"];
@@ -1542,9 +1429,7 @@ export interface components {
       volumes: components["schemas"]["ComposeStackServiceVolumeRequest"][];
       configs: components["schemas"]["ComposeStackServiceConfigRequest"][];
       ports: components["schemas"]["ComposeStackServicePortRequest"][];
-      healthcheck?:
-        | components["schemas"]["ComposeStackServiceHealthCheckRequest"]
-        | null;
+      healthcheck?: components["schemas"]["ComposeStackServiceHealthCheckRequest"] | null;
     };
     /**
      * @description * `STARTING` - STARTING
@@ -1554,12 +1439,7 @@ export interface components {
      * * `SLEEPING` - SLEEPING
      * @enum {string}
      */
-    ComposeStackServiceStatusStatusEnum:
-      | "STARTING"
-      | "HEALTHY"
-      | "UNHEALTHY"
-      | "COMPLETE"
-      | "SLEEPING";
+    ComposeStackServiceStatusStatusEnum: "STARTING" | "HEALTHY" | "UNHEALTHY" | "COMPLETE" | "SLEEPING";
     ComposeStackServiceTask: {
       status: components["schemas"]["ServiceTaskStatus"];
       desired_status: components["schemas"]["ServiceTaskStatus"];
@@ -1676,13 +1556,8 @@ export interface components {
       commit_message?: string;
       user_content?: string;
     };
-    ComposeStacksCreateCreateError:
-      | components["schemas"]["ComposeStacksCreateCreateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ComposeStacksCreateCreateSlugErrorComponent"]
-      | components["schemas"]["ComposeStacksCreateCreateUserContentErrorComponent"];
-    ComposeStacksCreateCreateErrorResponse400:
-      | components["schemas"]["ComposeStacksCreateCreateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ComposeStacksCreateCreateError: components["schemas"]["ComposeStacksCreateCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ComposeStacksCreateCreateSlugErrorComponent"] | components["schemas"]["ComposeStacksCreateCreateUserContentErrorComponent"];
+    ComposeStacksCreateCreateErrorResponse400: components["schemas"]["ComposeStacksCreateCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ComposeStacksCreateCreateNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -1711,13 +1586,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ComposeStacksCreateCreateUserContentErrorComponent: {
@@ -1735,13 +1604,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ComposeStacksCreateCreateValidationError: {
@@ -1749,12 +1612,8 @@ export interface components {
       errors: components["schemas"]["ComposeStacksCreateCreateError"][];
     };
     ComposeStacksDeploymentsBuildLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ComposeStacksListError:
-      | components["schemas"]["ComposeStacksListSlugErrorComponent"]
-      | components["schemas"]["ComposeStacksListSortByErrorComponent"];
-    ComposeStacksListErrorResponse400:
-      | components["schemas"]["ComposeStacksListValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ComposeStacksListError: components["schemas"]["ComposeStacksListSlugErrorComponent"] | components["schemas"]["ComposeStacksListSortByErrorComponent"];
+    ComposeStacksListErrorResponse400: components["schemas"]["ComposeStacksListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ComposeStacksListSlugErrorComponent: {
       /**
        * @description * `slug` - slug
@@ -1788,12 +1647,8 @@ export interface components {
     ComposeStacksMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksRuntimeLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ComposeStacksRuntimeLogsWithContextRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ComposeStacksUpdateError:
-      | components["schemas"]["ComposeStacksUpdateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ComposeStacksUpdateSlugErrorComponent"];
-    ComposeStacksUpdateErrorResponse400:
-      | components["schemas"]["ComposeStacksUpdateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ComposeStacksUpdateError: components["schemas"]["ComposeStacksUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ComposeStacksUpdateSlugErrorComponent"];
+    ComposeStacksUpdateErrorResponse400: components["schemas"]["ComposeStacksUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ComposeStacksUpdateNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -1822,13 +1677,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ComposeStacksUpdateValidationError: {
@@ -1870,12 +1719,8 @@ export interface components {
       language?: string;
     };
     ConnectorsDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ConnectorsGithubPartialUpdateError:
-      | components["schemas"]["ConnectorsGithubPartialUpdateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ConnectorsGithubPartialUpdateNameErrorComponent"];
-    ConnectorsGithubPartialUpdateErrorResponse400:
-      | components["schemas"]["ConnectorsGithubPartialUpdateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ConnectorsGithubPartialUpdateError: components["schemas"]["ConnectorsGithubPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConnectorsGithubPartialUpdateNameErrorComponent"];
+    ConnectorsGithubPartialUpdateErrorResponse400: components["schemas"]["ConnectorsGithubPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ConnectorsGithubPartialUpdateNameErrorComponent: {
       /**
        * @description * `name` - name
@@ -1892,14 +1737,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ConnectorsGithubPartialUpdateNonFieldErrorsErrorComponent: {
@@ -1935,22 +1773,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    ConnectorsGitlabUpdateUpdateError:
-      | components["schemas"]["ConnectorsGitlabUpdateUpdateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ConnectorsGitlabUpdateUpdateNameErrorComponent"]
-      | components["schemas"]["ConnectorsGitlabUpdateUpdateAppSecretErrorComponent"]
-      | components["schemas"]["ConnectorsGitlabUpdateUpdateRedirectUriErrorComponent"];
-    ConnectorsGitlabUpdateUpdateErrorResponse400:
-      | components["schemas"]["ConnectorsGitlabUpdateUpdateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ConnectorsGitlabUpdateUpdateError: components["schemas"]["ConnectorsGitlabUpdateUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConnectorsGitlabUpdateUpdateNameErrorComponent"] | components["schemas"]["ConnectorsGitlabUpdateUpdateAppSecretErrorComponent"] | components["schemas"]["ConnectorsGitlabUpdateUpdateRedirectUriErrorComponent"];
+    ConnectorsGitlabUpdateUpdateErrorResponse400: components["schemas"]["ConnectorsGitlabUpdateUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ConnectorsGitlabUpdateUpdateNameErrorComponent: {
       /**
        * @description * `name` - name
@@ -1966,13 +1793,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ConnectorsGitlabUpdateUpdateNonFieldErrorsErrorComponent: {
@@ -2003,13 +1824,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ConnectorsGitlabUpdateUpdateValidationError: {
@@ -2036,13 +1851,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ConsoleSystemSettingsUpdateBuildCacheMaxAgeDaysErrorComponent: {
@@ -2092,29 +1901,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    ConsoleSystemSettingsUpdateError:
-      | components["schemas"]["ConsoleSystemSettingsUpdateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ConsoleSystemSettingsUpdateDockerSystemPruneCronScheduleErrorComponent"]
-      | components["schemas"]["ConsoleSystemSettingsUpdateAppDataCleanupCronScheduleErrorComponent"]
-      | components["schemas"]["ConsoleSystemSettingsUpdateHttpLogRetentionDaysErrorComponent"]
-      | components["schemas"]["ConsoleSystemSettingsUpdateBuildCacheMaxAgeDaysErrorComponent"]
-      | components["schemas"]["ConsoleSystemSettingsUpdateBuildCacheMaxUseSpaceBytesErrorComponent"]
-      | components["schemas"]["ConsoleSystemSettingsUpdatePruneImagesErrorComponent"]
-      | components["schemas"]["ConsoleSystemSettingsUpdatePruneContainersErrorComponent"]
-      | components["schemas"]["ConsoleSystemSettingsUpdatePruneVolumesErrorComponent"]
-      | components["schemas"]["ConsoleSystemSettingsUpdatePruneNetworksErrorComponent"];
-    ConsoleSystemSettingsUpdateErrorResponse400:
-      | components["schemas"]["ConsoleSystemSettingsUpdateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ConsoleSystemSettingsUpdateError: components["schemas"]["ConsoleSystemSettingsUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateDockerSystemPruneCronScheduleErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateAppDataCleanupCronScheduleErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateHttpLogRetentionDaysErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateBuildCacheMaxAgeDaysErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdateBuildCacheMaxUseSpaceBytesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneImagesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneContainersErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneVolumesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsUpdatePruneNetworksErrorComponent"];
+    ConsoleSystemSettingsUpdateErrorResponse400: components["schemas"]["ConsoleSystemSettingsUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ConsoleSystemSettingsUpdateHttpLogRetentionDaysErrorComponent: {
       /**
        * @description * `http_log_retention_days` - http_log_retention_days
@@ -2204,12 +1995,8 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ConsoleSystemSettingsUpdateError"][];
     };
-    ConsoleTransferWorkspaceOwnershipError:
-      | components["schemas"]["ConsoleTransferWorkspaceOwnershipNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ConsoleTransferWorkspaceOwnershipOwnerIdErrorComponent"];
-    ConsoleTransferWorkspaceOwnershipErrorResponse400:
-      | components["schemas"]["ConsoleTransferWorkspaceOwnershipValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ConsoleTransferWorkspaceOwnershipError: components["schemas"]["ConsoleTransferWorkspaceOwnershipNonFieldErrorsErrorComponent"] | components["schemas"]["ConsoleTransferWorkspaceOwnershipOwnerIdErrorComponent"];
+    ConsoleTransferWorkspaceOwnershipErrorResponse400: components["schemas"]["ConsoleTransferWorkspaceOwnershipValidationError"] | components["schemas"]["ParseErrorResponse"];
     ConsoleTransferWorkspaceOwnershipNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -2245,9 +2032,7 @@ export interface components {
     };
     ConsoleUsersDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsoleUsersListError: components["schemas"]["ConsoleUsersListUsernameErrorComponent"];
-    ConsoleUsersListErrorResponse400:
-      | components["schemas"]["ConsoleUsersListValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ConsoleUsersListErrorResponse400: components["schemas"]["ConsoleUsersListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ConsoleUsersListUsernameErrorComponent: {
       /**
        * @description * `username` - username
@@ -2265,12 +2050,8 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ConsoleUsersListError"][];
     };
-    ConsoleUsersPartialUpdateError:
-      | components["schemas"]["ConsoleUsersPartialUpdateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ConsoleUsersPartialUpdateIsActiveErrorComponent"];
-    ConsoleUsersPartialUpdateErrorResponse400:
-      | components["schemas"]["ConsoleUsersPartialUpdateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ConsoleUsersPartialUpdateError: components["schemas"]["ConsoleUsersPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConsoleUsersPartialUpdateIsActiveErrorComponent"];
+    ConsoleUsersPartialUpdateErrorResponse400: components["schemas"]["ConsoleUsersPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ConsoleUsersPartialUpdateIsActiveErrorComponent: {
       /**
        * @description * `is_active` - is_active
@@ -2305,9 +2086,7 @@ export interface components {
     ConsoleUsersRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsoleWorkspacesDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsoleWorkspacesListError: components["schemas"]["ConsoleWorkspacesListNameErrorComponent"];
-    ConsoleWorkspacesListErrorResponse400:
-      | components["schemas"]["ConsoleWorkspacesListValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ConsoleWorkspacesListErrorResponse400: components["schemas"]["ConsoleWorkspacesListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ConsoleWorkspacesListNameErrorComponent: {
       /**
        * @description * `name` - name
@@ -2349,22 +2128,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    CreateDockerServiceError:
-      | components["schemas"]["CreateDockerServiceNonFieldErrorsErrorComponent"]
-      | components["schemas"]["CreateDockerServiceSlugErrorComponent"]
-      | components["schemas"]["CreateDockerServiceImageErrorComponent"]
-      | components["schemas"]["CreateDockerServiceContainerRegistryCredentialsIdErrorComponent"];
-    CreateDockerServiceErrorResponse400:
-      | components["schemas"]["CreateDockerServiceValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    CreateDockerServiceError: components["schemas"]["CreateDockerServiceNonFieldErrorsErrorComponent"] | components["schemas"]["CreateDockerServiceSlugErrorComponent"] | components["schemas"]["CreateDockerServiceImageErrorComponent"] | components["schemas"]["CreateDockerServiceContainerRegistryCredentialsIdErrorComponent"];
+    CreateDockerServiceErrorResponse400: components["schemas"]["CreateDockerServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     CreateDockerServiceImageErrorComponent: {
       /**
        * @description * `image` - image
@@ -2380,13 +2148,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateDockerServiceNonFieldErrorsErrorComponent: {
@@ -2417,13 +2179,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateDockerServiceValidationError: {
@@ -2433,13 +2189,8 @@ export interface components {
     CreateEnvironmentRequestRequest: {
       name: string;
     };
-    CreateFromDokployTemplateBase64Error:
-      | components["schemas"]["CreateFromDokployTemplateBase64NonFieldErrorsErrorComponent"]
-      | components["schemas"]["CreateFromDokployTemplateBase64UserContentErrorComponent"]
-      | components["schemas"]["CreateFromDokployTemplateBase64SlugErrorComponent"];
-    CreateFromDokployTemplateBase64ErrorResponse400:
-      | components["schemas"]["CreateFromDokployTemplateBase64ValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    CreateFromDokployTemplateBase64Error: components["schemas"]["CreateFromDokployTemplateBase64NonFieldErrorsErrorComponent"] | components["schemas"]["CreateFromDokployTemplateBase64UserContentErrorComponent"] | components["schemas"]["CreateFromDokployTemplateBase64SlugErrorComponent"];
+    CreateFromDokployTemplateBase64ErrorResponse400: components["schemas"]["CreateFromDokployTemplateBase64ValidationError"] | components["schemas"]["ParseErrorResponse"];
     CreateFromDokployTemplateBase64NonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -2468,13 +2219,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateFromDokployTemplateBase64UserContentErrorComponent: {
@@ -2492,13 +2237,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateFromDokployTemplateBase64ValidationError: {
@@ -2520,13 +2259,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateFromDokployTemplateObjectConfigErrorComponent: {
@@ -2544,23 +2277,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    CreateFromDokployTemplateObjectError:
-      | components["schemas"]["CreateFromDokployTemplateObjectNonFieldErrorsErrorComponent"]
-      | components["schemas"]["CreateFromDokployTemplateObjectComposeErrorComponent"]
-      | components["schemas"]["CreateFromDokployTemplateObjectConfigErrorComponent"]
-      | components["schemas"]["CreateFromDokployTemplateObjectSlugErrorComponent"];
-    CreateFromDokployTemplateObjectErrorResponse400:
-      | components["schemas"]["CreateFromDokployTemplateObjectValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    CreateFromDokployTemplateObjectError: components["schemas"]["CreateFromDokployTemplateObjectNonFieldErrorsErrorComponent"] | components["schemas"]["CreateFromDokployTemplateObjectComposeErrorComponent"] | components["schemas"]["CreateFromDokployTemplateObjectConfigErrorComponent"] | components["schemas"]["CreateFromDokployTemplateObjectSlugErrorComponent"];
+    CreateFromDokployTemplateObjectErrorResponse400: components["schemas"]["CreateFromDokployTemplateObjectValidationError"] | components["schemas"]["ParseErrorResponse"];
     CreateFromDokployTemplateObjectNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -2589,13 +2310,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateFromDokployTemplateObjectValidationError: {
@@ -2617,13 +2332,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateGitServiceBuildContextDirErrorComponent: {
@@ -2640,12 +2349,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateGitServiceBuildDirectoryErrorComponent: {
@@ -2662,12 +2366,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateGitServiceBuilderErrorComponent: {
@@ -2698,33 +2397,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    CreateGitServiceError:
-      | components["schemas"]["CreateGitServiceNonFieldErrorsErrorComponent"]
-      | components["schemas"]["CreateGitServiceSlugErrorComponent"]
-      | components["schemas"]["CreateGitServiceRepositoryUrlErrorComponent"]
-      | components["schemas"]["CreateGitServiceBranchNameErrorComponent"]
-      | components["schemas"]["CreateGitServiceGitAppIdErrorComponent"]
-      | components["schemas"]["CreateGitServiceDockerfilePathErrorComponent"]
-      | components["schemas"]["CreateGitServiceBuildContextDirErrorComponent"]
-      | components["schemas"]["CreateGitServiceBuilderErrorComponent"]
-      | components["schemas"]["CreateGitServicePublishDirectoryErrorComponent"]
-      | components["schemas"]["CreateGitServiceIsSpaErrorComponent"]
-      | components["schemas"]["CreateGitServiceNotFoundPageErrorComponent"]
-      | components["schemas"]["CreateGitServiceIndexPageErrorComponent"]
-      | components["schemas"]["CreateGitServiceBuildDirectoryErrorComponent"]
-      | components["schemas"]["CreateGitServiceIsStaticErrorComponent"]
-      | components["schemas"]["CreateGitServiceExposedPortErrorComponent"];
-    CreateGitServiceErrorResponse400:
-      | components["schemas"]["CreateGitServiceValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    CreateGitServiceError: components["schemas"]["CreateGitServiceNonFieldErrorsErrorComponent"] | components["schemas"]["CreateGitServiceSlugErrorComponent"] | components["schemas"]["CreateGitServiceRepositoryUrlErrorComponent"] | components["schemas"]["CreateGitServiceBranchNameErrorComponent"] | components["schemas"]["CreateGitServiceGitAppIdErrorComponent"] | components["schemas"]["CreateGitServiceDockerfilePathErrorComponent"] | components["schemas"]["CreateGitServiceBuildContextDirErrorComponent"] | components["schemas"]["CreateGitServiceBuilderErrorComponent"] | components["schemas"]["CreateGitServicePublishDirectoryErrorComponent"] | components["schemas"]["CreateGitServiceIsSpaErrorComponent"] | components["schemas"]["CreateGitServiceNotFoundPageErrorComponent"] | components["schemas"]["CreateGitServiceIndexPageErrorComponent"] | components["schemas"]["CreateGitServiceBuildDirectoryErrorComponent"] | components["schemas"]["CreateGitServiceIsStaticErrorComponent"] | components["schemas"]["CreateGitServiceExposedPortErrorComponent"];
+    CreateGitServiceErrorResponse400: components["schemas"]["CreateGitServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     CreateGitServiceExposedPortErrorComponent: {
       /**
        * @description * `exposed_port` - exposed_port
@@ -2755,12 +2432,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateGitServiceIndexPageErrorComponent: {
@@ -2777,12 +2449,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateGitServiceIsSpaErrorComponent: {
@@ -2839,11 +2506,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateGitServicePublishDirectoryErrorComponent: {
@@ -2860,12 +2523,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateGitServiceRepositoryUrlErrorComponent: {
@@ -2883,20 +2541,10 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    CreateGitServiceRequestRequest:
-      | components["schemas"]["GitServiceDockerfileBuilderRequestRequest"]
-      | components["schemas"]["GitServiceStaticDirBuilderRequestRequest"]
-      | components["schemas"]["GitServiceNixpacksBuilderRequestRequest"]
-      | components["schemas"]["GitServiceRailpackBuilderRequestRequest"];
+    CreateGitServiceRequestRequest: components["schemas"]["GitServiceDockerfileBuilderRequestRequest"] | components["schemas"]["GitServiceStaticDirBuilderRequestRequest"] | components["schemas"]["GitServiceNixpacksBuilderRequestRequest"] | components["schemas"]["GitServiceRailpackBuilderRequestRequest"];
     CreateGitServiceSlugErrorComponent: {
       /**
        * @description * `slug` - slug
@@ -2912,13 +2560,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateGitServiceValidationError: {
@@ -2940,13 +2582,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateGitlabAppAppSecretErrorComponent: {
@@ -2964,25 +2600,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    CreateGitlabAppError:
-      | components["schemas"]["CreateGitlabAppNonFieldErrorsErrorComponent"]
-      | components["schemas"]["CreateGitlabAppAppIdErrorComponent"]
-      | components["schemas"]["CreateGitlabAppAppSecretErrorComponent"]
-      | components["schemas"]["CreateGitlabAppRedirectUriErrorComponent"]
-      | components["schemas"]["CreateGitlabAppGitlabUrlErrorComponent"]
-      | components["schemas"]["CreateGitlabAppNameErrorComponent"];
-    CreateGitlabAppErrorResponse400:
-      | components["schemas"]["CreateGitlabAppValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    CreateGitlabAppError: components["schemas"]["CreateGitlabAppNonFieldErrorsErrorComponent"] | components["schemas"]["CreateGitlabAppAppIdErrorComponent"] | components["schemas"]["CreateGitlabAppAppSecretErrorComponent"] | components["schemas"]["CreateGitlabAppRedirectUriErrorComponent"] | components["schemas"]["CreateGitlabAppGitlabUrlErrorComponent"] | components["schemas"]["CreateGitlabAppNameErrorComponent"];
+    CreateGitlabAppErrorResponse400: components["schemas"]["CreateGitlabAppValidationError"] | components["schemas"]["ParseErrorResponse"];
     CreateGitlabAppGitlabUrlErrorComponent: {
       /**
        * @description * `gitlab_url` - gitlab_url
@@ -2997,12 +2619,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateGitlabAppNameErrorComponent: {
@@ -3020,13 +2637,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateGitlabAppNonFieldErrorsErrorComponent: {
@@ -3057,13 +2668,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateGitlabAppRequestRequest: {
@@ -3085,12 +2690,8 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateGitlabAppError"][];
     };
-    CreateNewEnvironmentError:
-      | components["schemas"]["CreateNewEnvironmentNonFieldErrorsErrorComponent"]
-      | components["schemas"]["CreateNewEnvironmentNameErrorComponent"];
-    CreateNewEnvironmentErrorResponse400:
-      | components["schemas"]["CreateNewEnvironmentValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    CreateNewEnvironmentError: components["schemas"]["CreateNewEnvironmentNonFieldErrorsErrorComponent"] | components["schemas"]["CreateNewEnvironmentNameErrorComponent"];
+    CreateNewEnvironmentErrorResponse400: components["schemas"]["CreateNewEnvironmentValidationError"] | components["schemas"]["ParseErrorResponse"];
     CreateNewEnvironmentNameErrorComponent: {
       /**
        * @description * `name` - name
@@ -3107,14 +2708,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateNewEnvironmentNonFieldErrorsErrorComponent: {
@@ -3148,21 +2742,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    CreateProjectError:
-      | components["schemas"]["CreateProjectNonFieldErrorsErrorComponent"]
-      | components["schemas"]["CreateProjectSlugErrorComponent"]
-      | components["schemas"]["CreateProjectDescriptionErrorComponent"];
-    CreateProjectErrorResponse400:
-      | components["schemas"]["CreateProjectValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    CreateProjectError: components["schemas"]["CreateProjectNonFieldErrorsErrorComponent"] | components["schemas"]["CreateProjectSlugErrorComponent"] | components["schemas"]["CreateProjectDescriptionErrorComponent"];
+    CreateProjectErrorResponse400: components["schemas"]["CreateProjectValidationError"] | components["schemas"]["ParseErrorResponse"];
     CreateProjectNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -3191,26 +2775,15 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateProjectValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateProjectError"][];
     };
-    CreateSSHKeyError:
-      | components["schemas"]["CreateSSHKeyNonFieldErrorsErrorComponent"]
-      | components["schemas"]["CreateSSHKeyUserErrorComponent"]
-      | components["schemas"]["CreateSSHKeySlugErrorComponent"];
-    CreateSSHKeyErrorResponse400:
-      | components["schemas"]["CreateSSHKeyValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    CreateSSHKeyError: components["schemas"]["CreateSSHKeyNonFieldErrorsErrorComponent"] | components["schemas"]["CreateSSHKeyUserErrorComponent"] | components["schemas"]["CreateSSHKeySlugErrorComponent"];
+    CreateSSHKeyErrorResponse400: components["schemas"]["CreateSSHKeyValidationError"] | components["schemas"]["ParseErrorResponse"];
     CreateSSHKeyNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -3243,13 +2816,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateSSHKeyUserErrorComponent: {
@@ -3267,25 +2834,15 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateSSHKeyValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateSSHKeyError"][];
     };
-    CreateWorkspaceError:
-      | components["schemas"]["CreateWorkspaceNonFieldErrorsErrorComponent"]
-      | components["schemas"]["CreateWorkspaceNameErrorComponent"];
-    CreateWorkspaceErrorResponse400:
-      | components["schemas"]["CreateWorkspaceValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    CreateWorkspaceError: components["schemas"]["CreateWorkspaceNonFieldErrorsErrorComponent"] | components["schemas"]["CreateWorkspaceNameErrorComponent"];
+    CreateWorkspaceErrorResponse400: components["schemas"]["CreateWorkspaceValidationError"] | components["schemas"]["ParseErrorResponse"];
     CreateWorkspaceNameErrorComponent: {
       /**
        * @description * `name` - name
@@ -3302,14 +2859,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateWorkspaceNonFieldErrorsErrorComponent: {
@@ -3351,20 +2901,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    DeployComposeStackError:
-      | components["schemas"]["DeployComposeStackNonFieldErrorsErrorComponent"]
-      | components["schemas"]["DeployComposeStackCommitMessageErrorComponent"];
-    DeployComposeStackErrorResponse400:
-      | components["schemas"]["DeployComposeStackValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    DeployComposeStackError: components["schemas"]["DeployComposeStackNonFieldErrorsErrorComponent"] | components["schemas"]["DeployComposeStackCommitMessageErrorComponent"];
+    DeployComposeStackErrorResponse400: components["schemas"]["DeployComposeStackValidationError"] | components["schemas"]["ParseErrorResponse"];
     DeployComposeStackNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -3409,20 +2950,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    DeployDockerServiceError:
-      | components["schemas"]["DeployDockerServiceNonFieldErrorsErrorComponent"]
-      | components["schemas"]["DeployDockerServiceCommitMessageErrorComponent"]
-      | components["schemas"]["DeployDockerServiceCleanupQueueErrorComponent"];
-    DeployDockerServiceErrorResponse400:
-      | components["schemas"]["DeployDockerServiceValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    DeployDockerServiceError: components["schemas"]["DeployDockerServiceNonFieldErrorsErrorComponent"] | components["schemas"]["DeployDockerServiceCommitMessageErrorComponent"] | components["schemas"]["DeployDockerServiceCleanupQueueErrorComponent"];
+    DeployDockerServiceErrorResponse400: components["schemas"]["DeployDockerServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     DeployDockerServiceNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -3454,13 +2986,8 @@ export interface components {
       code: "invalid" | "null";
       detail: string;
     };
-    DeployGitServiceError:
-      | components["schemas"]["DeployGitServiceNonFieldErrorsErrorComponent"]
-      | components["schemas"]["DeployGitServiceIgnoreBuildCacheErrorComponent"]
-      | components["schemas"]["DeployGitServiceCleanupQueueErrorComponent"];
-    DeployGitServiceErrorResponse400:
-      | components["schemas"]["DeployGitServiceValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    DeployGitServiceError: components["schemas"]["DeployGitServiceNonFieldErrorsErrorComponent"] | components["schemas"]["DeployGitServiceIgnoreBuildCacheErrorComponent"] | components["schemas"]["DeployGitServiceCleanupQueueErrorComponent"];
+    DeployGitServiceErrorResponse400: components["schemas"]["DeployGitServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     DeployGitServiceIgnoreBuildCacheErrorComponent: {
       /**
        * @description * `ignore_build_cache` - ignore_build_cache
@@ -3521,19 +3048,7 @@ export interface components {
      * * `configs` - configs
      * @enum {string}
      */
-    DeploymentChangeFieldEnum:
-      | "source"
-      | "git_source"
-      | "builder"
-      | "command"
-      | "healthcheck"
-      | "volumes"
-      | "shared_volumes"
-      | "env_variables"
-      | "urls"
-      | "ports"
-      | "resource_limits"
-      | "configs";
+    DeploymentChangeFieldEnum: "source" | "git_source" | "builder" | "command" | "healthcheck" | "volumes" | "shared_volumes" | "env_variables" | "urls" | "ports" | "resource_limits" | "configs";
     DeploymentChangeRequest: {
       id?: string;
       type: components["schemas"]["DeploymentChangeTypeEnum"];
@@ -3542,19 +3057,7 @@ export interface components {
       old_value?: unknown;
       item_id?: string | null;
     };
-    DeploymentChangeRequestRequest:
-      | components["schemas"]["URLItemChangeRequest"]
-      | components["schemas"]["VolumeItemChangeRequest"]
-      | components["schemas"]["SharedVolumeItemChangeRequest"]
-      | components["schemas"]["EnvItemChangeRequest"]
-      | components["schemas"]["PortItemChangeRequest"]
-      | components["schemas"]["DockerSourceFieldChangeRequest"]
-      | components["schemas"]["DockerCommandFieldChangeRequest"]
-      | components["schemas"]["HealthcheckFieldChangeRequest"]
-      | components["schemas"]["ResourceLimitChangeRequest"]
-      | components["schemas"]["ConfigItemChangeRequest"]
-      | components["schemas"]["GitSourceFieldChangeRequest"]
-      | components["schemas"]["GitBuilderFieldChangeRequest"];
+    DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["SharedVolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerSourceFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"] | components["schemas"]["ConfigItemChangeRequest"] | components["schemas"]["GitSourceFieldChangeRequest"] | components["schemas"]["GitBuilderFieldChangeRequest"];
     /**
      * @description * `UPDATE` - update
      * * `DELETE` - delete
@@ -3576,26 +3079,15 @@ export interface components {
       type: components["schemas"]["ServiceTypeEnum"];
       image: string;
       command: string | null;
-      builder:
-        | components["schemas"]["GitServiceBuilderEnum"]
-        | components["schemas"]["NullEnum"]
-        | null;
+      builder: components["schemas"]["GitServiceBuilderEnum"] | components["schemas"]["NullEnum"] | null;
       /** Format: uri */
       repository_url: string | null;
       branch_name: string | null;
       commit_sha: string | null;
-      dockerfile_builder_options:
-        | components["schemas"]["DockerfileBuilderOptions"]
-        | null;
-      static_dir_builder_options:
-        | components["schemas"]["StaticDirectoryBuilderOptions"]
-        | null;
-      nixpacks_builder_options:
-        | components["schemas"]["NixpacksBuilderOptions"]
-        | null;
-      railpack_builder_options:
-        | components["schemas"]["RailpackBuilderOptions"]
-        | null;
+      dockerfile_builder_options: components["schemas"]["DockerfileBuilderOptions"] | null;
+      static_dir_builder_options: components["schemas"]["StaticDirectoryBuilderOptions"] | null;
+      nixpacks_builder_options: components["schemas"]["NixpacksBuilderOptions"] | null;
+      railpack_builder_options: components["schemas"]["RailpackBuilderOptions"] | null;
       healthcheck: components["schemas"]["HealthCheck"] | null;
       project_id: string;
       environment: components["schemas"]["Environment"];
@@ -3620,9 +3112,7 @@ export interface components {
       watch_paths: string | null;
       cleanup_queue_on_auto_deploy: boolean;
       pr_preview_envs_enabled: boolean;
-      container_registry_credentials:
-        | components["schemas"]["WriteableContainerRegistryCredentials"]
-        | null;
+      container_registry_credentials: components["schemas"]["WriteableContainerRegistryCredentials"] | null;
       /** @default [] */
       shared_volumes: readonly components["schemas"]["SharedVolume"][];
     };
@@ -3641,19 +3131,7 @@ export interface components {
      * * `SLEEPING` - Sleeping
      * @enum {string}
      */
-    DeploymentStatusEnum:
-      | "QUEUED"
-      | "CANCELLED"
-      | "CANCELLING"
-      | "FAILED"
-      | "PREPARING"
-      | "BUILDING"
-      | "STARTING"
-      | "RESTARTING"
-      | "HEALTHY"
-      | "UNHEALTHY"
-      | "REMOVED"
-      | "SLEEPING";
+    DeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "BUILDING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
     /**
      * @description * `start` - start
      * * `stop` - stop
@@ -3761,13 +3239,8 @@ export interface components {
       code: "does_not_exist" | "incorrect_type" | "not_a_list" | "null";
       detail: string;
     };
-    EditWorkpacePermissionsError:
-      | components["schemas"]["EditWorkpacePermissionsNonFieldErrorsErrorComponent"]
-      | components["schemas"]["EditWorkpacePermissionsRoleErrorComponent"]
-      | components["schemas"]["EditWorkpacePermissionsAccessibleProjectIdsErrorComponent"];
-    EditWorkpacePermissionsErrorResponse400:
-      | components["schemas"]["EditWorkpacePermissionsValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    EditWorkpacePermissionsError: components["schemas"]["EditWorkpacePermissionsNonFieldErrorsErrorComponent"] | components["schemas"]["EditWorkpacePermissionsRoleErrorComponent"] | components["schemas"]["EditWorkpacePermissionsAccessibleProjectIdsErrorComponent"];
+    EditWorkpacePermissionsErrorResponse400: components["schemas"]["EditWorkpacePermissionsValidationError"] | components["schemas"]["ParseErrorResponse"];
     EditWorkpacePermissionsNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -3946,12 +3419,8 @@ export interface components {
     GetComposeStackDetailsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetPreviewEnvToReviewErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    GetProjectListError:
-      | components["schemas"]["GetProjectListSlugErrorComponent"]
-      | components["schemas"]["GetProjectListSortByErrorComponent"];
-    GetProjectListErrorResponse400:
-      | components["schemas"]["GetProjectListValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    GetProjectListError: components["schemas"]["GetProjectListSlugErrorComponent"] | components["schemas"]["GetProjectListSortByErrorComponent"];
+    GetProjectListErrorResponse400: components["schemas"]["GetProjectListValidationError"] | components["schemas"]["ParseErrorResponse"];
     GetProjectListSlugErrorComponent: {
       /**
        * @description * `slug` - slug
@@ -4029,11 +3498,7 @@ export interface components {
      * * `RAILPACK` - Railpack
      * @enum {string}
      */
-    GitServiceBuilderEnum:
-      | "DOCKERFILE"
-      | "STATIC_DIR"
-      | "NIXPACKS"
-      | "RAILPACK";
+    GitServiceBuilderEnum: "DOCKERFILE" | "STATIC_DIR" | "NIXPACKS" | "RAILPACK";
     GitServiceCard: {
       /** Format: date-time */
       updated_at: string;
@@ -4048,10 +3513,7 @@ export interface components {
       repository: string;
       last_commit_message: string;
       branch: string;
-      git_provider:
-        | components["schemas"]["GitServiceCardGitProviderEnum"]
-        | components["schemas"]["NullEnum"]
-        | null;
+      git_provider: components["schemas"]["GitServiceCardGitProviderEnum"] | components["schemas"]["NullEnum"] | null;
     };
     /**
      * @description * `gitlab` - gitlab
@@ -4317,17 +3779,8 @@ export interface components {
       code: "null_characters_not_allowed";
       detail: string;
     };
-    HttpLogsListError:
-      | components["schemas"]["HttpLogsListTimeErrorComponent"]
-      | components["schemas"]["HttpLogsListRequestMethodErrorComponent"]
-      | components["schemas"]["HttpLogsListRequestQueryErrorComponent"]
-      | components["schemas"]["HttpLogsListStackIdErrorComponent"]
-      | components["schemas"]["HttpLogsListServiceIdErrorComponent"]
-      | components["schemas"]["HttpLogsListDeploymentIdErrorComponent"]
-      | components["schemas"]["HttpLogsListSortByErrorComponent"];
-    HttpLogsListErrorResponse400:
-      | components["schemas"]["HttpLogsListValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    HttpLogsListError: components["schemas"]["HttpLogsListTimeErrorComponent"] | components["schemas"]["HttpLogsListRequestMethodErrorComponent"] | components["schemas"]["HttpLogsListRequestQueryErrorComponent"] | components["schemas"]["HttpLogsListStackIdErrorComponent"] | components["schemas"]["HttpLogsListServiceIdErrorComponent"] | components["schemas"]["HttpLogsListDeploymentIdErrorComponent"] | components["schemas"]["HttpLogsListSortByErrorComponent"];
+    HttpLogsListErrorResponse400: components["schemas"]["HttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     HttpLogsListRequestMethodErrorComponent: {
       /**
        * @description * `request_method` - request_method
@@ -4445,15 +3898,8 @@ export interface components {
       code: "does_not_exist" | "incorrect_type" | "not_a_list" | "null";
       detail: string;
     };
-    InviteUserError:
-      | components["schemas"]["InviteUserNonFieldErrorsErrorComponent"]
-      | components["schemas"]["InviteUserAccessibleProjectIdsErrorComponent"]
-      | components["schemas"]["InviteUserValidForErrorComponent"]
-      | components["schemas"]["InviteUserRoleErrorComponent"]
-      | components["schemas"]["InviteUserUsernameErrorComponent"];
-    InviteUserErrorResponse400:
-      | components["schemas"]["InviteUserValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    InviteUserError: components["schemas"]["InviteUserNonFieldErrorsErrorComponent"] | components["schemas"]["InviteUserAccessibleProjectIdsErrorComponent"] | components["schemas"]["InviteUserValidForErrorComponent"] | components["schemas"]["InviteUserRoleErrorComponent"] | components["schemas"]["InviteUserUsernameErrorComponent"];
+    InviteUserErrorResponse400: components["schemas"]["InviteUserValidationError"] | components["schemas"]["ParseErrorResponse"];
     InviteUserIntoWorkspaceRequestRequest: {
       /** @default [] */
       accessible_project_ids?: string[];
@@ -4507,15 +3953,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "min_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     InviteUserValidForErrorComponent: {
@@ -4543,12 +3981,8 @@ export interface components {
      * @enum {string}
      */
     ItemChangeTypeEnum: "ADD" | "DELETE" | "UPDATE";
-    LeaveWorkspaceError:
-      | components["schemas"]["LeaveWorkspaceNonFieldErrorsErrorComponent"]
-      | components["schemas"]["LeaveWorkspaceSuccessErrorComponent"];
-    LeaveWorkspaceErrorResponse400:
-      | components["schemas"]["LeaveWorkspaceValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    LeaveWorkspaceError: components["schemas"]["LeaveWorkspaceNonFieldErrorsErrorComponent"] | components["schemas"]["LeaveWorkspaceSuccessErrorComponent"];
+    LeaveWorkspaceErrorResponse400: components["schemas"]["LeaveWorkspaceValidationError"] | components["schemas"]["ParseErrorResponse"];
     LeaveWorkspaceNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -4598,12 +4032,8 @@ export interface components {
       uuid: string;
     };
     LicenseDetailsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    LicenseInstallError:
-      | components["schemas"]["LicenseInstallNonFieldErrorsErrorComponent"]
-      | components["schemas"]["LicenseInstallUuidErrorComponent"];
-    LicenseInstallErrorResponse400:
-      | components["schemas"]["LicenseInstallValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    LicenseInstallError: components["schemas"]["LicenseInstallNonFieldErrorsErrorComponent"] | components["schemas"]["LicenseInstallUuidErrorComponent"];
+    LicenseInstallErrorResponse400: components["schemas"]["LicenseInstallValidationError"] | components["schemas"]["ParseErrorResponse"];
     LicenseInstallNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -4641,12 +4071,8 @@ export interface components {
       errors: components["schemas"]["LicenseInstallError"][];
     };
     ListAvailableVolumesErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ListComposeStackDeploymentsError:
-      | components["schemas"]["ListComposeStackDeploymentsStatusErrorComponent"]
-      | components["schemas"]["ListComposeStackDeploymentsQueuedAtErrorComponent"];
-    ListComposeStackDeploymentsErrorResponse400:
-      | components["schemas"]["ListComposeStackDeploymentsValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ListComposeStackDeploymentsError: components["schemas"]["ListComposeStackDeploymentsStatusErrorComponent"] | components["schemas"]["ListComposeStackDeploymentsQueuedAtErrorComponent"];
+    ListComposeStackDeploymentsErrorResponse400: components["schemas"]["ListComposeStackDeploymentsValidationError"] | components["schemas"]["ParseErrorResponse"];
     ListComposeStackDeploymentsQueuedAtErrorComponent: {
       /**
        * @description * `queued_at` - queued_at
@@ -4679,13 +4105,9 @@ export interface components {
       errors: components["schemas"]["ListComposeStackDeploymentsError"][];
     };
     ListGitAppRepositoriesError: components["schemas"]["ListGitAppRepositoriesQueryErrorComponent"];
-    ListGitAppRepositoriesErrorResponse400:
-      | components["schemas"]["ListGitAppRepositoriesValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ListGitAppRepositoriesErrorResponse400: components["schemas"]["ListGitAppRepositoriesValidationError"] | components["schemas"]["ParseErrorResponse"];
     ListGitAppRepositoriesPaginatedError: components["schemas"]["ListGitAppRepositoriesPaginatedQueryErrorComponent"];
-    ListGitAppRepositoriesPaginatedErrorResponse400:
-      | components["schemas"]["ListGitAppRepositoriesPaginatedValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ListGitAppRepositoriesPaginatedErrorResponse400: components["schemas"]["ListGitAppRepositoriesPaginatedValidationError"] | components["schemas"]["ParseErrorResponse"];
     ListGitAppRepositoriesPaginatedQueryErrorComponent: {
       /**
        * @description * `query` - query
@@ -4723,13 +4145,8 @@ export interface components {
     ListGitAppsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ListGitRepoBranchesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ListRegistryImagesErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    LoginError:
-      | components["schemas"]["LoginNonFieldErrorsErrorComponent"]
-      | components["schemas"]["LoginUsernameErrorComponent"]
-      | components["schemas"]["LoginPasswordErrorComponent"];
-    LoginErrorResponse400:
-      | components["schemas"]["LoginValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    LoginError: components["schemas"]["LoginNonFieldErrorsErrorComponent"] | components["schemas"]["LoginUsernameErrorComponent"] | components["schemas"]["LoginPasswordErrorComponent"];
+    LoginErrorResponse400: components["schemas"]["LoginValidationError"] | components["schemas"]["ParseErrorResponse"];
     LoginNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -4760,15 +4177,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "min_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     LoginRequestRequest: {
@@ -4795,15 +4204,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "min_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     LoginValidationError: {
@@ -5248,11 +4649,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ProjectsPreviewTemplatesCreateAuthUserErrorComponent: {
@@ -5268,11 +4665,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent: {
@@ -5332,32 +4725,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    ProjectsPreviewTemplatesCreateError:
-      | components["schemas"]["ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesCreateSlugErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesCreateStacksToCloneIdsErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesCreateIsDefaultErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesCreateAuthUserErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesCreateAuthPasswordErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesCreateEnvVariablesErrorComponent"];
-    ProjectsPreviewTemplatesCreateErrorResponse400:
-      | components["schemas"]["ProjectsPreviewTemplatesCreateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ProjectsPreviewTemplatesCreateError: components["schemas"]["ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateSlugErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateStacksToCloneIdsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateIsDefaultErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateAuthUserErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateAuthPasswordErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateEnvVariablesErrorComponent"];
+    ProjectsPreviewTemplatesCreateErrorResponse400: components["schemas"]["ProjectsPreviewTemplatesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsPreviewTemplatesCreateIsDefaultErrorComponent: {
       /**
        * @description * `is_default` - is_default
@@ -5399,12 +4771,7 @@ export interface components {
        * * `null` - null
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "max_string_length"
-        | "max_value"
-        | "min_value"
-        | "null";
+      code: "invalid" | "max_string_length" | "max_value" | "min_value" | "null";
       detail: string;
     };
     ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent: {
@@ -5421,12 +4788,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent: {
@@ -5461,14 +4823,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ProjectsPreviewTemplatesCreateStacksToCloneIdsErrorComponent: {
@@ -5536,11 +4891,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent: {
@@ -5556,11 +4907,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent: {
@@ -5620,32 +4967,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    ProjectsPreviewTemplatesPartialUpdateError:
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateStacksToCloneIdsErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent"]
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateEnvVariablesErrorComponent"];
-    ProjectsPreviewTemplatesPartialUpdateErrorResponse400:
-      | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ProjectsPreviewTemplatesPartialUpdateError: components["schemas"]["ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateStacksToCloneIdsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateEnvVariablesErrorComponent"];
+    ProjectsPreviewTemplatesPartialUpdateErrorResponse400: components["schemas"]["ProjectsPreviewTemplatesPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent: {
       /**
        * @description * `is_default` - is_default
@@ -5687,12 +5013,7 @@ export interface components {
        * * `null` - null
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "max_string_length"
-        | "max_value"
-        | "min_value"
-        | "null";
+      code: "invalid" | "max_string_length" | "max_value" | "min_value" | "null";
       detail: string;
     };
     ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent: {
@@ -5709,12 +5030,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent: {
@@ -5749,14 +5065,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ProjectsPreviewTemplatesPartialUpdateStacksToCloneIdsErrorComponent: {
@@ -5797,12 +5106,8 @@ export interface components {
     };
     ProjectsPreviewTemplatesRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsBuildLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDeploymentsListError:
-      | components["schemas"]["ProjectsServiceDetailsDeploymentsListStatusErrorComponent"]
-      | components["schemas"]["ProjectsServiceDetailsDeploymentsListQueuedAtErrorComponent"];
-    ProjectsServiceDetailsDeploymentsListErrorResponse400:
-      | components["schemas"]["ProjectsServiceDetailsDeploymentsListValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDeploymentsListError: components["schemas"]["ProjectsServiceDetailsDeploymentsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsListQueuedAtErrorComponent"];
+    ProjectsServiceDetailsDeploymentsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDeploymentsListValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsListQueuedAtErrorComponent: {
       /**
        * @description * `queued_at` - queued_at
@@ -5841,13 +5146,8 @@ export interface components {
     ProjectsServiceDetailsDetectedPortsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsVariablesCreateError:
-      | components["schemas"]["ProjectsVariablesCreateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ProjectsVariablesCreateKeyErrorComponent"]
-      | components["schemas"]["ProjectsVariablesCreateValueErrorComponent"];
-    ProjectsVariablesCreateErrorResponse400:
-      | components["schemas"]["ProjectsVariablesCreateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ProjectsVariablesCreateError: components["schemas"]["ProjectsVariablesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsVariablesCreateKeyErrorComponent"] | components["schemas"]["ProjectsVariablesCreateValueErrorComponent"];
+    ProjectsVariablesCreateErrorResponse400: components["schemas"]["ProjectsVariablesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsVariablesCreateKeyErrorComponent: {
       /**
        * @description * `key` - key
@@ -5863,13 +5163,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ProjectsVariablesCreateNonFieldErrorsErrorComponent: {
@@ -5902,22 +5196,13 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ProjectsVariablesDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsVariablesListErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsVariablesPartialUpdateError:
-      | components["schemas"]["ProjectsVariablesPartialUpdateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ProjectsVariablesPartialUpdateKeyErrorComponent"]
-      | components["schemas"]["ProjectsVariablesPartialUpdateValueErrorComponent"];
-    ProjectsVariablesPartialUpdateErrorResponse400:
-      | components["schemas"]["ProjectsVariablesPartialUpdateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ProjectsVariablesPartialUpdateError: components["schemas"]["ProjectsVariablesPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsVariablesPartialUpdateKeyErrorComponent"] | components["schemas"]["ProjectsVariablesPartialUpdateValueErrorComponent"];
+    ProjectsVariablesPartialUpdateErrorResponse400: components["schemas"]["ProjectsVariablesPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsVariablesPartialUpdateKeyErrorComponent: {
       /**
        * @description * `key` - key
@@ -5933,13 +5218,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ProjectsVariablesPartialUpdateNonFieldErrorsErrorComponent: {
@@ -5972,21 +5251,12 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ProjectsVariablesRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsVariablesUpdateError:
-      | components["schemas"]["ProjectsVariablesUpdateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ProjectsVariablesUpdateKeyErrorComponent"]
-      | components["schemas"]["ProjectsVariablesUpdateValueErrorComponent"];
-    ProjectsVariablesUpdateErrorResponse400:
-      | components["schemas"]["ProjectsVariablesUpdateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ProjectsVariablesUpdateError: components["schemas"]["ProjectsVariablesUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsVariablesUpdateKeyErrorComponent"] | components["schemas"]["ProjectsVariablesUpdateValueErrorComponent"];
+    ProjectsVariablesUpdateErrorResponse400: components["schemas"]["ProjectsVariablesUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsVariablesUpdateKeyErrorComponent: {
       /**
        * @description * `key` - key
@@ -6002,13 +5272,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ProjectsVariablesUpdateNonFieldErrorsErrorComponent: {
@@ -6041,11 +5305,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     /**
@@ -6078,12 +5338,8 @@ export interface components {
       is_static: boolean;
     };
     ReDeployComposeStackErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ReDeployGitServiceError:
-      | components["schemas"]["ReDeployGitServiceNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ReDeployGitServiceIgnoreBuildCacheErrorComponent"];
-    ReDeployGitServiceErrorResponse400:
-      | components["schemas"]["ReDeployGitServiceValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ReDeployGitServiceError: components["schemas"]["ReDeployGitServiceNonFieldErrorsErrorComponent"] | components["schemas"]["ReDeployGitServiceIgnoreBuildCacheErrorComponent"];
+    ReDeployGitServiceErrorResponse400: components["schemas"]["ReDeployGitServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     ReDeployGitServiceIgnoreBuildCacheErrorComponent: {
       /**
        * @description * `ignore_build_cache` - ignore_build_cache
@@ -6146,16 +5402,8 @@ export interface components {
       code: "invalid" | "null";
       detail: string;
     };
-    RegenerateServiceDeployTokenError:
-      | components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"]
-      | components["schemas"]["RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent"]
-      | components["schemas"]["RegenerateServiceDeployTokenWatchPathsErrorComponent"]
-      | components["schemas"]["RegenerateServiceDeployTokenCleanupQueueOnAutoDeployErrorComponent"]
-      | components["schemas"]["RegenerateServiceDeployTokenPrPreviewEnvsEnabledErrorComponent"];
-    RegenerateServiceDeployTokenErrorResponse400:
-      | components["schemas"]["RegenerateServiceDeployTokenValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenWatchPathsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCleanupQueueOnAutoDeployErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenPrPreviewEnvsEnabledErrorComponent"];
+    RegenerateServiceDeployTokenErrorResponse400: components["schemas"]["RegenerateServiceDeployTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -6199,14 +5447,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegenerateServiceDeployTokenValidationError: {
@@ -6227,20 +5468,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    RegenerateUserInvitationError:
-      | components["schemas"]["RegenerateUserInvitationNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RegenerateUserInvitationValidForErrorComponent"];
-    RegenerateUserInvitationErrorResponse400:
-      | components["schemas"]["RegenerateUserInvitationValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    RegenerateUserInvitationError: components["schemas"]["RegenerateUserInvitationNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateUserInvitationValidForErrorComponent"];
+    RegenerateUserInvitationErrorResponse400: components["schemas"]["RegenerateUserInvitationValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegenerateUserInvitationNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -6276,12 +5508,8 @@ export interface components {
       /** @default 3 */
       valid_for?: components["schemas"]["ValidForEnum"];
     };
-    RegisterUserIntoWorkspaceError:
-      | components["schemas"]["RegisterUserIntoWorkspaceNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RegisterUserIntoWorkspacePasswordErrorComponent"];
-    RegisterUserIntoWorkspaceErrorResponse400:
-      | components["schemas"]["RegisterUserIntoWorkspaceValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    RegisterUserIntoWorkspaceError: components["schemas"]["RegisterUserIntoWorkspaceNonFieldErrorsErrorComponent"] | components["schemas"]["RegisterUserIntoWorkspacePasswordErrorComponent"];
+    RegisterUserIntoWorkspaceErrorResponse400: components["schemas"]["RegisterUserIntoWorkspaceValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegisterUserIntoWorkspaceNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -6312,40 +5540,15 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "min_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegisterUserIntoWorkspaceValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RegisterUserIntoWorkspaceError"][];
     };
-    RegistriesBuildRegistriesCreateError:
-      | components["schemas"]["RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesCreateNameErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesCreateIsDefaultErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesCreateIsSecureErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesCreateRegistryDomainErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsRegionErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsEndpointErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsSecureErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsBucketErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsAccessKeyErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsSecretKeyErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesCreateStorageBackendErrorComponent"];
-    RegistriesBuildRegistriesCreateErrorResponse400:
-      | components["schemas"]["RegistriesBuildRegistriesCreateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    RegistriesBuildRegistriesCreateError: components["schemas"]["RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsDefaultErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryDomainErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsRegionErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsEndpointErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsBucketErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsAccessKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsSecretKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateStorageBackendErrorComponent"];
+    RegistriesBuildRegistriesCreateErrorResponse400: components["schemas"]["RegistriesBuildRegistriesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegistriesBuildRegistriesCreateIsDefaultErrorComponent: {
       /**
        * @description * `is_default` - is_default
@@ -6391,14 +5594,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent: {
@@ -6429,13 +5625,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent: {
@@ -6451,11 +5641,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent: {
@@ -6472,12 +5658,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesCreateS3CredentialsAccessKeyErrorComponent: {
@@ -6495,13 +5676,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesCreateS3CredentialsBucketErrorComponent: {
@@ -6519,13 +5694,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesCreateS3CredentialsEndpointErrorComponent: {
@@ -6542,12 +5711,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesCreateS3CredentialsNonFieldErrorsErrorComponent: {
@@ -6578,13 +5742,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesCreateS3CredentialsSecretKeyErrorComponent: {
@@ -6601,12 +5759,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesCreateS3CredentialsSecureErrorComponent: {
@@ -6641,25 +5794,8 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RegistriesBuildRegistriesCreateError"][];
     };
-    RegistriesBuildRegistriesPartialUpdateError:
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateNameErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateStorageBackendErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsEndpointErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecureErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent"]
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent"];
-    RegistriesBuildRegistriesPartialUpdateErrorResponse400:
-      | components["schemas"]["RegistriesBuildRegistriesPartialUpdateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    RegistriesBuildRegistriesPartialUpdateError: components["schemas"]["RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateStorageBackendErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsEndpointErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent"];
+    RegistriesBuildRegistriesPartialUpdateErrorResponse400: components["schemas"]["RegistriesBuildRegistriesPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent: {
       /**
        * @description * `is_default` - is_default
@@ -6705,14 +5841,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent: {
@@ -6744,14 +5873,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent: {
@@ -6769,13 +5891,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent: {
@@ -6794,14 +5910,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent: {
@@ -6819,13 +5928,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent: {
@@ -6843,13 +5946,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesPartialUpdateS3CredentialsEndpointErrorComponent: {
@@ -6866,12 +5963,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent: {
@@ -6902,13 +5994,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent: {
@@ -6925,12 +6011,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesPartialUpdateS3CredentialsSecureErrorComponent: {
@@ -6966,16 +6047,8 @@ export interface components {
       errors: components["schemas"]["RegistriesBuildRegistriesPartialUpdateError"][];
     };
     RegistriesBuildRegistriesRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    RegistriesCredentialsCreateError:
-      | components["schemas"]["RegistriesCredentialsCreateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RegistriesCredentialsCreateRegistryTypeErrorComponent"]
-      | components["schemas"]["RegistriesCredentialsCreateUsernameErrorComponent"]
-      | components["schemas"]["RegistriesCredentialsCreatePasswordErrorComponent"]
-      | components["schemas"]["RegistriesCredentialsCreateUrlErrorComponent"]
-      | components["schemas"]["RegistriesCredentialsCreateSlugErrorComponent"];
-    RegistriesCredentialsCreateErrorResponse400:
-      | components["schemas"]["RegistriesCredentialsCreateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    RegistriesCredentialsCreateError: components["schemas"]["RegistriesCredentialsCreateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateRegistryTypeErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsCreatePasswordErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateSlugErrorComponent"];
+    RegistriesCredentialsCreateErrorResponse400: components["schemas"]["RegistriesCredentialsCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegistriesCredentialsCreateNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -7004,13 +6077,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsCreateRegistryTypeErrorComponent: {
@@ -7044,15 +6111,7 @@ export interface components {
        * * `unique` - unique
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed"
-        | "unique";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
       detail: string;
     };
     RegistriesCredentialsCreateUrlErrorComponent: {
@@ -7071,14 +6130,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsCreateUsernameErrorComponent: {
@@ -7097,29 +6149,15 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsCreateValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RegistriesCredentialsCreateError"][];
     };
-    RegistriesCredentialsPartialUpdateError:
-      | components["schemas"]["RegistriesCredentialsPartialUpdateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RegistriesCredentialsPartialUpdateUsernameErrorComponent"]
-      | components["schemas"]["RegistriesCredentialsPartialUpdateUrlErrorComponent"]
-      | components["schemas"]["RegistriesCredentialsPartialUpdatePasswordErrorComponent"]
-      | components["schemas"]["RegistriesCredentialsPartialUpdateSlugErrorComponent"];
-    RegistriesCredentialsPartialUpdateErrorResponse400:
-      | components["schemas"]["RegistriesCredentialsPartialUpdateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    RegistriesCredentialsPartialUpdateError: components["schemas"]["RegistriesCredentialsPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsPartialUpdateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsPartialUpdateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsPartialUpdatePasswordErrorComponent"] | components["schemas"]["RegistriesCredentialsPartialUpdateSlugErrorComponent"];
+    RegistriesCredentialsPartialUpdateErrorResponse400: components["schemas"]["RegistriesCredentialsPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegistriesCredentialsPartialUpdateNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -7148,13 +6186,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsPartialUpdateSlugErrorComponent: {
@@ -7174,15 +6206,7 @@ export interface components {
        * * `unique` - unique
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed"
-        | "unique";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
       detail: string;
     };
     RegistriesCredentialsPartialUpdateUrlErrorComponent: {
@@ -7201,14 +6225,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsPartialUpdateUsernameErrorComponent: {
@@ -7227,14 +6244,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsPartialUpdateValidationError: {
@@ -7250,12 +6260,7 @@ export interface components {
      * * `UNHEALTHY` - Unhealthy
      * @enum {string}
      */
-    RegistryDeploymentStatusEnum:
-      | "PREPARING"
-      | "STARTING"
-      | "RESTARTING"
-      | "HEALTHY"
-      | "UNHEALTHY";
+    RegistryDeploymentStatusEnum: "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY";
     /**
      * @description * `DOCKER_HUB` - Docker Hub
      * * `GITHUB` - GitHub Container Registry
@@ -7265,25 +6270,9 @@ export interface components {
      * * `GENERIC` - Generic Docker Registry (v2 API)
      * @enum {string}
      */
-    RegistryTypeEnum:
-      | "DOCKER_HUB"
-      | "GITHUB"
-      | "GITLAB"
-      | "GOOGLE_ARTIFACT"
-      | "AWS_ECR"
-      | "GENERIC";
-    RequestComposeStackUpdateError:
-      | components["schemas"]["RequestComposeStackUpdateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RequestComposeStackUpdateTypeErrorComponent"]
-      | components["schemas"]["RequestComposeStackUpdateNewValueErrorComponent"]
-      | components["schemas"]["RequestComposeStackUpdateFieldErrorComponent"]
-      | components["schemas"]["RequestComposeStackUpdateItemIdErrorComponent"]
-      | components["schemas"]["RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RequestComposeStackUpdateNewValueKeyErrorComponent"]
-      | components["schemas"]["RequestComposeStackUpdateNewValueValueErrorComponent"];
-    RequestComposeStackUpdateErrorResponse400:
-      | components["schemas"]["RequestComposeStackUpdateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    RegistryTypeEnum: "DOCKER_HUB" | "GITHUB" | "GITLAB" | "GOOGLE_ARTIFACT" | "AWS_ECR" | "GENERIC";
+    RequestComposeStackUpdateError: components["schemas"]["RequestComposeStackUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RequestComposeStackUpdateTypeErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueErrorComponent"] | components["schemas"]["RequestComposeStackUpdateFieldErrorComponent"] | components["schemas"]["RequestComposeStackUpdateItemIdErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueKeyErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueValueErrorComponent"];
+    RequestComposeStackUpdateErrorResponse400: components["schemas"]["RequestComposeStackUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestComposeStackUpdateFieldErrorComponent: {
       /**
        * @description * `field` - field
@@ -7314,13 +6303,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestComposeStackUpdateNewValueErrorComponent: {
@@ -7337,12 +6320,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestComposeStackUpdateNewValueKeyErrorComponent: {
@@ -7360,13 +6338,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent: {
@@ -7397,12 +6369,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestComposeStackUpdateNonFieldErrorsErrorComponent: {
@@ -7437,12 +6404,8 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RequestComposeStackUpdateError"][];
     };
-    RequestEnvChangesError:
-      | components["schemas"]["RequestEnvChangesNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RequestEnvChangesNewValueErrorComponent"];
-    RequestEnvChangesErrorResponse400:
-      | components["schemas"]["RequestEnvChangesValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    RequestEnvChangesError: components["schemas"]["RequestEnvChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestEnvChangesNewValueErrorComponent"];
+    RequestEnvChangesErrorResponse400: components["schemas"]["RequestEnvChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestEnvChangesNewValueErrorComponent: {
       /**
        * @description * `new_value` - new_value
@@ -7457,12 +6420,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestEnvChangesNonFieldErrorsErrorComponent: {
@@ -7492,14 +6450,7 @@ export interface components {
      * * `HEAD` - HEAD
      * @enum {string}
      */
-    RequestMethodEnum:
-      | "GET"
-      | "POST"
-      | "PUT"
-      | "DELETE"
-      | "PATCH"
-      | "OPTIONS"
-      | "HEAD";
+    RequestMethodEnum: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS" | "HEAD";
     /**
      * @description * `HTTP/1.0` - HTTP/1.0
      * * `HTTP/1.1` - HTTP/1.1
@@ -7508,61 +6459,8 @@ export interface components {
      * @enum {string}
      */
     RequestProtocolEnum: "HTTP/1.0" | "HTTP/1.1" | "HTTP/2.0" | "HTTP/3.0";
-    RequestServiceChangesError:
-      | components["schemas"]["RequestServiceChangesNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RequestServiceChangesTypeErrorComponent"]
-      | components["schemas"]["RequestServiceChangesItemIdErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueDomainErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueBasePathErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueStripPrefixErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueRedirectToNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueRedirectToUrlErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueRedirectToPermanentErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueAssociatedPortErrorComponent"]
-      | components["schemas"]["RequestServiceChangesFieldErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueNameErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueContainerPathErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueHostPathErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueModeErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueVolumeIdErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueKeyErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueValueErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueHostErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueForwardedErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueImageErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueContainerRegistryCredentialsIdErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueTypeErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueTimeoutSecondsErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueIntervalSecondsErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueCpusErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueMemoryNonFieldErrorsErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueMemoryValueErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueMemoryUnitErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueContentsErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueMountPathErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueLanguageErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueRepositoryUrlErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueBranchNameErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueCommitShaErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueGitAppIdErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueBuilderErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueBuildContextDirErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueDockerfilePathErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueBuildStageTargetErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValuePublishDirectoryErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueIsSpaErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueNotFoundPageErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueIndexPageErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueIsStaticErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueBuildDirectoryErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueCustomInstallCommandErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueCustomBuildCommandErrorComponent"]
-      | components["schemas"]["RequestServiceChangesNewValueCustomStartCommandErrorComponent"];
-    RequestServiceChangesErrorResponse400:
-      | components["schemas"]["RequestServiceChangesValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    RequestServiceChangesError: components["schemas"]["RequestServiceChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesTypeErrorComponent"] | components["schemas"]["RequestServiceChangesItemIdErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueAssociatedPortErrorComponent"] | components["schemas"]["RequestServiceChangesFieldErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueNameErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueModeErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueVolumeIdErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueValueErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueHostErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueImageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueContainerRegistryCredentialsIdErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMemoryUnitErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueContentsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMountPathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueLanguageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRepositoryUrlErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBranchNameErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCommitShaErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueGitAppIdErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuilderErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuildContextDirErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueDockerfilePathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuildStageTargetErrorComponent"] | components["schemas"]["RequestServiceChangesNewValuePublishDirectoryErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIsSpaErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueNotFoundPageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIndexPageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIsStaticErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuildDirectoryErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCustomInstallCommandErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCustomBuildCommandErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCustomStartCommandErrorComponent"];
+    RequestServiceChangesErrorResponse400: components["schemas"]["RequestServiceChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestServiceChangesFieldErrorComponent: {
       /**
        * @description * `field` - field
@@ -7593,13 +6491,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueAssociatedPortErrorComponent: {
@@ -7632,12 +6524,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueBranchNameErrorComponent: {
@@ -7655,13 +6542,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueBuildContextDirErrorComponent: {
@@ -7678,12 +6559,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueBuildDirectoryErrorComponent: {
@@ -7700,12 +6576,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueBuildStageTargetErrorComponent: {
@@ -7721,11 +6592,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueBuilderErrorComponent: {
@@ -7756,12 +6623,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueContainerPathErrorComponent: {
@@ -7780,14 +6642,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueContainerRegistryCredentialsIdErrorComponent: {
@@ -7804,12 +6659,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueContentsErrorComponent: {
@@ -7826,12 +6676,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueCpusErrorComponent: {
@@ -7863,11 +6708,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueCustomInstallCommandErrorComponent: {
@@ -7883,11 +6724,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueCustomStartCommandErrorComponent: {
@@ -7903,11 +6740,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueDockerfilePathErrorComponent: {
@@ -7924,12 +6757,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueDomainErrorComponent: {
@@ -7946,12 +6774,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueErrorComponent: {
@@ -7968,12 +6791,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueForwardedErrorComponent: {
@@ -8006,11 +6824,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueHostErrorComponent: {
@@ -8045,13 +6859,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueImageErrorComponent: {
@@ -8069,13 +6877,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueIndexPageErrorComponent: {
@@ -8092,12 +6894,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueIntervalSecondsErrorComponent: {
@@ -8159,13 +6956,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueLanguageErrorComponent: {
@@ -8182,12 +6973,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueMemoryNonFieldErrorsErrorComponent: {
@@ -8264,13 +7050,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueNameErrorComponent: {
@@ -8289,14 +7069,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "min_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueNonFieldErrorsErrorComponent: {
@@ -8327,11 +7100,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValuePublishDirectoryErrorComponent: {
@@ -8348,12 +7117,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueRedirectToNonFieldErrorsErrorComponent: {
@@ -8399,13 +7163,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueRepositoryUrlErrorComponent: {
@@ -8423,13 +7181,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueStripPrefixErrorComponent: {
@@ -8493,14 +7245,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNewValueVolumeIdErrorComponent: {
@@ -8519,14 +7264,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestServiceChangesNonFieldErrorsErrorComponent: {
@@ -8576,22 +7314,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    ResetPasswordError:
-      | components["schemas"]["ResetPasswordNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ResetPasswordNewPasswordErrorComponent"]
-      | components["schemas"]["ResetPasswordConfirmPasswordErrorComponent"];
-    ResetPasswordErrorResponse400:
-      | components["schemas"]["ResetPasswordValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ResetPasswordError: components["schemas"]["ResetPasswordNonFieldErrorsErrorComponent"] | components["schemas"]["ResetPasswordNewPasswordErrorComponent"] | components["schemas"]["ResetPasswordConfirmPasswordErrorComponent"];
+    ResetPasswordErrorResponse400: components["schemas"]["ResetPasswordValidationError"] | components["schemas"]["ParseErrorResponse"];
     ResetPasswordNewPasswordErrorComponent: {
       /**
        * @description * `new_password` - new_password
@@ -8609,15 +7336,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "min_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ResetPasswordNonFieldErrorsErrorComponent: {
@@ -8671,11 +7390,7 @@ export interface components {
       cpus?: number;
       memory?: components["schemas"]["MemoryLimitRequestRequest"];
     };
-    ResourceResponse:
-      | components["schemas"]["EnvironmentSearchResponse"]
-      | components["schemas"]["ServiceSearchResponse"]
-      | components["schemas"]["ProjectSearchResponse"]
-      | components["schemas"]["ComposeStackSearchResponse"];
+    ResourceResponse: components["schemas"]["EnvironmentSearchResponse"] | components["schemas"]["ServiceSearchResponse"] | components["schemas"]["ProjectSearchResponse"] | components["schemas"]["ComposeStackSearchResponse"];
     ReviewPreviewEnvDeployDecisionErrorComponent: {
       /**
        * @description * `decision` - decision
@@ -8691,12 +7406,8 @@ export interface components {
       code: "invalid_choice" | "null" | "required";
       detail: string;
     };
-    ReviewPreviewEnvDeployError:
-      | components["schemas"]["ReviewPreviewEnvDeployNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ReviewPreviewEnvDeployDecisionErrorComponent"];
-    ReviewPreviewEnvDeployErrorResponse400:
-      | components["schemas"]["ReviewPreviewEnvDeployValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ReviewPreviewEnvDeployError: components["schemas"]["ReviewPreviewEnvDeployNonFieldErrorsErrorComponent"] | components["schemas"]["ReviewPreviewEnvDeployDecisionErrorComponent"];
+    ReviewPreviewEnvDeployErrorResponse400: components["schemas"]["ReviewPreviewEnvDeployValidationError"] | components["schemas"]["ParseErrorResponse"];
     ReviewPreviewEnvDeployNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -8800,26 +7511,15 @@ export interface components {
       type: components["schemas"]["ServiceTypeEnum"];
       image: string | null;
       command: string | null;
-      builder:
-        | components["schemas"]["GitServiceBuilderEnum"]
-        | components["schemas"]["NullEnum"]
-        | null;
+      builder: components["schemas"]["GitServiceBuilderEnum"] | components["schemas"]["NullEnum"] | null;
       /** Format: uri */
       repository_url: string | null;
       branch_name: string | null;
       commit_sha: string | null;
-      dockerfile_builder_options:
-        | components["schemas"]["DockerfileBuilderOptions"]
-        | null;
-      static_dir_builder_options:
-        | components["schemas"]["StaticDirectoryBuilderOptions"]
-        | null;
-      nixpacks_builder_options:
-        | components["schemas"]["NixpacksBuilderOptions"]
-        | null;
-      railpack_builder_options:
-        | components["schemas"]["RailpackBuilderOptions"]
-        | null;
+      dockerfile_builder_options: components["schemas"]["DockerfileBuilderOptions"] | null;
+      static_dir_builder_options: components["schemas"]["StaticDirectoryBuilderOptions"] | null;
+      nixpacks_builder_options: components["schemas"]["NixpacksBuilderOptions"] | null;
+      railpack_builder_options: components["schemas"]["RailpackBuilderOptions"] | null;
       healthcheck: components["schemas"]["HealthCheck"] | null;
       project_id: string;
       environment: components["schemas"]["Environment"];
@@ -8844,15 +7544,11 @@ export interface components {
       watch_paths: string | null;
       cleanup_queue_on_auto_deploy: boolean;
       pr_preview_envs_enabled: boolean;
-      container_registry_credentials:
-        | components["schemas"]["WriteableContainerRegistryCredentials"]
-        | null;
+      container_registry_credentials: components["schemas"]["WriteableContainerRegistryCredentials"] | null;
       /** @default [] */
       shared_volumes: readonly components["schemas"]["SharedVolume"][];
     };
-    ServiceCardResponse:
-      | components["schemas"]["DockerServiceCard"]
-      | components["schemas"]["GitServiceCard"];
+    ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
     ServiceDeployment: {
       is_current_production: boolean;
       slot: components["schemas"]["SlotEnum"];
@@ -8910,10 +7606,7 @@ export interface components {
       id: string;
       project_slug: string;
       slug: string;
-      git_provider:
-        | components["schemas"]["ServiceSearchResponseGitProviderEnum"]
-        | components["schemas"]["NullEnum"]
-        | null;
+      git_provider: components["schemas"]["ServiceSearchResponseGitProviderEnum"] | components["schemas"]["NullEnum"] | null;
       /** Format: date-time */
       created_at: string;
       kind: components["schemas"]["ServiceTypeEnum"];
@@ -8941,13 +7634,7 @@ export interface components {
      * * `DEPLOYING` - Deploying
      * @enum {string}
      */
-    ServiceStatusEnum:
-      | "HEALTHY"
-      | "UNHEALTHY"
-      | "FAILED"
-      | "SLEEPING"
-      | "NOT_DEPLOYED_YET"
-      | "DEPLOYING";
+    ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "FAILED" | "SLEEPING" | "NOT_DEPLOYED_YET" | "DEPLOYING";
     /**
      * @description * `new` - new
      * * `pending` - pending
@@ -8965,21 +7652,7 @@ export interface components {
      * * `remove` - remove
      * @enum {string}
      */
-    ServiceTaskStatus:
-      | "new"
-      | "pending"
-      | "assigned"
-      | "accepted"
-      | "ready"
-      | "preparing"
-      | "starting"
-      | "running"
-      | "complete"
-      | "failed"
-      | "shutdown"
-      | "rejected"
-      | "orphaned"
-      | "remove";
+    ServiceTaskStatus: "new" | "pending" | "assigned" | "accepted" | "ready" | "preparing" | "starting" | "running" | "complete" | "failed" | "shutdown" | "rejected" | "orphaned" | "remove";
     /**
      * @description * `DOCKER_REGISTRY` - Docker repository
      * * `GIT_REPOSITORY` - Git repository
@@ -9183,12 +7856,8 @@ export interface components {
      * @enum {string}
      */
     StorageBackendEnum: "LOCAL" | "S3";
-    SwitchWorkspaceError:
-      | components["schemas"]["SwitchWorkspaceNonFieldErrorsErrorComponent"]
-      | components["schemas"]["SwitchWorkspaceWorkspaceIdErrorComponent"];
-    SwitchWorkspaceErrorResponse400:
-      | components["schemas"]["SwitchWorkspaceValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    SwitchWorkspaceError: components["schemas"]["SwitchWorkspaceNonFieldErrorsErrorComponent"] | components["schemas"]["SwitchWorkspaceWorkspaceIdErrorComponent"];
+    SwitchWorkspaceErrorResponse400: components["schemas"]["SwitchWorkspaceValidationError"] | components["schemas"]["ParseErrorResponse"];
     SwitchWorkspaceNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -9224,13 +7893,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     SyncGitlabReposErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -9300,13 +7963,8 @@ export interface components {
       code: "invalid_choice" | "null" | "required";
       detail: string;
     };
-    ToggleComposeStackError:
-      | components["schemas"]["ToggleComposeStackNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ToggleComposeStackDesiredStateErrorComponent"]
-      | components["schemas"]["ToggleComposeStackServiceNameErrorComponent"];
-    ToggleComposeStackErrorResponse400:
-      | components["schemas"]["ToggleComposeStackValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ToggleComposeStackError: components["schemas"]["ToggleComposeStackNonFieldErrorsErrorComponent"] | components["schemas"]["ToggleComposeStackDesiredStateErrorComponent"] | components["schemas"]["ToggleComposeStackServiceNameErrorComponent"];
+    ToggleComposeStackErrorResponse400: components["schemas"]["ToggleComposeStackValidationError"] | components["schemas"]["ParseErrorResponse"];
     ToggleComposeStackNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -9334,12 +7992,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ToggleComposeStackValidationError: {
@@ -9361,12 +8014,8 @@ export interface components {
       code: "invalid_choice" | "null" | "required";
       detail: string;
     };
-    ToggleServiceError:
-      | components["schemas"]["ToggleServiceNonFieldErrorsErrorComponent"]
-      | components["schemas"]["ToggleServiceDesiredStateErrorComponent"];
-    ToggleServiceErrorResponse400:
-      | components["schemas"]["ToggleServiceValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    ToggleServiceError: components["schemas"]["ToggleServiceNonFieldErrorsErrorComponent"] | components["schemas"]["ToggleServiceDesiredStateErrorComponent"];
+    ToggleServiceErrorResponse400: components["schemas"]["ToggleServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     ToggleServiceNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -9387,12 +8036,8 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ToggleServiceError"][];
     };
-    TransferWorkspaceOwnershipError:
-      | components["schemas"]["TransferWorkspaceOwnershipNonFieldErrorsErrorComponent"]
-      | components["schemas"]["TransferWorkspaceOwnershipNewOwnerIdErrorComponent"];
-    TransferWorkspaceOwnershipErrorResponse400:
-      | components["schemas"]["TransferWorkspaceOwnershipValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    TransferWorkspaceOwnershipError: components["schemas"]["TransferWorkspaceOwnershipNonFieldErrorsErrorComponent"] | components["schemas"]["TransferWorkspaceOwnershipNewOwnerIdErrorComponent"];
+    TransferWorkspaceOwnershipErrorResponse400: components["schemas"]["TransferWorkspaceOwnershipValidationError"] | components["schemas"]["ParseErrorResponse"];
     TransferWorkspaceOwnershipNewOwnerIdErrorComponent: {
       /**
        * @description * `new_owner_id` - new_owner_id
@@ -9459,22 +8104,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    TriggerUpdateCreateError:
-      | components["schemas"]["TriggerUpdateCreateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["TriggerUpdateCreateDesiredVersionErrorComponent"];
-    TriggerUpdateCreateErrorResponse400:
-      | components["schemas"]["TriggerUpdateCreateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    TriggerUpdateCreateError: components["schemas"]["TriggerUpdateCreateNonFieldErrorsErrorComponent"] | components["schemas"]["TriggerUpdateCreateDesiredVersionErrorComponent"];
+    TriggerUpdateCreateErrorResponse400: components["schemas"]["TriggerUpdateCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     TriggerUpdateCreateNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -9557,12 +8191,8 @@ export interface components {
      * @enum {string}
      */
     UnitEnum: "BYTES" | "KILOBYTES" | "MEGABYTES" | "GIGABYTES";
-    UpdateEnvironmentError:
-      | components["schemas"]["UpdateEnvironmentNonFieldErrorsErrorComponent"]
-      | components["schemas"]["UpdateEnvironmentNameErrorComponent"];
-    UpdateEnvironmentErrorResponse400:
-      | components["schemas"]["UpdateEnvironmentValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    UpdateEnvironmentError: components["schemas"]["UpdateEnvironmentNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateEnvironmentNameErrorComponent"];
+    UpdateEnvironmentErrorResponse400: components["schemas"]["UpdateEnvironmentValidationError"] | components["schemas"]["ParseErrorResponse"];
     UpdateEnvironmentNameErrorComponent: {
       /**
        * @description * `name` - name
@@ -9579,14 +8209,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     UpdateEnvironmentNonFieldErrorsErrorComponent: {
@@ -9611,14 +8234,8 @@ export interface components {
       first_name: string;
       last_name: string;
     };
-    UpdateProfileError:
-      | components["schemas"]["UpdateProfileNonFieldErrorsErrorComponent"]
-      | components["schemas"]["UpdateProfileUsernameErrorComponent"]
-      | components["schemas"]["UpdateProfileFirstNameErrorComponent"]
-      | components["schemas"]["UpdateProfileLastNameErrorComponent"];
-    UpdateProfileErrorResponse400:
-      | components["schemas"]["UpdateProfileValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    UpdateProfileError: components["schemas"]["UpdateProfileNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateProfileUsernameErrorComponent"] | components["schemas"]["UpdateProfileFirstNameErrorComponent"] | components["schemas"]["UpdateProfileLastNameErrorComponent"];
+    UpdateProfileErrorResponse400: components["schemas"]["UpdateProfileValidationError"] | components["schemas"]["ParseErrorResponse"];
     UpdateProfileFirstNameErrorComponent: {
       /**
        * @description * `first_name` - first_name
@@ -9633,12 +8250,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     UpdateProfileLastNameErrorComponent: {
@@ -9655,12 +8267,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     UpdateProfileNonFieldErrorsErrorComponent: {
@@ -9692,14 +8299,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     UpdateProfileValidationError: {
@@ -9719,20 +8319,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    UpdateProjectError:
-      | components["schemas"]["UpdateProjectNonFieldErrorsErrorComponent"]
-      | components["schemas"]["UpdateProjectSlugErrorComponent"]
-      | components["schemas"]["UpdateProjectDescriptionErrorComponent"];
-    UpdateProjectErrorResponse400:
-      | components["schemas"]["UpdateProjectValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    UpdateProjectError: components["schemas"]["UpdateProjectNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateProjectSlugErrorComponent"] | components["schemas"]["UpdateProjectDescriptionErrorComponent"];
+    UpdateProjectErrorResponse400: components["schemas"]["UpdateProjectValidationError"] | components["schemas"]["ParseErrorResponse"];
     UpdateProjectNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -9761,13 +8352,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     UpdateProjectValidationError: {
@@ -9802,16 +8387,8 @@ export interface components {
       code: "invalid" | "null";
       detail: string;
     };
-    UpdateServiceError:
-      | components["schemas"]["UpdateServiceNonFieldErrorsErrorComponent"]
-      | components["schemas"]["UpdateServiceSlugErrorComponent"]
-      | components["schemas"]["UpdateServiceAutoDeployEnabledErrorComponent"]
-      | components["schemas"]["UpdateServiceWatchPathsErrorComponent"]
-      | components["schemas"]["UpdateServiceCleanupQueueOnAutoDeployErrorComponent"]
-      | components["schemas"]["UpdateServicePrPreviewEnvsEnabledErrorComponent"];
-    UpdateServiceErrorResponse400:
-      | components["schemas"]["UpdateServiceValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    UpdateServiceError: components["schemas"]["UpdateServiceNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateServiceSlugErrorComponent"] | components["schemas"]["UpdateServiceAutoDeployEnabledErrorComponent"] | components["schemas"]["UpdateServiceWatchPathsErrorComponent"] | components["schemas"]["UpdateServiceCleanupQueueOnAutoDeployErrorComponent"] | components["schemas"]["UpdateServicePrPreviewEnvsEnabledErrorComponent"];
+    UpdateServiceErrorResponse400: components["schemas"]["UpdateServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     UpdateServiceNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -9855,14 +8432,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     UpdateServiceValidationError: {
@@ -9883,12 +8453,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     User: {
@@ -10002,21 +8567,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    WebhookDeployComposeStackError:
-      | components["schemas"]["WebhookDeployComposeStackNonFieldErrorsErrorComponent"]
-      | components["schemas"]["WebhookDeployComposeStackCommitMessageErrorComponent"]
-      | components["schemas"]["WebhookDeployComposeStackUserContentErrorComponent"];
-    WebhookDeployComposeStackErrorResponse400:
-      | components["schemas"]["WebhookDeployComposeStackValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    WebhookDeployComposeStackError: components["schemas"]["WebhookDeployComposeStackNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookDeployComposeStackCommitMessageErrorComponent"] | components["schemas"]["WebhookDeployComposeStackUserContentErrorComponent"];
+    WebhookDeployComposeStackErrorResponse400: components["schemas"]["WebhookDeployComposeStackValidationError"] | components["schemas"]["ParseErrorResponse"];
     WebhookDeployComposeStackNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -10044,12 +8599,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     WebhookDeployComposeStackValidationError: {
@@ -10083,21 +8633,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    WebhookDockerDeployServiceError:
-      | components["schemas"]["WebhookDockerDeployServiceNonFieldErrorsErrorComponent"]
-      | components["schemas"]["WebhookDockerDeployServiceCommitMessageErrorComponent"]
-      | components["schemas"]["WebhookDockerDeployServiceNewImageErrorComponent"]
-      | components["schemas"]["WebhookDockerDeployServiceCleanupQueueErrorComponent"];
-    WebhookDockerDeployServiceErrorResponse400:
-      | components["schemas"]["WebhookDockerDeployServiceValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    WebhookDockerDeployServiceError: components["schemas"]["WebhookDockerDeployServiceNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookDockerDeployServiceCommitMessageErrorComponent"] | components["schemas"]["WebhookDockerDeployServiceNewImageErrorComponent"] | components["schemas"]["WebhookDockerDeployServiceCleanupQueueErrorComponent"];
+    WebhookDockerDeployServiceErrorResponse400: components["schemas"]["WebhookDockerDeployServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     WebhookDockerDeployServiceNewImageErrorComponent: {
       /**
        * @description * `new_image` - new_image
@@ -10112,12 +8652,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     WebhookDockerDeployServiceNonFieldErrorsErrorComponent: {
@@ -10165,22 +8700,11 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    WebhookGitDeployServiceError:
-      | components["schemas"]["WebhookGitDeployServiceNonFieldErrorsErrorComponent"]
-      | components["schemas"]["WebhookGitDeployServiceIgnoreBuildCacheErrorComponent"]
-      | components["schemas"]["WebhookGitDeployServiceCommitShaErrorComponent"]
-      | components["schemas"]["WebhookGitDeployServiceCleanupQueueErrorComponent"];
-    WebhookGitDeployServiceErrorResponse400:
-      | components["schemas"]["WebhookGitDeployServiceValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    WebhookGitDeployServiceError: components["schemas"]["WebhookGitDeployServiceNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookGitDeployServiceIgnoreBuildCacheErrorComponent"] | components["schemas"]["WebhookGitDeployServiceCommitShaErrorComponent"] | components["schemas"]["WebhookGitDeployServiceCleanupQueueErrorComponent"];
+    WebhookGitDeployServiceErrorResponse400: components["schemas"]["WebhookGitDeployServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     WebhookGitDeployServiceIgnoreBuildCacheErrorComponent: {
       /**
        * @description * `ignore_build_cache` - ignore_build_cache
@@ -10226,12 +8750,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     WebhookTriggerPreviewEnvCommitShaErrorComponent: {
@@ -10248,12 +8767,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     WebhookTriggerPreviewEnvEnvVariablesINDEXKeyErrorComponent: {
@@ -10271,13 +8785,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     WebhookTriggerPreviewEnvEnvVariablesINDEXNonFieldErrorsErrorComponent: {
@@ -10309,12 +8817,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     WebhookTriggerPreviewEnvEnvVariablesNonFieldErrorsErrorComponent: {
@@ -10331,19 +8834,8 @@ export interface components {
       code: "not_a_list" | "null";
       detail: string;
     };
-    WebhookTriggerPreviewEnvError:
-      | components["schemas"]["WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent"]
-      | components["schemas"]["WebhookTriggerPreviewEnvBranchNameErrorComponent"]
-      | components["schemas"]["WebhookTriggerPreviewEnvPrNumberErrorComponent"]
-      | components["schemas"]["WebhookTriggerPreviewEnvCommitShaErrorComponent"]
-      | components["schemas"]["WebhookTriggerPreviewEnvTemplateErrorComponent"]
-      | components["schemas"]["WebhookTriggerPreviewEnvEnvVariablesNonFieldErrorsErrorComponent"]
-      | components["schemas"]["WebhookTriggerPreviewEnvEnvVariablesINDEXNonFieldErrorsErrorComponent"]
-      | components["schemas"]["WebhookTriggerPreviewEnvEnvVariablesINDEXKeyErrorComponent"]
-      | components["schemas"]["WebhookTriggerPreviewEnvEnvVariablesINDEXValueErrorComponent"];
-    WebhookTriggerPreviewEnvErrorResponse400:
-      | components["schemas"]["WebhookTriggerPreviewEnvValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    WebhookTriggerPreviewEnvError: components["schemas"]["WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvBranchNameErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvPrNumberErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvCommitShaErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvTemplateErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvEnvVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvEnvVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvEnvVariablesINDEXKeyErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvEnvVariablesINDEXValueErrorComponent"];
+    WebhookTriggerPreviewEnvErrorResponse400: components["schemas"]["WebhookTriggerPreviewEnvValidationError"] | components["schemas"]["ParseErrorResponse"];
     WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -10386,12 +8878,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "null"
-        | "null_characters_not_allowed"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     WebhookTriggerPreviewEnvValidationError: {
@@ -10451,12 +8938,8 @@ export interface components {
       user: components["schemas"]["SimpleWorkspaceUser"];
     };
     WorkspaceMembersDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    WorkspaceMembersListError:
-      | components["schemas"]["WorkspaceMembersListRoleErrorComponent"]
-      | components["schemas"]["WorkspaceMembersListQueryErrorComponent"];
-    WorkspaceMembersListErrorResponse400:
-      | components["schemas"]["WorkspaceMembersListValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    WorkspaceMembersListError: components["schemas"]["WorkspaceMembersListRoleErrorComponent"] | components["schemas"]["WorkspaceMembersListQueryErrorComponent"];
+    WorkspaceMembersListErrorResponse400: components["schemas"]["WorkspaceMembersListValidationError"] | components["schemas"]["ParseErrorResponse"];
     WorkspaceMembersListQueryErrorComponent: {
       /**
        * @description * `query` - query
@@ -10510,12 +8993,8 @@ export interface components {
     WorkspaceTransferOwnershipResponse: {
       success: boolean;
     };
-    WorkspaceUpdateError:
-      | components["schemas"]["WorkspaceUpdateNonFieldErrorsErrorComponent"]
-      | components["schemas"]["WorkspaceUpdateNameErrorComponent"];
-    WorkspaceUpdateErrorResponse400:
-      | components["schemas"]["WorkspaceUpdateValidationError"]
-      | components["schemas"]["ParseErrorResponse"];
+    WorkspaceUpdateError: components["schemas"]["WorkspaceUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["WorkspaceUpdateNameErrorComponent"];
+    WorkspaceUpdateErrorResponse400: components["schemas"]["WorkspaceUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     WorkspaceUpdateNameErrorComponent: {
       /**
        * @description * `name` - name
@@ -10532,14 +9011,7 @@ export interface components {
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code:
-        | "blank"
-        | "invalid"
-        | "max_length"
-        | "null"
-        | "null_characters_not_allowed"
-        | "required"
-        | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     WorkspaceUpdateNonFieldErrorsErrorComponent: {
@@ -10589,6 +9061,7 @@ export type $defs = Record<string, never>;
 export type external = Record<string, never>;
 
 export interface operations {
+
   /**
    * Change user password
    * @description Change the authenticated user's password. Requires current password verification and validates new password strength.
@@ -11276,13 +9749,7 @@ export interface operations {
          * * `FAILED` - Failed
          * * `CANCELLED` - Cancelled
          */
-        status?: (
-          | "CANCELLED"
-          | "DEPLOYING"
-          | "FAILED"
-          | "FINISHED"
-          | "QUEUED"
-        )[];
+        status?: ("CANCELLED" | "DEPLOYING" | "FAILED" | "FINISHED" | "QUEUED")[];
       };
       path: {
         env_slug: string;
@@ -11476,12 +9943,7 @@ export interface operations {
          * * `LAST_WEEK` - LAST_WEEK
          * * `LAST_MONTH` - LAST_MONTH
          */
-        time_range?:
-          | "LAST_HOUR"
-          | "LAST_6HOURS"
-          | "LAST_DAY"
-          | "LAST_WEEK"
-          | "LAST_MONTH";
+        time_range?: "LAST_HOUR" | "LAST_6HOURS" | "LAST_DAY" | "LAST_WEEK" | "LAST_MONTH";
       };
       path: {
         env_slug: string;
@@ -13287,15 +11749,7 @@ export interface operations {
          * * `OPTIONS` - OPTIONS
          * * `HEAD` - HEAD
          */
-        request_method?: (
-          | "DELETE"
-          | "GET"
-          | "HEAD"
-          | "OPTIONS"
-          | "PATCH"
-          | "POST"
-          | "PUT"
-        )[];
+        request_method?: ("DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT")[];
         /** @description Multiple values may be separated by commas. */
         request_path?: string[];
         request_query?: string;
@@ -13310,12 +11764,7 @@ export interface operations {
          * * `request_duration_ns` - Request duration ns
          * * `-request_duration_ns` - Request duration ns (descending)
          */
-        sort_by?: (
-          | "-request_duration_ns"
-          | "-time"
-          | "request_duration_ns"
-          | "time"
-        )[];
+        sort_by?: ("-request_duration_ns" | "-time" | "request_duration_ns" | "time")[];
         stack_id?: string;
         /** @description Multiple values may be separated by commas. */
         stack_service_name?: string[];
@@ -13409,11 +11858,7 @@ export interface operations {
          * * `request_user_agent` - request_user_agent
          * * `request_ip` - request_ip
          */
-        field:
-          | "request_host"
-          | "request_path"
-          | "request_user_agent"
-          | "request_ip";
+        field: "request_host" | "request_path" | "request_user_agent" | "request_ip";
         service_id?: string;
         stack_id?: string;
         value: string;
@@ -14496,20 +12941,7 @@ export interface operations {
          * * `REMOVED` - Removed
          * * `SLEEPING` - Sleeping
          */
-        status?: (
-          | "BUILDING"
-          | "CANCELLED"
-          | "CANCELLING"
-          | "FAILED"
-          | "HEALTHY"
-          | "PREPARING"
-          | "QUEUED"
-          | "REMOVED"
-          | "RESTARTING"
-          | "SLEEPING"
-          | "STARTING"
-          | "UNHEALTHY"
-        )[];
+        status?: ("BUILDING" | "CANCELLED" | "CANCELLING" | "FAILED" | "HEALTHY" | "PREPARING" | "QUEUED" | "REMOVED" | "RESTARTING" | "SLEEPING" | "STARTING" | "UNHEALTHY")[];
       };
       path: {
         env_slug: string;
@@ -14651,12 +13083,7 @@ export interface operations {
          * * `LAST_WEEK` - LAST_WEEK
          * * `LAST_MONTH` - LAST_MONTH
          */
-        time_range?:
-          | "LAST_HOUR"
-          | "LAST_6HOURS"
-          | "LAST_DAY"
-          | "LAST_WEEK"
-          | "LAST_MONTH";
+        time_range?: "LAST_HOUR" | "LAST_6HOURS" | "LAST_DAY" | "LAST_WEEK" | "LAST_MONTH";
       };
       path: {
         deployment_hash: string;
@@ -14849,12 +13276,7 @@ export interface operations {
          * * `LAST_WEEK` - LAST_WEEK
          * * `LAST_MONTH` - LAST_MONTH
          */
-        time_range?:
-          | "LAST_HOUR"
-          | "LAST_6HOURS"
-          | "LAST_DAY"
-          | "LAST_WEEK"
-          | "LAST_MONTH";
+        time_range?: "LAST_HOUR" | "LAST_6HOURS" | "LAST_DAY" | "LAST_WEEK" | "LAST_MONTH";
       };
       path: {
         env_slug: string;
