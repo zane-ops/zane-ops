@@ -30,7 +30,7 @@ import {
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
-import type { Route } from "../settings/+types/create-build-registry";
+import type { Route } from "./+types/create-build-registry";
 
 export function meta() {
   return [

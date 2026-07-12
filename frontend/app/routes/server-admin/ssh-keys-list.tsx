@@ -28,7 +28,7 @@ import {
 import { sshKeysQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/lib/utils";
-import type { Route } from "../settings/+types/ssh-keys-list";
+import type { Route } from "./+types/ssh-keys-list";
 
 export function meta() {
   return [metaTitle("SSH Keys")] satisfies ReturnType<Route.MetaFunction>;

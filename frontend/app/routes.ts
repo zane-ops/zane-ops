@@ -65,21 +65,24 @@ export default [
 
     layout("./routes/layouts/server-admin-layout.tsx", [
       ...prefix("admin", [
-        route("ssh-keys", "./routes/settings/ssh-keys-list.tsx"),
-        route("ssh-keys/new", "./routes/settings/create-ssh-key.tsx"),
-        route("server-console", "./routes/settings/server-terminal.tsx"),
-        route("build-registries", "./routes/settings/build-registry-list.tsx"),
+        route("ssh-keys", "./routes/server-admin/ssh-keys-list.tsx"),
+        route("ssh-keys/new", "./routes/server-admin/create-ssh-key.tsx"),
+        route("server-console", "./routes/server-admin/server-terminal.tsx"),
+        route(
+          "build-registries",
+          "./routes/server-admin/build-registry-list.tsx"
+        ),
         route(
           "build-registries/new",
-          "./routes/settings/create-build-registry.tsx"
+          "./routes/server-admin/create-build-registry.tsx"
         ),
         route(
           "build-registries/:id/list-images",
-          "./routes/settings/build-registry-image-list.tsx"
+          "./routes/server-admin/build-registry-image-list.tsx"
         ),
         route(
           "build-registries/:id",
-          "./routes/settings/build-registry-details.tsx"
+          "./routes/server-admin/build-registry-details.tsx"
         )
       ])
     ]),

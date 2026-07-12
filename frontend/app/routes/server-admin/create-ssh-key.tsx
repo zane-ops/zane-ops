@@ -31,7 +31,7 @@ import {
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
-import type { Route } from "../settings/+types/create-ssh-key";
+import type { Route } from "./+types/create-ssh-key";
 
 export function meta() {
   return [metaTitle("Create SSH Key")] satisfies ReturnType<Route.MetaFunction>;

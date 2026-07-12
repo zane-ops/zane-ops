@@ -1,7 +1,7 @@
 import { Separator } from "~/components/ui/separator";
 import { buildRegistryQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import type { Route } from "../settings/+types/build-registry-details";
+import type { Route } from "./+types/build-registry-details";
 
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircleIcon, FolderIcon, LoaderIcon } from "lucide-react";

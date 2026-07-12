@@ -21,7 +21,7 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { metaTitle } from "~/lib/utils";
-import type { Route } from "../settings/+types/build-registry-image-list";
+import type { Route } from "./+types/build-registry-image-list";
 
 export function meta() {
   return [
