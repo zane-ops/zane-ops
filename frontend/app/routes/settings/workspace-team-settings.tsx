@@ -2,26 +2,18 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ChevronDownIcon,
   CrownIcon,
-  EllipsisIcon,
-  ExternalLinkIcon,
   LoaderIcon,
   MailPlusIcon,
-  PencilLineIcon,
-  PlusIcon,
   SearchIcon,
-  Trash2Icon,
   UserKeyIcon,
   UserXIcon,
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, redirect, useSearchParams } from "react-router";
-import { useFetcher } from "react-router";
-import { Form } from "react-router";
+import { Form, Link, useFetcher, useSearchParams } from "react-router";
 import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
-import type { Writeable } from "zod";
-import type { WorkspaceMember, WorkspaceMembership } from "~/api/types";
+import type { WorkspaceMember } from "~/api/types";
 import { Code } from "~/components/code";
 import { SimpleConfirmationDialog } from "~/components/delete-confirmation-dialog";
 import { Pagination } from "~/components/pagination";
@@ -40,9 +32,7 @@ import {
   FieldSetLabel,
   FieldSetSelect
 } from "~/components/ui/fieldset";
-import { Input } from "~/components/ui/input";
 import {
-  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -64,26 +54,16 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import {
-  DEFAULT_REGISTRIES,
-  type DEPLOYMENT_STATUSES,
   SPIN_DELAY_DEFAULT_OPTIONS,
   WORKSPACE_ROLE_MAPPING
 } from "~/lib/constants";
 import {
-  ensureAuthedUser,
-  projectQueries,
-  serviceDeploymentListFilters,
+  ensureMinRole,
   workspaceMemberListFilters,
   workspaceQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import {
-  formatLogTime,
-  hasMinRole,
-  metaTitle,
-  notFound,
-  pluralize
-} from "~/lib/utils";
+import { formatLogTime, hasMinRole, metaTitle, pluralize } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
@@ -96,10 +76,7 @@ export function meta() {
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const user = await ensureAuthedUser(queryClient);
-  if (!hasMinRole(user, "Member")) {
-    throw notFound();
-  }
+  await ensureMinRole(queryClient, "Member");
 
   const searchParams = new URL(request.url).searchParams;
   const search = workspaceMemberListFilters.parse(searchParams);

@@ -42,7 +42,7 @@ import {
 } from "~/components/ui/tooltip";
 import { WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
 import {
-  ensureAuthedUser,
+  ensureMinRole,
   projectQueries,
   workspaceQueries
 } from "~/lib/queries";
@@ -51,9 +51,7 @@ import {
   formattedTime,
   getCsrfTokenHeader,
   getFormErrorsFromResponseData,
-  hasMinRole,
   metaTitle,
-  notFound,
   pluralize
 } from "~/lib/utils";
 import {
@@ -70,10 +68,7 @@ export function meta() {
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const user = await ensureAuthedUser(queryClient);
-  if (!hasMinRole(user, "Admin")) {
-    throw notFound();
-  }
+  await ensureMinRole(queryClient, "Admin");
 
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const projects = await queryClient.ensureQueryData(
