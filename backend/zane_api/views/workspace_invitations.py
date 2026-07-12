@@ -38,6 +38,7 @@ from django.contrib.auth import login
 from django.db import transaction
 from ..constants import WORKSPACE_SESSION_KEY
 from .base import DefaultPageNumberPagination
+from rest_framework.throttling import ScopedRateThrottle
 
 
 class ListWorkspaceInvitationAPIView(ListAPIView):
@@ -105,6 +106,8 @@ class WorkspaceInvitationLinkDetailsAPIView(RetrieveAPIView):
     queryset = WorkspaceInvitation.objects.all().select_related("workspace")
     lookup_field = "token"
     lookup_url_kwarg = "token"
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "initial_registration"
 
 
 class WorkspaceRegisterInvitationAPIView(APIView):
