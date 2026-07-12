@@ -15483,6 +15483,8 @@ export interface operations {
       query?: {
         /** @description A page number within the paginated result set. */
         page?: number;
+        /** @description Number of results to return per page. */
+        per_page?: number;
       };
     };
     responses: {
