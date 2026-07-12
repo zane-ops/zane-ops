@@ -45,7 +45,6 @@ from .serializers import (
     WorkspaceTransferOwnershipResponseSerializer,
     WorkspaceTransferOwnershipRequestSerializer,
     WorkspaceMembershipFilterSet,
-    WorkspaceMembershipPagination,
     WorkspaceLeaveResponseSerializer,
 )
 from rest_framework import exceptions
@@ -68,6 +67,7 @@ from .base import ResourceConflict, EMPTY_PAGINATED_RESPONSE
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from ..licensing.gate import can_create_workspace
+from .base import DefaultPageNumberPagination
 
 
 class WorkspaceMemberDetailAPIView(RetrieveDestroyAPIView):
@@ -167,7 +167,7 @@ class EditWorkspaceMemberPermissionsAPIView(APIView):
 class ListWorkspaceMembersAPIView(ListAPIView):
     serializer_class = WorkspaceMemberSerializer
     filter_backends = [DjangoFilterBackend]
-    pagination_class = WorkspaceMembershipPagination
+    pagination_class = DefaultPageNumberPagination
     filterset_class = WorkspaceMembershipFilterSet
     permission_classes = [HasWorkspace, IsWorkspaceMember]
 

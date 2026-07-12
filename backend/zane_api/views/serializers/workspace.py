@@ -178,9 +178,3 @@ class WorkspaceMembershipFilterSet(django_filters.FilterSet):
     class Meta:
         model = WorkspaceMembership
         fields = ["role", "query"]
-
-
-class WorkspaceMembershipPagination(pagination.PageNumberPagination):
-    page_size = 10
-    page_size_query_param = "per_page"
-    page_query_param = "page"

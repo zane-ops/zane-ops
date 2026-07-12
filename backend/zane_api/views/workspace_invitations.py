@@ -37,11 +37,13 @@ from django.contrib.auth.models import User, AbstractUser
 from django.contrib.auth import login
 from django.db import transaction
 from ..constants import WORKSPACE_SESSION_KEY
+from .base import DefaultPageNumberPagination
 
 
 class ListWorkspaceInvitationAPIView(ListAPIView):
     permission_classes = [HasWorkspace, IsWorkspaceAdmin]
     serializer_class = WorkspaceInvitationSerializer
+    pagination_class = DefaultPageNumberPagination
 
     def get_queryset(self) -> QuerySet[WorkspaceInvitation]:  # type: ignore
         return WorkspaceInvitation.objects.filter(
