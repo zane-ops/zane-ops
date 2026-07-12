@@ -14,16 +14,12 @@ import {
 import { userQueries } from "~/lib/queries";
 import { useDeviceSize } from "~/lib/use-device-size";
 
-import { cn, hasMinRole } from "~/lib/utils";
+import { cn, getUserDisplayName, hasMinRole } from "~/lib/utils";
 import { useWorkspaceStore } from "~/lib/workspace-store";
 
 export type UserDropdownProps = {
   user: AuthedUserResponse;
 };
-
-function getUserDisplayName(user: AuthedUserResponse["user"]) {
-  return user.first_name.trim() ? user.first_name : user.username;
-}
 
 export function UserHeaderDropdown(props: UserDropdownProps) {
   const fetcher = useFetcher();
@@ -84,7 +80,7 @@ export function UserHeaderDropdown(props: UserDropdownProps) {
               Account Settings
             </DropdownMenuItem>
 
-            {workspaceId && hasMinRole(data, "Member") && (
+            {workspaceId && hasMinRole(data, "Guest") && (
               <DropdownMenuItem
                 className="my-2"
                 onClick={() => {

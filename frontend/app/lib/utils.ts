@@ -3,6 +3,7 @@ import { type ErrorResponse, isRouteErrorResponse } from "react-router";
 import { twMerge } from "tailwind-merge";
 import { apiClient } from "~/api/client";
 import type {
+  AuthedUserResponse,
   WorkspaceMembership,
   WorkspaceRoleName,
   WorkspaceRoleValue
@@ -626,4 +627,10 @@ export function hasMinRole(
   return Boolean(
     user.membership && user.membership.role >= WORKSPACE_ROLE_MAPPING[roleName]
   );
+}
+
+export function getUserDisplayName(
+  user: Pick<AuthedUserResponse["user"], "first_name" | "username">
+) {
+  return user.first_name.trim() ? user.first_name : user.username;
 }

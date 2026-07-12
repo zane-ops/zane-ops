@@ -13,7 +13,7 @@ import {
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { projectQueries, userQueries } from "~/lib/queries";
+import { ensureMinRole, projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
@@ -28,12 +28,18 @@ export function meta() {
   return [metaTitle("Create Project")] satisfies ReturnType<Route.MetaFunction>;
 }
 
+export async function clientLoader() {
+  const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Admin");
+}
+
 export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
+
   const formData = await request.formData();
   const userData = {
     slug: formData.get("slug")?.toString().trim(),

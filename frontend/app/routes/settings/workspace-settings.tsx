@@ -96,8 +96,9 @@ export default function WorkspaceSettingsPage({
               <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
                 <InfoIcon size={15} className="flex-none text-grey" />
               </div>
-              {hasMinRole(user, "Owner") && (
-                <div className="h-full border border-grey/50"></div>
+              <div className="h-full border border-grey/50"></div>
+              {!hasMinRole(user, "Owner") && (
+                <div className="bg-grey/50 rounded-md size-2" />
               )}
             </div>
 

@@ -21,7 +21,11 @@ import {
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
-import { sharedRegistryCredentialsQueries, userQueries } from "~/lib/queries";
+import {
+  ensureMinRole,
+  sharedRegistryCredentialsQueries,
+  userQueries
+} from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
@@ -36,6 +40,11 @@ export function meta() {
   return [
     metaTitle("New Registry Credentials")
   ] satisfies ReturnType<Route.MetaFunction>;
+}
+
+export async function clientLoader() {
+  const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Owner");
 }
 
 export default function CreateRegistryCredentialsPage() {

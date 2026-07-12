@@ -7860,6 +7860,11 @@ export interface components {
     SimpleTemplateServiceRequest: {
       id?: string;
     };
+    SimpleUser: {
+      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+      username: string;
+      first_name: string;
+    };
     SimpleWorkspace: {
       name: string;
     };
@@ -8969,6 +8974,7 @@ export interface components {
       username: string;
       has_existing_account: boolean;
       workspace: components["schemas"]["SimpleWorkspace"];
+      invited_by: components["schemas"]["SimpleUser"];
     };
     WorkspaceInvitationsDeleteDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceInvitationsListErrorResponse400: components["schemas"]["ParseErrorResponse"];

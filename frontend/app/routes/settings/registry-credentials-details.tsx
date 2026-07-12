@@ -28,7 +28,11 @@ import {
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
-import { sharedRegistryCredentialsQueries, userQueries } from "~/lib/queries";
+import {
+  ensureMinRole,
+  sharedRegistryCredentialsQueries,
+  userQueries
+} from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
@@ -50,6 +54,7 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Owner");
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const credentials = await queryClient.ensureQueryData(
     sharedRegistryCredentialsQueries.single(workspaceId, params.id)

@@ -31780,6 +31780,21 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+    SimpleUser:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          maxLength: 150
+      required:
+      - first_name
+      - username
     SimpleWorkspace:
       type: object
       properties:
@@ -34180,8 +34195,13 @@ components:
           allOf:
           - $ref: '#/components/schemas/SimpleWorkspace'
           readOnly: true
+        invited_by:
+          allOf:
+          - $ref: '#/components/schemas/SimpleUser'
+          readOnly: true
       required:
       - has_existing_account
+      - invited_by
       - role
       - role_name
       - token

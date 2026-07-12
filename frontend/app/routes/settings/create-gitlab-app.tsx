@@ -14,7 +14,7 @@ import {
 import { Separator } from "~/components/ui/separator";
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { serverQueries } from "~/lib/queries";
+import { ensureMinRole, serverQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   getCsrfTokenHeader,
@@ -29,8 +29,8 @@ export function meta() {
 
 export async function clientLoader() {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Owner");
   const settings = await queryClient.ensureQueryData(serverQueries.settings);
-
   return { settings };
 }
 

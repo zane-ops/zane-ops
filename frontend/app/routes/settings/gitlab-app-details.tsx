@@ -12,7 +12,7 @@ import {
   FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
-import { gitAppsQueries, userQueries } from "~/lib/queries";
+import { gitAppsQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   getCsrfTokenHeader,

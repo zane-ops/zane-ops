@@ -105,7 +105,7 @@ class WorkspaceInvitationDeleteAPIView(DestroyAPIView):
 class WorkspaceInvitationLinkDetailsAPIView(RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
     serializer_class = WorkspaceInvitationLinkSerializer
-    queryset = WorkspaceInvitation.objects.all().select_related("workspace")
+    queryset = WorkspaceInvitation.objects.all()
     lookup_field = "token"
     lookup_url_kwarg = "token"
     throttle_classes = [ScopedRateThrottle]
@@ -123,7 +123,7 @@ class WorkspaceInvitationLinkDetailsAPIView(RetrieveAPIView):
         try:
             invitation = (
                 WorkspaceInvitation.objects.filter(query)
-                .select_related("workspace")
+                .select_related("workspace", "invited_by")
                 .get()
             )
         except WorkspaceInvitation.DoesNotExist:

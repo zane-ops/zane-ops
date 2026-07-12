@@ -30,7 +30,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
-import { sharedRegistryCredentialsQueries, userQueries } from "~/lib/queries";
+import { ensureMinRole, sharedRegistryCredentialsQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { metaTitle } from "~/lib/utils";
 import {
@@ -47,6 +47,8 @@ export function meta() {
 
 export async function clientLoader() {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Owner");
+
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const credentials = await queryClient.ensureQueryData(
     sharedRegistryCredentialsQueries.list(workspaceId)

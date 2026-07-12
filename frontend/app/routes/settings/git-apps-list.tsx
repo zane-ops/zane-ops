@@ -27,7 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { gitAppsQueries, userQueries } from "~/lib/queries";
+import { ensureMinRole, gitAppsQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader, metaTitle } from "~/lib/utils";
 import {
@@ -42,6 +42,8 @@ export function meta() {
 
 export async function clientLoader() {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Owner");
+
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const gitAppList = await queryClient.ensureQueryData(
     gitAppsQueries.list(workspaceId)

@@ -9,7 +9,13 @@ import {
   XIcon
 } from "lucide-react";
 
-import { Link, href, useLoaderData, useSearchParams } from "react-router";
+import {
+  Link,
+  href,
+  useLoaderData,
+  useMatches,
+  useSearchParams
+} from "react-router";
 import { Input } from "~/components/ui/input";
 
 import { useQuery } from "@tanstack/react-query";
@@ -101,16 +107,18 @@ export default function ProjectList({
     <main className="flex flex-col gap-10">
       <div className="flex items-center gap-4">
         <h1 className="text-2xl font-medium">Dashboard</h1>
-        <Button
-          asChild
-          variant="secondary"
-          className="inline-flex items-center gap-1"
-        >
-          <Link to={href("/create-project")}>
-            <span>New project</span>
-            <PlusIcon size={16} className="flex-none" />
-          </Link>
-        </Button>
+        {hasMinRole(user, "Admin") && (
+          <Button
+            asChild
+            variant="secondary"
+            className="inline-flex items-center gap-1"
+          >
+            <Link to={href("/create-project")}>
+              <span>New project</span>
+              <PlusIcon size={16} className="flex-none" />
+            </Link>
+          </Button>
+        )}
       </div>
       <ProjectsListSection />
       {hasMinRole(user, "Member") && <RecentDeploymentsSection />}
@@ -130,6 +138,11 @@ const sortValueMap: Record<string, string> = {
 
 function ProjectsListSection() {
   const loaderData = useLoaderData<typeof clientLoader>();
+  const {
+    "1": {
+      loaderData: { user }
+    }
+  } = useMatches() as Route.ComponentProps["matches"];
   const currentWorkspace = useCurrentWorkspace();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -244,11 +257,13 @@ function ProjectsListSection() {
               <span className="text-grey">`</span>
             </h3>
             <p>This workspace doesn't have any projects yet.</p>
-            <Button asChild>
-              <Link prefetch="intent" to="./create-project">
-                Start by creating one
-              </Link>
-            </Button>
+            {hasMinRole(user, "Admin") && (
+              <Button asChild>
+                <Link prefetch="intent" to="./create-project">
+                  Start by creating one
+                </Link>
+              </Button>
+            )}
           </div>
         )}
         {noResults && (

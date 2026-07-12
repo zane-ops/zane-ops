@@ -47,6 +47,11 @@ export type WorkspaceInvitation = ApiResponse<
   "/api/workspace/invitations/"
 >["results"][number];
 
+export type WorkspaceInvitationLink = ApiResponse<
+  "get",
+  "/api/workspace/invitations/{token}/"
+>;
+
 export type WorkspaceRoleName = WorkspaceMember["role_name"];
 export type WorkspaceRoleValue = WorkspaceMember["role"];
 

@@ -166,11 +166,13 @@ export default function WorkspaceTeamSettingsPage({
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
         <h2 className="text-2xl">Team Settings</h2>
-        <Button asChild variant="secondary" className="flex gap-2">
-          <Link to="invite" prefetch="intent">
-            Invite User <MailPlusIcon size={18} />
-          </Link>
-        </Button>
+        {hasMinRole(user, "Admin") && (
+          <Button asChild variant="secondary" className="flex gap-2">
+            <Link to="invite" prefetch="intent">
+              Invite User <MailPlusIcon size={18} />
+            </Link>
+          </Button>
+        )}
       </div>
       <Separator />
       <h3 className="text-grey">Manage your workspace team</h3>
