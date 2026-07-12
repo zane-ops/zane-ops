@@ -175,7 +175,7 @@ export default function WorkspaceTeamSettingsPage({
         )}
       </div>
       <Separator />
-      <h3 className="text-grey">Manage your workspace team</h3>
+      <h3 className="text-grey">Manage your workspace members</h3>
 
       <Form className="flex flex-wrap items-center md:gap-3 gap-1">
         <FieldSet name="query" className="flex md:w-[30%] w-full items-center">
