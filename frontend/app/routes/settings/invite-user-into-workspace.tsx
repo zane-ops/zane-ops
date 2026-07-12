@@ -106,7 +106,7 @@ type UserInvitationLinkCardProps = {
 
 function UserInvitationLinkCard({ data }: UserInvitationLinkCardProps) {
   const registerLink =
-    window.location.origin + href("/register/:token", { token: data.token });
+    window.location.origin + href("/invite/:token", { token: data.token });
 
   return (
     <Card className="px-0">

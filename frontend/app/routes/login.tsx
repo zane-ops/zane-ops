@@ -1,5 +1,11 @@
-import { AlertCircle, LoaderIcon } from "lucide-react";
-import { Form, href, redirect, useNavigation } from "react-router";
+import { AlertCircle, LoaderIcon, MailCheckIcon } from "lucide-react";
+import {
+  Form,
+  href,
+  redirect,
+  useNavigation,
+  useSearchParams
+} from "react-router";
 import { apiClient } from "~/api/client";
 import { ThemedLogo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -86,6 +92,16 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
   const isPending =
     navigation.state === "loading" || navigation.state === "submitting";
   const errors = getFormErrorsFromResponseData(actionData?.errors);
+
+  const [searchParams] = useSearchParams();
+
+  const redirectParam = searchParams.get("redirect_to");
+
+  const hasBeenInvited =
+    redirectParam &&
+    URL.canParse(redirectParam, window.location.href) &&
+    redirectParam.startsWith("/invite");
+
   return (
     <>
       <main className="h-[100vh] flex md:flex-row flex-col  justify-center items-center">
@@ -105,9 +121,20 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
           method="POST"
           className="p-7 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
         >
+          {hasBeenInvited && (
+            <Alert className="p-4" variant="info">
+              <MailCheckIcon className="size-4 flex-none" />
+              <AlertTitle>Looks like you've been invited!</AlertTitle>
+              <AlertDescription>
+                Log in to accept the invitation
+              </AlertDescription>
+            </Alert>
+          )}
+
           <h1 className="md:text-2xl text-3xl md:text-left text-center font-bold my-3">
             Log in
           </h1>
+
           <div className="card flex flex-col gap-3">
             {errors.non_field_errors && (
               <Alert variant="destructive">

@@ -3151,7 +3151,15 @@ export const workspaceQueries = {
           throw new Error(fullErrorMessage);
         }
 
-        return result;
+        if (!result.data) {
+          const fullErrorMessage = result.error?.errors
+            .map((err) => err.detail)
+            .join(" ");
+
+          throw notFound(fullErrorMessage);
+        }
+
+        return result.data;
       }
     })
 };

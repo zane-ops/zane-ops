@@ -62,6 +62,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { WorkspaceRoleBadge } from "~/components/workspace-role-badge";
 import {
   SPIN_DELAY_DEFAULT_OPTIONS,
   WORKSPACE_ROLE_MAPPING
@@ -312,21 +313,6 @@ function WorkspaceMembersTable({
               "Member"
             );
 
-            let Icon: LucideIcon;
-            switch (member.role_name) {
-              case "Member":
-                Icon = UserIcon;
-                break;
-              case "Admin":
-                Icon = ShieldIcon;
-                break;
-              case "Owner":
-                Icon = CrownIcon;
-                break;
-              default:
-                Icon = UserSearchIcon;
-                break;
-            }
             return (
               <TableRow className="px-2" key={member.id}>
                 <TableCell className="p-2">{member.user.username}</TableCell>
@@ -336,14 +322,7 @@ function WorkspaceMembersTable({
                   )}
                 </TableCell>
                 <TableCell className="p-2">
-                  <StatusBadge
-                    color="gray"
-                    pingState="hidden"
-                    className="gap-1"
-                  >
-                    <span>{member.role_name}</span>
-                    <Icon className="size-4 flex-none" />
-                  </StatusBadge>
+                  <WorkspaceRoleBadge role={member.role_name} />
                 </TableCell>
                 <TableCell className="p-2">
                   {isMember ? (
@@ -351,7 +330,7 @@ function WorkspaceMembersTable({
                   ) : (
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button>
+                        <button className="cursor-pointer">
                           <StatusBadge
                             className="relative top-0.5 text-xs pl-3 pr-2 inline-flex items-center gap-1"
                             color="gray"

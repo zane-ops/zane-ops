@@ -22,12 +22,13 @@ import { Button } from "~/components/ui/button";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import {
   deploymentQueries,
+  ensureAuthedUser,
   projectQueries,
   projectSearchSchema,
   userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn } from "~/lib/utils";
+import { cn, hasMinRole } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
@@ -36,6 +37,7 @@ import {
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
   const workspace = await getCurrentWorkspace(queryClient);
+  const authedUser = await ensureAuthedUser(queryClient);
 
   const searchParams = new URL(request.url).searchParams;
 
@@ -51,7 +53,9 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     queryClient.ensureQueryData(
       projectQueries.list({ workspaceId: workspace.id, filters })
     ),
-    queryClient.ensureQueryData(deploymentQueries.recent(workspace.id))
+    hasMinRole(authedUser, "Member")
+      ? queryClient.ensureQueryData(deploymentQueries.recent(workspace.id))
+      : []
   ]);
   return {
     projectList,
@@ -62,7 +66,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 export default function ProjectList({
   matches: {
     "2": {
-      loaderData: { workspace }
+      loaderData: { workspace, user }
     }
   }
 }: Route.ComponentProps) {
@@ -109,7 +113,7 @@ export default function ProjectList({
         </Button>
       </div>
       <ProjectsListSection />
-      <RecentDeploymentsSection />
+      {hasMinRole(user, "Member") && <RecentDeploymentsSection />}
     </main>
   );
 }

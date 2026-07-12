@@ -14992,10 +14992,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkspaceInvitationLink'
           description: ''
-  /api/workspace/invitations/{token}/accept/:
+  /api/workspace/invitations/{token}/review/:
     post:
-      operationId: acceptInvitation
-      summary: Accept workspace invitation
+      operationId: reviewWorkspaceInvitation
+      summary: Accept or decline workspace invitation
       parameters:
       - in: path
         name: token
@@ -15005,6 +15005,18 @@ paths:
         required: true
       tags:
       - workspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceReviewInvitationRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceReviewInvitationRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceReviewInvitationRequestRequest'
+        required: true
       security:
       - cookieAuth: []
       responses:
@@ -15012,7 +15024,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AcceptInvitationErrorResponse400'
+                $ref: '#/components/schemas/ReviewWorkspaceInvitationErrorResponse400'
           description: ''
         '401':
           content:
@@ -15063,11 +15075,11 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '201':
+        '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceAcceptInvitationResponse'
+                $ref: '#/components/schemas/WorkspaceReviewInvitationResponse'
           description: ''
   /api/workspace/invite-user/:
     post:
@@ -15714,7 +15726,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkspaceAcceptInvitationResponse'
+                $ref: '#/components/schemas/WorkspaceReviewInvitationResponse'
           description: ''
   /api/workspace/transfer-ownership/:
     post:
@@ -16031,13 +16043,6 @@ paths:
           description: No response body
 components:
   schemas:
-    AcceptInvitationErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     AccessibleWorkspaceProject:
       type: object
       properties:
@@ -20945,14 +20950,6 @@ components:
       required:
       - errors
       - type
-    DecisionEnum:
-      enum:
-      - APPROVE
-      - DECLINE
-      type: string
-      description: |-
-        * `APPROVE` - APPROVE
-        * `DECLINE` - DECLINE
     DeleteBuildRegistryErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -26955,11 +26952,13 @@ components:
     RegisterUserIntoWorkspaceError:
       oneOf:
       - $ref: '#/components/schemas/RegisterUserIntoWorkspaceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegisterUserIntoWorkspaceFirstNameErrorComponent'
       - $ref: '#/components/schemas/RegisterUserIntoWorkspacePasswordErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/RegisterUserIntoWorkspaceNonFieldErrorsErrorComponent'
+          first_name: '#/components/schemas/RegisterUserIntoWorkspaceFirstNameErrorComponent'
           password: '#/components/schemas/RegisterUserIntoWorkspacePasswordErrorComponent'
     RegisterUserIntoWorkspaceErrorResponse400:
       oneOf:
@@ -26970,6 +26969,34 @@ components:
         mapping:
           validation_error: '#/components/schemas/RegisterUserIntoWorkspaceValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    RegisterUserIntoWorkspaceFirstNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - first_name
+          type: string
+          description: '* `first_name` - first_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RegisterUserIntoWorkspaceNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -30493,13 +30520,94 @@ components:
       required:
       - errors
       - type
+    ReviewPreviewEnvDeploymentRequestDecisionEnum:
+      enum:
+      - APPROVE
+      - DECLINE
+      type: string
+      description: |-
+        * `APPROVE` - APPROVE
+        * `DECLINE` - DECLINE
     ReviewPreviewEnvDeploymentRequestRequest:
       type: object
       properties:
         decision:
-          $ref: '#/components/schemas/DecisionEnum'
+          $ref: '#/components/schemas/ReviewPreviewEnvDeploymentRequestDecisionEnum'
       required:
       - decision
+    ReviewWorkspaceInvitationDecisionErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - decision
+          type: string
+          description: '* `decision` - decision'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ReviewWorkspaceInvitationError:
+      oneOf:
+      - $ref: '#/components/schemas/ReviewWorkspaceInvitationNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ReviewWorkspaceInvitationDecisionErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ReviewWorkspaceInvitationNonFieldErrorsErrorComponent'
+          decision: '#/components/schemas/ReviewWorkspaceInvitationDecisionErrorComponent'
+    ReviewWorkspaceInvitationErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ReviewWorkspaceInvitationValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ReviewWorkspaceInvitationValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ReviewWorkspaceInvitationNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ReviewWorkspaceInvitationValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewWorkspaceInvitationError'
+      required:
+      - errors
+      - type
     RoleEnum:
       enum:
       - 10
@@ -33966,13 +34074,6 @@ components:
       required:
       - id
       - name
-    WorkspaceAcceptInvitationResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-      required:
-      - success
     WorkspaceDestroyErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -34269,6 +34370,9 @@ components:
     WorkspaceRegisterRequestRequest:
       type: object
       properties:
+        first_name:
+          type: string
+          minLength: 1
         password:
           type: string
           minLength: 8
@@ -34291,6 +34395,28 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    WorkspaceReviewInvitationRequestDecisionEnum:
+      enum:
+      - ACCEPT
+      - DECLINE
+      type: string
+      description: |-
+        * `ACCEPT` - ACCEPT
+        * `DECLINE` - DECLINE
+    WorkspaceReviewInvitationRequestRequest:
+      type: object
+      properties:
+        decision:
+          $ref: '#/components/schemas/WorkspaceReviewInvitationRequestDecisionEnum'
+      required:
+      - decision
+    WorkspaceReviewInvitationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+      - success
     WorkspaceTransferOwnershipRequest:
       type: object
       properties:

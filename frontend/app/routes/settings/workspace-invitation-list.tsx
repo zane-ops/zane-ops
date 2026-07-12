@@ -62,6 +62,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { WorkspaceRoleBadge } from "~/components/workspace-role-badge";
 import {
   ensureMinRole,
   paginationListFilters,
@@ -226,34 +227,11 @@ function WorkspaceInvitationsTable({
               "Member"
             );
 
-            let Icon: LucideIcon;
-            switch (invitation.role_name) {
-              case "Member":
-                Icon = UserIcon;
-                break;
-              case "Admin":
-                Icon = ShieldIcon;
-                break;
-              case "Owner":
-                Icon = CrownIcon;
-                break;
-              default:
-                Icon = UserSearchIcon;
-                break;
-            }
-
             return (
               <TableRow className="px-2" key={invitation.id}>
                 <TableCell className="p-2">{invitation.username}</TableCell>
                 <TableCell className="p-2">
-                  <StatusBadge
-                    color="gray"
-                    pingState="hidden"
-                    className="gap-1.5"
-                  >
-                    <span>{invitation.role_name}</span>
-                    <Icon className="size-4 flex-none" />
-                  </StatusBadge>
+                  <WorkspaceRoleBadge role={invitation.role_name} />
                 </TableCell>
 
                 <TableCell className="p-2">
@@ -262,7 +240,7 @@ function WorkspaceInvitationsTable({
                   ) : (
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button>
+                        <button className="cursor-pointer">
                           <StatusBadge
                             className="relative top-0.5 text-xs pl-3 pr-2 inline-flex items-center gap-1"
                             color="gray"
@@ -356,7 +334,7 @@ export type WorkspaceInvitationActionsProps = {
 function getInvitationLink(invitation: { token: string }) {
   const registerLink =
     window.location.origin +
-    href("/register/:token", { token: invitation.token });
+    href("/invite/:token", { token: invitation.token });
   return registerLink;
 }
 

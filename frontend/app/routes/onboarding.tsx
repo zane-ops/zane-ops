@@ -36,10 +36,12 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   const queryClient = getQueryClient();
   const formData = await request.formData();
 
+  const firstName = formData.get("first_name")?.toString();
+
   const credentials = {
-    username: formData.get("username")!.toString(),
-    first_name: formData.get("first_name")!.toString(),
-    password: formData.get("password")!.toString(),
+    username: formData.get("username")?.toString() ?? "",
+    first_name: firstName?.trim() ? firstName : undefined,
+    password: formData.get("password")?.toString() ?? "",
     workspace_name: formData.get("workspace_name")?.toString(),
     password_confirmation: formData.get("password_confirmation")!.toString()
   } satisfies RequestInput<"post", "/api/auth/create-initial-user/"> & {
@@ -135,6 +137,14 @@ export default function InitialRegistration({
           ref={formRef}
           className="p-7 my-2 lg:px-32 md:px-20 md:w-2/3 xl:md:w-1/2  flex flex-col w-full"
         >
+          {errors.non_field_errors && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{errors.non_field_errors}</AlertDescription>
+            </Alert>
+          )}
+
           <h3 className="mt-2 text-lg text-grey">
             Let's setup your first workspace
           </h3>
@@ -164,14 +174,6 @@ export default function InitialRegistration({
 
           <p className="my-2 text-lg text-grey">Create your first user</p>
           <div className="card flex flex-col gap-3">
-            {errors.non_field_errors && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{errors.non_field_errors}</AlertDescription>
-              </Alert>
-            )}
-
             <div className="my-2 flex flex-col gap-1">
               <label htmlFor="username" className="">
                 Username

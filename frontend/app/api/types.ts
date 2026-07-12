@@ -83,6 +83,8 @@ export type ComposeStackDeployment = ApiResponse<
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deployments/{hash}/"
 >;
 
+export type ServerSettings = ApiResponse<"get", "/api/settings/">;
+
 export type TemplateDocument = {
   id: string;
   name: string;

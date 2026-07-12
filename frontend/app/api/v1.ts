@@ -634,9 +634,9 @@ export interface paths {
   "/api/workspace/invitations/{token}/": {
     get: operations["workspace_invitations_retrieve"];
   };
-  "/api/workspace/invitations/{token}/accept/": {
-    /** Accept workspace invitation */
-    post: operations["acceptInvitation"];
+  "/api/workspace/invitations/{token}/review/": {
+    /** Accept or decline workspace invitation */
+    post: operations["reviewWorkspaceInvitation"];
   };
   "/api/workspace/invite-user/": {
     /** Generate an invitation link for a new user in a workspace */
@@ -683,7 +683,6 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
-    AcceptInvitationErrorResponse400: components["schemas"]["ParseErrorResponse"];
     AccessibleWorkspaceProject: {
       id: string;
       slug: string;
@@ -2879,12 +2878,6 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateWorkspaceError"][];
     };
-    /**
-     * @description * `APPROVE` - APPROVE
-     * * `DECLINE` - DECLINE
-     * @enum {string}
-     */
-    DecisionEnum: "APPROVE" | "DECLINE";
     DeleteBuildRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     DeleteRegistryCredentialsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     DeployComposeStackCommitMessageErrorComponent: {
@@ -5508,8 +5501,25 @@ export interface components {
       /** @default 3 */
       valid_for?: components["schemas"]["ValidForEnum"];
     };
-    RegisterUserIntoWorkspaceError: components["schemas"]["RegisterUserIntoWorkspaceNonFieldErrorsErrorComponent"] | components["schemas"]["RegisterUserIntoWorkspacePasswordErrorComponent"];
+    RegisterUserIntoWorkspaceError: components["schemas"]["RegisterUserIntoWorkspaceNonFieldErrorsErrorComponent"] | components["schemas"]["RegisterUserIntoWorkspaceFirstNameErrorComponent"] | components["schemas"]["RegisterUserIntoWorkspacePasswordErrorComponent"];
     RegisterUserIntoWorkspaceErrorResponse400: components["schemas"]["RegisterUserIntoWorkspaceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RegisterUserIntoWorkspaceFirstNameErrorComponent: {
+      /**
+       * @description * `first_name` - first_name
+       * @enum {string}
+       */
+      attr: "first_name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     RegisterUserIntoWorkspaceNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -7425,8 +7435,48 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ReviewPreviewEnvDeployError"][];
     };
+    /**
+     * @description * `APPROVE` - APPROVE
+     * * `DECLINE` - DECLINE
+     * @enum {string}
+     */
+    ReviewPreviewEnvDeploymentRequestDecisionEnum: "APPROVE" | "DECLINE";
     ReviewPreviewEnvDeploymentRequestRequest: {
-      decision: components["schemas"]["DecisionEnum"];
+      decision: components["schemas"]["ReviewPreviewEnvDeploymentRequestDecisionEnum"];
+    };
+    ReviewWorkspaceInvitationDecisionErrorComponent: {
+      /**
+       * @description * `decision` - decision
+       * @enum {string}
+       */
+      attr: "decision";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    ReviewWorkspaceInvitationError: components["schemas"]["ReviewWorkspaceInvitationNonFieldErrorsErrorComponent"] | components["schemas"]["ReviewWorkspaceInvitationDecisionErrorComponent"];
+    ReviewWorkspaceInvitationErrorResponse400: components["schemas"]["ReviewWorkspaceInvitationValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ReviewWorkspaceInvitationNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ReviewWorkspaceInvitationValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ReviewWorkspaceInvitationError"][];
     };
     /**
      * @description * `10` - Guest
@@ -8889,9 +8939,6 @@ export interface components {
       id: string;
       name: string;
     };
-    WorkspaceAcceptInvitationResponse: {
-      success: boolean;
-    };
     WorkspaceDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceDetail: {
       id: string;
@@ -8984,12 +9031,25 @@ export interface components {
       workspace: components["schemas"]["Workspace"];
     };
     WorkspaceRegisterRequestRequest: {
+      first_name?: string;
       password: string;
     };
     WorkspaceRequest: {
       name: string;
     };
     WorkspaceRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    /**
+     * @description * `ACCEPT` - ACCEPT
+     * * `DECLINE` - DECLINE
+     * @enum {string}
+     */
+    WorkspaceReviewInvitationRequestDecisionEnum: "ACCEPT" | "DECLINE";
+    WorkspaceReviewInvitationRequestRequest: {
+      decision: components["schemas"]["WorkspaceReviewInvitationRequestDecisionEnum"];
+    };
+    WorkspaceReviewInvitationResponse: {
+      success: boolean;
+    };
     WorkspaceTransferOwnershipRequest: {
       owner_id: number;
     };
@@ -15641,22 +15701,29 @@ export interface operations {
       };
     };
   };
-  /** Accept workspace invitation */
-  acceptInvitation: {
+  /** Accept or decline workspace invitation */
+  reviewWorkspaceInvitation: {
     parameters: {
       path: {
         token: string;
       };
     };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WorkspaceReviewInvitationRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["WorkspaceReviewInvitationRequestRequest"];
+        "multipart/form-data": components["schemas"]["WorkspaceReviewInvitationRequestRequest"];
+      };
+    };
     responses: {
-      201: {
+      200: {
         content: {
-          "application/json": components["schemas"]["WorkspaceAcceptInvitationResponse"];
+          "application/json": components["schemas"]["WorkspaceReviewInvitationResponse"];
         };
       };
       400: {
         content: {
-          "application/json": components["schemas"]["AcceptInvitationErrorResponse400"];
+          "application/json": components["schemas"]["ReviewWorkspaceInvitationErrorResponse400"];
         };
       };
       401: {
@@ -15942,7 +16009,7 @@ export interface operations {
     responses: {
       201: {
         content: {
-          "application/json": components["schemas"]["WorkspaceAcceptInvitationResponse"];
+          "application/json": components["schemas"]["WorkspaceReviewInvitationResponse"];
         };
       };
       400: {

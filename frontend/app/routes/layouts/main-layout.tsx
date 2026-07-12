@@ -1,15 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   BookOpenIcon,
+  BuildingIcon,
   GitCommitVerticalIcon,
+  GlobeIcon,
   HeartHandshakeIcon,
   HeartIcon,
+  LandmarkIcon,
   LaptopMinimalIcon,
   MoonIcon,
+  SettingsIcon,
   SunIcon,
   TagIcon
 } from "lucide-react";
-import { Outlet, href, redirect } from "react-router";
+import { Outlet, data, href, redirect } from "react-router";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { type Theme, useTheme } from "~/components/theme-context";
 import { Button } from "~/components/ui/button";
@@ -17,6 +21,7 @@ import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { serverQueries, userQueries } from "~/lib/queries";
 import { cn, hasMinRole } from "~/lib/utils";
 
+import type { ServerSettings } from "~/api/types";
 import { Header } from "~/components/header/header";
 import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
 import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
@@ -42,7 +47,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     if (url.pathname !== "/" && url.pathname !== "/login") {
       const params = new URLSearchParams([["redirect_to", url.pathname]]);
 
-      redirectPathName = [href("/login"), "?", params.toString()].join();
+      redirectPathName = [href("/login"), "?", params.toString()].join("");
     }
 
     throw redirect(redirectPathName);
@@ -158,6 +163,10 @@ const socialLinks = [
   }
 ];
 
+function getBuildName(build: ServerSettings["build"]) {
+  return build === "ee" ? "Enterprise" : "Open Source";
+}
+
 function Footer() {
   const { data } = useQuery(serverQueries.settings);
 
@@ -249,6 +258,19 @@ function Footer() {
           </ToggleGroupItem>
         </ToggleGroup>
 
+        {data?.build && (
+          <span className="flex items-center gap-1">
+            {data.build === "ee" ? (
+              <LandmarkIcon size={15} />
+            ) : (
+              <GlobeIcon size={15} />
+            )}
+            <span>
+              <span className="sr-only">Build: </span> &nbsp;
+              <span>{getBuildName(data.build)} Edition</span>
+            </span>
+          </span>
+        )}
         {data?.commit_sha && (
           <span className="flex items-center gap-2">
             <GitCommitVerticalIcon size={15} />
@@ -264,6 +286,7 @@ function Footer() {
             </span>
           </span>
         )}
+
         {data?.image_version && image_version_url && (
           <span className="flex items-center gap-2">
             <TagIcon size={15} />
