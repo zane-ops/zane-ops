@@ -9,7 +9,7 @@ from typing import Sequence
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from ...validators import validate_new_password
 import django_filters
-from rest_framework import pagination
+
 from django.db.models import QuerySet, Q
 
 
