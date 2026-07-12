@@ -56,9 +56,9 @@ urlpatterns = [
         name="workspace.register",
     ),
     re_path(
-        r"^workspace/invitations/(?P<token>[a-zA-Z0-9]+)/accept/?$",
-        views.WorkspaceAcceptInvitationAPIView.as_view(),
-        name="workspace.accept_invitation",
+        r"^workspace/invitations/(?P<token>[a-zA-Z0-9]+)/review/?$",
+        views.WorkspaceReviewInvitationAPIView.as_view(),
+        name="workspace.review_invitation",
     ),
     re_path(
         r"^workspace/invitations/(?P<id>[a-zA-Z0-9-_]+)/delete/?$",

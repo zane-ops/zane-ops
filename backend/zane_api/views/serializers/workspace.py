@@ -33,6 +33,7 @@ class RegenerateWorkspaceInvitationRequestSerializer(serializers.Serializer):
 
 
 class WorkspaceRegisterRequestSerializer(serializers.Serializer):
+    first_name = serializers.CharField(required=False)
     password = serializers.CharField(
         min_length=8, max_length=255, validators=[validate_new_password]
     )
@@ -83,8 +84,24 @@ class WorkspaceEditPermissionsRequestSerializer(serializers.Serializer):
         return attrs
 
 
-class WorkspaceAcceptInvitationResponseSerializer(serializers.Serializer):
+class WorkspaceReviewInvitationResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
+
+
+class WorkspaceInvitationDecision:
+    ACCEPT = "ACCEPT"
+    DECLINE = "DECLINE"
+
+    @classmethod
+    def choices(cls):
+        return [
+            cls.ACCEPT,
+            cls.DECLINE,
+        ]
+
+
+class WorkspaceReviewInvitationRequestSerializer(serializers.Serializer):
+    decision = serializers.ChoiceField(choices=WorkspaceInvitationDecision.choices())
 
 
 class InviteUserIntoWorkspaceRequestSerializer(serializers.Serializer):

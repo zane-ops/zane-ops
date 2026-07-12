@@ -19,6 +19,7 @@ import responses
 from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
+from zane_api.views.workspace_invitations import WorkspaceInvitationDecision
 
 
 class WorkspaceLimitsChecksViewTests(AuthAPITestCase):
@@ -458,9 +459,10 @@ class WorkspaceUserLimitOnRegisterViewTests(AuthAPITestCase):
         self.client.login(username="mohai", password="password")
         response = self.client.post(
             reverse(
-                "zane_api:workspace.accept_invitation",
+                "zane_api:workspace.review_invitation",
                 kwargs={"token": invitation.token},
             ),
+            data={"decision": WorkspaceInvitationDecision.ACCEPT},
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)

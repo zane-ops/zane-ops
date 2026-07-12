@@ -17,6 +17,7 @@ from datetime import timedelta
 from django.contrib import auth
 from django.contrib.auth.models import User
 from ..constants import WORKSPACE_SESSION_KEY
+from zane_api.views.workspace_invitations import WorkspaceInvitationDecision
 
 
 class WorkspaceInviteUserViewTests(AuthAPITestCase):
@@ -339,7 +340,7 @@ class RegenerateWorkspaceInvitationViewTests(AuthAPITestCase):
 
 
 class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
-    def test_workspace_register_and_accept_invitation(self):
+    def test_workspace_register_and_review_invitation(self):
         self.loginUser()
         workspace = cast(Workspace, Workspace.objects.first())
 
@@ -495,12 +496,13 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         # 3- Accept invitation
         response = self.client.post(
             reverse(
-                "zane_api:workspace.accept_invitation",
+                "zane_api:workspace.review_invitation",
                 kwargs={"token": new_invitation.token},
             ),
+            data={"decision": WorkspaceInvitationDecision.ACCEPT},
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # 4- Membership should be created for user
         membership = cast(
@@ -526,6 +528,51 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         self.assertEqual(data["membership"]["workspace"]["id"], workspace.id)
 
         # 6- Invitation should be deleted
+        self.assertEqual(0, WorkspaceInvitation.objects.count())
+
+    def test_decline_workspace_invitation(self):
+        self.loginUser()
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        # 0- Create user
+        new_user = User.objects.create_user(username="mohai", password="password")
+
+        # 1- Create invitation
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.MEMBER,
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
+
+        # 2- Login to second user
+        self.client.login(username="mohai", password="password")
+
+        # 3- Decline invitation
+        response = self.client.post(
+            reverse(
+                "zane_api:workspace.review_invitation",
+                kwargs={"token": new_invitation.token},
+            ),
+            data={"decision": WorkspaceInvitationDecision.DECLINE},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # 4- No membership should be created for user
+        membership = WorkspaceMembership.objects.filter(
+            user=new_user,
+            workspace=workspace,
+        ).first()
+        self.assertIsNone(membership)
+
+        # 5- Invitation should be deleted
         self.assertEqual(0, WorkspaceInvitation.objects.count())
 
     def test_cannot_accept_workspace_invitation_if_not_logged_in(self):
@@ -554,14 +601,15 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         # 2- Accept invitation
         response = self.client.post(
             reverse(
-                "zane_api:workspace.accept_invitation",
+                "zane_api:workspace.review_invitation",
                 kwargs={"token": new_invitation.token},
             ),
+            data={"decision": WorkspaceInvitationDecision.ACCEPT},
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
-    def test_cannot_accept_invitation_for_other_user_if_logged_into_different_account(
+    def test_cannot_review_invitation_for_other_user_if_logged_into_different_account(
         self,
     ):
         self.loginUser()
@@ -586,9 +634,10 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         # 2- Accept invitation
         response = self.client.post(
             reverse(
-                "zane_api:workspace.accept_invitation",
+                "zane_api:workspace.review_invitation",
                 kwargs={"token": new_invitation.token},
             ),
+            data={"decision": WorkspaceInvitationDecision.ACCEPT},
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
@@ -744,7 +793,7 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         self.assertIsNotNone(workspace_id)
         self.assertEqual(workspace_id, workspace.id)
 
-    def test_accept_invitation_should_commit_workspace_into_session(self):
+    def test_review_invitation_should_commit_workspace_into_session(self):
         self.loginUser()
         workspace = cast(Workspace, Workspace.objects.first())
 
@@ -771,12 +820,13 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         # 3- Accept invitation
         response = self.client.post(
             reverse(
-                "zane_api:workspace.accept_invitation",
+                "zane_api:workspace.review_invitation",
                 kwargs={"token": new_invitation.token},
             ),
+            data={"decision": WorkspaceInvitationDecision.ACCEPT},
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify that workspace session is set
         workspace_id = self.client.session.get(WORKSPACE_SESSION_KEY)
@@ -848,9 +898,10 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         # 3- Accept invitation
         response = self.client.post(
             reverse(
-                "zane_api:workspace.accept_invitation",
+                "zane_api:workspace.review_invitation",
                 kwargs={"token": new_invitation.token},
             ),
+            data={"decision": WorkspaceInvitationDecision.ACCEPT},
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)

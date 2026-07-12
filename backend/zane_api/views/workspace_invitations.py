@@ -24,13 +24,15 @@ from ..permissions import (
     IsWorkspaceAdmin,
 )
 import secrets
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Q
 from django.utils import timezone
 from datetime import timedelta
 from .serializers import (
     RegenerateWorkspaceInvitationRequestSerializer,
     InviteUserIntoWorkspaceRequestSerializer,
-    WorkspaceAcceptInvitationResponseSerializer,
+    WorkspaceReviewInvitationResponseSerializer,
+    WorkspaceReviewInvitationRequestSerializer,
+    WorkspaceInvitationDecision,
     WorkspaceRegisterRequestSerializer,
 )
 from django.contrib.auth.models import User, AbstractUser
@@ -109,6 +111,26 @@ class WorkspaceInvitationLinkDetailsAPIView(RetrieveAPIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "initial_registration"
 
+    def get_object(self) -> WorkspaceInvitation:  # type: ignore
+        token = self.kwargs["token"]
+
+        authed_user = cast(AbstractUser, self.request.user)
+
+        query = Q(token=token, expires_at__gt=timezone.now())
+        if authed_user.is_authenticated:
+            query &= Q(username=authed_user.username)
+
+        try:
+            invitation = (
+                WorkspaceInvitation.objects.filter(query)
+                .select_related("workspace")
+                .get()
+            )
+        except WorkspaceInvitation.DoesNotExist:
+            raise exceptions.NotFound("This invitation link is invalid or has expired.")
+
+        return invitation
+
 
 class WorkspaceRegisterInvitationAPIView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -116,7 +138,7 @@ class WorkspaceRegisterInvitationAPIView(APIView):
     @transaction.atomic()
     @extend_schema(
         request=WorkspaceRegisterRequestSerializer,
-        responses={201: WorkspaceAcceptInvitationResponseSerializer},
+        responses={201: WorkspaceReviewInvitationResponseSerializer},
         operation_id="registerUserIntoWorkspace",
         summary="Create user account and register them into workspace",
     )
@@ -159,6 +181,7 @@ class WorkspaceRegisterInvitationAPIView(APIView):
         user = User.objects.create_user(
             username=invitation.username,
             password=data["password"],
+            first_name=data.get("first_name", ""),
         )  # type: ignore
 
         membership = WorkspaceMembership.objects.create(
@@ -177,19 +200,19 @@ class WorkspaceRegisterInvitationAPIView(APIView):
 
         invitation.delete()
 
-        serializer = WorkspaceAcceptInvitationResponseSerializer({"success": True})
+        serializer = WorkspaceReviewInvitationResponseSerializer({"success": True})
         return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
 
-class WorkspaceAcceptInvitationAPIView(APIView):
+class WorkspaceReviewInvitationAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = WorkspaceReviewInvitationResponseSerializer
 
     @transaction.atomic()
     @extend_schema(
-        request=None,
-        responses={201: WorkspaceAcceptInvitationResponseSerializer},
-        operation_id="acceptInvitation",
-        summary="Accept workspace invitation",
+        request=WorkspaceReviewInvitationRequestSerializer,
+        operation_id="reviewWorkspaceInvitation",
+        summary="Accept or decline workspace invitation",
     )
     def post(self, request: Request, token: str):
         try:
@@ -205,22 +228,29 @@ class WorkspaceAcceptInvitationAPIView(APIView):
         except WorkspaceInvitation.DoesNotExist:
             raise exceptions.NotFound("This invitation link is invalid or has expired.")
 
-        membership = WorkspaceMembership.objects.create(
-            user=request.user,
-            workspace=invitation.workspace,
-            role=invitation.role,
-        )
+        form = WorkspaceReviewInvitationRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+        data = cast(dict, form.validated_data)
 
-        for project in invitation.accessible_projects.all():
-            membership.accessible_projects.add(project)
+        match data["decision"]:
+            case WorkspaceInvitationDecision.ACCEPT:
+                membership = WorkspaceMembership.objects.create(
+                    user=request.user,
+                    workspace=invitation.workspace,
+                    role=invitation.role,
+                )
 
-        # Commit workspace to session
-        request.session[WORKSPACE_SESSION_KEY] = invitation.workspace.id
+                for project in invitation.accessible_projects.all():
+                    membership.accessible_projects.add(project)
+
+                # Commit workspace to session
+                request.session[WORKSPACE_SESSION_KEY] = invitation.workspace.id
+            case _:
+                pass
 
         invitation.delete()
-
-        serializer = WorkspaceAcceptInvitationResponseSerializer({"success": True})
-        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
+        serializer = WorkspaceReviewInvitationResponseSerializer({"success": True})
+        return Response(data=serializer.data)
 
 
 class InviteUserIntoWorkspaceAPIView(APIView):
