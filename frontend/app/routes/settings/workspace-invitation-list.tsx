@@ -1,11 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
-import { ShieldIcon, XIcon } from "lucide-react";
-import { Link, useSearchParams } from "react-router";
+import {
+  ChevronDownIcon,
+  CrownIcon,
+  type LucideIcon,
+  RefreshCcwIcon,
+  ShieldIcon,
+  Trash2Icon,
+  UserIcon,
+  UserSearchIcon,
+  XIcon
+} from "lucide-react";
+import { Link, href, useSearchParams } from "react-router";
 import type { WorkspaceInvitation } from "~/api/types";
 import { Code } from "~/components/code";
+import { CopyButton } from "~/components/copy-button";
 import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "~/components/ui/popover";
 import { Separator } from "~/components/ui/separator";
 import {
   Table,
@@ -16,12 +32,25 @@ import {
   TableRow
 } from "~/components/ui/table";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
+import {
   ensureMinRole,
   paginationListFilters,
   workspaceQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { formattedTime, hasMinRole, metaTitle, pluralize } from "~/lib/utils";
+import {
+  cn,
+  formattedTime,
+  hasMinRole,
+  metaTitle,
+  pluralize,
+  stringToColor
+} from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
@@ -145,7 +174,7 @@ function WorkspaceInvitationsTable({
           </TableHead>
           <TableHead className="sticky top-0 z-20">Created at</TableHead>
           <TableHead className="sticky top-0 z-20">Expires at</TableHead>
-          <TableHead className="sticky top-0 z-20 px-4"></TableHead>
+          <TableHead className="sticky top-0 z-20 px-4">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -170,6 +199,22 @@ function WorkspaceInvitationsTable({
               "Member"
             );
 
+            let Icon: LucideIcon;
+            switch (invitation.role_name) {
+              case "Member":
+                Icon = UserIcon;
+                break;
+              case "Admin":
+                Icon = ShieldIcon;
+                break;
+              case "Owner":
+                Icon = CrownIcon;
+                break;
+              default:
+                Icon = UserSearchIcon;
+                break;
+            }
+
             return (
               <TableRow className="px-2" key={invitation.id}>
                 <TableCell className="p-2">{invitation.username}</TableCell>
@@ -177,21 +222,77 @@ function WorkspaceInvitationsTable({
                   <StatusBadge
                     color="gray"
                     pingState="hidden"
-                    className="gap-1"
+                    className="gap-1.5"
                   >
                     <span>{invitation.role_name}</span>
-                    {invitation.role_name === "Admin" && (
-                      <ShieldIcon className="size-4 flex-none" />
-                    )}
+                    <Icon className="size-4 flex-none" />
                   </StatusBadge>
                 </TableCell>
 
                 <TableCell className="p-2">
-                  <Code className="px-2 whitespace-nowrap">
-                    {isMember
-                      ? "All projects"
-                      : `${invitation.accessible_projects.length} ${pluralize("project", invitation.accessible_projects.length)}`}
-                  </Code>
+                  {isMember ? (
+                    <Code className="px-2 whitespace-nowrap">All projects</Code>
+                  ) : (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button>
+                          <StatusBadge
+                            className="relative top-0.5 text-xs pl-3 pr-2 inline-flex items-center gap-1"
+                            color="gray"
+                            pingState="hidden"
+                          >
+                            <span>
+                              {invitation.accessible_projects.length}&nbsp;
+                              {pluralize(
+                                "project",
+                                invitation.accessible_projects.length
+                              )}
+                            </span>
+
+                            <ChevronDownIcon className="flex-none size-4" />
+                          </StatusBadge>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="start"
+                        side="bottom"
+                        className="px-4 pt-0 pb-2 w-fit min-w-42"
+                      >
+                        <ul>
+                          <li className="text-xs text-grey my-2">Projects</li>
+                          {invitation.accessible_projects.map((project) => {
+                            const projectColor = stringToColor(project.slug);
+                            return (
+                              <li
+                                style={
+                                  {
+                                    "--color-light": projectColor.light,
+                                    "--color-dark": projectColor.dark
+                                  } as React.CSSProperties
+                                }
+                                key={project.id}
+                                className="inline-flex gap-2 items-center text-sm"
+                              >
+                                <div
+                                  className={cn(
+                                    "size-6 flex-none rounded-md flex items-center justify-center",
+                                    "text-[var(--color-light)] dark:text-[var(--color-dark)]",
+                                    "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10",
+                                    "border  border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10"
+                                  )}
+                                >
+                                  <span>
+                                    {project.slug.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                                <span>{project.slug}</span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </TableCell>
                 <TableCell className="p-2">
                   <time
@@ -210,7 +311,7 @@ function WorkspaceInvitationsTable({
                   </time>
                 </TableCell>
                 <TableCell className="p-2">
-                  {/* <WorkspaceMemberActions member={invitation} /> */}
+                  <WorkspaceInvitationActions invitation={invitation} />
                 </TableCell>
               </TableRow>
             );
@@ -218,5 +319,60 @@ function WorkspaceInvitationsTable({
         )}
       </TableBody>
     </Table>
+  );
+}
+
+export type WorkspaceInvitationActionsProps = {
+  invitation: WorkspaceInvitation;
+};
+
+function getInvitationLink(invitation: WorkspaceInvitation) {
+  const registerLink =
+    window.location.origin +
+    href("/register/:token", { token: invitation.token });
+  return registerLink;
+}
+
+export function WorkspaceInvitationActions({
+  invitation
+}: WorkspaceInvitationActionsProps) {
+  return (
+    <div className="flex items-center gap-1">
+      <TooltipProvider>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <CopyButton
+              variant="ghost"
+              label="Copy invitation link"
+              value={getInvitationLink(invitation)}
+              className="!opacity-100 flex-none h-9 rounded-md px-3 text-sm"
+            />
+          </TooltipTrigger>
+          <TooltipContent>Copy invitation link</TooltipContent>
+        </Tooltip>
+
+        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <Button size="sm" variant="ghost" className="gap-1">
+              <span className="sr-only">Regenerate link</span>
+              <RefreshCcwIcon className="flex-none size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Regenerate invitation link</TooltipContent>
+        </Tooltip>
+        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <Button size="sm" variant="ghost" className="gap-1 text-red-400">
+              <span className="sr-only">Delete invitation</span>
+              <Trash2Icon className="flex-none size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Delete invitation</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
   );
 }

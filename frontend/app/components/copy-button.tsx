@@ -1,6 +1,6 @@
 import { CheckIcon, CopyIcon } from "lucide-react";
 import * as React from "react";
-import { Button } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
 import { cn, durationToMs, wait } from "~/lib/utils";
 
 export type CopyButtonProps = Omit<
@@ -25,6 +25,7 @@ export function CopyButton({
       variant="ghost"
       {...props}
       className={cn(
+        buttonVariants(props),
         "px-2.5 py-0.5",
         "inline-flex gap-1 items-center",
         "focus-visible:opacity-100 group-hover:opacity-100",

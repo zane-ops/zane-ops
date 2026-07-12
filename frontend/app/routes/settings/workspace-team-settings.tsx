@@ -3,10 +3,13 @@ import {
   ChevronDownIcon,
   CrownIcon,
   LoaderIcon,
+  type LucideIcon,
   MailPlusIcon,
   SearchIcon,
   ShieldIcon,
+  UserIcon,
   UserKeyIcon,
+  UserSearchIcon,
   UserXIcon,
   XIcon
 } from "lucide-react";
@@ -33,6 +36,11 @@ import {
   FieldSetLabel,
   FieldSetSelect
 } from "~/components/ui/fieldset";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "~/components/ui/popover";
 import {
   SelectContent,
   SelectItem,
@@ -64,7 +72,14 @@ import {
   workspaceQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { formatLogTime, hasMinRole, metaTitle, pluralize } from "~/lib/utils";
+import {
+  cn,
+  formatLogTime,
+  hasMinRole,
+  metaTitle,
+  pluralize,
+  stringToColor
+} from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
@@ -296,6 +311,22 @@ function WorkspaceMembersTable({
               },
               "Member"
             );
+
+            let Icon: LucideIcon;
+            switch (member.role_name) {
+              case "Member":
+                Icon = UserIcon;
+                break;
+              case "Admin":
+                Icon = ShieldIcon;
+                break;
+              case "Owner":
+                Icon = CrownIcon;
+                break;
+              default:
+                Icon = UserSearchIcon;
+                break;
+            }
             return (
               <TableRow className="px-2" key={member.id}>
                 <TableCell className="p-2">{member.user.username}</TableCell>
@@ -311,21 +342,73 @@ function WorkspaceMembersTable({
                     className="gap-1"
                   >
                     <span>{member.role_name}</span>
-                    {member.role_name === "Owner" ? (
-                      <CrownIcon className="size-4 flex-none" />
-                    ) : (
-                      member.role_name === "Admin" && (
-                        <ShieldIcon className="size-4 flex-none" />
-                      )
-                    )}
+                    <Icon className="size-4 flex-none" />
                   </StatusBadge>
                 </TableCell>
                 <TableCell className="p-2">
-                  <Code className="px-2 whitespace-nowrap">
-                    {isMember
-                      ? "All projects"
-                      : `${member.accessible_projects.length} ${pluralize("project", member.accessible_projects.length)}`}
-                  </Code>
+                  {isMember ? (
+                    <Code className="px-2 whitespace-nowrap">All projects</Code>
+                  ) : (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button>
+                          <StatusBadge
+                            className="relative top-0.5 text-xs pl-3 pr-2 inline-flex items-center gap-1"
+                            color="gray"
+                            pingState="hidden"
+                          >
+                            <span>
+                              {member.accessible_projects.length}&nbsp;
+                              {pluralize(
+                                "project",
+                                member.accessible_projects.length
+                              )}
+                            </span>
+
+                            <ChevronDownIcon className="flex-none size-4" />
+                          </StatusBadge>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="start"
+                        side="bottom"
+                        className="px-4 pt-0 pb-2 w-fit min-w-42"
+                      >
+                        <ul>
+                          <li className="text-xs text-grey my-2">Projects</li>
+                          {member.accessible_projects.map((project) => {
+                            const projectColor = stringToColor(project.slug);
+                            return (
+                              <li
+                                style={
+                                  {
+                                    "--color-light": projectColor.light,
+                                    "--color-dark": projectColor.dark
+                                  } as React.CSSProperties
+                                }
+                                key={project.id}
+                                className="inline-flex gap-2 items-center text-sm"
+                              >
+                                <div
+                                  className={cn(
+                                    "size-6 flex-none rounded-md flex items-center justify-center",
+                                    "text-[var(--color-light)] dark:text-[var(--color-dark)]",
+                                    "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10",
+                                    "border  border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10"
+                                  )}
+                                >
+                                  <span>
+                                    {project.slug.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                                <span>{project.slug}</span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </TableCell>
                 <TableCell className="p-2">
                   <time
