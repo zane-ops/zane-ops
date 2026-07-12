@@ -1,27 +1,52 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircleIcon,
   ChevronDownIcon,
   CrownIcon,
+  IterationCwIcon,
+  LoaderIcon,
   type LucideIcon,
-  RefreshCcwIcon,
   ShieldIcon,
   Trash2Icon,
   UserIcon,
   UserSearchIcon,
   XIcon
 } from "lucide-react";
-import { Link, href, useSearchParams } from "react-router";
+import * as React from "react";
+import { Link, href, useFetcher, useSearchParams } from "react-router";
 import type { WorkspaceInvitation } from "~/api/types";
 import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
+import { SimpleConfirmationDialog } from "~/components/delete-confirmation-dialog";
 import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
-import { Button } from "~/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Button, SubmitButton } from "~/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "~/components/ui/dialog";
+import {
+  FieldSet,
+  FieldSetLabel,
+  FieldSetSelect
+} from "~/components/ui/fieldset";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
+import {
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import {
   Table,
@@ -46,6 +71,7 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
   formattedTime,
+  getFormErrorsFromResponseData,
   hasMinRole,
   metaTitle,
   pluralize,
@@ -55,6 +81,7 @@ import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
+import type { clientAction } from "~/routes/settings/workspace-invitation-details";
 import type { Route } from "./+types/workspace-invitation-list";
 
 export function meta() {
@@ -326,7 +353,7 @@ export type WorkspaceInvitationActionsProps = {
   invitation: WorkspaceInvitation;
 };
 
-function getInvitationLink(invitation: WorkspaceInvitation) {
+function getInvitationLink(invitation: { token: string }) {
   const registerLink =
     window.location.origin +
     href("/register/:token", { token: invitation.token });
@@ -350,29 +377,247 @@ export function WorkspaceInvitationActions({
           </TooltipTrigger>
           <TooltipContent>Copy invitation link</TooltipContent>
         </Tooltip>
+      </TooltipProvider>
 
-        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+      <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
 
+      <RegenerateInvitationLinkFormDialog invitation={invitation} />
+      <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+      <DeleteConfirmationFormDialog invitation={invitation} />
+    </div>
+  );
+}
+
+function RegenerateInvitationLinkFormDialog({
+  invitation
+}: WorkspaceInvitationActionsProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const validForOptions = Array.from({ length: 7 }, (_, i) => i + 1);
+
+  const fetcher = useFetcher<typeof clientAction>();
+
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
+  const [data, setData] = React.useState(fetcher.data);
+  const isPending = fetcher.state !== "idle";
+  const errors = getFormErrorsFromResponseData(data?.errors);
+
+  const close = React.useCallback(() => {
+    setIsOpen(false);
+    setData(undefined);
+  }, []);
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+  }, [fetcher.data]);
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (isPending) return;
+        setIsOpen(open);
+        if (!open) close();
+      }}
+    >
+      <TooltipProvider>
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
-            <Button size="sm" variant="ghost" className="gap-1">
-              <span className="sr-only">Regenerate link</span>
-              <RefreshCcwIcon className="flex-none size-4" />
-            </Button>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="ghost" className="gap-1">
+                <span className="sr-only">Regenerate link</span>
+                <IterationCwIcon className="flex-none size-4" />
+              </Button>
+            </DialogTrigger>
           </TooltipTrigger>
           <TooltipContent>Regenerate invitation link</TooltipContent>
         </Tooltip>
-        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <Button size="sm" variant="ghost" className="gap-1 text-red-400">
-              <span className="sr-only">Delete invitation</span>
-              <Trash2Icon className="flex-none size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Delete invitation</TooltipContent>
-        </Tooltip>
       </TooltipProvider>
-    </div>
+
+      <DialogContent className="gap-0">
+        <DialogHeader>
+          <DialogTitle>Regenerate invitation link</DialogTitle>
+        </DialogHeader>
+
+        {data?.data ? (
+          <div
+            className={cn(
+              "flex flex-col  my-5 gap-6",
+              "border-t border-border -mx-6 px-6 py-4",
+              "w-[calc(100%+var(--spacing)*12)]",
+              "min-w-0"
+            )}
+          >
+            <p>
+              The invitation link has been regenerated. The user must access the
+              link below to accept the invitation.
+            </p>
+            <dl className="flex flex-col gap-2">
+              <div className="flex gap-2 items-center">
+                <dt className="text-grey">Valid until:</dt>
+                <dd>
+                  <time dateTime={data.data.expires_at}>
+                    {formattedTime(data.data.expires_at)}
+                  </time>
+                </dd>
+              </div>
+              <div className="flex items-center gap-2 w-min">
+                <dt className="text-grey">New Link:</dt>
+                <dd className="flex items-center gap-1.5 grow max-w-65/100">
+                  <a
+                    href={getInvitationLink({
+                      token: data.data.token
+                    })}
+                    target="_blank"
+                    className="text-link  hover:underline inline-flex min-w-0 max-w-min items-center  w-full gap-1"
+                    rel="noopener"
+                  >
+                    <p className="whitespace-nowrap text-ellipsis overflow-x-hidden w-full">
+                      {getInvitationLink({
+                        token: data.data.token
+                      })}
+                    </p>
+                  </a>
+
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <CopyButton
+                          value={getInvitationLink({
+                            token: data.data.token
+                          })}
+                          label="Copy url"
+                          size="icon"
+                          className="hover:bg-transparent !opacity-100 size-4 flex-none"
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>Copy link</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </dd>
+              </div>
+            </dl>
+          </div>
+        ) : (
+          <fetcher.Form
+            id="confirm-form"
+            ref={formRef}
+            method="POST"
+            action={`./${invitation.id}`}
+            className={cn(
+              "flex flex-col  my-5 gap-1",
+              "border-t border-border -mx-6 px-6 py-4"
+            )}
+          >
+            <p className="mb-4 text-base leading-6.5">
+              Are you sure you want to regenerate the invitation link for&nbsp;
+              <span className="text-link">{invitation.username}</span>&nbsp;?
+              This will revoke the previous link.
+            </p>
+
+            {errors.non_field_errors && (
+              <Alert variant="destructive">
+                <AlertCircleIcon className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{errors.non_field_errors}</AlertDescription>
+              </Alert>
+            )}
+            <input type="hidden" name="intent" value="regenerate-link" />
+            <FieldSet
+              name="valid_for"
+              className="w-full"
+              errors={errors.valid_for}
+            >
+              <FieldSetLabel htmlFor="valid_for">
+                New Validity period
+              </FieldSetLabel>
+
+              <FieldSetSelect defaultValue={(3).toString()}>
+                <SelectTrigger id="valid_for" className="w-full gap-2">
+                  <SelectValue placeholder="Select days" />
+                </SelectTrigger>
+                <SelectContent className="z-999">
+                  {validForOptions.map((number) => (
+                    <SelectItem value={number.toString()} key={number}>
+                      {number} {pluralize("day", number)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </FieldSetSelect>
+            </FieldSet>
+          </fetcher.Form>
+        )}
+
+        <DialogFooter className="-mx-6 px-6">
+          <div className={cn("flex items-center gap-4 w-full")}>
+            {!data?.data && (
+              <SubmitButton
+                isPending={isPending}
+                form="confirm-form"
+                className={cn("inline-flex gap-1 items-center")}
+              >
+                {isPending ? (
+                  <>
+                    <LoaderIcon className="animate-spin flex-none" size={15} />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <span>Regenerate</span>
+                )}
+              </SubmitButton>
+            )}
+
+            <DialogClose asChild>
+              <Button variant="outline" type="button" disabled={isPending}>
+                Close
+              </Button>
+            </DialogClose>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteConfirmationFormDialog({
+  invitation
+}: WorkspaceInvitationActionsProps) {
+  const fetcher = useFetcher();
+
+  return (
+    <SimpleConfirmationDialog
+      fetcher={fetcher}
+      title="Remove invitation ?"
+      variant="warning"
+      message={
+        <span>
+          Once removed, this invitation will no longer be valid. You can always
+          re-invite the user later.
+        </span>
+      }
+      form={
+        <fetcher.Form method="post" action={`./${invitation.id}`}>
+          <input type="hidden" name="intent" value="delete" />
+        </fetcher.Form>
+      }
+      trigger={
+        <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1 text-red-400"
+                >
+                  <span className="sr-only">Delete invitation</span>
+                  <Trash2Icon className="flex-none size-4" />
+                </Button>
+              </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Delete invitation</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      }
+    />
   );
 }

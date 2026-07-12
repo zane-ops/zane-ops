@@ -137,7 +137,7 @@ function UserInvitationLinkCard({ data }: UserInvitationLinkCardProps) {
                 </p>
               </a>
               <TooltipProvider>
-                <Tooltip>
+                <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
                     <CopyButton
                       value={registerLink}

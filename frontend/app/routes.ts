@@ -104,6 +104,10 @@ export default [
           "./routes/settings/invite-user-into-workspace.tsx"
         ),
         route("invitations", "./routes/settings/workspace-invitation-list.tsx"),
+        route(
+          "invitations/:id",
+          "./routes/settings/workspace-invitation-details.tsx"
+        ),
         route("git-apps", "./routes/settings/git-apps-list.tsx"),
         route(
           "git-apps/create-github-app",

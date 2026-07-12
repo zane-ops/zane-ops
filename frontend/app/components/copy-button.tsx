@@ -20,12 +20,12 @@ export function CopyButton({
   ...props
 }: CopyButtonProps) {
   const [hasCopied, startTransition] = React.useTransition();
+
   return (
     <Button
       variant="ghost"
       {...props}
       className={cn(
-        buttonVariants(props),
         "px-2.5 py-0.5",
         "inline-flex gap-1 items-center",
         "focus-visible:opacity-100 group-hover:opacity-100",

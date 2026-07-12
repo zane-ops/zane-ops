@@ -1,4 +1,4 @@
-import { AlertCircleIcon, LoaderIcon } from "lucide-react";
+import { AlertCircleIcon, LoaderIcon, TriangleAlertIcon } from "lucide-react";
 import * as React from "react";
 import type { FetcherWithComponents } from "react-router";
 import { CopyButton } from "~/components/copy-button";
@@ -70,6 +70,7 @@ type SharedDialogProps = {
   >;
   confirmText?: string;
   pendingText?: string;
+  variant?: "danger" | "warning";
 };
 
 export type DeleteConfirmationDialogProps = SharedDialogProps & {
@@ -87,7 +88,8 @@ export function DeleteConfirmationDialog({
   confirmationValue,
   confirmationFieldName,
   confirmText,
-  pendingText
+  pendingText,
+  variant = "danger"
 }: DeleteConfirmationDialogProps) {
   const { isOpen, setIsOpen, formRef, isPending, errors, close } =
     useConfirmationDialogState({
@@ -109,9 +111,15 @@ export function DeleteConfirmationDialog({
         <DialogHeader className="pb-4">
           <DialogTitle>{title}</DialogTitle>
 
-          <Alert variant="danger" className="my-5">
-            <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Warning</AlertTitle>
+          <Alert variant={variant} className="my-5">
+            {variant === "danger" ? (
+              <TriangleAlertIcon className="size-4" />
+            ) : (
+              <AlertCircleIcon className="size-4" />
+            )}
+            <AlertTitle>
+              {variant === "danger" ? "Attention" : "Warning"}
+            </AlertTitle>
             <AlertDescription>{message}</AlertDescription>
           </Alert>
 
@@ -187,7 +195,8 @@ export function SimpleConfirmationDialog({
   form,
   extraInfo,
   confirmText,
-  pendingText
+  pendingText,
+  variant = "danger"
 }: SimpleConfirmationDialogProps) {
   const { isOpen, setIsOpen, formRef, isPending, errors, close } =
     useConfirmationDialogState({ fetcher });
@@ -206,9 +215,15 @@ export function SimpleConfirmationDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
 
-          <Alert variant="danger" className="my-5">
-            <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Warning</AlertTitle>
+          <Alert variant={variant} className="my-5">
+            {variant === "danger" ? (
+              <TriangleAlertIcon className="size-4" />
+            ) : (
+              <AlertCircleIcon className="size-4" />
+            )}
+            <AlertTitle>
+              {variant === "danger" ? "Attention" : "Warning"}
+            </AlertTitle>
             <AlertDescription>{message}</AlertDescription>
           </Alert>
         </DialogHeader>
