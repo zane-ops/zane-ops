@@ -83,18 +83,22 @@ export async function getCurrentWorkspace(queryClient: QueryClient) {
  */
 const authedUserHash = hashKey(userQueries.authedUser.queryKey);
 
+export function syncWorkspaceStore(data: AuthedUserResponse | undefined) {
+  console.log("[workspace-store/syncWorkspaceStore]", { data });
+  useWorkspaceMembershipStore.setState({
+    membership: data?.membership ?? null
+  });
+  useWorkspaceStore.setState({
+    workspace: data?.membership?.workspace ?? null
+  });
+}
+
 getQueryClient()
   .getQueryCache()
   .subscribe((event) => {
     if (event.query.queryHash === authedUserHash) {
-      const authedUser = event.query.state.data as
-        | AuthedUserResponse
-        | undefined;
-      useWorkspaceMembershipStore.setState({
-        membership: authedUser?.membership ?? null
-      });
-      useWorkspaceStore.setState({
-        workspace: authedUser?.membership?.workspace ?? null
-      });
+      syncWorkspaceStore(
+        event.query.state.data as AuthedUserResponse | undefined
+      );
     }
   });

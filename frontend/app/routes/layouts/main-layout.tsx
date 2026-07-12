@@ -21,6 +21,7 @@ import { Header } from "~/components/header/header";
 import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
 import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
 import { getQueryClient } from "~/lib/query-client";
+import { syncWorkspaceStore } from "~/lib/workspace-store";
 import type { Route } from "./+types/main-layout";
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
@@ -46,6 +47,10 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
     throw redirect(redirectPathName);
   }
+
+  // Manually update store as it seems that the subscription
+  // doesn't get set if the main route is called from `redirect(...)`
+  syncWorkspaceStore(user);
 
   return { user };
 }
