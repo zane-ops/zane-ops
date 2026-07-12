@@ -5,6 +5,7 @@ import {
   LoaderIcon,
   MailPlusIcon,
   SearchIcon,
+  ShieldIcon,
   UserKeyIcon,
   UserXIcon,
   XIcon
@@ -287,7 +288,7 @@ function WorkspaceMembersTable({
           </TableRow>
         ) : (
           members.map((member) => {
-            const invitedAt = formatLogTime(member.created_at);
+            const joinedAt = formatLogTime(member.created_at);
             const isMember = hasMinRole(
               {
                 user: { is_superuser: false },
@@ -304,10 +305,18 @@ function WorkspaceMembersTable({
                   )}
                 </TableCell>
                 <TableCell className="p-2">
-                  <StatusBadge color="gray" pingState="hidden">
+                  <StatusBadge
+                    color="gray"
+                    pingState="hidden"
+                    className="gap-1"
+                  >
                     <span>{member.role_name}</span>
-                    {member.role_name === "Owner" && (
+                    {member.role_name === "Owner" ? (
                       <CrownIcon className="size-4 flex-none" />
+                    ) : (
+                      member.role_name === "Admin" && (
+                        <ShieldIcon className="size-4 flex-none" />
+                      )
                     )}
                   </StatusBadge>
                 </TableCell>
@@ -324,8 +333,8 @@ function WorkspaceMembersTable({
                     dateTime={new Date(member.created_at).toISOString()}
                   >
                     <span>
-                      {invitedAt.dateFormat},&nbsp;
-                      <span>{invitedAt.hourFormat}</span>
+                      {joinedAt.dateFormat},&nbsp;
+                      <span>{joinedAt.hourFormat}</span>
                     </span>
                   </time>
                 </TableCell>
