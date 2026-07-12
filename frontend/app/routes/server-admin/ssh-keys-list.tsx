@@ -28,7 +28,7 @@ import {
 import { sshKeysQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/lib/utils";
-import type { Route } from "./+types/ssh-keys-list";
+import type { Route } from "../settings/+types/ssh-keys-list";
 
 export function meta() {
   return [metaTitle("SSH Keys")] satisfies ReturnType<Route.MetaFunction>;
@@ -65,7 +65,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   }
 
   await queryClient.invalidateQueries(sshKeysQueries.list);
-  throw redirect(href("/settings/ssh-keys"));
+  throw redirect(href("/admin/ssh-keys"));
 }
 
 export default function SSHKeysPagePage({ loaderData }: Route.ComponentProps) {
@@ -147,7 +147,7 @@ function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
                 <Button size="sm" variant="ghost" asChild>
                   <Link
                     to={{
-                      pathname: href("/settings/server-console"),
+                      pathname: href("/admin/server-console"),
                       search: `?ssh_key_slug=${encodeURIComponent(ssh_key.slug)}`
                     }}
                   >

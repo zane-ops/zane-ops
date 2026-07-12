@@ -1,7 +1,20 @@
+import { Separator } from "~/components/ui/separator";
+import { buildRegistryQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import type { Route } from "../settings/+types/build-registry-details";
+
+import { useQuery } from "@tanstack/react-query";
 import { AlertCircleIcon, FolderIcon, LoaderIcon } from "lucide-react";
 import * as React from "react";
-import { href, redirect, useFetcher } from "react-router";
+import {
+  href,
+  redirect,
+  useFetcher,
+  useLoaderData,
+  useParams
+} from "react-router";
 import { toast } from "sonner";
+import { formData } from "zod-form-data";
 import { type RequestInput, apiClient } from "~/api/client";
 import type { BuildRegistry, RegistryStorageBackend } from "~/api/types";
 import { AWSECSLogo } from "~/components/aws-ecs-logo";
@@ -21,44 +34,61 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import { Separator } from "~/components/ui/separator";
-import { buildRegistryQueries } from "~/lib/queries";
-import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
   getCsrfTokenHeader,
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
-import type { Route } from "./+types/create-build-registry";
 
 export function meta() {
   return [
-    metaTitle("New Build Registry")
+    metaTitle("Build Registry details")
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export default function CreateBuildRegistryPage({}: Route.ComponentProps) {
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const registry = await queryClient.ensureQueryData(
+    buildRegistryQueries.single(params.id)
+  );
+  return {
+    registry
+  };
+}
+
+export default function EditBuildRegistryPage({
+  loaderData
+}: Route.ComponentProps) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
-        <h2 className="text-2xl">Add New Build Registry</h2>
+        <h2 className="text-2xl">Edit Build Registry</h2>
       </div>
       <Separator />
-      <CreateBuildRegistryForm />
+      <EditBuildRegistryForm />
     </div>
   );
 }
 
-function CreateBuildRegistryForm() {
+function EditBuildRegistryForm() {
   const fetcher = useFetcher<typeof clientAction>();
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const SelectTriggerRef =
     React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
 
-  const [storageBackend, setStorageBackend] =
-    React.useState<BuildRegistry["storage_backend"]>("LOCAL");
+  const params = useParams();
+  const loaderData = useLoaderData<typeof clientLoader>();
+
+  const { data: registry } = useQuery({
+    ...buildRegistryQueries.single(params.id!),
+    initialData: loaderData.registry
+  });
+
+  const [storageBackend, setStorageBackend] = React.useState<
+    BuildRegistry["storage_backend"]
+  >(registry.storage_backend);
 
   React.useEffect(() => {
     const key = Object.keys(errors ?? {})[0];
@@ -96,7 +126,11 @@ function CreateBuildRegistryForm() {
           Name
         </FieldSetLabel>
 
-        <FieldSetInput autoFocus placeholder="ex: production-registry" />
+        <FieldSetInput
+          defaultValue={registry.name}
+          autoFocus
+          placeholder="ex: production-registry"
+        />
       </FieldSet>
 
       <FieldSet
@@ -109,7 +143,10 @@ function CreateBuildRegistryForm() {
           Domain
         </FieldSetLabel>
 
-        <FieldSetInput placeholder="registry.mysupersaas.com" />
+        <FieldSetInput
+          defaultValue={registry.registry_domain}
+          placeholder="registry.mysupersaas.com"
+        />
       </FieldSet>
 
       <FieldSet
@@ -118,7 +155,10 @@ function CreateBuildRegistryForm() {
         className="flex-1 inline-flex gap-2 flex-col"
       >
         <div className="inline-flex gap-2 items-start">
-          <FieldSetCheckbox defaultChecked className="relative top-1" />
+          <FieldSetCheckbox
+            defaultChecked={registry.is_default}
+            className="relative top-1"
+          />
 
           <div className="flex flex-col gap-0.5">
             <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
@@ -139,7 +179,10 @@ function CreateBuildRegistryForm() {
         className="flex-1 inline-flex gap-2 flex-col"
       >
         <div className="inline-flex gap-2 items-start">
-          <FieldSetCheckbox defaultChecked className="relative top-1" />
+          <FieldSetCheckbox
+            defaultChecked={registry.is_secure}
+            className="relative top-1"
+          />
 
           <div className="flex flex-col gap-0.5">
             <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
@@ -166,7 +209,10 @@ function CreateBuildRegistryForm() {
         >
           <FieldSetLabel>Username</FieldSetLabel>
 
-          <FieldSetInput defaultValue="zane" placeholder="ex: zane" />
+          <FieldSetInput
+            defaultValue={registry.registry_username}
+            placeholder="ex: zane"
+          />
         </FieldSet>
 
         <FieldSet
@@ -176,8 +222,8 @@ function CreateBuildRegistryForm() {
         >
           <FieldSetLabel className="flex items-center gap-2">
             Password
-            <span className="text-card-foreground">
-              (leave empty to auto-generate)
+            <span className="text-grey dark:text-card-foreground">
+              (Only fill if you need to update)
             </span>
           </FieldSetLabel>
 
@@ -212,7 +258,7 @@ function CreateBuildRegistryForm() {
               className={cn(
                 "data-disabled:bg-secondary/60 dark:data-disabled:bg-secondary-foreground",
                 "data-disabled:opacity-100 data-disabled:border-transparent",
-                "[&_[data-item]]:flex-row [&_[data-item]]:gap-2"
+                "[&_[data-description]]:hidden [&_[data-description]]:md:block [&_[data-item]]:flex-row [&_[data-item]]:gap-2"
               )}
             >
               <SelectValue placeholder="Select a storage backend" />
@@ -226,7 +272,7 @@ function CreateBuildRegistryForm() {
                   <FolderIcon className="size-4 flex-none relative top-1" />
                   <div className="flex flex-col" data-item>
                     <span>Local Filesystem</span>
-                    <span className="text-muted-foreground">
+                    <span className="text-muted-foreground" data-description>
                       Store container images on the ZaneOps server
                     </span>
                   </div>
@@ -240,7 +286,7 @@ function CreateBuildRegistryForm() {
                   <AWSECSLogo className="flex-none size-3 relative top-1" />
                   <div className="flex flex-col" data-item>
                     <span>S3-Compatible Storage</span>
-                    <span className="text-muted-foreground">
+                    <span className="text-muted-foreground" data-description>
                       Store images in AWS S3 or compatible services (R2, MinIO,
                       etc.)
                     </span>
@@ -273,7 +319,10 @@ function CreateBuildRegistryForm() {
                 S3 Bucket Name
               </FieldSetLabel>
 
-              <FieldSetInput placeholder="ex: my-registry-images" />
+              <FieldSetInput
+                defaultValue={registry.s3_credentials?.bucket}
+                placeholder="ex: my-registry-images"
+              />
             </FieldSet>
 
             <FieldSet
@@ -286,7 +335,10 @@ function CreateBuildRegistryForm() {
                 Access Key ID
               </FieldSetLabel>
 
-              <FieldSetInput placeholder="ex: akiaiosfodnn7example" />
+              <FieldSetInput
+                defaultValue={registry.s3_credentials?.access_key}
+                placeholder="ex: akiaiosfodnn7example"
+              />
             </FieldSet>
 
             <FieldSet
@@ -297,6 +349,9 @@ function CreateBuildRegistryForm() {
             >
               <FieldSetLabel className="flex items-center gap-2">
                 Secret Access Key
+                <span className="text-grey dark:text-card-foreground">
+                  (Only fill if you need to update)
+                </span>
               </FieldSetLabel>
 
               <FieldSetPasswordToggleInput />
@@ -311,7 +366,7 @@ function CreateBuildRegistryForm() {
               </FieldSetLabel>
 
               <FieldSetInput
-                defaultValue="us-east-1"
+                defaultValue={registry.s3_credentials?.region}
                 placeholder="ex: us-east-1"
               />
             </FieldSet>
@@ -327,7 +382,10 @@ function CreateBuildRegistryForm() {
                 </span>
               </FieldSetLabel>
 
-              <FieldSetInput placeholder="ex: https://s3.us-west-1.myhost.com" />
+              <FieldSetInput
+                defaultValue={registry.s3_credentials?.endpoint}
+                placeholder="ex: https://s3.us-west-1.myhost.com"
+              />
             </FieldSet>
 
             <FieldSet
@@ -336,7 +394,10 @@ function CreateBuildRegistryForm() {
               className="flex-1 inline-flex gap-2 flex-col"
             >
               <div className="inline-flex gap-2 items-start">
-                <FieldSetCheckbox defaultChecked className="relative top-1" />
+                <FieldSetCheckbox
+                  defaultChecked={registry.s3_credentials?.secure}
+                  className="relative top-1"
+                />
 
                 <div className="flex flex-col gap-0.5">
                   <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
@@ -353,32 +414,107 @@ function CreateBuildRegistryForm() {
         )}
       </div>
 
+      <input type="hidden" name="intent" value="update" />
+
       <SubmitButton isPending={fetcher.state !== "idle"} className="mt-4">
         {fetcher.state !== "idle" ? (
           <>
             <LoaderIcon className="animate-spin" size={15} />
-            <span>Creating registry...</span>
+            <span>Updating registry...</span>
           </>
         ) : (
-          "Create Registry"
+          "Update Registry"
         )}
       </SubmitButton>
     </fetcher.Form>
   );
 }
 
-export async function clientAction({ request }: Route.ClientActionArgs) {
-  const queryClient = getQueryClient();
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
   const formData = await request.formData();
+  const intent = formData.get("intent")?.toString();
 
+  switch (intent) {
+    case "update":
+      return updateRegistry(params.id, formData);
+    case "delete":
+      return deleteRegistry(params.id, formData);
+    default:
+      throw new Error(`Invalid intent '${intent}'`);
+  }
+}
+
+async function deleteRegistry(id: string, formData: FormData) {
+  const queryClient = getQueryClient();
+  const userData = {
+    name: formData.get("name")?.toString() ?? "",
+    domain: formData.get("domain")?.toString() ?? "",
+    scheme: formData.get("scheme")?.toString() ?? ""
+  };
+
+  console.log({
+    formData: Object.fromEntries(formData.entries())
+  });
+
+  const { error } = await apiClient.DELETE(
+    "/api/registries/build-registries/{id}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: { id: id }
+      }
+    }
+  );
+
+  if (error) {
+    const fullErrorMessage = error.errors.map((err) => err.detail).join(" ");
+    toast.error("Error", {
+      description: fullErrorMessage,
+      closeButton: true
+    });
+  }
+  toast.success("Success", {
+    description: (
+      <span>
+        Successfully deleted registry&nbsp;
+        <strong>{userData.name}</strong>&nbsp;@&nbsp;
+        <span className="text-link">
+          {userData.scheme}://{userData.domain}
+        </span>
+      </span>
+    ),
+    closeButton: true
+  });
+
+  await queryClient.invalidateQueries({
+    predicate(query) {
+      const key = buildRegistryQueries.list({}).queryKey[0];
+      return query.queryKey.includes(key);
+    }
+  });
+
+  return { data: { success: true }, errors: undefined };
+}
+
+export async function updateRegistry(id: string, formData: FormData) {
+  const queryClient = getQueryClient();
   const storage_backend = formData
     .get("storage_backend")
     ?.toString() as RegistryStorageBackend;
-  const userData: RequestInput<"post", "/api/registries/build-registries/"> = {
+  const password = formData.get("registry_password")?.toString();
+  const userData: RequestInput<
+    "patch",
+    "/api/registries/build-registries/{id}/"
+  > = {
     name: formData.get("name")?.toString() ?? "",
     registry_domain: formData.get("registry_domain")?.toString() ?? "",
     registry_username: formData.get("registry_username")?.toString() ?? "",
-    registry_password: formData.get("registry_password")?.toString() ?? "",
+    registry_password: password ? password : undefined,
     storage_backend: storage_backend,
     is_secure: formData.get("is_secure") === "on",
     is_default: formData.get("is_default") === "on"
@@ -387,20 +523,27 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   if (storage_backend === "S3") {
     const s3_endpoint = formData.get("s3_credentials.endpoint")?.toString();
     const s3_region = formData.get("s3_credentials.region")?.toString();
+    const s3_secret_key = formData.get("s3_credentials.secret_key")?.toString();
+
     userData["s3_credentials"] = {
       bucket: formData.get("s3_credentials.bucket")?.toString() ?? "",
       access_key: formData.get("s3_credentials.access_key")?.toString() ?? "",
-      secret_key: formData.get("s3_credentials.secret_key")?.toString() ?? "",
+      secret_key: s3_secret_key ? s3_secret_key : undefined,
       secure: formData.get("s3_credentials.secure")?.toString() === "on",
       endpoint: s3_endpoint ? s3_endpoint : undefined,
       region: s3_region ? s3_region : undefined
     };
   }
-  const { error: errors } = await apiClient.POST(
-    "/api/registries/build-registries/",
+  const { error: errors } = await apiClient.PATCH(
+    "/api/registries/build-registries/{id}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          id
+        }
       },
       body: userData
     }
@@ -416,8 +559,13 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   toast.success("Success", {
     dismissible: true,
     closeButton: true,
-    description: "Build Registry created succesfully"
+    description: "Build Registry updated succesfully"
   });
-  await queryClient.invalidateQueries(buildRegistryQueries.list({}));
-  throw redirect(href("/settings/build-registries"));
+  await queryClient.invalidateQueries({
+    predicate(query) {
+      const key = buildRegistryQueries.list({}).queryKey[0];
+      return query.queryKey.includes(key);
+    }
+  });
+  throw redirect(href("/admin/build-registries"));
 }

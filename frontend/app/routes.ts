@@ -63,6 +63,27 @@ export default [
       "./routes/environments/bulk-deploy-services.tsx"
     ),
 
+    layout("./routes/layouts/server-admin-layout.tsx", [
+      ...prefix("admin", [
+        route("ssh-keys", "./routes/settings/ssh-keys-list.tsx"),
+        route("ssh-keys/new", "./routes/settings/create-ssh-key.tsx"),
+        route("server-console", "./routes/settings/server-terminal.tsx"),
+        route("build-registries", "./routes/settings/build-registry-list.tsx"),
+        route(
+          "build-registries/new",
+          "./routes/settings/create-build-registry.tsx"
+        ),
+        route(
+          "build-registries/:id/list-images",
+          "./routes/settings/build-registry-image-list.tsx"
+        ),
+        route(
+          "build-registries/:id",
+          "./routes/settings/build-registry-details.tsx"
+        )
+      ])
+    ]),
+
     layout("./routes/layouts/workspace-layout.tsx", [
       index("./routes/project-list.tsx"),
 
@@ -109,22 +130,6 @@ export default [
           "shared-credentials/:id",
           "./routes/settings/registry-credentials-details.tsx"
         )
-        // route("ssh-keys", "./routes/settings/ssh-keys-list.tsx"),
-        // route("ssh-keys/new", "./routes/settings/create-ssh-key.tsx"),
-        // route("server-console", "./routes/settings/server-terminal.tsx"),
-        // route("build-registries", "./routes/settings/build-registry-list.tsx"),
-        // route(
-        //   "build-registries/new",
-        //   "./routes/settings/create-build-registry.tsx"
-        // ),
-        // route(
-        //   "build-registries/:id/list-images",
-        //   "./routes/settings/build-registry-image-list.tsx"
-        // ),
-        // route(
-        //   "build-registries/:id",
-        //   "./routes/settings/build-registry-details.tsx"
-        // )
       ]),
       route("create-project", "./routes/projects/create-project.tsx"),
 

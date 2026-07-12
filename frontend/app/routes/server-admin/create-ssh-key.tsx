@@ -31,7 +31,7 @@ import {
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
-import type { Route } from "./+types/create-ssh-key";
+import type { Route } from "../settings/+types/create-ssh-key";
 
 export function meta() {
   return [metaTitle("Create SSH Key")] satisfies ReturnType<Route.MetaFunction>;
@@ -110,10 +110,7 @@ function CreateSSHKeyForm({
         </div>
         <div className="flex items-center gap-4 justify-end">
           <Button asChild variant="outline">
-            <Link
-              to={href("/settings/ssh-keys")}
-              className="items-center gap-2"
-            >
+            <Link to={href("/admin/ssh-keys")} className="items-center gap-2">
               <ChevronLeftIcon className="size-4 flex-none" />
               Back to ssh keys
             </Link>
@@ -122,7 +119,7 @@ function CreateSSHKeyForm({
           <Button asChild>
             <Link
               to={{
-                pathname: href("/settings/server-console"),
+                pathname: href("/admin/server-console"),
                 search: `?ssh_key_slug=${actionData.data.slug}`
               }}
               className="items-center gap-2"

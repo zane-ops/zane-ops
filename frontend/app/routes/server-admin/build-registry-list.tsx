@@ -29,7 +29,7 @@ import {
 import { buildRegistryListFilters, buildRegistryQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { metaTitle } from "~/lib/utils";
-import type { Route } from "./+types/build-registry-list";
+import type { Route } from "../settings/+types/build-registry-list";
 
 import type { BuildRegistry } from "~/api/types";
 import { SimpleConfirmationDialog } from "~/components/delete-confirmation-dialog";
