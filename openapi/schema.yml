@@ -34019,6 +34019,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/RoleNameEnum'
           readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
         expires_at:
           type: string
           format: date-time
@@ -34043,6 +34047,7 @@ components:
           readOnly: true
       required:
       - accessible_projects
+      - created_at
       - expires_at
       - id
       - role

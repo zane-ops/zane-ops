@@ -93,6 +93,7 @@ class WorkspaceInvitationSerializer(serializers.ModelSerializer):
         model = models.WorkspaceInvitation
         fields = [
             "role_name",
+            "created_at",
             "expires_at",
             "role",
             "token",

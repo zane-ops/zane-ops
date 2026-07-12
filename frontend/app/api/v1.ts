@@ -8906,6 +8906,8 @@ export interface components {
     WorkspaceInvitation: {
       role_name: components["schemas"]["RoleNameEnum"];
       /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
       expires_at: string;
       role: components["schemas"]["RoleEnum"];
       token: string;
