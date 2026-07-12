@@ -3126,5 +3126,32 @@ export const workspaceQueries = {
         return DEFAULT_QUERY_REFETCH_INTERVAL;
       },
       placeholderData: keepPreviousData
+    }),
+
+  invitationLink: (token: string) =>
+    queryOptions({
+      queryKey: ["INVITATION_LINKS", token],
+      queryFn: async ({ signal }) => {
+        const result = await apiClient.GET(
+          "/api/workspace/invitations/{token}/",
+          {
+            signal,
+            params: {
+              path: { token }
+            }
+          }
+        );
+
+        // if rate limited, throw error
+        if (result.response.status === 429) {
+          const fullErrorMessage = result.error?.errors
+            .map((err) => err.detail)
+            .join(" ");
+
+          throw new Error(fullErrorMessage);
+        }
+
+        return result;
+      }
     })
 };

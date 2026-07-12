@@ -1,9 +1,5 @@
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
-import {
-  QueryClient,
-  QueryClientProvider,
-  keepPreviousData
-} from "@tanstack/react-query";
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
   PersistQueryClientProvider,
@@ -122,7 +118,7 @@ export default function App() {
     );
   }
 
-  const persister = createSyncStoragePersister({
+  const persister = createAsyncStoragePersister({
     storage: localStorage,
     throttleTime: import.meta.env.PROD
       ? durationToMs(30, "seconds")
