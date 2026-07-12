@@ -41,11 +41,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
-import {
-  ensureMinRole,
-  projectQueries,
-  workspaceQueries
-} from "~/lib/queries";
+import { ensureMinRole, projectQueries, workspaceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   formattedTime,
