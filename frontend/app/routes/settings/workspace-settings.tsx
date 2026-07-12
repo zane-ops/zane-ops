@@ -109,54 +109,58 @@ export default function WorkspaceSettingsPage({
             </div>
           </section>
 
-          {hasMinRole(user, "Owner") && (
-            <section id="danger" className="flex gap-1 scroll-mt-20">
-              <div className="w-16 hidden md:flex flex-col items-center">
-                <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
-                  <FlameIcon size={15} className="flex-none text-red-500" />
-                </div>
+          <section id="danger" className="flex gap-1 scroll-mt-20">
+            <div className="w-16 hidden md:flex flex-col items-center">
+              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
+                <FlameIcon size={15} className="flex-none text-red-500" />
               </div>
-              <div className="w-full flex flex-col gap-5 pt-1 pb-14">
-                <h2 className="text-lg text-red-400">Danger Zone</h2>
-                <div className="flex flex-col gap-4 items-start max-w-4xl w-full rounded-md border border-border py-4">
-                  <div className="flex md:flex-row gap-4 justify-between items-center w-full px-4">
-                    <div className="flex flex-col gap-1">
-                      <h3 className="text-lg font-medium">Leave Workspace</h3>
-                      <p>Remove yourself as a member of this workspace</p>
-                    </div>
-                    {/* <TransferOwnershipForm workspaceId={workspace.id} /> */}
+            </div>
+            <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+              <h2 className="text-lg text-red-400">Danger Zone</h2>
+              <div className="flex flex-col gap-4 items-start max-w-4xl w-full rounded-md border border-border py-4">
+                <div className="flex md:flex-row gap-4 justify-between items-center w-full px-4">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-lg font-medium">Leave Workspace</h3>
+                    <p>Remove yourself as a member of this workspace</p>
                   </div>
-
-                  <Separator />
-
-                  <div className="flex md:flex-row gap-4 justify-between items-center w-full px-4">
-                    <div className="flex flex-col gap-1">
-                      <h3 className="text-lg font-medium">
-                        Transfer Ownership
-                      </h3>
-                      <p>
-                        Transfer ownership of this workspace to another member
-                      </p>
-                    </div>
-                    <TransferOwnershipForm workspaceId={workspace.id} />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex md:flex-row gap-4 justify-between items-center w-full px-4">
-                    <div className="flex flex-col gap-1">
-                      <h3 className="text-lg font-medium">Delete workspace</h3>
-                      <p>
-                        Deletes this workspace along with all its project and
-                        services
-                      </p>
-                    </div>
-                    <WorkspaceDeleteForm name={workspace.name} />
-                  </div>
+                  {/* <TransferOwnershipForm workspaceId={workspace.id} /> */}
                 </div>
+
+                {hasMinRole(user, "Owner") && (
+                  <>
+                    <Separator />
+
+                    <div className="flex md:flex-row gap-4 justify-between items-center w-full px-4">
+                      <div className="flex flex-col gap-1">
+                        <h3 className="text-lg font-medium">
+                          Transfer Ownership
+                        </h3>
+                        <p>
+                          Transfer ownership of this workspace to another member
+                        </p>
+                      </div>
+                      <TransferOwnershipForm workspaceId={workspace.id} />
+                    </div>
+
+                    <Separator />
+
+                    <div className="flex md:flex-row gap-4 justify-between items-center w-full px-4">
+                      <div className="flex flex-col gap-1">
+                        <h3 className="text-lg font-medium">
+                          Delete workspace
+                        </h3>
+                        <p>
+                          Deletes this workspace along with all its project and
+                          services
+                        </p>
+                      </div>
+                      <WorkspaceDeleteForm name={workspace.name} />
+                    </div>
+                  </>
+                )}
               </div>
-            </section>
-          )}
+            </div>
+          </section>
         </div>
       </div>
     </section>

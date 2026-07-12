@@ -42,8 +42,10 @@ import {
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const workspace = await getCurrentWorkspace(queryClient);
-  const authedUser = await ensureAuthedUser(queryClient);
+  const [workspace, authedUser] = await Promise.all([
+    getCurrentWorkspace(queryClient),
+    queryClient.ensureQueryData(userQueries.authedUser)
+  ]);
 
   const searchParams = new URL(request.url).searchParams;
 
@@ -59,7 +61,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     queryClient.ensureQueryData(
       projectQueries.list({ workspaceId: workspace.id, filters })
     ),
-    hasMinRole(authedUser, "Member")
+    authedUser && hasMinRole(authedUser, "Member")
       ? queryClient.ensureQueryData(deploymentQueries.recent(workspace.id))
       : []
   ]);

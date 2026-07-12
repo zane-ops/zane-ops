@@ -18,10 +18,10 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
   const [memberships, user] = await Promise.all([
     queryClient.ensureQueryData(userQueries.memberships),
-    ensureAuthedUser(queryClient)
+    queryClient.ensureQueryData(userQueries.authedUser)
   ]);
 
-  const workspace = user.membership?.workspace;
+  const workspace = user?.membership?.workspace;
   if (memberships === null || !workspace) {
     throw redirect(href("/login"));
   }

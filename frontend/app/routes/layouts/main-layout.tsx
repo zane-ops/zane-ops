@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   BookOpenIcon,
-  BuildingIcon,
   GitCommitVerticalIcon,
   GlobeIcon,
   HeartHandshakeIcon,
@@ -9,11 +8,10 @@ import {
   LandmarkIcon,
   LaptopMinimalIcon,
   MoonIcon,
-  SettingsIcon,
   SunIcon,
   TagIcon
 } from "lucide-react";
-import { Outlet, data, href, redirect } from "react-router";
+import { Outlet, href, redirect } from "react-router";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { type Theme, useTheme } from "~/components/theme-context";
 import { Button } from "~/components/ui/button";
@@ -49,6 +47,8 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
       redirectPathName = [href("/login"), "?", params.toString()].join("");
     }
+
+    alert(`[main-layout] Redirect to ${redirectPathName}`);
 
     throw redirect(redirectPathName);
   }
