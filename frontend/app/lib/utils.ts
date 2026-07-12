@@ -617,7 +617,7 @@ export type UserWithMembership = {
 
 export function hasMinRole(
   user: UserWithMembership,
-  roleName: WorkspaceMembership["role_name"] | "ServerAdmin"
+  roleName: WorkspaceRoleName | "ServerAdmin"
 ): boolean {
   if (roleName === "ServerAdmin") {
     return Boolean(user.user.is_superuser);
