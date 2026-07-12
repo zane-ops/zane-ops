@@ -26,8 +26,7 @@ import {
   WORKSPACE_ROLE_MAPPING
 } from "~/lib/constants";
 import type { Writeable } from "~/lib/types";
-import { notFound } from "~/lib/utils";
-import { durationToMs } from "~/utils";
+import { durationToMs, notFound } from "~/lib/utils";
 
 export const userQueries = {
   authedUser: queryOptions({

@@ -17,12 +17,16 @@ import {
 } from "~/components/ui/fieldset";
 import { Slider } from "~/components/ui/slider";
 import { serverQueries } from "~/lib/queries";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import {
+  cn,
+  convertValueToBytes,
+  formatStorageValue,
+  getFormErrorsFromResponseData
+} from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
 } from "~/routes/services/settings/service-settings";
-import { convertValueToBytes, formatStorageValue } from "~/utils";
 
 export type ServiceResourceLimitsProps = {
   project_slug: string;

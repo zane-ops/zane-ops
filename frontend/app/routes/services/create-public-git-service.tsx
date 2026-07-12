@@ -44,8 +44,12 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import {
+  cn,
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import type { Route } from "./+types/create-public-git-service";
 
 export function meta() {

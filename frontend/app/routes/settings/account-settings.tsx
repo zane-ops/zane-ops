@@ -19,8 +19,11 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { ensureAuthedUser, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import {
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import type { Route } from "./+types/account-settings";
 
 export const meta: Route.MetaFunction = () => [metaTitle("Account Settings")];

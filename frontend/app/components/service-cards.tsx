@@ -10,8 +10,7 @@ import {
 import * as React from "react";
 import { Link } from "react-router";
 import { Checkbox } from "~/components/ui/checkbox";
-import { cn } from "~/lib/utils";
-import { getDockerImageIconURL } from "~/utils";
+import { cn, getDockerImageIconURL } from "~/lib/utils";
 import {
   Card,
   CardContent,

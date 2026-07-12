@@ -34,10 +34,9 @@ import {
 import { composeStackQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
-import { cn } from "~/lib/utils";
+import { cn, durationToMs, wait } from "~/lib/utils";
 import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { clientAction as deployClientAction } from "~/routes/compose/deploy-compose-stack";
-import { durationToMs, wait } from "~/utils";
 
 export type ComposeStackActionsPopoverProps = {
   stack: ComposeStack;

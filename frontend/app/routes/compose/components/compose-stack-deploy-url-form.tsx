@@ -17,9 +17,8 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn } from "~/lib/utils";
+import { cn, wait } from "~/lib/utils";
 import type { clientAction } from "~/routes/compose/compose-stack-settings";
-import { wait } from "~/utils";
 
 export type ServiceDeployURLFormProps = {
   stack: ComposeStack;

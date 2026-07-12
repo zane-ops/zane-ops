@@ -37,10 +37,9 @@ import {
 } from "~/components/ui/dialog";
 import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
-import { cn } from "~/lib/utils";
+import { cn, durationToMs, wait } from "~/lib/utils";
 import { ServiceCleanupQueueConfirmModal } from "~/routes/services/components/service-cleanup-queue-confirm-modal";
 import type { clientAction as deployClientAction } from "~/routes/services/deploy-docker-service";
-import { durationToMs, wait } from "~/utils";
 
 export type ServiceActionsPopoverProps = {
   service: Service;

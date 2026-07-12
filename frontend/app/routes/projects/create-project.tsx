@@ -15,9 +15,13 @@ import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import {
+  cn,
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import { getCurrentWorkspace } from "~/lib/workspace-store";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-project";
 
 export function meta() {

@@ -22,13 +22,18 @@ import {
   userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, isNotFoundError, notFound } from "~/lib/utils";
+import {
+  cn,
+  formattedTime,
+  isNotFoundError,
+  metaTitle,
+  notFound
+} from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
 import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
-import { formattedTime, metaTitle } from "~/utils";
 import type { Route } from "./+types/deployment-layout";
 
 export function meta({ params, error }: Route.MetaArgs) {

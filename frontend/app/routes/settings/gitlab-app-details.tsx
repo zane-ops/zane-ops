@@ -14,9 +14,12 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { gitAppsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { getFormErrorsFromResponseData } from "~/lib/utils";
+import {
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import { getCurrentWorkspace } from "~/lib/workspace-store";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/gitlab-app-details";
 
 export function meta() {

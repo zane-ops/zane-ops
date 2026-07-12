@@ -8,9 +8,8 @@ import { Link, NavLink, Outlet, href } from "react-router";
 import { Button } from "~/components/ui/button";
 import { projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, isNotFoundError } from "~/lib/utils";
+import { cn, isNotFoundError, metaTitle, stringToColor } from "~/lib/utils";
 import { getCurrentWorkspace } from "~/lib/workspace-store";
-import { metaTitle, stringToColor } from "~/utils";
 import type { Route } from "./+types/project-settings-layout";
 
 export function meta({ error, params }: Route.MetaArgs) {

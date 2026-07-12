@@ -1,5 +1,5 @@
 import { QueryClient, keepPreviousData } from "@tanstack/react-query";
-import { durationToMs } from "~/utils";
+import { durationToMs } from "~/lib/utils";
 
 export function makeQueryClient() {
   return new QueryClient({

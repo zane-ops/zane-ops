@@ -24,9 +24,8 @@ import {
 } from "~/components/ui/popover";
 import { projectQueries } from "~/lib/queries";
 import { useDeviceSize } from "~/lib/use-device-size";
-import { cn } from "~/lib/utils";
+import { cn, durationToMs, stringToColor } from "~/lib/utils";
 import { useCurrentWorkspace } from "~/lib/workspace-store";
-import { durationToMs, stringToColor } from "~/utils";
 
 export type WorkspaceProjectListHeaderDropdownProps = {
   projectList: Project[];

@@ -29,8 +29,7 @@ import {
   ZANE_DEPLOYMENT_HASH_HEADER
 } from "~/lib/constants";
 import type { HttpLog } from "~/lib/queries";
-import { cn } from "~/lib/utils";
-import { formatDuration, formattedTime } from "~/utils";
+import { cn, formatDuration, formattedTime } from "~/lib/utils";
 
 type HttpLogRequestDetailsProps = {
   log?: HttpLog;

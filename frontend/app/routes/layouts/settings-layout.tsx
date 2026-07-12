@@ -8,8 +8,7 @@ import {
 } from "lucide-react";
 import { NavLink, Outlet, href } from "react-router";
 import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
-import { hasMinRole, metaTitle } from "~/utils";
+import { cn, hasMinRole, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/settings-layout";
 
 export function meta() {

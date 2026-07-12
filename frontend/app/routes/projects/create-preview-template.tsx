@@ -46,14 +46,15 @@ import { getQueryClient } from "~/lib/query-client";
 import type { Writeable } from "~/lib/types";
 import {
   cn,
+  getCsrfTokenHeader,
   getFormErrorsFromResponseData,
-  isNotFoundError
+  isNotFoundError,
+  metaTitle
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-preview-template";
 
 export function meta({ error, params }: Route.MetaArgs) {

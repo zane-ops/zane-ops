@@ -36,6 +36,7 @@ import {
   userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
@@ -58,7 +59,6 @@ import { ServiceSlugForm } from "~/routes/services/components/service-slug-form"
 import { ServiceSourceForm } from "~/routes/services/components/service-source-form";
 import { ServiceURLsForm } from "~/routes/services/components/service-urls-form";
 import { ServiceVolumesForm } from "~/routes/services/components/service-volumes-form";
-import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/service-settings";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {

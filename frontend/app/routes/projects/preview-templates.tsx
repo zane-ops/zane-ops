@@ -19,12 +19,11 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
 import { previewTemplatesQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { isNotFoundError } from "~/lib/utils";
+import { isNotFoundError, metaTitle } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
-import { metaTitle } from "~/utils";
 import type { Route } from "./+types/preview-templates";
 
 export function meta({ error, params }: Route.MetaArgs) {

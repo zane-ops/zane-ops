@@ -31,8 +31,12 @@ import {
 import { TEMPLATE_API_HOST } from "~/lib/constants";
 import { templateQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import {
+  cn,
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import type { Route } from "./+types/create-compose-stack-from-template";
 
 export function meta({ params }: Route.MetaArgs) {

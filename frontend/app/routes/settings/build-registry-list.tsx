@@ -28,7 +28,7 @@ import {
 } from "~/components/ui/tooltip";
 import { buildRegistryListFilters, buildRegistryQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { metaTitle } from "~/utils";
+import { metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/build-registry-list";
 
 import type { BuildRegistry } from "~/api/types";

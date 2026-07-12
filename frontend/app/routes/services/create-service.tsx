@@ -7,8 +7,7 @@ import {
 } from "lucide-react";
 import { Link, href } from "react-router";
 import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
-import { metaTitle } from "~/utils";
+import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/create-service";
 
 export function meta() {

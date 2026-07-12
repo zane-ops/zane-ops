@@ -10,8 +10,7 @@ import { DockerHubLogo } from "~/components/docker-hub-logo";
 import { GithubLogo } from "~/components/github-logo";
 import { GitlabLogo } from "~/components/gitlab-logo";
 import { GoogleArtifactLogo } from "~/components/google-artifact-logo";
-import { cn } from "~/lib/utils";
-import { durationToMs } from "~/utils";
+import { cn, durationToMs } from "~/lib/utils";
 
 export const DEPLOYMENT_STATUSES = [
   "QUEUED",

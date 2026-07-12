@@ -17,7 +17,7 @@ import {
 } from "~/components/ui/tooltip";
 import { serverQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { metaTitle, stripSlashIfExists } from "~/utils";
+import { metaTitle, stripSlashIfExists } from "~/lib/utils";
 import type { Route } from "./+types/create-github-app";
 
 export function meta() {

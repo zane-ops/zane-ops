@@ -15,13 +15,12 @@ import { type Theme, useTheme } from "~/components/theme-context";
 import { Button } from "~/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { serverQueries, userQueries } from "~/lib/queries";
-import { cn } from "~/lib/utils";
+import { cn, hasMinRole } from "~/lib/utils";
 
 import { Header } from "~/components/header/header";
 import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
 import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
 import { getQueryClient } from "~/lib/query-client";
-import { hasMinRole } from "~/utils";
 import type { Route } from "./+types/main-layout";
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {

@@ -9,8 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
-import { cn } from "~/lib/utils";
-import { capitalizeText } from "~/utils";
+import { capitalizeText, cn } from "~/lib/utils";
 
 /**
  * Variants for the multi-select component to handle different styles.

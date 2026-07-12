@@ -3,8 +3,7 @@ import { Link, href } from "react-router";
 import { DokployLogo } from "~/components/dokploy-logo";
 import { ZaneOpsLogo } from "~/components/logo";
 import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
-import { metaTitle } from "~/utils";
+import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/create-compose-stack";
 
 export function meta() {

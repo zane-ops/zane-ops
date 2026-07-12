@@ -31,14 +31,14 @@ import {
 import { deploymentQueries, metrisSearch, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
-import {
   convertValueToBytes,
   formatStorageValue,
   timeAgoFormatter
-} from "~/utils";
+} from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/deployment-metrics";
 
 export async function clientLoader({

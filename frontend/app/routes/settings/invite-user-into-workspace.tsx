@@ -51,18 +51,19 @@ import {
   workspaceQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { getFormErrorsFromResponseData, notFound } from "~/lib/utils";
+import {
+  formattedTime,
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  hasMinRole,
+  metaTitle,
+  notFound,
+  pluralize
+} from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
-import {
-  formattedTime,
-  getCsrfTokenHeader,
-  hasMinRole,
-  metaTitle,
-  pluralize
-} from "~/utils";
 import type { Route } from "./+types/invite-user-into-workspace";
 
 export function meta() {
@@ -106,7 +107,7 @@ export default function InviteUserIntoWorkspacePage({
             actionData?.data ?? {
               role_name: "Admin",
               expires_at: new Date(),
-              token: "abc123",
+              token: "A0wlwoQClMtjSoSei5LXLGGqQRpusQnL",
               username: "johndoesnot"
             }
           }
@@ -136,8 +137,8 @@ function UserInvitationLinkCard({ data }: UserInvitationLinkCardProps) {
           User Invited <CheckIcon className="text-teal-500 size-5 flex-none" />
         </CardTitle>
         <p className="text-grey">
-          The user has been invited. Share the link below with them so they
-          can accept the invitation.
+          The user has been invited. Share the link below with them so they can
+          accept the invitation.
         </p>
       </CardHeader>
       <CardContent className="flex flex-col gap-2 ">
@@ -146,11 +147,11 @@ function UserInvitationLinkCard({ data }: UserInvitationLinkCardProps) {
         <dl>
           <div className="flex items-center gap-2">
             <dt className="text-grey">Link:</dt>
-            <dd className="flex items-center gap-2">
+            <dd className="flex items-center gap-2 whitespace-nowrap text-ellipsis overflow-x-hidden">
               <a
                 href={registerLink}
                 target="_blank"
-                className="text-link whitespace-nowrap text-ellipsis overflow-x-hidden hover:underline inline-flex gap-1 items-center"
+                className="text-link  hover:underline inline-flex gap-1 items-center"
                 rel="noopener"
               >
                 {registerLink}

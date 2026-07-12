@@ -37,14 +37,14 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
-import {
   formatStorageValue,
   getMaxDomainForStorageValue,
   timeAgoFormatter
-} from "~/utils";
+} from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-metrics";
 
 export async function clientLoader({

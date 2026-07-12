@@ -56,17 +56,17 @@ import {
   userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn } from "~/lib/utils";
+import {
+  capitalizeText,
+  cn,
+  formatElapsedTime,
+  formattedTime,
+  mergeTimeAgoFormatterAndFormattedDate
+} from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
-import {
-  capitalizeText,
-  formatElapsedTime,
-  formattedTime,
-  mergeTimeAgoFormatterAndFormattedDate
-} from "~/utils";
 import type { Route } from "./+types/compose-stack-deployment-list";
 
 export async function clientLoader({

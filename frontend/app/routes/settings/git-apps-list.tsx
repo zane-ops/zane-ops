@@ -29,11 +29,11 @@ import {
 } from "~/components/ui/tooltip";
 import { gitAppsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader, metaTitle } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/git-apps-list";
 
 export function meta() {

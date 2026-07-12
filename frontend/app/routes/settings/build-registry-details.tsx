@@ -1,7 +1,6 @@
 import { Separator } from "~/components/ui/separator";
 import { buildRegistryQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/build-registry-details";
 
 import { useQuery } from "@tanstack/react-query";
@@ -35,7 +34,12 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import {
+  cn,
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 
 export function meta() {
   return [

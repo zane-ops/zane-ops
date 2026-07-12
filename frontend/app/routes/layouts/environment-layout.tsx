@@ -35,12 +35,11 @@ import {
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { environmentQueries, projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, isNotFoundError } from "~/lib/utils";
+import { cn, isNotFoundError, metaTitle, stringToColor } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
-import { metaTitle, stringToColor } from "~/utils";
 import type { Route } from "./+types/environment-layout";
 
 export function meta({ error, params }: Route.MetaArgs) {

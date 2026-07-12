@@ -1,8 +1,7 @@
 import { CheckIcon, CopyIcon } from "lucide-react";
 import * as React from "react";
 import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
-import { durationToMs, wait } from "~/utils";
+import { cn, durationToMs, wait } from "~/lib/utils";
 
 export type CopyButtonProps = Omit<
   React.ComponentProps<typeof Button>,

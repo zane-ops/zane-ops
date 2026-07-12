@@ -49,12 +49,11 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
-import { cn, formatLogTime, notFound } from "~/lib/utils";
+import { cn, formatDuration, formatLogTime, notFound } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
-import { formatDuration } from "~/utils";
 import type { Route } from "./+types/service-http-logs";
 
 export async function clientLoader({

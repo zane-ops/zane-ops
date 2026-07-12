@@ -12,8 +12,12 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { ensureAuthedUser, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import {
+  cn,
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import type { Route } from "./+types/change-password";
 
 export const meta: Route.MetaFunction = () => [

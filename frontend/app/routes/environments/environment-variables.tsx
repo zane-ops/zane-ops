@@ -52,13 +52,14 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
-  getFormErrorsFromResponseData
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  pluralize
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
-import { getCsrfTokenHeader, pluralize } from "~/utils";
 import type { Route } from "./+types/environment-variables";
 
 export default function EnvironmentVariablesPage({

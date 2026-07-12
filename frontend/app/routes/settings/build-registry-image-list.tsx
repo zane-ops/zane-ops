@@ -20,7 +20,7 @@ import {
   buildRegistryQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { metaTitle } from "~/utils";
+import { metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/build-registry-image-list";
 
 export function meta() {

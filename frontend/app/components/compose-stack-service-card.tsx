@@ -38,16 +38,16 @@ import { composeStackQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import type { ValueOf } from "~/lib/types";
-import { cn } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
-import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 import {
+  cn,
   durationToMs,
   formatURL,
   getDockerImageIconURL,
   stripSlashIfExists,
   wait
-} from "~/utils";
+} from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
+import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 
 export type ComposeStackServiceCardProps = {
   service: ValueOf<ComposeStack["services"]>;

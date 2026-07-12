@@ -40,12 +40,6 @@ import {
   AccordionItem,
   AccordionTrigger
 } from "~/components/ui/accordion";
-import {
-  capitalizeText,
-  formatElapsedTime,
-  formattedTime,
-  wait
-} from "~/utils";
 import type { Route } from "./+types/deployment-details";
 import "highlight.js/styles/atom-one-dark.css";
 import { useQuery } from "@tanstack/react-query";
@@ -72,7 +66,13 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { deploymentQueries } from "~/lib/queries";
-import { cn } from "~/lib/utils";
+import {
+  capitalizeText,
+  cn,
+  formatElapsedTime,
+  formattedTime,
+  wait
+} from "~/lib/utils";
 import { useCurrentWorkspace } from "~/lib/workspace-store";
 
 hljs.registerLanguage("json", json);

@@ -16,6 +16,7 @@ import {
   userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
@@ -25,7 +26,6 @@ import { ComposeStackDeployURLForm } from "~/routes/compose/components/compose-s
 import { ComposeStackEnvForm } from "~/routes/compose/components/compose-stack-env-form";
 import { ComposeStackSlugForm } from "~/routes/compose/components/compose-stack-slug-form";
 import { ComposeStackUserContentForm } from "~/routes/compose/components/compose-stack-user-content-form";
-import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/compose-stack-settings";
 
 export default function ComposeStackSettingsPage({

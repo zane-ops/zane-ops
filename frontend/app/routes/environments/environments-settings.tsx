@@ -53,13 +53,13 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
+  getCsrfTokenHeader,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
-import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/environments-settings";
 
 export default function EnvironmentSettingsPage({

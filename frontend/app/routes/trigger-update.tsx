@@ -5,7 +5,7 @@ import { ZANE_UPDATE_TOAST_ID } from "~/lib/constants";
 import { serverQueries } from "~/lib/queries";
 
 import { getQueryClient } from "~/lib/query-client";
-import { durationToMs, getCsrfTokenHeader, wait } from "~/utils";
+import { durationToMs, getCsrfTokenHeader, wait } from "~/lib/utils";
 import type { Route } from "./+types/trigger-update";
 
 export function clientLoader({}: Route.ClientLoaderArgs) {

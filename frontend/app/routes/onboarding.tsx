@@ -12,9 +12,10 @@ import { userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
-  getFormErrorsFromResponseData
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
 } from "~/lib/utils";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/onboarding";
 
 export const meta: Route.MetaFunction = () => [metaTitle("Welcome to ZaneOps")];

@@ -3,8 +3,8 @@ import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { serviceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { durationToMs, getCsrfTokenHeader, wait } from "~/lib/utils";
 import { getCurrentWorkspace } from "~/lib/workspace-store";
-import { durationToMs, getCsrfTokenHeader, wait } from "~/utils";
 import type { Route } from "./+types/toggle-service-state";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {

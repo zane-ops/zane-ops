@@ -16,8 +16,11 @@ import { Separator } from "~/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { serverQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import {
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import type { Route } from "./+types/create-gitlab-app";
 
 export function meta() {

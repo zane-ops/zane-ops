@@ -46,20 +46,21 @@ import {
 import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
-import { cn, notFound } from "~/lib/utils";
+import {
+  cn,
+  durationToMs,
+  formatURL,
+  getDockerImageIconURL,
+  metaTitle,
+  notFound,
+  pluralize,
+  wait
+} from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
 import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
-import {
-  durationToMs,
-  formatURL,
-  getDockerImageIconURL,
-  metaTitle,
-  pluralize,
-  wait
-} from "~/utils";
 import type { Route } from "./+types/compose-stack-service-layout";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {

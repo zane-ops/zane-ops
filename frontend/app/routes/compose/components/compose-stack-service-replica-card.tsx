@@ -33,13 +33,13 @@ import {
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
-import { cn } from "~/lib/utils";
 import {
+  cn,
   formattedDate,
   formattedTime,
   getDockerImageIconURL,
   mergeTimeAgoFormatterAndFormattedDate
-} from "~/utils";
+} from "~/lib/utils";
 
 export const TASK_STATUS_COLOR_MAP = {
   new: "gray",

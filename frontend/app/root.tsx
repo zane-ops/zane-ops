@@ -29,7 +29,7 @@ import { Button } from "~/components/ui/button";
 import { Toaster } from "~/components/ui/sonner";
 import { THEME_STORAGE_KEY } from "~/lib/constants";
 import { getQueryClient } from "~/lib/query-client";
-import { durationToMs } from "~/utils";
+import { durationToMs } from "~/lib/utils";
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
 

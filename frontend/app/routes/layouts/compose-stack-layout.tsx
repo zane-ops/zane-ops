@@ -22,14 +22,13 @@ import {
 } from "~/components/ui/tooltip";
 import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, isNotFoundError, notFound } from "~/lib/utils";
+import { cn, isNotFoundError, metaTitle, notFound } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
 import { ComposeStackActionsPopover } from "~/routes/compose/components/compose-stack-actions-popover";
 import { ComposeStackChangesModal } from "~/routes/compose/components/compose-stack-changes-modal";
-import { metaTitle } from "~/utils";
 import type { Route } from "./+types/compose-stack-layout";
 
 export function meta({ params, error }: Route.MetaArgs) {

@@ -4,8 +4,8 @@ import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { serviceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader } from "~/lib/utils";
 import { getCurrentWorkspace } from "~/lib/workspace-store";
-import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/cleanup-deploy-queue";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {

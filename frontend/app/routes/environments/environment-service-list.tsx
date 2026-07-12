@@ -32,12 +32,11 @@ import {
 import { Popover, PopoverTrigger } from "~/components/ui/popover";
 import { environmentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn } from "~/lib/utils";
+import { cn, timeAgoFormatter } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
-import { timeAgoFormatter } from "~/utils";
 import type { Route } from "./+types/environment-service-list";
 
 export async function clientLoader({

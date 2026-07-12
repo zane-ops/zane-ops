@@ -22,10 +22,10 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
+  getCsrfTokenHeader,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
 import { getCurrentWorkspace } from "~/lib/workspace-store";
-import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/project-settings";
 
 export default function ProjectSettingsPage({

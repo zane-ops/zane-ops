@@ -27,7 +27,7 @@ import {
 } from "~/components/ui/tooltip";
 import { sshKeysQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/utils";
+import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/ssh-keys-list";
 
 export function meta() {

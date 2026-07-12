@@ -43,9 +43,13 @@ import {
   FieldSetLabel
 } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import {
+  capitalizeText,
+  cn,
+  getFormErrorsFromResponseData,
+  pluralize
+} from "~/lib/utils";
 import type { clientAction } from "~/routes/services/deploy-docker-service";
-import { capitalizeText, pluralize } from "~/utils";
 
 type ServiceChangeModalProps = {
   service: Service;

@@ -12,13 +12,12 @@ import { NavLink } from "~/components/nav-link";
 import { SubmitButton } from "~/components/ui/button";
 import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, notFound } from "~/lib/utils";
+import { cn, formattedTime, metaTitle, notFound } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
 import type { clientAction as cancelDeploymentAction } from "~/routes/compose/cancel-compose-deployment";
-import { formattedTime, metaTitle } from "~/utils";
 import type { Route } from "./+types/compose-stack-deployment-layout";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {

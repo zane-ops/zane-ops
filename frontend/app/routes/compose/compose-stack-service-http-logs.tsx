@@ -35,7 +35,7 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
-import { cn, formatLogTime, notFound } from "~/lib/utils";
+import { cn, formatDuration, formatLogTime, notFound } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
@@ -54,7 +54,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { formatDuration } from "~/utils";
 
 export async function clientLoader({
   params,

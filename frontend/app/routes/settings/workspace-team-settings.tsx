@@ -77,12 +77,17 @@ import {
   workspaceQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { formatLogTime, notFound } from "~/lib/utils";
+import {
+  formatLogTime,
+  hasMinRole,
+  metaTitle,
+  notFound,
+  pluralize
+} from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
-import { hasMinRole, metaTitle, pluralize } from "~/utils";
 import type { Route } from "./+types/workspace-team-settings";
 
 export function meta() {

@@ -19,12 +19,11 @@ import {
 } from "~/components/ui/menubar";
 import { gitAppsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn } from "~/lib/utils";
+import { cn, metaTitle } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
-import { metaTitle } from "~/utils";
 import type { Route } from "./+types/create-private-git-service";
 
 export function meta() {

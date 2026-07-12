@@ -7,8 +7,7 @@ import { WorkspaceMembershipListHeaderDropdown } from "~/components/header/works
 import { WorkspaceProjectListHeaderDropdown } from "~/components/header/workspace-project-list-header-dropdown";
 import { ensureAuthedUser, projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn } from "~/lib/utils";
-import { metaTitle } from "~/utils";
+import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/workspace-layout";
 
 export function meta() {

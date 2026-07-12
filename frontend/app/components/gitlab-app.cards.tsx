@@ -20,9 +20,8 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn } from "~/lib/utils";
+import { cn, formattedDate } from "~/lib/utils";
 import type { clientAction } from "~/routes/settings/github-app-details";
-import { formattedDate } from "~/utils";
 
 export type GitlabAppCardProps = {
   app: GitlabApp;

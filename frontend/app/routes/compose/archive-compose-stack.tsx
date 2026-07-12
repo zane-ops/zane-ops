@@ -4,8 +4,8 @@ import { apiClient } from "~/api/client";
 import { environmentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { ErrorResponseFromAPI } from "~/lib/utils";
+import { getCsrfTokenHeader } from "~/lib/utils";
 import { getCurrentWorkspace } from "~/lib/workspace-store";
-import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/archive-compose-stack";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {

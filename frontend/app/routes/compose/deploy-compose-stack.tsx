@@ -7,8 +7,8 @@ import {
   userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader } from "~/lib/utils";
 import { getCurrentWorkspace } from "~/lib/workspace-store";
-import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/deploy-compose-stack";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {

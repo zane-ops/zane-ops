@@ -10,8 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn } from "~/lib/utils";
-import { pluralize } from "~/utils";
+import { cn, pluralize } from "~/lib/utils";
 
 export type ProjectCardProps = {
   project: Project;

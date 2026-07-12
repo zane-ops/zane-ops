@@ -25,8 +25,7 @@ import {
 import { sshKeysQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { useLocalStorage } from "~/lib/use-local-storage";
-import { cn } from "~/lib/utils";
-import { metaTitle } from "~/utils";
+import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/server-terminal";
 
 export function meta() {

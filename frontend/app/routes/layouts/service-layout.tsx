@@ -41,19 +41,21 @@ import {
 import { serverQueries, serviceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { ValueOf } from "~/lib/types";
-import { cn, isNotFoundError, notFound } from "~/lib/utils";
+import {
+  cn,
+  durationToMs,
+  formatURL,
+  getDockerImageIconURL,
+  isNotFoundError,
+  metaTitle,
+  notFound,
+  pluralize
+} from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
 import { ServiceActionsPopover } from "~/routes/services/components/service-actions-popover";
-import {
-  durationToMs,
-  formatURL,
-  getDockerImageIconURL,
-  metaTitle,
-  pluralize
-} from "~/utils";
 import type { Route } from "./+types/service-layout";
 
 export function meta({ params, error }: Route.MetaArgs) {

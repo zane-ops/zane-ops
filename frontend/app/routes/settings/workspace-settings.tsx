@@ -49,13 +49,15 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
-  getFormErrorsFromResponseData
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  hasMinRole,
+  metaTitle
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
-import { getCsrfTokenHeader, hasMinRole, metaTitle } from "~/utils";
 import type { Route } from "./+types/workspace-settings";
 
 export function meta() {

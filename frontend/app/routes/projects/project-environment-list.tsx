@@ -64,14 +64,16 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
+  formattedDate,
+  getCsrfTokenHeader,
   getFormErrorsFromResponseData,
-  isNotFoundError
+  isNotFoundError,
+  metaTitle
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
-import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/project-environment-list";
 
 export function meta({ error, params }: Route.MetaArgs) {

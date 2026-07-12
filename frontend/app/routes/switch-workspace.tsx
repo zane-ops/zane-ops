@@ -4,7 +4,7 @@ import { type RequestInput, apiClient } from "~/api/client";
 import { userQueries } from "~/lib/queries";
 
 import { getQueryClient } from "~/lib/query-client";
-import { getCsrfTokenHeader } from "~/utils";
+import { getCsrfTokenHeader } from "~/lib/utils";
 import type { Route } from "./+types/switch-workspace";
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {

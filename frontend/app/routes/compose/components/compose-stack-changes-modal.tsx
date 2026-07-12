@@ -31,9 +31,13 @@ import {
   FieldSetLabel
 } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import {
+  capitalizeText,
+  cn,
+  getFormErrorsFromResponseData,
+  pluralize
+} from "~/lib/utils";
 import type { clientAction } from "~/routes/compose/deploy-compose-stack";
-import { capitalizeText, pluralize } from "~/utils";
 
 export type ComposeStackChangesModalProps = {
   stack: ComposeStack;

@@ -48,9 +48,8 @@ import {
 } from "~/components/ui/tooltip";
 import { ZANEOPS_INTERNAL_DOMAIN } from "~/lib/constants";
 import { composeStackQueries } from "~/lib/queries";
-import { cn } from "~/lib/utils";
+import { cn, formatElapsedTime, pluralize } from "~/lib/utils";
 import { useCurrentWorkspace } from "~/lib/workspace-store";
-import { formatElapsedTime, pluralize } from "~/utils";
 import type { Route } from "./+types/compose-stack-service-details";
 
 export default function ComposeStackServiceDetailsPage({
