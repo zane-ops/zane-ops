@@ -11,7 +11,7 @@ import { type RequestInput, apiClient } from "~/api/client";
 import { GithubLogo } from "~/components/github-logo";
 import { ThemedLogo } from "~/components/logo";
 import { SubmitButton } from "~/components/ui/button";
-import { environmentQueries, userQueries } from "~/lib/queries";
+import { environmentQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader, metaTitle } from "~/lib/utils";
 import { getCurrentWorkspace } from "~/lib/workspace-store";
