@@ -26,7 +26,7 @@ import {
   WORKSPACE_ROLE_MAPPING
 } from "~/lib/constants";
 import type { Writeable } from "~/lib/types";
-import { durationToMs, notFound } from "~/lib/utils";
+import { durationToMs, hasMinRole, notFound } from "~/lib/utils";
 
 export const userQueries = {
   authedUser: queryOptions({
@@ -87,6 +87,22 @@ export async function ensureAuthedUser(queryClient: QueryClient) {
   const user = await queryClient.ensureQueryData(userQueries.authedUser);
   if (!user) {
     throw redirect(href("/login"));
+  }
+  return user;
+}
+
+/**
+ * Fetches the authed user and throws a 404 if they don't have at least
+ * `roleName` in the current workspace. Centralizes the auth + role check
+ * instead of leaving it to each `clientLoader` to do both on its own.
+ */
+export async function ensureMinRole(
+  queryClient: QueryClient,
+  roleName: Parameters<typeof hasMinRole>[1]
+) {
+  const user = await ensureAuthedUser(queryClient);
+  if (!hasMinRole(user, roleName)) {
+    throw notFound();
   }
   return user;
 }
