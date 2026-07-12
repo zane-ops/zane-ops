@@ -226,7 +226,7 @@ export default function WorkspaceTeamSettingsPage({
       />
 
       <div className="my-4 block">
-        {members.length > 0 && data.count > filters.per_page && (
+        {members.length > 0 && data.count > 10 && (
           <Pagination
             totalPages={totalPages}
             currentPage={filters.page}
