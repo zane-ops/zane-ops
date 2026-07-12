@@ -15,11 +15,7 @@ import {
 } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
-import type {
-  Project,
-  WorkspaceRoleName,
-  WorkspaceRoleValue
-} from "~/api/types";
+import type { Project, WorkspaceRoleName } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
 import { MultiSelect } from "~/components/multi-select";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -101,17 +97,8 @@ export default function InviteUserIntoWorkspacePage({
       </div>
       <Separator />
 
-      {!actionData?.data ? (
-        <UserInvitationLinkCard
-          data={
-            actionData?.data ?? {
-              role_name: "Admin",
-              expires_at: new Date(),
-              token: "A0wlwoQClMtjSoSei5LXLGGqQRpusQnL",
-              username: "johndoesnot"
-            }
-          }
-        />
+      {actionData?.data ? (
+        <UserInvitationLinkCard data={actionData?.data} />
       ) : (
         <>
           <h3 className="text-grey">Enter the details for the new user</h3>
@@ -147,14 +134,16 @@ function UserInvitationLinkCard({ data }: UserInvitationLinkCardProps) {
         <dl>
           <div className="flex items-center gap-2">
             <dt className="text-grey">Link:</dt>
-            <dd className="flex items-center gap-2 whitespace-nowrap text-ellipsis overflow-x-hidden">
+            <dd className="flex items-center gap-2 grow max-w-[90%]">
               <a
                 href={registerLink}
                 target="_blank"
-                className="text-link  hover:underline inline-flex gap-1 items-center"
+                className="text-link  hover:underline inline-flex min-w-0 items-center max-w-min"
                 rel="noopener"
               >
-                {registerLink}
+                <p className="whitespace-nowrap text-ellipsis overflow-x-hidden max-w-full">
+                  {registerLink}
+                </p>
               </a>
               <TooltipProvider>
                 <Tooltip>
@@ -163,7 +152,7 @@ function UserInvitationLinkCard({ data }: UserInvitationLinkCardProps) {
                       value={registerLink}
                       label="Copy url"
                       size="icon"
-                      className="hover:bg-transparent !opacity-100 size-4"
+                      className="hover:bg-transparent !opacity-100 size-4 flex-none"
                     />
                   </TooltipTrigger>
                   <TooltipContent>Copy URL</TooltipContent>
