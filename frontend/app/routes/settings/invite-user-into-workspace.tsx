@@ -100,8 +100,17 @@ export default function InviteUserIntoWorkspacePage({
       </div>
       <Separator />
 
-      {actionData?.data ? (
-        <UserInvitationLinkCard data={actionData?.data} />
+      {!actionData?.data ? (
+        <UserInvitationLinkCard
+          data={
+            actionData?.data ?? {
+              role_name: "Admin",
+              expires_at: new Date(),
+              token: "abc123",
+              username: "johndoesnot"
+            }
+          }
+        />
       ) : (
         <>
           <h3 className="text-grey">Enter the details for the new user</h3>
@@ -127,8 +136,8 @@ function UserInvitationLinkCard({ data }: UserInvitationLinkCardProps) {
           User Invited <CheckIcon className="text-teal-500 size-5 flex-none" />
         </CardTitle>
         <p className="text-grey">
-          The user has been invited. They must access the link below to accept
-          the invitation.
+          The user has been invited. Share the link below with them so they
+          can accept the invitation.
         </p>
       </CardHeader>
       <CardContent className="flex flex-col gap-2 ">
@@ -141,11 +150,10 @@ function UserInvitationLinkCard({ data }: UserInvitationLinkCardProps) {
               <a
                 href={registerLink}
                 target="_blank"
-                className="text-link hover:underline inline-flex gap-1 items-center"
+                className="text-link whitespace-nowrap text-ellipsis overflow-x-hidden hover:underline inline-flex gap-1 items-center"
                 rel="noopener"
               >
                 {registerLink}
-                {/* <ExternalLinkIcon className="size-4 flex-none" /> */}
               </a>
               <TooltipProvider>
                 <Tooltip>
@@ -164,18 +172,22 @@ function UserInvitationLinkCard({ data }: UserInvitationLinkCardProps) {
           </div>
 
           <div className="flex gap-2 items-center">
-            <dt className="text-grey">Username:</dt>
-            <dd>{data.username}</dd>
-          </div>
-
-          <div className="flex gap-2 items-center">
             <dt className="text-grey">Valid until:</dt>
             <dd>
               <time dateTime={data.expires_at}>
                 {formattedTime(data.expires_at)}
               </time>
-              {/* <Code className="px-2">{formattedTime(data.expires_at)}</Code> */}
             </dd>
+          </div>
+
+          <div className="flex gap-2 items-center">
+            <dt className="text-grey">Username:</dt>
+            <dd>{data.username}</dd>
+          </div>
+
+          <div className="flex gap-2 items-center">
+            <dt className="text-grey">Role:</dt>
+            <dd>{data.role_name}</dd>
           </div>
         </dl>
       </CardContent>
@@ -346,24 +358,21 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
 
-  const roleName = formData.get("role")?.toString();
-
-  let role: WorkspaceRoleValue = WORKSPACE_ROLE_MAPPING["Guest"];
-  if (roleName) {
-    role = WORKSPACE_ROLE_MAPPING[roleName as WorkspaceRoleName];
-  }
-
   type Body = RequestInput<"post", "/api/workspace/invite-user/">;
   const userData = {
     username: formData.get("username")?.toString() ?? "",
     accessible_project_ids: formData
       .getAll("accessible_project_ids")
       .map((entry) => entry.toString()),
-    role,
+    role: Number(formData.get("role")?.toString()) as Body["role"],
     valid_for: Number(
       formData.get("valid_for")?.toString()
     ) as Body["valid_for"]
   } satisfies Body;
+
+  console.log({
+    userData
+  });
 
   const { error: errors, data } = await apiClient.POST(
     "/api/workspace/invite-user/",

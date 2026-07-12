@@ -1,4 +1,8 @@
-import type { AuthedUserResponse, WorkspaceMembership } from "~/api/types";
+import type {
+  WorkspaceMembership,
+  WorkspaceRoleName,
+  WorkspaceRoleValue
+} from "~/api/types";
 import { WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
 import { apiClient } from "./api/client";
 
@@ -396,7 +400,7 @@ export function getDockerImageIconURL(image: string) {
   return iconSrc;
 }
 
-const CONTAINER_ID_COLORS = [
+const AVAILABLE_COLORS = [
   "blue",
   "emerald",
   "violet",
@@ -423,8 +427,7 @@ export function stringToColor(str: string): {
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const color =
-    CONTAINER_ID_COLORS[Math.abs(hash) % CONTAINER_ID_COLORS.length];
+  const color = AVAILABLE_COLORS[Math.abs(hash) % AVAILABLE_COLORS.length];
   return {
     light: `var(--color-${color}-700)`,
     dark: `var(--color-${color}-400)`
@@ -452,12 +455,22 @@ export function getMaxDomainForStorageValue(maxValueInBytes: number) {
   );
 }
 
+export type UserWithMembership = {
+  user: {
+    is_superuser?: boolean;
+  };
+  membership?: {
+    role_name: WorkspaceRoleName;
+    role: WorkspaceRoleValue;
+  } | null;
+};
+
 export function hasMinRole(
-  user: AuthedUserResponse,
+  user: UserWithMembership,
   roleName: WorkspaceMembership["role_name"] | "ServerAdmin"
-) {
+): boolean {
   if (roleName === "ServerAdmin") {
-    return user.user.is_superuser;
+    return Boolean(user.user.is_superuser);
   }
 
   return Boolean(

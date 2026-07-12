@@ -290,7 +290,7 @@ function WorkspaceMembersTable({
           <TableHead className="sticky top-0 z-20">
             Accessible projects
           </TableHead>
-          <TableHead className="sticky top-0 z-20">Invited at</TableHead>
+          <TableHead className="sticky top-0 z-20">Joinet at</TableHead>
           {showActionsColumn && (
             <TableHead className="sticky top-0 z-20 px-4"></TableHead>
           )}
@@ -306,6 +306,13 @@ function WorkspaceMembersTable({
         ) : (
           members.map((member) => {
             const invitedAt = formatLogTime(member.created_at);
+            const isMember = hasMinRole(
+              {
+                user: { is_superuser: false },
+                membership: member
+              },
+              "Member"
+            );
             return (
               <TableRow className="px-2" key={member.id}>
                 <TableCell className="p-2">{member.user.username}</TableCell>
@@ -324,7 +331,7 @@ function WorkspaceMembersTable({
                 </TableCell>
                 <TableCell className="p-2">
                   <Code className="px-2 whitespace-nowrap">
-                    {member.role > WORKSPACE_ROLE_MAPPING["Guest"]
+                    {isMember
                       ? "All projects"
                       : `${member.accessible_projects.length} ${pluralize("project", member.accessible_projects.length)}`}
                   </Code>

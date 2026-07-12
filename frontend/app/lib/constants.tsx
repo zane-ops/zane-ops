@@ -1,6 +1,10 @@
 import { type LucideProps, PackageIcon } from "lucide-react";
 import type { useSpinDelay } from "spin-delay";
-import type { ContainerRegistryType, WorkspaceMembership } from "~/api/types";
+import type {
+  ContainerRegistryType,
+  WorkspaceRoleName,
+  WorkspaceRoleValue
+} from "~/api/types";
 import { AWSECSLogo } from "~/components/aws-ecs-logo";
 import { DockerHubLogo } from "~/components/docker-hub-logo";
 import { GithubLogo } from "~/components/github-logo";
@@ -201,7 +205,4 @@ export const WORKSPACE_ROLE_MAPPING = {
   Member: 30,
   Admin: 40,
   Owner: 50
-} satisfies Record<
-  WorkspaceMembership["role_name"],
-  WorkspaceMembership["role"]
->;
+} satisfies Record<WorkspaceRoleName, WorkspaceRoleValue>;
