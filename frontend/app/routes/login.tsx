@@ -47,7 +47,6 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
       redirectTo = redirect_to;
     }
-    alert(`[login] Redirect to ${redirectTo}`);
 
     throw redirect(redirectTo);
   }
