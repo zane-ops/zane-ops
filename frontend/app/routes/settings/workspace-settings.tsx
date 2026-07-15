@@ -6,9 +6,11 @@ import {
   CheckIcon,
   ChevronDownIcon,
   ChevronsRightIcon,
+  DoorOpenIcon,
   FlameIcon,
   InfoIcon,
   LoaderIcon,
+  LogOut,
   SearchIcon,
   Trash2Icon
 } from "lucide-react";
@@ -44,6 +46,12 @@ import {
   PopoverTrigger
 } from "~/components/ui/popover";
 import { Separator } from "~/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import { userQueries, workspaceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -123,7 +131,7 @@ export default function WorkspaceSettingsPage({
                     <h3 className="text-lg font-medium">Leave Workspace</h3>
                     <p>Remove yourself as a member of this workspace</p>
                   </div>
-                  {/* <TransferOwnershipForm workspaceId={workspace.id} /> */}
+                  <WorkspaceLeaveForm />
                 </div>
 
                 {hasMinRole(user, "Owner") && (
@@ -240,8 +248,46 @@ async function archiveWorkspace(formData: FormData) {
     closeButton: true,
     description: (
       <span>
-        Workspace `<strong>{workspace.name}</strong>` has been successfully
-        deleted.
+        Workspace <strong>{workspace.name}</strong> has been deleted.
+      </span>
+    )
+  });
+  throw redirect(href("/"));
+}
+
+async function leaveWorkspace() {
+  const queryClient = getQueryClient();
+
+  const workspace = await getCurrentWorkspace(queryClient);
+
+  const { error } = await apiClient.POST("/api/workspace/leave/", {
+    headers: {
+      ...(await getCsrfTokenHeader())
+    }
+  });
+
+  if (error) {
+    const fullErrorMessage = error.errors
+      .map((err) => (err.attr ? `${err.attr}:` : "") + `${err.detail}`)
+      .join(" ");
+
+    toast.error("Error", {
+      description: fullErrorMessage,
+      closeButton: true
+    });
+    return;
+  }
+
+  await Promise.all([
+    queryClient.invalidateQueries(userQueries.authedUser),
+    queryClient.invalidateQueries(userQueries.memberships)
+  ]);
+
+  toast.success("Success", {
+    closeButton: true,
+    description: (
+      <span>
+        You have left the workspace <strong>{workspace.name}</strong>.
       </span>
     )
   });
@@ -310,6 +356,9 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     }
     case "transfer_workspace_ownership": {
       return transferWorkspaceOwnership(formData);
+    }
+    case "leave_workspace": {
+      return leaveWorkspace();
     }
     default: {
       throw new Error("Unexpected intent");
@@ -659,5 +708,55 @@ function TransferOwnershipForm({ workspaceId }: TransferOwnershipFormProps) {
 }
 
 function WorkspaceLeaveForm() {
-  return;
+  const fetcher = useFetcher<typeof clientAction>();
+  const isPending = fetcher.state !== "idle";
+
+  const {
+    "1": {
+      loaderData: { user }
+    }
+  } = useMatches() as Route.ComponentProps["matches"];
+
+  const isOwner = hasMinRole(user, "Owner");
+
+  return (
+    <fetcher.Form
+      method="post"
+      onSubmit={(e) => {
+        if (isOwner) {
+          e.preventDefault();
+        }
+      }}
+    >
+      <input type="hidden" name="intent" value="leave_workspace" />
+      <TooltipProvider>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <SubmitButton
+              variant="destructive-outline"
+              className={cn("destructive-outline", isOwner && "opacity-50")}
+              isPending={isPending}
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span>Leaving ...</span>
+                </>
+              ) : (
+                <>
+                  <DoorOpenIcon className="size-4 flex-none" />
+                  <span>Leave</span>
+                </>
+              )}
+            </SubmitButton>
+          </TooltipTrigger>
+          {isOwner && (
+            <TooltipContent className="max-w-56 text-pretty">
+              Please transfer workspace ownership before leaving this workspace.
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </TooltipProvider>
+    </fetcher.Form>
+  );
 }

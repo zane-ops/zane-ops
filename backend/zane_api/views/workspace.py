@@ -387,6 +387,7 @@ class WorkspaceLeaveAPIView(APIView):
     serializer_class = WorkspaceLeaveResponseSerializer
 
     @extend_schema(
+        request=None,
         operation_id="leaveWorkspace",
         summary="Leave workspace",
     )

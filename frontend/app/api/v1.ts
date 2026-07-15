@@ -3974,40 +3974,7 @@ export interface components {
      * @enum {string}
      */
     ItemChangeTypeEnum: "ADD" | "DELETE" | "UPDATE";
-    LeaveWorkspaceError: components["schemas"]["LeaveWorkspaceNonFieldErrorsErrorComponent"] | components["schemas"]["LeaveWorkspaceSuccessErrorComponent"];
-    LeaveWorkspaceErrorResponse400: components["schemas"]["LeaveWorkspaceValidationError"] | components["schemas"]["ParseErrorResponse"];
-    LeaveWorkspaceNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    LeaveWorkspaceSuccessErrorComponent: {
-      /**
-       * @description * `success` - success
-       * @enum {string}
-       */
-      attr: "success";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "null" | "required";
-      detail: string;
-    };
-    LeaveWorkspaceValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["LeaveWorkspaceError"][];
-    };
+    LeaveWorkspaceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     /**
      * @description * `ERROR` - Error
      * * `INFO` - Info
@@ -8980,9 +8947,6 @@ export interface components {
     WorkspaceInvitationsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceInvitationsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceLeaveResponse: {
-      success: boolean;
-    };
-    WorkspaceLeaveResponseRequest: {
       success: boolean;
     };
     WorkspaceMember: {
@@ -15788,13 +15752,6 @@ export interface operations {
   };
   /** Leave workspace */
   leaveWorkspace: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["WorkspaceLeaveResponseRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["WorkspaceLeaveResponseRequest"];
-        "multipart/form-data": components["schemas"]["WorkspaceLeaveResponseRequest"];
-      };
-    };
     responses: {
       200: {
         content: {

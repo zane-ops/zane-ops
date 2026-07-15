@@ -15169,18 +15169,6 @@ paths:
       summary: Leave workspace
       tags:
       - workspace
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WorkspaceLeaveResponseRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/WorkspaceLeaveResponseRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/WorkspaceLeaveResponseRequest'
-        required: true
       security:
       - cookieAuth: []
       responses:
@@ -23561,79 +23549,13 @@ components:
         * `ADD` - Add
         * `DELETE` - Delete
         * `UPDATE` - Update
-    LeaveWorkspaceError:
-      oneOf:
-      - $ref: '#/components/schemas/LeaveWorkspaceNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/LeaveWorkspaceSuccessErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          non_field_errors: '#/components/schemas/LeaveWorkspaceNonFieldErrorsErrorComponent'
-          success: '#/components/schemas/LeaveWorkspaceSuccessErrorComponent'
     LeaveWorkspaceErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/LeaveWorkspaceValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/LeaveWorkspaceValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    LeaveWorkspaceNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - non_field_errors
-          type: string
-          description: '* `non_field_errors` - non_field_errors'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    LeaveWorkspaceSuccessErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - success
-          type: string
-          description: '* `success` - success'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    LeaveWorkspaceValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/LeaveWorkspaceError'
-      required:
-      - errors
-      - type
     LevelEnum:
       enum:
       - ERROR
@@ -34229,13 +34151,6 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     WorkspaceLeaveResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-      required:
-      - success
-    WorkspaceLeaveResponseRequest:
       type: object
       properties:
         success:
