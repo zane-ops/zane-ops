@@ -28,7 +28,6 @@ import { Button } from "~/components/ui/button";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import {
   deploymentQueries,
-  ensureAuthedUser,
   projectQueries,
   projectSearchSchema,
   userQueries

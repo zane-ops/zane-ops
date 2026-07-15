@@ -5,7 +5,7 @@ import { ProjectEnvironmentListHeaderHeaderDropdown } from "~/components/header/
 import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
 import { WorkspaceMembershipListHeaderDropdown } from "~/components/header/workspace-list-header-dropdown";
 import { WorkspaceProjectListHeaderDropdown } from "~/components/header/workspace-project-list-header-dropdown";
-import { ensureAuthedUser, projectQueries, userQueries } from "~/lib/queries";
+import { projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/workspace-layout";

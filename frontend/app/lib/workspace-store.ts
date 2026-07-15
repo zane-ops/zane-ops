@@ -83,7 +83,9 @@ export async function getCurrentWorkspace(queryClient: QueryClient) {
  */
 const authedUserHash = hashKey(userQueries.authedUser.queryKey);
 
-export function syncWorkspaceStore(data: AuthedUserResponse | undefined) {
+export function syncWorkspaceStore(
+  data: AuthedUserResponse | undefined | null
+) {
   console.log("[workspace-store/syncWorkspaceStore]", { data });
   useWorkspaceMembershipStore.setState({
     membership: data?.membership ?? null
@@ -96,7 +98,10 @@ export function syncWorkspaceStore(data: AuthedUserResponse | undefined) {
 getQueryClient()
   .getQueryCache()
   .subscribe((event) => {
-    if (event.query.queryHash === authedUserHash) {
+    // We don't subscribe to `removed` event because
+    // if we query is removed, normally the page should get updated before
+    // components, but while the page is loading, this component get updated and rerender all its subscribers
+    if (event.type !== "removed" && event.query.queryHash === authedUserHash) {
       syncWorkspaceStore(
         event.query.state.data as AuthedUserResponse | undefined
       );

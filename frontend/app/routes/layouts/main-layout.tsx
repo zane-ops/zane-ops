@@ -48,8 +48,6 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
       redirectPathName = [href("/login"), "?", params.toString()].join("");
     }
 
-    alert(`[main-layout] Redirect to ${redirectPathName}`);
-
     throw redirect(redirectPathName);
   }
 
