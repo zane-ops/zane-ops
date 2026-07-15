@@ -10,7 +10,6 @@ import {
   FlameIcon,
   InfoIcon,
   LoaderIcon,
-  LogOut,
   SearchIcon,
   Trash2Icon
 } from "lucide-react";
@@ -105,9 +104,6 @@ export default function WorkspaceSettingsPage({
                 <InfoIcon size={15} className="flex-none text-grey" />
               </div>
               <div className="h-full border border-grey/50"></div>
-              {!hasMinRole(user, "Owner") && (
-                <div className="bg-grey/50 rounded-md size-2" />
-              )}
             </div>
 
             <div className="w-full flex flex-col gap-5 pt-1 pb-8">
