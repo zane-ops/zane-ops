@@ -86,6 +86,7 @@ export const userQueries = {
 export async function ensureAuthedUser(queryClient: QueryClient) {
   const user = await queryClient.ensureQueryData(userQueries.authedUser);
   if (!user) {
+    alert("[ensureAuthedUser] redirect to /login");
     throw redirect(href("/login"));
   }
   return user;
