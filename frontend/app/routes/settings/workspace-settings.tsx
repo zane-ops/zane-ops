@@ -252,7 +252,7 @@ async function archiveWorkspace(formData: FormData) {
       </span>
     )
   });
-  throw redirect(href("/workspace"));
+  throw redirect(href("/"));
 }
 
 async function leaveWorkspace() {
@@ -291,7 +291,7 @@ async function leaveWorkspace() {
       </span>
     )
   });
-  throw redirect(href("/workspace"));
+  throw redirect(href("/"));
 }
 
 async function transferWorkspaceOwnership(formData: FormData) {

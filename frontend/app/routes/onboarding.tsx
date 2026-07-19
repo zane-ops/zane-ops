@@ -93,7 +93,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     closeButton: true
   });
 
-  throw redirect(href("/workspace"));
+  throw redirect(href("/"));
 }
 
 export default function InitialRegistration({

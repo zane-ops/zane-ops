@@ -61,16 +61,13 @@ export async function clientLoader({
   ]);
 
   if (!authedUser && invitationLink.has_existing_account) {
-    let redirectPathName = href("/login");
     const url = new URL(request.url);
-    if (
-      url.pathname !== href("/workspace") &&
-      url.pathname !== href("/login")
-    ) {
-      const params = new URLSearchParams([["redirect_to", url.pathname]]);
+    const params = new URLSearchParams([["redirect_to", url.pathname]]);
 
-      redirectPathName = [href("/login"), "?", params.toString()].join("");
-    }
+    const redirectPathName = [href("/login"), "?", params.toString()].join("");
+    console.log(
+      `[workspace-invitation/clientLoader] redirect to \`${redirectPathName}\``
+    );
     throw redirect(redirectPathName);
   }
 
