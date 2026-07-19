@@ -1,4 +1,4 @@
-import { Outlet, href, redirect } from "react-router";
+import { Outlet } from "react-router";
 import { CommandBarTrigger } from "~/components/commandbar/commandbar-trigger";
 import { Header } from "~/components/header/header";
 import { ProjectEnvironmentListHeaderHeaderDropdown } from "~/components/header/project-environment-list-header-dropdown";
@@ -22,15 +22,14 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   ]);
 
   const workspace = user?.membership?.workspace;
-  if (memberships === null || !workspace) {
-    throw redirect(href("/login"));
-  }
 
   const [projects, currentProject] = await Promise.all([
-    queryClient.ensureQueryData(
-      projectQueries.list({ workspaceId: workspace.id })
-    ),
-    params.projectSlug
+    workspace
+      ? queryClient.ensureQueryData(
+          projectQueries.list({ workspaceId: workspace.id })
+        )
+      : [],
+    params.projectSlug && workspace
       ? queryClient.ensureQueryData(
           projectQueries.single(workspace.id, params.projectSlug)
         )
@@ -55,7 +54,7 @@ export default function WorkspaceLayout({
       <Header
         leftSlot={[
           <WorkspaceMembershipListHeaderDropdown
-            memberships={loaderData.memberships}
+            memberships={loaderData.memberships ?? []}
           />,
           params.projectSlug ? (
             <WorkspaceProjectListHeaderDropdown

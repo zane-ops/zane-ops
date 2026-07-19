@@ -17,7 +17,10 @@ import * as React from "react";
 import { href, redirect, useFetcher, useMatches } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
-import { DeleteConfirmationDialog } from "~/components/delete-confirmation-dialog";
+import {
+  DeleteConfirmationDialog,
+  SimpleConfirmationDialog
+} from "~/components/delete-confirmation-dialog";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
@@ -63,6 +66,7 @@ import {
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
+  syncWorkspaceStore,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/workspace-settings";
@@ -705,7 +709,6 @@ function TransferOwnershipForm({ workspaceId }: TransferOwnershipFormProps) {
 
 function WorkspaceLeaveForm() {
   const fetcher = useFetcher<typeof clientAction>();
-  const isPending = fetcher.state !== "idle";
 
   const {
     "1": {
@@ -716,43 +719,53 @@ function WorkspaceLeaveForm() {
   const isOwner = hasMinRole(user, "Owner");
 
   return (
-    <fetcher.Form
-      method="post"
-      onSubmit={(e) => {
-        if (isOwner) {
-          e.preventDefault();
-        }
-      }}
-    >
-      <input type="hidden" name="intent" value="leave_workspace" />
-      <TooltipProvider>
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <SubmitButton
-              variant="destructive-outline"
-              className={cn("destructive-outline", isOwner && "opacity-50")}
-              isPending={isPending}
-            >
-              {isPending ? (
-                <>
-                  <LoaderIcon className="animate-spin" size={15} />
-                  <span>Leaving ...</span>
-                </>
-              ) : (
-                <>
+    <SimpleConfirmationDialog
+      fetcher={fetcher}
+      title="Leave workspace ?"
+      variant="warning"
+      message={
+        <span>
+          You will lose access to this workspace and all its projects. You will
+          need a new invitation to join back.
+        </span>
+      }
+      form={
+        <fetcher.Form method="post">
+          <input type="hidden" name="intent" value="leave_workspace" />
+        </fetcher.Form>
+      }
+      trigger={
+        <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="destructive-outline"
+                  className={cn(
+                    "destructive-outline gap-2",
+                    isOwner && "opacity-50"
+                  )}
+                  onClick={(e) => {
+                    if (isOwner) {
+                      e.preventDefault();
+                    }
+                  }}
+                >
                   <DoorOpenIcon className="size-4 flex-none" />
                   <span>Leave</span>
-                </>
-              )}
-            </SubmitButton>
-          </TooltipTrigger>
-          {isOwner && (
-            <TooltipContent className="max-w-56 text-pretty">
-              Please transfer workspace ownership before leaving this workspace.
-            </TooltipContent>
-          )}
-        </Tooltip>
-      </TooltipProvider>
-    </fetcher.Form>
+                </Button>
+              </DialogTrigger>
+            </TooltipTrigger>
+            {isOwner && (
+              <TooltipContent className="max-w-56 text-pretty">
+                Please transfer workspace ownership before leaving this
+                workspace.
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
+      }
+    />
   );
 }

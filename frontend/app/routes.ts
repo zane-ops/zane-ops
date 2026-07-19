@@ -88,7 +88,7 @@ export default [
     ]),
 
     layout("./routes/layouts/workspace-layout.tsx", [
-      index("./routes/project-list.tsx"),
+      index("./routes/home.tsx"),
 
       route(
         "/project/:projectSlug/:envSlug/review-deployment",

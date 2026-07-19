@@ -18,7 +18,7 @@ import { cn, getUserDisplayName, hasMinRole } from "~/lib/utils";
 import { useWorkspaceStore } from "~/lib/workspace-store";
 
 export type UserDropdownProps = {
-  user: AuthedUserResponse;
+  user: AuthedUserResponse | null;
 };
 
 export function UserHeaderDropdown(props: UserDropdownProps) {

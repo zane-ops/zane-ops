@@ -36,6 +36,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   ]);
 
   if (!userExistQuery.data?.exists) {
+    console.log("[main-layout/clientLoader] redirect to `/onboarding`");
     throw redirect(href("/onboarding"));
   }
 
@@ -48,6 +49,9 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
       redirectPathName = [href("/login"), "?", params.toString()].join("");
     }
 
+    console.log(
+      `[main-layout/clientLoader] redirect to \`/${redirectPathName}\``
+    );
     throw redirect(redirectPathName);
   }
 
@@ -58,14 +62,21 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   return { user };
 }
 
-export default function MainLayout({
-  loaderData: { user }
-}: Route.ComponentProps) {
+export default function MainLayout({ loaderData }: Route.ComponentProps) {
+  const { data: user } = useQuery({
+    ...userQueries.authedUser,
+    initialData: loaderData.user
+  });
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen flex flex-col justify-between">
       <NavigationProgress />
 
-      {user.membership ? <Outlet /> : <EmptyWorkspacesHome user={user} />}
+      <Outlet />
 
       <Footer />
 

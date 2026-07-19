@@ -465,8 +465,8 @@ function RemoveConfirmationFormDialog({ member }: WorkspaceMemberActionsProps) {
       title="Delete these Credentials ?"
       message={
         <span>
-          This action <strong>CANNOT</strong> be undone. You will loose access
-          to this workspace
+          This action <strong>CANNOT</strong> be undone. You will lose access to
+          this workspace
         </span>
       }
       form={

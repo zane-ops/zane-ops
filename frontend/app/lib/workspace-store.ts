@@ -66,7 +66,7 @@ export async function getCurrentWorkspace(queryClient: QueryClient) {
   const user = await queryClient.ensureQueryData(userQueries.authedUser);
   const workspace = user?.membership?.workspace;
   if (!workspace) {
-    throw notFound("Workspace not found");
+    throw notFound("[getCurrentWorkspace] Workspace not found");
   }
   return workspace;
 }

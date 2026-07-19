@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { Route } from "./+types/project-list";
+import type { Route } from "./+types/home";
 
 import {
   ArrowUpDownIcon,
@@ -41,10 +41,9 @@ import {
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const [workspace, authedUser] = await Promise.all([
-    getCurrentWorkspace(queryClient),
-    queryClient.ensureQueryData(userQueries.authedUser)
-  ]);
+  const authedUser = await queryClient.ensureQueryData(userQueries.authedUser);
+
+  const workspace = authedUser?.membership?.workspace;
 
   const searchParams = new URL(request.url).searchParams;
 
@@ -57,10 +56,12 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
   // fetch the data on first load to prevent showing the loading fallback
   const [projectList, recentDeployments] = await Promise.all([
-    queryClient.ensureQueryData(
-      projectQueries.list({ workspaceId: workspace.id, filters })
-    ),
-    authedUser && hasMinRole(authedUser, "Member")
+    workspace
+      ? queryClient.ensureQueryData(
+          projectQueries.list({ workspaceId: workspace.id, filters })
+        )
+      : [],
+    authedUser && workspace && hasMinRole(authedUser, "Member")
       ? queryClient.ensureQueryData(deploymentQueries.recent(workspace.id))
       : []
   ]);
@@ -73,7 +74,10 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 export default function ProjectList({
   matches: {
     "2": {
-      loaderData: { workspace, user }
+      loaderData: { workspace }
+    },
+    "1": {
+      loaderData: { user }
     }
   }
 }: Route.ComponentProps) {
