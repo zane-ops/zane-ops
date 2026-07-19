@@ -291,6 +291,7 @@ async function leaveWorkspace() {
       </span>
     )
   });
+  window.location.href = href("/");
   throw redirect(href("/"));
 }
 
