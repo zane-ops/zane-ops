@@ -189,7 +189,7 @@ function ReviewInvitationForm({ invitation }: InvitationFormProps) {
         </div>
       </div>
 
-      <p className="text-lg">
+      <p className="text-center">
         <span className="text-link">
           {getUserDisplayName(invitation.invited_by)}
         </span>{" "}

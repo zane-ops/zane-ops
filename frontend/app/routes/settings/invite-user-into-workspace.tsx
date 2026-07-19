@@ -351,10 +351,6 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     ) as Body["valid_for"]
   } satisfies Body;
 
-  console.log({
-    userData
-  });
-
   const { error: errors, data } = await apiClient.POST(
     "/api/workspace/invite-user/",
     {

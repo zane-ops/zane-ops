@@ -2,14 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
   ChevronDownIcon,
-  CrownIcon,
   IterationCwIcon,
   LoaderIcon,
-  type LucideIcon,
-  ShieldIcon,
   Trash2Icon,
-  UserIcon,
-  UserSearchIcon,
   XIcon
 } from "lucide-react";
 import * as React from "react";
@@ -219,13 +214,7 @@ function WorkspaceInvitationsTable({
             });
             const createdAt = formattedTime(invitation.created_at);
             const expiresAt = formattedTime(invitation.expires_at);
-            const isMember = hasMinRole(
-              {
-                user: { is_superuser: false },
-                membership: invitation
-              },
-              "Member"
-            );
+            const isMember = hasMinRole(invitation, "Member");
 
             return (
               <TableRow className="px-2" key={invitation.id}>
@@ -331,7 +320,7 @@ export type WorkspaceInvitationActionsProps = {
   invitation: WorkspaceInvitation;
 };
 
-function getInvitationLink(invitation: { token: string }) {
+function getInvitationLink(invitation: Pick<WorkspaceInvitation, "token">) {
   const registerLink =
     window.location.origin +
     href("/invite/:token", { token: invitation.token });
@@ -442,17 +431,13 @@ function RegenerateInvitationLinkFormDialog({
                 <dt className="text-grey">New Link:</dt>
                 <dd className="flex items-center gap-1.5 grow max-w-65/100">
                   <a
-                    href={getInvitationLink({
-                      token: data.data.token
-                    })}
+                    href={getInvitationLink(data.data)}
                     target="_blank"
                     className="text-link  hover:underline inline-flex min-w-0 max-w-min items-center  w-full gap-1"
                     rel="noopener"
                   >
                     <p className="whitespace-nowrap text-ellipsis overflow-x-hidden w-full">
-                      {getInvitationLink({
-                        token: data.data.token
-                      })}
+                      {getInvitationLink(data.data)}
                     </p>
                   </a>
 
@@ -460,9 +445,7 @@ function RegenerateInvitationLinkFormDialog({
                     <Tooltip delayDuration={0}>
                       <TooltipTrigger asChild>
                         <CopyButton
-                          value={getInvitationLink({
-                            token: data.data.token
-                          })}
+                          value={getInvitationLink(data.data)}
                           label="Copy url"
                           size="icon"
                           className="hover:bg-transparent !opacity-100 size-4 flex-none"

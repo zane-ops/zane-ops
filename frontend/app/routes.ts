@@ -102,11 +102,16 @@ export default [
         route("settings", "./routes/layouts/settings-layout.tsx", [
           index("./routes/settings/workspace-settings.tsx"),
 
-          route("team", "./routes/settings/workspace-team-settings.tsx"),
-          route(
-            "team/invite",
-            "./routes/settings/invite-user-into-workspace.tsx"
-          ),
+          ...prefix("team", [
+            index("./routes/settings/workspace-team-settings.tsx"),
+            route("invite", "./routes/settings/invite-user-into-workspace.tsx"),
+            route(
+              ":id/permissions",
+              "./routes/settings/workspace-edit-member-permissions.tsx"
+            ),
+            route(":id/remove", "./routes/settings/workspace-remove-member.tsx")
+          ]),
+
           route(
             "invitations",
             "./routes/settings/workspace-invitation-list.tsx"

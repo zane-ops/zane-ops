@@ -3161,5 +3161,37 @@ export const workspaceQueries = {
 
         return result.data;
       }
+    }),
+
+  member: (workspaceId: string, membershipId: string) =>
+    queryOptions({
+      queryKey: [
+        ...workspaceKey(workspaceId),
+        "MEMBERS",
+        "SINGLE",
+        membershipId
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/workspace/members/{membership_id}/",
+          {
+            signal,
+            params: {
+              path: {
+                membership_id: membershipId
+              }
+            }
+          }
+        );
+        if (!data) throw notFound("Not found");
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (!query.state.data) {
+          return false;
+        }
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData
     })
 };

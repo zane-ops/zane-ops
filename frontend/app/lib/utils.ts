@@ -4,6 +4,8 @@ import { twMerge } from "tailwind-merge";
 import { apiClient } from "~/api/client";
 import type {
   AuthedUserResponse,
+  WorkspaceInvitation,
+  WorkspaceMember,
   WorkspaceMembership,
   WorkspaceRoleName,
   WorkspaceRoleValue
@@ -606,26 +608,27 @@ export function getMaxDomainForStorageValue(maxValueInBytes: number) {
   );
 }
 
-export type UserWithMembership = {
-  user: {
-    is_superuser?: boolean;
-  };
-  membership?: {
-    role_name: WorkspaceRoleName;
-    role: WorkspaceRoleValue;
-  } | null;
-};
+export type UserWithMembership =
+  | AuthedUserResponse
+  | WorkspaceMembership
+  | WorkspaceMember
+  | WorkspaceInvitation;
 
 export function hasMinRole(
   user: UserWithMembership,
   roleName: WorkspaceRoleName | "ServerAdmin"
 ): boolean {
   if (roleName === "ServerAdmin") {
-    return Boolean(user.user.is_superuser);
+    return (
+      "user" in user &&
+      "is_superuser" in user.user &&
+      Boolean(user.user?.is_superuser)
+    );
   }
 
+  const membership = "membership" in user ? user.membership : user;
   return Boolean(
-    user.membership && user.membership.role >= WORKSPACE_ROLE_MAPPING[roleName]
+    membership && membership.role >= WORKSPACE_ROLE_MAPPING[roleName]
   );
 }
 

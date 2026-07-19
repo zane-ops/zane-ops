@@ -1,20 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   ChevronDownIcon,
-  CrownIcon,
   LoaderIcon,
-  type LucideIcon,
   MailPlusIcon,
   SearchIcon,
-  ShieldIcon,
-  UserIcon,
   UserKeyIcon,
-  UserSearchIcon,
   UserXIcon,
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import { Form, Link, useFetcher, useSearchParams } from "react-router";
+import { Form, Link, href, useFetcher, useSearchParams } from "react-router";
 import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
 import type { WorkspaceMember } from "~/api/types";
@@ -24,12 +19,6 @@ import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
 import { DialogTrigger } from "~/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "~/components/ui/dropdown-menu";
 import {
   FieldSet,
   FieldSetInput,
@@ -242,6 +231,7 @@ export default function WorkspaceTeamSettingsPage({
       <WorkspaceMembersTable
         members={members}
         showActionsColumn={hasMinRole(user, "Admin")}
+        currentMembershipId={user.membership!.id}
       />
 
       <div className="my-4 block">
@@ -273,11 +263,13 @@ export default function WorkspaceTeamSettingsPage({
 type WorkspaceMembersTableProps = {
   members: WorkspaceMember[];
   showActionsColumn: boolean;
+  currentMembershipId: number;
 };
 
 function WorkspaceMembersTable({
   members,
-  showActionsColumn
+  showActionsColumn,
+  currentMembershipId
 }: WorkspaceMembersTableProps) {
   return (
     <Table>
@@ -293,7 +285,7 @@ function WorkspaceMembersTable({
           </TableHead>
           <TableHead className="sticky top-0 z-20">Joinet at</TableHead>
           {showActionsColumn && (
-            <TableHead className="sticky top-0 z-20 px-4"></TableHead>
+            <TableHead className="sticky top-0 z-20 px-4">Actions</TableHead>
           )}
         </TableRow>
       </TableHeader>
@@ -307,13 +299,7 @@ function WorkspaceMembersTable({
         ) : (
           members.map((member) => {
             const joinedAt = formatLogTime(member.created_at);
-            const isMember = hasMinRole(
-              {
-                user: { is_superuser: false },
-                membership: member
-              },
-              "Member"
-            );
+            const isMember = hasMinRole(member, "Member");
 
             return (
               <TableRow className="px-2" key={member.id}>
@@ -402,11 +388,13 @@ function WorkspaceMembersTable({
                     </span>
                   </time>
                 </TableCell>
-                {showActionsColumn && (
-                  <TableCell className="p-2">
-                    <WorkspaceMemberActions member={member} />
-                  </TableCell>
-                )}
+                {showActionsColumn &&
+                  !hasMinRole(member, "Owner") &&
+                  currentMembershipId !== member.id && (
+                    <TableCell className="p-2">
+                      <WorkspaceMemberActions member={member} />
+                    </TableCell>
+                  )}
               </TableRow>
             );
           })
@@ -425,33 +413,32 @@ export function WorkspaceMemberActions({
 }: WorkspaceMemberActionsProps) {
   return (
     <div className="flex items-center gap-1">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 border-dashed"
-            disabled={member.role_name === "Owner"}
-          >
-            Actions
-            <ChevronDownIcon className="size-4 flex-none" />
-          </Button>
-        </DropdownMenuTrigger>
+      <TooltipProvider>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              asChild
+              disabled={hasMinRole(member, "Owner")}
+            >
+              <Link
+                to={href("/workspace/settings/team/:id/permissions", {
+                  id: member.id.toString()
+                })}
+              >
+                <UserKeyIcon className="flex-none size-4" />
+                <span className="sr-only">Edit permissions</span>
+              </Link>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Edit member permissions</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem className="flex items-center gap-2">
-            <UserKeyIcon className="flex-none size-4" />
-            <span>Edit permissions</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="flex items-center gap-2"
-            variant="destructive"
-          >
-            <UserXIcon className="flex-none size-4" />
-            <span>Remove member</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+
+      <RemoveConfirmationFormDialog member={member} />
     </div>
   );
 }
@@ -462,16 +449,28 @@ function RemoveConfirmationFormDialog({ member }: WorkspaceMemberActionsProps) {
   return (
     <SimpleConfirmationDialog
       fetcher={fetcher}
-      title="Delete these Credentials ?"
+      title={
+        <>
+          Remove&nbsp;
+          <span className="text-grey ">{member.user.username}</span>
+          &nbsp;from this workspace?
+        </>
+      }
       message={
         <span>
-          This action <strong>CANNOT</strong> be undone. You will lose access to
-          this workspace
+          They will immediately lose access to this workspace and all of its
+          projects. You can invite them again later, but their permissions will
+          need to be set up from scratch.
         </span>
       }
       form={
-        <fetcher.Form method="post" action={`./${member.id}`}>
-          <input type="hidden" name="intent" value="delete" />
+        <fetcher.Form
+          method="post"
+          action={href("/workspace/settings/team/:id/remove", {
+            id: member.id.toString()
+          })}
+        >
+          <input type="hidden" name="intent" value="remove" />
         </fetcher.Form>
       }
       trigger={
@@ -484,41 +483,14 @@ function RemoveConfirmationFormDialog({ member }: WorkspaceMemberActionsProps) {
                   variant="ghost"
                   className="gap-1 text-red-400"
                 >
-                  <>
-                    <span>Remove member</span>
-                    <UserXIcon className="flex-none size-4" />
-                  </>
+                  <span className="sr-only">Remove member from workspace</span>
+                  <UserXIcon className="flex-none size-4" />
                 </Button>
               </DialogTrigger>
             </TooltipTrigger>
-            <TooltipContent>Remove member</TooltipContent>
+            <TooltipContent>Remove member from workspace</TooltipContent>
           </Tooltip>
         </TooltipProvider>
-      }
-      extraInfo={
-        <dl className="py-2 border-y border-border mb-5 ">
-          {/* <div className="flex items-center gap-1">
-            <dt className="select-none">Username: </dt>
-            <dd className="text-grey dark:text-foreground">
-              {credentials.username ?? (
-                <span className="text-grey font-mono">N/A</span>
-              )}
-            </dd>
-          </div>
-          <div className="flex items-center gap-1">
-            <dt className="select-none">URL:</dt>
-            <dd className="text-link">
-              <a
-                href={credentials.url}
-                target="_blank"
-                className="underline text-link inline-flex items-center gap-1"
-              >
-                <span>{credentials.url}</span>
-                <ExternalLinkIcon size={16} className="flex-none" />
-              </a>
-            </dd>
-          </div> */}
-        </dl>
       }
     />
   );
