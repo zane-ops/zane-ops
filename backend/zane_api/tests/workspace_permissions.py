@@ -355,6 +355,135 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
         )
         self.assertEqual(WorkspaceRole.OWNER, owner_membership.role)
 
+    def test_admin_cannot_edit_another_admin_permissions(self):
+        admin = self.loginUser()
+
+        workspace = cast(Workspace, Workspace.objects.first())
+        WorkspaceMembership.objects.filter(user=admin, workspace=workspace).update(
+            role=WorkspaceRole.ADMIN
+        )
+
+        other_admin = User.objects.create_user(username="mohai", password="password")
+        other_membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.ADMIN,
+            user=other_admin,
+            workspace=workspace,
+        )
+
+        data = {"role": WorkspaceRole.MEMBER}
+
+        response = self.client.put(
+            reverse(
+                "zane_api:workspace.edit_membership_permissions",
+                kwargs={"membership_id": other_membership.pk},
+            ),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+        other_membership = WorkspaceMembership.objects.get(
+            user=other_admin, workspace=workspace
+        )
+        self.assertEqual(WorkspaceRole.ADMIN, other_membership.role)
+
+    def test_admin_cannot_promote_a_member_to_admin(self):
+        admin = self.loginUser()
+
+        workspace = cast(Workspace, Workspace.objects.first())
+        WorkspaceMembership.objects.filter(user=admin, workspace=workspace).update(
+            role=WorkspaceRole.ADMIN
+        )
+
+        user = User.objects.create_user(username="mohai", password="password")
+        membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.MEMBER,
+            user=user,
+            workspace=workspace,
+        )
+
+        data = {"role": WorkspaceRole.ADMIN}
+
+        response = self.client.put(
+            reverse(
+                "zane_api:workspace.edit_membership_permissions",
+                kwargs={"membership_id": membership.pk},
+            ),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+        membership = WorkspaceMembership.objects.get(user=user, workspace=workspace)
+        self.assertEqual(WorkspaceRole.MEMBER, membership.role)
+
+    def test_admin_can_edit_a_member_permissions(self):
+        admin = self.loginUser()
+
+        workspace = cast(Workspace, Workspace.objects.first())
+        WorkspaceMembership.objects.filter(user=admin, workspace=workspace).update(
+            role=WorkspaceRole.ADMIN
+        )
+
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops", "env_slug": "production"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        project = Project.objects.get(slug="zaneops")
+
+        user = User.objects.create_user(username="mohai", password="password")
+        membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.MEMBER,
+            user=user,
+            workspace=workspace,
+        )
+
+        data = {
+            "role": WorkspaceRole.GUEST,
+            "accessible_project_ids": [project.id],
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:workspace.edit_membership_permissions",
+                kwargs={"membership_id": membership.pk},
+            ),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        membership = WorkspaceMembership.objects.get(user=user, workspace=workspace)
+        self.assertEqual(WorkspaceRole.GUEST, membership.role)
+
+    def test_owner_can_edit_an_admin_permissions(self):
+        self.loginUser()
+
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        user = User.objects.create_user(username="mohai", password="password")
+        membership = WorkspaceMembership.objects.create(
+            role=WorkspaceRole.ADMIN,
+            user=user,
+            workspace=workspace,
+        )
+
+        data = {"role": WorkspaceRole.MEMBER}
+
+        response = self.client.put(
+            reverse(
+                "zane_api:workspace.edit_membership_permissions",
+                kwargs={"membership_id": membership.pk},
+            ),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        membership = WorkspaceMembership.objects.get(user=user, workspace=workspace)
+        self.assertEqual(WorkspaceRole.MEMBER, membership.role)
+
 
 class RemoveUserFromWorkspaceViewtests(AuthAPITestCase):
     def test_remove_user_from_workspace(self):

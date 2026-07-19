@@ -143,6 +143,18 @@ class EditWorkspaceMemberPermissionsAPIView(APIView):
                 "You cannot edit your own permissions in the workspace."
             )
 
+        current_membership = WorkspaceMembership.objects.get(
+            workspace=self.request.workspace,  # type: ignore
+            user=self.request.user,
+        )
+        if (
+            current_membership.role == WorkspaceRole.ADMIN
+            and membership.role >= WorkspaceRole.ADMIN
+        ):
+            raise ResourceConflict(
+                "You cannot edit the permissions of another admin of the workspace."
+            )
+
         form = WorkspaceEditPermissionsRequestSerializer(
             data=request.data,
             context=dict(
@@ -152,6 +164,14 @@ class EditWorkspaceMemberPermissionsAPIView(APIView):
         form.is_valid(raise_exception=True)
 
         data = cast(dict, form.validated_data)
+
+        if (
+            current_membership.role < WorkspaceRole.OWNER
+            and data["role"] >= WorkspaceRole.ADMIN
+        ):
+            raise ResourceConflict(
+                "Only the workspace owner can promote a user to admin."
+            )
 
         membership.role = data["role"]
         membership.save()
