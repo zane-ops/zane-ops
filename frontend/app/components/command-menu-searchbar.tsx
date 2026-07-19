@@ -131,20 +131,26 @@ export function CommandMenuSearchbar({ onSelect }: CommandMenuSearchbarProps) {
 
                   switch (resource.type) {
                     case "project":
-                      targetUrl = href("/project/:projectSlug/:envSlug", {
-                        projectSlug: resource.slug,
-                        envSlug: "production"
-                      });
+                      targetUrl = href(
+                        "/workspace/project/:projectSlug/:envSlug",
+                        {
+                          projectSlug: resource.slug,
+                          envSlug: "production"
+                        }
+                      );
                       break;
                     case "environment":
-                      targetUrl = href("/project/:projectSlug/:envSlug", {
-                        projectSlug: resource.project_slug,
-                        envSlug: resource.name
-                      });
+                      targetUrl = href(
+                        "/workspace/project/:projectSlug/:envSlug",
+                        {
+                          projectSlug: resource.project_slug,
+                          envSlug: resource.name
+                        }
+                      );
                       break;
                     case "service":
                       targetUrl = href(
-                        "/project/:projectSlug/:envSlug/services/:serviceSlug",
+                        "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
                         {
                           projectSlug: resource.project_slug,
                           envSlug: resource.environment,
@@ -154,7 +160,7 @@ export function CommandMenuSearchbar({ onSelect }: CommandMenuSearchbarProps) {
                       break;
                     case "compose_stack":
                       targetUrl = href(
-                        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+                        "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
                         {
                           projectSlug: resource.project_slug,
                           envSlug: resource.environment,

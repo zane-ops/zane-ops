@@ -115,7 +115,10 @@ export default function CreateComposeStackFromContentsPage({
       )}
     >
       <Link
-        to={href("/project/:projectSlug/:envSlug/create-compose-stack", params)}
+        to={href(
+          "/workspace/project/:projectSlug/:envSlug/create-compose-stack",
+          params
+        )}
         className={cn(
           "text-sm text-grey mx-auto mb-2",
           "flex items-center gap-0.5 hover:underline",
@@ -418,7 +421,7 @@ function StackCreatedStep({
           <Button asChild className="flex-1" variant="outline">
             <Link
               to={href(
-                "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+                "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
                 {
                   composeStackSlug,
                   envSlug,
@@ -467,7 +470,7 @@ function StackDeployedStep({
           <Button asChild className="flex-1">
             <Link
               to={href(
-                "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
+                "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
                 {
                   composeStackSlug,
                   envSlug,

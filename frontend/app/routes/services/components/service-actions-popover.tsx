@@ -60,11 +60,14 @@ export function ServiceActionsPopover({
     if (deployFetcher.state === "idle" && deployFetcher.data) {
       if (!deployFetcher.data.errors) {
         navigate(
-          href("/project/:projectSlug/:envSlug/services/:serviceSlug", {
-            projectSlug,
-            envSlug,
-            serviceSlug: service.slug
-          })
+          href(
+            "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+            {
+              projectSlug,
+              envSlug,
+              serviceSlug: service.slug
+            }
+          )
         );
       }
     }
@@ -334,11 +337,14 @@ async function toggleStateToast({
   const serviceLink = (
     <Link
       className="text-link underline inline break-all"
-      to={href("/project/:projectSlug/:envSlug/services/:serviceSlug", {
-        projectSlug,
-        envSlug,
-        serviceSlug
-      })}
+      to={href(
+        "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+        {
+          projectSlug,
+          envSlug,
+          serviceSlug
+        }
+      )}
     >
       {projectSlug}/{envSlug}/{serviceSlug}
     </Link>

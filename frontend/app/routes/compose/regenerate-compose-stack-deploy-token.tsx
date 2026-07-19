@@ -11,7 +11,7 @@ import { getCurrentWorkspace } from "~/lib/workspace-store";
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     href(
-      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
+      "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
       params
     )
   );

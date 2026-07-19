@@ -65,7 +65,10 @@ export default function CreatePrivateGitServicePage({
     >
       <div className="flex w-full flex-col gap-1 md:w-1/2">
         <Link
-          to={href("/project/:projectSlug/:envSlug/create-service", params)}
+          to={href(
+            "/workspace/project/:projectSlug/:envSlug/create-service",
+            params
+          )}
           className={cn(
             "text-sm text-grey",
             "flex items-center gap-0.5 hover:underline"
@@ -114,7 +117,9 @@ export default function CreatePrivateGitServicePage({
                     icon={GithubIcon}
                     text="GitHub app"
                     onClick={() => {
-                      navigate(href("/settings/git-apps/create-github-app"));
+                      navigate(
+                        href("/workspace/settings/git-apps/create-github-app")
+                      );
                     }}
                   />
 
@@ -122,7 +127,9 @@ export default function CreatePrivateGitServicePage({
                     icon={GitlabIcon}
                     text="gitlab app"
                     onClick={() => {
-                      navigate(href("/settings/git-apps/create-gitlab-app"));
+                      navigate(
+                        href("/workspace/settings/git-apps/create-gitlab-app")
+                      );
                     }}
                   />
                 </MenubarContent>

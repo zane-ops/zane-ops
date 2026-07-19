@@ -10,7 +10,7 @@ import type { Route } from "./+types/discard-compose-stack-change";
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     href(
-      `/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug`,
+      `/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug`,
       params
     )
   );

@@ -55,7 +55,7 @@ export function WorkspaceMembershipListHeaderDropdown({
         asChild
         className="inline-flex gap-1.5 py-1 px-2 rounded-sm text-sm h-8"
       >
-        <Link to={href("/")}>
+        <Link to={href("/workspace")}>
           <div
             style={
               {

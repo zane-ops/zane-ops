@@ -62,7 +62,7 @@ export function ComposeStackChangesModal({
         setIsOpen(false);
         navigate(
           href(
-            "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
+            "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
             {
               ...params,
               composeStackSlug: stack.slug

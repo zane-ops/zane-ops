@@ -3,13 +3,8 @@ import { Outlet } from "react-router";
 import { Header } from "~/components/header/header";
 import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
 import { userQueries } from "~/lib/queries";
-import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/home-layout";
-
-export async function clientLoader({}: Route.ClientLoaderArgs) {
-  return;
-}
 
 export default function HomeLayoutPage({
   matches: {

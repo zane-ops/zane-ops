@@ -338,7 +338,7 @@ function ToggleServiceForm({
 
     await fetcher.submit(formData, {
       action: href(
-        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
+        "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
         { ...params }
       ),
       method: "POST"
@@ -391,7 +391,7 @@ async function toggleStateToast({
     <Link
       className="text-link underline inline break-all"
       to={href(
-        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/services/:serviceSlug",
+        "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/services/:serviceSlug",
         { ...params }
       )}
     >

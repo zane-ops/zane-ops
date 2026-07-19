@@ -37,7 +37,7 @@ export function ComposeStackSlugForm({
     if (fetcher.state === "idle" && newSlug) {
       navigate(
         href(
-          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
+          "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
           {
             projectSlug: project_slug,
             envSlug: env_slug,

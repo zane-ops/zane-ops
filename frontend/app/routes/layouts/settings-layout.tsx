@@ -32,7 +32,7 @@ export default function SettingsLayoutPage({
   const sidebarNavItems: NavItem[] = [
     {
       title: "General",
-      href: href("/settings"),
+      href: href("/workspace/settings"),
       icon: Building2Icon
     }
   ];
@@ -40,14 +40,14 @@ export default function SettingsLayoutPage({
   if (hasMinRole(user, "Member")) {
     sidebarNavItems.push({
       title: "Team",
-      href: href("/settings/team"),
+      href: href("/workspace/settings/team"),
       icon: UsersIcon
     });
   }
   if (hasMinRole(user, "Admin")) {
     sidebarNavItems.push({
       title: "User Invitations",
-      href: href("/settings/invitations"),
+      href: href("/workspace/settings/invitations"),
       icon: MailIcon
     });
   }
@@ -55,12 +55,12 @@ export default function SettingsLayoutPage({
   if (hasMinRole(user, "Owner")) {
     sidebarNavItems.push({
       title: "Git",
-      href: href("/settings/git-apps"),
+      href: href("/workspace/settings/git-apps"),
       icon: GitBranchIcon
     });
     sidebarNavItems.push({
       title: "Shared Credentials",
-      href: href("/settings/shared-credentials"),
+      href: href("/workspace/settings/shared-credentials"),
       icon: CreditCardIcon
     });
 
@@ -106,7 +106,7 @@ export default function SettingsLayoutPage({
                       )}
                       aria-disabled={item.disabled}
                       // if we don't do this, the default route "/settings" would always be active
-                      end={item.href === href("/settings")}
+                      end={item.href === href("/workspace/settings")}
                     >
                       <item.icon size={15} className="text-grey flex-none" />
                       {item.title}

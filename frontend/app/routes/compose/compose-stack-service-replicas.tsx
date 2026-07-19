@@ -39,7 +39,7 @@ export default function ComposeStackServiceReplicasPage({
     return (
       <Navigate
         to={href(
-          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+          "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
           params
         )}
       />

@@ -8,7 +8,7 @@ import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/bulk-deploy-services";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
-  throw redirect(href("/project/:projectSlug/:envSlug", params));
+  throw redirect(href("/workspace/project/:projectSlug/:envSlug", params));
 }
 
 export async function clientAction({

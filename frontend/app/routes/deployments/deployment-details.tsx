@@ -208,7 +208,7 @@ export default function DeploymentDetailsPage({
                   (Redeploy of&nbsp;
                   <Link
                     to={href(
-                      "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
+                      "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
                       {
                         projectSlug: project_slug,
                         envSlug: env_slug,

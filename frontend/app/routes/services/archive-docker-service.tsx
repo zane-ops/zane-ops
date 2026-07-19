@@ -15,9 +15,12 @@ import type { Route } from "./+types/archive-docker-service";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href("/project/:projectSlug/:envSlug/services/:serviceSlug/settings", {
-      ...params
-    })
+    href(
+      "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/settings",
+      {
+        ...params
+      }
+    )
   );
 }
 
@@ -100,7 +103,7 @@ export async function clientAction({
     )
   });
   throw redirect(
-    href("/project/:projectSlug/:envSlug", {
+    href("/workspace/project/:projectSlug/:envSlug", {
       projectSlug: project_slug,
       envSlug: env_slug
     })

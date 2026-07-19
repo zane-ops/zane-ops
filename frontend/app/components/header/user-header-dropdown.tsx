@@ -84,7 +84,7 @@ export function UserHeaderDropdown(props: UserDropdownProps) {
               <DropdownMenuItem
                 className="my-2"
                 onClick={() => {
-                  navigate(href("/settings"));
+                  navigate(href("/workspace/settings"));
                 }}
               >
                 <SettingsIcon />

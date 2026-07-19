@@ -64,7 +64,7 @@ export async function clientAction({
     queryKey: projectQueries.list({ workspaceId }).queryKey.slice(0, 3) // 0...3 include the workspace id & project list key
   });
   throw redirect(
-    href(`/project/:projectSlug/:envSlug`, {
+    href(`/workspace/project/:projectSlug/:envSlug`, {
       ...params,
       projectSlug: apiResponse.data.slug,
       envSlug: "production"
@@ -86,7 +86,7 @@ export default function CreateProjectPage({
     >
       <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
         <Link
-          to={href("/")}
+          to={href("/workspace")}
           className={cn(
             "text-sm text-grey w-full",
             "flex items-center gap-0.5 hover:underline"

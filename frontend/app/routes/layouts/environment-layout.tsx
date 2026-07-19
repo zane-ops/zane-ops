@@ -143,7 +143,7 @@ export default function EnvironmentLayout({
       <div className="pt-0">
         <nav>
           <Link
-            to={href("/project/:projectSlug/settings", {
+            to={href("/workspace/project/:projectSlug/settings", {
               projectSlug: project.slug
             })}
             className="underline inline-flex gap-0.5 px-0 items-center text-sm"
@@ -161,7 +161,7 @@ export default function EnvironmentLayout({
           <div className="flex items-start gap-4">
             <div className={cn("flex gap-2 items-center flex-wrap")}>
               <Link
-                to={href("/project/:projectSlug/:envSlug", {
+                to={href("/workspace/project/:projectSlug/:envSlug", {
                   ...params,
                   envSlug: "production"
                 })}
@@ -220,7 +220,7 @@ export default function EnvironmentLayout({
                     onClick={() => {
                       navigate(
                         href(
-                          "/project/:projectSlug/:envSlug/create-service",
+                          "/workspace/project/:projectSlug/:envSlug/create-service",
                           params
                         )
                       );
@@ -233,7 +233,7 @@ export default function EnvironmentLayout({
                     onClick={() => {
                       navigate(
                         href(
-                          "/project/:projectSlug/:envSlug/create-compose-stack",
+                          "/workspace/project/:projectSlug/:envSlug/create-compose-stack",
                           params
                         )
                       );
@@ -314,7 +314,7 @@ export function ErrorBoundary() {
             <h1 className="text-3xl font-bold">Error 404</h1>
             <p className="text-lg">This project does not exist</p>
           </div>
-          <Link to={href("/")} prefetch="intent">
+          <Link to={href("/workspace")} prefetch="intent">
             <Button>Go home</Button>
           </Link>
         </div>

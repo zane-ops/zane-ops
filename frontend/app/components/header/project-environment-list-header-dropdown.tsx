@@ -45,7 +45,7 @@ export function ProjectEnvironmentListHeaderHeaderDropdown(
         className="inline-flex gap-1.5 py-0 px-2 rounded-sm text-sm h-8 text-foreground"
       >
         <Link
-          to={href("/project/:projectSlug/:envSlug", {
+          to={href("/workspace/project/:projectSlug/:envSlug", {
             projectSlug,
             envSlug
           })}
@@ -96,7 +96,7 @@ export function ProjectEnvironmentListHeaderHeaderDropdown(
                   className="flex items-start gap-2 py-2 pl-2.5 pr-3"
                   onClick={() =>
                     navigate(
-                      href("/project/:projectSlug/:envSlug", {
+                      href("/workspace/project/:projectSlug/:envSlug", {
                         projectSlug,
                         envSlug: env.name
                       })

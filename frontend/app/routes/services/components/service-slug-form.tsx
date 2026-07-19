@@ -35,11 +35,14 @@ export function ServiceSlugForm({
 
     if (fetcher.state === "idle" && fetcher.data?.data?.slug) {
       navigate(
-        href("/project/:projectSlug/:envSlug/services/:serviceSlug/settings", {
-          projectSlug: project_slug,
-          envSlug: env_slug,
-          serviceSlug: fetcher.data.data.slug
-        }),
+        href(
+          "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/settings",
+          {
+            projectSlug: project_slug,
+            envSlug: env_slug,
+            serviceSlug: fetcher.data.data.slug
+          }
+        ),
         {
           replace: true
         }

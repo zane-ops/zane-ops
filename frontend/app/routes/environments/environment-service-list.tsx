@@ -150,7 +150,7 @@ export default function EnvironmentServiceListPage({
                   method="post"
                   className="bg-popover flex flex-col items-stretch"
                   action={href(
-                    "/project/:projectSlug/:envSlug/bulk-deploy-services",
+                    "/workspace/project/:projectSlug/:envSlug/bulk-deploy-services",
                     {
                       envSlug: env_slug,
                       projectSlug: project_slug
@@ -183,7 +183,7 @@ export default function EnvironmentServiceListPage({
                   method="post"
                   className="bg-popover flex flex-col items-stretch"
                   action={href(
-                    "/project/:projectSlug/:envSlug/bulk-toggle-service-state",
+                    "/workspace/project/:projectSlug/:envSlug/bulk-toggle-service-state",
                     {
                       envSlug: env_slug,
                       projectSlug: project_slug
@@ -323,7 +323,7 @@ export default function EnvironmentServiceListPage({
                           onClick={() => {
                             navigate(
                               href(
-                                "/project/:projectSlug/:envSlug/create-service",
+                                "/workspace/project/:projectSlug/:envSlug/create-service",
                                 {
                                   projectSlug: project_slug,
                                   envSlug: env_slug
@@ -339,7 +339,7 @@ export default function EnvironmentServiceListPage({
                           onClick={() => {
                             navigate(
                               href(
-                                "/project/:projectSlug/:envSlug/create-compose-stack",
+                                "/workspace/project/:projectSlug/:envSlug/create-compose-stack",
                                 {
                                   projectSlug: project_slug,
                                   envSlug: env_slug

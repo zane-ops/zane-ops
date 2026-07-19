@@ -738,7 +738,7 @@ async function archiveEnvironment(
   });
 
   throw redirect(
-    href("/project/:projectSlug/:envSlug", {
+    href("/workspace/project/:projectSlug/:envSlug", {
       projectSlug: project_slug,
       envSlug: "production"
     })
@@ -774,7 +774,7 @@ function EnvironmentDeleteFormDialog({ environment }: { environment: string }) {
 
       setIsOpen(false);
       navigate(
-        href("/project/:projectSlug/settings/environments", {
+        href("/workspace/project/:projectSlug/settings/environments", {
           projectSlug: params.projectSlug!
         }),
         { replace: true }

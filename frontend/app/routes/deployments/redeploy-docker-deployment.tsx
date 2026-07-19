@@ -9,7 +9,10 @@ import type { Route } from "./+types/redeploy-docker-deployment";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href("/project/:projectSlug/:envSlug/services/:serviceSlug", params)
+    href(
+      "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+      params
+    )
   );
 }
 
@@ -43,7 +46,10 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
       closeButton: true
     });
     throw redirect(
-      href("/project/:projectSlug/:envSlug/services/:serviceSlug", params)
+      href(
+        "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+        params
+      )
     );
   }
 
@@ -62,6 +68,9 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     closeButton: true
   });
   throw redirect(
-    href("/project/:projectSlug/:envSlug/services/:serviceSlug", params)
+    href(
+      "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+      params
+    )
   );
 }

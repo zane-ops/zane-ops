@@ -8,7 +8,7 @@ import { getCsrfTokenHeader } from "~/lib/utils";
 import type { Route } from "./+types/switch-workspace";
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
-  throw redirect(href("/"));
+  throw redirect(href("/workspace"));
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
@@ -43,5 +43,5 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     queryClient.invalidateQueries(userQueries.memberships)
   ]);
 
-  throw redirect(href("/"));
+  throw redirect(href("/workspace"));
 }

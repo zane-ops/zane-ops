@@ -20,8 +20,6 @@ import { serverQueries, userQueries } from "~/lib/queries";
 import { cn, hasMinRole } from "~/lib/utils";
 
 import type { ServerSettings } from "~/api/types";
-import { Header } from "~/components/header/header";
-import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
 import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
 import { getQueryClient } from "~/lib/query-client";
 import { syncWorkspaceStore } from "~/lib/workspace-store";
@@ -43,11 +41,10 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   if (!user) {
     let redirectPathName = href("/login");
     const url = new URL(request.url);
-    if (url.pathname !== "/" && url.pathname !== "/login") {
-      const params = new URLSearchParams([["redirect_to", url.pathname]]);
 
-      redirectPathName = [href("/login"), "?", params.toString()].join("");
-    }
+    const params = new URLSearchParams([["redirect_to", url.pathname]]);
+
+    redirectPathName = [href("/login"), "?", params.toString()].join("");
 
     console.log(
       `[main-layout/clientLoader] redirect to \`/${redirectPathName}\``
@@ -68,9 +65,7 @@ export default function MainLayout({ loaderData }: Route.ComponentProps) {
     initialData: loaderData.user
   });
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
     <div className="min-h-screen flex flex-col justify-between">
@@ -82,44 +77,6 @@ export default function MainLayout({ loaderData }: Route.ComponentProps) {
 
       {hasMinRole(user, "ServerAdmin") && <ZaneUpdateNotifier />}
     </div>
-  );
-}
-
-function EmptyWorkspacesHome({
-  user
-}: { user: Route.ComponentProps["loaderData"]["user"] }) {
-  return (
-    <>
-      <Header rigthSlot={<UserHeaderDropdown user={user} />} />
-      <main
-        className={cn(
-          "grow container p-6 relative overflow-y-clip",
-          "flex flex-col gap-10",
-          !import.meta.env.PROD ? "my-14" : "my-7"
-        )}
-      >
-        <h1 className="text-2xl font-medium">Dashboard</h1>
-
-        <div
-          className={cn(
-            "flex flex-col items-center justify-center gap-2 px-6 py-20",
-            "border-border rounded-lg w-full border-dashed border-1 text-grey",
-            "col-span-full"
-          )}
-        >
-          <h3 className="text-2xl font-medium text-card-foreground">
-            Welcome to ZaneOps
-          </h3>
-          <p>
-            Your account isn't part of any workspace yet, so there's nothing to
-            show here.
-          </p>
-          <p>
-            Ask your administrator to invite you to a workspace to get started.
-          </p>
-        </div>
-      </main>
-    </>
   );
 }
 

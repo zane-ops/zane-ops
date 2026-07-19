@@ -66,7 +66,7 @@ export default function ProjectLayout({
         <div className="md:col-span-12">
           <div className="flex items-center gap-4">
             <Link
-              to={href("/project/:projectSlug/:envSlug", {
+              to={href("/workspace/project/:projectSlug/:envSlug", {
                 ...params,
                 envSlug: "production"
               })}

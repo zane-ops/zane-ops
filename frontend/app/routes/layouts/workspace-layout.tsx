@@ -1,4 +1,4 @@
-import { Outlet } from "react-router";
+import { Outlet, href, redirect } from "react-router";
 import { CommandBarTrigger } from "~/components/commandbar/commandbar-trigger";
 import { Header } from "~/components/header/header";
 import { ProjectEnvironmentListHeaderHeaderDropdown } from "~/components/header/project-environment-list-header-dropdown";
@@ -11,7 +11,9 @@ import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/workspace-layout";
 
 export function meta() {
-  return [metaTitle("Dashboard")] satisfies ReturnType<Route.MetaFunction>;
+  return [
+    metaTitle("Workspace Dashboard")
+  ] satisfies ReturnType<Route.MetaFunction>;
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
@@ -23,13 +25,16 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 
   const workspace = user?.membership?.workspace;
 
+  if (!workspace) {
+    console.log("[workspace-layout/clientLoader] redirect to `/`");
+    throw redirect(href("/"));
+  }
+
   const [projects, currentProject] = await Promise.all([
-    workspace
-      ? queryClient.ensureQueryData(
-          projectQueries.list({ workspaceId: workspace.id })
-        )
-      : [],
-    params.projectSlug && workspace
+    queryClient.ensureQueryData(
+      projectQueries.list({ workspaceId: workspace.id })
+    ),
+    params.projectSlug
       ? queryClient.ensureQueryData(
           projectQueries.single(workspace.id, params.projectSlug)
         )
@@ -37,7 +42,6 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   ]);
 
   return {
-    user,
     workspace,
     projects,
     currentProject,
@@ -47,7 +51,12 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 
 export default function WorkspaceLayout({
   loaderData,
-  params
+  params,
+  matches: {
+    "1": {
+      loaderData: { user }
+    }
+  }
 }: Route.ComponentProps) {
   return (
     <>
@@ -67,10 +76,7 @@ export default function WorkspaceLayout({
             />
           ) : null
         ]}
-        rigthSlot={[
-          <CommandBarTrigger />,
-          <UserHeaderDropdown user={loaderData.user} />
-        ]}
+        rigthSlot={[<CommandBarTrigger />, <UserHeaderDropdown user={user} />]}
       />
       <main
         className={cn(

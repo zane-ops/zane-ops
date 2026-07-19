@@ -108,7 +108,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
               <Link
                 className="text-link underline"
                 to={href(
-                  "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
+                  "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
                   {
                     projectSlug: routeParams.projectSlug!,
                     envSlug: routeParams.envSlug!,

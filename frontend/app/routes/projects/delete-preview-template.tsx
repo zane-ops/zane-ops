@@ -19,10 +19,13 @@ import type { Route } from "./+types/delete-preview-template";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href("/project/:projectSlug/settings/preview-templates/:templateSlug", {
-      projectSlug: params.projectSlug,
-      templateSlug: params.templateSlug
-    })
+    href(
+      "/workspace/project/:projectSlug/settings/preview-templates/:templateSlug",
+      {
+        projectSlug: params.projectSlug,
+        templateSlug: params.templateSlug
+      }
+    )
   );
 }
 
@@ -47,7 +50,7 @@ export function DeleteConfirmationFormDialog() {
         <fetcher.Form
           method="post"
           action={href(
-            "/project/:projectSlug/settings/preview-templates/:templateSlug/delete",
+            "/workspace/project/:projectSlug/settings/preview-templates/:templateSlug/delete",
             params
           )}
         >
@@ -136,7 +139,7 @@ export async function clientAction({
     )
   });
   throw redirect(
-    href("/project/:projectSlug/settings/preview-templates", {
+    href("/workspace/project/:projectSlug/settings/preview-templates", {
       projectSlug: params.projectSlug
     })
   );

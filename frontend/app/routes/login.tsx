@@ -48,6 +48,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
       redirectTo = redirect_to;
     }
 
+    console.log(`[login/clientLoader] redirect to \`/${redirectTo}\``);
     throw redirect(redirectTo);
   }
   return;

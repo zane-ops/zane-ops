@@ -139,7 +139,7 @@ export default function DeploymentLayoutPage({
               <span className="text-grey sr-only md:not-sr-only flex-none">
                 <Link
                   to={href(
-                    "/project/:projectSlug/:envSlug/services/:serviceSlug",
+                    "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
                     params
                   )}
                   className="hover:underline"

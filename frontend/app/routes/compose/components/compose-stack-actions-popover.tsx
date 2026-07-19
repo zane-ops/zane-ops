@@ -58,7 +58,7 @@ export function ComposeStackActionsPopover({
       if (!deployFetcher.data.errors) {
         navigate(
           href(
-            "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
+            "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
             {
               projectSlug,
               envSlug,
@@ -244,7 +244,7 @@ async function toggleStateToast({
     <Link
       className="text-link underline inline break-all"
       to={href(
-        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+        "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
         {
           projectSlug,
           envSlug,

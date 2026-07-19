@@ -63,7 +63,10 @@ export async function clientLoader({
   if (!authedUser && invitationLink.has_existing_account) {
     let redirectPathName = href("/login");
     const url = new URL(request.url);
-    if (url.pathname !== "/" && url.pathname !== "/login") {
+    if (
+      url.pathname !== href("/workspace") &&
+      url.pathname !== href("/login")
+    ) {
       const params = new URLSearchParams([["redirect_to", url.pathname]]);
 
       redirectPathName = [href("/login"), "?", params.toString()].join("");
@@ -466,7 +469,7 @@ async function registerToWorkspace(
     closeButton: true
   });
 
-  throw redirect(href("/"));
+  throw redirect(href("/workspace"));
 }
 
 async function reviewWorkspaceInvitation(
@@ -516,5 +519,5 @@ async function reviewWorkspaceInvitation(
     closeButton: true
   });
 
-  throw redirect(href("/"));
+  throw redirect(href("/workspace"));
 }

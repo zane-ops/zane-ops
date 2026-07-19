@@ -9,7 +9,10 @@ import type { Route } from "./+types/deploy-git-service";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href("/project/:projectSlug/:envSlug/services/:serviceSlug", params)
+    href(
+      "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+      params
+    )
   );
 }
 

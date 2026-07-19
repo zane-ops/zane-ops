@@ -85,7 +85,9 @@ export default function GitConnectorsListPage({
                 icon={GithubIcon}
                 text="GitHub app"
                 onClick={() => {
-                  navigate(href("/settings/git-apps/create-github-app"));
+                  navigate(
+                    href("/workspace/settings/git-apps/create-github-app")
+                  );
                 }}
               />
 
@@ -93,7 +95,9 @@ export default function GitConnectorsListPage({
                 icon={GitlabIcon}
                 text="gitlab app"
                 onClick={() => {
-                  navigate(href("/settings/git-apps/create-gitlab-app"));
+                  navigate(
+                    href("/workspace/settings/git-apps/create-gitlab-app")
+                  );
                 }}
               />
             </MenubarContent>

@@ -10,9 +10,12 @@ import type { Route } from "./+types/cleanup-deploy-queue";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href("/project/:projectSlug/:envSlug/services/:serviceSlug/settings", {
-      ...params
-    })
+    href(
+      "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/settings",
+      {
+        ...params
+      }
+    )
   );
 }
 

@@ -21,7 +21,7 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
         <div className="card  flex  md:w-[50%] lg:w-[30%] w-full flex-col gap-6">
           <div className="flex flex-col gap-2">
             <Link
-              to={href("/project/:projectSlug/:envSlug", params)}
+              to={href("/workspace/project/:projectSlug/:envSlug", params)}
               className={cn(
                 "text-sm text-grey w-full",
                 "flex items-center gap-0.5 hover:underline"

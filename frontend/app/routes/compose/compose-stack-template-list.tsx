@@ -73,7 +73,7 @@ export default function ComposeStackTemplateListPage({
       <div className="flex flex-col">
         <Link
           to={href(
-            "/project/:projectSlug/:envSlug/create-compose-stack",
+            "/workspace/project/:projectSlug/:envSlug/create-compose-stack",
             params
           )}
           className={cn(

@@ -8,7 +8,7 @@ import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/workspace-invitation-details";
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
-  throw redirect(href("/settings/invitations"));
+  throw redirect(href("/workspace/settings/invitations"));
 }
 
 export async function clientAction({
@@ -67,7 +67,7 @@ async function deleteInvitation(params: Route.ComponentProps["params"]) {
   await queryClient.invalidateQueries({
     queryKey: workspaceQueries.invitations(workspace.id).queryKey.slice(0, 3)
   });
-  throw redirect(href("/settings/invitations"));
+  throw redirect(href("/workspace/settings/invitations"));
 }
 
 async function regenerateInvitationLink(

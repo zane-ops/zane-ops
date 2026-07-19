@@ -77,7 +77,10 @@ export default function CreateServicePage({
       )}
     >
       <Link
-        to={href("/project/:projectSlug/:envSlug/create-service", params)}
+        to={href(
+          "/workspace/project/:projectSlug/:envSlug/create-service",
+          params
+        )}
         className={cn(
           "text-sm text-grey mx-auto mb-2",
           "flex items-center gap-0.5 hover:underline",
@@ -980,11 +983,14 @@ function StepServiceCreated({
 
           <Button asChild className="flex-1" variant="outline">
             <Link
-              to={href("/project/:projectSlug/:envSlug/services/:serviceSlug", {
-                projectSlug,
-                envSlug,
-                serviceSlug
-              })}
+              to={href(
+                "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+                {
+                  projectSlug,
+                  envSlug,
+                  serviceSlug
+                }
+              )}
               className="flex gap-2  items-center"
             >
               Go to service details <ArrowRightIcon size={20} />
@@ -1026,7 +1032,7 @@ function StepServiceDeployed({
           <Button asChild className="flex-1">
             <Link
               to={href(
-                "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
+                "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
                 {
                   projectSlug,
                   envSlug,

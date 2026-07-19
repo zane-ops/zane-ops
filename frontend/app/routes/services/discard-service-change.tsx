@@ -9,7 +9,7 @@ import { type Route } from "./+types/discard-service-change";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href("/project/:projectSlug/:envSlug/services/:serviceSlug", {
+    href("/workspace/project/:projectSlug/:envSlug/services/:serviceSlug", {
       ...params
     })
   );

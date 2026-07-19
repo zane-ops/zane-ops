@@ -8,7 +8,7 @@ import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/github-app-details";
 
 export function clientLoader() {
-  throw redirect(href("/settings/git-apps"));
+  throw redirect(href("/workspace/settings/git-apps"));
 }
 
 export async function clientAction({

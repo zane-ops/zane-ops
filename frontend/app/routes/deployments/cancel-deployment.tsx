@@ -10,7 +10,7 @@ import type { Route } from "./+types/cancel-deployment";
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     href(
-      `/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash`,
+      `/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash`,
       params
     )
   );
@@ -54,7 +54,10 @@ export async function clientAction({
     });
     if (shouldRedirect) {
       throw redirect(
-        href(`/project/:projectSlug/:envSlug/services/:serviceSlug`, params)
+        href(
+          `/workspace/project/:projectSlug/:envSlug/services/:serviceSlug`,
+          params
+        )
       );
     }
     return;
@@ -77,7 +80,10 @@ export async function clientAction({
   });
   if (shouldRedirect) {
     throw redirect(
-      href(`/project/:projectSlug/:envSlug/services/:serviceSlug`, params)
+      href(
+        `/workspace/project/:projectSlug/:envSlug/services/:serviceSlug`,
+        params
+      )
     );
   }
 }

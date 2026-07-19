@@ -9,7 +9,7 @@ import { durationToMs, getCsrfTokenHeader, wait } from "~/lib/utils";
 import type { Route } from "./+types/trigger-update";
 
 export function clientLoader({}: Route.ClientLoaderArgs) {
-  throw redirect(href("/"));
+  throw redirect(href("/workspace"));
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {

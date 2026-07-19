@@ -126,7 +126,7 @@ export default function ComposeStackDeploymentDetailsPage({
                   (Redeploy of&nbsp;
                   <Link
                     to={href(
-                      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
+                      "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
                       params
                     )}
                     className="text-link underline"

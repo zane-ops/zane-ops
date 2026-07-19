@@ -854,7 +854,7 @@ export function RecentDeploymentCard({
           to={
             isPending || status === "FAILED" || status === "CANCELLED"
               ? href(
-                  "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
+                  "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
                   {
                     deploymentHash: hash,
                     projectSlug: project_slug,
@@ -863,7 +863,7 @@ export function RecentDeploymentCard({
                   }
                 )
               : href(
-                  "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
+                  "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
                   {
                     deploymentHash: hash,
                     projectSlug: project_slug,

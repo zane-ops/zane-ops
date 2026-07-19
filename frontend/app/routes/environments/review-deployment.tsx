@@ -190,7 +190,7 @@ export async function clientAction({
       description: `No pending environment to review exists at \`${params.projectSlug}/${params.envSlug}\` `,
       closeButton: true
     });
-    throw redirect(href("/"));
+    throw redirect(href("/workspace"));
   }
 
   const formData = await request.formData();

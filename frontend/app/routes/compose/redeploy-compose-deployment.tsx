@@ -10,7 +10,7 @@ import type { Route } from "./+types/redeploy-compose-deployment";
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     href(
-      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
+      "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
       params
     )
   );
@@ -50,7 +50,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     });
     throw redirect(
       href(
-        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
+        "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
         params
       )
     );

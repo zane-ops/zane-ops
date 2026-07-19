@@ -286,7 +286,7 @@ async function updateProject(
       apiResponse.data
     );
     throw redirect(
-      href("/project/:projectSlug/settings", {
+      href("/workspace/project/:projectSlug/settings", {
         projectSlug: apiResponse.data.slug
       })
     );
@@ -335,5 +335,5 @@ async function archiveProject(
       </span>
     )
   });
-  throw redirect(href("/"));
+  throw redirect(href("/workspace"));
 }

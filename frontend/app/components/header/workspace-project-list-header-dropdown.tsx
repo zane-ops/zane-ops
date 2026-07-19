@@ -66,7 +66,7 @@ export function WorkspaceProjectListHeaderDropdown(
         className="inline-flex gap-1.5 px-2 py-1 rounded-sm text-sm h-8"
       >
         <Link
-          to={href("/project/:projectSlug/:envSlug", {
+          to={href("/workspace/project/:projectSlug/:envSlug", {
             projectSlug: params.projectSlug,
             envSlug: "production"
           })}
@@ -154,7 +154,7 @@ export function WorkspaceProjectListHeaderDropdown(
                       value={project.slug}
                       onSelect={() => {
                         navigate(
-                          href("/project/:projectSlug/:envSlug", {
+                          href("/workspace/project/:projectSlug/:envSlug", {
                             projectSlug: project.slug,
                             envSlug: "production"
                           })
@@ -202,7 +202,7 @@ export function WorkspaceProjectListHeaderDropdown(
                   value="CREATE_PROJECT"
                   className="cursor-pointer flex gap-1.5"
                   onSelect={() => {
-                    navigate(href("/create-project"));
+                    navigate(href("/workspace/create-project"));
                     setQuery("");
                     setPopoverOpen(false);
                   }}

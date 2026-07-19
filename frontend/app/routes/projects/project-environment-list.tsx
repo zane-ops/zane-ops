@@ -145,7 +145,7 @@ function EnvironmentList({ environments, projectSlug }: EnvironmentListProps) {
               <TableRow key={env.id}>
                 <TableCell className="p-2">
                   <Link
-                    to={href("/project/:projectSlug/:envSlug", {
+                    to={href("/workspace/project/:projectSlug/:envSlug", {
                       projectSlug,
                       envSlug: env.name
                     })}
@@ -353,7 +353,7 @@ async function archiveEnvironment(
   });
 
   throw redirect(
-    href("/project/:projectSlug/settings/environments", {
+    href("/workspace/project/:projectSlug/settings/environments", {
       projectSlug: project_slug
     })
   );
@@ -401,7 +401,7 @@ async function createEnvironment(
     )
   ]);
   throw redirect(
-    href("/project/:projectSlug/:envSlug", {
+    href("/workspace/project/:projectSlug/:envSlug", {
       projectSlug: project_slug,
       envSlug: data.name
     })
@@ -472,7 +472,7 @@ async function cloneEnvironment(
     )
   ]);
   throw redirect(
-    href("/project/:projectSlug/:envSlug", {
+    href("/workspace/project/:projectSlug/:envSlug", {
       projectSlug: project_slug,
       envSlug: data.name
     })

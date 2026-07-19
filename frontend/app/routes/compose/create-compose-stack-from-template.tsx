@@ -74,7 +74,7 @@ export default function CreateComposeStackFromTemplatePage({
     >
       <Link
         to={href(
-          "/project/:projectSlug/:envSlug/create-compose-stack/template",
+          "/workspace/project/:projectSlug/:envSlug/create-compose-stack/template",
           params
         )}
         className={cn(
@@ -422,7 +422,7 @@ function StackCreatedStep({
           <Button asChild className="flex-1" variant="outline">
             <Link
               to={href(
-                "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+                "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
                 {
                   composeStackSlug,
                   envSlug,
@@ -471,7 +471,7 @@ function StackDeployedStep({
           <Button asChild className="flex-1">
             <Link
               to={href(
-                "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
+                "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
                 {
                   composeStackSlug,
                   envSlug,

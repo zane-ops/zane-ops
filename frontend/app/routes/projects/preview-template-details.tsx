@@ -740,7 +740,7 @@ export async function clientAction({
     description: "Preview template udpated succesfully"
   });
   throw redirect(
-    href("/project/:projectSlug/settings/preview-templates", {
+    href("/workspace/project/:projectSlug/settings/preview-templates", {
       projectSlug: params.projectSlug
     })
   );
