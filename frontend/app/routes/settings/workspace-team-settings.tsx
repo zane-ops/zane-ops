@@ -12,7 +12,7 @@ import * as React from "react";
 import { Form, Link, href, useFetcher, useSearchParams } from "react-router";
 import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
-import type { WorkspaceMember } from "~/api/types";
+import type { AuthedUserResponse, WorkspaceMember } from "~/api/types";
 import { Code } from "~/components/code";
 import { SimpleConfirmationDialog } from "~/components/delete-confirmation-dialog";
 import { Pagination } from "~/components/pagination";
@@ -228,11 +228,7 @@ export default function WorkspaceTeamSettingsPage({
         )}
       </Form>
 
-      <WorkspaceMembersTable
-        members={members}
-        showActionsColumn={hasMinRole(user, "Admin")}
-        currentMembershipId={user.membership!.id}
-      />
+      <WorkspaceMembersTable members={members} currentUser={user} />
 
       <div className="my-4 block">
         {members.length > 0 && data.count > 10 && (
@@ -262,15 +258,15 @@ export default function WorkspaceTeamSettingsPage({
 
 type WorkspaceMembersTableProps = {
   members: WorkspaceMember[];
-  showActionsColumn: boolean;
-  currentMembershipId: number;
+  currentUser: AuthedUserResponse;
 };
 
 function WorkspaceMembersTable({
   members,
-  showActionsColumn,
-  currentMembershipId
+  currentUser
 }: WorkspaceMembersTableProps) {
+  const showActionsColumn = hasMinRole(currentUser, "Admin");
+
   return (
     <Table>
       <TableHeader>
@@ -300,6 +296,15 @@ function WorkspaceMembersTable({
           members.map((member) => {
             const joinedAt = formatLogTime(member.created_at);
             const isMember = hasMinRole(member, "Member");
+
+            const isSelf = currentUser.membership?.id === member.id;
+            // owners can manage everyone, admins only people below them
+            const canManageMember =
+              hasMinRole(currentUser, "Owner") ||
+              (hasMinRole(currentUser, "Admin") &&
+                !hasMinRole(member, "Admin"));
+
+            const showActions = !isSelf && canManageMember;
 
             return (
               <TableRow className="px-2" key={member.id}>
@@ -390,10 +395,7 @@ function WorkspaceMembersTable({
                 </TableCell>
                 {showActionsColumn && (
                   <TableCell className="p-2">
-                    {!hasMinRole(member, "Owner") &&
-                      currentMembershipId !== member.id && (
-                        <WorkspaceMemberActions member={member} />
-                      )}
+                    {showActions && <WorkspaceMemberActions member={member} />}
                   </TableCell>
                 )}
               </TableRow>
