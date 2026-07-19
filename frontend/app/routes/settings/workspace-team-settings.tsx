@@ -388,13 +388,14 @@ function WorkspaceMembersTable({
                     </span>
                   </time>
                 </TableCell>
-                {showActionsColumn &&
-                  !hasMinRole(member, "Owner") &&
-                  currentMembershipId !== member.id && (
-                    <TableCell className="p-2">
-                      <WorkspaceMemberActions member={member} />
-                    </TableCell>
-                  )}
+                {showActionsColumn && (
+                  <TableCell className="p-2">
+                    {!hasMinRole(member, "Owner") &&
+                      currentMembershipId !== member.id && (
+                        <WorkspaceMemberActions member={member} />
+                      )}
+                  </TableCell>
+                )}
               </TableRow>
             );
           })

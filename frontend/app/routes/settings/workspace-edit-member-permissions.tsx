@@ -49,7 +49,7 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  await ensureMinRole(queryClient, "Admin");
+  const authedUser = await ensureMinRole(queryClient, "Admin");
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
 
   const [member, projects] = await Promise.all([
@@ -63,7 +63,10 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     )
   ]);
 
-  if (hasMinRole(member, "Owner")) {
+  if (
+    hasMinRole(member, "Owner") ||
+    authedUser.membership?.id.toString() === params.id
+  ) {
     throw redirect(href("/workspace/settings/team"));
   }
 
