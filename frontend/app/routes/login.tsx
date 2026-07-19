@@ -36,6 +36,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   ]);
 
   if (!userExistQuery.data?.exists) {
+    console.log(`[login/clientLoader] redirect to \`/onboarding\``);
     throw redirect(href("/onboarding"));
   }
 
