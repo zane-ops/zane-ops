@@ -344,9 +344,9 @@ function WorkspaceMembersTable({
                       <PopoverContent
                         align="start"
                         side="bottom"
-                        className="px-4 pt-0 pb-2 w-fit min-w-42"
+                        className="px-4 pt-0 pb-2 w-fit min-w-42 max-h-[300px] overflow-y-auto overflow-x-clip"
                       >
-                        <ul>
+                        <ul className="flex flex-col items-start gap-3 pb-2">
                           <li className="text-xs text-grey my-2">Projects</li>
                           {member.accessible_projects.map((project) => {
                             const projectColor = stringToColor(project.slug);
