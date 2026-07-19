@@ -42,7 +42,14 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
   toast.success("Success", {
     dismissible: true,
     closeButton: true,
-    description: `${getUserDisplayName(member.user)} no longer has access to this workspace.`
+    description: (
+      <p>
+        <strong className="text-grey">
+          &ldquo;{member.user.username}&rdquo;
+        </strong>{" "}
+        no longer has access to this workspace.
+      </p>
+    )
   });
 
   await queryClient.invalidateQueries({

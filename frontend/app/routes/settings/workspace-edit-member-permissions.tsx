@@ -32,12 +32,14 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   getCsrfTokenHeader,
   getFormErrorsFromResponseData,
+  getUserDisplayName,
   hasMinRole,
   metaTitle
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/workspace-edit-member-permissions";
 
@@ -64,8 +66,10 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   ]);
 
   if (
+    authedUser.membership?.id.toString() === params.id ||
     hasMinRole(member, "Owner") ||
-    authedUser.membership?.id.toString() === params.id
+    (hasMinRole(member, "Admin") &&
+      authedUser.membership?.role_name === "Admin")
   ) {
     throw redirect(href("/workspace/settings/team"));
   }
@@ -113,6 +117,7 @@ type EditWorkspaceMemberFormProps = {
 function EditWorkspaceMemberForm({ member }: EditWorkspaceMemberFormProps) {
   const loaderData = useLoaderData<Route.ComponentProps["loaderData"]>();
   const actionData = useActionData<Route.ComponentProps["actionData"]>();
+  const membership = useCurrentWorkspaceMembership();
 
   const navigation = useNavigation();
   const isPending =
@@ -138,8 +143,16 @@ function EditWorkspaceMemberForm({ member }: EditWorkspaceMemberFormProps) {
       return projects.filter((project) => accessibleIds.has(project.id));
     }
   );
+
+  const excludedRoles = ["Owner"];
+  if (membership.role_name === "Admin") {
+    excludedRoles.push("Admin");
+  }
+
   const workspaceRoleOptions = Object.entries(WORKSPACE_ROLE_MAPPING).filter(
-    ([roleName]) => roleName !== "Owner"
+    ([roleName]) => {
+      return !excludedRoles.includes(roleName);
+    }
   );
 
   const selectedRoleValue = WORKSPACE_ROLE_MAPPING[selectedRole];
@@ -274,7 +287,14 @@ export async function clientAction({
   toast.success("Success", {
     dismissible: true,
     closeButton: true,
-    description: `${data.user.username}'s permissions have been updated successfully.`
+    description: (
+      <p>
+        <strong className="text-grey">
+          &ldquo;{data.user.username}&rdquo;
+        </strong>
+        's permissions have been updated successfully.
+      </p>
+    )
   });
   await queryClient.invalidateQueries({
     queryKey: workspaceQueries.members(workspaceId).queryKey.slice(0, 3)

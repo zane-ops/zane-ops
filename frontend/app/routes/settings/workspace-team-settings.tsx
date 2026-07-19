@@ -65,6 +65,7 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
   formatLogTime,
+  getUserDisplayName,
   hasMinRole,
   metaTitle,
   pluralize,
@@ -455,7 +456,9 @@ function RemoveConfirmationFormDialog({ member }: WorkspaceMemberActionsProps) {
       title={
         <>
           Remove&nbsp;
-          <span className="text-grey ">{member.user.username}</span>
+          <span className="text-grey ">
+            &ldquo;{member.user.username}&rdquo;
+          </span>
           &nbsp;from this workspace?
         </>
       }
