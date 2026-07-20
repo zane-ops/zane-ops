@@ -93,6 +93,7 @@ class WorkspaceInvitationSerializer(serializers.ModelSerializer):
         model = models.WorkspaceInvitation
         fields = [
             "role_name",
+            "created_at",
             "expires_at",
             "role",
             "token",
@@ -108,8 +109,15 @@ class SimpleWorkspaceSerializer(serializers.ModelSerializer):
         fields = ["name"]
 
 
+class SimpleUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["username", "first_name"]
+
+
 class WorkspaceInvitationLinkSerializer(serializers.ModelSerializer):
     workspace = SimpleWorkspaceSerializer(read_only=True)
+    invited_by = SimpleUserSerializer(read_only=True)
 
     class Meta:
         model = models.WorkspaceInvitation
@@ -120,6 +128,7 @@ class WorkspaceInvitationLinkSerializer(serializers.ModelSerializer):
             "username",
             "has_existing_account",
             "workspace",
+            "invited_by",
         ]
 
 
@@ -158,6 +167,8 @@ class WorkspaceMemberSerializer(serializers.ModelSerializer):
             "role",
             "accessible_projects",
             "user",
+            "created_at",
+            "updated_at",
         ]
 
 

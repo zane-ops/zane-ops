@@ -1,14 +1,18 @@
-import { redirect } from "react-router";
+import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { serviceQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
-import { type Route } from "./+types/cancel-deployment";
+import { serviceQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
+import type { Route } from "./+types/cancel-deployment";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}/deployments/${params.deploymentHash}`
+    href(
+      `/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash`,
+      params
+    )
   );
 }
 
@@ -16,6 +20,7 @@ export async function clientAction({
   params,
   request
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const toastId = toast.loading(
     `Requesting cancellation for deployment #${params.deploymentHash}...`
   );
@@ -49,14 +54,19 @@ export async function clientAction({
     });
     if (shouldRedirect) {
       throw redirect(
-        `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
+        href(
+          `/workspace/project/:projectSlug/:envSlug/services/:serviceSlug`,
+          params
+        )
       );
     }
     return;
   }
 
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   await queryClient.invalidateQueries({
     ...serviceQueries.single({
+      workspaceId,
       project_slug: params.projectSlug,
       service_slug: params.serviceSlug,
       env_slug: params.envSlug
@@ -70,7 +80,10 @@ export async function clientAction({
   });
   if (shouldRedirect) {
     throw redirect(
-      `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
+      href(
+        `/workspace/project/:projectSlug/:envSlug/services/:serviceSlug`,
+        params
+      )
     );
   }
 }

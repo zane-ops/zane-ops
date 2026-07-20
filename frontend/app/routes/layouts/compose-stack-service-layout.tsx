@@ -43,24 +43,32 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { composeStackQueries } from "~/lib/queries";
+import { composeStackQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
-import { cn, notFound } from "~/lib/utils";
-import { queryClient } from "~/root";
-import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 import {
+  cn,
   durationToMs,
   formatURL,
   getDockerImageIconURL,
   metaTitle,
+  notFound,
   pluralize,
   wait
-} from "~/utils";
+} from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
+import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 import type { Route } from "./+types/compose-stack-service-layout";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const stack = await queryClient.ensureQueryData(
     composeStackQueries.single({
+      workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -86,8 +94,10 @@ export default function ComposeStackServiceLayoutPage({
   params,
   loaderData
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
+      workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -103,7 +113,7 @@ export default function ComposeStackServiceLayoutPage({
     return (
       <Navigate
         to={href(
-          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+          "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
           params
         )}
       />
@@ -152,72 +162,12 @@ export default function ComposeStackServiceLayoutPage({
   return (
     <>
       <title>{title}</title>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/">Projects</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href("/project/:projectSlug/:envSlug", {
-                  ...params,
-                  envSlug: "production"
-                })}
-                prefetch="intent"
-              >
-                {params.projectSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                params.envSlug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : params.envSlug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={href("/project/:projectSlug/:envSlug", params)}
-                prefetch="intent"
-              >
-                {params.envSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <Link
-              to={href(
-                "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
-                params
-              )}
-            >
-              {params.composeStackSlug}
-            </Link>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{params.serviceSlug}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
 
       <section
         id="header"
         className="flex flex-col sm:flex-row md:items-center gap-4 justify-between"
       >
-        <div className="mt-10 flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-x-2">
             <h1 className="text-xl md:text-2xl inline-flex gap-1 items-center">
               {is_job ? (
@@ -228,9 +178,9 @@ export default function ComposeStackServiceLayoutPage({
               <span className="text-grey sr-only md:not-sr-only flex-none">
                 <Link to={`./../..`} className="hover:underline">
                   {params.composeStackSlug}
-                </Link>{" "}
-                /
+                </Link>
               </span>
+              <span>/</span>
               <span>{params.serviceSlug}</span>
             </h1>
             <span className="inline-block rounded-full size-0.5 bg-foreground relative top-0.5" />
@@ -349,6 +299,7 @@ export default function ComposeStackServiceLayoutPage({
           <div>
             <ToggleServiceForm
               params={params}
+              workspaceId={workspaceId}
               current_state={service.status}
               stack_id={stack.id}
             />
@@ -415,12 +366,14 @@ export default function ComposeStackServiceLayoutPage({
 
 type RestartServiceFormProps = {
   params: Route.ComponentProps["params"];
+  workspaceId: string;
   current_state: ComposeStackService["status"];
   stack_id: string;
 };
 
 function ToggleServiceForm({
   params,
+  workspaceId,
   current_state,
   stack_id
 }: RestartServiceFormProps) {
@@ -441,7 +394,7 @@ function ToggleServiceForm({
 
     await fetcher.submit(formData, {
       action: href(
-        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
+        "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
         params
       ),
       method: "POST"
@@ -451,6 +404,7 @@ function ToggleServiceForm({
     queueToggleItem(queue_id);
     toggleStateToast({
       desiredState,
+      workspaceId,
       ...params
     }).finally(() => dequeueToggleItem(queue_id));
   }
@@ -485,15 +439,18 @@ function ToggleServiceForm({
 
 async function toggleStateToast({
   desiredState,
+  workspaceId,
   ...params
 }: {
   desiredState: "stop" | "start";
+  workspaceId: string;
 } & Route.ComponentProps["params"]) {
+  const queryClient = getQueryClient();
   const stackLink = (
     <Link
       className="text-link underline inline break-all"
       to={href(
-        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/services/:serviceSlug",
+        "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/services/:serviceSlug",
         params
       )}
     >
@@ -526,6 +483,7 @@ async function toggleStateToast({
     try {
       stack = await queryClient.fetchQuery(
         composeStackQueries.single({
+          workspaceId,
           project_slug: params.projectSlug,
           stack_slug: params.composeStackSlug,
           env_slug: params.envSlug

@@ -1,9 +1,21 @@
 import * as React from "react";
-import type { Route } from "./+types/dashboard";
+import type { Route } from "./+types/project-list";
 
-import { ArrowUpDownIcon, LoaderIcon, SearchIcon, XIcon } from "lucide-react";
+import {
+  ArrowUpDownIcon,
+  LoaderIcon,
+  PlusIcon,
+  SearchIcon,
+  XIcon
+} from "lucide-react";
 
-import { Link, useLoaderData, useSearchParams } from "react-router";
+import {
+  Link,
+  href,
+  useLoaderData,
+  useMatches,
+  useSearchParams
+} from "react-router";
 import { Input } from "~/components/ui/input";
 
 import { useQuery } from "@tanstack/react-query";
@@ -16,13 +28,25 @@ import { Button } from "~/components/ui/button";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import {
   deploymentQueries,
+  ensureAuthedUser,
   projectQueries,
-  projectSearchSchema
+  projectSearchSchema,
+  userQueries
 } from "~/lib/queries";
-import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
+import { cn, hasMinRole } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const [authedUser, workspace] = await Promise.all([
+    ensureAuthedUser(queryClient),
+    getCurrentWorkspace(queryClient)
+  ]);
+
   const searchParams = new URL(request.url).searchParams;
 
   const search = projectSearchSchema.parse(searchParams);
@@ -34,8 +58,12 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
   // fetch the data on first load to prevent showing the loading fallback
   const [projectList, recentDeployments] = await Promise.all([
-    queryClient.ensureQueryData(projectQueries.list(filters)),
-    queryClient.ensureQueryData(deploymentQueries.recent)
+    queryClient.ensureQueryData(
+      projectQueries.list({ workspaceId: workspace.id, filters })
+    ),
+    hasMinRole(authedUser, "Member")
+      ? queryClient.ensureQueryData(deploymentQueries.recent(workspace.id))
+      : []
   ]);
   return {
     projectList,
@@ -43,12 +71,62 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   };
 }
 
-export default function ProjectList() {
+export default function ProjectList({
+  matches: {
+    "2": {
+      loaderData: { workspace }
+    },
+    "1": {
+      loaderData: { user }
+    }
+  }
+}: Route.ComponentProps) {
+  if (!workspace) {
+    return (
+      <main className="flex flex-col gap-10">
+        <h1 className="text-2xl font-medium">Dashboard</h1>
+
+        <div
+          className={cn(
+            "flex flex-col items-center justify-center gap-2 px-6 py-20",
+            "border-border rounded-lg w-full border-dashed border-1 text-grey",
+            "col-span-full"
+          )}
+        >
+          <h3 className="text-2xl font-medium text-card-foreground">
+            Welcome to ZaneOps
+          </h3>
+          <p>
+            Your account isn't part of any workspace yet, so there's nothing to
+            show here.
+          </p>
+          <p>
+            Ask your administrator to invite you to a workspace to get started.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="flex flex-col gap-10">
-      <h1 className="text-2xl font-medium">Dashboard</h1>
+      <div className="flex items-center gap-4">
+        <h1 className="text-2xl font-medium">Dashboard</h1>
+        {hasMinRole(user, "Admin") && (
+          <Button
+            asChild
+            variant="secondary"
+            className="inline-flex items-center gap-1"
+          >
+            <Link to={href("/workspace/create-project")}>
+              <span>New project</span>
+              <PlusIcon size={16} className="flex-none" />
+            </Link>
+          </Button>
+        )}
+      </div>
       <ProjectsListSection />
-      <RecentDeploymentsSection />
+      {hasMinRole(user, "Member") && <RecentDeploymentsSection />}
     </main>
   );
 }
@@ -58,12 +136,19 @@ const sortKeyMap: Record<string, string> = {
   "-updated_at": "Last Updated"
 };
 
-const sortValueMap = {
+const sortValueMap: Record<string, string> = {
   Alphabetical: "slug",
   "Last Updated": "-updated_at"
 };
+
 function ProjectsListSection() {
   const loaderData = useLoaderData<typeof clientLoader>();
+  const {
+    "1": {
+      loaderData: { user }
+    }
+  } = useMatches() as Route.ComponentProps["matches"];
+  const currentWorkspace = useCurrentWorkspace();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const search = projectSearchSchema.parse(searchParams);
@@ -75,7 +160,10 @@ function ProjectsListSection() {
   };
 
   const projectActiveQuery = useQuery({
-    ...projectQueries.list(filters),
+    ...projectQueries.list({
+      workspaceId: currentWorkspace.id,
+      filters
+    }),
     initialData: loaderData.projectList
   });
 
@@ -143,7 +231,6 @@ function ProjectsListSection() {
             searchParams.delete("sort_by");
 
             for (const value of newVal) {
-              // @ts-expect-error
               const field = sortValueMap[value];
               searchParams.append("sort_by", field);
             }
@@ -170,14 +257,18 @@ function ProjectsListSection() {
             )}
           >
             <h3 className="text-2xl font-medium text-card-foreground">
-              Welcome to ZaneOps
+              Welcome to <span className="text-grey">`</span>
+              {currentWorkspace.name}
+              <span className="text-grey">`</span>
             </h3>
-            <p>You don't have any project yet</p>
-            <Button asChild>
-              <Link prefetch="intent" to="/create-project">
-                Start by creating one
-              </Link>
-            </Button>
+            <p>This workspace doesn't have any projects yet.</p>
+            {hasMinRole(user, "Admin") && (
+              <Button asChild>
+                <Link prefetch="intent" to="./create-project">
+                  Start by creating one
+                </Link>
+              </Button>
+            )}
           </div>
         )}
         {noResults && (
@@ -208,8 +299,10 @@ function ProjectsListSection() {
 function RecentDeploymentsSection() {
   const loaderData = useLoaderData<typeof clientLoader>();
 
+  const workspaceId = useCurrentWorkspace().id;
+
   const { data: recentDeployments } = useQuery({
-    ...deploymentQueries.recent,
+    ...deploymentQueries.recent(workspaceId),
     initialData: loaderData.recentDeployments
   });
 

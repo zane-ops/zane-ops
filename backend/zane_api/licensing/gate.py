@@ -8,7 +8,7 @@ FREE_USER_LIMIT = 3
 FREE_WORKSPACE_LIMIT = 1
 
 
-class LicenceFeature(StrEnum):
+class LicenseFeature(StrEnum):
     """
     Catalog of features gated behind a valid paid license.
     The values are user-facing descriptions, the enum keys are what the code uses.
@@ -26,7 +26,7 @@ class LicenseGate(Protocol):
     implementation at startup.
     """
 
-    def is_feature_enabled(self, feature: LicenceFeature) -> bool:
+    def is_feature_enabled(self, feature: LicenseFeature) -> bool:
         """Whether the given feature is unlocked on this instance."""
         ...
 
@@ -37,7 +37,7 @@ class FreeLicenseGate:
     gated feature is off.
     """
 
-    def is_feature_enabled(self, feature: LicenceFeature) -> bool:
+    def is_feature_enabled(self, feature: LicenseFeature) -> bool:
         return False
 
 
@@ -62,7 +62,7 @@ def can_add_user(current_user_count: int) -> tuple[bool, str | None]:
     """
     if current_user_count < FREE_USER_LIMIT:
         return True, None
-    if get_license_gate().is_feature_enabled(LicenceFeature.EXTRA_USER_SEATS):
+    if get_license_gate().is_feature_enabled(LicenseFeature.EXTRA_USER_SEATS):
         return True, None
     return False, (
         f"This ZaneOps instance has reached its limit of {FREE_USER_LIMIT} users. "
@@ -79,7 +79,7 @@ def can_create_workspace(current_workspace_count: int) -> tuple[bool, str | None
     """
     if current_workspace_count < FREE_WORKSPACE_LIMIT:
         return True, None
-    if get_license_gate().is_feature_enabled(LicenceFeature.EXTRA_WORKSPACES):
+    if get_license_gate().is_feature_enabled(LicenseFeature.EXTRA_WORKSPACES):
         return True, None
     return False, (
         "Creating more than one workspace requires a license. "

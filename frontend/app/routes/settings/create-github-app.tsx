@@ -15,9 +15,9 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { serverQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
-import { metaTitle, stripSlashIfExists } from "~/utils";
+import { ensureMinRole, serverQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import { metaTitle, stripSlashIfExists } from "~/lib/utils";
 import type { Route } from "./+types/create-github-app";
 
 export function meta() {
@@ -25,6 +25,9 @@ export function meta() {
 }
 
 export async function clientLoader() {
+  const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Owner");
+
   const settings = await queryClient.ensureQueryData(serverQueries.settings);
 
   return { settings };

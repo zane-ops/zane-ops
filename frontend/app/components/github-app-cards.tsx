@@ -24,9 +24,8 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn, formattedDate, getFormErrorsFromResponseData } from "~/lib/utils";
 import type { clientAction } from "~/routes/settings/github-app-details";
-import { formattedDate } from "~/utils";
 
 export type GithubAppCardProps = {
   app: GithubApp;

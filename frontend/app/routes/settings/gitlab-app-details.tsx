@@ -13,9 +13,13 @@ import {
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
 import { gitAppsQueries } from "~/lib/queries";
-import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import { getQueryClient } from "~/lib/query-client";
+import {
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/gitlab-app-details";
 
 export function meta() {
@@ -25,8 +29,10 @@ export function meta() {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const app = await queryClient.ensureQueryData(
-    gitAppsQueries.gitlab(params.id)
+    gitAppsQueries.gitlab(workspaceId, params.id)
   );
   return { app };
 }
@@ -181,6 +187,8 @@ export async function clientAction({
   params,
   request
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
 
   const intent = formData.get("intent")?.toString();
@@ -190,7 +198,7 @@ export async function clientAction({
       return testGitlabAppConnection(params);
     }
     case "update_gitlab_app": {
-      return updateGitlabApp(params, formData);
+      return updateGitlabApp(params, formData, workspaceId);
     }
     case "sync_gitlab_repositories": {
       return syncGitlabRepositories(params);
@@ -238,8 +246,10 @@ async function testGitlabAppConnection(
 
 async function updateGitlabApp(
   params: Route.ClientActionArgs["params"],
-  formData: FormData
+  formData: FormData,
+  workspaceId: string
 ) {
+  const queryClient = getQueryClient();
   const app_secret = formData.get("app_secret")?.toString()?.trim() ?? "";
   const userData = {
     name: formData.get("name")?.toString()?.toString() ?? "",
@@ -269,7 +279,7 @@ async function updateGitlabApp(
   const { state } = data;
 
   const app = await queryClient.getQueryData(
-    gitAppsQueries.gitlab(params.id).queryKey
+    gitAppsQueries.gitlab(workspaceId, params.id).queryKey
   )!;
 
   const redirectURL = new URL(`${app.gitlab_url}/oauth/authorize`);

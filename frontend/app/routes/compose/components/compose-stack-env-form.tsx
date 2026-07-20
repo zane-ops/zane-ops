@@ -39,9 +39,13 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import {
+  cn,
+  getFormErrorsFromResponseData,
+  pluralize,
+  wait
+} from "~/lib/utils";
 import type { clientAction } from "~/routes/compose/compose-stack-settings";
-import { pluralize, wait } from "~/utils";
 
 export type ComposeStackEnvFormProps = {
   stack: ComposeStack;

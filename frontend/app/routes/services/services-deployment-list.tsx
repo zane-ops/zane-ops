@@ -35,8 +35,12 @@ import {
 } from "~/components/ui/popover";
 import { DEPLOYMENT_STATUSES } from "~/lib/constants";
 import { serviceDeploymentListFilters, serviceQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/services-deployment-list";
 
 export async function clientLoader({
@@ -47,6 +51,8 @@ export async function clientLoader({
   },
   request
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const searchParams = new URL(request.url).searchParams;
   const search = serviceDeploymentListFilters.parse(searchParams);
   const filters = {
@@ -61,6 +67,7 @@ export async function clientLoader({
 
   const deploymentList = await queryClient.ensureQueryData(
     serviceQueries.deploymentList({
+      workspaceId,
       project_slug,
       service_slug,
       filters,
@@ -105,11 +112,12 @@ export default function DeploymentListPage({
   },
   loaderData,
   matches: {
-    "2": {
+    "3": {
       loaderData: { service }
     }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const search = serviceDeploymentListFilters.parse(searchParams);
 
@@ -127,6 +135,7 @@ export default function DeploymentListPage({
     data: { results: deploymentList, count: totalDeployments }
   } = useQuery({
     ...serviceQueries.deploymentList({
+      workspaceId,
       project_slug,
       service_slug,
       filters,

@@ -2,18 +2,21 @@ import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { gitAppsQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
+import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/github-app-details";
 
-export function clientLoader({ params }: Route.ClientLoaderArgs) {
-  throw redirect(href("/settings/git-apps"));
+export function clientLoader() {
+  throw redirect(href("/workspace/settings/git-apps"));
 }
 
 export async function clientAction({
   params,
   request
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
 
   const intent = formData.get("intent")?.toString();
@@ -23,7 +26,7 @@ export async function clientAction({
       return testGithubAppConnection(params);
     }
     case "rename_github_app": {
-      return renameGithubApp(formData, params);
+      return renameGithubApp(formData, params, workspaceId);
     }
     default: {
       throw new Error("Unexpected intent");
@@ -63,8 +66,10 @@ async function testGithubAppConnection(
 
 async function renameGithubApp(
   formData: FormData,
-  params: Route.ClientActionArgs["params"]
+  params: Route.ClientActionArgs["params"],
+  workspaceId: string
 ) {
+  const queryClient = getQueryClient();
   const userData = {
     name: formData.get("name")?.toString()
   } satisfies RequestInput<"patch", "/api/connectors/github/{id}/">;
@@ -93,9 +98,7 @@ async function renameGithubApp(
   }
 
   await queryClient.invalidateQueries({
-    predicate(query) {
-      return query.queryKey.includes(gitAppsQueries.list.queryKey[0]);
-    }
+    queryKey: gitAppsQueries.list(workspaceId).queryKey
   });
 
   toast.success("Success", {

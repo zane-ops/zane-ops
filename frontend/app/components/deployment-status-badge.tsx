@@ -20,8 +20,7 @@ import {
 } from "lucide-react";
 import type { StatusBadgeColor } from "~/components/status-badge";
 import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
-import { cn } from "~/lib/utils";
-import { capitalizeText } from "~/utils";
+import { capitalizeText, cn } from "~/lib/utils";
 
 const DEPLOYMENT_STATUS_COLOR_MAP = {
   STARTING: "blue",

@@ -28,7 +28,7 @@ with workflow.unsafe.imports_passed_through():
     import docker.errors
     from django import db
     from django.db.models import Q
-    from zane_api.models import Deployment, HealthCheck, ServiceMetrics
+    from zane_api.models import Deployment, HealthCheck, ServiceMetrics, HttpLog
     from zane_api.utils import (
         DockerSwarmTaskState,
         DockerSwarmTask,
@@ -46,6 +46,7 @@ with workflow.unsafe.imports_passed_through():
         get_compose_stack_swarm_service_status,
         collect_swarm_service_metrics,
     )
+    from console.models import SystemSettings
 
 docker_client: docker.DockerClient | None = None
 
@@ -472,6 +473,18 @@ class CleanupActivities:
             created_at__lt=today - timedelta(days=30)
         ).adelete()
         return deleted[0]
+
+    @activity.defn
+    async def cleanup_http_logs(self):
+        system = await SystemSettings.aget_or_create()
+
+        today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        if system.http_log_retention_days is not None:
+            deleted = await HttpLog.objects.filter(
+                created_at__lt=today - timedelta(days=system.http_log_retention_days)
+            ).adelete()
+            return deleted[0]
+        return 0
 
 
 class MonitorRegistryDeploymentActivites:

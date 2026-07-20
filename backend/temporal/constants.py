@@ -123,3 +123,5 @@ BUILD_REGISTRY_CONFIG_PATH = "/etc/distribution/config.yml"
 BUILD_REGISTRY_PASSWORD_PATH = "/auth/htpasswd"
 BUILD_REGISTRY_IMAGE = "registry:3.0.0"
 BUILD_REGISTRY_DEPLOY_SEMAPHORE_KEY = "deploy-registry-workflow"
+
+ZANE_BUILDER_NAME_PREFIX = "builder-zane"

@@ -1,21 +1,23 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { composeStackQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
+import { composeStackQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/cancel-compose-deployment";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     href(
-      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
+      "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
       params
     )
   );
 }
 
 export async function clientAction({ params }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const toastId = toast.loading(
     `Requesting cancellation for deployment #${params.deploymentHash}...`
   );
@@ -48,9 +50,11 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     return;
   }
 
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   await Promise.all([
     queryClient.invalidateQueries({
       ...composeStackQueries.singleDeployment({
+        workspaceId: workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -60,6 +64,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     }),
     queryClient.invalidateQueries(
       composeStackQueries.deploymentList({
+        workspaceId: workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug

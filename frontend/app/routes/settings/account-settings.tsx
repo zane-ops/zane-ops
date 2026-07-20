@@ -6,7 +6,7 @@ import {
   LoaderIcon,
   UserIcon
 } from "lucide-react";
-import { Link, href, redirect, useFetcher, useLoaderData } from "react-router";
+import { Link, useFetcher, useLoaderData } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -17,30 +17,31 @@ import {
   FieldSetLabel
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
-import { userQueries } from "~/lib/queries";
-import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import { ensureAuthedUser, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import {
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import type { Route } from "./+types/account-settings";
 
 export const meta: Route.MetaFunction = () => [metaTitle("Account Settings")];
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
-  const user = await queryClient.ensureQueryData(userQueries.authedUser);
-
-  if (!user) {
-    throw redirect(href("/login"));
-  }
+  const queryClient = getQueryClient();
+  const user = await ensureAuthedUser(queryClient);
 
   return { user };
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
   const profileData = {
     username: formData.get("username")?.toString(),
     first_name: formData.get("first_name")?.toString() || "",
-    last_name: formData.get("last_name")?.toString() || ""
+    last_name: "" // we use the first name as the display name
   } satisfies RequestInput<"patch", "/api/auth/update-profile/">;
 
   const { error: errors } = await apiClient.PATCH("/api/auth/update-profile/", {
@@ -60,12 +61,11 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   return { success: true };
 }
 
-export default function UserSettingsPage({}: Route.ComponentProps) {
+export default function UserSettingsPage({ params }: Route.ComponentProps) {
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex items-center gap-4">
-        <h2 className="text-2xl">Profile</h2>
-      </div>
+      <h1 className="text-3xl font-medium mt-5">Account Settings</h1>
+
       <Separator />
       <h3 className="text-grey">Update your profile information</h3>
       <div className="grid lg:grid-cols-12 gap-10 relative">
@@ -93,7 +93,7 @@ export default function UserSettingsPage({}: Route.ComponentProps) {
               <h3 className="text-lg text-grey">Change Password</h3>
               <div>
                 <Link
-                  to="/settings/account/change-password"
+                  to="./change-password"
                   className="hover:underline text-sm py-2 flex items-center gap-0.5 text-link"
                 >
                   <span>Change your password here</span>
@@ -111,13 +111,15 @@ export default function UserSettingsPage({}: Route.ComponentProps) {
 function UpdateProfileForm() {
   const loaderData = useLoaderData<typeof clientLoader>();
   const fetcher = useFetcher<typeof clientAction>();
-  const { data: user } = useQuery({
+  const { data } = useQuery({
     ...userQueries.authedUser,
     initialData: loaderData.user
   });
 
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+
+  const user = data?.user;
 
   return (
     <fetcher.Form method="POST" className="flex flex-col gap-6">
@@ -148,22 +150,10 @@ function UpdateProfileForm() {
           errors={errors.first_name}
           className="flex flex-col gap-2"
         >
-          <FieldSetLabel className="block">First Name</FieldSetLabel>
+          <FieldSetLabel className="block">Display Name</FieldSetLabel>
           <FieldSetInput
-            placeholder="Enter your first name"
+            placeholder="Enter your display name"
             defaultValue={user?.first_name}
-          />
-        </FieldSet>
-
-        <FieldSet
-          name="last_name"
-          errors={errors.last_name}
-          className="flex flex-col gap-2"
-        >
-          <FieldSetLabel className="block">Last Name</FieldSetLabel>
-          <FieldSetInput
-            placeholder="Enter your last name"
-            defaultValue={user?.last_name}
           />
         </FieldSet>
       </div>

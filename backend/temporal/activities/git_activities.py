@@ -943,9 +943,23 @@ class GitActivities:
             os.path.join(build_location, details.builder_options.dockerfile_path)
         )
         build_envs = get_build_environment_variables_for_deployment(details.deployment)
-
         build_envs["FORCE_COLOR"] = "true"
-        env_lines = [f"{key}={shlex.quote(value)}" for key, value in build_envs.items()]
+
+        # Omit env variables that change on each deployment in the `.env`
+        # to prevent it from causing cache misses if included
+        service = details.deployment.service
+
+        changing_env_variables = []
+        pattern = r"{{[ \t]*deployment\.(\w+)[ \t]*}}"
+        for env in service.system_env_variables:
+            if re.match(pattern, env.value):
+                changing_env_variables.append(env.key)
+
+        env_lines = [
+            f"{key}={shlex.quote(value)}"
+            for key, value in build_envs.items()
+            if key not in changing_env_variables
+        ]
         env_file_contents = "\n".join(env_lines)
 
         # Add `.env` in the build context directory to be loaded by the Dockerfile if possible

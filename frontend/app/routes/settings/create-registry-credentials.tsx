@@ -21,16 +21,30 @@ import {
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
-import { sharedRegistryCredentialsQueries } from "~/lib/queries";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import {
+  ensureMinRole,
+  sharedRegistryCredentialsQueries,
+  userQueries
+} from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import {
+  cn,
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/create-registry-credentials";
 
 export function meta() {
   return [
     metaTitle("New Registry Credentials")
   ] satisfies ReturnType<Route.MetaFunction>;
+}
+
+export async function clientLoader() {
+  const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Owner");
 }
 
 export default function CreateRegistryCredentialsPage() {
@@ -205,6 +219,8 @@ function CreateRegistryCredentialsForm() {
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
 
   const userData = {
@@ -239,6 +255,8 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     closeButton: true,
     description: "Container Registry Credentials created succesfully"
   });
-  await queryClient.invalidateQueries(sharedRegistryCredentialsQueries.list);
-  throw redirect(href("/settings/shared-credentials"));
+  await queryClient.invalidateQueries(
+    sharedRegistryCredentialsQueries.list(workspaceId)
+  );
+  throw redirect(href("/workspace/settings/shared-credentials"));
 }

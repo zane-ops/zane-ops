@@ -1,8 +1,7 @@
 import { CheckIcon, CopyIcon } from "lucide-react";
 import * as React from "react";
-import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
-import { durationToMs, wait } from "~/utils";
+import { Button, buttonVariants } from "~/components/ui/button";
+import { cn, durationToMs, wait } from "~/lib/utils";
 
 export type CopyButtonProps = Omit<
   React.ComponentProps<typeof Button>,
@@ -21,6 +20,7 @@ export function CopyButton({
   ...props
 }: CopyButtonProps) {
   const [hasCopied, startTransition] = React.useTransition();
+
   return (
     <Button
       variant="ghost"

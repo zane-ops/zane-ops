@@ -227,7 +227,9 @@ else
 fi
 
 # Create installation directory
-INSTALL_DIR="/var/www/zaneops"
+INSTALL_DIR="${APP_DIRECTORY:-/var/www/zaneops}"
+echo "➡️ Using INSTALL_DIR=${INSTALL_DIR}" 
+
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 

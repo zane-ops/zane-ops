@@ -1,18 +1,9 @@
-import { ArrowRightIcon, FileTextIcon } from "lucide-react";
-import { Link } from "react-router";
+import { ArrowLeftIcon, ArrowRightIcon, FileTextIcon } from "lucide-react";
+import { Link, href } from "react-router";
 import { DokployLogo } from "~/components/dokploy-logo";
 import { ZaneOpsLogo } from "~/components/logo";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
-import { metaTitle } from "~/utils";
+import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/create-compose-stack";
 
 export function meta() {
@@ -26,57 +17,22 @@ export default function CreateComposeStackPage({
 }: Route.ComponentProps) {
   return (
     <div>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={`/project/${params.projectSlug}/production`}
-                prefetch="intent"
-              >
-                {params.projectSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                params.envSlug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : params.envSlug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={`/project/${params.projectSlug}/${params.envSlug}`}
-                prefetch="intent"
-              >
-                {params.envSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Create compose stack</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <div className="flex h-[70vh] grow justify-center items-center">
         <div className="card  flex  md:w-[50%] lg:w-[30%] w-full flex-col gap-6">
-          <h1 className="text-3xl font-bold">New Compose Stack</h1>
+          <div className="flex flex-col gap-2">
+            <Link
+              to={href("/workspace/project/:projectSlug/:envSlug", params)}
+              className={cn(
+                "text-sm text-grey w-full",
+                "flex items-center gap-0.5 hover:underline"
+              )}
+            >
+              <ArrowLeftIcon className="size-4" />
+              Services
+            </Link>
+            <h1 className="text-3xl font-bold">New Compose Stack</h1>
+          </div>
+
           <div className="flex flex-col gap-3">
             <Button
               type="button"

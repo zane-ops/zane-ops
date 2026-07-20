@@ -50,21 +50,30 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { composeStackQueries, stackDeploymentListFilters } from "~/lib/queries";
-import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
+import {
+  composeStackQueries,
+  stackDeploymentListFilters,
+  userQueries
+} from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import {
   capitalizeText,
+  cn,
   formatElapsedTime,
   formattedTime,
   mergeTimeAgoFormatterAndFormattedDate
-} from "~/utils";
+} from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-deployment-list";
 
 export async function clientLoader({
   request,
   params
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const searchParams = new URL(request.url).searchParams;
   const search = stackDeploymentListFilters.parse(searchParams);
   const filters = {
@@ -75,8 +84,10 @@ export async function clientLoader({
     queued_at_before: search.queued_at_before
   };
 
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const deploymentList = await queryClient.ensureQueryData(
     composeStackQueries.deploymentList({
+      workspaceId: workspaceId,
       project_slug: params.projectSlug,
       env_slug: params.envSlug,
       stack_slug: params.composeStackSlug,
@@ -100,10 +111,12 @@ export default function ComposeStackDeploymentListPage({
     queued_at_after: search.queued_at_after,
     queued_at_before: search.queued_at_before
   };
+  const workspaceId = useCurrentWorkspace().id;
   const {
     data: { results: deploymentList, count: totalDeployments }
   } = useQuery({
     ...composeStackQueries.deploymentList({
+      workspaceId: workspaceId,
       project_slug: params.projectSlug,
       env_slug: params.envSlug,
       stack_slug: params.composeStackSlug,

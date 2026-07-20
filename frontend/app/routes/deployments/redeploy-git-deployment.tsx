@@ -1,18 +1,23 @@
-import { redirect } from "react-router";
+import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { serviceQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
+import { serviceQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import { type Route } from "./+types/redeploy-git-deployment";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
+    href(
+      "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+      params
+    )
   );
 }
 
 export async function clientAction({ params }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const toasId = toast.loading(
     `Queueing redeployment for #${params.deploymentHash}...`
   );
@@ -41,12 +46,17 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
       closeButton: true
     });
     throw redirect(
-      `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
+      href(
+        "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+        params
+      )
     );
   }
 
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   await queryClient.invalidateQueries(
     serviceQueries.single({
+      workspaceId,
       project_slug: params.projectSlug,
       service_slug: params.serviceSlug,
       env_slug: params.envSlug
@@ -58,6 +68,6 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     closeButton: true
   });
   throw redirect(
-    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
+    `/workspace/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
   );
 }

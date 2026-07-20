@@ -1,26 +1,14 @@
 import {
-  ContainerIcon,
+  Building2Icon,
   CreditCardIcon,
   GitBranchIcon,
-  KeyIcon,
   type LucideIcon,
-  TerminalIcon,
-  TicketCheckIcon,
-  UserIcon
+  MailIcon,
+  UsersIcon
 } from "lucide-react";
-import { Link, Outlet } from "react-router";
-import { NavLink } from "react-router";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
+import { NavLink, Outlet, href } from "react-router";
 import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
-import { metaTitle } from "~/utils";
+import { cn, hasMinRole, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/settings-layout";
 
 export function meta() {
@@ -34,62 +22,73 @@ type NavItem = {
   disabled?: boolean;
 };
 
-const sidebarNavItems: NavItem[] = [
-  {
-    title: "Account",
-    href: "account",
-    icon: UserIcon
-  },
-  {
-    title: "SSH Keys",
-    href: "ssh-keys",
-    icon: KeyIcon
-  },
-  {
-    title: "Console",
-    href: "server-console",
-    icon: TerminalIcon
-  },
-  {
-    title: "Git",
-    href: "git-apps",
-    icon: GitBranchIcon
-  },
-  {
-    title: "Registries",
-    href: "build-registries",
-    icon: ContainerIcon
-  },
-  {
-    title: "Shared Credentials",
-    href: "shared-credentials",
-    icon: CreditCardIcon
+export default function SettingsLayoutPage({
+  matches: {
+    "1": {
+      loaderData: { user }
+    }
   }
-];
+}: Route.ComponentProps) {
+  const sidebarNavItems: NavItem[] = [
+    {
+      title: "General",
+      href: href("/workspace/settings"),
+      icon: Building2Icon
+    }
+  ];
 
-export default function SettingsLayoutPage({}: Route.ComponentProps) {
+  if (hasMinRole(user, "Member")) {
+    sidebarNavItems.push({
+      title: "Team",
+      href: href("/workspace/settings/team"),
+      icon: UsersIcon
+    });
+  }
+  if (hasMinRole(user, "Admin")) {
+    sidebarNavItems.push({
+      title: "User Invitations",
+      href: href("/workspace/settings/invitations"),
+      icon: MailIcon
+    });
+  }
+
+  if (hasMinRole(user, "Owner")) {
+    sidebarNavItems.push({
+      title: "Git",
+      href: href("/workspace/settings/git-apps"),
+      icon: GitBranchIcon
+    });
+    sidebarNavItems.push({
+      title: "Shared Credentials",
+      href: href("/workspace/settings/shared-credentials"),
+      icon: CreditCardIcon
+    });
+
+    // Only in server admin
+    // {
+    //   title: "Registries",
+    //   href: "build-registries",
+    //   icon: ContainerIcon
+    // },
+    // {
+    //   title: "SSH Keys",
+    //   href: "ssh-keys",
+    //   icon: KeyIcon
+    // },
+    // {
+    //   title: "Console",
+    //   href: "server-console",
+    //   icon: TerminalIcon
+    // },
+  }
+
   return (
     <>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Settings</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
       <div className="my-6 grid md:grid-cols-12 gap-6 md:gap-4 relative max-w-full">
         <div className="md:col-span-full">
           <h1 className="text-3xl font-medium">Settings</h1>
           <h4 className="text-sm mt-2 opacity-60">
-            Manage your global settings
+            Manage your workspace settings
           </h4>
         </div>
         <aside className="md:col-span-3">
@@ -107,7 +106,7 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
                       )}
                       aria-disabled={item.disabled}
                       // if we don't do this, the default route "/settings" would always be active
-                      end={item.href.length === 0}
+                      end={item.href === href("/workspace/settings")}
                     >
                       <item.icon size={15} className="text-grey flex-none" />
                       {item.title}

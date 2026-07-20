@@ -25,9 +25,6 @@
     "@webhooksite/cli": "^0.2.6",
     "concurrently": "^8.2.2"
   },
-  "engines": {
-    "node": "20"
-  },
   "packageManager": "pnpm@8.15.9",
   "pnpm": {
     "overrides": {

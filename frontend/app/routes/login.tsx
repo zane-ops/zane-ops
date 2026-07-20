@@ -1,5 +1,11 @@
-import { AlertCircle, LoaderIcon } from "lucide-react";
-import { Form, redirect, useNavigation } from "react-router";
+import { AlertCircle, LoaderIcon, MailCheckIcon } from "lucide-react";
+import {
+  Form,
+  href,
+  redirect,
+  useNavigation,
+  useSearchParams
+} from "react-router";
 import { apiClient } from "~/api/client";
 import { ThemedLogo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -10,42 +16,47 @@ import {
   FieldSetLabel,
   FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
-import { Input } from "~/components/ui/input";
-import { PasswordToggleInput } from "~/components/ui/password-toggle-input";
 import { userQueries } from "~/lib/queries";
-import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import { getQueryClient } from "~/lib/query-client";
+import {
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 import type { Route } from "./+types/login";
 
 export const meta: Route.MetaFunction = () => [metaTitle("Login")];
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const [user, userExistQuery] = await Promise.all([
     queryClient.ensureQueryData(userQueries.authedUser),
     queryClient.ensureQueryData(userQueries.checkUserExistence)
   ]);
 
   if (!userExistQuery.data?.exists) {
-    throw redirect("/onboarding");
+    console.log(`[login/clientLoader] redirect to \`/onboarding\``);
+    throw redirect(href("/onboarding"));
   }
 
   const searchParams = new URL(request.url).searchParams;
 
   if (user) {
     const redirect_to = searchParams.get("redirect_to");
-    let redirectTo = "/";
+    let redirectTo = href("/");
     if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
       redirectTo = redirect_to;
     }
 
+    console.log(`[login/clientLoader] redirect to \`/${redirectTo}\``);
     throw redirect(redirectTo);
   }
   return;
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
   const searchParams = new URL(request.url).searchParams;
 
@@ -68,12 +79,14 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   }
   if (data?.success) {
     queryClient.removeQueries(userQueries.authedUser);
+    queryClient.removeQueries(userQueries.memberships);
 
     const redirect_to = searchParams.get("redirect_to");
-    let redirectTo = "/";
+    let redirectTo = href("/");
     if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
       redirectTo = redirect_to;
     }
+
     throw redirect(redirectTo);
   }
 }
@@ -83,6 +96,16 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
   const isPending =
     navigation.state === "loading" || navigation.state === "submitting";
   const errors = getFormErrorsFromResponseData(actionData?.errors);
+
+  const [searchParams] = useSearchParams();
+
+  const redirectParam = searchParams.get("redirect_to");
+
+  const hasBeenInvited =
+    redirectParam &&
+    URL.canParse(redirectParam, window.location.href) &&
+    redirectParam.startsWith("/invite");
+
   return (
     <>
       <main className="h-[100vh] flex md:flex-row flex-col  justify-center items-center">
@@ -102,9 +125,20 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
           method="POST"
           className="p-7 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
         >
+          {hasBeenInvited && (
+            <Alert className="p-4" variant="info">
+              <MailCheckIcon className="size-4 flex-none" />
+              <AlertTitle>Looks like you've been invited!</AlertTitle>
+              <AlertDescription>
+                Log in to accept the invitation
+              </AlertDescription>
+            </Alert>
+          )}
+
           <h1 className="md:text-2xl text-3xl md:text-left text-center font-bold my-3">
             Log in
           </h1>
+
           <div className="card flex flex-col gap-3">
             {errors.non_field_errors && (
               <Alert variant="destructive">

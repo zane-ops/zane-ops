@@ -1,5 +1,5 @@
-import { AlertCircleIcon, LoaderIcon } from "lucide-react";
-import { Form, Link, redirect, useNavigation } from "react-router";
+import { AlertCircleIcon, ArrowLeftIcon, LoaderIcon } from "lucide-react";
+import { Form, Link, href, redirect, useNavigation } from "react-router";
 import { apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
@@ -13,43 +13,34 @@ import {
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { projectQueries } from "~/lib/queries";
-import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
-import { type Route } from "./+types/create-project";
+import { ensureMinRole, projectQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import {
+  cn,
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
+import type { Route } from "./+types/create-project";
 
 export function meta() {
   return [metaTitle("Create Project")] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export default function CreateProjectPage({
-  actionData
-}: Route.ComponentProps) {
-  return (
-    <div>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Create project</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-      <CreateForm actionData={actionData} />
-    </div>
-  );
+export async function clientLoader() {
+  const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Admin");
 }
 
-export async function clientAction({ request }: Route.ClientActionArgs) {
-  let formData = await request.formData();
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
+
+  const formData = await request.formData();
   const userData = {
     slug: formData.get("slug")?.toString().trim(),
     description: formData.get("description")?.toString() || undefined
@@ -69,14 +60,21 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     };
   }
 
-  queryClient.invalidateQueries({
-    predicate: (query) =>
-      query.queryKey.includes(projectQueries.list().queryKey[0])
+  await queryClient.invalidateQueries({
+    queryKey: projectQueries.list({ workspaceId }).queryKey.slice(0, 3) // 0...3 include the workspace id & project list key
   });
-  throw redirect(`/project/${apiResponse.data.slug}/production`);
+  throw redirect(
+    href(`/workspace/project/:projectSlug/:envSlug`, {
+      ...params,
+      projectSlug: apiResponse.data.slug,
+      envSlug: "production"
+    })
+  );
 }
 
-function CreateForm({ actionData }: Pick<Route.ComponentProps, "actionData">) {
+export default function CreateProjectPage({
+  actionData
+}: Route.ComponentProps) {
   const navigation = useNavigation();
   const isPending =
     navigation.state === "loading" || navigation.state === "submitting";
@@ -87,6 +85,16 @@ function CreateForm({ actionData }: Pick<Route.ComponentProps, "actionData">) {
       className="flex h-[60vh] grow justify-center items-center"
     >
       <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
+        <Link
+          to={href("/workspace")}
+          className={cn(
+            "text-sm text-grey w-full",
+            "flex items-center gap-0.5 hover:underline"
+          )}
+        >
+          <ArrowLeftIcon className="size-4" />
+          Project List
+        </Link>
         <h1 className="text-3xl font-bold">New Project</h1>
 
         {errors.non_field_errors && (

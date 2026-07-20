@@ -48,18 +48,20 @@ import {
 } from "~/components/ui/tooltip";
 import { ZANEOPS_INTERNAL_DOMAIN } from "~/lib/constants";
 import { composeStackQueries } from "~/lib/queries";
-import { cn } from "~/lib/utils";
-import { formatElapsedTime, pluralize } from "~/utils";
+import { cn, formatElapsedTime, pluralize } from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-service-details";
 
 export default function ComposeStackServiceDetailsPage({
   params,
   matches: {
-    2: { loaderData }
+    3: { loaderData }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
+      workspaceId: workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -74,7 +76,7 @@ export default function ComposeStackServiceDetailsPage({
     return (
       <Navigate
         to={href(
-          "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+          "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
           params
         )}
       />

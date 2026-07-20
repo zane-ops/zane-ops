@@ -23,10 +23,9 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { sshKeysQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { useLocalStorage } from "~/lib/use-local-storage";
-import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { metaTitle } from "~/utils";
+import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/server-terminal";
 
 export function meta() {
@@ -34,6 +33,7 @@ export function meta() {
 }
 
 export async function clientLoader() {
+  const queryClient = getQueryClient();
   const sshKeys = await queryClient.ensureQueryData(sshKeysQueries.list);
   return { sshKeys };
 }

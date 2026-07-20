@@ -24,8 +24,7 @@ import {
 } from "~/components/ui/popover";
 import { Separator } from "~/components/ui/separator";
 import type { ValueOf } from "~/lib/types";
-import { cn } from "~/lib/utils";
-import { formatURL, getDockerImageIconURL, pluralize } from "~/utils";
+import { cn, formatURL, getDockerImageIconURL, pluralize } from "~/lib/utils";
 
 export type ComposeStackCardProps = Pick<
   ComposeStack,

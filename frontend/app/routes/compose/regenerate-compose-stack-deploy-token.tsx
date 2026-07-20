@@ -3,14 +3,15 @@ import type { Route } from "./+types/regenerate-compose-stack-deploy-token";
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { composeStackQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
+import { composeStackQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     href(
-      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
+      "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
       params
     )
   );
@@ -23,6 +24,8 @@ export async function clientAction({
     composeStackSlug: stack_slug
   }
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const { error, data } = await apiClient.PUT(
     "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/regenerate-deploy-token/",
     {
@@ -52,7 +55,12 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    composeStackQueries.single({ project_slug, stack_slug, env_slug })
+    composeStackQueries.single({
+      workspaceId,
+      project_slug,
+      stack_slug,
+      env_slug
+    })
   );
   toast.success("Success", {
     description: "Done",

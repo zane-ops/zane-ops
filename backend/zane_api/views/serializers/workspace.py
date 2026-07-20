@@ -9,7 +9,8 @@ from typing import Sequence
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from ...validators import validate_new_password
 import django_filters
-from rest_framework import pagination
+
+from django.db.models import QuerySet, Q
 
 
 class SwitchWorkspaceRequestSerializer(serializers.Serializer):
@@ -32,6 +33,7 @@ class RegenerateWorkspaceInvitationRequestSerializer(serializers.Serializer):
 
 
 class WorkspaceRegisterRequestSerializer(serializers.Serializer):
+    first_name = serializers.CharField(required=False)
     password = serializers.CharField(
         min_length=8, max_length=255, validators=[validate_new_password]
     )
@@ -82,8 +84,24 @@ class WorkspaceEditPermissionsRequestSerializer(serializers.Serializer):
         return attrs
 
 
-class WorkspaceAcceptInvitationResponseSerializer(serializers.Serializer):
+class WorkspaceReviewInvitationResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
+
+
+class WorkspaceInvitationDecision:
+    ACCEPT = "ACCEPT"
+    DECLINE = "DECLINE"
+
+    @classmethod
+    def choices(cls):
+        return [
+            cls.ACCEPT,
+            cls.DECLINE,
+        ]
+
+
+class WorkspaceReviewInvitationRequestSerializer(serializers.Serializer):
+    decision = serializers.ChoiceField(choices=WorkspaceInvitationDecision.choices())
 
 
 class InviteUserIntoWorkspaceRequestSerializer(serializers.Serializer):
@@ -167,13 +185,13 @@ class WorkspaceTransferOwnershipRequestSerializer(serializers.Serializer):
 
 class WorkspaceMembershipFilterSet(django_filters.FilterSet):
     role = django_filters.ChoiceFilter(choices=WorkspaceRole.choices)
+    query = django_filters.CharFilter(method="filter_query")
+
+    def filter_query(self, qs: QuerySet, name: str, value: str):
+        return qs.filter(
+            Q(user__username__icontains=value) | Q(user__first_name__icontains=value)
+        )
 
     class Meta:
         model = WorkspaceMembership
-        fields = ["role"]
-
-
-class WorkspaceMembershipPagination(pagination.PageNumberPagination):
-    page_size = 10
-    page_size_query_param = "per_page"
-    page_query_param = "page"
+        fields = ["role", "query"]

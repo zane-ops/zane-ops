@@ -32,29 +32,37 @@ import {
 import {
   composeStackQueries,
   serverQueries,
-  stackMetrisSearch
+  stackMetrisSearch,
+  userQueries
 } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
 import {
   formatStorageValue,
   getMaxDomainForStorageValue,
   timeAgoFormatter
-} from "~/utils";
+} from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-metrics";
 
 export async function clientLoader({
   request,
   params
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const searchParams = new URL(request.url).searchParams;
   const filters = stackMetrisSearch.parse({
     time_range: searchParams.get("time_range"),
     service_names: searchParams.getAll("service_names")
   });
 
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const [metrics, limits] = await Promise.all([
     queryClient.ensureQueryData(
       composeStackQueries.metrics({
+        workspaceId: workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -71,7 +79,7 @@ export default function ComposeStackMetricsPage({
   loaderData,
   params,
   matches: {
-    "2": {
+    "3": {
       loaderData: { stack }
     }
   }
@@ -81,8 +89,10 @@ export default function ComposeStackMetricsPage({
     time_range: searchParams.get("time_range"),
     service_names: searchParams.getAll("service_names")
   });
+  const workspaceId = useCurrentWorkspace().id;
   const { data } = useQuery({
     ...composeStackQueries.metrics({
+      workspaceId: workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug,

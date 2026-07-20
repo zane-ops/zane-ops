@@ -1,25 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRightIcon, ChevronRightIcon, SearchIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ArrowUpRightIcon,
+  ChevronRightIcon,
+  SearchIcon
+} from "lucide-react";
 import * as React from "react";
 import { Link, href, useLoaderData, useSearchParams } from "react-router";
 import { MultiSelect } from "~/components/multi-select";
 import { Pagination } from "~/components/pagination";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
 import { Card } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { TEMPLATE_API_HOST } from "~/lib/constants";
 import { templateQueries, templateSearchFilters } from "~/lib/queries";
-import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { metaTitle } from "~/utils";
+import { getQueryClient } from "~/lib/query-client";
+import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/compose-stack-template-list";
 
 export function meta() {
@@ -29,6 +25,7 @@ export function meta() {
 }
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const searchParams = new URL(request.url).searchParams;
   const filters = templateSearchFilters.parse(searchParams);
 
@@ -46,76 +43,6 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 export default function ComposeStackTemplateListPage({
   params
 }: Route.ComponentProps) {
-  return (
-    <>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={`/project/${params.projectSlug}/production`}
-                prefetch="intent"
-              >
-                {params.projectSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                params.envSlug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : params.envSlug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={`/project/${params.projectSlug}/${params.envSlug}`}
-                prefetch="intent"
-              >
-                {params.envSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink>
-              <Link
-                to={href(
-                  "/project/:projectSlug/:envSlug/create-compose-stack",
-                  params
-                )}
-                prefetch="intent"
-              >
-                Create compose stack
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>From ZaneOps template</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
-      <TemplateSearchList />
-    </>
-  );
-}
-
-function TemplateSearchList() {
   const loaderData = useLoaderData<Route.ComponentProps["loaderData"]>();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -142,10 +69,26 @@ function TemplateSearchList() {
   }
 
   return (
-    <div className="flex my-20 flex-col gap-8 max-w-5xl mx-auto">
-      <h1 className="text-center text-3xl font-medium">
-        Deploy your app in seconds
-      </h1>
+    <div className="flex my-10 mb-20 flex-col gap-8 max-w-5xl mx-auto">
+      <div className="flex flex-col">
+        <Link
+          to={href(
+            "/workspace/project/:projectSlug/:envSlug/create-compose-stack",
+            params
+          )}
+          className={cn(
+            "text-sm text-grey mx-auto mb-2",
+            "flex items-center gap-0.5 hover:underline",
+            "w-full"
+          )}
+        >
+          <ArrowLeftIcon className="size-4" />
+          Create Compose Stack
+        </Link>
+        <h1 className="text-start text-3xl font-medium">
+          Deploy your app in seconds
+        </h1>
+      </div>
       <div className="flex flex-col gap-2">
         <form
           action={(formData) => {

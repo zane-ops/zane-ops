@@ -1,8 +1,7 @@
 import type { ComposeStackTask } from "~/api/types";
 import { SelectItem } from "~/components/ui/select";
-import { cn } from "~/lib/utils";
+import { cn, stringToColor } from "~/lib/utils";
 import { TASK_STATUS_COLOR_MAP } from "~/routes/compose/components/compose-stack-service-replica-card";
-import { stringToColor } from "~/utils";
 
 export type TaskWithContainerSelectItemProps = Pick<
   ComposeStackTask,

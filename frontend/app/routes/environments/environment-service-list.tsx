@@ -30,30 +30,45 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import { Popover, PopoverTrigger } from "~/components/ui/popover";
-import { environmentQueries } from "~/lib/queries";
-import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { timeAgoFormatter } from "~/utils";
+import { environmentQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import { cn, timeAgoFormatter } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/environment-service-list";
 
 export async function clientLoader({
   request,
   params
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const searchParams = new URL(request.url).searchParams;
 
   const queryString = searchParams.get("query") ?? "";
 
   const serviceList = await queryClient.ensureQueryData(
-    environmentQueries.serviceList(params.projectSlug, params.envSlug, {
-      query: queryString
-    })
+    environmentQueries.serviceList(
+      workspaceId,
+      params.projectSlug,
+      params.envSlug,
+      {
+        query: queryString
+      }
+    )
   );
 
   const composeStackList = await queryClient.ensureQueryData(
-    environmentQueries.composeStackList(params.projectSlug, params.envSlug, {
-      slug: queryString
-    })
+    environmentQueries.composeStackList(
+      workspaceId,
+      params.projectSlug,
+      params.envSlug,
+      {
+        slug: queryString
+      }
+    )
   );
 
   return { serviceList, composeStackList };
@@ -63,20 +78,26 @@ export default function EnvironmentServiceListPage({
   params: { projectSlug: project_slug, envSlug: env_slug },
   loaderData
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams] = useSearchParams();
   const query = searchParams.get("query") ?? "";
 
   const { data: serviceList = loaderData.serviceList } = useQuery({
-    ...environmentQueries.serviceList(project_slug, env_slug, {
+    ...environmentQueries.serviceList(workspaceId, project_slug, env_slug, {
       query
     }),
     initialData: loaderData.serviceList
   });
 
   const { data: composeStackList = loaderData.composeStackList } = useQuery({
-    ...environmentQueries.composeStackList(project_slug, env_slug, {
-      slug: query
-    }),
+    ...environmentQueries.composeStackList(
+      workspaceId,
+      project_slug,
+      env_slug,
+      {
+        slug: query
+      }
+    ),
     initialData: loaderData.composeStackList
   });
 
@@ -129,7 +150,7 @@ export default function EnvironmentServiceListPage({
                   method="post"
                   className="bg-popover flex flex-col items-stretch"
                   action={href(
-                    "/project/:projectSlug/:envSlug/bulk-deploy-services",
+                    "/workspace/project/:projectSlug/:envSlug/bulk-deploy-services",
                     {
                       envSlug: env_slug,
                       projectSlug: project_slug
@@ -162,7 +183,7 @@ export default function EnvironmentServiceListPage({
                   method="post"
                   className="bg-popover flex flex-col items-stretch"
                   action={href(
-                    "/project/:projectSlug/:envSlug/bulk-toggle-service-state",
+                    "/workspace/project/:projectSlug/:envSlug/bulk-toggle-service-state",
                     {
                       envSlug: env_slug,
                       projectSlug: project_slug
@@ -264,7 +285,7 @@ export default function EnvironmentServiceListPage({
               {query.length > 0 ? (
                 <>
                   <h2 className="text-2xl font-medium">
-                    No services or stacks match the filter criteria
+                    No services or compose stacks match the filter criteria
                   </h2>
                   <h3 className="text-lg text-gray-500">
                     Your search for <em>`{query}`</em> did not return any
@@ -279,7 +300,7 @@ export default function EnvironmentServiceListPage({
               ) : (
                 <>
                   <h1 className="text-2xl font-bold">
-                    No services or stacks found in this environment
+                    No services or compose stacks found in this environment
                   </h1>
                   <h2 className="text-lg">
                     Would you like to start by creating one?
@@ -302,7 +323,7 @@ export default function EnvironmentServiceListPage({
                           onClick={() => {
                             navigate(
                               href(
-                                "/project/:projectSlug/:envSlug/create-service",
+                                "/workspace/project/:projectSlug/:envSlug/create-service",
                                 {
                                   projectSlug: project_slug,
                                   envSlug: env_slug
@@ -318,7 +339,7 @@ export default function EnvironmentServiceListPage({
                           onClick={() => {
                             navigate(
                               href(
-                                "/project/:projectSlug/:envSlug/create-compose-stack",
+                                "/workspace/project/:projectSlug/:envSlug/create-compose-stack",
                                 {
                                   projectSlug: project_slug,
                                   envSlug: env_slug

@@ -112,7 +112,7 @@ services:
     command: >
       bash -c "source /opt/.venv/bin/activate &&
                uv sync --locked --active &&
-               python manage.py create_metrics_cleanup_schedule &&
+               python manage.py setup_automated_schedules &&
                python manage.py runserver 0.0.0.0:8000"
     container_name: zane-api
     volumes:

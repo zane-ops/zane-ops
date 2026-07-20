@@ -1,166 +1,67 @@
+import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowBigUpDash,
-  BookOpen,
-  ChevronDown,
-  CircleUser,
-  GitCommitVertical,
-  HeartHandshake,
+  BookOpenIcon,
+  GitCommitVerticalIcon,
+  GlobeIcon,
+  HeartHandshakeIcon,
   HeartIcon,
+  LandmarkIcon,
   LaptopMinimalIcon,
-  LoaderIcon,
-  LogOut,
-  Menu,
   MoonIcon,
-  SettingsIcon,
-  Sparkles,
   SunIcon,
   TagIcon
 } from "lucide-react";
-import {
-  Link,
-  Outlet,
-  href,
-  redirect,
-  useFetcher,
-  useNavigate
-} from "react-router";
-import { ThemedLogo } from "~/components/logo";
-import {
-  Menubar,
-  MenubarContent,
-  MenubarContentItem,
-  MenubarMenu,
-  MenubarSeparator,
-  MenubarTrigger
-} from "~/components/ui/menubar";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetHeader,
-  SheetTrigger
-} from "~/components/ui/sheet";
-import { serverQueries, userQueries, versionQueries } from "~/lib/queries";
-import { cn } from "~/lib/utils";
-import { metaTitle } from "~/utils";
-
-import { useQuery } from "@tanstack/react-query";
-import * as React from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { toast } from "sonner";
-import { CommandMenuSearchbar } from "~/components/command-menu-searchbar";
+import { Outlet, href, redirect } from "react-router";
 import { NavigationProgress } from "~/components/navigation-progress";
-import { StatusBadge } from "~/components/status-badge";
 import { type Theme, useTheme } from "~/components/theme-context";
-import { Button, SubmitButton } from "~/components/ui/button";
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from "~/components/ui/dialog";
+import { Button } from "~/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
-import { ZANE_UPDATE_TOAST_ID } from "~/lib/constants";
-import { queryClient } from "~/root";
-import {
-  type clientAction,
-  pollUntilUpdateDone
-} from "~/routes/trigger-update";
-import type { Route } from "./+types/dashboard-layout";
+import { serverQueries, userQueries } from "~/lib/queries";
+import { cn, hasMinRole } from "~/lib/utils";
 
-export function meta() {
-  return [metaTitle("Dashboard")] satisfies ReturnType<Route.MetaFunction>;
-}
+import type { ServerSettings } from "~/api/types";
+import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
+import { getQueryClient } from "~/lib/query-client";
+import { syncWorkspaceStore } from "~/lib/workspace-store";
+import type { Route } from "./+types/main-layout";
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+
   const [user, userExistQuery] = await Promise.all([
     queryClient.ensureQueryData(userQueries.authedUser),
     queryClient.ensureQueryData(userQueries.checkUserExistence)
   ]);
 
   if (!userExistQuery.data?.exists) {
-    throw redirect("/onboarding");
+    console.log("[main-layout/clientLoader] redirect to `/onboarding`");
+    throw redirect(href("/onboarding"));
   }
 
   if (!user) {
-    let redirectPathName = `/login`;
+    let redirectPathName = href("/login");
     const url = new URL(request.url);
-    if (url.pathname !== "/" && url.pathname !== "/login") {
+
+    if (url.pathname !== href("/workspace")) {
       const params = new URLSearchParams([["redirect_to", url.pathname]]);
-      redirectPathName = `/login?${params.toString()}`;
+
+      redirectPathName = [href("/login"), "?", params.toString()].join("");
     }
 
+    console.log(
+      `[main-layout/clientLoader] redirect to \`${redirectPathName}\``
+    );
     throw redirect(redirectPathName);
   }
+
+  // Manually update store as it seems that the subscription
+  // doesn't get set if the main route is called from `redirect(...)`
+  syncWorkspaceStore(user);
+
   return { user };
 }
 
-export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
-  const [showUpdateDialog, setshowUpdateDialog] = React.useState(false);
-  const fetcher = useFetcher<typeof clientAction>();
-  const isPending = fetcher.state !== "idle";
-
-  React.useEffect(() => {
-    if (fetcher.state === "idle" && fetcher.data?.data) {
-      setshowUpdateDialog(false);
-    }
-  }, [fetcher.data, fetcher.state]);
-
-  const { data: latestVersion } = useQuery(versionQueries.latest);
-  const { data: serverSettings } = useQuery(serverQueries.settings);
-
-  const previousVersion = serverSettings?.image_version;
-
-  const ongoingUpdateQuery = useQuery(serverQueries.ongoingUpdate);
-
-  React.useEffect(() => {
-    // resume polling + loading toast if an update is already ongoing
-    // (e.g. the page was reloaded while ZaneOps was updating)
-    if (ongoingUpdateQuery.data?.update_ongoing) {
-      pollUntilUpdateDone();
-    }
-  }, [ongoingUpdateQuery.data]);
-
-  React.useEffect(() => {
-    if (
-      import.meta.env.PROD &&
-      latestVersion?.tag &&
-      previousVersion &&
-      previousVersion !== "canary" && // ignore canary as it is the latest version
-      !previousVersion.startsWith("pr-") && // ignore pr branch versions
-      previousVersion !== latestVersion.tag &&
-      !(ongoingUpdateQuery.data && ongoingUpdateQuery.data.update_ongoing)
-    ) {
-      toast.success("New version of ZaneOps available !", {
-        description: latestVersion.tag,
-        closeButton: true,
-        duration: Number.POSITIVE_INFINITY,
-        id: ZANE_UPDATE_TOAST_ID,
-        icon: <Sparkles size={17} />,
-        action: (
-          <Button
-            onClick={() => {
-              setshowUpdateDialog(true);
-              toast.dismiss(ZANE_UPDATE_TOAST_ID);
-            }}
-            className="text-xs cursor-pointer"
-            size="xs"
-          >
-            Inspect
-          </Button>
-        ),
-        style: {
-          flex: "row",
-          justifyContent: "space-between"
-        }
-      });
-    }
-  }, [previousVersion, latestVersion?.tag, ongoingUpdateQuery]);
-
+export default function MainLayout({ loaderData }: Route.ComponentProps) {
   const { data: user } = useQuery({
     ...userQueries.authedUser,
     initialData: loaderData.user
@@ -171,239 +72,13 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
   return (
     <div className="min-h-screen flex flex-col justify-between">
       <NavigationProgress />
-      <Header user={user} />
-      <main
-        className={cn(
-          "grow container p-6 relative overflow-y-clip",
-          !import.meta.env.PROD && "my-7"
-        )}
-      >
-        <Outlet />
-        {latestVersion && (
-          <Dialog open={showUpdateDialog} onOpenChange={setshowUpdateDialog}>
-            <DialogContent className="sm:max-w-[525px]">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 pb-3">
-                  <span>New Version Available</span>
-                  <StatusBadge color="blue" className="flex items-center gap-1">
-                    {latestVersion.tag}
-                  </StatusBadge>
-                </DialogTitle>
-                <DialogDescription className="border-t border-border -mx-6 px-6 pt-2">
-                  <p className="text-start text-lg font-medium text-card-foreground">
-                    Release notes:
-                  </p>
-                  <div className="flex my-2 flex-col gap-2.5 markdown py-2 rounded-lg bg-muted p-4 max-h-[500px] overflow-auto text-card-foreground">
-                    <Markdown remarkPlugins={[remarkGfm]}>
-                      {latestVersion.body}
-                    </Markdown>
-                  </div>
-                </DialogDescription>
-              </DialogHeader>
 
-              <DialogFooter className="flex flex-col md:flex-row flex-wrap gap-3 -mx-6 pt-6 px-6 border-t border-border">
-                <fetcher.Form
-                  action="/trigger-update"
-                  method="POST"
-                  className="order-1 md:order-1 w-full md:w-auto"
-                >
-                  <input
-                    type="hidden"
-                    name="desired_version"
-                    value={latestVersion.tag}
-                  />
-                  <SubmitButton
-                    isPending={isPending}
-                    className="flex gap-1 items-center w-full md:w-fit"
-                    onClick={() => setshowUpdateDialog(false)}
-                  >
-                    {isPending ? (
-                      <>
-                        <span>Updating...</span>
-                        <LoaderIcon className="animate-spin" size={15} />
-                      </>
-                    ) : (
-                      <>
-                        <span>Update ZaneOps</span>
-                        <ArrowBigUpDash size={15} />
-                      </>
-                    )}
-                  </SubmitButton>
-                </fetcher.Form>
+      <Outlet />
 
-                <Button
-                  variant="outline"
-                  onClick={() => setshowUpdateDialog(false)}
-                  className="order-2 md:order-2 w-full md:w-auto"
-                >
-                  Cancel
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
-      </main>
       <Footer />
+
+      {hasMinRole(user, "ServerAdmin") && <ZaneUpdateNotifier />}
     </div>
-  );
-}
-
-type HeaderProps = {
-  user: Route.ComponentProps["loaderData"]["user"];
-};
-
-function Header({ user }: HeaderProps) {
-  const fetcher = useFetcher();
-  const navigate = useNavigate();
-
-  const [sheetOpen, setSheetOpen] = React.useState(false);
-
-  return (
-    <>
-      {!import.meta.env.PROD && (
-        <div
-          className={cn(
-            "py-0.5 bg-red-500 text-white text-center fixed top-0 left-0 right-0  z-49",
-            "w-full"
-          )}
-        >
-          <p className="">⚠️ YOU ARE IN DEV ⚠️</p>
-        </div>
-      )}
-      <header
-        className={cn(
-          "flex px-6 border-b border-opacity-65 border-border py-2 items-center bg-toggle justify-between gap-4 sticky top-0 z-60",
-          !import.meta.env.PROD && "top-7"
-        )}
-      >
-        <Link to="/">
-          <ThemedLogo className="flex-none size-10 mr-8" />
-        </Link>
-        <div className="md:flex hidden  w-full items-center">
-          <Button asChild>
-            <Link to="/create-project" prefetch="intent">
-              Create project
-            </Link>
-          </Button>
-
-          <div className="flex mx-2 w-full justify-center items-center">
-            <CommandMenuSearchbar />
-          </div>
-        </div>
-
-        <fetcher.Form
-          method="post"
-          action="/logout"
-          id="logout-form"
-          className="hidden"
-        />
-        <Menubar className="border-none md:block hidden w-fit">
-          <MenubarMenu>
-            <MenubarTrigger className="flex justify-center items-center gap-2">
-              <CircleUser className="w-5 opacity-70" />
-              <p>{user.username}</p>
-              <ChevronDown className="w-4 my-auto" />
-            </MenubarTrigger>
-            <MenubarContent className="border min-w-0 mx-9  border-border">
-              <MenubarContentItem
-                icon={SettingsIcon}
-                text="Settings"
-                onClick={() => {
-                  navigate("/settings");
-                }}
-              />
-
-              <MenubarSeparator />
-              <button
-                className="w-full"
-                onClick={(e) => {
-                  e.currentTarget.form?.requestSubmit();
-                }}
-                form="logout-form"
-                disabled={fetcher.state !== "idle"}
-              >
-                {fetcher.state !== "idle" ? (
-                  "Logging out..."
-                ) : (
-                  <MenubarContentItem
-                    icon={LogOut}
-                    text="Logout"
-                    className="text-red-400"
-                  />
-                )}
-              </button>
-            </MenubarContent>
-          </MenubarMenu>
-        </Menubar>
-
-        {/** Mobile */}
-        <div className="md:hidden block">
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <SheetTrigger>
-              <Menu />
-            </SheetTrigger>
-            <SheetContent className="border flex rounded-xl  flex-col gap-5 w-full h-[calc(100dvh-100px)] border-border">
-              <SheetHeader>
-                <div className="absolute w-full top-3.5">
-                  <div className="flex justify-between w-[78%] items-center">
-                    <Link to="/">
-                      <ThemedLogo className="w-10 flex-none h-10 mr-8" />
-                    </Link>
-                  </div>
-                </div>
-              </SheetHeader>
-              <div className="flex mt-14 flex-col gap-3">
-                <CommandMenuSearchbar onSelect={() => setSheetOpen(false)} />
-
-                <div className="flex items-center  w-full">
-                  <SheetClose asChild>
-                    <Button
-                      asChild
-                      className="flex w-full justify-between text-sm items-center gap-1"
-                    >
-                      <Link to="/create-project">Create Project</Link>
-                    </Button>
-                  </SheetClose>
-                </div>
-              </div>
-
-              <div className="flex flex-col">
-                <div className="flex justify-between px-2 py-3 items-center border-b border-border">
-                  <p>{user.username}</p>
-                  <CircleUser className="w-8 opacity-70" />
-                </div>
-
-                <SheetClose asChild>
-                  <Link
-                    to={href("/settings")}
-                    className="flex items-center gap-1 p-2 hover:bg-muted transition rounded-md"
-                  >
-                    <SettingsIcon size={15} />
-                    <span>Settings</span>
-                  </Link>
-                </SheetClose>
-              </div>
-
-              <SheetClose asChild>
-                <Button
-                  type="submit"
-                  form="logout-form"
-                  variant="outline"
-                  className="p-2 border text-red-400 hover:text-red-500 hover:bg-muted"
-                  disabled={fetcher.state !== "idle"}
-                >
-                  {fetcher.state !== "idle" ? (
-                    "Logging out..."
-                  ) : (
-                    <div>Log Out</div>
-                  )}
-                </Button>
-              </SheetClose>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </header>
-    </>
   );
 }
 
@@ -427,7 +102,7 @@ const socialLinks = [
     id: "docs",
     name: "Docs",
     url: "https://zaneops.dev",
-    icon: <BookOpen size={15} />
+    icon: <BookOpenIcon size={15} />
   },
   {
     id: "support",
@@ -439,7 +114,7 @@ const socialLinks = [
     id: "contribute",
     name: "Contribute",
     url: "https://github.com/zane-ops/zane-ops/blob/main/CONTRIBUTING.md",
-    icon: <HeartHandshake size={15} />
+    icon: <HeartHandshakeIcon size={15} />
   },
   {
     id: "sponsor",
@@ -456,6 +131,10 @@ const socialLinks = [
   }
 ];
 
+function getBuildName(build: ServerSettings["build"]) {
+  return build === "ee" ? "Enterprise" : "Open Source";
+}
+
 function Footer() {
   const { data } = useQuery(serverQueries.settings);
 
@@ -471,114 +150,126 @@ function Footer() {
   const { setTheme, theme } = useTheme();
 
   return (
-    <>
-      <footer className="flex flex-wrap justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
-        <div className="items-center gap-4 md:gap-10 flex flex-wrap">
-          {socialLinks.map((link) =>
-            link.id === "sponsor" ? (
-              <Button
-                asChild
-                key={link.id}
-                variant="outline"
-                className="bg-grey/20 border-grey/20"
-              >
-                <a
-                  className="flex items-center gap-2 pl-2.5"
-                  href={link.url}
-                  target="_blank"
-                >
-                  {link.icon}
-                  {link.name}
-                </a>
-              </Button>
-            ) : (
+    <footer className="flex flex-wrap justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
+      <div className="items-center gap-4 md:gap-10 flex flex-wrap">
+        {socialLinks.map((link) =>
+          link.id === "sponsor" ? (
+            <Button
+              asChild
+              key={link.id}
+              variant="outline"
+              className="bg-grey/20 border-grey/20"
+            >
               <a
-                key={link.id}
-                className={cn("flex underline items-center gap-2")}
+                className="flex items-center gap-2 pl-2.5"
                 href={link.url}
                 target="_blank"
               >
                 {link.icon}
                 {link.name}
               </a>
-            )
-          )}
-        </div>
+            </Button>
+          ) : (
+            <a
+              key={link.id}
+              className={cn("flex underline items-center gap-2")}
+              href={link.url}
+              target="_blank"
+            >
+              {link.icon}
+              {link.name}
+            </a>
+          )
+        )}
+      </div>
 
-        <div className="flex gap-4 flex-wrap items-center">
-          <ToggleGroup
-            variant="outline"
-            type="single"
-            value={theme}
-            onValueChange={(value) => value && setTheme(value as Theme)}
-            className="gap-0 relative top-0.5 rounded-full border border-border p-0.5"
+      <div className="flex gap-4 flex-wrap items-center">
+        <ToggleGroup
+          variant="outline"
+          type="single"
+          value={theme}
+          onValueChange={(value) => value && setTheme(value as Theme)}
+          className="gap-0 relative top-0.5 rounded-full border border-border p-0.5"
+        >
+          <ToggleGroupItem
+            className={cn(
+              "rounded-full border-none text-grey cursor-pointer",
+              "hover:text-card-foreground hover:bg-transparent",
+              "data-[state=on]:text-card-foreground shadow-none"
+            )}
+            value="LIGHT"
           >
-            <ToggleGroupItem
-              className={cn(
-                "rounded-full border-none text-grey cursor-pointer",
-                "hover:text-card-foreground hover:bg-transparent",
-                "data-[state=on]:text-card-foreground shadow-none"
-              )}
-              value="LIGHT"
-            >
-              <span className="sr-only">light theme</span>
-              <SunIcon size={16} />
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              className={cn(
-                "rounded-full border-none text-grey cursor-pointer",
-                "hover:text-card-foreground hover:bg-transparent",
-                "data-[state=on]:text-card-foreground shadow-none"
-              )}
-              value="SYSTEM"
-            >
-              <span className="sr-only">system theme</span>
-              <LaptopMinimalIcon size={16} />
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              className={cn(
-                "rounded-full border-none text-grey cursor-pointer",
-                "hover:text-card-foreground hover:bg-transparent",
-                "data-[state=on]:text-card-foreground shadow-none"
-              )}
-              value="DARK"
-            >
-              <span className="sr-only">dark theme</span>
-              <MoonIcon size={16} />
-            </ToggleGroupItem>
-          </ToggleGroup>
+            <span className="sr-only">light theme</span>
+            <SunIcon size={16} />
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            className={cn(
+              "rounded-full border-none text-grey cursor-pointer",
+              "hover:text-card-foreground hover:bg-transparent",
+              "data-[state=on]:text-card-foreground shadow-none"
+            )}
+            value="SYSTEM"
+          >
+            <span className="sr-only">system theme</span>
+            <LaptopMinimalIcon size={16} />
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            className={cn(
+              "rounded-full border-none text-grey cursor-pointer",
+              "hover:text-card-foreground hover:bg-transparent",
+              "data-[state=on]:text-card-foreground shadow-none"
+            )}
+            value="DARK"
+          >
+            <span className="sr-only">dark theme</span>
+            <MoonIcon size={16} />
+          </ToggleGroupItem>
+        </ToggleGroup>
 
-          {data?.commit_sha && (
-            <span className="flex items-center gap-2">
-              <GitCommitVertical size={15} />
-              <span>
-                commit&nbsp;
-                <a
-                  className="underline font-semibold"
-                  href={`https://github.com/zane-ops/zane-ops/tree/${data.commit_sha}`}
-                  target="_blank"
-                >
-                  #{data.commit_sha.substring(0, 7)}
-                </a>
-              </span>
+        {data?.build && (
+          <span className="flex items-center gap-1">
+            {data.build === "ee" ? (
+              <LandmarkIcon size={15} />
+            ) : (
+              <GlobeIcon size={15} />
+            )}
+            <span>
+              <span className="sr-only">Build: </span> &nbsp;
+              <span>{getBuildName(data.build)} Edition</span>
             </span>
-          )}
-          {data?.image_version && image_version_url && (
-            <span className="flex items-center gap-2">
-              <TagIcon size={15} />
-              <span>
-                <a
-                  className="underline font-semibold"
-                  href={image_version_url}
-                  target="_blank"
-                >
-                  {data.image_version}
-                </a>
-              </span>
+          </span>
+        )}
+        {data?.commit_sha && (
+          <span className="flex items-center gap-2">
+            <GitCommitVerticalIcon size={15} />
+            <span>
+              commit&nbsp;
+              <a
+                className="underline font-semibold"
+                href={`https://github.com/zane-ops/zane-ops/tree/${data.commit_sha}`}
+                target="_blank"
+              >
+                #{data.commit_sha.substring(0, 7)}
+              </a>
             </span>
-          )}
-        </div>
-      </footer>
-    </>
+          </span>
+        )}
+
+        {data?.image_version && image_version_url && (
+          <span className="flex items-center gap-2">
+            <TagIcon size={15} />
+            <span>
+              <a
+                className="underline font-semibold"
+                href={image_version_url}
+                target="_blank"
+              >
+                {data.image_version}
+              </a>
+            </span>
+          </span>
+        )}
+      </div>
+    </footer>
   );
 }

@@ -6,7 +6,7 @@ import {
   Undo2Icon
 } from "lucide-react";
 import * as React from "react";
-import { useFetcher, useNavigate } from "react-router";
+import { href, useFetcher, useNavigate } from "react-router";
 import type { Service } from "~/api/types";
 import {
   BuilderChangeField,
@@ -43,9 +43,13 @@ import {
   FieldSetLabel
 } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import {
+  capitalizeText,
+  cn,
+  getFormErrorsFromResponseData,
+  pluralize
+} from "~/lib/utils";
 import type { clientAction } from "~/routes/services/deploy-docker-service";
-import { capitalizeText, pluralize } from "~/utils";
 
 type ServiceChangeModalProps = {
   service: Service;
@@ -67,7 +71,14 @@ export function ServiceChangesModal({
       if (!fetcher.data.errors) {
         setIsOpen(false);
         navigate(
-          `/project/${project_slug}/${service.environment.name}/services/${service.slug}`
+          href(
+            "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+            {
+              projectSlug: project_slug,
+              envSlug: service.environment.name,
+              serviceSlug: service.slug
+            }
+          )
         );
       }
     }

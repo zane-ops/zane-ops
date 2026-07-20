@@ -1,41 +1,51 @@
 import { AlertCircle, LoaderIcon } from "lucide-react";
 import * as React from "react";
-import { Form, redirect, useNavigation } from "react-router";
+import { Form, href, redirect, useNavigation } from "react-router";
 import { toast } from "sonner";
-import { apiClient } from "~/api/client";
+import { type RequestInput, apiClient } from "~/api/client";
 import { ThemedLogo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { Separator } from "~/components/ui/separator";
 import { userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
-  getFormErrorsFromResponseData
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
 } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/onboarding";
 
 export const meta: Route.MetaFunction = () => [metaTitle("Welcome to ZaneOps")];
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const userExistQuery = await queryClient.ensureQueryData(
     userQueries.checkUserExistence
   );
 
   if (userExistQuery.data?.exists) {
-    throw redirect("/login");
+    throw redirect(href("/login"));
   }
   return;
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
 
+  const firstName = formData.get("first_name")?.toString();
+
   const credentials = {
-    username: formData.get("username")!.toString(),
-    password: formData.get("password")!.toString(),
+    username: formData.get("username")?.toString() ?? "",
+    first_name: firstName?.trim() ? firstName : undefined,
+    password: formData.get("password")?.toString() ?? "",
+    workspace_name: formData.get("workspace_name")?.toString(),
     password_confirmation: formData.get("password_confirmation")!.toString()
+  } satisfies RequestInput<"post", "/api/auth/create-initial-user/"> & {
+    password_confirmation: string;
   };
 
   if (credentials.password !== credentials.password_confirmation) {
@@ -83,7 +93,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     closeButton: true
   });
 
-  throw redirect("/");
+  throw redirect(href("/"));
 }
 
 export default function InitialRegistration({
@@ -125,18 +135,45 @@ export default function InitialRegistration({
         <Form
           method="POST"
           ref={formRef}
-          className="p-7 my-2 lg:px-32 md:px-20 md:w-[50%]  flex flex-col w-full"
+          className="p-7 my-2 lg:px-32 md:px-20 md:w-2/3 xl:md:w-1/2  flex flex-col w-full"
         >
-          <p className="my-2 text-lg text-grey">Let's setup your first user</p>
-          <div className="card flex flex-col gap-3">
-            {errors.non_field_errors && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{errors.non_field_errors}</AlertDescription>
-              </Alert>
-            )}
+          {errors.non_field_errors && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{errors.non_field_errors}</AlertDescription>
+            </Alert>
+          )}
 
+          <h3 className="mt-2 text-lg text-grey">
+            Let's setup your first workspace
+          </h3>
+
+          <div className="my-2 flex flex-col gap-1">
+            <label htmlFor="workspace_name" className="">
+              Workspace Name
+            </label>
+            <Input
+              id="workspace_name"
+              name="workspace_name"
+              placeholder="ex: Default workspace"
+              defaultValue={actionData?.userData?.workspace_name}
+              type="text"
+              aria-describedby="workspace-name-error"
+              aria-invalid={!!errors.workspace_name}
+              autoFocus
+            />
+            {errors.workspace_name && (
+              <span id="workspace-name-error" className="text-red-500 text-sm">
+                {errors.workspace_name}
+              </span>
+            )}
+          </div>
+
+          <Separator className="mt-4" />
+
+          <p className="my-2 text-lg text-grey">Create your first user</p>
+          <div className="card flex flex-col gap-3">
             <div className="my-2 flex flex-col gap-1">
               <label htmlFor="username" className="">
                 Username
@@ -153,6 +190,26 @@ export default function InitialRegistration({
               {errors.username && (
                 <span id="username-error" className="text-red-500 text-sm">
                   {errors.username}
+                </span>
+              )}
+            </div>
+
+            <div className="my-2 flex flex-col gap-1">
+              <label htmlFor="first_name" className="">
+                Display Name <span className="text-grey">(optional)</span>
+              </label>
+              <Input
+                id="first_name"
+                name="first_name"
+                placeholder="ex: John Doe"
+                defaultValue={actionData?.userData?.first_name}
+                type="text"
+                aria-describedby="first-name-error"
+                aria-invalid={!!errors.first_name}
+              />
+              {errors.first_name && (
+                <span id="first-name-error" className="text-red-500 text-sm">
+                  {errors.first_name}
                 </span>
               )}
             </div>

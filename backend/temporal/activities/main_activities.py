@@ -1,6 +1,8 @@
 import asyncio
 import json
+import re
 from datetime import timedelta
+import shlex
 from typing import Any, Coroutine, List, Optional, cast
 
 from rest_framework import status
@@ -68,6 +70,8 @@ with workflow.unsafe.imports_passed_through():
         get_volume_resource_name,
     )
     from container_registry.models import BuildRegistry
+    from console.models import SystemSettings
+    from ..constants import ZANE_BUILDER_NAME_PREFIX
 
 
 from zane_api.dtos import (
@@ -92,8 +96,16 @@ from ..shared import (
     SimpleGitDeploymentDetails,
     ScaleBackServiceDetails,
     ScaleDownServiceDetails,
+    DockerSystemPruneSettings,
+    BuildCachePruneDetails,
+    DockerBuildCacheEntry,
+    DockerBuildCachePruneResult,
 )
-from ..constants import ZANEOPS_SLEEP_MANUAL_MARKER, SERVICE_DEPLOY_SEMAPHORE_KEY
+from ..constants import (
+    ZANEOPS_SLEEP_MANUAL_MARKER,
+    SERVICE_DEPLOY_SEMAPHORE_KEY,
+    DOCKER_BINARY_PATH,
+)
 
 
 @activity.defn
@@ -144,12 +156,130 @@ async def reset_deploy_semaphore():
     await semaphore.reset()
 
 
-class SystemCleanupActivities:
+def parse_docker_buildx_prune_output(output: str) -> DockerBuildCachePruneResult:
+    """
+    Parse the output of `docker buildx prune`, e.g.:
+    "ID\t\t\t\t\t\tRECLAIMABLE\tSIZE\t\tLAST ACCESSED\n<id>\ttrue\t\t26B\t4 days ago\n...Total:\t370.6MB\n"
+    """
+    total_reclaimed = "0B"
+    cache_entries: List[DockerBuildCacheEntry] = []
+    for line in output.strip().splitlines():
+        if line.startswith("Total:"):
+            total_reclaimed = line.split("\t")[-1].strip()
+            continue
+        if line.startswith("ID"):
+            continue
+
+        columns = [
+            column.strip() for column in re.split(r"\t+", line) if column.strip()
+        ]
+        if len(columns) >= 4:
+            cache_id, reclaimable, size, last_accessed = columns[:4]
+            cache_entries.append(
+                DockerBuildCacheEntry(
+                    id=cache_id,
+                    reclaimable=reclaimable.lower() == "true",
+                    size=size,
+                    last_accessed=last_accessed,
+                )
+            )
+
+    return DockerBuildCachePruneResult(
+        total_reclaimed=total_reclaimed, cache_entries=cache_entries
+    )
+
+
+class DockerSystemPruneActivities:
     def __init__(self):
         self.docker_client = get_docker_client()
 
     @activity.defn
-    async def cleanup_images(self) -> dict:
+    async def get_prune_settings(self) -> DockerSystemPruneSettings:
+        system = await SystemSettings.aget_or_create()
+        return DockerSystemPruneSettings(
+            prune_images=system.prune_images,
+            prune_volumes=system.prune_volumes,
+            prune_networks=system.prune_networks,
+            prune_containers=system.prune_containers,
+            max_cache_days=system.build_cache_max_age_days,
+            max_cache_space=system.build_cache_max_use_space_bytes,
+        )
+
+    @activity.defn
+    async def list_zane_buildx_builders(self) -> List[str]:
+        """
+        List the buildx builders created by ZaneOps for each environment,
+        these are named `builder-zane-<env_id>` (see `get_buildkit_builder_resource_name`).
+        """
+        cmd = [
+            DOCKER_BINARY_PATH,
+            "buildx",
+            "ls",
+            "--format",
+            "json",
+        ]
+        print(
+            f"[{Colors.YELLOW}prune_docker_build_cache{Colors.ENDC}]: Running shell command {Colors.YELLOW}{shlex.join(cmd)}{Colors.ENDC}"
+        )
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await process.communicate()
+        builder_names = []
+        for line in stdout.decode().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            name = json.loads(line).get("Name", "")
+            if name.startswith(ZANE_BUILDER_NAME_PREFIX):
+                builder_names.append(name)
+        return builder_names
+
+    @activity.defn
+    async def prune_docker_build_cache(
+        self, details: BuildCachePruneDetails
+    ) -> DockerBuildCachePruneResult:
+        cmd = [
+            DOCKER_BINARY_PATH,
+            "buildx",
+            "prune",
+            "--force",
+            "--all",
+            "--builder",
+            details.builder_name,
+        ]
+        if details.max_cache_space is not None:
+            cmd.extend(["--max-used-space", str(details.max_cache_space)])
+        if details.max_cache_days is not None:
+            cmd.extend(["--filter", f"until={details.max_cache_days * 24}h"])
+
+        print(
+            f"[{Colors.YELLOW}prune_docker_build_cache{Colors.ENDC}]: Running shell command {Colors.YELLOW}{shlex.join(cmd)}{Colors.ENDC}"
+        )
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate()
+        info_lines = (stdout or b"").decode()
+        error_lines = (stderr or b"").decode()
+        if info_lines:
+            print(info_lines)
+        if error_lines:
+            print(error_lines)
+
+        print(
+            f"Build cache for builder {Colors.ORANGE}{details.builder_name}{Colors.ENDC} deleted sucessfully ✅"
+        )
+        result = parse_docker_buildx_prune_output(info_lines)
+        result.error = error_lines.strip() or None
+        return result
+
+    @activity.defn
+    async def prune_images(self) -> dict:
         return self.docker_client.images.prune(
             filters={
                 "dangling": True,
@@ -158,7 +288,7 @@ class SystemCleanupActivities:
         )
 
     @activity.defn
-    async def cleanup_volumes(self) -> dict:
+    async def prune_volumes(self) -> dict:
         return self.docker_client.volumes.prune(
             filters={
                 "all": True,
@@ -167,11 +297,11 @@ class SystemCleanupActivities:
         )
 
     @activity.defn
-    async def cleanup_containers(self) -> dict:
+    async def prune_containers(self) -> dict:
         return self.docker_client.containers.prune()
 
     @activity.defn
-    async def cleanup_networks(self) -> dict:
+    async def prune_networks(self) -> dict:
         return self.docker_client.networks.prune(
             filters={
                 "label!": ["zane-managed"],
@@ -262,7 +392,7 @@ class DockerSwarmActivities:
                     original_id=service.original_id,
                     urls=[
                         URLDto(
-                            domain=url.domain,
+                            domain=url.domain,  # type: ignore
                             base_path=url.base_path,
                             strip_prefix=url.strip_prefix,
                             id=url.original_id,
@@ -287,7 +417,7 @@ class DockerSwarmActivities:
                     original_id=service.original_id,
                     urls=[
                         URLDto(
-                            domain=url.domain,
+                            domain=url.domain,  # type: ignore
                             base_path=url.base_path,
                             strip_prefix=url.strip_prefix,
                             id=url.original_id,
@@ -335,7 +465,7 @@ class DockerSwarmActivities:
                     original_id=service.original_id,
                     urls=[
                         URLDto(
-                            domain=url.domain,
+                            domain=url.domain,  # type: ignore
                             base_path=url.base_path,
                             strip_prefix=url.strip_prefix,
                             id=url.original_id,
@@ -361,7 +491,7 @@ class DockerSwarmActivities:
                     original_id=service.original_id,
                     urls=[
                         URLDto(
-                            domain=url.domain,
+                            domain=url.domain,  # type: ignore
                             base_path=url.base_path,
                             strip_prefix=url.strip_prefix,
                             id=url.original_id,

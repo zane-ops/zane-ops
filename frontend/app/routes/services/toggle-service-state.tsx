@@ -1,14 +1,20 @@
-import { redirect } from "react-router";
+import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
-import { serviceQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
-import { durationToMs, getCsrfTokenHeader, wait } from "~/utils";
+import { serviceQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import { durationToMs, getCsrfTokenHeader, wait } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/toggle-service-state";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}/settings`
+    href(
+      "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/settings",
+      {
+        ...params
+      }
+    )
   );
 }
 
@@ -25,6 +31,8 @@ export async function clientAction({
   },
   request
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
   const userData = {
     desired_state: formData
@@ -60,7 +68,7 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    serviceQueries.single({ project_slug, service_slug, env_slug })
+    serviceQueries.single({ workspaceId, project_slug, service_slug, env_slug })
   );
 
   return {

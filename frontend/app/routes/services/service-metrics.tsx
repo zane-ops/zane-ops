@@ -28,13 +28,17 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import { metrisSearch, serviceQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { metrisSearch, serviceQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import {
   convertValueToBytes,
   formatStorageValue,
   timeAgoFormatter
-} from "~/utils";
+} from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/service-metrics";
 
 export async function clientLoader({
@@ -45,6 +49,8 @@ export async function clientLoader({
     envSlug: env_slug
   }
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const searchParams = new URL(request.url).searchParams;
   const filters = metrisSearch.parse({
     time_range: searchParams.get("time_range")
@@ -52,6 +58,7 @@ export async function clientLoader({
 
   const metrics = await queryClient.ensureQueryData(
     serviceQueries.metrics({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,
@@ -65,7 +72,7 @@ export async function clientLoader({
 export default function ServiceMetricsPage({
   loaderData,
   matches: {
-    "2": {
+    "3": {
       loaderData: { limits, service }
     }
   },
@@ -75,12 +82,14 @@ export default function ServiceMetricsPage({
     envSlug: env_slug
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = metrisSearch.parse({
     time_range: searchParams.get("time_range")
   });
   const { data } = useQuery({
     ...serviceQueries.metrics({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,

@@ -1,7 +1,6 @@
 import { Separator } from "~/components/ui/separator";
 import { buildRegistryQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import { getQueryClient } from "~/lib/query-client";
 import type { Route } from "./+types/build-registry-details";
 
 import { useQuery } from "@tanstack/react-query";
@@ -35,7 +34,12 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import {
+  cn,
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 
 export function meta() {
   return [
@@ -44,6 +48,7 @@ export function meta() {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
   const registry = await queryClient.ensureQueryData(
     buildRegistryQueries.single(params.id)
   );
@@ -443,6 +448,7 @@ export async function clientAction({
 }
 
 async function deleteRegistry(id: string, formData: FormData) {
+  const queryClient = getQueryClient();
   const userData = {
     name: formData.get("name")?.toString() ?? "",
     domain: formData.get("domain")?.toString() ?? "",
@@ -496,6 +502,7 @@ async function deleteRegistry(id: string, formData: FormData) {
 }
 
 export async function updateRegistry(id: string, formData: FormData) {
+  const queryClient = getQueryClient();
   const storage_backend = formData
     .get("storage_backend")
     ?.toString() as RegistryStorageBackend;
@@ -560,5 +567,5 @@ export async function updateRegistry(id: string, formData: FormData) {
       return query.queryKey.includes(key);
     }
   });
-  throw redirect(href("/settings/build-registries"));
+  throw redirect(href("/admin/build-registries"));
 }

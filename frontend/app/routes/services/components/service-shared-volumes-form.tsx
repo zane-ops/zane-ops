@@ -39,6 +39,7 @@ import {
 } from "~/components/ui/tooltip";
 import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
@@ -140,13 +141,14 @@ function ServiceSharedVolumeItem({
   change_id,
   ...props
 }: SharedVolumeItem & ServiceSharedVolumesFormProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const [accordionValue, setAccordionValue] = React.useState("");
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const [changedVolumeId, setChangedVolumeId] = React.useState(volume_id);
   const SelectTriggerRef =
     React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
   const { data: volumes = [] } = useQuery(
-    serviceQueries.availableVolumes(props)
+    serviceQueries.availableVolumes({ ...props, workspaceId })
   );
 
   const volumeMap = React.useMemo(() => {
@@ -417,11 +419,12 @@ function ServiceSharedVolumeItem({
 }
 
 function NewServiceSharedVolumeForm(props: ServiceSharedVolumesFormProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const SelectTriggerRef =
     React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
   const { data: volumes = [], isLoading } = useQuery(
-    serviceQueries.availableVolumes(props)
+    serviceQueries.availableVolumes({ ...props, workspaceId })
   );
 
   const [selectedVolumeId, setSelectedVolumeId] = React.useState<

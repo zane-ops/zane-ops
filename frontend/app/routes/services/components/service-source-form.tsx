@@ -39,6 +39,7 @@ import {
   sharedRegistryCredentialsQueries
 } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import {
   type clientAction,
   useServiceQuery
@@ -55,6 +56,7 @@ export function ServiceSourceForm({
   project_slug,
   env_slug
 }: ServiceFormProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const fetcher = useFetcher<typeof clientAction>();
   const isPending = fetcher.state !== "idle";
 
@@ -105,7 +107,7 @@ export function ServiceSourceForm({
     dockerHubQueries.images(debouncedValue)
   );
   const { data: registries = [] } = useQuery(
-    sharedRegistryCredentialsQueries.list
+    sharedRegistryCredentialsQueries.list(workspaceId)
   );
 
   const imageList = imageListData?.data?.images ?? [];

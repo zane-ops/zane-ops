@@ -14,10 +14,13 @@ import {
 import { Separator } from "~/components/ui/separator";
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { serverQueries } from "~/lib/queries";
-import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import { ensureMinRole, serverQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import {
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import type { Route } from "./+types/create-gitlab-app";
 
 export function meta() {
@@ -25,8 +28,9 @@ export function meta() {
 }
 
 export async function clientLoader() {
+  const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Owner");
   const settings = await queryClient.ensureQueryData(serverQueries.settings);
-
   return { settings };
 }
 

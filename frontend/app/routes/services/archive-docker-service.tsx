@@ -4,18 +4,23 @@ import { apiClient } from "~/api/client";
 import {
   environmentQueries,
   resourceQueries,
-  serviceQueries
+  serviceQueries,
+  userQueries
 } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import type { ErrorResponseFromAPI } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
+import { getCsrfTokenHeader } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/archive-docker-service";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href("/project/:projectSlug/:envSlug/services/:serviceSlug/settings", {
-      ...params
-    })
+    href(
+      "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/settings",
+      {
+        ...params
+      }
+    )
   );
 }
 
@@ -27,6 +32,8 @@ export async function clientAction({
     envSlug: env_slug
   }
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
 
   if (
@@ -73,15 +80,18 @@ export async function clientAction({
   }
 
   queryClient.removeQueries({
-    queryKey: serviceQueries.single({ project_slug, service_slug, env_slug })
-      .queryKey
+    queryKey: serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }).queryKey
   });
   queryClient.invalidateQueries(
-    environmentQueries.serviceList(project_slug, env_slug)
+    environmentQueries.serviceList(workspaceId, project_slug, env_slug)
   );
   queryClient.invalidateQueries({
-    predicate: (query) =>
-      query.queryKey[0] === resourceQueries.search().queryKey[0]
+    queryKey: resourceQueries.search(workspaceId).queryKey.slice(0, 3)
   });
 
   toast.success("Success", {
@@ -93,7 +103,7 @@ export async function clientAction({
     )
   });
   throw redirect(
-    href("/project/:projectSlug/:envSlug", {
+    href("/workspace/project/:projectSlug/:envSlug", {
       projectSlug: project_slug,
       envSlug: env_slug
     })

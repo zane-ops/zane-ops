@@ -6,40 +6,32 @@ import {
   LoaderIcon,
   Trash2Icon
 } from "lucide-react";
-import * as React from "react";
 import { href, redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { CopyButton } from "~/components/copy-button";
+import { DeleteConfirmationDialog } from "~/components/delete-confirmation-dialog";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "~/components/ui/dialog";
+import { DialogTrigger } from "~/components/ui/dialog";
 import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { Textarea } from "~/components/ui/textarea";
-import { projectQueries, resourceQueries } from "~/lib/queries";
+import { projectQueries, resourceQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
+  getCsrfTokenHeader,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/project-settings";
 
 export default function ProjectSettingsPage({
   params,
   matches: {
-    "2": {
+    "3": {
       loaderData: { project }
     }
   }
@@ -50,7 +42,7 @@ export default function ProjectSettingsPage({
         <h2 className="text-2xl">General</h2>
       </div>
       <Separator />
-      <p className="text-grey">Update the general details of your service</p>
+      <p className="text-grey">Update the general details of your project</p>
       <div className="grid lg:grid-cols-12 gap-10 relative">
         <div className="lg:col-span-10 flex flex-col">
           <section id="details" className="flex gap-1 scroll-mt-20">
@@ -87,7 +79,7 @@ export default function ProjectSettingsPage({
                       services
                     </p>
                   </div>
-                  <ProjectDangerZoneForm project_slug={params.projectSlug} />
+                  <ProjectDeleteForm project_slug={params.projectSlug} />
                 </div>
               </div>
             </div>
@@ -96,118 +88,6 @@ export default function ProjectSettingsPage({
       </div>
     </section>
   );
-}
-
-export async function clientAction({
-  request,
-  params
-}: Route.ClientActionArgs) {
-  const formData = await request.formData();
-  const intent = formData.get("intent")?.toString();
-
-  switch (intent) {
-    case "update_project": {
-      return updateProject(params.projectSlug, formData);
-    }
-    case "archive_project": {
-      if (
-        formData.get("project_slug")?.toString().trim() !== params.projectSlug
-      ) {
-        return {
-          errors: {
-            type: "validation_error",
-            errors: [
-              {
-                attr: "project_slug",
-                code: "invalid",
-                detail: "The project slug does not match"
-              }
-            ]
-          } satisfies ErrorResponseFromAPI
-        };
-      }
-      return archiveProject(params.projectSlug);
-    }
-    default: {
-      throw new Error("Unexpected intent");
-    }
-  }
-}
-
-async function updateProject(project_slug: string, formData: FormData) {
-  const userData = {
-    slug: formData.get("slug")?.toString() ?? "",
-    description: formData.get("description")?.toString()
-  };
-  const apiResponse = await apiClient.PUT("/api/projects/{slug}/", {
-    headers: {
-      ...(await getCsrfTokenHeader())
-    },
-    params: {
-      path: {
-        slug: project_slug
-      }
-    },
-    body: userData
-  });
-
-  if (apiResponse.error) {
-    return {
-      userData,
-      errors: apiResponse.error
-    };
-  }
-
-  queryClient.invalidateQueries(projectQueries.single(project_slug));
-  toast.success("Project updated successfully!", { closeButton: true });
-
-  if (apiResponse.data.slug !== project_slug) {
-    queryClient.setQueryData(
-      projectQueries.single(userData.slug).queryKey,
-      apiResponse.data
-    );
-    throw redirect(
-      href("/project/:projectSlug/settings", {
-        projectSlug: apiResponse.data.slug
-      })
-    );
-  }
-}
-
-async function archiveProject(project_slug: string) {
-  const apiResponse = await apiClient.DELETE("/api/projects/{slug}/", {
-    headers: {
-      ...(await getCsrfTokenHeader())
-    },
-    params: {
-      path: {
-        slug: project_slug
-      }
-    }
-  });
-
-  if (apiResponse.error) {
-    return {
-      errors: apiResponse.error
-    };
-  }
-
-  queryClient.invalidateQueries(projectQueries.single(project_slug));
-  queryClient.invalidateQueries({
-    predicate: (query) =>
-      query.queryKey[0] === resourceQueries.search().queryKey[0] ||
-      query.queryKey[0] === projectQueries.list().queryKey[0]
-  });
-
-  toast.success("Success", {
-    closeButton: true,
-    description: (
-      <span>
-        Project `<strong>{project_slug}</strong>` has been successfully deleted.
-      </span>
-    )
-  });
-  throw redirect(`/`);
 }
 
 type ProjectDetailsFormProps = {
@@ -291,141 +171,169 @@ function ProjectDetailsForm({
   );
 }
 
-function ProjectDangerZoneForm({ project_slug }: { project_slug: string }) {
+function ProjectDeleteForm({ project_slug }: { project_slug: string }) {
   const fetcher = useFetcher<typeof clientAction>();
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
 
   return (
-    <fetcher.Form method="post" className="flex flex-col gap-2 items-start">
-      <DeleteConfirmationFormDialog project_slug={project_slug} />
-    </fetcher.Form>
+    <div className="flex flex-col gap-2 items-start">
+      <DeleteConfirmationDialog
+        fetcher={fetcher}
+        title="Delete this project ?"
+        message="Deleting this project will also delete all its services and delete all the deployments related to the services, This action is irreversible."
+        confirmationValue={project_slug}
+        confirmationFieldName="project_slug"
+        form={
+          <fetcher.Form method="post">
+            <FieldSet name="project_slug" errors={errors.project_slug}>
+              <FieldSetInput />
+            </FieldSet>
+            <input type="hidden" name="intent" value="archive_project" />
+          </fetcher.Form>
+        }
+        trigger={
+          <DialogTrigger asChild>
+            <Button
+              variant="destructive"
+              type="button"
+              className={cn("inline-flex gap-1 items-center")}
+            >
+              <Trash2Icon size={15} className="flex-none" />
+              <span>Delete this project</span>
+            </Button>
+          </DialogTrigger>
+        }
+      />
+    </div>
   );
 }
 
-function DeleteConfirmationFormDialog({
-  project_slug
-}: { project_slug: string }) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const fetcher = useFetcher<typeof clientAction>();
-  const formRef = React.useRef<React.ComponentRef<"form">>(null);
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
+  const formData = await request.formData();
+  const intent = formData.get("intent")?.toString();
 
-  const [data, setData] = React.useState(fetcher.data);
-  const isPending = fetcher.state !== "idle";
-  const errors = getFormErrorsFromResponseData(data?.errors);
-
-  React.useEffect(() => {
-    setData(fetcher.data);
-
-    // only focus on the correct input in case of error
-    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
-      formRef.current?.reset();
-      setIsOpen(false);
+  switch (intent) {
+    case "update_project": {
+      return updateProject(workspaceId, params, formData);
     }
-  }, [fetcher.state, fetcher.data]);
+    case "archive_project": {
+      if (
+        formData.get("project_slug")?.toString().trim() !== params.projectSlug
+      ) {
+        return {
+          errors: {
+            type: "validation_error",
+            errors: [
+              {
+                attr: "project_slug",
+                code: "invalid",
+                detail: "The project slug does not match"
+              }
+            ]
+          } satisfies ErrorResponseFromAPI
+        };
+      }
+      return archiveProject(workspaceId, params);
+    }
+    default: {
+      throw new Error("Unexpected intent");
+    }
+  }
+}
 
-  return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={(open) => {
-        if (isPending) return; // prevent closing if form is being submitted
-        setIsOpen(open);
-        if (!open) {
-          setData(undefined);
-        }
-      }}
-    >
-      <DialogTrigger asChild>
-        <Button
-          variant="destructive"
-          type="button"
-          className={cn("inline-flex gap-1 items-center")}
-        >
-          <Trash2Icon size={15} className="flex-none" />
-          <span>Delete this project</span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="gap-0">
-        <DialogHeader className="pb-4">
-          <DialogTitle>Delete this project ?</DialogTitle>
+async function updateProject(
+  workspaceId: string,
+  params: Route.ClientActionArgs["params"],
+  formData: FormData
+) {
+  const queryClient = getQueryClient();
+  const userData = {
+    slug: formData.get("slug")?.toString() ?? "",
+    description: formData.get("description")?.toString()
+  };
+  const apiResponse = await apiClient.PUT("/api/projects/{slug}/", {
+    headers: {
+      ...(await getCsrfTokenHeader())
+    },
+    params: {
+      path: {
+        slug: params.projectSlug
+      }
+    },
+    body: userData
+  });
 
-          <Alert variant="danger" className="my-5">
-            <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Attention !</AlertTitle>
-            <AlertDescription>
-              Deleting this project will also delete all its services and delete
-              all the deployments related to the services, This action is
-              irreversible.
-            </AlertDescription>
-          </Alert>
+  if (apiResponse.error) {
+    return {
+      userData,
+      errors: apiResponse.error
+    };
+  }
 
-          <DialogDescription className="inline-flex gap-1 items-center flex-wrap">
-            <span className="whitespace-nowrap">Please type</span>
-            <CopyButton
-              variant="outline"
-              size="sm"
-              showLabel
-              value={project_slug}
-              label={project_slug}
-            />
-            <span className="whitespace-nowrap">to confirm :</span>
-          </DialogDescription>
-        </DialogHeader>
-
-        {errors.non_field_errors && (
-          <Alert variant="destructive">
-            <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{errors.non_field_errors}</AlertDescription>
-          </Alert>
-        )}
-
-        <fetcher.Form
-          className="flex flex-col w-full mb-5 gap-1"
-          method="post"
-          id="delete-form"
-          ref={formRef}
-        >
-          <FieldSet name="project_slug" errors={errors.project_slug}>
-            <FieldSetInput />
-          </FieldSet>
-        </fetcher.Form>
-
-        <DialogFooter className="-mx-6 px-6 pt-4">
-          <div className="flex items-center gap-4 w-full">
-            <SubmitButton
-              variant="destructive"
-              className={cn(
-                "inline-flex gap-1 items-center",
-                isPending ? "bg-red-400" : "bg-red-500"
-              )}
-              value="archive_project"
-              name="intent"
-              form="delete-form"
-              isPending={isPending}
-            >
-              {isPending ? (
-                <>
-                  <LoaderIcon className="animate-spin flex-none" size={15} />
-                  <span>Deleting...</span>
-                </>
-              ) : (
-                <>
-                  <span>Delete</span>
-                </>
-              )}
-            </SubmitButton>
-
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsOpen(false);
-                setData(undefined);
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+  queryClient.invalidateQueries(
+    projectQueries.single(workspaceId, params.projectSlug)
   );
+  toast.success("Project updated successfully!", { closeButton: true });
+
+  if (apiResponse.data.slug !== params.projectSlug) {
+    queryClient.setQueryData(
+      projectQueries.single(workspaceId, userData.slug).queryKey,
+      apiResponse.data
+    );
+    throw redirect(
+      href("/workspace/project/:projectSlug/settings", {
+        projectSlug: apiResponse.data.slug
+      })
+    );
+  }
+}
+
+async function archiveProject(
+  workspaceId: string,
+  params: Route.ClientActionArgs["params"]
+) {
+  const queryClient = getQueryClient();
+  const apiResponse = await apiClient.DELETE("/api/projects/{slug}/", {
+    headers: {
+      ...(await getCsrfTokenHeader())
+    },
+    params: {
+      path: {
+        slug: params.projectSlug
+      }
+    }
+  });
+
+  if (apiResponse.error) {
+    return {
+      errors: apiResponse.error
+    };
+  }
+  await Promise.all([
+    queryClient.invalidateQueries(
+      projectQueries.single(workspaceId, params.projectSlug)
+    ),
+    queryClient.invalidateQueries({
+      queryKey: resourceQueries.search(workspaceId).queryKey.slice(0, 3)
+    }),
+    queryClient.invalidateQueries({
+      queryKey: projectQueries.list({ workspaceId }).queryKey.slice(0, 3)
+    })
+  ]);
+
+  toast.success("Success", {
+    closeButton: true,
+    description: (
+      <span>
+        Project `<strong>{params.projectSlug}</strong>` has been successfully
+        deleted.
+      </span>
+    )
+  });
+  throw redirect(href("/workspace"));
 }

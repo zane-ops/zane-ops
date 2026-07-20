@@ -16,12 +16,11 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn } from "~/lib/utils";
+import { cn, wait } from "~/lib/utils";
 import {
   type clientAction,
   useServiceQuery
 } from "~/routes/services/settings/service-settings";
-import { wait } from "~/utils";
 
 export type ServiceDeployURLFormProps = {
   service_slug: string;

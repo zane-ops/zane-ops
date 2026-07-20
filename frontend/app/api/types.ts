@@ -27,6 +27,34 @@ export type Service = ApiResponse<
   "get",
   "/api/projects/{project_slug}/{env_slug}/service-details/{slug}/"
 >;
+
+export type AuthedUserResponse = ApiResponse<"get", "/api/auth/me/">;
+
+export type WorkspaceMembership = ApiResponse<
+  "get",
+  "/api/workspaces/list/"
+>[number];
+
+export type SimpleWorkspace = ApiResponse<"get", "/api/workspace/">;
+
+export type WorkspaceMember = ApiResponse<
+  "get",
+  "/api/workspace/members/"
+>["results"][number];
+
+export type WorkspaceInvitation = ApiResponse<
+  "get",
+  "/api/workspace/invitations/"
+>["results"][number];
+
+export type WorkspaceInvitationLink = ApiResponse<
+  "get",
+  "/api/workspace/invitations/{token}/"
+>;
+
+export type WorkspaceRoleName = WorkspaceMember["role_name"];
+export type WorkspaceRoleValue = WorkspaceMember["role"];
+
 export type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
 
 export type Project = ApiResponse<"get", "/api/projects/{slug}/">;
@@ -59,6 +87,8 @@ export type ComposeStackDeployment = ApiResponse<
   "get",
   "/api/compose/stacks/{project_slug}/{env_slug}/{slug}/deployments/{hash}/"
 >;
+
+export type ServerSettings = ApiResponse<"get", "/api/settings/">;
 
 export type TemplateDocument = {
   id: string;

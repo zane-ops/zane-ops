@@ -1,5 +1,5 @@
-import { AlertCircle, LoaderIcon } from "lucide-react";
-import { href, redirect, useFetcher } from "react-router";
+import { AlertCircle, ArrowLeftIcon, LoaderIcon } from "lucide-react";
+import { Link, href, redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -10,17 +10,30 @@ import {
   FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
-import { userQueries } from "~/lib/queries";
-import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import { ensureAuthedUser, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import {
+  cn,
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import type { Route } from "./+types/change-password";
 
 export const meta: Route.MetaFunction = () => [
   metaTitle("Update your password")
 ];
 
-export async function clientAction({ request }: Route.ClientActionArgs) {
+export async function clientLoader({}: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  await ensureAuthedUser(queryClient);
+}
+
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
   const credentials = {
     current_password: formData.get("current_password")!.toString(),
@@ -41,18 +54,31 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     description: "Password updated successfully"
   });
 
-  throw redirect(href("/settings/account"));
+  throw redirect(href("/account"));
 }
 
 export default function UserSettingsPage({}: Route.ComponentProps) {
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex items-center gap-4">
-        <h2 className="text-2xl">Change Password</h2>
+      <div className="flex flex-col">
+        <Link
+          to={href("/account")}
+          className={cn(
+            "text-sm text-grey w-full",
+            "flex items-center gap-0.5 hover:underline"
+          )}
+        >
+          <ArrowLeftIcon className="size-4" />
+          Account Settings
+        </Link>
+
+        <div className="flex items-center gap-4">
+          <h2 className="text-3xl font-medium">Update your password</h2>
+        </div>
       </div>
       <Separator />
 
-      <p className="text-gray">
+      <p className="text-grey">
         Update your account password. Make sure to use a strong password
       </p>
 

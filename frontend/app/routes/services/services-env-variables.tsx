@@ -57,10 +57,19 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { serviceQueries } from "~/lib/queries";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader, pluralize, wait } from "~/utils";
+import { serviceQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import {
+  cn,
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  pluralize,
+  wait
+} from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/services-env-variables";
 
 type EnvVariableUI = {
@@ -78,13 +87,19 @@ export default function ServiceEnvVariablesPage({
     envSlug: env_slug
   },
   matches: {
-    "2": {
+    "3": {
       loaderData: { service: initialData }
     }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const { data: service } = useQuery({
-    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+    ...serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }),
     initialData
   });
 
@@ -201,12 +216,15 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
 
   switch (intent) {
     case "create-env-variable": {
       return createEnvVariable({
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -215,6 +233,7 @@ export async function clientAction({
     }
     case "update-env-variable": {
       return updateEnvVariable({
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -223,6 +242,7 @@ export async function clientAction({
     }
     case "cancel-env-change": {
       return cancelEnvVariable({
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -231,6 +251,7 @@ export async function clientAction({
     }
     case "delete-env-variable": {
       return deleteEnvVariable({
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -239,6 +260,7 @@ export async function clientAction({
     }
     case "add-dotenv-values": {
       return addDotEnvVariables({
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -257,16 +279,19 @@ type EnVariableRowProps = EnvVariableUI & {
 };
 
 async function createEnvVariable({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const userData = {
     key: (formData.get("key") ?? "").toString(),
     value: (formData.get("value") ?? "").toString()
@@ -300,7 +325,12 @@ async function createEnvVariable({
 
   if (data) {
     await queryClient.invalidateQueries({
-      ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+      ...serviceQueries.single({
+        workspaceId,
+        project_slug,
+        service_slug,
+        env_slug
+      }),
       exact: true
     });
     return { data };
@@ -308,16 +338,19 @@ async function createEnvVariable({
 }
 
 async function updateEnvVariable({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const userData = {
     key: (formData.get("key") ?? "").toString(),
     value: (formData.get("value") ?? "").toString()
@@ -352,7 +385,12 @@ async function updateEnvVariable({
 
   if (data) {
     await queryClient.invalidateQueries({
-      ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+      ...serviceQueries.single({
+        workspaceId,
+        project_slug,
+        service_slug,
+        env_slug
+      }),
       exact: true
     });
     return { data };
@@ -360,16 +398,19 @@ async function updateEnvVariable({
 }
 
 async function deleteEnvVariable({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const toasId = toast.loading(`Sending change request...`);
   const { error } = await apiClient.PUT(
     "/api/projects/{project_slug}/{env_slug}/request-service-changes/{service_slug}/",
@@ -402,7 +443,12 @@ async function deleteEnvVariable({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+    ...serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }),
     exact: true
   });
   toast.success("Success", {
@@ -413,16 +459,19 @@ async function deleteEnvVariable({
 }
 
 async function addDotEnvVariables({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const { error: errors, data } = await apiClient.PUT(
     "/api/projects/{project_slug}/{env_slug}/request-env-changes/{service_slug}/",
     {
@@ -448,7 +497,12 @@ async function addDotEnvVariables({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+    ...serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }),
     exact: true
   });
   toast.success("Success", {
@@ -461,16 +515,19 @@ async function addDotEnvVariables({
 }
 
 async function cancelEnvVariable({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const toasId = toast.loading(`Cancelling env variable change...`);
   const { error } = await apiClient.DELETE(
     "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/{service_slug}/{change_id}/",
@@ -499,7 +556,12 @@ async function cancelEnvVariable({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+    ...serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }),
     exact: true
   });
   toast.success("Success", {

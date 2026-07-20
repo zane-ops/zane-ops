@@ -46,25 +46,35 @@ import { PasswordToggleInput } from "~/components/ui/password-toggle-input";
 import {
   environmentQueries,
   projectQueries,
-  resourceQueries
+  resourceQueries,
+  userQueries
 } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
+  getCsrfTokenHeader,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/environments-settings";
 
 export default function EnvironmentSettingsPage({
   params,
   matches: {
-    "2": { loaderData }
+    "3": { loaderData }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const { data: env } = useQuery({
-    ...environmentQueries.single(params.projectSlug, params.envSlug),
+    ...environmentQueries.single(
+      workspaceId,
+      params.projectSlug,
+      params.envSlug
+    ),
     initialData: loaderData.environment
   });
 
@@ -523,7 +533,7 @@ export default function EnvironmentSettingsPage({
 function EnvironmentNameForm({
   environment: env
 }: {
-  environment: Route.ComponentProps["matches"][2]["loaderData"]["environment"];
+  environment: Route.ComponentProps["matches"][3]["loaderData"]["environment"];
 }) {
   const isModifiable = !env.is_preview && env.name !== "production";
   const fetcher = useFetcher<typeof clientAction>();
@@ -588,12 +598,19 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
 
   switch (intent) {
     case "rename_environment": {
-      return renameEnvironment(params.projectSlug, params.envSlug, formData);
+      return renameEnvironment(
+        workspaceId,
+        params.projectSlug,
+        params.envSlug,
+        formData
+      );
     }
     case "archive_environment": {
       if (
@@ -614,6 +631,7 @@ export async function clientAction({
         };
       }
       return archiveEnvironment(
+        workspaceId,
         params.projectSlug,
         formData.get("environment")!.toString()
       );
@@ -625,10 +643,12 @@ export async function clientAction({
 }
 
 async function renameEnvironment(
+  workspaceId: string,
   project_slug: string,
   env_slug: string,
   formData: FormData
 ) {
+  const queryClient = getQueryClient();
   const userData = {
     name: formData.get("name")?.toString() ?? ""
   };
@@ -660,9 +680,11 @@ async function renameEnvironment(
 
   if (data.name !== env_slug) {
     await Promise.all([
-      queryClient.invalidateQueries(projectQueries.single(project_slug)),
       queryClient.invalidateQueries(
-        environmentQueries.serviceList(project_slug, env_slug)
+        projectQueries.single(workspaceId, project_slug)
+      ),
+      queryClient.invalidateQueries(
+        environmentQueries.serviceList(workspaceId, project_slug, env_slug)
       )
     ]);
   }
@@ -670,7 +692,12 @@ async function renameEnvironment(
   return { data };
 }
 
-async function archiveEnvironment(project_slug: string, env_slug: string) {
+async function archiveEnvironment(
+  workspaceId: string,
+  project_slug: string,
+  env_slug: string
+) {
+  const queryClient = getQueryClient();
   const apiResponse = await apiClient.DELETE(
     "/api/projects/{slug}/environment-details/{env_slug}/",
     {
@@ -693,10 +720,11 @@ async function archiveEnvironment(project_slug: string, env_slug: string) {
   }
 
   await Promise.all([
-    queryClient.invalidateQueries(projectQueries.single(project_slug)),
+    queryClient.invalidateQueries(
+      projectQueries.single(workspaceId, project_slug)
+    ),
     queryClient.invalidateQueries({
-      predicate: (query) =>
-        query.queryKey[0] === resourceQueries.search().queryKey[0]
+      queryKey: resourceQueries.search(workspaceId).queryKey.slice(0, 3)
     })
   ]);
 
@@ -710,7 +738,7 @@ async function archiveEnvironment(project_slug: string, env_slug: string) {
   });
 
   throw redirect(
-    href("/project/:projectSlug/:envSlug", {
+    href("/workspace/project/:projectSlug/:envSlug", {
       projectSlug: project_slug,
       envSlug: "production"
     })
@@ -746,7 +774,7 @@ function EnvironmentDeleteFormDialog({ environment }: { environment: string }) {
 
       setIsOpen(false);
       navigate(
-        href("/project/:projectSlug/settings/environments", {
+        href("/workspace/project/:projectSlug/settings/environments", {
           projectSlug: params.projectSlug!
         }),
         { replace: true }

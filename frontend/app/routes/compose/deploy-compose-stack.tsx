@@ -1,15 +1,20 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { composeStackQueries, serviceQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
+import {
+  composeStackQueries,
+  serviceQueries,
+  userQueries
+} from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/deploy-compose-stack";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     href(
-      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+      "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
       params
     )
   );
@@ -23,6 +28,8 @@ export async function clientAction({
     envSlug: env_slug
   }
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
 
   const commit_message = formData.get("commit_message")?.toString();
@@ -60,10 +67,20 @@ export async function clientAction({
 
   await Promise.all([
     queryClient.invalidateQueries(
-      composeStackQueries.single({ project_slug, stack_slug, env_slug })
+      composeStackQueries.single({
+        workspaceId,
+        project_slug,
+        stack_slug,
+        env_slug
+      })
     ),
     queryClient.invalidateQueries(
-      composeStackQueries.deploymentList({ project_slug, stack_slug, env_slug })
+      composeStackQueries.deploymentList({
+        workspaceId,
+        project_slug,
+        stack_slug,
+        env_slug
+      })
     )
   ]);
   toast.success("Success", {

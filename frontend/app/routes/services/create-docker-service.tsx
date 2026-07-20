@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
+  ArrowLeftIcon,
   ArrowRightIcon,
   CheckIcon,
   ClockArrowUpIcon,
@@ -51,11 +52,20 @@ import {
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import {
   dockerHubQueries,
-  sharedRegistryCredentialsQueries
+  sharedRegistryCredentialsQueries,
+  userQueries
 } from "~/lib/queries";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import { getQueryClient } from "~/lib/query-client";
+import {
+  cn,
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/create-docker-service";
 
 export function meta() {
@@ -64,9 +74,11 @@ export function meta() {
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader() {
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const registries = await queryClient.ensureQueryData(
-    sharedRegistryCredentialsQueries.list
+    sharedRegistryCredentialsQueries.list(workspaceId)
   );
   return { registries };
 }
@@ -83,67 +95,25 @@ export default function CreateServicePage({
   const [deploymentHash, setDeploymentHash] = React.useState("");
 
   return (
-    <>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={`/project/${params.projectSlug}/production`}
-                prefetch="intent"
-              >
-                {params.projectSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                params.envSlug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : params.envSlug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={`/project/${params.projectSlug}/${params.envSlug}`}
-                prefetch="intent"
-              >
-                {params.envSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={`/project/${params.projectSlug}/${params.envSlug}/create-service`}
-                prefetch="intent"
-              >
-                Create service
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>From Docker Image</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+    <div
+      className={cn(
+        currentStep !== "FORM" &&
+          "h-[70vh] flex flex-col items-center justify-center w-full"
+      )}
+    >
+      <Link
+        to={href(
+          "/workspace/project/:projectSlug/:envSlug/create-service",
+          params
+        )}
+        className={cn(
+          "text-sm text-grey lg:w-1/3 md:w-1/2 w-full mx-auto mb-2",
+          "flex items-center gap-0.5 hover:underline"
+        )}
+      >
+        <ArrowLeftIcon className="size-4" />
+        Create service
+      </Link>
 
       {currentStep === "FORM" && (
         <StepServiceForm
@@ -175,7 +145,7 @@ export default function CreateServicePage({
           deploymentHash={deploymentHash}
         />
       )}
-    </>
+    </div>
   );
 }
 
@@ -293,8 +263,9 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   );
 
   const loaderData = useLoaderData<typeof clientLoader>();
+  const workspaceId = useCurrentWorkspace().id;
   const { data: registries } = useQuery({
-    ...sharedRegistryCredentialsQueries.list,
+    ...sharedRegistryCredentialsQueries.list(workspaceId),
     initialData: loaderData.registries
   });
   const navigate = useNavigate();
@@ -329,9 +300,9 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
     <Form
       ref={formRef}
       method="post"
-      className="flex my-10 grow justify-center items-center"
+      className="flex grow w-full justify-center"
     >
-      <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
+      <div className="card flex lg:w-1/3 md:w-1/2 w-full flex-col gap-3">
         <h1 className="text-3xl font-bold">New Docker Service</h1>
 
         {errors.non_field_errors && (
@@ -452,7 +423,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
               value={selectedRegistry}
               onValueChange={(value) => {
                 if (value === "add-new") {
-                  navigate(href("/settings/shared-credentials/new"));
+                  navigate(href("/workspace/settings/shared-credentials/new"));
                 } else {
                   setSelectedRegistry(value);
                 }
@@ -540,7 +511,7 @@ function StepServiceCreated({
     onSuccess(fetcher.data.deploymentHash);
   }
   return (
-    <div className="flex flex-col h-[70vh] justify-center items-center">
+    <div className="flex flex-col w-full justify-center items-center">
       {errors.non_field_errors && (
         <Alert variant="destructive">
           <AlertCircleIcon className="h-4 w-4" />
@@ -582,7 +553,14 @@ function StepServiceCreated({
 
           <Button asChild className="flex-1" variant="outline">
             <Link
-              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}`}
+              to={href(
+                "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+                {
+                  projectSlug,
+                  envSlug,
+                  serviceSlug
+                }
+              )}
               className="flex gap-2  items-center"
             >
               Go to service details <ArrowRightIcon size={20} />
@@ -609,7 +587,7 @@ function StepServiceDeployed({
 }: StepServiceDeployedProps) {
   const navigation = useNavigation();
   return (
-    <div className="flex  flex-col h-[70vh] justify-center items-center">
+    <div className="flex  flex-col justify-center items-center w-full">
       <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
         <Alert variant="info">
           <ClockArrowUpIcon className="h-5 w-5" />
@@ -623,7 +601,15 @@ function StepServiceDeployed({
         <div className="flex gap-3 md:flex-row flex-col items-stretch">
           <Button asChild className="flex-1">
             <Link
-              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}/deployments/${deploymentHash}/build-logs`}
+              to={href(
+                "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
+                {
+                  projectSlug,
+                  envSlug,
+                  serviceSlug,
+                  deploymentHash
+                }
+              )}
               className="flex gap-2  items-center"
             >
               {navigation.state !== "idle" && (

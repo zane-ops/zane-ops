@@ -1,15 +1,16 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { composeStackQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
+import { composeStackQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/discard-compose-stack-change";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     href(
-      `/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug`,
+      `/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug`,
       params
     )
   );
@@ -22,6 +23,8 @@ export async function clientAction({
     envSlug: env_slug
   }
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
   const toastId = toast.loading("Discarding stack change...");
   const change_id = formData.get("change_id")?.toString()!;
@@ -51,7 +54,12 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries({
-    ...composeStackQueries.single({ project_slug, stack_slug, env_slug }),
+    ...composeStackQueries.single({
+      workspaceId,
+      project_slug,
+      stack_slug,
+      env_slug
+    }),
     exact: true
   });
   toast.success("Change discarded successfully", {

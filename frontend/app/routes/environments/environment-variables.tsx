@@ -47,24 +47,34 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { environmentQueries } from "~/lib/queries";
+import { environmentQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
-  getFormErrorsFromResponseData
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  pluralize
 } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader, pluralize } from "~/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/environment-variables";
 
 export default function EnvironmentVariablesPage({
   matches: {
-    "2": { loaderData: matchData }
+    "3": { loaderData: matchData }
   },
   params
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const { data: environment } = useQuery({
-    ...environmentQueries.single(params.projectSlug, params.envSlug),
+    ...environmentQueries.single(
+      workspaceId,
+      params.projectSlug,
+      params.envSlug
+    ),
     initialData: matchData.environment
   });
   const { variables: env_variables } = environment;
@@ -515,6 +525,8 @@ export async function clientAction({
   params,
   request
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
 
   const intent = formData.get("intent")?.toString();
@@ -523,10 +535,16 @@ export async function clientAction({
 
   switch (intent) {
     case "add-env-variable": {
-      return addEnvVariable(params.projectSlug, env_slug, formData);
+      return addEnvVariable(
+        workspaceId,
+        params.projectSlug,
+        env_slug,
+        formData
+      );
     }
     case "update-env-variable": {
       return updateEnvVariable(
+        workspaceId,
         params.projectSlug,
         env_slug,
         variable_id,
@@ -534,7 +552,12 @@ export async function clientAction({
       );
     }
     case "delete-env-variable": {
-      return deleteEnvVariable(params.projectSlug, env_slug, variable_id);
+      return deleteEnvVariable(
+        workspaceId,
+        params.projectSlug,
+        env_slug,
+        variable_id
+      );
     }
     default: {
       throw new Error("Unexpected intent");
@@ -543,10 +566,12 @@ export async function clientAction({
 }
 
 async function addEnvVariable(
+  workspaceId: string,
   project_slug: string,
   env_slug: string,
   formData: FormData
 ) {
+  const queryClient = getQueryClient();
   const userData = {
     key: formData.get("key")!.toString(),
     value: formData.get("value")!.toString()
@@ -588,7 +613,7 @@ async function addEnvVariable(
   }
 
   await queryClient.invalidateQueries(
-    environmentQueries.single(project_slug, env_slug)
+    environmentQueries.single(workspaceId, project_slug, env_slug)
   );
 
   toast.success("Success", {
@@ -600,11 +625,13 @@ async function addEnvVariable(
 }
 
 async function updateEnvVariable(
+  workspaceId: string,
   project_slug: string,
   env_slug: string,
   env_id: string,
   formData: FormData
 ) {
+  const queryClient = getQueryClient();
   const userData = {
     key: formData.get("key")!.toString(),
     value: formData.get("value")!.toString()
@@ -647,7 +674,7 @@ async function updateEnvVariable(
   }
 
   await queryClient.invalidateQueries(
-    environmentQueries.single(project_slug, env_slug)
+    environmentQueries.single(workspaceId, project_slug, env_slug)
   );
 
   toast.success("Success", {
@@ -659,10 +686,12 @@ async function updateEnvVariable(
 }
 
 async function deleteEnvVariable(
+  workspaceId: string,
   project_slug: string,
   env_slug: string,
   env_id: string
 ) {
+  const queryClient = getQueryClient();
   const { data, error, response } = await apiClient.DELETE(
     "/api/projects/{project_slug}/{env_slug}/variables/{id}/",
     {
@@ -686,7 +715,7 @@ async function deleteEnvVariable(
   }
 
   await queryClient.invalidateQueries(
-    environmentQueries.single(project_slug, env_slug)
+    environmentQueries.single(workspaceId, project_slug, env_slug)
   );
 
   toast.success("Success", {

@@ -12,25 +12,32 @@ import { type RequestInput, apiClient } from "~/api/client";
 import {
   composeStackQueries,
   environmentQueries,
-  resourceQueries
+  resourceQueries,
+  userQueries
 } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import { ComposeStackDangerZoneForm } from "~/routes/compose/components/compose-stack-danger-zone-form";
 import { ComposeStackDeployURLForm } from "~/routes/compose/components/compose-stack-deploy-url-form";
 import { ComposeStackEnvForm } from "~/routes/compose/components/compose-stack-env-form";
 import { ComposeStackSlugForm } from "~/routes/compose/components/compose-stack-slug-form";
 import { ComposeStackUserContentForm } from "~/routes/compose/components/compose-stack-user-content-form";
-import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/compose-stack-settings";
 
 export default function ComposeStackSettingsPage({
   params,
   matches: {
-    2: { loaderData }
+    3: { loaderData }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
+      workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -190,10 +197,13 @@ export async function clientAction({
 }: Route.ClientActionArgs) {
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
 
   switch (intent) {
     case "update-slug": {
       return updateStackSlug({
+        workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -202,6 +212,7 @@ export async function clientAction({
     }
     case "request-stack-change": {
       return requestStackChange({
+        workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -210,6 +221,7 @@ export async function clientAction({
     }
     case "cancel-stack-change": {
       return cancelStackChange({
+        workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -223,16 +235,19 @@ export async function clientAction({
 }
 
 async function updateStackSlug({
+  workspaceId,
   project_slug,
   stack_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   stack_slug: string;
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const userData = {
     slug: formData.get("slug")?.toString()
   } satisfies RequestInput<
@@ -241,8 +256,12 @@ async function updateStackSlug({
   >;
 
   await queryClient.cancelQueries({
-    queryKey: composeStackQueries.single({ project_slug, stack_slug, env_slug })
-      .queryKey,
+    queryKey: composeStackQueries.single({
+      workspaceId,
+      project_slug,
+      stack_slug,
+      env_slug
+    }).queryKey,
     exact: true
   });
 
@@ -273,17 +292,17 @@ async function updateStackSlug({
   await Promise.all([
     queryClient.invalidateQueries(
       composeStackQueries.single({
+        workspaceId,
         project_slug,
         stack_slug,
         env_slug
       })
     ),
     queryClient.invalidateQueries(
-      environmentQueries.composeStackList(project_slug, env_slug)
+      environmentQueries.composeStackList(workspaceId, project_slug, env_slug)
     ),
     queryClient.invalidateQueries({
-      predicate: (query) =>
-        query.queryKey[0] === resourceQueries.search().queryKey[0]
+      queryKey: resourceQueries.search(workspaceId).queryKey.slice(0, 3)
     })
   ]);
 
@@ -294,6 +313,7 @@ async function updateStackSlug({
   if (data.slug !== stack_slug) {
     queryClient.setQueryData(
       composeStackQueries.single({
+        workspaceId,
         project_slug,
         stack_slug: data.slug,
         env_slug
@@ -317,16 +337,19 @@ type BodyOf<Type extends ChangeRequestBody["field"]> = FindByType<
 >;
 
 async function requestStackChange({
+  workspaceId,
   project_slug,
   stack_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   stack_slug: string;
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const field = formData
     .get("change_field")
     ?.toString() as ChangeRequestBody["field"];
@@ -399,6 +422,7 @@ async function requestStackChange({
 
   await queryClient.invalidateQueries({
     ...composeStackQueries.single({
+      workspaceId,
       project_slug,
       stack_slug,
       env_slug
@@ -416,16 +440,19 @@ async function requestStackChange({
 }
 
 async function cancelStackChange({
+  workspaceId,
   project_slug,
   stack_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   stack_slug: string;
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const change_id = formData.get("change_id")?.toString() ?? "";
 
   const toastId = toast.loading("Discarding change request...");
@@ -463,6 +490,7 @@ async function cancelStackChange({
 
   await queryClient.invalidateQueries({
     ...composeStackQueries.single({
+      workspaceId,
       project_slug,
       stack_slug,
       env_slug

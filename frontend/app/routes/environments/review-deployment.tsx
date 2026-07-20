@@ -5,15 +5,16 @@ import {
   SirenIcon
 } from "lucide-react";
 import * as React from "react";
-import { Form, redirect, useNavigation } from "react-router";
+import { Form, href, redirect, useNavigation } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { GithubLogo } from "~/components/github-logo";
 import { ThemedLogo } from "~/components/logo";
 import { SubmitButton } from "~/components/ui/button";
 import { environmentQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader, metaTitle } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/review-deployment";
 
 export function meta() {
@@ -26,8 +27,14 @@ type DeploymentDecision = RequestInput<
 >["decision"];
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const environment = await queryClient.ensureQueryData(
-    environmentQueries.pendingReview(params.projectSlug, params.envSlug)
+    environmentQueries.pendingReview(
+      workspaceId,
+      params.projectSlug,
+      params.envSlug
+    )
   );
 
   return {
@@ -168,9 +175,14 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const environment = queryClient.getQueryData(
-    environmentQueries.pendingReview(params.projectSlug, params.envSlug)
-      .queryKey
+    environmentQueries.pendingReview(
+      workspaceId,
+      params.projectSlug,
+      params.envSlug
+    ).queryKey
   );
 
   if (!environment) {
@@ -178,7 +190,7 @@ export async function clientAction({
       description: `No pending environment to review exists at \`${params.projectSlug}/${params.envSlug}\` `,
       closeButton: true
     });
-    throw redirect("/");
+    throw redirect(href("/workspace"));
   }
 
   const formData = await request.formData();
@@ -219,7 +231,7 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    environmentQueries.single(params.projectSlug, params.envSlug)
+    environmentQueries.single(workspaceId, params.projectSlug, params.envSlug)
   );
 
   throw redirect(environment.preview_metadata!.external_url);

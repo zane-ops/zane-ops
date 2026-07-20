@@ -25,9 +25,12 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { sshKeysQueries } from "~/lib/queries";
-import { getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import { getQueryClient } from "~/lib/query-client";
+import {
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import type { Route } from "./+types/create-ssh-key";
 
 export function meta() {
@@ -107,10 +110,7 @@ function CreateSSHKeyForm({
         </div>
         <div className="flex items-center gap-4 justify-end">
           <Button asChild variant="outline">
-            <Link
-              to={href("/settings/ssh-keys")}
-              className="items-center gap-2"
-            >
+            <Link to={href("/admin/ssh-keys")} className="items-center gap-2">
               <ChevronLeftIcon className="size-4 flex-none" />
               Back to ssh keys
             </Link>
@@ -119,7 +119,7 @@ function CreateSSHKeyForm({
           <Button asChild>
             <Link
               to={{
-                pathname: href("/settings/server-console"),
+                pathname: href("/admin/server-console"),
                 search: `?ssh_key_slug=${actionData.data.slug}`
               }}
               className="items-center gap-2"
@@ -191,6 +191,7 @@ function CreateSSHKeyForm({
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
 
   const userData = {

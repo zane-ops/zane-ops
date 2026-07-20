@@ -1,4 +1,8 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient
+} from "@tanstack/react-query";
 import { notUndefined, useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowDown01Icon,
@@ -41,12 +45,16 @@ import {
   type HttpLog,
   REQUEST_METHODS,
   deploymentQueries,
-  httpLogSearchSchema
+  httpLogSearchSchema,
+  userQueries
 } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection } from "~/lib/types";
-import { cn, formatLogTime } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { formatDuration } from "~/utils";
+import { cn, formatDuration, formatLogTime } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/deployment-http-logs";
 
 export async function clientLoader({
@@ -58,6 +66,8 @@ export async function clientLoader({
     envSlug: env_slug
   }
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const searchParams = new URL(request.url).searchParams;
   const search = httpLogSearchSchema.parse(searchParams);
   const filters = {
@@ -76,6 +86,7 @@ export async function clientLoader({
   const [httpLogs, httpLog] = await Promise.all([
     queryClient.ensureInfiniteQueryData(
       deploymentQueries.httpLogs({
+        workspaceId,
         deployment_hash,
         project_slug,
         service_slug,
@@ -87,6 +98,7 @@ export async function clientLoader({
     search.request_id
       ? queryClient.ensureQueryData(
           deploymentQueries.singleHttpLog({
+            workspaceId,
             deployment_hash,
             project_slug,
             service_slug,
@@ -108,11 +120,13 @@ export default function DeploymentHttpLogsPage({
     envSlug: env_slug
   },
   matches: {
-    2: {
+    3: {
       loaderData: { deployment }
     }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
@@ -133,6 +147,7 @@ export default function DeploymentHttpLogsPage({
 
   const logsQuery = useInfiniteQuery({
     ...deploymentQueries.httpLogs({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,
@@ -922,11 +937,13 @@ function HostFilter({ hosts }: HostFilterProps) {
     serviceSlug: service_slug,
     envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
   const { data: hostList = [] } = useQuery(
     deploymentQueries.filterHttpLogFields({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,
@@ -968,11 +985,13 @@ function PathFilter({ paths }: PathFilterProps) {
     serviceSlug: service_slug,
     envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
   const { data: hostList = [] } = useQuery(
     deploymentQueries.filterHttpLogFields({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,
@@ -1014,11 +1033,13 @@ function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
     serviceSlug: service_slug,
     envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
   const { data: ipList = [] } = useQuery(
     deploymentQueries.filterHttpLogFields({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,
@@ -1058,11 +1079,13 @@ function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
     serviceSlug: service_slug,
     envSlug: env_slug
   } = useParams() as Required<Route.LoaderArgs["params"]>;
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const [inputValue, setInputValue] = React.useState("");
 
   const { data: uaList = [] } = useQuery(
     deploymentQueries.filterHttpLogFields({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,

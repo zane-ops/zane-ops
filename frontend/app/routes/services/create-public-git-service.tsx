@@ -1,5 +1,6 @@
 import {
   AlertCircleIcon,
+  ArrowLeftIcon,
   ArrowRightIcon,
   CheckIcon,
   ChevronRightIcon,
@@ -8,7 +9,7 @@ import {
   LoaderIcon
 } from "lucide-react";
 import * as React from "react";
-import { Form, Link, useFetcher, useNavigation } from "react-router";
+import { Form, Link, href, useFetcher, useNavigation } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
 import type { ServiceBuilder } from "~/api/types";
 import { GitRepositoryBranchListInput } from "~/components/git-repository-branch-list-input";
@@ -43,8 +44,12 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import {
+  cn,
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import type { Route } from "./+types/create-public-git-service";
 
 export function meta() {
@@ -65,67 +70,26 @@ export default function CreateServicePage({
   const [deploymentHash, setDeploymentHash] = React.useState("");
 
   return (
-    <>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={`/project/${params.projectSlug}/production`}
-                prefetch="intent"
-              >
-                {params.projectSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                params.envSlug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : params.envSlug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={`/project/${params.projectSlug}/${params.envSlug}`}
-                prefetch="intent"
-              >
-                {params.envSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={`/project/${params.projectSlug}/${params.envSlug}/create-service`}
-                prefetch="intent"
-              >
-                Create service
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>From public Git repo</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+    <div
+      className={cn(
+        currentStep !== "FORM" &&
+          "h-[70vh] flex flex-col items-center justify-center w-full"
+      )}
+    >
+      <Link
+        to={href(
+          "/workspace/project/:projectSlug/:envSlug/create-service",
+          params
+        )}
+        className={cn(
+          "text-sm text-grey mx-auto mb-2",
+          "flex items-center gap-0.5 hover:underline",
+          "lg:w-1/3 md:w-1/2 w-full"
+        )}
+      >
+        <ArrowLeftIcon className="size-4" />
+        Create service
+      </Link>
 
       {currentStep === "FORM" && (
         <StepServiceForm
@@ -157,7 +121,7 @@ export default function CreateServicePage({
           deploymentHash={deploymentHash}
         />
       )}
-    </>
+    </div>
   );
 }
 
@@ -299,7 +263,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
     <Form
       ref={formRef}
       method="post"
-      className="flex my-10 grow justify-center items-center"
+      className="flex grow justify-center items-center"
     >
       <div className="card flex lg:w-[35%] md:w-[50%] w-full flex-col gap-3">
         <div className="flex flex-col sm:flex-row items-start gap-1">
@@ -977,7 +941,7 @@ function StepServiceCreated({
     onSuccess(fetcher.data.deploymentHash);
   }
   return (
-    <div className="flex flex-col h-[70vh] justify-center items-center">
+    <div className="flex flex-col w-full justify-center items-center">
       {errors.non_field_errors && (
         <Alert variant="destructive">
           <AlertCircleIcon className="h-4 w-4" />
@@ -1019,7 +983,14 @@ function StepServiceCreated({
 
           <Button asChild className="flex-1" variant="outline">
             <Link
-              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}`}
+              to={href(
+                "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+                {
+                  projectSlug,
+                  envSlug,
+                  serviceSlug
+                }
+              )}
               className="flex gap-2  items-center"
             >
               Go to service details <ArrowRightIcon size={20} />
@@ -1046,7 +1017,7 @@ function StepServiceDeployed({
 }: StepServiceDeployedProps) {
   const navigation = useNavigation();
   return (
-    <div className="flex  flex-col h-[70vh] justify-center items-center">
+    <div className="flex  flex-col w-full justify-center items-center">
       <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
         <Alert variant="info">
           <ClockArrowUpIcon className="h-5 w-5" />
@@ -1060,7 +1031,15 @@ function StepServiceDeployed({
         <div className="flex gap-3 md:flex-row flex-col items-stretch">
           <Button asChild className="flex-1">
             <Link
-              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}/deployments/${deploymentHash}/build-logs`}
+              to={href(
+                "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
+                {
+                  projectSlug,
+                  envSlug,
+                  serviceSlug,
+                  deploymentHash
+                }
+              )}
               className="flex gap-2  items-center"
             >
               {navigation.state !== "idle" && (

@@ -28,13 +28,17 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import { deploymentQueries, metrisSearch } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { deploymentQueries, metrisSearch, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import {
   convertValueToBytes,
   formatStorageValue,
   timeAgoFormatter
-} from "~/utils";
+} from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/deployment-metrics";
 
 export async function clientLoader({
@@ -46,6 +50,8 @@ export async function clientLoader({
     envSlug: env_slug
   }
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const searchParams = new URL(request.url).searchParams;
   const filters = metrisSearch.parse({
     time_range: searchParams.get("time_range")
@@ -53,6 +59,7 @@ export async function clientLoader({
 
   const metrics = await queryClient.ensureQueryData(
     deploymentQueries.metrics({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,
@@ -67,7 +74,7 @@ export async function clientLoader({
 export default function DeploymentMetricsPage({
   loaderData,
   matches: {
-    "2": {
+    "3": {
       loaderData: { limits, service }
     }
   },
@@ -78,12 +85,14 @@ export default function DeploymentMetricsPage({
     envSlug: env_slug
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = metrisSearch.parse({
     time_range: searchParams.get("time_range")
   });
   const { data: metrics } = useQuery({
     ...deploymentQueries.metrics({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,
@@ -369,9 +378,10 @@ export default function DeploymentMetricsPage({
                     domain={[
                       0,
                       Math.max(
-                        ...metrics
-                          .map((m) => [m.total_net_rx, m.total_net_tx])
-                          .flat()
+                        ...metrics.flatMap((m) => [
+                          m.total_net_rx,
+                          m.total_net_tx
+                        ])
                       ) + convertValueToBytes(10, "MEGABYTES")
                     ]}
                     tickFormatter={(value) => {
@@ -506,9 +516,10 @@ export default function DeploymentMetricsPage({
                     domain={[
                       0,
                       Math.max(
-                        ...metrics
-                          .map((m) => [m.total_disk_write, m.total_disk_read])
-                          .flat()
+                        ...metrics.flatMap((m) => [
+                          m.total_disk_write,
+                          m.total_disk_read
+                        ])
                       ) + convertValueToBytes(10, "MEGABYTES")
                     ]}
                     tickFormatter={(value) => {

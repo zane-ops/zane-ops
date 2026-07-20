@@ -6,29 +6,27 @@ import {
   RocketIcon,
   SquareChartGanttIcon
 } from "lucide-react";
-import { Link, Outlet, href, useFetcher } from "react-router";
+import { Link, Outlet, useFetcher } from "react-router";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
 import { NavLink } from "~/components/nav-link";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
 import { SubmitButton } from "~/components/ui/button";
-import { composeStackQueries } from "~/lib/queries";
-import { cn, notFound } from "~/lib/utils";
-import { queryClient } from "~/root";
+import { composeStackQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import { cn, formattedTime, metaTitle, notFound } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { clientAction as cancelDeploymentAction } from "~/routes/compose/cancel-compose-deployment";
-import { formattedTime, metaTitle } from "~/utils";
 import type { Route } from "./+types/compose-stack-deployment-layout";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const [stack, deployment] = await Promise.all([
     queryClient.ensureQueryData(
       composeStackQueries.single({
+        workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug
@@ -36,6 +34,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     ),
     queryClient.ensureQueryData(
       composeStackQueries.singleDeployment({
+        workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -55,8 +54,10 @@ export default function ComposeStackDeploymentLayoutPage({
   loaderData,
   params
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const { data: deployment } = useQuery({
     ...composeStackQueries.singleDeployment({
+      workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug,
@@ -89,95 +90,21 @@ export default function ComposeStackDeploymentLayoutPage({
   return (
     <>
       <title>{meta.title}</title>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/">Projects</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href("/project/:projectSlug/:envSlug", {
-                  ...params,
-                  envSlug: "production"
-                })}
-                prefetch="intent"
-              >
-                {params.projectSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                params.envSlug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : params.envSlug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={href("/project/:projectSlug/:envSlug", params)}
-                prefetch="intent"
-              >
-                {params.envSlug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <Link
-              to={href(
-                "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
-                params
-              )}
-            >
-              {params.composeStackSlug}
-            </Link>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <Link
-              to={
-                href(
-                  "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments",
-                  params
-                ) + "/"
-              }
-            >
-              deployments
-            </Link>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{params.deploymentHash}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
 
       <section
         id="header"
         className="flex flex-col md:flex-row md:items-center gap-4 justify-between"
       >
-        <div className="md:mt-10 mt-5 flex flex-col gap-2 md:gap-0">
+        <div className="flex flex-col gap-2 md:gap-0">
           <div className="inline-flex flex-wrap gap-1 items-center">
             <h1 className="text-xl md:text-2xl inline-flex gap-1 items-center">
               <RocketIcon className="size-6 flex-none" />
               <span className="text-grey sr-only md:not-sr-only flex-none">
                 <Link to={`./../..`} className="hover:underline">
                   {params.composeStackSlug}
-                </Link>{" "}
-                /
+                </Link>
               </span>
+              <span>/</span>
               <span>{deployment.hash}</span>
             </h1>
 

@@ -1,7 +1,7 @@
 import { CheckIcon, LoaderIcon, PencilLineIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { flushSync } from "react-dom";
-import { useFetcher, useNavigate } from "react-router";
+import { href, useFetcher, useNavigate } from "react-router";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
@@ -35,10 +35,16 @@ export function ServiceSlugForm({
 
     if (fetcher.state === "idle" && fetcher.data?.data?.slug) {
       navigate(
-        `/project/${project_slug}/${env_slug}/services/${fetcher.data.data.slug}/settings`,
+        href(
+          "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/settings",
+          {
+            projectSlug: project_slug,
+            envSlug: env_slug,
+            serviceSlug: fetcher.data.data.slug
+          }
+        ),
         {
-          replace: true,
-          relative: "path"
+          replace: true
         }
       );
       setIsEditing(false);

@@ -16,17 +16,9 @@ import {
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
-import { Link, Outlet, useLocation, useParams } from "react-router";
+import { Outlet, useLocation, useParams } from "react-router";
 import { NavLink } from "~/components/nav-link";
 import { StatusBadge } from "~/components/status-badge";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { ServiceChangesModal } from "~/routes/services/components/service-changes-modal";
 
@@ -46,18 +38,24 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { serverQueries, serviceQueries } from "~/lib/queries";
+import { serverQueries, serviceQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import type { ValueOf } from "~/lib/types";
-import { cn, isNotFoundError, notFound } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { ServiceActionsPopover } from "~/routes/services/components/service-actions-popover";
 import {
+  cn,
   durationToMs,
   formatURL,
   getDockerImageIconURL,
+  isNotFoundError,
   metaTitle,
+  notFound,
   pluralize
-} from "~/utils";
+} from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
+import { ServiceActionsPopover } from "~/routes/services/components/service-actions-popover";
 import type { Route } from "./+types/service-layout";
 
 export function meta({ params, error }: Route.MetaArgs) {
@@ -70,9 +68,12 @@ export function meta({ params, error }: Route.MetaArgs) {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const [service, limits, detectedPorts] = await Promise.all([
     queryClient.ensureQueryData(
       serviceQueries.single({
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug
@@ -81,6 +82,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     queryClient.ensureQueryData(serverQueries.resourceLimits),
     queryClient.ensureQueryData(
       serviceQueries.detectedPorts({
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug
@@ -110,10 +112,12 @@ export default function ServiceDetailsLayout({
     envSlug: env_slug
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const location = useLocation();
 
   const { data: service } = useQuery({
     ...serviceQueries.single({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug
@@ -123,6 +127,7 @@ export default function ServiceDetailsLayout({
 
   const { data: detectedPorts } = useQuery({
     ...serviceQueries.detectedPorts({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug
@@ -234,59 +239,11 @@ export default function ServiceDetailsLayout({
 
   return (
     <>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={`/project/${project_slug}/production`}
-                prefetch="intent"
-              >
-                {project_slug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              asChild
-              className={cn(
-                env_slug === "production"
-                  ? "text-green-500 dark:text-primary"
-                  : env_slug.startsWith("preview")
-                    ? "text-link"
-                    : ""
-              )}
-            >
-              <Link
-                to={`/project/${project_slug}/${env_slug}`}
-                prefetch="intent"
-              >
-                {env_slug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{service_slug}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <section
         id="header"
         className="flex flex-col sm:flex-row md:items-center gap-4 justify-between"
       >
-        <div className="mt-10 flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-x-4 flex-wrap">
             <h1 className="text-2xl">{service.slug}</h1>
 

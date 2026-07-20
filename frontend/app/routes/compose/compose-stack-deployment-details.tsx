@@ -34,8 +34,8 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { composeStackQueries } from "~/lib/queries";
-import { cn } from "~/lib/utils";
-import { formatElapsedTime, formattedTime } from "~/utils";
+import { cn, formatElapsedTime, formattedTime } from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-deployment-details";
 
 hljs.registerLanguage("json", json);
@@ -43,11 +43,13 @@ hljs.registerLanguage("json", json);
 export default function ComposeStackDeploymentDetailsPage({
   params,
   matches: {
-    2: { loaderData }
+    3: { loaderData }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const { data: deployment } = useQuery({
     ...composeStackQueries.singleDeployment({
+      workspaceId: workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug,
@@ -124,7 +126,7 @@ export default function ComposeStackDeploymentDetailsPage({
                   (Redeploy of&nbsp;
                   <Link
                     to={href(
-                      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
+                      "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash",
                       params
                     )}
                     className="text-link underline"

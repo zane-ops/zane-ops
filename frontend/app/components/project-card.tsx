@@ -10,8 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn } from "~/lib/utils";
-import { pluralize } from "~/utils";
+import { cn, pluralize } from "~/lib/utils";
 
 export type ProjectCardProps = {
   project: Project;
@@ -33,7 +32,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
     >
       <div className="flex items-center justify-between gap-2 text-lg font-semibold">
         <Link
-          to={href("/project/:projectSlug/:envSlug", {
+          to={href("/workspace/project/:projectSlug/:envSlug", {
             envSlug: "production",
             projectSlug: project.slug
           })}
@@ -47,7 +46,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             <TooltipTrigger asChild>
               <Button asChild variant="ghost" size="sm" className="w-9">
                 <Link
-                  to={href("/project/:projectSlug/settings", {
+                  to={href("/workspace/project/:projectSlug/settings", {
                     projectSlug: project.slug
                   })}
                   className="relative z-10"

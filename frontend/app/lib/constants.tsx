@@ -1,13 +1,16 @@
 import { type LucideProps, PackageIcon } from "lucide-react";
 import type { useSpinDelay } from "spin-delay";
-import type { ContainerRegistryType } from "~/api/types";
+import type {
+  ContainerRegistryType,
+  WorkspaceRoleName,
+  WorkspaceRoleValue
+} from "~/api/types";
 import { AWSECSLogo } from "~/components/aws-ecs-logo";
 import { DockerHubLogo } from "~/components/docker-hub-logo";
 import { GithubLogo } from "~/components/github-logo";
 import { GitlabLogo } from "~/components/gitlab-logo";
 import { GoogleArtifactLogo } from "~/components/google-artifact-logo";
-import { cn } from "~/lib/utils";
-import { durationToMs } from "~/utils";
+import { cn, durationToMs } from "~/lib/utils";
 
 export const DEPLOYMENT_STATUSES = [
   "QUEUED",
@@ -29,10 +32,10 @@ export const LOGS_QUERY_REFETCH_INTERVAL = durationToMs(3, "seconds");
 export const DEFAULT_LOGS_PER_PAGE = 50;
 export const MAX_VISIBLE_LOG_CHARS_LIMIT = 1_000;
 
-export const SPIN_DELAY_DEFAULT_OPTIONS: Parameters<typeof useSpinDelay>[1] = {
+export const SPIN_DELAY_DEFAULT_OPTIONS = {
   delay: 150,
   minDuration: 150
-};
+} as const satisfies Parameters<typeof useSpinDelay>[1];
 export const METRICS_TIME_RANGES = [
   "LAST_HOUR",
   "LAST_6HOURS",
@@ -195,3 +198,10 @@ export const THEME_STORAGE_KEY = "__theme";
 export const ZANE_UPDATE_TOAST_ID = "zaneops-update-toast";
 export const ZANEOPS_INTERNAL_DOMAIN = "zaneops.internal";
 export const TEMPLATE_API_HOST = "https://templates.zaneops.dev";
+
+export const WORKSPACE_ROLE_MAPPING = {
+  Guest: 10,
+  Member: 30,
+  Admin: 40,
+  Owner: 50
+} satisfies Record<WorkspaceRoleName, WorkspaceRoleValue>;

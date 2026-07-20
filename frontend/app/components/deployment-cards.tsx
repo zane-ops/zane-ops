@@ -41,16 +41,16 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
-import { cn } from "~/lib/utils";
-import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
-import type { clientAction as redeployClientAction } from "~/routes/deployments/redeploy-docker-deployment";
 import {
   capitalizeText,
+  cn,
   excerpt,
   formatElapsedTime,
   formattedTime,
   mergeTimeAgoFormatterAndFormattedDate
-} from "~/utils";
+} from "~/lib/utils";
+import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
+import type { clientAction as redeployClientAction } from "~/routes/deployments/redeploy-docker-deployment";
 
 export type DockerDeploymentCardProps = {
   status: (typeof DEPLOYMENT_STATUSES)[number];
@@ -854,7 +854,7 @@ export function RecentDeploymentCard({
           to={
             isPending || status === "FAILED" || status === "CANCELLED"
               ? href(
-                  "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
+                  "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
                   {
                     deploymentHash: hash,
                     projectSlug: project_slug,
@@ -863,7 +863,7 @@ export function RecentDeploymentCard({
                   }
                 )
               : href(
-                  "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
+                  "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
                   {
                     deploymentHash: hash,
                     projectSlug: project_slug,

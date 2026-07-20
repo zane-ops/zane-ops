@@ -32,9 +32,15 @@ import {
   environmentQueries,
   gitAppsQueries,
   resourceQueries,
-  serviceQueries
+  serviceQueries,
+  userQueries
 } from "~/lib/queries";
-import { queryClient } from "~/root";
+import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import { ServiceAutoDeployForm } from "~/routes/services/components/service-auto-deploy-form";
 import { ServiceBuilderForm } from "~/routes/services/components/service-builder-form";
 import { ServiceCommandForm } from "~/routes/services/components/service-command-form";
@@ -53,11 +59,14 @@ import { ServiceSlugForm } from "~/routes/services/components/service-slug-form"
 import { ServiceSourceForm } from "~/routes/services/components/service-source-form";
 import { ServiceURLsForm } from "~/routes/services/components/service-urls-form";
 import { ServiceVolumesForm } from "~/routes/services/components/service-volumes-form";
-import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/service-settings";
 
-export async function clientLoader({}: Route.ClientLoaderArgs) {
-  const gitAppList = await queryClient.ensureQueryData(gitAppsQueries.list);
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
+  const gitAppList = await queryClient.ensureQueryData(
+    gitAppsQueries.list(workspaceId)
+  );
   return { gitAppList };
 }
 
@@ -68,7 +77,7 @@ export default function ServiceSettingsPage({
     envSlug: env_slug
   },
   matches: {
-    "2": {
+    "3": {
       loaderData: { service }
     }
   }
@@ -520,14 +529,20 @@ export function useServiceQuery({
   service_slug,
   env_slug
 }: { project_slug: string; service_slug: string; env_slug: string }) {
+  const workspaceId = useCurrentWorkspace().id;
   const {
-    "2": {
+    "3": {
       loaderData: { service: initialData }
     }
   } = useMatches() as Route.ComponentProps["matches"];
 
   return useQuery({
-    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+    ...serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }),
     initialData
   });
 }
@@ -573,12 +588,15 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
 
   switch (intent) {
     case "update-slug": {
       return updateServiceSlug({
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -587,6 +605,7 @@ export async function clientAction({
     }
     case "update-auto-deploy": {
       return updateServiceAutoDeployOptions({
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -597,6 +616,7 @@ export async function clientAction({
     case "remove-service-healthcheck":
     case "remove-service-resource-limits": {
       return requestServiceChange({
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -605,6 +625,7 @@ export async function clientAction({
     }
     case "cancel-service-change": {
       return cancelServiceChange({
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -613,6 +634,7 @@ export async function clientAction({
     }
     case "regenerate-deploy-token": {
       return regenerateDeployToken({
+        workspaceId,
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug
@@ -625,14 +647,17 @@ export async function clientAction({
 }
 
 async function regenerateDeployToken({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
 }) {
+  const queryClient = getQueryClient();
   const toastId = toast.loading("Regenerating service deploy URL...");
   const { error: errors, data } = await apiClient.PATCH(
     "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/regenerate-deploy-token/",
@@ -663,7 +688,12 @@ async function regenerateDeployToken({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+    ...serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }),
     exact: true
   });
 
@@ -674,16 +704,19 @@ async function regenerateDeployToken({
 }
 
 async function updateServiceSlug({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const userData = {
     slug: formData.get("slug")?.toString()
   } satisfies RequestInput<
@@ -692,8 +725,12 @@ async function updateServiceSlug({
   >;
 
   await queryClient.cancelQueries({
-    queryKey: serviceQueries.single({ project_slug, service_slug, env_slug })
-      .queryKey,
+    queryKey: serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }).queryKey,
     exact: true
   });
 
@@ -724,17 +761,17 @@ async function updateServiceSlug({
   await Promise.all([
     queryClient.invalidateQueries(
       serviceQueries.single({
+        workspaceId,
         project_slug,
         service_slug,
         env_slug
       })
     ),
     queryClient.invalidateQueries(
-      environmentQueries.serviceList(project_slug, env_slug)
+      environmentQueries.serviceList(workspaceId, project_slug, env_slug)
     ),
     queryClient.invalidateQueries({
-      predicate: (query) =>
-        query.queryKey[0] === resourceQueries.search().queryKey[0]
+      queryKey: resourceQueries.search(workspaceId).queryKey.slice(0, 3)
     })
   ]);
 
@@ -744,8 +781,12 @@ async function updateServiceSlug({
   });
   if (data.slug !== service_slug) {
     queryClient.setQueryData(
-      serviceQueries.single({ project_slug, service_slug: data.slug, env_slug })
-        .queryKey,
+      serviceQueries.single({
+        workspaceId,
+        project_slug,
+        service_slug: data.slug,
+        env_slug
+      }).queryKey,
       data
     );
   }
@@ -755,16 +796,19 @@ async function updateServiceSlug({
 }
 
 async function updateServiceAutoDeployOptions({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   let userData: RequestInput<
     "patch",
     "/api/projects/{project_slug}/{env_slug}/service-details/{slug}/"
@@ -789,8 +833,12 @@ async function updateServiceAutoDeployOptions({
   }
 
   await queryClient.cancelQueries({
-    queryKey: serviceQueries.single({ project_slug, service_slug, env_slug })
-      .queryKey,
+    queryKey: serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }).queryKey,
     exact: true
   });
 
@@ -820,6 +868,7 @@ async function updateServiceAutoDeployOptions({
 
   await queryClient.invalidateQueries(
     serviceQueries.single({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug
@@ -847,16 +896,19 @@ type BodyOf<Type extends ChangeRequestBody["field"]> = FindByType<
 >;
 
 async function requestServiceChange({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const field = formData
     .get("change_field")
     ?.toString() as ChangeRequestBody["field"];
@@ -1094,6 +1146,7 @@ async function requestServiceChange({
 
   await queryClient.invalidateQueries({
     ...serviceQueries.single({
+      workspaceId,
       project_slug,
       service_slug: service_slug,
       env_slug
@@ -1111,16 +1164,19 @@ async function requestServiceChange({
 }
 
 async function cancelServiceChange({
+  workspaceId,
   project_slug,
   service_slug,
   env_slug,
   formData
 }: {
+  workspaceId: string;
   project_slug: string;
   service_slug: string;
   env_slug: string;
   formData: FormData;
 }) {
+  const queryClient = getQueryClient();
   const toastId = toast.loading("Discarding service change...");
   const change_id = formData.get("change_id")?.toString();
   const { error: errors, data } = await apiClient.DELETE(
@@ -1153,7 +1209,12 @@ async function cancelServiceChange({
   }
 
   await queryClient.invalidateQueries({
-    ...serviceQueries.single({ project_slug, service_slug, env_slug }),
+    ...serviceQueries.single({
+      workspaceId,
+      project_slug,
+      service_slug,
+      env_slug
+    }),
     exact: true
   });
   toast.success("Change discarded successfully", {

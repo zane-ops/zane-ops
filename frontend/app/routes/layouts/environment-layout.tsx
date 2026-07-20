@@ -2,10 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRightIcon,
   BoxesIcon,
-  ChevronDownIcon,
   ContainerIcon,
   KeyRoundIcon,
   LoaderIcon,
+  PlusIcon,
   Search,
   SettingsIcon
 } from "lucide-react";
@@ -23,13 +23,6 @@ import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
 import { NavLink } from "~/components/nav-link";
 import { StatusBadge } from "~/components/status-badge";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
@@ -39,18 +32,14 @@ import {
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "~/components/ui/select";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
-import { environmentQueries, projectQueries } from "~/lib/queries";
-import { cn, isNotFoundError } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { metaTitle } from "~/utils";
+import { environmentQueries, projectQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import { cn, isNotFoundError, metaTitle, stringToColor } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/environment-layout";
 
 export function meta({ error, params }: Route.MetaArgs) {
@@ -66,28 +55,40 @@ export async function clientLoader({
   request,
   params
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const searchParams = new URL(request.url).searchParams;
 
   const queryString = searchParams.get("query") ?? "";
 
   let environment = queryClient.getQueryData(
-    environmentQueries.single(params.projectSlug, params.envSlug).queryKey
+    environmentQueries.single(workspaceId, params.projectSlug, params.envSlug)
+      .queryKey
   );
 
   const project = await queryClient.ensureQueryData(
-    projectQueries.single(params.projectSlug)
+    projectQueries.single(workspaceId, params.projectSlug)
   );
 
   if (!environment) {
     // fetch the data on first load to prevent showing the loading fallback
     [environment] = await Promise.all([
       queryClient.ensureQueryData(
-        environmentQueries.single(params.projectSlug, params.envSlug)
+        environmentQueries.single(
+          workspaceId,
+          params.projectSlug,
+          params.envSlug
+        )
       ),
       queryClient.ensureQueryData(
-        environmentQueries.serviceList(params.projectSlug, params.envSlug, {
-          query: queryString
-        })
+        environmentQueries.serviceList(
+          workspaceId,
+          params.projectSlug,
+          params.envSlug,
+          {
+            query: queryString
+          }
+        )
       )
     ]);
   }
@@ -100,10 +101,11 @@ export default function EnvironmentLayout({
   loaderData
 }: Route.ComponentProps) {
   const { projectSlug: slug, envSlug } = params;
+  const workspaceId = useCurrentWorkspace().id;
   const navigate = useNavigate();
 
   const { data: project } = useQuery({
-    ...projectQueries.single(params.projectSlug),
+    ...projectQueries.single(workspaceId, params.projectSlug),
     initialData: loaderData.project
   });
 
@@ -111,7 +113,7 @@ export default function EnvironmentLayout({
   const query = searchParams.get("query") ?? "";
 
   const projectServiceListQuery = useQuery(
-    environmentQueries.serviceList(slug, envSlug, {
+    environmentQueries.serviceList(workspaceId, slug, envSlug, {
       query
     })
   );
@@ -134,71 +136,14 @@ export default function EnvironmentLayout({
     }
   }, [query]);
 
+  const projectColor = stringToColor(project.slug);
+
   return (
     <section>
-      <Breadcrumb>
-        <BreadcrumbList className="text-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/" prefetch="intent">
-                Projects
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                to={href("/project/:projectSlug/:envSlug", {
-                  projectSlug: params.projectSlug,
-                  envSlug: "production"
-                })}
-                prefetch="intent"
-              >
-                {slug}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-
-          <BreadcrumbItem>
-            <Select
-              name="environment"
-              onValueChange={(env) => {
-                navigate(
-                  `/project/${params.projectSlug}/${env}?${searchParams.toString()}`,
-                  {
-                    replace: true
-                  }
-                );
-              }}
-              value={params.envSlug}
-            >
-              <SelectTrigger
-                className={cn(
-                  "data-disabled:bg-secondary/60 dark:data-disabled:bg-secondary-foreground",
-                  "data-disabled:opacity-100 data-disabled:border-transparent",
-                  "text-card-foreground"
-                )}
-              >
-                <SelectValue placeholder="Select an environment" />
-              </SelectTrigger>
-              <SelectContent>
-                {project.environments.map((env) => (
-                  <SelectItem key={env.id} value={env.name}>
-                    {env.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-      <div className="pt-5">
+      <div className="pt-0">
         <nav>
           <Link
-            to={href("/project/:projectSlug/settings", {
+            to={href("/workspace/project/:projectSlug/settings", {
               projectSlug: project.slug
             })}
             className="underline inline-flex gap-0.5 px-0 items-center text-sm"
@@ -213,28 +158,54 @@ export default function EnvironmentLayout({
           id="header"
           className="flex items-center md:flex-nowrap lg:my-0 md:my-1 my-5 flex-wrap gap-3 justify-between"
         >
-          <div className="flex items-center gap-4">
-            <div className={cn("flex gap-1 items-center flex-wrap")}>
-              <h1 className="text-3xl font-medium">{project.slug}</h1>
-              <StatusBadge
-                color={
-                  envSlug == "production"
-                    ? "green"
-                    : envSlug.startsWith("preview")
-                      ? "blue"
-                      : "gray"
+          <div className="flex items-start gap-4">
+            <div className={cn("flex gap-2 items-center flex-wrap")}>
+              <Link
+                to={href("/workspace/project/:projectSlug/:envSlug", {
+                  ...params,
+                  envSlug: "production"
+                })}
+                style={
+                  {
+                    "--color-light": projectColor.light,
+                    "--color-dark": projectColor.dark
+                  } as React.CSSProperties
                 }
-                pingState="hidden"
+                className={cn(
+                  "size-12 text-xl flex-none rounded-md flex items-center justify-center",
+                  "text-[var(--color-light)] dark:text-[var(--color-dark)]",
+                  "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10",
+                  "border  border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10",
+                  "focus-visible:outline-hidden focus-visible:ring-2",
+                  "focus-visible:ring-ring focus-visible:ring-offset-2",
+                  "ring-offset-background transition-colors"
+                )}
               >
-                {envSlug}
-              </StatusBadge>
+                <span>{project.slug.charAt(0).toUpperCase()}</span>
+              </Link>
+              <div className="flex flex-col gap-0 items-start relative -top-0.5">
+                <h1 className="text-3xl font-medium">{project.slug}</h1>
+                <StatusBadge
+                  color={
+                    envSlug == "production"
+                      ? "green"
+                      : envSlug.startsWith("preview")
+                        ? "blue"
+                        : "gray"
+                  }
+                  pingState="hidden"
+                  className="text-xs px-2 py-0"
+                >
+                  {envSlug}
+                </StatusBadge>
+              </div>
             </div>
 
             <Menubar className="border-none w-fit">
               <MenubarMenu>
                 <MenubarTrigger asChild>
                   <Button variant="secondary" className="flex gap-2">
-                    New <ChevronDownIcon size={18} />
+                    New <PlusIcon size={18} />
                   </Button>
                 </MenubarTrigger>
                 <MenubarContent
@@ -249,7 +220,7 @@ export default function EnvironmentLayout({
                     onClick={() => {
                       navigate(
                         href(
-                          "/project/:projectSlug/:envSlug/create-service",
+                          "/workspace/project/:projectSlug/:envSlug/create-service",
                           params
                         )
                       );
@@ -262,7 +233,7 @@ export default function EnvironmentLayout({
                     onClick={() => {
                       navigate(
                         href(
-                          "/project/:projectSlug/:envSlug/create-compose-stack",
+                          "/workspace/project/:projectSlug/:envSlug/create-compose-stack",
                           params
                         )
                       );
@@ -343,7 +314,7 @@ export function ErrorBoundary() {
             <h1 className="text-3xl font-bold">Error 404</h1>
             <p className="text-lg">This project does not exist</p>
           </div>
-          <Link to="/" prefetch="intent">
+          <Link to={href("/")} prefetch="intent">
             <Button>Go home</Button>
           </Link>
         </div>

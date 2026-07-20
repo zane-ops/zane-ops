@@ -57,17 +57,24 @@ import {
 import {
   environmentQueries,
   projectQueries,
-  resourceQueries
+  resourceQueries,
+  userQueries
 } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
+  formattedDate,
+  getCsrfTokenHeader,
   getFormErrorsFromResponseData,
-  isNotFoundError
+  isNotFoundError,
+  metaTitle
 } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/utils";
-import type { Route } from "./+types/project-environments";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
+import type { Route } from "./+types/project-environment-list";
 
 export function meta({ error, params }: Route.MetaArgs) {
   const title = !error
@@ -80,12 +87,13 @@ export function meta({ error, params }: Route.MetaArgs) {
 
 export default function ProjectEnvironmentsPage({
   matches: {
-    "2": { loaderData }
+    "3": { loaderData }
   },
   params
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const { data: project } = useQuery({
-    ...projectQueries.single(params.projectSlug),
+    ...projectQueries.single(workspaceId, params.projectSlug),
     initialData: loaderData.project
   });
   return (
@@ -137,7 +145,7 @@ function EnvironmentList({ environments, projectSlug }: EnvironmentListProps) {
               <TableRow key={env.id}>
                 <TableCell className="p-2">
                   <Link
-                    to={href("/project/:projectSlug/:envSlug", {
+                    to={href("/workspace/project/:projectSlug/:envSlug", {
                       projectSlug,
                       envSlug: env.name
                     })}
@@ -195,19 +203,26 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
 
   switch (intent) {
     case "rename_environment": {
-      return renameEnvironment(params.projectSlug, formData);
+      return renameEnvironment(workspaceId, params.projectSlug, formData);
     }
     case "create_environment": {
-      return createEnvironment(params.projectSlug, formData);
+      return createEnvironment(workspaceId, params.projectSlug, formData);
     }
     case "clone_environment": {
       const clone_from = formData.get("clone_from")?.toString()!;
-      return cloneEnvironment(params.projectSlug, clone_from, formData);
+      return cloneEnvironment(
+        workspaceId,
+        params.projectSlug,
+        clone_from,
+        formData
+      );
     }
     case "archive_environment": {
       if (
@@ -228,6 +243,7 @@ export async function clientAction({
         };
       }
       return archiveEnvironment(
+        workspaceId,
         params.projectSlug,
         formData.get("environment")!.toString()
       );
@@ -238,7 +254,12 @@ export async function clientAction({
   }
 }
 
-async function renameEnvironment(project_slug: string, formData: FormData) {
+async function renameEnvironment(
+  workspaceId: string,
+  project_slug: string,
+  formData: FormData
+) {
+  const queryClient = getQueryClient();
   const userData = {
     name: formData.get("name")?.toString() ?? ""
   };
@@ -271,16 +292,27 @@ async function renameEnvironment(project_slug: string, formData: FormData) {
 
   if (data.name !== currentEnvironment) {
     await Promise.all([
-      queryClient.invalidateQueries(projectQueries.single(project_slug)),
       queryClient.invalidateQueries(
-        environmentQueries.serviceList(project_slug, currentEnvironment)
+        projectQueries.single(workspaceId, project_slug)
+      ),
+      queryClient.invalidateQueries(
+        environmentQueries.serviceList(
+          workspaceId,
+          project_slug,
+          currentEnvironment
+        )
       )
     ]);
   }
   return { data };
 }
 
-async function archiveEnvironment(project_slug: string, env_slug: string) {
+async function archiveEnvironment(
+  workspaceId: string,
+  project_slug: string,
+  env_slug: string
+) {
+  const queryClient = getQueryClient();
   const apiResponse = await apiClient.DELETE(
     "/api/projects/{slug}/environment-details/{env_slug}/",
     {
@@ -303,10 +335,11 @@ async function archiveEnvironment(project_slug: string, env_slug: string) {
   }
 
   await Promise.all([
-    queryClient.invalidateQueries(projectQueries.single(project_slug)),
+    queryClient.invalidateQueries(
+      projectQueries.single(workspaceId, project_slug)
+    ),
     queryClient.invalidateQueries({
-      predicate: (query) =>
-        query.queryKey[0] === resourceQueries.search().queryKey[0]
+      queryKey: resourceQueries.search(workspaceId).queryKey.slice(0, 3)
     })
   ]);
 
@@ -320,13 +353,18 @@ async function archiveEnvironment(project_slug: string, env_slug: string) {
   });
 
   throw redirect(
-    href("/project/:projectSlug/settings/environments", {
+    href("/workspace/project/:projectSlug/settings/environments", {
       projectSlug: project_slug
     })
   );
 }
 
-async function createEnvironment(project_slug: string, formData: FormData) {
+async function createEnvironment(
+  workspaceId: string,
+  project_slug: string,
+  formData: FormData
+) {
+  const queryClient = getQueryClient();
   const userData = {
     name: formData.get("name")?.toString() ?? ""
   };
@@ -358,16 +396,25 @@ async function createEnvironment(project_slug: string, formData: FormData) {
   });
 
   await Promise.all([
-    queryClient.invalidateQueries(projectQueries.single(project_slug))
+    queryClient.invalidateQueries(
+      projectQueries.single(workspaceId, project_slug)
+    )
   ]);
-  throw redirect(`/project/${project_slug}/${data.name}`);
+  throw redirect(
+    href("/workspace/project/:projectSlug/:envSlug", {
+      projectSlug: project_slug,
+      envSlug: data.name
+    })
+  );
 }
 
 async function cloneEnvironment(
+  workspaceId: string,
   project_slug: string,
   cloned_environment: string,
   formData: FormData
 ) {
+  const queryClient = getQueryClient();
   const userData = {
     name: formData.get("name")?.toString() ?? "",
     deploy_after_clone: formData.get("deploy_after_clone") === "on"
@@ -420,9 +467,16 @@ async function cloneEnvironment(
   });
 
   await Promise.all([
-    queryClient.invalidateQueries(projectQueries.single(project_slug))
+    queryClient.invalidateQueries(
+      projectQueries.single(workspaceId, project_slug)
+    )
   ]);
-  throw redirect(`/project/${project_slug}/${data.name}`);
+  throw redirect(
+    href("/workspace/project/:projectSlug/:envSlug", {
+      projectSlug: project_slug,
+      envSlug: data.name
+    })
+  );
 }
 
 function CreateEnvironmentFormDialog({

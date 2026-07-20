@@ -1,14 +1,18 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { serviceQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
+import { serviceQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import { getCsrfTokenHeader } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/discard-multiple-changes";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    href("/project/:projectSlug/:envSlug/services/:serviceSlug", params)
+    href(
+      "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+      params
+    )
   );
 }
 
@@ -20,6 +24,8 @@ export async function clientAction({
     envSlug: env_slug
   }
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
   const changes = formData.getAll("change_id");
   let fullErrorMessage = "";
@@ -53,7 +59,7 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    serviceQueries.single({ project_slug, service_slug, env_slug })
+    serviceQueries.single({ workspaceId, project_slug, service_slug, env_slug })
   );
 
   if (fullErrorMessage) {

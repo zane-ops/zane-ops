@@ -30,11 +30,16 @@ import {
   REQUEST_METHODS,
   composeStackQueries,
   httpLogSearchSchema,
-  serviceQueries
+  serviceQueries,
+  userQueries
 } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
-import { cn, formatLogTime, notFound } from "~/lib/utils";
-import { queryClient } from "~/root";
+import { cn, formatDuration, formatLogTime, notFound } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-service-http-logs";
 
 import type { DateRange } from "react-day-picker";
@@ -49,14 +54,16 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { formatDuration } from "~/utils";
 
 export async function clientLoader({
   params,
   request
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const stack = await queryClient.ensureQueryData(
     composeStackQueries.single({
+      workspaceId: workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug
@@ -93,6 +100,7 @@ export async function clientLoader({
   const [httpLogs, httpLog] = await Promise.all([
     queryClient.ensureInfiniteQueryData(
       composeStackQueries.httpLogs({
+        workspaceId: workspaceId,
         project_slug: params.projectSlug,
         stack_slug: params.composeStackSlug,
         env_slug: params.envSlug,
@@ -105,6 +113,7 @@ export async function clientLoader({
     search.request_id
       ? queryClient.ensureQueryData(
           composeStackQueries.singleHttpLog({
+            workspaceId: workspaceId,
             project_slug: params.projectSlug,
             stack_slug: params.composeStackSlug,
             env_slug: params.envSlug,
@@ -120,6 +129,8 @@ export default function ComposeStackServiceHttpLogsPage({
   loaderData,
   params
 }: Route.ComponentProps) {
+  const queryClient = getQueryClient();
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
@@ -140,6 +151,7 @@ export default function ComposeStackServiceHttpLogsPage({
 
   const logsQuery = useInfiniteQuery({
     ...composeStackQueries.httpLogs({
+      workspaceId: workspaceId,
       project_slug: params.projectSlug,
       stack_slug: params.composeStackSlug,
       env_slug: params.envSlug,
@@ -925,6 +937,7 @@ type HostFilterProps = {
 };
 
 function HostFilter({ hosts }: HostFilterProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
@@ -937,6 +950,7 @@ function HostFilter({ hosts }: HostFilterProps) {
 
   const { data: hostList = [] } = useQuery(
     composeStackQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       env_slug,
       stack_slug,
@@ -972,6 +986,7 @@ type PathFilterProps = {
 };
 
 function PathFilter({ paths }: PathFilterProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
@@ -983,6 +998,7 @@ function PathFilter({ paths }: PathFilterProps) {
 
   const { data: hostList = [] } = useQuery(
     composeStackQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       stack_slug,
       env_slug,
@@ -1018,6 +1034,7 @@ type ClientIpFilterProps = {
 };
 
 function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
@@ -1030,6 +1047,7 @@ function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
 
   const { data: ipList = [] } = useQuery(
     composeStackQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       stack_slug,
       env_slug,
@@ -1063,6 +1081,7 @@ type UserAgentFilterProps = {
 };
 
 function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
@@ -1074,6 +1093,7 @@ function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
 
   const { data: uaList = [] } = useQuery(
     composeStackQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       stack_slug,
       env_slug,

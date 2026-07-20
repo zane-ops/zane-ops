@@ -18,9 +18,13 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER } from "~/lib/constants";
-import { deploymentQueries } from "~/lib/queries";
+import { deploymentQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/deployment-build-logs";
 
 export async function clientLoader({
@@ -31,8 +35,11 @@ export async function clientLoader({
     deploymentHash: deployment_hash
   }
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   queryClient.prefetchInfiniteQuery(
     deploymentQueries.buildLogs({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,
@@ -51,12 +58,14 @@ export default function DeploymentBuildLogsPage({
     deploymentHash: deployment_hash
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
 
   const queryClient = useQueryClient();
   const logsQuery = useInfiniteQuery({
     ...deploymentQueries.buildLogs({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,

@@ -35,18 +35,19 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { composeStackQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import type { ValueOf } from "~/lib/types";
-import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
-import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 import {
+  cn,
   durationToMs,
   formatURL,
   getDockerImageIconURL,
   stripSlashIfExists,
   wait
-} from "~/utils";
+} from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
+import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 
 export type ComposeStackServiceCardProps = {
   service: ValueOf<ComposeStack["services"]>;
@@ -320,6 +321,7 @@ function ToggleServiceForm({
   ref,
   ...params
 }: ToggleServiceFormProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const fetcher = useFetcher();
 
   const { queue, queueToggleItem, dequeueToggleItem } =
@@ -336,8 +338,8 @@ function ToggleServiceForm({
 
     await fetcher.submit(formData, {
       action: href(
-        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
-        params
+        "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
+        { ...params }
       ),
       method: "POST"
     });
@@ -345,6 +347,7 @@ function ToggleServiceForm({
     const desiredState = formData.get("desired_state") as "stop" | "start";
     queueToggleItem(queue_id);
     toggleStateToast({
+      workspaceId,
       desiredState,
       ...params
     }).finally(() => dequeueToggleItem(queue_id));
@@ -378,16 +381,18 @@ function ToggleServiceForm({
 
 async function toggleStateToast({
   desiredState,
+  workspaceId,
   ...params
 }: {
   desiredState: "stop" | "start";
+  workspaceId: string;
 } & Omit<ToggleServiceFormProps, "stackId" | "current_state" | "ref">) {
   const stackLink = (
     <Link
       className="text-link underline inline break-all"
       to={href(
-        "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/services/:serviceSlug",
-        params
+        "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/services/:serviceSlug",
+        { ...params }
       )}
     >
       {params.projectSlug}/{params.envSlug}/{params.composeStackSlug}/
@@ -411,6 +416,7 @@ async function toggleStateToast({
 
   let currentState: ToggleStackState | null = null;
 
+  const queryClient = getQueryClient();
   while (total_tries < MAX_TRIES && currentState !== desiredState) {
     total_tries++;
 
@@ -419,6 +425,7 @@ async function toggleStateToast({
     try {
       stack = await queryClient.fetchQuery(
         composeStackQueries.single({
+          workspaceId,
           project_slug: params.projectSlug,
           stack_slug: params.composeStackSlug,
           env_slug: params.envSlug

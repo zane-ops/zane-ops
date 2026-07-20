@@ -23,9 +23,13 @@ import {
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import { buildRegistryQueries } from "~/lib/queries";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import { getQueryClient } from "~/lib/query-client";
+import {
+  cn,
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import type { Route } from "./+types/create-build-registry";
 
 export function meta() {
@@ -364,6 +368,7 @@ function CreateBuildRegistryForm() {
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
 
   const storage_backend = formData
@@ -414,5 +419,5 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     description: "Build Registry created succesfully"
   });
   await queryClient.invalidateQueries(buildRegistryQueries.list({}));
-  throw redirect(href("/settings/build-registries"));
+  throw redirect(href("/admin/build-registries"));
 }

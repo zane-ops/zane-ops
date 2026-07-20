@@ -17,10 +17,13 @@ import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
-import { previewTemplatesQueries } from "~/lib/queries";
-import { isNotFoundError } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { metaTitle } from "~/utils";
+import { previewTemplatesQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import { isNotFoundError, metaTitle } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/preview-templates";
 
 export function meta({ error, params }: Route.MetaArgs) {
@@ -33,8 +36,10 @@ export function meta({ error, params }: Route.MetaArgs) {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const templates = await queryClient.ensureQueryData(
-    previewTemplatesQueries.list(params.projectSlug)
+    previewTemplatesQueries.list(workspaceId, params.projectSlug)
   );
 
   return {
@@ -46,8 +51,9 @@ export default function PreviewTemplatesPage({
   loaderData,
   params
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const { data: templates } = useQuery({
-    ...previewTemplatesQueries.list(params.projectSlug),
+    ...previewTemplatesQueries.list(workspaceId, params.projectSlug),
     initialData: loaderData.templates
   });
 

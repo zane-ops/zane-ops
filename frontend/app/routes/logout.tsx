@@ -1,9 +1,7 @@
-import { redirect } from "react-router";
+import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { userQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
-import { deleteCookie, getCsrfTokenHeader } from "~/utils";
+import { deleteCookie, getCsrfTokenHeader } from "~/lib/utils";
 
 export async function clientAction() {
   const { error } = await apiClient.DELETE("/api/auth/logout/", {
@@ -18,16 +16,13 @@ export async function clientAction() {
       description: fullErrorMessage,
       closeButton: true
     });
-    throw redirect("/");
+    throw redirect(href("/"));
   }
 
-  queryClient.removeQueries({
-    queryKey: userQueries.authedUser.queryKey
-  });
   deleteCookie("csrftoken");
-  throw redirect("/login");
+  window.location.href = href("/login");
 }
 
 export async function clientLoader() {
-  throw redirect("/");
+  throw redirect(href("/"));
 }

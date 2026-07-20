@@ -1,4 +1,8 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient
+} from "@tanstack/react-query";
 import { notUndefined, useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowDown01Icon,
@@ -40,12 +44,16 @@ import {
   type HttpLog,
   REQUEST_METHODS,
   httpLogSearchSchema,
-  serviceQueries
+  serviceQueries,
+  userQueries
 } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
-import { cn, formatLogTime, notFound } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { formatDuration } from "~/utils";
+import { cn, formatDuration, formatLogTime, notFound } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/service-http-logs";
 
 export async function clientLoader({
@@ -56,8 +64,11 @@ export async function clientLoader({
     envSlug: env_slug
   }
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const service = await queryClient.ensureQueryData(
     serviceQueries.single({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug
@@ -86,6 +97,7 @@ export async function clientLoader({
   const [httpLogs, httpLog] = await Promise.all([
     queryClient.ensureInfiniteQueryData(
       serviceQueries.httpLogs({
+        workspaceId,
         project_slug,
         service_slug,
         env_slug,
@@ -97,6 +109,7 @@ export async function clientLoader({
     search.request_id
       ? queryClient.ensureQueryData(
           serviceQueries.singleHttpLog({
+            workspaceId,
             project_slug,
             request_uuid: search.request_id,
             service_slug,
@@ -117,11 +130,13 @@ export default function ServiceHttpLogsPage({
     envSlug: env_slug
   },
   matches: {
-    2: {
+    3: {
       loaderData: { service }
     }
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
@@ -142,6 +157,7 @@ export default function ServiceHttpLogsPage({
 
   const logsQuery = useInfiniteQuery({
     ...serviceQueries.httpLogs({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,
@@ -927,6 +943,7 @@ type HostFilterProps = {
 };
 
 function HostFilter({ hosts }: HostFilterProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -939,6 +956,7 @@ function HostFilter({ hosts }: HostFilterProps) {
 
   const { data: hostList = [] } = useQuery(
     serviceQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,
@@ -974,6 +992,7 @@ type PathFilterProps = {
 };
 
 function PathFilter({ paths }: PathFilterProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -985,6 +1004,7 @@ function PathFilter({ paths }: PathFilterProps) {
 
   const { data: hostList = [] } = useQuery(
     serviceQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,
@@ -1020,6 +1040,7 @@ type ClientIpFilterProps = {
 };
 
 function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -1032,6 +1053,7 @@ function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
 
   const { data: ipList = [] } = useQuery(
     serviceQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,
@@ -1065,6 +1087,7 @@ type UserAgentFilterProps = {
 };
 
 function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const {
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -1076,6 +1099,7 @@ function UserAgentFilter({ userAgents }: UserAgentFilterProps) {
 
   const { data: uaList = [] } = useQuery(
     serviceQueries.filterHttpLogFields({
+      workspaceId,
       project_slug,
       service_slug,
       env_slug,

@@ -11,6 +11,7 @@ import {
 } from "~/components/ui/command";
 import { gitAppsQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 
 type GitRepositoryListInputProps = {
   appId: string;
@@ -37,11 +38,12 @@ export function GitRepositoryListInput({
   repoSearchQuery,
   setRepoSearchQuery
 }: GitRepositoryListInputProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const [isComboxOpen, setComboxOpen] = React.useState(false);
   const [debouncedValue] = useDebounce(repoSearchQuery, 150);
 
   const repositoriesListQuery = useQuery(
-    gitAppsQueries.repositories(appId, {
+    gitAppsQueries.repositories(workspaceId, appId, {
       query: debouncedValue
     })
   );

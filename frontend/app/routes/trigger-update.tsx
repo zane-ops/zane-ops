@@ -1,14 +1,15 @@
-import { redirect } from "react-router";
+import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { ZANE_UPDATE_TOAST_ID } from "~/lib/constants";
 import { serverQueries } from "~/lib/queries";
-import { queryClient } from "~/root";
-import { durationToMs, getCsrfTokenHeader, wait } from "~/utils";
+
+import { getQueryClient } from "~/lib/query-client";
+import { durationToMs, getCsrfTokenHeader, wait } from "~/lib/utils";
 import type { Route } from "./+types/trigger-update";
 
-export function clientLoader({ params }: Route.ClientLoaderArgs) {
-  throw redirect(`/`);
+export function clientLoader({}: Route.ClientLoaderArgs) {
+  throw redirect(href("/"));
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
@@ -34,6 +35,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     };
   }
 
+  const queryClient = getQueryClient();
   await queryClient.invalidateQueries(serverQueries.ongoingUpdate);
 
   // poll the ongoing update status in the background and keep the user
@@ -62,6 +64,7 @@ export async function pollUntilUpdateDone() {
     }
   );
 
+  const queryClient = getQueryClient();
   try {
     const deadline = Date.now() + durationToMs(5, "minutes");
     let updateOngoing = true;

@@ -281,6 +281,7 @@ class CreateUserView(APIView):
         user = User.objects.create_superuser(
             username=data["username"],
             password=data["password"],
+            first_name=data.get("first_name", ""),
         )  # type: ignore
 
         # Create workspace and membership

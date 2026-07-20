@@ -1,16 +1,17 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { environmentQueries } from "~/lib/queries";
+import { environmentQueries, userQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import type { ErrorResponseFromAPI } from "~/lib/utils";
-import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
+import { getCsrfTokenHeader } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/archive-compose-stack";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
     href(
-      "/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
+      "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/settings",
       params
     )
   );
@@ -20,6 +21,7 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const queryClient = getQueryClient();
   const formData = await request.formData();
 
   if (
@@ -68,13 +70,18 @@ export async function clientAction({
     };
   }
 
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   await queryClient.invalidateQueries(
-    environmentQueries.composeStackList(params.projectSlug, params.envSlug)
+    environmentQueries.composeStackList(
+      workspaceId,
+      params.projectSlug,
+      params.envSlug
+    )
   );
   toast.success("Success", {
     description: "Compose Stack deleted succesfully !",
     closeButton: true
   });
 
-  throw redirect(href("/project/:projectSlug/:envSlug", params));
+  throw redirect(href("/workspace/project/:projectSlug/:envSlug", params));
 }

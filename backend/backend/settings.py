@@ -71,10 +71,13 @@ ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "127-0-0-1.sslip.io")
 ZANE_INTERNAL_DOMAIN = "zaneops.internal"
 ENABLE_API_SCHEMA = os.environ.get("ENABLE_API_SCHEMA") == "true"
 
+# Using the OSS build or EE build
+BUILD = os.environ.get("BUILD", "oss")
+
 # Whether the commercial EE layer (`ee/`) is loaded. Set to "false" for a
 # pure-MIT build that ships without the `ee/` directory ; free-tier behavior
 # then applies everywhere.
-ENABLE_EE = os.environ.get("BUILD", "oss") == "ee"
+ENABLE_EE = BUILD == "ee"
 
 
 ALLOWED_HOSTS = (
@@ -490,3 +493,13 @@ OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "zane-api")
 OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get(
     "OTEL_EXPORTER_OTLP_ENDPOINT", "http://zane.tempo:4317"
 )
+
+# Named like this for backwards compatibility, in the past this was used to cleanup logs
+# but since logs are automatically cleaned up by grafana/loki, it is used now for cleaning up metrics
+OLD_APP_DATA_CLEANUP_SCHEDULE_ID = "daily-logs-cleanup"
+APP_DATA_CLEANUP_SCHEDULE_ID = "daily-app-data-cleanup"
+
+
+# The old name isn't descriptive enough for what the schedule does
+OLD_DOCKER_SYSTEM_PRUNE_SCHEDULE_ID = "hourly-system-cleanup"
+DOCKER_SYSTEM_PRUNE_SCHEDULE_ID = "docker-system-prune"

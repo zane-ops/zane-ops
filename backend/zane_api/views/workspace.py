@@ -12,7 +12,7 @@ from rest_framework.generics import (
     RetrieveUpdateDestroyAPIView,
 )
 
-from rest_framework import status
+from rest_framework import status, permissions
 from temporal.client import TemporalClient
 from temporal.shared import (
     ArchivedProjectDetails,
@@ -45,7 +45,6 @@ from .serializers import (
     WorkspaceTransferOwnershipResponseSerializer,
     WorkspaceTransferOwnershipRequestSerializer,
     WorkspaceMembershipFilterSet,
-    WorkspaceMembershipPagination,
     WorkspaceLeaveResponseSerializer,
 )
 from rest_framework import exceptions
@@ -59,6 +58,8 @@ from ..permissions import (
     HasWorkspace,
     IsWorkspaceOwner,
     IsWorkspaceAdmin,
+    IsWorkspaceGuest,
+    IsWorkspaceMember,
 )
 
 from django.db.models import QuerySet, Q
@@ -66,6 +67,7 @@ from .base import ResourceConflict, EMPTY_PAGINATED_RESPONSE
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from ..licensing.gate import can_create_workspace
+from .base import DefaultPageNumberPagination
 
 
 class WorkspaceMemberDetailAPIView(RetrieveDestroyAPIView):
@@ -132,9 +134,25 @@ class EditWorkspaceMemberPermissionsAPIView(APIView):
         except WorkspaceMembership.DoesNotExist:
             raise exceptions.NotFound()
 
+        if membership.role >= WorkspaceRole.OWNER:
+            raise ResourceConflict(
+                "You cannot edit the permissions of the workspace owner."
+            )
         if membership.user == self.request.user:
             raise ResourceConflict(
                 "You cannot edit your own permissions in the workspace."
+            )
+
+        current_membership = WorkspaceMembership.objects.get(
+            workspace=self.request.workspace,  # type: ignore
+            user=self.request.user,
+        )
+        if (
+            current_membership.role == WorkspaceRole.ADMIN
+            and membership.role >= WorkspaceRole.ADMIN
+        ):
+            raise ResourceConflict(
+                "You cannot edit the permissions of another admin of the workspace."
             )
 
         form = WorkspaceEditPermissionsRequestSerializer(
@@ -146,6 +164,14 @@ class EditWorkspaceMemberPermissionsAPIView(APIView):
         form.is_valid(raise_exception=True)
 
         data = cast(dict, form.validated_data)
+
+        if (
+            current_membership.role < WorkspaceRole.OWNER
+            and data["role"] >= WorkspaceRole.ADMIN
+        ):
+            raise ResourceConflict(
+                "Only the workspace owner can promote a user to admin."
+            )
 
         membership.role = data["role"]
         membership.save()
@@ -161,9 +187,9 @@ class EditWorkspaceMemberPermissionsAPIView(APIView):
 class ListWorkspaceMembersAPIView(ListAPIView):
     serializer_class = WorkspaceMemberSerializer
     filter_backends = [DjangoFilterBackend]
-    pagination_class = WorkspaceMembershipPagination
+    pagination_class = DefaultPageNumberPagination
     filterset_class = WorkspaceMembershipFilterSet
-    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     queryset = WorkspaceMembership.objects.all()  # just used for the openAPI docs
 
@@ -191,20 +217,27 @@ class ListWorkspaceMembersAPIView(ListAPIView):
 class WorkspaceMembershipListAPIView(ListAPIView):
     serializer_class = WorkspaceMembershipSerializer
     pagination_class = None
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self) -> QuerySet[WorkspaceMembership]:  # type: ignore
-        return WorkspaceMembership.objects.filter(
-            user=self.request.user
-        ).select_related("workspace")
+        return (
+            WorkspaceMembership.objects.filter(user=self.request.user)
+            .select_related("workspace")
+            .order_by("pk")
+        )
 
 
 class WorkspaceDetailAPIView(RetrieveUpdateDestroyAPIView):
-    permission_classes = [HasWorkspace, IsWorkspaceOwner]
     serializer_class = WorkspaceSerializer
     http_method_names = ["put", "delete", "get"]
 
     def get_object(self) -> Workspace:  # type: ignore
         return self.request.workspace  # type: ignore
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [HasWorkspace(), IsWorkspaceGuest()]
+        return [HasWorkspace(), IsWorkspaceOwner()]
 
     @transaction.atomic()
     def perform_destroy(self, instance):
@@ -374,6 +407,7 @@ class WorkspaceLeaveAPIView(APIView):
     serializer_class = WorkspaceLeaveResponseSerializer
 
     @extend_schema(
+        request=None,
         operation_id="leaveWorkspace",
         summary="Leave workspace",
     )

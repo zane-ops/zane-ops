@@ -5,8 +5,7 @@ import { useSearchParams } from "react-router";
 import { buttonVariants } from "~/components/ui/button";
 import { MAX_VISIBLE_LOG_CHARS_LIMIT } from "~/lib/constants";
 import type { DeploymentLog } from "~/lib/queries";
-import { cn, formatLogTime } from "~/lib/utils";
-import { excerpt, stringToColor } from "~/utils";
+import { cn, excerpt, formatLogTime, stringToColor } from "~/lib/utils";
 
 type LogProps = Pick<DeploymentLog, "id" | "level" | "time" | "timestamp"> & {
   content: string;

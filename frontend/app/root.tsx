@@ -1,9 +1,5 @@
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
-import {
-  QueryClient,
-  QueryClientProvider,
-  keepPreviousData
-} from "@tanstack/react-query";
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
   PersistQueryClientProvider,
@@ -17,6 +13,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  href,
   isRouteErrorResponse,
   useRouteError
 } from "react-router";
@@ -27,7 +24,8 @@ import { ThemeProvider, getThemePreference } from "~/components/theme-context";
 import { Button } from "~/components/ui/button";
 import { Toaster } from "~/components/ui/sonner";
 import { THEME_STORAGE_KEY } from "~/lib/constants";
-import { durationToMs } from "~/utils";
+import { getQueryClient } from "~/lib/query-client";
+import { durationToMs } from "~/lib/utils";
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
 
@@ -50,20 +48,6 @@ export function links() {
 export function meta() {
   return [{ title: "ZaneOps" }] satisfies ReturnType<Route.MetaFunction>;
 }
-
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      placeholderData: keepPreviousData,
-      gcTime: durationToMs(3, "days"),
-      retry(failureCount, error) {
-        // error responses are valid responses that react router can handle, so we don't want to retry them
-        return !(error instanceof Response) && failureCount < 3;
-      }
-    }
-  }
-});
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -118,6 +102,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const queryClient = getQueryClient();
+
   // we don't need persistence in DEV, because it might cause cache issues
   if (import.meta.env.DEV) {
     return (
@@ -132,7 +118,7 @@ export default function App() {
     );
   }
 
-  const persister = createSyncStoragePersister({
+  const persister = createAsyncStoragePersister({
     storage: localStorage,
     throttleTime: import.meta.env.PROD
       ? durationToMs(30, "seconds")
@@ -206,7 +192,7 @@ export function ErrorBoundary() {
           <code>{stack}</code>
         </pre>
       ) : (
-        <Link to="/">
+        <Link to={href("/")}>
           <Button>Go home</Button>
         </Link>
       )}

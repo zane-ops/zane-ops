@@ -42,10 +42,15 @@ import {
   type DeploymentLogFilters,
   LOG_LEVELS,
   deploymentLogSearchSchema,
-  deploymentQueries
+  deploymentQueries,
+  userQueries
 } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn, formatLogTime } from "~/lib/utils";
-import { queryClient } from "~/root";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/deployment-logs";
 
 export async function clientLoader({
@@ -57,6 +62,8 @@ export async function clientLoader({
   },
   request
 }: Route.ClientLoaderArgs) {
+  const queryClient = getQueryClient();
+  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const searchParams = new URL(request.url).searchParams;
   const search = deploymentLogSearchSchema.parse(searchParams);
   const filters = {
@@ -68,6 +75,7 @@ export async function clientLoader({
 
   queryClient.prefetchInfiniteQuery(
     deploymentQueries.logs({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,
@@ -87,6 +95,7 @@ export default function DeploymentLogsPage({
     deploymentHash: deployment_hash
   }
 }: Route.ComponentProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const [searchParams, setSearchParams] = useSearchParams();
   const search = deploymentLogSearchSchema.parse(searchParams);
   const [isAutoRefetchEnabled, setIsAutoRefetchEnabled] = React.useState(true);
@@ -106,6 +115,7 @@ export default function DeploymentLogsPage({
   const queryClient = useQueryClient();
   const logsQuery = useInfiniteQuery({
     ...deploymentQueries.logs({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,
@@ -119,6 +129,7 @@ export default function DeploymentLogsPage({
 
   const logsWithContextQuery = useQuery({
     ...deploymentQueries.logWithContext({
+      workspaceId,
       deployment_hash,
       project_slug,
       service_slug,

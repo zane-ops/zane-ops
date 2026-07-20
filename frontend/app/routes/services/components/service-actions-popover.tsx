@@ -17,6 +17,7 @@ import {
   PopoverTrigger
 } from "~/components/ui/popover";
 import { serviceQueries } from "~/lib/queries";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type {
   ToggleServiceState,
   clientAction as toggleClientAction
@@ -34,12 +35,11 @@ import {
   DialogTitle,
   DialogTrigger
 } from "~/components/ui/dialog";
+import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
-import { cn } from "~/lib/utils";
-import { queryClient } from "~/root";
+import { cn, durationToMs, wait } from "~/lib/utils";
 import { ServiceCleanupQueueConfirmModal } from "~/routes/services/components/service-cleanup-queue-confirm-modal";
 import type { clientAction as deployClientAction } from "~/routes/services/deploy-docker-service";
-import { durationToMs, wait } from "~/utils";
 
 export type ServiceActionsPopoverProps = {
   service: Service;
@@ -60,11 +60,14 @@ export function ServiceActionsPopover({
     if (deployFetcher.state === "idle" && deployFetcher.data) {
       if (!deployFetcher.data.errors) {
         navigate(
-          href("/project/:projectSlug/:envSlug/services/:serviceSlug", {
-            projectSlug,
-            envSlug,
-            serviceSlug: service.slug
-          })
+          href(
+            "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+            {
+              projectSlug,
+              envSlug,
+              serviceSlug: service.slug
+            }
+          )
         );
       }
     }
@@ -146,9 +149,11 @@ function ToggleServiceForm({
   projectSlug,
   envSlug
 }: ToggleServiceFormProps) {
+  const workspaceId = useCurrentWorkspace().id;
   const fetcher = useFetcher<typeof toggleClientAction>();
   const deploymentListQuery = useQuery(
     serviceQueries.deploymentList({
+      workspaceId,
       project_slug: projectSlug,
       service_slug: service.slug,
       env_slug: envSlug
@@ -187,6 +192,7 @@ function ToggleServiceForm({
     const desiredState = formData.get("desired_state") as "stop" | "start";
     queueToggleItem(service.id);
     toggleStateToast({
+      workspaceId,
       desiredState,
       projectSlug,
       serviceSlug: service.slug,
@@ -315,24 +321,30 @@ function StopServiceConfirmationDialog({
 }
 
 async function toggleStateToast({
+  workspaceId,
   desiredState,
   projectSlug,
   serviceSlug,
   envSlug
 }: {
+  workspaceId: string;
   desiredState: "stop" | "start";
   projectSlug: string;
   serviceSlug: string;
   envSlug: string;
 }) {
+  const queryClient = getQueryClient();
   const serviceLink = (
     <Link
       className="text-link underline inline break-all"
-      to={href("/project/:projectSlug/:envSlug/services/:serviceSlug", {
-        projectSlug,
-        envSlug,
-        serviceSlug
-      })}
+      to={href(
+        "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+        {
+          projectSlug,
+          envSlug,
+          serviceSlug
+        }
+      )}
     >
       {projectSlug}/{envSlug}/{serviceSlug}
     </Link>
@@ -354,6 +366,7 @@ async function toggleStateToast({
   const deploymentList =
     queryClient.getQueryData(
       serviceQueries.deploymentList({
+        workspaceId,
         project_slug: projectSlug,
         service_slug: serviceSlug,
         env_slug: envSlug
@@ -377,6 +390,7 @@ async function toggleStateToast({
       (
         await queryClient.fetchQuery(
           serviceQueries.deploymentList({
+            workspaceId,
             project_slug: projectSlug,
             service_slug: serviceSlug,
             env_slug: envSlug
