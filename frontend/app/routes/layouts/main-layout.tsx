@@ -42,7 +42,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     let redirectPathName = href("/login");
     const url = new URL(request.url);
 
-    if (url.pathname !== href("/workspace")) {
+    if (url.pathname !== href("/workspace") && url.pathname !== href("/")) {
       const params = new URLSearchParams([["redirect_to", url.pathname]]);
 
       redirectPathName = [href("/login"), "?", params.toString()].join("");
