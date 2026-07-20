@@ -36,6 +36,11 @@ class GitAppDetailsAPIView(RetrieveDestroyAPIView):
     lookup_field = "id"
     permission_classes = [HasWorkspace, IsWorkspaceOwner]
 
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [HasWorkspace(), IsWorkspaceMember()]
+        return [HasWorkspace(), IsWorkspaceOwner()]
+
     def get_queryset(self):
         return (
             super()
