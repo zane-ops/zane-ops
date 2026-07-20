@@ -53,6 +53,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { getCurrentWorkspace } from "~/lib/auth-store";
 import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
 import { gitAppsQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
@@ -62,7 +63,6 @@ import {
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
-import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/create-git-service-from-gitapp";
 
 export function meta() {

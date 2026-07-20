@@ -11,9 +11,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger
 } from "~/components/ui/dropdown-menu";
+import { useCurrentWorkspace } from "~/lib/auth-store";
 import { projectQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
 
 export type ProjectEnvironmentListHeaderHeaderDropdownProps = {
   currentProject?: Project;

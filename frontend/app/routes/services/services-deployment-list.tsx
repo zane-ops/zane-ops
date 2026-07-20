@@ -33,14 +33,11 @@ import {
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
+import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import { DEPLOYMENT_STATUSES } from "~/lib/constants";
 import { serviceDeploymentListFilters, serviceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
 import type { Route } from "./+types/services-deployment-list";
 
 export async function clientLoader({

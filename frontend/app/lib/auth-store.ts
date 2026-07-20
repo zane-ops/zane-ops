@@ -6,6 +6,12 @@ import { getQueryClient } from "~/lib/query-client";
 import { notFound } from "~/lib/utils";
 
 type Workspace = WorkspaceMembership["workspace"];
+type User = NonNullable<AuthedUserResponse>["user"];
+
+type UserStore = {
+  user: User | null;
+  setUser: (user: User | null) => void;
+};
 
 type WorkspaceStore = {
   workspace: Workspace | null;
@@ -16,6 +22,11 @@ type WorkspaceMembershipStore = {
   membership: WorkspaceMembership | null;
   setMembership: (membership: WorkspaceMembership | null) => void;
 };
+
+export const useUserStore = create<UserStore>((set) => ({
+  user: null,
+  setUser: (user) => set({ user })
+}));
 
 export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   workspace: null,
@@ -28,6 +39,20 @@ export const useWorkspaceMembershipStore = create<WorkspaceMembershipStore>(
     setMembership: (membership) => set({ membership })
   })
 );
+
+/**
+ * Only for components rendered within authenticated routes
+ * (main-layout.tsx and below), where an authed user is guaranteed.
+ */
+export function useCurrentAuthedUser() {
+  const user = useUserStore((s) => s.user);
+  if (!user) {
+    throw new Error(
+      "useCurrentAuthedUser() called outside an authenticated route"
+    );
+  }
+  return user;
+}
 
 /**
  * Only for components rendered within workspace-scoped routes
@@ -72,21 +97,22 @@ export async function getCurrentWorkspace(queryClient: QueryClient) {
 }
 
 /**
- * Keeps the store mirroring the query cache directly,
- * so it reflects the query regardless of what triggered a change (initial
+ * Keeps the stores mirroring the query cache directly,
+ * so they reflect the query regardless of what triggered a change (initial
  * `ensureQueryData` in a loader, the query's own refetchInterval, or an
  * `invalidateQueries` call elsewhere e.g. after switching workspace).
  * Subscribing at module scope (rather than via a component's useEffect)
  * avoids a render/effect-ordering race: loaders already await
  * `ensureQueryData` before any component renders, so this subscription can
- * update the store in that same window, well before any component reads it.
+ * update the stores in that same window, well before any component reads them.
  */
 const authedUserHash = hashKey(userQueries.authedUser.queryKey);
 
-export function syncWorkspaceStore(
-  data: AuthedUserResponse | undefined | null
-) {
-  console.log("[workspace-store/syncWorkspaceStore]", { data });
+export function syncAuthStore(data: AuthedUserResponse | undefined | null) {
+  console.log("[auth-store/syncAuthStore]", { data });
+  useUserStore.setState({
+    user: data?.user ?? null
+  });
   useWorkspaceMembershipStore.setState({
     membership: data?.membership ?? null
   });
@@ -102,8 +128,6 @@ getQueryClient()
     // if we query is removed, normally the page should get updated before
     // components, but while the page is loading, this component get updated and rerender all its subscribers
     if (event.type !== "removed" && event.query.queryHash === authedUserHash) {
-      syncWorkspaceStore(
-        event.query.state.data as AuthedUserResponse | undefined
-      );
+      syncAuthStore(event.query.state.data as AuthedUserResponse | undefined);
     }
   });

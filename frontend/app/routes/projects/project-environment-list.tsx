@@ -54,6 +54,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import {
   environmentQueries,
   projectQueries,
@@ -70,10 +71,6 @@ import {
   isNotFoundError,
   metaTitle
 } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
 import type { Route } from "./+types/project-environment-list";
 
 export function meta({ error, params }: Route.MetaArgs) {

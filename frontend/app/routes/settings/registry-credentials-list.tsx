@@ -29,14 +29,11 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import { ensureMinRole, sharedRegistryCredentialsQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { metaTitle } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
 import type { Route } from "./+types/registry-credentials-list";
 
 export function meta() {

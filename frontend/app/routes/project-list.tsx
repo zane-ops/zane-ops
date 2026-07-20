@@ -25,6 +25,7 @@ import { RecentDeploymentCard } from "~/components/deployment-cards";
 import { MultiSelect } from "~/components/multi-select";
 import { ProjectCard } from "~/components/project-card";
 import { Button } from "~/components/ui/button";
+import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import {
   deploymentQueries,
@@ -35,10 +36,6 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, hasMinRole } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();

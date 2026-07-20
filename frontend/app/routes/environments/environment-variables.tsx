@@ -47,6 +47,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import { environmentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -56,10 +57,6 @@ import {
   getFormErrorsFromResponseData,
   pluralize
 } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
 import type { Route } from "./+types/environment-variables";
 
 export default function EnvironmentVariablesPage({

@@ -52,6 +52,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { WorkspaceRoleBadge } from "~/components/workspace-role-badge";
+import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import {
   SPIN_DELAY_DEFAULT_OPTIONS,
   WORKSPACE_ROLE_MAPPING
@@ -71,10 +72,6 @@ import {
   pluralize,
   stringToColor
 } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
 import type { Route } from "./+types/workspace-team-settings";
 
 export function meta() {

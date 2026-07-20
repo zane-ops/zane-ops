@@ -43,6 +43,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
@@ -56,10 +57,6 @@ import {
   pluralize,
   wait
 } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
 import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 import type { Route } from "./+types/compose-stack-service-layout";
 

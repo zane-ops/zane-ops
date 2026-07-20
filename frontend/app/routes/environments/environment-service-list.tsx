@@ -30,13 +30,10 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import { Popover, PopoverTrigger } from "~/components/ui/popover";
+import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import { environmentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, timeAgoFormatter } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
 import type { Route } from "./+types/environment-service-list";
 
 export async function clientLoader({

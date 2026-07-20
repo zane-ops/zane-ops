@@ -20,13 +20,10 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, isNotFoundError, metaTitle, notFound } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
 import { ComposeStackActionsPopover } from "~/routes/compose/components/compose-stack-actions-popover";
 import { ComposeStackChangesModal } from "~/routes/compose/components/compose-stack-changes-modal";
 import type { Route } from "./+types/compose-stack-layout";

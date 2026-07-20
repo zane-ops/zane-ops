@@ -14,8 +14,8 @@ import {
 import { userQueries } from "~/lib/queries";
 import { useDeviceSize } from "~/lib/use-device-size";
 
+import { useWorkspaceStore } from "~/lib/auth-store";
 import { cn, getUserDisplayName, hasMinRole } from "~/lib/utils";
-import { useWorkspaceStore } from "~/lib/workspace-store";
 
 export type UserDropdownProps = {
   user: AuthedUserResponse | null;

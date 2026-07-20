@@ -1,10 +1,10 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
+import { getCurrentWorkspace } from "~/lib/auth-store";
 import { workspaceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader, getUserDisplayName } from "~/lib/utils";
-import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/workspace-remove-member";
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {

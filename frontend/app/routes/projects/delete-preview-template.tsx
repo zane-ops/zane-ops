@@ -6,6 +6,7 @@ import { DeleteConfirmationDialog } from "~/components/delete-confirmation-dialo
 import { Button } from "~/components/ui/button";
 import { DialogTrigger } from "~/components/ui/dialog";
 import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
+import { getCurrentWorkspace } from "~/lib/auth-store";
 import { previewTemplatesQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -14,7 +15,6 @@ import {
   getCsrfTokenHeader,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
-import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/delete-preview-template";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {

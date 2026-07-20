@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
+import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import { deploymentQueries, metrisSearch, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -35,10 +36,6 @@ import {
   formatStorageValue,
   timeAgoFormatter
 } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
 import type { Route } from "./+types/deployment-metrics";
 
 export async function clientLoader({

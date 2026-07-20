@@ -15,6 +15,7 @@ import { NavLink } from "~/components/nav-link";
 import { SubmitButton } from "~/components/ui/button";
 
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
+import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import {
   deploymentQueries,
   serverQueries,
@@ -29,10 +30,6 @@ import {
   metaTitle,
   notFound
 } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
 import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
 import type { Route } from "./+types/deployment-layout";
 

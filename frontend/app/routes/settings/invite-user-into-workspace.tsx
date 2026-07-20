@@ -40,6 +40,11 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/auth-store";
 import { WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
 import { ensureMinRole, projectQueries, workspaceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
@@ -50,11 +55,6 @@ import {
   metaTitle,
   pluralize
 } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace,
-  useCurrentWorkspaceMembership
-} from "~/lib/workspace-store";
 import type { Route } from "./+types/invite-user-into-workspace";
 
 export function meta() {

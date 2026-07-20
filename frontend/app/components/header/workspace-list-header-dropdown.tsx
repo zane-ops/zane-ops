@@ -15,11 +15,11 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { userQueries } from "~/lib/queries";
 
-import { cn, stringToColor } from "~/lib/utils";
 import {
   useCurrentWorkspace,
   useCurrentWorkspaceMembership
-} from "~/lib/workspace-store";
+} from "~/lib/auth-store";
+import { cn, stringToColor } from "~/lib/utils";
 import type { clientAction } from "~/routes/switch-workspace";
 
 export type WorkspaceMembershipListProps = {

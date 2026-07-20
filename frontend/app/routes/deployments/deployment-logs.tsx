@@ -37,6 +37,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import { REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER } from "~/lib/constants";
 import {
   type DeploymentLogFilters,
@@ -47,10 +48,6 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, formatLogTime } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
 import type { Route } from "./+types/deployment-logs";
 
 export async function clientLoader({

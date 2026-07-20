@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow
 } from "~/components/ui/table";
+import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import {
   type HTTPLogFilters,
   type HttpLog,
@@ -34,10 +35,6 @@ import {
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
 import { cn, formatDuration, formatLogTime, notFound } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-http-logs";
 
 import type { DateRange } from "react-day-picker";

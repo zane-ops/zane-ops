@@ -16,8 +16,8 @@ import {
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
+import { useCurrentWorkspace } from "~/lib/auth-store";
 import { serviceQueries } from "~/lib/queries";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type {
   ToggleServiceState,
   clientAction as toggleClientAction

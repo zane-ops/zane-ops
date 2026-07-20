@@ -43,6 +43,7 @@ import {
 } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
 import { PasswordToggleInput } from "~/components/ui/password-toggle-input";
+import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import {
   environmentQueries,
   projectQueries,
@@ -56,10 +57,6 @@ import {
   getCsrfTokenHeader,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
 import type { Route } from "./+types/environments-settings";
 
 export default function EnvironmentSettingsPage({

@@ -37,6 +37,7 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
+import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import {
   environmentQueries,
   previewTemplatesQueries,
@@ -51,10 +52,6 @@ import {
   isNotFoundError,
   metaTitle
 } from "~/lib/utils";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace
-} from "~/lib/workspace-store";
 import type { Route } from "./+types/create-preview-template";
 
 export function meta({ error, params }: Route.MetaArgs) {

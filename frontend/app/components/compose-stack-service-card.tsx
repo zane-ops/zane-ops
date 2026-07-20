@@ -34,6 +34,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { useCurrentWorkspace } from "~/lib/auth-store";
 import { composeStackQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
@@ -46,7 +47,6 @@ import {
   stripSlashIfExists,
   wait
 } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 
 export type ComposeStackServiceCardProps = {
