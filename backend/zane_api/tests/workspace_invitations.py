@@ -266,6 +266,64 @@ class WorkspaceInviteUserViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
 
+    def test_admin_cannot_invite_user_with_admin_role(self):
+        admin = self.loginUser()
+        WorkspaceMembership.objects.filter(user=admin).update(role=WorkspaceRole.ADMIN)
+
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.ADMIN,
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(0, WorkspaceInvitation.objects.count())
+
+    def test_admin_can_invite_user_with_member_role(self):
+        admin = self.loginUser()
+        WorkspaceMembership.objects.filter(user=admin).update(role=WorkspaceRole.ADMIN)
+
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.MEMBER,
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
+        self.assertIsNotNone(new_invitation)
+        self.assertEqual(new_invitation.role, WorkspaceRole.MEMBER)
+
+    def test_owner_can_invite_user_with_admin_role(self):
+        owner = self.loginUser()
+        workspace = cast(Workspace, Workspace.objects.first())
+
+        self.assertEqual(
+            WorkspaceRole.OWNER,
+            WorkspaceMembership.objects.get(user=owner, workspace=workspace).role,
+        )
+
+        data = {
+            "username": "mohai",
+            "role": WorkspaceRole.ADMIN,
+        }
+        response = self.client.post(
+            reverse("zane_api:workspace.invite_user"),
+            data=data,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_invitation = cast(WorkspaceInvitation, WorkspaceInvitation.objects.first())
+        self.assertIsNotNone(new_invitation)
+        self.assertEqual(new_invitation.role, WorkspaceRole.ADMIN)
+        self.assertEqual(new_invitation.username, "mohai")
+
     def test_cannot_invite_two_users_with_the_same_username(self):
         self.loginUser()
         data = {

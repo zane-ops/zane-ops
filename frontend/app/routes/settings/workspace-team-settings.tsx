@@ -309,7 +309,16 @@ function WorkspaceMembersTable({
 
             return (
               <TableRow className="px-2" key={member.id}>
-                <TableCell className="p-2">{member.user.username}</TableCell>
+                <TableCell className="p-2">
+                  <span>{member.user.username}</span>
+                  {isSelf && (
+                    <>
+                      &nbsp;
+                      <span>&middot;</span>&nbsp;
+                      <span className="text-link text-sm">you</span>
+                    </>
+                  )}
+                </TableCell>
                 <TableCell className="p-2 whitespace-nowrap">
                   {member.user.first_name ?? (
                     <span className="text-grey font-mono">N/A</span>

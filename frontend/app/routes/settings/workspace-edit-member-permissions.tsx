@@ -4,11 +4,11 @@ import * as React from "react";
 import {
   Form,
   href,
+  redirect,
   useActionData,
   useLoaderData,
   useNavigation
 } from "react-router";
-import { redirect } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import type { Project, WorkspaceMember, WorkspaceRoleName } from "~/api/types";
@@ -32,7 +32,6 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   getCsrfTokenHeader,
   getFormErrorsFromResponseData,
-  getUserDisplayName,
   hasMinRole,
   metaTitle
 } from "~/lib/utils";
