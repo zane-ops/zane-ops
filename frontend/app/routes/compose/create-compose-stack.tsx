@@ -3,6 +3,8 @@ import { Link, href } from "react-router";
 import { DokployLogo } from "~/components/dokploy-logo";
 import { ZaneOpsLogo } from "~/components/logo";
 import { Button } from "~/components/ui/button";
+import { ensureMinRole } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/create-compose-stack";
 
@@ -10,6 +12,11 @@ export function meta() {
   return [
     metaTitle("Create Compose Stack")
   ] satisfies ReturnType<Route.MetaFunction>;
+}
+
+export async function clientLoader() {
+  const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Member");
 }
 
 export default function CreateComposeStackPage({

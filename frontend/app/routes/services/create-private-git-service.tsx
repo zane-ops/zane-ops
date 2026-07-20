@@ -19,11 +19,10 @@ import {
 } from "~/components/ui/menubar";
 import {
   getCurrentWorkspace,
-  useCurrentAuthedUser,
   useCurrentWorkspace,
   useCurrentWorkspaceMembership
 } from "~/lib/auth-store";
-import { ensureMinRole, gitAppsQueries, userQueries } from "~/lib/queries";
+import { ensureMinRole, gitAppsQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, hasMinRole, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/create-private-git-service";
@@ -36,7 +35,7 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  await ensureMinRole(queryClient, "Admin");
+  await ensureMinRole(queryClient, "Member");
 
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const gitAppList = await queryClient.ensureQueryData(

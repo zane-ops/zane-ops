@@ -18,6 +18,8 @@ import {
   FieldSetLabel,
   FieldSetTextarea
 } from "~/components/ui/fieldset";
+import { ensureMinRole } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { useLocalStorage } from "~/lib/use-local-storage";
 import {
   cn,
@@ -31,6 +33,11 @@ export function meta() {
   return [
     metaTitle("New Compose Stack")
   ] satisfies ReturnType<Route.MetaFunction>;
+}
+
+export async function clientLoader() {
+  const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Member");
 }
 
 const SAVED_COMPOSE_CONTENTS_KEY = "compose:last-user-contents";
