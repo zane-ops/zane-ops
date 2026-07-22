@@ -18,7 +18,11 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
 import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
-import { previewTemplatesQueries, userQueries } from "~/lib/queries";
+import {
+  ensureMinRole,
+  previewTemplatesQueries,
+  userQueries
+} from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { isNotFoundError, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/preview-templates";
@@ -34,6 +38,7 @@ export function meta({ error, params }: Route.MetaArgs) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Admin");
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const templates = await queryClient.ensureQueryData(
     previewTemplatesQueries.list(workspaceId, params.projectSlug)

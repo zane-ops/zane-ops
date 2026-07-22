@@ -39,6 +39,7 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import {
+  ensureMinRole,
   environmentQueries,
   previewTemplatesQueries,
   userQueries
@@ -61,6 +62,11 @@ export function meta({ error, params }: Route.MetaArgs) {
       ? "Error 404 - Project does not exist"
       : "Oops";
   return [metaTitle(title)] satisfies ReturnType<Route.MetaFunction>;
+}
+
+export async function clientLoader({}: Route.ClientLoaderArgs) {
+  await ensureMinRole(getQueryClient(), "Admin");
+  return;
 }
 
 export default function CreatePreviewTemplatePage({

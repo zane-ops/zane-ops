@@ -7,7 +7,11 @@ import { Button } from "~/components/ui/button";
 import { DialogTrigger } from "~/components/ui/dialog";
 import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import { getCurrentWorkspace } from "~/lib/auth-store";
-import { previewTemplatesQueries, userQueries } from "~/lib/queries";
+import {
+  ensureMinRole,
+  previewTemplatesQueries,
+  userQueries
+} from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
@@ -17,7 +21,8 @@ import {
 } from "~/lib/utils";
 import type { Route } from "./+types/delete-preview-template";
 
-export function clientLoader({ params }: Route.ClientLoaderArgs) {
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  await ensureMinRole(getQueryClient(), "Admin");
   throw redirect(
     href(
       "/workspace/project/:projectSlug/settings/preview-templates/:templateSlug",

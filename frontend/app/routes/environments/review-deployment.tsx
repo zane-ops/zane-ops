@@ -12,7 +12,7 @@ import { GithubLogo } from "~/components/github-logo";
 import { ThemedLogo } from "~/components/logo";
 import { SubmitButton } from "~/components/ui/button";
 import { getCurrentWorkspace } from "~/lib/auth-store";
-import { environmentQueries } from "~/lib/queries";
+import { ensureMinRole, environmentQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/review-deployment";
@@ -28,6 +28,7 @@ type DeploymentDecision = RequestInput<
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Admin");
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const environment = await queryClient.ensureQueryData(
     environmentQueries.pendingReview(

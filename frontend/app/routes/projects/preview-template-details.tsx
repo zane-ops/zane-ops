@@ -39,6 +39,7 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import {
+  ensureMinRole,
   environmentQueries,
   previewTemplatesQueries,
   userQueries
@@ -66,6 +67,7 @@ export function meta({ error, params }: Route.MetaArgs) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Admin");
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const template = await queryClient.ensureQueryData(
     previewTemplatesQueries.single(
