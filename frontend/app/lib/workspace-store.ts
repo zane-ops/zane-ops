@@ -86,7 +86,7 @@ const authedUserHash = hashKey(userQueries.authedUser.queryKey);
 export function syncWorkspaceStore(
   data: AuthedUserResponse | undefined | null
 ) {
-  console.log("[auth-store/syncAuthStore]", { data });
+  console.log("[workspace-store/syncWorkspaceStore]", { data });
   useWorkspaceMembershipStore.setState({
     membership: data?.membership ?? null
   });
