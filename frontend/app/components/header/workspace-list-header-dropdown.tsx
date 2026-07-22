@@ -3,7 +3,6 @@ import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
 import type * as React from "react";
 import { Link, href, useFetcher } from "react-router";
 import type { WorkspaceMembership } from "~/api/types";
-import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -15,6 +14,7 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { userQueries } from "~/lib/queries";
 
+import { WorkspaceRoleBadge } from "~/components/workspace-role-badge";
 import { cn, stringToColor } from "~/lib/utils";
 import {
   useCurrentWorkspace,
@@ -81,12 +81,11 @@ export function WorkspaceMembershipListHeaderDropdown({
           >
             {currentWorkspace.name}
           </p>
-          <StatusBadge
-            pingState="hidden"
+          <WorkspaceRoleBadge
+            role={currentMembership.role_name}
+            size="sm"
             className="py-0.5 px-1.5 text-xs hidden lg:inline-flex"
-          >
-            {currentMembership.role_name}
-          </StatusBadge>
+          />
         </Link>
       </Button>
       <DropdownMenu>
@@ -142,12 +141,7 @@ export function WorkspaceMembershipListHeaderDropdown({
                     <div className="flex items-start gap-8 justify-between w-full">
                       <div className="flex flex-col mr-2 items-start gap-0.5">
                         <span className="font-medium">{m.workspace.name}</span>
-                        <StatusBadge
-                          pingState="hidden"
-                          className="py-0 px-1.5 text-xs"
-                        >
-                          {m.role_name.toLowerCase()}
-                        </StatusBadge>
+                        <WorkspaceRoleBadge size="sm" role={m.role_name} />
                       </div>
 
                       <span className="flex size-4 items-center justify-center ml-auto flex-none py-2.5">

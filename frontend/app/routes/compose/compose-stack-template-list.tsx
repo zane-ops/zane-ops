@@ -13,7 +13,11 @@ import { Card } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { TEMPLATE_API_HOST } from "~/lib/constants";
-import { templateQueries, templateSearchFilters } from "~/lib/queries";
+import {
+  ensureMinRole,
+  templateQueries,
+  templateSearchFilters
+} from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/compose-stack-template-list";
@@ -26,6 +30,8 @@ export function meta() {
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Member");
+
   const searchParams = new URL(request.url).searchParams;
   const filters = templateSearchFilters.parse(searchParams);
 

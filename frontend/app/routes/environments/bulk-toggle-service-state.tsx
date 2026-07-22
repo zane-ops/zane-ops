@@ -5,7 +5,7 @@ import { environmentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/lib/utils";
 import { getCurrentWorkspace } from "~/lib/workspace-store";
-import { type Route } from "./+types/bulk-toggle-service-state";
+import type { Route } from "./+types/bulk-toggle-service-state";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(href("/workspace/project/:projectSlug/:envSlug", params));

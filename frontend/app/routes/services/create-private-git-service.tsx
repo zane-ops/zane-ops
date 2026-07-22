@@ -17,12 +17,13 @@ import {
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
-import { gitAppsQueries, userQueries } from "~/lib/queries";
+import { ensureMinRole, gitAppsQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, metaTitle } from "~/lib/utils";
+import { cn, hasMinRole, metaTitle } from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/create-private-git-service";
 
@@ -34,6 +35,8 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Member");
+
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const gitAppList = await queryClient.ensureQueryData(
     gitAppsQueries.list(workspaceId)
@@ -53,6 +56,8 @@ export default function CreatePrivateGitServicePage({
     ...gitAppsQueries.list(workspaceId),
     initialData: loaderData.gitAppList
   });
+
+  const membership = useCurrentWorkspaceMembership();
 
   const navigate = useNavigate();
 
@@ -98,43 +103,55 @@ export default function CreatePrivateGitServicePage({
             )}
           >
             <h2 className="text-2xl font-medium">No git app found</h2>
-            <h3 className="text-lg text-grey text-center">
-              start by creating one
-            </h3>
-            <Menubar className="border-none w-fit">
-              <MenubarMenu>
-                <MenubarTrigger asChild>
-                  <Button className="flex gap-2">
-                    Create <ChevronDownIcon size={18} />
-                  </Button>
-                </MenubarTrigger>
-                <MenubarContent
-                  align="center"
-                  alignOffset={0}
-                  className="border min-w-0 mx-9  border-border"
-                >
-                  <MenubarContentItem
-                    icon={GithubIcon}
-                    text="GitHub app"
-                    onClick={() => {
-                      navigate(
-                        href("/workspace/settings/git-apps/create-github-app")
-                      );
-                    }}
-                  />
+            {hasMinRole(membership, "Owner") ? (
+              <>
+                <h3 className="text-lg text-grey text-center">
+                  start by creating one
+                </h3>
+                <Menubar className="border-none w-fit">
+                  <MenubarMenu>
+                    <MenubarTrigger asChild>
+                      <Button className="flex gap-2">
+                        Create <ChevronDownIcon size={18} />
+                      </Button>
+                    </MenubarTrigger>
+                    <MenubarContent
+                      align="center"
+                      alignOffset={0}
+                      className="border min-w-0 mx-9  border-border"
+                    >
+                      <MenubarContentItem
+                        icon={GithubIcon}
+                        text="GitHub app"
+                        onClick={() => {
+                          navigate(
+                            href(
+                              "/workspace/settings/git-apps/create-github-app"
+                            )
+                          );
+                        }}
+                      />
 
-                  <MenubarContentItem
-                    icon={GitlabIcon}
-                    text="gitlab app"
-                    onClick={() => {
-                      navigate(
-                        href("/workspace/settings/git-apps/create-gitlab-app")
-                      );
-                    }}
-                  />
-                </MenubarContent>
-              </MenubarMenu>
-            </Menubar>
+                      <MenubarContentItem
+                        icon={GitlabIcon}
+                        text="gitlab app"
+                        onClick={() => {
+                          navigate(
+                            href(
+                              "/workspace/settings/git-apps/create-gitlab-app"
+                            )
+                          );
+                        }}
+                      />
+                    </MenubarContent>
+                  </MenubarMenu>
+                </Menubar>
+              </>
+            ) : (
+              <h3 className="text-lg text-grey text-center">
+                Ask your workspace owner to create a new one.
+              </h3>
+            )}
           </div>
         )}
 

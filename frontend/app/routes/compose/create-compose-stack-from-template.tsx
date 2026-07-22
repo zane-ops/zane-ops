@@ -29,7 +29,7 @@ import {
   FieldSetTextarea
 } from "~/components/ui/fieldset";
 import { TEMPLATE_API_HOST } from "~/lib/constants";
-import { templateQueries } from "~/lib/queries";
+import { ensureMinRole, templateQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
@@ -47,6 +47,8 @@ export function meta({ params }: Route.MetaArgs) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Member");
+
   const template = await queryClient.ensureQueryData(
     templateQueries.single(params.templateSlug)
   );

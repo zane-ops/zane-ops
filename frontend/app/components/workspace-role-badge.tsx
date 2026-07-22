@@ -12,11 +12,13 @@ import { cn } from "~/lib/utils";
 export type WorkspaceRoleBadgeProps = {
   role: WorkspaceRoleName;
   className?: string;
+  size?: "default" | "sm";
 };
 
 export function WorkspaceRoleBadge({
   role,
-  className
+  className,
+  size = "default"
 }: WorkspaceRoleBadgeProps) {
   let Icon: LucideIcon;
   switch (role) {
@@ -37,10 +39,16 @@ export function WorkspaceRoleBadge({
     <StatusBadge
       color="gray"
       pingState="hidden"
-      className={cn("gap-1.5", className)}
+      className={cn(
+        {
+          "gap-1.5 [&_svg]:size-4!": size === "default",
+          "gap-1 py-0 px-1.5 text-xs [&_svg]:size-3!": size === "sm"
+        },
+        className
+      )}
     >
       <span>{role}</span>
-      <Icon className="size-4 flex-none" />
+      <Icon className={cn("flex-none")} />
     </StatusBadge>
   );
 }

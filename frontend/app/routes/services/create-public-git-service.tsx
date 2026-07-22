@@ -44,6 +44,8 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
+import { ensureMinRole } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
   getCsrfTokenHeader,
@@ -56,6 +58,11 @@ export function meta() {
   return [
     metaTitle("New Git Service from Public repo URL")
   ] satisfies ReturnType<Route.MetaFunction>;
+}
+
+export async function clientLoader() {
+  const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Member");
 }
 
 export default function CreateServicePage({

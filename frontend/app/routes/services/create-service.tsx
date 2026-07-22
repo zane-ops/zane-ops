@@ -7,11 +7,18 @@ import {
 } from "lucide-react";
 import { Link, href } from "react-router";
 import { Button } from "~/components/ui/button";
+import { ensureMinRole } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/create-service";
 
 export function meta() {
   return [metaTitle("Create Service")] satisfies ReturnType<Route.MetaFunction>;
+}
+
+export async function clientLoader() {
+  const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Member");
 }
 
 export default function CreateServicePage({ params }: Route.ComponentProps) {

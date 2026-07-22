@@ -52,7 +52,8 @@ import {
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/invite-user-into-workspace";
 
@@ -180,6 +181,8 @@ function InviteNewUserForm() {
   const loaderData = useLoaderData<Route.ComponentProps["loaderData"]>();
   const actionData = useActionData<Route.ComponentProps["actionData"]>();
 
+  const membership = useCurrentWorkspaceMembership();
+
   const errors = getFormErrorsFromResponseData(actionData?.errors);
 
   const workspaceId = useCurrentWorkspace().id;
@@ -199,8 +202,15 @@ function InviteNewUserForm() {
 
   const [selectedProjects, setSelectedProjects] = React.useState<Project[]>([]);
   const validForOptions = Array.from({ length: 7 }, (_, i) => i + 1);
+  const excludedRoles = ["Owner"];
+  if (membership.role_name === "Admin") {
+    excludedRoles.push("Admin");
+  }
+
   const workspaceRoleOptions = Object.entries(WORKSPACE_ROLE_MAPPING).filter(
-    ([roleName]) => roleName !== "Owner"
+    ([roleName]) => {
+      return !excludedRoles.includes(roleName);
+    }
   );
 
   const selectedRoleValue = WORKSPACE_ROLE_MAPPING[selectedRole];

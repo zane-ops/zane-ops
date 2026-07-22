@@ -17,8 +17,7 @@ import { apiClient } from "~/api/client";
 import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
-import { SubmitButton } from "~/components/ui/button";
+import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -36,10 +35,10 @@ import { Input } from "~/components/ui/input";
 import {
   Menubar,
   MenubarContent,
+  MenubarContentItem,
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
-import { MenubarContentItem } from "~/components/ui/menubar";
 import { Separator } from "~/components/ui/separator";
 import {
   Tooltip,
@@ -47,7 +46,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { environmentQueries, userQueries } from "~/lib/queries";
+import { ensureMinRole, environmentQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
@@ -61,6 +60,11 @@ import {
   useCurrentWorkspace
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/environment-variables";
+
+export async function clientLoader({}: Route.ClientLoaderArgs) {
+  await ensureMinRole(getQueryClient(), "Member");
+  return;
+}
 
 export default function EnvironmentVariablesPage({
   matches: {

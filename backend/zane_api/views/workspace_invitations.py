@@ -13,7 +13,7 @@ from .base import ResourceConflict, BadRequest
 from ..licensing.gate import can_add_user
 
 
-from ..models import WorkspaceMembership, WorkspaceInvitation
+from ..models import WorkspaceMembership, WorkspaceInvitation, WorkspaceRole
 from rest_framework import exceptions
 from ..serializers import (
     WorkspaceInvitationSerializer,
@@ -277,6 +277,18 @@ class InviteUserIntoWorkspaceAPIView(APIView):
 
         if data["username"] == self.request.user.username:
             raise ResourceConflict("You cannot invite yourself to the workspace.")
+
+        current_membership = WorkspaceMembership.objects.get(
+            workspace=self.request.workspace,  # type: ignore
+            user=self.request.user,
+        )
+        if (
+            current_membership.role == WorkspaceRole.ADMIN
+            and data["role"] >= WorkspaceRole.ADMIN
+        ):
+            raise ResourceConflict(
+                "Only the workspace owner can invite a user as an admin."
+            )
 
         if WorkspaceMembership.objects.filter(
             user__username=data["username"],

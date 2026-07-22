@@ -72,14 +72,14 @@ export async function getCurrentWorkspace(queryClient: QueryClient) {
 }
 
 /**
- * Keeps the store mirroring the query cache directly,
- * so it reflects the query regardless of what triggered a change (initial
+ * Keeps the stores mirroring the query cache directly,
+ * so they reflect the query regardless of what triggered a change (initial
  * `ensureQueryData` in a loader, the query's own refetchInterval, or an
  * `invalidateQueries` call elsewhere e.g. after switching workspace).
  * Subscribing at module scope (rather than via a component's useEffect)
  * avoids a render/effect-ordering race: loaders already await
  * `ensureQueryData` before any component renders, so this subscription can
- * update the store in that same window, well before any component reads it.
+ * update the stores in that same window, well before any component reads them.
  */
 const authedUserHash = hashKey(userQueries.authedUser.queryKey);
 

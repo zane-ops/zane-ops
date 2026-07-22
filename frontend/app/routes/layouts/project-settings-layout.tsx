@@ -6,10 +6,19 @@ import {
 } from "lucide-react";
 import { Link, NavLink, Outlet, href } from "react-router";
 import { Button } from "~/components/ui/button";
-import { projectQueries, userQueries } from "~/lib/queries";
+import { projectQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, isNotFoundError, metaTitle, stringToColor } from "~/lib/utils";
-import { getCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  cn,
+  hasMinRole,
+  isNotFoundError,
+  metaTitle,
+  stringToColor
+} from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/project-settings-layout";
 
 export function meta({ error, params }: Route.MetaArgs) {
@@ -28,24 +37,6 @@ type NavItem = {
   disabled?: boolean;
 };
 
-const sidebarNavItems: NavItem[] = [
-  {
-    title: "General",
-    href: "",
-    icon: SettingsIcon
-  },
-  {
-    title: "Environments",
-    href: "environments",
-    icon: NetworkIcon
-  },
-  {
-    title: "Preview Templates",
-    href: "preview-templates",
-    icon: BookDashedIcon
-  }
-];
-
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
@@ -59,7 +50,32 @@ export default function ProjectLayout({
   params,
   loaderData: { project }
 }: Route.ComponentProps) {
+  const membership = useCurrentWorkspaceMembership();
   const projectColor = stringToColor(project.slug);
+
+  const sidebarNavItems: NavItem[] = [
+    {
+      title: "General",
+      href: "",
+      icon: SettingsIcon
+    }
+  ];
+
+  if (hasMinRole(membership, "Admin")) {
+    sidebarNavItems.push(
+      {
+        title: "Environments",
+        href: "environments",
+        icon: NetworkIcon
+      },
+      {
+        title: "Preview Templates",
+        href: "preview-templates",
+        icon: BookDashedIcon
+      }
+    );
+  }
+
   return (
     <>
       <div className="mt-11.5 my-6 grid md:grid-cols-12 gap-6 relative max-w-full">

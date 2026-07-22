@@ -52,6 +52,7 @@ import {
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import {
   dockerHubQueries,
+  ensureMinRole,
   sharedRegistryCredentialsQueries,
   userQueries
 } from "~/lib/queries";
@@ -76,6 +77,8 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Member");
+
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const registries = await queryClient.ensureQueryData(
     sharedRegistryCredentialsQueries.list(workspaceId)
