@@ -22,7 +22,7 @@ import { cn, hasMinRole } from "~/lib/utils";
 import type { ServerSettings } from "~/api/types";
 import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
 import { getQueryClient } from "~/lib/query-client";
-import { syncAuthStore } from "~/lib/workspace-store";
+import { syncWorkspaceStore } from "~/lib/workspace-store";
 import type { Route } from "./+types/main-layout";
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
@@ -56,7 +56,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
   // Manually update store as it seems that the subscription
   // doesn't get set if the main route is called from `redirect(...)`
-  syncAuthStore(user);
+  syncWorkspaceStore(user);
 
   return { user };
 }

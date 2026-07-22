@@ -83,7 +83,9 @@ export async function getCurrentWorkspace(queryClient: QueryClient) {
  */
 const authedUserHash = hashKey(userQueries.authedUser.queryKey);
 
-export function syncAuthStore(data: AuthedUserResponse | undefined | null) {
+export function syncWorkspaceStore(
+  data: AuthedUserResponse | undefined | null
+) {
   console.log("[auth-store/syncAuthStore]", { data });
   useWorkspaceMembershipStore.setState({
     membership: data?.membership ?? null
@@ -100,6 +102,8 @@ getQueryClient()
     // if we query is removed, normally the page should get updated before
     // components, but while the page is loading, this component get updated and rerender all its subscribers
     if (event.type !== "removed" && event.query.queryHash === authedUserHash) {
-      syncAuthStore(event.query.state.data as AuthedUserResponse | undefined);
+      syncWorkspaceStore(
+        event.query.state.data as AuthedUserResponse | undefined
+      );
     }
   });
