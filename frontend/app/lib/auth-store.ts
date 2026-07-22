@@ -6,12 +6,6 @@ import { getQueryClient } from "~/lib/query-client";
 import { notFound } from "~/lib/utils";
 
 type Workspace = WorkspaceMembership["workspace"];
-type User = NonNullable<AuthedUserResponse>["user"];
-
-type UserStore = {
-  user: User | null;
-  setUser: (user: User | null) => void;
-};
 
 type WorkspaceStore = {
   workspace: Workspace | null;
@@ -22,11 +16,6 @@ type WorkspaceMembershipStore = {
   membership: WorkspaceMembership | null;
   setMembership: (membership: WorkspaceMembership | null) => void;
 };
-
-export const useUserStore = create<UserStore>((set) => ({
-  user: null,
-  setUser: (user) => set({ user })
-}));
 
 export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   workspace: null,
@@ -39,20 +28,6 @@ export const useWorkspaceMembershipStore = create<WorkspaceMembershipStore>(
     setMembership: (membership) => set({ membership })
   })
 );
-
-/**
- * Only for components rendered within authenticated routes
- * (main-layout.tsx and below), where an authed user is guaranteed.
- */
-export function useCurrentAuthedUser() {
-  const user = useUserStore((s) => s.user);
-  if (!user) {
-    throw new Error(
-      "useCurrentAuthedUser() called outside an authenticated route"
-    );
-  }
-  return user;
-}
 
 /**
  * Only for components rendered within workspace-scoped routes
@@ -110,9 +85,6 @@ const authedUserHash = hashKey(userQueries.authedUser.queryKey);
 
 export function syncAuthStore(data: AuthedUserResponse | undefined | null) {
   console.log("[auth-store/syncAuthStore]", { data });
-  useUserStore.setState({
-    user: data?.user ?? null
-  });
   useWorkspaceMembershipStore.setState({
     membership: data?.membership ?? null
   });
