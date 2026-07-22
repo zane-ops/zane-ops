@@ -58,7 +58,6 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { WorkspaceRoleBadge } from "~/components/workspace-role-badge";
-import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import {
   ensureMinRole,
   paginationListFilters,
@@ -74,6 +73,10 @@ import {
   pluralize,
   stringToColor
 } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { clientAction } from "~/routes/settings/workspace-invitation-details";
 import type { Route } from "./+types/workspace-invitation-list";
 

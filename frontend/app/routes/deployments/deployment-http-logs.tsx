@@ -40,7 +40,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import {
   type HTTPLogFilters,
   type HttpLog,
@@ -52,6 +51,10 @@ import {
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection } from "~/lib/types";
 import { cn, formatDuration, formatLogTime } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/deployment-http-logs";
 
 export async function clientLoader({

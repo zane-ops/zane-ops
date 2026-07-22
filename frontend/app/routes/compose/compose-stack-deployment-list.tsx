@@ -50,7 +50,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import {
   composeStackQueries,
   stackDeploymentListFilters,
@@ -64,6 +63,10 @@ import {
   formattedTime,
   mergeTimeAgoFormatterAndFormattedDate
 } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-deployment-list";
 
 export async function clientLoader({

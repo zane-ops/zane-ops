@@ -1,11 +1,11 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { getCurrentWorkspace } from "~/lib/auth-store";
 import { environmentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { ErrorResponseFromAPI } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/archive-compose-stack";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {

@@ -13,7 +13,6 @@ import {
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { getCurrentWorkspace } from "~/lib/auth-store";
 import { ensureMinRole, projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -22,6 +21,7 @@ import {
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/create-project";
 
 export function meta() {

@@ -15,11 +15,11 @@ import {
 import { userQueries } from "~/lib/queries";
 
 import { WorkspaceRoleBadge } from "~/components/workspace-role-badge";
+import { cn, stringToColor } from "~/lib/utils";
 import {
   useCurrentWorkspace,
   useCurrentWorkspaceMembership
-} from "~/lib/auth-store";
-import { cn, stringToColor } from "~/lib/utils";
+} from "~/lib/workspace-store";
 import type { clientAction } from "~/routes/switch-workspace";
 
 export type WorkspaceMembershipListProps = {

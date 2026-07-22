@@ -26,11 +26,6 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspace,
-  useCurrentWorkspaceMembership
-} from "~/lib/auth-store";
 import { WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
 import { ensureMinRole, projectQueries, workspaceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
@@ -40,6 +35,11 @@ import {
   hasMinRole,
   metaTitle
 } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/workspace-edit-member-permissions";
 
 export function meta() {

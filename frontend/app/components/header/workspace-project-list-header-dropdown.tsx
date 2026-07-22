@@ -22,10 +22,10 @@ import {
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
-import { useCurrentWorkspace } from "~/lib/auth-store";
 import { projectQueries } from "~/lib/queries";
 import { useDeviceSize } from "~/lib/use-device-size";
 import { cn, durationToMs, stringToColor } from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 
 export type WorkspaceProjectListHeaderDropdownProps = {
   projectList: Project[];

@@ -37,9 +37,9 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { useCurrentWorkspace } from "~/lib/auth-store";
 import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import {
   useFetcherWithCallbacks,
   useServiceQuery

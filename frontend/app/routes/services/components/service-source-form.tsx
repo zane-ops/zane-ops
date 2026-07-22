@@ -33,13 +33,13 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import { useCurrentWorkspace } from "~/lib/auth-store";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import {
   dockerHubQueries,
   sharedRegistryCredentialsQueries
 } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import {
   type clientAction,
   useServiceQuery

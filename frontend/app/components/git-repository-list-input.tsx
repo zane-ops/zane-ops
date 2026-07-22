@@ -9,9 +9,9 @@ import {
   CommandItem,
   CommandList
 } from "~/components/ui/command";
-import { useCurrentWorkspace } from "~/lib/auth-store";
 import { gitAppsQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 
 type GitRepositoryListInputProps = {
   appId: string;

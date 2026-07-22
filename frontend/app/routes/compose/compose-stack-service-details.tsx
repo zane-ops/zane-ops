@@ -46,10 +46,10 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { useCurrentWorkspace } from "~/lib/auth-store";
 import { ZANEOPS_INTERNAL_DOMAIN } from "~/lib/constants";
 import { composeStackQueries } from "~/lib/queries";
 import { cn, formatElapsedTime, pluralize } from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-service-details";
 
 export default function ComposeStackServiceDetailsPage({

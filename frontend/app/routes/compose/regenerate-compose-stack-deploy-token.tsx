@@ -3,10 +3,10 @@ import type { Route } from "./+types/regenerate-compose-stack-deploy-token";
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { getCurrentWorkspace } from "~/lib/auth-store";
 import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(

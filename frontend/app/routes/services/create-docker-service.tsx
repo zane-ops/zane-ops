@@ -49,7 +49,6 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import {
   dockerHubQueries,
@@ -64,6 +63,10 @@ import {
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/create-docker-service";
 
 export function meta() {

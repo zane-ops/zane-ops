@@ -9,7 +9,6 @@ import {
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
-import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import {
   composeStackQueries,
   environmentQueries,
@@ -18,6 +17,10 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import { ComposeStackDangerZoneForm } from "~/routes/compose/components/compose-stack-danger-zone-form";
 import { ComposeStackDeployURLForm } from "~/routes/compose/components/compose-stack-deploy-url-form";
 import { ComposeStackEnvForm } from "~/routes/compose/components/compose-stack-env-form";

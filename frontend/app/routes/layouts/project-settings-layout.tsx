@@ -6,10 +6,6 @@ import {
 } from "lucide-react";
 import { Link, NavLink, Outlet, href } from "react-router";
 import { Button } from "~/components/ui/button";
-import {
-  getCurrentWorkspace,
-  useCurrentWorkspaceMembership
-} from "~/lib/auth-store";
 import { projectQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -19,6 +15,10 @@ import {
   metaTitle,
   stringToColor
 } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/project-settings-layout";
 
 export function meta({ error, params }: Route.MetaArgs) {

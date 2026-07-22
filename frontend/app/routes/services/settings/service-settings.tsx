@@ -27,7 +27,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import { ZANEOPS_INTERNAL_DOMAIN } from "~/lib/constants";
 import {
   environmentQueries,
@@ -38,6 +37,10 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import { ServiceAutoDeployForm } from "~/routes/services/components/service-auto-deploy-form";
 import { ServiceBuilderForm } from "~/routes/services/components/service-builder-form";
 import { ServiceCommandForm } from "~/routes/services/components/service-command-form";

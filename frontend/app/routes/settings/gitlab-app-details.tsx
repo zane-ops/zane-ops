@@ -12,7 +12,6 @@ import {
   FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
-import { getCurrentWorkspace } from "~/lib/auth-store";
 import { gitAppsQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -20,6 +19,7 @@ import {
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/gitlab-app-details";
 
 export function meta() {

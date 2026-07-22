@@ -27,7 +27,6 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
-import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import {
   ensureMinRole,
@@ -41,6 +40,10 @@ import {
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/registry-credentials-details";
 
 export function meta() {

@@ -38,7 +38,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import { serverQueries, serviceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { ValueOf } from "~/lib/types";
@@ -52,6 +51,10 @@ import {
   notFound,
   pluralize
 } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import { ServiceActionsPopover } from "~/routes/services/components/service-actions-popover";
 import type { Route } from "./+types/service-layout";
 

@@ -6,7 +6,6 @@ import { DeleteConfirmationDialog } from "~/components/delete-confirmation-dialo
 import { Button } from "~/components/ui/button";
 import { DialogTrigger } from "~/components/ui/dialog";
 import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
-import { getCurrentWorkspace } from "~/lib/auth-store";
 import {
   ensureMinRole,
   previewTemplatesQueries,
@@ -19,6 +18,7 @@ import {
   getCsrfTokenHeader,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/delete-preview-template";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {

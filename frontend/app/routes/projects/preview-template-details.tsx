@@ -37,7 +37,6 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
-import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import {
   ensureMinRole,
   environmentQueries,
@@ -53,6 +52,10 @@ import {
   isNotFoundError,
   metaTitle
 } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/preview-template-details";
 import { DeleteConfirmationFormDialog } from "./delete-preview-template";
 

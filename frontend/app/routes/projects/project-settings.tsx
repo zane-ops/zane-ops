@@ -17,7 +17,6 @@ import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { Textarea } from "~/components/ui/textarea";
-import { getCurrentWorkspace } from "~/lib/auth-store";
 import { projectQueries, resourceQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -26,6 +25,7 @@ import {
   getCsrfTokenHeader,
   getFormErrorsFromResponseData
 } from "~/lib/utils";
+import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/project-settings";
 
 export default function ProjectSettingsPage({

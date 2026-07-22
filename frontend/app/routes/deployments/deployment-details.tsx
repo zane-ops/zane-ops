@@ -65,7 +65,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { useCurrentWorkspace } from "~/lib/auth-store";
 import { deploymentQueries } from "~/lib/queries";
 import {
   capitalizeText,
@@ -74,6 +73,7 @@ import {
   formattedTime,
   wait
 } from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 
 hljs.registerLanguage("json", json);
 

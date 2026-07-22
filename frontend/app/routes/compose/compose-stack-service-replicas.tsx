@@ -8,9 +8,9 @@ import {
   AccordionItem,
   AccordionTrigger
 } from "~/components/ui/accordion";
-import { useCurrentWorkspace } from "~/lib/auth-store";
 import { composeStackQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import { ComposeStackServiceReplicaCard } from "~/routes/compose/components/compose-stack-service-replica-card";
 import type { Route } from "./+types/compose-stack-service-replicas";
 

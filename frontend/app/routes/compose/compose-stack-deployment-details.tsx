@@ -33,9 +33,9 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { useCurrentWorkspace } from "~/lib/auth-store";
 import { composeStackQueries } from "~/lib/queries";
 import { cn, formatElapsedTime, formattedTime } from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-deployment-details";
 
 hljs.registerLanguage("json", json);

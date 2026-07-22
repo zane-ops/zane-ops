@@ -22,9 +22,9 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { useCurrentWorkspace } from "~/lib/auth-store";
 import { composeStackQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
+import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-service-terminal";
 
 export default function ComposeStackServiceTerminalPage({

@@ -8,8 +8,8 @@ import {
 } from "lucide-react";
 import { NavLink, Outlet, href } from "react-router";
 import { Button } from "~/components/ui/button";
-import { useCurrentWorkspaceMembership } from "~/lib/auth-store";
 import { cn, hasMinRole, metaTitle } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import type { Route } from "./+types/settings-layout";
 
 export function meta() {

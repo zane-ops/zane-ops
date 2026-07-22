@@ -32,11 +32,14 @@ import {
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
-import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { environmentQueries, projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, isNotFoundError, metaTitle, stringToColor } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/environment-layout";
 
 export function meta({ error, params }: Route.MetaArgs) {

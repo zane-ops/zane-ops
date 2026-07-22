@@ -27,7 +27,6 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import {
   composeStackQueries,
   serverQueries,
@@ -40,6 +39,10 @@ import {
   getMaxDomainForStorageValue,
   timeAgoFormatter
 } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-service-metrics";
 
 export async function clientLoader({

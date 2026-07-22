@@ -27,10 +27,13 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
 import { ensureMinRole, gitAppsQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { getCsrfTokenHeader, metaTitle } from "~/lib/utils";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/git-apps-list";
 
 export function meta() {

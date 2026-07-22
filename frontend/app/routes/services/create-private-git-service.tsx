@@ -17,14 +17,14 @@ import {
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
+import { ensureMinRole, gitAppsQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
+import { cn, hasMinRole, metaTitle } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace,
   useCurrentWorkspaceMembership
-} from "~/lib/auth-store";
-import { ensureMinRole, gitAppsQueries } from "~/lib/queries";
-import { getQueryClient } from "~/lib/query-client";
-import { cn, hasMinRole, metaTitle } from "~/lib/utils";
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/create-private-git-service";
 
 export function meta() {
