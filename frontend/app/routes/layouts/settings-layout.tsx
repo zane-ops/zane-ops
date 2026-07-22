@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { NavLink, Outlet, href } from "react-router";
 import { Button } from "~/components/ui/button";
+import { useCurrentWorkspaceMembership } from "~/lib/auth-store";
 import { cn, hasMinRole, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/settings-layout";
 
@@ -22,13 +23,9 @@ type NavItem = {
   disabled?: boolean;
 };
 
-export default function SettingsLayoutPage({
-  matches: {
-    "1": {
-      loaderData: { user }
-    }
-  }
-}: Route.ComponentProps) {
+export default function SettingsLayoutPage({}: Route.ComponentProps) {
+  const membership = useCurrentWorkspaceMembership();
+
   const sidebarNavItems: NavItem[] = [
     {
       title: "General",
@@ -37,14 +34,14 @@ export default function SettingsLayoutPage({
     }
   ];
 
-  if (hasMinRole(user, "Member")) {
+  if (hasMinRole(membership, "Member")) {
     sidebarNavItems.push({
       title: "Team",
       href: href("/workspace/settings/team"),
       icon: UsersIcon
     });
   }
-  if (hasMinRole(user, "Admin")) {
+  if (hasMinRole(membership, "Admin")) {
     sidebarNavItems.push({
       title: "User Invitations",
       href: href("/workspace/settings/invitations"),
@@ -52,7 +49,7 @@ export default function SettingsLayoutPage({
     });
   }
 
-  if (hasMinRole(user, "Owner")) {
+  if (hasMinRole(membership, "Owner")) {
     sidebarNavItems.push({
       title: "Git",
       href: href("/workspace/settings/git-apps"),

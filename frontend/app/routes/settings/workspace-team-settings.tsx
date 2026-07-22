@@ -12,7 +12,7 @@ import * as React from "react";
 import { Form, Link, href, useFetcher, useSearchParams } from "react-router";
 import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
-import type { AuthedUserResponse, WorkspaceMember } from "~/api/types";
+import type { WorkspaceMember } from "~/api/types";
 import { Code } from "~/components/code";
 import { SimpleConfirmationDialog } from "~/components/delete-confirmation-dialog";
 import { Pagination } from "~/components/pagination";
@@ -52,7 +52,11 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { WorkspaceRoleBadge } from "~/components/workspace-role-badge";
-import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/auth-store";
 import {
   SPIN_DELAY_DEFAULT_OPTIONS,
   WORKSPACE_ROLE_MAPPING
@@ -101,13 +105,9 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 }
 
 export default function WorkspaceTeamSettingsPage({
-  loaderData,
-  matches: {
-    "1": {
-      loaderData: { user }
-    }
-  }
+  loaderData
 }: Route.ComponentProps) {
+  const membership = useCurrentWorkspaceMembership();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = workspaceMemberListFilters.parse(searchParams);
 
@@ -153,7 +153,7 @@ export default function WorkspaceTeamSettingsPage({
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
         <h2 className="text-2xl">Team Settings</h2>
-        {hasMinRole(user, "Admin") && (
+        {hasMinRole(membership, "Admin") && (
           <Button asChild variant="secondary" className="flex gap-2">
             <Link to="invite" prefetch="intent">
               Invite User <MailPlusIcon size={18} />
@@ -226,7 +226,7 @@ export default function WorkspaceTeamSettingsPage({
         )}
       </Form>
 
-      <WorkspaceMembersTable members={members} currentUser={user} />
+      <WorkspaceMembersTable members={members} />
 
       <div className="my-4 block">
         {members.length > 0 && data.count > 10 && (
@@ -256,14 +256,11 @@ export default function WorkspaceTeamSettingsPage({
 
 type WorkspaceMembersTableProps = {
   members: WorkspaceMember[];
-  currentUser: AuthedUserResponse;
 };
 
-function WorkspaceMembersTable({
-  members,
-  currentUser
-}: WorkspaceMembersTableProps) {
-  const showActionsColumn = hasMinRole(currentUser, "Admin");
+function WorkspaceMembersTable({ members }: WorkspaceMembersTableProps) {
+  const currentMembership = useCurrentWorkspaceMembership();
+  const showActionsColumn = hasMinRole(currentMembership, "Admin");
 
   return (
     <Table>
@@ -295,11 +292,11 @@ function WorkspaceMembersTable({
             const joinedAt = formatLogTime(member.created_at);
             const isMember = hasMinRole(member, "Member");
 
-            const isSelf = currentUser.membership?.id === member.id;
+            const isSelf = currentMembership.id === member.id;
             // owners can manage everyone, admins only people below them
             const canManageMember =
-              hasMinRole(currentUser, "Owner") ||
-              (hasMinRole(currentUser, "Admin") &&
+              hasMinRole(currentMembership, "Owner") ||
+              (hasMinRole(currentMembership, "Admin") &&
                 !hasMinRole(member, "Admin"));
 
             const showActions = !isSelf && canManageMember;

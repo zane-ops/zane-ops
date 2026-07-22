@@ -14,7 +14,7 @@ import {
   Trash2Icon
 } from "lucide-react";
 import * as React from "react";
-import { href, redirect, useFetcher, useMatches } from "react-router";
+import { href, redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import {
@@ -54,7 +54,11 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { getCurrentWorkspace, useCurrentWorkspace } from "~/lib/auth-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/auth-store";
 import { userQueries, workspaceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -79,14 +83,9 @@ export async function clientLoader({}: Route.ClientLoaderArgs) {
   return { workspace };
 }
 
-export default function WorkspaceSettingsPage({
-  matches: {
-    "1": {
-      loaderData: { user }
-    }
-  }
-}: Route.ComponentProps) {
+export default function WorkspaceSettingsPage({}: Route.ComponentProps) {
   const workspace = useCurrentWorkspace();
+  const membership = useCurrentWorkspaceMembership();
 
   return (
     <section className="flex flex-col gap-4">
@@ -130,7 +129,7 @@ export default function WorkspaceSettingsPage({
                   <WorkspaceLeaveForm />
                 </div>
 
-                {hasMinRole(user, "Owner") && (
+                {hasMinRole(membership, "Owner") && (
                   <>
                     <Separator />
 
@@ -368,11 +367,7 @@ type WorkspaceDetailsFormProps = {
 };
 
 function WorkspaceDetailsForm({ name }: WorkspaceDetailsFormProps) {
-  const {
-    "1": {
-      loaderData: { user }
-    }
-  } = useMatches() as Route.ComponentProps["matches"];
+  const membership = useCurrentWorkspaceMembership();
   const fetcher = useFetcher<typeof clientAction>();
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
@@ -396,11 +391,11 @@ function WorkspaceDetailsForm({ name }: WorkspaceDetailsFormProps) {
         <FieldSetInput
           placeholder="ex: Default workspace"
           defaultValue={name}
-          disabled={!hasMinRole(user, "Owner")}
+          disabled={!hasMinRole(membership, "Owner")}
         />
       </FieldSet>
 
-      {hasMinRole(user, "Owner") && (
+      {hasMinRole(membership, "Owner") && (
         <SubmitButton
           isPending={isPending}
           variant="secondary"
@@ -707,13 +702,9 @@ function TransferOwnershipForm({ workspaceId }: TransferOwnershipFormProps) {
 function WorkspaceLeaveForm() {
   const fetcher = useFetcher<typeof clientAction>();
 
-  const {
-    "1": {
-      loaderData: { user }
-    }
-  } = useMatches() as Route.ComponentProps["matches"];
+  const membership = useCurrentWorkspaceMembership();
 
-  const isOwner = hasMinRole(user, "Owner");
+  const isOwner = hasMinRole(membership, "Owner");
 
   return (
     <SimpleConfirmationDialog

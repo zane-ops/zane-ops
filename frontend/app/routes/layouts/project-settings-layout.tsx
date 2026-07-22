@@ -6,7 +6,10 @@ import {
 } from "lucide-react";
 import { Link, NavLink, Outlet, href } from "react-router";
 import { Button } from "~/components/ui/button";
-import { getCurrentWorkspace } from "~/lib/auth-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/auth-store";
 import { projectQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -45,13 +48,9 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 
 export default function ProjectLayout({
   params,
-  loaderData: { project },
-  matches: {
-    "1": {
-      loaderData: { user }
-    }
-  }
+  loaderData: { project }
 }: Route.ComponentProps) {
+  const membership = useCurrentWorkspaceMembership();
   const projectColor = stringToColor(project.slug);
 
   const sidebarNavItems: NavItem[] = [
@@ -62,7 +61,7 @@ export default function ProjectLayout({
     }
   ];
 
-  if (hasMinRole(user, "Admin")) {
+  if (hasMinRole(membership, "Admin")) {
     sidebarNavItems.push(
       {
         title: "Environments",
