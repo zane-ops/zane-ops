@@ -196,7 +196,7 @@ export function ComposeStackServiceReplicaCard({
             )}
             <small className="break-all inline whitespace-normal text-start text-xs">
               {imageVersion}
-              <span className="text-grey">:{imageSha}</span>
+              <span className="text-grey">@{imageSha}</span>
             </small>
           </div>
         </div>
