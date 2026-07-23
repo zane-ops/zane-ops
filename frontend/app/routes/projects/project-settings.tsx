@@ -19,10 +19,8 @@ import {
   FieldSetLabel,
   FieldSetTextarea
 } from "~/components/ui/fieldset";
-import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
-import { Textarea } from "~/components/ui/textarea";
-import { projectQueries, resourceQueries, userQueries } from "~/lib/queries";
+import { projectQueries, resourceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,

@@ -10,7 +10,7 @@ import {
   TerminalIcon,
   TextSearchIcon
 } from "lucide-react";
-import { Link, Outlet, href, useFetcher } from "react-router";
+import { Link, Outlet, href, useFetcher, useParams } from "react-router";
 import { NavLink } from "~/components/nav-link";
 import { SubmitButton } from "~/components/ui/button";
 
@@ -134,7 +134,7 @@ export default function DeploymentLayoutPage({
         className="flex flex-col md:flex-row md:items-center gap-4 justify-between"
       >
         <div className="flex flex-col gap-2 md:gap-0">
-          <div className="inline-flex flex-wrap gap-1">
+          <div className="inline-flex flex-wrap gap-1 items-center">
             <h1 className="text-xl md:text-2xl inline-flex gap-1.5">
               <span className="text-grey sr-only md:not-sr-only flex-none">
                 <Link
@@ -151,9 +151,12 @@ export default function DeploymentLayoutPage({
               <span>{deployment.hash}</span>
             </h1>
 
-            <DeploymentStatusBadge status={deployment.status} />
+            <DeploymentStatusBadge
+              status={deployment.status}
+              className="py-1 top-0"
+            />
             {deployment.is_current_production && (
-              <div className="relative top-0.5 rounded-md bg-link/20 text-link px-2  inline-flex gap-1 items-center">
+              <div className="py-1 rounded-md bg-link/20 text-link px-2  inline-flex gap-1 items-center">
                 <RocketIcon size={15} className="flex-none" />
                 <p>current</p>
               </div>
@@ -229,12 +232,16 @@ export default function DeploymentLayoutPage({
 function DeploymentCancelForm() {
   const fetcher = useFetcher<typeof cancelClientAction>();
   const isPending = fetcher.state !== "idle";
+  const params = useParams() as Route.ComponentProps["params"];
 
   return (
     <fetcher.Form
       method="POST"
-      action={`./cancel`}
-      className="self-end relative top-0.5"
+      action={href(
+        "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/cancel",
+        params
+      )}
+      className="self-end"
     >
       <input type="hidden" name="do_not_redirect" value="true" />
 
