@@ -61,19 +61,19 @@ export default function ProjectLayout({
     }
   ];
 
+  if (hasMinRole(membership, "Member")) {
+    sidebarNavItems.push({
+      title: "Environments",
+      href: "environments",
+      icon: NetworkIcon
+    });
+  }
   if (hasMinRole(membership, "Admin")) {
-    sidebarNavItems.push(
-      {
-        title: "Environments",
-        href: "environments",
-        icon: NetworkIcon
-      },
-      {
-        title: "Preview Templates",
-        href: "preview-templates",
-        icon: BookDashedIcon
-      }
-    );
+    sidebarNavItems.push({
+      title: "Preview Templates",
+      href: "preview-templates",
+      icon: BookDashedIcon
+    });
   }
 
   return (

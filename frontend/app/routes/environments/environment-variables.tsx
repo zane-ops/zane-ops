@@ -53,11 +53,13 @@ import {
   cn,
   getCsrfTokenHeader,
   getFormErrorsFromResponseData,
+  hasMinRole,
   pluralize
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/environment-variables";
 
@@ -82,6 +84,9 @@ export default function EnvironmentVariablesPage({
     initialData: matchData.environment
   });
   const { variables: env_variables } = environment;
+
+  const membership = useCurrentWorkspaceMembership();
+
   return (
     <section className="py-8 flex flex-col gap-4">
       <h2 className="text-lg inline-flex gap-2 items-center">
@@ -134,7 +139,9 @@ export default function EnvironmentVariablesPage({
             env_slug={environment.name}
           />
         ))}
-        <EditVariableForm env_slug={environment.name} editType="add" />
+        {hasMinRole(membership, "Admin") && (
+          <EditVariableForm env_slug={environment.name} editType="add" />
+        )}
       </div>
     </section>
   );
@@ -151,6 +158,7 @@ function EnVariableRow({ name, value, id, env_slug }: EnvVariableRowProps) {
   const [isEnvValueShown, setIsEnvValueShown] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
   const [isOpen, setIsOpen] = React.useState(false);
+  const membership = useCurrentWorkspaceMembership();
 
   return (
     <div
@@ -223,7 +231,7 @@ function EnVariableRow({ name, value, id, env_slug }: EnvVariableRowProps) {
         </>
       )}
 
-      {!isEditing && (
+      {!isEditing && hasMinRole(membership, "Admin") && (
         <div className="flex justify-end">
           <DeleteVariableConfirmationDialog
             env_slug={env_slug}

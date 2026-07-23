@@ -55,11 +55,13 @@ import {
   type ErrorResponseFromAPI,
   cn,
   getCsrfTokenHeader,
-  getFormErrorsFromResponseData
+  getFormErrorsFromResponseData,
+  hasMinRole
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/environments-settings";
 
@@ -91,6 +93,9 @@ export default function EnvironmentSettingsPage({
     ? new URL(env.preview_metadata?.pr_base_repo_url).pathname.substring(1)
     : null;
 
+  const membership = useCurrentWorkspaceMembership();
+  const isAdmin = hasMinRole(membership, "Admin");
+
   return (
     <section className="py-8 flex flex-col gap-4">
       <div className="grid lg:grid-cols-12 gap-10 relative">
@@ -101,19 +106,19 @@ export default function EnvironmentSettingsPage({
                 <InfoIcon size={15} className="flex-none text-grey" />
               </div>
               <div className="h-full border border-grey/50"></div>
-              {env.name === "production" && (
+              {(env.name === "production" || !isAdmin) && (
                 <div className="bg-grey/50 rounded-md size-2" />
               )}
             </div>
             <div
               className={cn(
                 "w-full flex flex-col gap-5 pt-1",
-                env.name === "production" ? "pb-6" : "pb-8"
+                env.name === "production" || !isAdmin ? "pb-6" : "pb-8"
               )}
             >
               <h2 className="text-lg text-grey">Details</h2>
 
-              <EnvironmentNameForm environment={env} />
+              <EnvironmentNameForm environment={env} isAdmin={isAdmin} />
             </div>
           </section>
 
@@ -503,7 +508,7 @@ export default function EnvironmentSettingsPage({
             </section>
           )}
 
-          {env.name !== "production" && (
+          {env.name !== "production" && isAdmin && (
             <section id="danger" className="flex gap-1 scroll-mt-20">
               <div className="w-16 hidden md:flex flex-col items-center">
                 <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
@@ -537,11 +542,13 @@ export default function EnvironmentSettingsPage({
 }
 
 function EnvironmentNameForm({
-  environment: env
+  environment: env,
+  isAdmin = false
 }: {
   environment: Route.ComponentProps["matches"][3]["loaderData"]["environment"];
+  isAdmin?: boolean;
 }) {
-  const isModifiable = !env.is_preview && env.name !== "production";
+  const isModifiable = isAdmin && !env.is_preview && env.name !== "production";
   const fetcher = useFetcher<typeof clientAction>();
 
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
@@ -574,28 +581,30 @@ function EnvironmentNameForm({
         />
       </FieldSet>
 
-      <div className="flex  items-center gap-2 pt-4 px-4 -mx-4">
-        <SubmitButton
-          variant="secondary"
-          isPending={fetcher.state !== "idle"}
-          className="inline-flex gap-1"
-          name="intent"
-          value="rename_environment"
-          disabled={!isModifiable}
-        >
-          {fetcher.state !== "idle" ? (
-            <>
-              <span>Updating...</span>
-              <LoaderIcon className="animate-spin" size={15} />
-            </>
-          ) : (
-            <>
-              Update
-              <CheckIcon size={15} />
-            </>
-          )}
-        </SubmitButton>
-      </div>
+      {isAdmin && (
+        <div className="flex  items-center gap-2 pt-4 px-4 -mx-4">
+          <SubmitButton
+            variant="secondary"
+            isPending={fetcher.state !== "idle"}
+            className="inline-flex gap-1"
+            name="intent"
+            value="rename_environment"
+            disabled={!isModifiable}
+          >
+            {fetcher.state !== "idle" ? (
+              <>
+                <span>Updating...</span>
+                <LoaderIcon className="animate-spin" size={15} />
+              </>
+            ) : (
+              <>
+                Update
+                <CheckIcon size={15} />
+              </>
+            )}
+          </SubmitButton>
+        </div>
+      )}
     </fetcher.Form>
   );
 }
