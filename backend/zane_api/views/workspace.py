@@ -375,6 +375,8 @@ class CreateWorkspaceAPIView(CreateAPIView):
 
 
 class SwitchWorkspaceAPIView(APIView):
+    permission_classes = [HasWorkspace, IsWorkspaceGuest]
+
     @extend_schema(
         request=SwitchWorkspaceRequestSerializer,
         responses={
@@ -405,6 +407,7 @@ class SwitchWorkspaceAPIView(APIView):
 
 class WorkspaceLeaveAPIView(APIView):
     serializer_class = WorkspaceLeaveResponseSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceGuest]
 
     @extend_schema(
         request=None,

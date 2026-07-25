@@ -22,7 +22,7 @@ Other backend permissions:
 - `InternalZaneAppPermission` — Basic auth with `zaneops:$SECRET_KEY`, for internal agents (fluentd).
 - `AllowAny` / `IsAuthenticated` — DRF built-ins.
 
-DRF default (`settings.REST_FRAMEWORK.DEFAULT_PERMISSION_CLASSES`) is `[HasWorkspace, IsWorkspaceGuest]`.
+DRF default (`settings.REST_FRAMEWORK.DEFAULT_PERMISSION_CLASSES`) is `[HasWorkspace, IsWorkspaceMember]`. Guest-accessible routes must opt in explicitly with `permission_classes = [HasWorkspace, IsWorkspaceGuest]`.
 
 Guest access is additionally narrowed by `get_accessible_projects()`: a Guest only sees projects explicitly listed in `membership.accessible_projects`, while Member and above see every project in the workspace.
 
