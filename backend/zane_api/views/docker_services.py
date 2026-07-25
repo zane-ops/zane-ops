@@ -1164,10 +1164,7 @@ class ServiceDetailsAPIView(RetrieveUpdateAPIView):
     http_method_names = ["patch", "get"]
     lookup_field = "slug"
 
-    def get_permissions(self):
-        if self.request.method == "GET":
-            return [HasWorkspace(), IsWorkspaceMember()]
-        return [HasWorkspace(), IsWorkspaceMember()]
+    permission_classes = [HasWorkspace(), IsWorkspaceMember()]
 
     @extend_schema(
         operation_id="updateService",

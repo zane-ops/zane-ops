@@ -671,7 +671,6 @@ class TriggerPreviewEnvironmentAPIView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @transaction.atomic()
     @extend_schema(
