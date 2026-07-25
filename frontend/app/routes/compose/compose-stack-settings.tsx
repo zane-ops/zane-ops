@@ -12,14 +12,14 @@ import { type RequestInput, apiClient } from "~/api/client";
 import {
   composeStackQueries,
   environmentQueries,
-  resourceQueries,
-  userQueries
+  resourceQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { getCsrfTokenHeader } from "~/lib/utils";
+import { cn, getCsrfTokenHeader, hasMinRole } from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import { ComposeStackDangerZoneForm } from "~/routes/compose/components/compose-stack-danger-zone-form";
 import { ComposeStackDeployURLForm } from "~/routes/compose/components/compose-stack-deploy-url-form";
@@ -44,6 +44,9 @@ export default function ComposeStackSettingsPage({
     }),
     initialData: loaderData.stack
   });
+
+  const membership = useCurrentWorkspaceMembership();
+  const isAdmin = hasMinRole(membership, "Admin");
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 relative mt-8 max-w-full">
@@ -104,37 +107,45 @@ export default function ComposeStackSettingsPage({
               <HammerIcon size={15} className="flex-none text-grey" />
             </div>
             <div className="h-full border border-grey/50"></div>
+            {!isAdmin && <div className="bg-grey/50 rounded-md size-2" />}
           </div>
-          <div className="w-full flex flex-col gap-12 pt-1 pb-14">
+          <div
+            className={cn(
+              "w-full flex flex-col gap-12 pt-1",
+              isAdmin ? "pb-14" : "pb-8"
+            )}
+          >
             <h2 className="text-lg text-grey">Deploy</h2>
 
             <ComposeStackDeployURLForm stack={stack} />
           </div>
         </section>
 
-        <section id="danger" className="flex gap-1 scroll-mt-24">
-          <div className="w-16 hidden md:flex flex-col items-center">
-            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
-              <FlameIcon size={15} className="flex-none text-red-500" />
+        {isAdmin && (
+          <section id="danger" className="flex gap-1 scroll-mt-24">
+            <div className="w-16 hidden md:flex flex-col items-center">
+              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
+                <FlameIcon size={15} className="flex-none text-red-500" />
+              </div>
             </div>
-          </div>
-          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
-            <h2 className="text-lg text-red-400">Danger Zone</h2>
-            <ComposeStackDangerZoneForm
-              projectSlug={params.projectSlug}
-              envSlug={params.envSlug}
-              stackSlug={params.composeStackSlug}
-            />
-          </div>
-        </section>
+            <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+              <h2 className="text-lg text-red-400">Danger Zone</h2>
+              <ComposeStackDangerZoneForm
+                projectSlug={params.projectSlug}
+                envSlug={params.envSlug}
+                stackSlug={params.composeStackSlug}
+              />
+            </div>
+          </section>
+        )}
       </div>
 
-      <StackSettingsSideNav />
+      <StackSettingsSideNav isAdmin={isAdmin} />
     </div>
   );
 }
 
-function StackSettingsSideNav() {
+function StackSettingsSideNav({ isAdmin = false }: { isAdmin?: boolean }) {
   return (
     <aside className="col-span-2 hidden lg:flex flex-col h-full">
       <nav className="sticky top-20 flex flex-col gap-4">
@@ -176,15 +187,17 @@ function StackSettingsSideNav() {
             </Link>
           </li>
 
-          <li className="text-red-400">
-            <Link
-              to={{
-                hash: "#danger"
-              }}
-            >
-              Danger Zone
-            </Link>
-          </li>
+          {isAdmin && (
+            <li className="text-red-400">
+              <Link
+                to={{
+                  hash: "#danger"
+                }}
+              >
+                Danger Zone
+              </Link>
+            </li>
+          )}
         </ul>
       </nav>
     </aside>
