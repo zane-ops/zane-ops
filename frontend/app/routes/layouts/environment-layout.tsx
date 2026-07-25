@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRightIcon,
   BoxesIcon,
+  ChevronDownIcon,
   ContainerIcon,
   KeyRoundIcon,
   LoaderIcon,
   type LucideIcon,
-  PlusIcon,
   Search,
   SettingsIcon
 } from "lucide-react";
@@ -34,7 +34,7 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
-import { environmentQueries, projectQueries, userQueries } from "~/lib/queries";
+import { environmentQueries, projectQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
@@ -241,8 +241,8 @@ export default function EnvironmentLayout({
             <Menubar className="border-none w-fit">
               <MenubarMenu>
                 <MenubarTrigger asChild>
-                  <Button variant="secondary" className="flex gap-2">
-                    New <PlusIcon size={18} />
+                  <Button variant="secondary" className="flex gap-2 ">
+                    New <ChevronDownIcon size={18} />
                   </Button>
                 </MenubarTrigger>
                 <MenubarContent
