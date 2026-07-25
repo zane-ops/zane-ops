@@ -1,6 +1,6 @@
 import { ensureMinRole } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import type { Route } from "./+types/guest-apps-list";
+import type { Route } from "./+types/guest-app-list";
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
