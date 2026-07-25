@@ -24,8 +24,11 @@ import {
 } from "~/components/ui/popover";
 import { projectQueries } from "~/lib/queries";
 import { useDeviceSize } from "~/lib/use-device-size";
-import { cn, durationToMs, stringToColor } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import { cn, durationToMs, hasMinRole, stringToColor } from "~/lib/utils";
+import {
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/workspace-store";
 
 export type WorkspaceProjectListHeaderDropdownProps = {
   projectList: Project[];
@@ -37,6 +40,7 @@ export function WorkspaceProjectListHeaderDropdown(
   const deviceSize = useDeviceSize();
   const workspaceId = useCurrentWorkspace().id;
   const params = useParams() as { projectSlug: string };
+  const membership = useCurrentWorkspaceMembership();
 
   const { data: projectList } = useQuery({
     ...projectQueries.list({
@@ -194,25 +198,28 @@ export function WorkspaceProjectListHeaderDropdown(
                     </CommandItem>
                   );
                 })}
-
-                <CommandSeparator />
               </CommandGroup>
-              <CommandGroup>
-                <CommandItem
-                  value="CREATE_PROJECT"
-                  className="cursor-pointer flex gap-1.5"
-                  onSelect={() => {
-                    navigate(href("/workspace/create-project"));
-                    setQuery("");
-                    setPopoverOpen(false);
-                  }}
-                >
-                  <div className="size-6 flex-none flex items-center justify-center border border-border rounded-full">
-                    <PlusIcon className="size-4" />
-                  </div>
-                  Create project
-                </CommandItem>
-              </CommandGroup>
+              {hasMinRole(membership, "Admin") && (
+                <>
+                  <CommandSeparator />
+                  <CommandGroup>
+                    <CommandItem
+                      value="CREATE_PROJECT"
+                      className="cursor-pointer flex gap-1.5"
+                      onSelect={() => {
+                        navigate(href("/workspace/create-project"));
+                        setQuery("");
+                        setPopoverOpen(false);
+                      }}
+                    >
+                      <div className="size-6 flex-none flex items-center justify-center border border-border rounded-full">
+                        <PlusIcon className="size-4" />
+                      </div>
+                      Create project
+                    </CommandItem>
+                  </CommandGroup>
+                </>
+              )}
             </CommandList>
           </Command>
         </PopoverContent>

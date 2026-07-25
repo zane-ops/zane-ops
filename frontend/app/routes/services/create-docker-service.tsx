@@ -61,11 +61,13 @@ import {
   cn,
   getCsrfTokenHeader,
   getFormErrorsFromResponseData,
+  hasMinRole,
   metaTitle
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/create-docker-service";
 
@@ -279,6 +281,8 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   const navigation = useNavigation();
   const isPending = navigation.state === "submitting";
 
+  const membership = useCurrentWorkspaceMembership();
+
   React.useEffect(() => {
     const key = Object.keys(errors ?? {})[0] as keyof typeof errors;
 
@@ -460,14 +464,24 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                     </SelectItem>
                   );
                 })}
-                <SelectItem value="add-new" className="px-2">
-                  <div className="inline-flex items-start gap-2">
-                    <PlusIcon className="size-4 relative top-0.5" />
-                    <div className="flex flex-col items-start">
-                      <span>Add new credentials</span>
+                {hasMinRole(membership, "Admin") ? (
+                  <SelectItem value="add-new" className="px-2">
+                    <div className="inline-flex items-start gap-2">
+                      <PlusIcon className="size-4 relative top-0.5" />
+                      <div className="flex flex-col items-start">
+                        <span>Add new credentials</span>
+                      </div>
                     </div>
-                  </div>
-                </SelectItem>
+                  </SelectItem>
+                ) : (
+                  <SelectItem value="none" className="px-2" disabled>
+                    <div className="inline-flex items-start gap-2">
+                      <div className="flex flex-col items-start">
+                        <em className="font-mono">&lt;empty&gt;</em>
+                      </div>
+                    </div>
+                  </SelectItem>
+                )}
               </SelectContent>
             </FieldSetSelect>
           </FieldSet>
