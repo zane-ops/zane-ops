@@ -4,8 +4,7 @@ import { apiClient } from "~/api/client";
 import {
   environmentQueries,
   resourceQueries,
-  serviceQueries,
-  userQueries
+  serviceQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { ErrorResponseFromAPI } from "~/lib/utils";
