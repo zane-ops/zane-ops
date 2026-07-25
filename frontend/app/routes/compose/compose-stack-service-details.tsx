@@ -222,7 +222,7 @@ export default function ComposeStackServiceDetailsPage({
                     >
                       <span>
                         {serviceImage}
-                        <span className="text-grey">:{imageSha}</span>
+                        <span className="text-grey">@{imageSha}</span>
                       </span>
                     </div>
                   </div>

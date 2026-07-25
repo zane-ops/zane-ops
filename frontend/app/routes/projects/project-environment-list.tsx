@@ -68,12 +68,14 @@ import {
   formattedDate,
   getCsrfTokenHeader,
   getFormErrorsFromResponseData,
+  hasMinRole,
   isNotFoundError,
   metaTitle
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/project-environment-list";
 
@@ -87,7 +89,7 @@ export function meta({ error, params }: Route.MetaArgs) {
 }
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
-  await ensureMinRole(getQueryClient(), "Admin");
+  await ensureMinRole(getQueryClient(), "Member");
   return;
 }
 
@@ -102,12 +104,16 @@ export default function ProjectEnvironmentsPage({
     ...projectQueries.single(workspaceId, params.projectSlug),
     initialData: loaderData.project
   });
+
+  const membership = useCurrentWorkspaceMembership();
   return (
     <section className="flex gap-1 scroll-mt-20">
       <div className="w-full flex flex-col gap-4 pb-14">
         <div className="flex  items-center gap-4">
           <h2 className="text-2xl">Environments</h2>
-          <CreateEnvironmentFormDialog environments={project.environments} />
+          {hasMinRole(membership, "Admin") && (
+            <CreateEnvironmentFormDialog environments={project.environments} />
+          )}
         </div>
         <Separator />
 

@@ -12,7 +12,7 @@ import {
   FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
-import { gitAppsQueries } from "~/lib/queries";
+import { ensureMinRole, gitAppsQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   getCsrfTokenHeader,
@@ -30,6 +30,7 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Owner");
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const app = await queryClient.ensureQueryData(
     gitAppsQueries.gitlab(workspaceId, params.id)

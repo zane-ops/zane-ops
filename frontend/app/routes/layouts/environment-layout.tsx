@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRightIcon,
   BoxesIcon,
+  ChevronDownIcon,
   ContainerIcon,
   KeyRoundIcon,
   LoaderIcon,
-  PlusIcon,
+  type LucideIcon,
   Search,
   SettingsIcon
 } from "lucide-react";
@@ -33,12 +34,19 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
-import { environmentQueries, projectQueries, userQueries } from "~/lib/queries";
+import { environmentQueries, projectQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, isNotFoundError, metaTitle, stringToColor } from "~/lib/utils";
+import {
+  cn,
+  hasMinRole,
+  isNotFoundError,
+  metaTitle,
+  stringToColor
+} from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/environment-layout";
 
@@ -96,6 +104,12 @@ export async function clientLoader({
   return { environment, project };
 }
 
+type NavItem = {
+  title: string;
+  href: string;
+  icon: LucideIcon;
+};
+
 export default function EnvironmentLayout({
   params,
   loaderData
@@ -137,6 +151,29 @@ export default function EnvironmentLayout({
   }, [query]);
 
   const projectColor = stringToColor(project.slug);
+
+  const membership = useCurrentWorkspaceMembership();
+  const sidebarNavItems: NavItem[] = [
+    {
+      title: "Services",
+      href: ".",
+      icon: ContainerIcon
+    }
+  ];
+
+  if (hasMinRole(membership, "Member")) {
+    sidebarNavItems.push({
+      title: "Variables",
+      href: "variables",
+      icon: KeyRoundIcon
+    });
+  }
+
+  sidebarNavItems.push({
+    title: "Settings",
+    href: "settings",
+    icon: SettingsIcon
+  });
 
   return (
     <section>
@@ -204,8 +241,8 @@ export default function EnvironmentLayout({
             <Menubar className="border-none w-fit">
               <MenubarMenu>
                 <MenubarTrigger asChild>
-                  <Button variant="secondary" className="flex gap-2">
-                    New <PlusIcon size={18} />
+                  <Button variant="secondary" className="flex gap-2 ">
+                    New <ChevronDownIcon size={18} />
                   </Button>
                 </MenubarTrigger>
                 <MenubarContent
@@ -274,25 +311,14 @@ export default function EnvironmentLayout({
             "inline-flex items-stretch p-0.5 text-muted-foreground"
           )}
         >
-          <li>
-            <NavLink to=".">
-              <span>Services</span>
-              <ContainerIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-
-          <li>
-            <NavLink to="./variables">
-              <span>Variables</span>
-              <KeyRoundIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="./settings">
-              <span>Settings</span>
-              <SettingsIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
+          {sidebarNavItems.map((item) => (
+            <li key={item.title}>
+              <NavLink to={item.href}>
+                <span>{item.title}</span>
+                <item.icon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+          ))}
         </ul>
       </nav>
       <section className="mt-2">

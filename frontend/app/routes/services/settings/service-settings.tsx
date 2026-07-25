@@ -36,10 +36,11 @@ import {
   userQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { getCsrfTokenHeader } from "~/lib/utils";
+import { cn, getCsrfTokenHeader, hasMinRole } from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import { ServiceAutoDeployForm } from "~/routes/services/components/service-auto-deploy-form";
 import { ServiceBuilderForm } from "~/routes/services/components/service-builder-form";
@@ -82,6 +83,9 @@ export default function ServiceSettingsPage({
     }
   }
 }: Route.ComponentProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isAdmin = hasMinRole(membership, "Admin");
+
   return (
     <div className="my-6 grid lg:grid-cols-12 gap-10 relative max-w-full">
       <div className="lg:col-span-10 flex flex-col max-w-full">
@@ -284,8 +288,14 @@ export default function ServiceSettingsPage({
               <FileSlidersIcon size={15} className="flex-none text-grey" />
             </div>
             <div className="h-full border border-grey/50"></div>
+            {!isAdmin && <div className="bg-grey/50 rounded-md size-2" />}
           </div>
-          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+          <div
+            className={cn(
+              "w-full flex flex-col gap-5 pt-1",
+              isAdmin ? "pb-14" : "pb-8"
+            )}
+          >
             <h2 className="text-lg text-grey">Config files</h2>
             <ServiceConfigsForm
               project_slug={project_slug}
@@ -295,29 +305,34 @@ export default function ServiceSettingsPage({
           </div>
         </section>
 
-        <section id="danger" className="flex gap-1 scroll-mt-24">
-          <div className="w-16 hidden md:flex flex-col items-center">
-            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
-              <FlameIcon size={15} className="flex-none text-red-500" />
+        {isAdmin && (
+          <section id="danger" className="flex gap-1 scroll-mt-24">
+            <div className="w-16 hidden md:flex flex-col items-center">
+              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
+                <FlameIcon size={15} className="flex-none text-red-500" />
+              </div>
             </div>
-          </div>
-          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
-            <h2 className="text-lg text-red-400">Danger Zone</h2>
-            <ServiceDangerZoneForm
-              project_slug={project_slug}
-              service_slug={service_slug}
-              env_slug={env_slug}
-            />
-          </div>
-        </section>
+            <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+              <h2 className="text-lg text-red-400">Danger Zone</h2>
+              <ServiceDangerZoneForm
+                project_slug={project_slug}
+                service_slug={service_slug}
+                env_slug={env_slug}
+              />
+            </div>
+          </section>
+        )}
       </div>
 
-      <ServiceSettingsSideNav service={service} />
+      <ServiceSettingsSideNav service={service} isAdmin={isAdmin} />
     </div>
   );
 }
 
-function ServiceSettingsSideNav({ service }: { service: Service }) {
+function ServiceSettingsSideNav({
+  service,
+  isAdmin = false
+}: { service: Service; isAdmin?: boolean }) {
   return (
     <aside className="col-span-2 hidden lg:flex flex-col h-full">
       <nav className="sticky top-20 flex flex-col gap-4">
@@ -409,15 +424,17 @@ function ServiceSettingsSideNav({ service }: { service: Service }) {
               Config files
             </Link>
           </li>
-          <li className="text-red-400">
-            <Link
-              to={{
-                hash: "#danger"
-              }}
-            >
-              Danger Zone
-            </Link>
-          </li>
+          {isAdmin && (
+            <li className="text-red-400">
+              <Link
+                to={{
+                  hash: "#danger"
+                }}
+              >
+                Danger Zone
+              </Link>
+            </li>
+          )}
         </ul>
       </nav>
     </aside>
