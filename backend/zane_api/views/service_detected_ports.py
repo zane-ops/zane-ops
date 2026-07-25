@@ -22,11 +22,12 @@ from temporal.helpers import (
 import docker
 import docker.errors
 from zane_api.utils import DockerSwarmTask
-from ..permissions import get_accessible_projects
+from ..permissions import get_accessible_projects, HasWorkspace, IsWorkspaceMember
 
 
 class ServiceDetectedPortsAPIView(APIView):
     serializer_class = ServiceDetectedPortsResponseSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         summary="Get detected service ports",

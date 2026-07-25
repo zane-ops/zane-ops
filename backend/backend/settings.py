@@ -293,7 +293,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "DEFAULT_PERMISSION_CLASSES": [
         "zane_api.permissions.HasWorkspace",
-        "zane_api.permissions.IsWorkspaceGuest",
+        "zane_api.permissions.IsWorkspaceMember",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",

@@ -1166,7 +1166,7 @@ class ServiceDetailsAPIView(RetrieveUpdateAPIView):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [HasWorkspace(), IsWorkspaceGuest()]
+            return [HasWorkspace(), IsWorkspaceMember()]
         return [HasWorkspace(), IsWorkspaceMember()]
 
     @extend_schema(

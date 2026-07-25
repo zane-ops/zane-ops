@@ -117,7 +117,7 @@ urlpatterns = [
     ),
     re_path(
         rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/?$",
-        views.ProjectDetailsView.as_view(),
+        views.ProjectDetailsAPIView.as_view(),
         name="projects.details",
     ),
     re_path(
