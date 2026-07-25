@@ -78,11 +78,20 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     };
   }
   if (data?.success) {
-    queryClient.removeQueries(userQueries.authedUser);
+    const authedUser = await queryClient.fetchQuery({
+      ...userQueries.authedUser,
+      staleTime: 0
+    });
     queryClient.removeQueries(userQueries.memberships);
 
     const redirect_to = searchParams.get("redirect_to");
+
     let redirectTo = href("/");
+
+    if (authedUser?.membership?.role_name === "Guest") {
+      redirectTo = href("/workspace/guest");
+    }
+
     if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
       redirectTo = redirect_to;
     }
