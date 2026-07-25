@@ -29,12 +29,12 @@ from compose.models import ComposeStack
 from ..permissions import (
     get_accessible_projects,
     HasWorkspace,
-    IsWorkspaceMember,
+    IsWorkspaceGuest,
 )
 
 
 class ResourceSearchAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    permission_classes = [HasWorkspace, IsWorkspaceGuest]
 
     @extend_schema(
         operation_id="searchResources",

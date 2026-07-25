@@ -12,6 +12,7 @@ import {
 import {
   Link,
   href,
+  redirect,
   useLoaderData,
   useMatches,
   useSearchParams
@@ -47,6 +48,10 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     getCurrentWorkspace(queryClient)
   ]);
 
+  if (!hasMinRole(authedUser, "Member")) {
+    throw redirect(href("/workspace/guest"));
+  }
+
   const searchParams = new URL(request.url).searchParams;
 
   const search = projectSearchSchema.parse(searchParams);
@@ -61,9 +66,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     queryClient.ensureQueryData(
       projectQueries.list({ workspaceId: workspace.id, filters })
     ),
-    hasMinRole(authedUser, "Member")
-      ? queryClient.ensureQueryData(deploymentQueries.recent(workspace.id))
-      : []
+    queryClient.ensureQueryData(deploymentQueries.recent(workspace.id))
   ]);
   return {
     projectList,
