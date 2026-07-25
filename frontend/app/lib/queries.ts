@@ -102,7 +102,11 @@ export async function ensureMinRole(
 ) {
   const user = await ensureAuthedUser(queryClient);
   if (!hasMinRole(user, roleName)) {
-    throw notFound();
+    throw notFound(
+      import.meta.env.DEV
+        ? "You do have permission to view this page"
+        : "Not found"
+    );
   }
   return user;
 }

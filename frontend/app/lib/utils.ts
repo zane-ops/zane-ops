@@ -627,9 +627,16 @@ export function hasMinRole(
   }
 
   const membership = "membership" in user ? user.membership : user;
-  return Boolean(
+
+  const hasRole = Boolean(
     membership && membership.role >= WORKSPACE_ROLE_MAPPING[roleName]
   );
+  console.log("[hasMinRole]", {
+    membership,
+    roleName,
+    hasRole
+  });
+  return hasRole;
 }
 
 export function getUserDisplayName(

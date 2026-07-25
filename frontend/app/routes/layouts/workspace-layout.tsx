@@ -7,7 +7,7 @@ import { WorkspaceMembershipListHeaderDropdown } from "~/components/header/works
 import { WorkspaceProjectListHeaderDropdown } from "~/components/header/workspace-project-list-header-dropdown";
 import { projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, metaTitle } from "~/lib/utils";
+import { cn, hasMinRole, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/workspace-layout";
 
 export function meta() {
@@ -30,10 +30,14 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     throw redirect(href("/"));
   }
 
+  const isMember = hasMinRole(user, "Member");
+
   const [projects, currentProject] = await Promise.all([
-    queryClient.ensureQueryData(
-      projectQueries.list({ workspaceId: workspace.id })
-    ),
+    isMember
+      ? queryClient.ensureQueryData(
+          projectQueries.list({ workspaceId: workspace.id })
+        )
+      : [],
     params.projectSlug
       ? queryClient.ensureQueryData(
           projectQueries.single(workspace.id, params.projectSlug)
