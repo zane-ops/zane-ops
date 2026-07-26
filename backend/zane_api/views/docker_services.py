@@ -102,7 +102,6 @@ from ..permissions import (
     HasWorkspace,
     IsWorkspaceMember,
     IsWorkspaceAdmin,
-    IsWorkspaceGuest,
     get_accessible_projects,
 )
 
@@ -1164,7 +1163,7 @@ class ServiceDetailsAPIView(RetrieveUpdateAPIView):
     http_method_names = ["patch", "get"]
     lookup_field = "slug"
 
-    permission_classes = [HasWorkspace(), IsWorkspaceMember()]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         operation_id="updateService",
