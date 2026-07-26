@@ -74,9 +74,52 @@ Consistent with Member managing service-level env vars, so probably deliberate �
 
 ## 5. Building block for later — single deploy check
 
-Deploy authorization is currently repeated as `permission_classes` across ~10 deploy / redeploy / toggle views. Collapsing it into one `can_deploy(user, service)` helper that those views call makes protected environments a one-function change later instead of ten edits.
+Deploy authorization is currently repeated as `permission_classes` across ~12 deploy / redeploy / toggle views. Collapsing it into one helper makes protected environments a one-function change later instead of twelve edits. No model change needed now.
 
-No model change needed now. This is the only prerequisite worth paying for up front.
+**Constraint:** `permission_classes` runs *before* the object exists — `project` → `environment` → `service` are resolved inside `put()` ([docker_services.py:853](../zane_api/views/docker_services.py#L853)), and these are plain `APIView` handlers, so `has_object_permission()` never fires either. So this cannot be a `BasePermission`; it's a plain function called once the environment is in hand.
+
+In [permissions.py](../zane_api/permissions.py), beside `get_accessible_projects`:
+
+```python
+def get_workspace_role(user: AbstractUser, workspace: Workspace) -> WorkspaceRole | None:
+    membership = WorkspaceMembership.objects.filter(
+        user=user, workspace=workspace
+    ).first()
+    return WorkspaceRole(membership.role) if membership is not None else None
+
+
+def can_deploy(
+    user: AbstractUser, workspace: Workspace, environment: Environment
+) -> bool:
+    role = get_workspace_role(user, workspace)
+    if role is None:
+        return False
+    return role >= WorkspaceRole.MEMBER
+
+
+def check_can_deploy(request: Request, environment: Environment) -> None:
+    """Raises PermissionDenied (403) if the user may not deploy in this environment."""
+    if not can_deploy(request.user, request.workspace, environment):
+        raise PermissionDenied(
+            "You do not have permission to deploy in this environment."
+        )
+```
+
+`PermissionDenied` from `rest_framework.exceptions` → 403 with the message, no view-level error handling.
+
+Call site is one line, after `environment` is resolved and before the service lookup:
+
+```python
+environment = Environment.objects.get(name=env_slug.lower(), project=project)
+check_can_deploy(request, environment)
+```
+
+- `permission_classes = [HasWorkspace, IsWorkspaceMember]` **stays** — cheap early gate, so a Viewer 403s without hitting the service query. `check_can_deploy` layers after it.
+- Identical to `IsWorkspaceMember` today, so it ships as a no-op. Protected envs later become two lines inside `can_deploy`: `if environment.is_protected: return role >= WorkspaceRole.ADMIN`.
+- Takes `environment`, not `service` — lets services and compose stacks share one function without a union type, and it's already a local at every call site.
+- **Call sites:** `Deploy{Docker,Git}ServiceAPIView`, `{Redeploy,ReDeploy}{Docker,Git}ServiceAPIView`, `BulkDeployServicesAPIView`, `CancelServiceDeploymentAPIView`, `{Toggle,BulkToggle}Service(s)APIView`, plus `ComposeStack{Deploy,ReDeploy}APIView`, `CancelComposeStackDeploymentAPIView`, `ToggleComposeStackAPIView`.
+- **Webhooks need their own check.** The `{deploy_token}` routes are `AllowAny` with no user, so `can_deploy` doesn't apply — they need `can_deploy_with_token(environment)`, trivially `True` today, later `not environment.is_protected`. Without it the token bypasses the gate, same hole as §1.
+- *Optional:* every permission class re-queries `WorkspaceMembership` independently ([permissions.py:109](../zane_api/permissions.py#L109), [:121](../zane_api/permissions.py#L121), [:133](../zane_api/permissions.py#L133), [:145](../zane_api/permissions.py#L145)) and this adds one more. `HasWorkspace` runs first on all these routes and could stash the membership on `request` for the rest to read — separate change, removes a duplicate query per authenticated request.
 
 ---
 
