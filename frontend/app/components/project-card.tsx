@@ -36,7 +36,10 @@ export function ProjectCard({ project }: ProjectCardProps) {
             envSlug: "production",
             projectSlug: project.slug
           })}
-          className={cn("hover:underline", "after:inset-0 after:absolute")}
+          className={cn(
+            "hover:underline after:inset-0 after:absolute",
+            "whitespace-nowrap overflow-hidden text-ellipsis"
+          )}
         >
           {project.slug}
         </Link>
