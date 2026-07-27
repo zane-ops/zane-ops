@@ -28,3 +28,4 @@ from .shared_volumes import *
 from .workspace import *
 from .workspace_invitations import *
 from .workspace_permissions import *
+from .viewer_permissions import *

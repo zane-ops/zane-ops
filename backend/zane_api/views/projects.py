@@ -74,6 +74,7 @@ from ..permissions import (
     HasWorkspace,
     IsWorkspaceAdmin,
     IsWorkspaceMember,
+    IsWorkspaceViewer,
     get_accessible_projects,
 )
 
@@ -87,7 +88,7 @@ class ProjectsListAPIView(ListCreateAPIView):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [HasWorkspace(), IsWorkspaceMember()]
+            return [HasWorkspace(), IsWorkspaceViewer()]
         return [HasWorkspace(), IsWorkspaceAdmin()]
 
     def get_queryset(self) -> QuerySet[Project]:  # type: ignore
@@ -242,7 +243,7 @@ class ProjectDetailsAPIView(APIView):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [HasWorkspace(), IsWorkspaceMember()]
+            return [HasWorkspace(), IsWorkspaceViewer()]
         return [HasWorkspace(), IsWorkspaceAdmin()]
 
     def get_object(self) -> Project:  # type: ignore

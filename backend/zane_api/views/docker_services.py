@@ -102,6 +102,7 @@ from ..permissions import (
     HasWorkspace,
     IsWorkspaceMember,
     IsWorkspaceAdmin,
+    IsWorkspaceViewer,
     get_accessible_projects,
 )
 
@@ -1163,7 +1164,10 @@ class ServiceDetailsAPIView(RetrieveUpdateAPIView):
     http_method_names = ["patch", "get"]
     lookup_field = "slug"
 
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [HasWorkspace(), IsWorkspaceViewer()]
+        return [HasWorkspace(), IsWorkspaceMember()]
 
     @extend_schema(
         operation_id="updateService",
