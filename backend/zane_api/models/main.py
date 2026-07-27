@@ -78,7 +78,7 @@ class Workspace(TimestampedModel):
 
 class WorkspaceRole(models.IntegerChoices):
     # Read-only user: View projects and preview deployments only
-    GUEST = 10, "Guest"
+    VIEWER = 10, "Viewer"
 
     # 3rd party contributor to the team (usually temporary)
     # + View logs, env vars, trigger deploys, manage own tokens
@@ -126,11 +126,11 @@ class WorkspaceInvitation(TimestampedModel):
         on_delete=models.CASCADE,
         related_name="created_invitations",
     )
-    # Only relevant for GUEST and CONTRIBUTOR
+    # Only relevant for VIEWER and CONTRIBUTOR
     accessible_projects = models.ManyToManyField("Project", blank=True)
 
     @property
-    def role_name(self) -> Literal["Owner", "Admin", "Member", "Guest"]:
+    def role_name(self) -> Literal["Owner", "Admin", "Member", "Viewer"]:
         return self.get_role_display()
 
     @property
@@ -166,11 +166,11 @@ class WorkspaceMembership(models.Model):
         default=WorkspaceRole.MEMBER,
     )
 
-    # Only relevant for GUEST and CONTRIBUTOR
+    # Only relevant for VIEWER and CONTRIBUTOR
     accessible_projects = models.ManyToManyField("Project", blank=True)
 
     @property
-    def role_name(self) -> Literal["Owner", "Admin", "Member", "Guest"]:
+    def role_name(self) -> Literal["Owner", "Admin", "Member", "Viewer"]:
         return self.get_role_display()
 
     class Meta:

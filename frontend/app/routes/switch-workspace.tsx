@@ -44,8 +44,8 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     queryClient.invalidateQueries(userQueries.memberships)
   ]);
 
-  if (authedUser?.membership?.role_name === "Guest") {
-    throw redirect(href("/workspace/guest"));
+  if (authedUser?.membership?.role_name === "Viewer") {
+    throw redirect(href("/workspace/viewer"));
   }
 
   throw redirect(href("/workspace"));

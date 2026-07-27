@@ -80,7 +80,7 @@ export function UserHeaderDropdown(props: UserDropdownProps) {
               Account Settings
             </DropdownMenuItem>
 
-            {workspaceId && hasMinRole(data, "Guest") && (
+            {workspaceId && hasMinRole(data, "Viewer") && (
               <DropdownMenuItem
                 className="my-2"
                 onClick={() => {

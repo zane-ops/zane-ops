@@ -200,7 +200,7 @@ export const ZANEOPS_INTERNAL_DOMAIN = "zaneops.internal";
 export const TEMPLATE_API_HOST = "https://templates.zaneops.dev";
 
 export const WORKSPACE_ROLE_MAPPING = {
-  Guest: 10,
+  Viewer: 10,
   Member: 30,
   Admin: 40,
   Owner: 50

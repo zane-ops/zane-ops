@@ -79,9 +79,9 @@ class WorkspaceProjectListViewTests(AuthAPITestCase):
         project_list = response.json()
         self.assertEqual(3, len(project_list))
 
-    def test_can_list_projects_even_if_just_a_guest(self):
+    def test_can_list_projects_even_if_just_a_viewer(self):
         owner = self.loginUser()
-        WorkspaceMembership.objects.filter(user=owner).update(role=WorkspaceRole.GUEST)
+        WorkspaceMembership.objects.filter(user=owner).update(role=WorkspaceRole.VIEWER)
 
         workspace = Workspace.objects.get(memberships__user=owner)
 
@@ -99,7 +99,7 @@ class WorkspaceProjectListViewTests(AuthAPITestCase):
         project_list = response.json()
         self.assertEqual(0, len(project_list))
 
-    def test_can_only_list_accessible_projects_if_guest(self):
+    def test_can_only_list_accessible_projects_if_viewer(self):
         owner = self.loginUser()
 
         workspace = Workspace.objects.get(memberships__user=owner)
@@ -113,7 +113,7 @@ class WorkspaceProjectListViewTests(AuthAPITestCase):
             ]
         )
         membership = WorkspaceMembership.objects.get(user=owner)
-        membership.role = WorkspaceRole.GUEST
+        membership.role = WorkspaceRole.VIEWER
         membership.save()
         membership.accessible_projects.add(*projects[:2])
 
@@ -143,7 +143,7 @@ class WorkspaceProjectDetailViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-    def test_project_guest_can_only_see_accessible_projects(self):
+    def test_project_viewer_can_only_see_accessible_projects(self):
         owner = self.loginUser()
 
         workspace = Workspace.objects.get(memberships__user=owner)
@@ -155,7 +155,7 @@ class WorkspaceProjectDetailViewTests(AuthAPITestCase):
             ]
         )
         membership = WorkspaceMembership.objects.get(user=owner)
-        membership.role = WorkspaceRole.GUEST
+        membership.role = WorkspaceRole.VIEWER
         membership.save()
         membership.accessible_projects.add(projects[0])
 

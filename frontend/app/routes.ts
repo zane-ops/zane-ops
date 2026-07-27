@@ -93,7 +93,7 @@ export default [
     ...prefix("workspace", [
       layout("./routes/layouts/workspace-layout.tsx", [
         index("./routes/project-list.tsx"),
-        route("/guest", "./routes/guest/guest-app-list.tsx"),
+        route("/viewer", "./routes/viewer/viewer-app-list.tsx"),
 
         route(
           "project/:projectSlug/:envSlug/review-deployment",

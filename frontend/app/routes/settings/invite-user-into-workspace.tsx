@@ -198,7 +198,7 @@ function InviteNewUserForm() {
     navigation.state === "loading" || navigation.state === "submitting";
 
   const [selectedRole, setSelectedRole] =
-    React.useState<WorkspaceRoleName>("Guest");
+    React.useState<WorkspaceRoleName>("Viewer");
 
   const [selectedProjects, setSelectedProjects] = React.useState<Project[]>([]);
   const validForOptions = Array.from({ length: 7 }, (_, i) => i + 1);
@@ -294,7 +294,7 @@ function InviteNewUserForm() {
         />
       ))}
 
-      {selectedRole === "Guest" && (
+      {selectedRole === "Viewer" && (
         <div className="my-2 flex flex-col gap-1 w-full">
           <label htmlFor="accessible_projects" className="sr-only">
             Accessible projects

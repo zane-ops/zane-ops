@@ -49,7 +49,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   ]);
 
   if (!hasMinRole(authedUser, "Member")) {
-    throw redirect(href("/workspace/guest"));
+    throw redirect(href("/workspace/viewer"));
   }
 
   const searchParams = new URL(request.url).searchParams;

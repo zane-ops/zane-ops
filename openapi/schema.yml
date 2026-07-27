@@ -15251,7 +15251,7 @@ paths:
           - 40
           - 50
         description: |-
-          * `10` - Guest
+          * `10` - Viewer
           * `30` - Member
           * `40` - Admin
           * `50` - Owner
@@ -30525,7 +30525,7 @@ components:
       - 50
       type: integer
       description: |-
-        * `10` - Guest
+        * `10` - Viewer
         * `30` - Member
         * `40` - Admin
         * `50` - Owner
@@ -30534,7 +30534,7 @@ components:
       - Owner
       - Admin
       - Member
-      - Guest
+      - Viewer
       type: string
     RuntimeLog:
       type: object

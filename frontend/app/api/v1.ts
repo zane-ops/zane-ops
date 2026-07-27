@@ -7446,7 +7446,7 @@ export interface components {
       errors: components["schemas"]["ReviewWorkspaceInvitationError"][];
     };
     /**
-     * @description * `10` - Guest
+     * @description * `10` - Viewer
      * * `30` - Member
      * * `40` - Admin
      * * `50` - Owner
@@ -7454,7 +7454,7 @@ export interface components {
      */
     RoleEnum: 10 | 30 | 40 | 50;
     /** @enum {string} */
-    RoleNameEnum: "Owner" | "Admin" | "Member" | "Guest";
+    RoleNameEnum: "Owner" | "Admin" | "Member" | "Viewer";
     RuntimeLog: {
       id: string;
       service_id: string | null;
@@ -15340,11 +15340,6 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
-      403: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse403"];
-        };
-      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -15790,7 +15785,7 @@ export interface operations {
         per_page?: number;
         query?: string;
         /**
-         * @description * `10` - Guest
+         * @description * `10` - Viewer
          * * `30` - Member
          * * `40` - Admin
          * * `50` - Owner

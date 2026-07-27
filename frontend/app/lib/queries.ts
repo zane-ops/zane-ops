@@ -3067,7 +3067,7 @@ export const workspaceMemberListFilters = zfd.formData({
   query: z.string().optional(),
   per_page: zfd.numeric().optional().catch(10).optional(),
   role: z
-    .enum(["Guest", "Member", "Admin", "Owner"])
+    .enum(["Viewer", "Member", "Admin", "Owner"])
     .optional()
     .catch(undefined)
 });

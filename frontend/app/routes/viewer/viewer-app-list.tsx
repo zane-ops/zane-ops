@@ -1,14 +1,14 @@
 import { ensureMinRole } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import type { Route } from "./+types/guest-app-list";
+import type { Route } from "./+types/viewer-app-list";
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  await ensureMinRole(queryClient, "Guest");
+  await ensureMinRole(queryClient, "Viewer");
 
   return;
 }
 
-export default function GuestAppsListPage({}: Route.ComponentProps) {
-  return <>guest-apps-list Page</>;
+export default function ViewerAppsListPage({}: Route.ComponentProps) {
+  return <>viewer-apps-list Page</>;
 }

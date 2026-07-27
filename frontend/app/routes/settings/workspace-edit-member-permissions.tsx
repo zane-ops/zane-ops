@@ -192,7 +192,7 @@ function EditWorkspaceMemberForm({ member }: EditWorkspaceMemberFormProps) {
         </FieldSetSelect>
       </FieldSet>
 
-      {selectedRole === "Guest" && (
+      {selectedRole === "Viewer" && (
         <div className="my-2 flex flex-col gap-1 w-full">
           <label htmlFor="accessible_projects" className="sr-only">
             Accessible projects

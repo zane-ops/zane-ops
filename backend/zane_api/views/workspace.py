@@ -58,7 +58,7 @@ from ..permissions import (
     HasWorkspace,
     IsWorkspaceOwner,
     IsWorkspaceAdmin,
-    IsWorkspaceGuest,
+    IsWorkspaceViewer,
     IsWorkspaceMember,
 )
 
@@ -236,7 +236,7 @@ class WorkspaceDetailAPIView(RetrieveUpdateDestroyAPIView):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [HasWorkspace(), IsWorkspaceGuest()]
+            return [HasWorkspace(), IsWorkspaceViewer()]
         return [HasWorkspace(), IsWorkspaceOwner()]
 
     @transaction.atomic()
@@ -375,7 +375,7 @@ class CreateWorkspaceAPIView(CreateAPIView):
 
 
 class SwitchWorkspaceAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceGuest]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     @extend_schema(
         request=SwitchWorkspaceRequestSerializer,
@@ -407,7 +407,7 @@ class SwitchWorkspaceAPIView(APIView):
 
 class WorkspaceLeaveAPIView(APIView):
     serializer_class = WorkspaceLeaveResponseSerializer
-    permission_classes = [HasWorkspace, IsWorkspaceGuest]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     @extend_schema(
         request=None,

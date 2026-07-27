@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from temporal.helpers import get_server_resource_limits
 
 from rest_framework import serializers
-from ..permissions import HasWorkspace, IsWorkspaceGuest, IsWorkspaceMember
+from ..permissions import HasWorkspace, IsWorkspaceViewer, IsWorkspaceMember
 
 
 class SettingsSerializer(serializers.Serializer):
@@ -20,7 +20,7 @@ class SettingsSerializer(serializers.Serializer):
 
 class SettingsView(APIView):
     serializer_class = SettingsSerializer
-    permission_classes = [HasWorkspace, IsWorkspaceGuest]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     @extend_schema(
         operation_id="getAPISettings",
