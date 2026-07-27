@@ -271,6 +271,7 @@ class LogIngestAPIView(APIView):
 
 class HttpLogsFieldsAPIView(APIView):
     serializer_class = HttpLogFieldsResponseSerializer
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @extend_schema(
         summary="Get http logs fields values",

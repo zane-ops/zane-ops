@@ -26,7 +26,7 @@ from django.db.models import (
 )
 from ..permissions import (
     HasWorkspace,
-    IsWorkspaceMember,
+    IsWorkspaceViewer,
     get_accessible_projects,
 )
 
@@ -39,7 +39,7 @@ class ExtractEpoch(Func):
 
 class ServiceMetricsAPIView(APIView):
     serializer_class = ServiceMetricsResponseSerializer
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     @extend_schema(
         parameters=[ServiceMetricsQuery],

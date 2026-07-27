@@ -77,7 +77,7 @@ class Workspace(TimestampedModel):
 
 
 class WorkspaceRole(models.IntegerChoices):
-    # Read-only user: View projects and preview deployments only
+    # Read-only user with no access to sensitive fields
     VIEWER = 10, "Viewer"
 
     # 3rd party contributor to the team (usually temporary)

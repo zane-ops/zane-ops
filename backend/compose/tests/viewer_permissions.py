@@ -199,6 +199,10 @@ class ViewerComposeStackSecretFieldsViewTests(ViewerComposeStackTestBase):
         "computed_content",
         "env_overrides",
         "configs",
+        "unapplied_changes",
+    ]
+    DEPLOYMENT_MEMBER_ONLY_FIELDS = [
+        "changes",
     ]
 
     def test_member_sees_secret_fields_in_stack_details(self):
@@ -280,3 +284,56 @@ class ViewerComposeStackSecretFieldsViewTests(ViewerComposeStackTestBase):
         jprint(snapshot)
         for field in self.MEMBER_ONLY_FIELDS:
             self.assertNotIn(field, snapshot)
+
+    def test_member_sees_changes_in_stack_deployment(self):
+        project, stack = self.create_compose_stack(
+            content=DOCKER_COMPOSE_WEB_SERVICE, slug="my-stack"
+        )
+        deployment = ComposeStackDeployment.objects.create(stack=stack)
+        stack.apply_pending_changes(deployment=deployment)
+        deployment.stack_snapshot = stack.snapshot.to_dict()  # type: ignore
+        deployment.save()
+
+        WorkspaceMembership.objects.filter(workspace=project.workspace).update(
+            role=WorkspaceRole.MEMBER
+        )
+
+        response = self.client.get(
+            reverse(
+                "compose:stacks.deployments.details",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                    "hash": deployment.hash,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        for field in self.DEPLOYMENT_MEMBER_ONLY_FIELDS:
+            self.assertIn(field, response.json())
+
+    def test_viewer_does_not_see_changes_in_stack_deployment(self):
+        """
+        `changes` records carry the compose content and env overrides in their
+        `old_value` / `new_value`.
+        """
+        project, stack, deployment = self.setup_viewer_with_stack()
+
+        response = self.client.get(
+            reverse(
+                "compose:stacks.deployments.details",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                    "hash": deployment.hash,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        data = response.json()
+        jprint(data)
+        for field in self.DEPLOYMENT_MEMBER_ONLY_FIELDS:
+            self.assertNotIn(field, data)
