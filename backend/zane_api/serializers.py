@@ -498,18 +498,22 @@ class ServiceSerializer(serializers.ModelSerializer):
     configs = ConfigSerializer(read_only=True, many=True)
     urls = URLModelSerializer(read_only=True, many=True)
     ports = PortConfigurationSerializer(read_only=True, many=True)
-    env_variables = EnvVariableSerializer(many=True, read_only=True, allow_null=True)
+    env_variables = EnvVariableSerializer(
+        many=True,
+        read_only=True,
+    )
     healthcheck = HealthCheckSerializer(read_only=True, allow_null=True)
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
     global_network_alias = serializers.CharField(read_only=True)
     unapplied_changes = DeploymentChangeSerializer(
-        many=True, read_only=True, allow_null=True
+        many=True,
+        read_only=True,
     )
     credentials = DockerCredentialSerializer(allow_null=True)
     resource_limits = ResourceLimitsSerializer(allow_null=True)
-    system_env_variables = SystemEnvVariablesSerializer(allow_null=True, many=True)
+    system_env_variables = SystemEnvVariablesSerializer(many=True)
     environment = EnvironmentSerializer(read_only=True)
     dockerfile_builder_options = DockerfileBuilderOptionsSerializer(allow_null=True)
     static_dir_builder_options = StaticDirectoryBuilderOptionsSerializer(
@@ -548,9 +552,11 @@ class ServiceSerializer(serializers.ModelSerializer):
             "watch_paths",
             "cleanup_queue_on_auto_deploy",
         }
-        for name, field in fields.items():
-            if name not in writable:
-                field.read_only = True
+
+        sensitive_fields = models.Service.get_sensitive_fields()
+        for field_name, field in fields.items():
+            field.read_only = field_name not in writable
+            field.allow_null = field.allow_null or field_name in sensitive_fields
         return fields
 
     class Meta:

@@ -17248,6 +17248,7 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
         user_content:
           type: string
+          nullable: true
         computed_content:
           type: string
           readOnly: true
@@ -17258,6 +17259,7 @@ components:
           items:
             $ref: '#/components/schemas/ComposeStackChange'
           readOnly: true
+          nullable: true
         urls:
           type: object
           additionalProperties:
@@ -17270,11 +17272,13 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/ComposeConfigVersion'
           readOnly: true
+          nullable: true
         env_overrides:
           type: array
           items:
             $ref: '#/components/schemas/ComposeStackEnvOverride'
           readOnly: true
+          nullable: true
         services:
           type: object
           additionalProperties:
@@ -17525,6 +17529,7 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
         user_content:
           type: string
+          nullable: true
           minLength: 1
       required:
       - user_content
@@ -18000,6 +18005,7 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
         user_content:
           type: string
+          nullable: true
         computed_content:
           type: string
           readOnly: true
@@ -18017,11 +18023,13 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/ComposeConfigVersion'
           readOnly: true
+          nullable: true
         env_overrides:
           type: array
           items:
             $ref: '#/components/schemas/ComposeStackEnvOverride'
           readOnly: true
+          nullable: true
       required:
       - computed_content
       - configs
@@ -18063,6 +18071,7 @@ components:
         user_content:
           type: string
           readOnly: true
+          nullable: true
         computed_content:
           type: string
           readOnly: true
@@ -18073,6 +18082,7 @@ components:
           items:
             $ref: '#/components/schemas/ComposeStackChange'
           readOnly: true
+          nullable: true
         urls:
           type: object
           additionalProperties:
@@ -18085,11 +18095,13 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/ComposeConfigVersion'
           readOnly: true
+          nullable: true
         env_overrides:
           type: array
           items:
             $ref: '#/components/schemas/ComposeStackEnvOverride'
           readOnly: true
+          nullable: true
         services:
           type: object
           additionalProperties:
@@ -18258,7 +18270,6 @@ components:
           enum:
           - blank
           - invalid
-          - 'null'
           - null_characters_not_allowed
           - required
           - surrogate_characters_not_allowed
@@ -18266,7 +18277,6 @@ components:
           description: |-
             * `blank` - blank
             * `invalid` - invalid
-            * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed

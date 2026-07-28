@@ -17,7 +17,7 @@ from ..models import (
 from faker import Faker
 import time
 from ..processor import ComposeSpecProcessor
-from zane_api.models import Project, Environment
+from zane_api.models import Project, Environment, WorkspaceRole
 from django.core.exceptions import ValidationError
 from ..dtos import ComposeStackServiceStatus, ComposeStackEnvOverrideDto
 from zane_api.utils import DockerSwarmTaskState, EnhancedJSONEncoder
@@ -31,6 +31,7 @@ from drf_spectacular.utils import extend_schema_field
 from search.dtos import RuntimeLogLevel
 from search.serializers import RuntimeLogsContextParamsSerializer
 from rest_framework import pagination
+from zane_api.permissions import has_min_role
 
 
 class ComposeStackChangeSerializer(serializers.ModelSerializer):
@@ -260,9 +261,24 @@ class ComposeStackSerializer(serializers.ModelSerializer):
     def get_fields(self):
         fields = super().get_fields()
         writable = ["slug", "user_content"]
+        sensitive_fields = ComposeStack.get_sensitive_fields()
         for field_name, field in fields.items():
             field.read_only = field_name not in writable
+            field.allow_null = field.allow_null or field_name in sensitive_fields
+
         return fields
+
+    def to_representation(self, instance: ComposeStack):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(request, WorkspaceRole.MEMBER):
+            sensitive_fields = ComposeStack.get_sensitive_fields()
+            for key in dict(data):
+                if key in sensitive_fields:
+                    data.pop(key)
+
+        return data
 
     class Meta:
         model = ComposeStack
@@ -288,12 +304,11 @@ class ComposeStackUpdateSerializer(ComposeStackSerializer):
     def get_fields(self):
         fields = super().get_fields()
         for field_name, field in fields.items():
-            if field_name == "slug":
-                field.read_only = (
-                    False  # only `slug` should be writable here, rest is read-only
-                )
-            else:
-                field.read_only = True
+            field.read_only = (
+                field_name
+                != "slug"  # only `slug` should be writable here, rest is read-only
+            )
+
         return fields
 
 

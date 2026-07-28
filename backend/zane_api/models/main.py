@@ -429,8 +429,8 @@ class Service(BaseService):
     environment_id: str
     shared_volumes: Manager["SharedVolume"]
 
-    @classmethod
-    def get_sensitive_fields(self):
+    @staticmethod
+    def get_sensitive_fields():
         """
         Fields that contain potentially secret values
         """
@@ -1645,8 +1645,8 @@ class Deployment(BaseDeployment):
     build_started_at = models.DateTimeField(null=True)
     build_finished_at = models.DateTimeField(null=True)
 
-    @classmethod
-    def get_sensitive_fields(self):
+    @staticmethod
+    def get_sensitive_fields():
         """
         Fields that contain potentially secret values
         """

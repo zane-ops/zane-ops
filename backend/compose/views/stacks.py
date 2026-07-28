@@ -64,6 +64,7 @@ from drf_standardized_errors.formatter import ExceptionFormatter
 from zane_api.permissions import (
     HasWorkspace,
     IsWorkspaceMember,
+    IsWorkspaceViewer,
     IsWorkspaceAdmin,
     get_accessible_projects,
 )
@@ -345,7 +346,7 @@ class ComposeStackDetailsAPIView(RetrieveUpdateAPIView):
     lookup_field = "slug"
     http_method_names = ["get", "put"]
     queryset = ComposeStack.objects.all()
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     @extend_schema(
         operation_id="getComposeStackDetails",
