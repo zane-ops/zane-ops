@@ -3091,7 +3091,7 @@ export const workspaceQueries = {
             query: {
               ...filters,
               role: filters.role
-                ? WORKSPACE_ROLE_MAPPING[filters.role]
+                ? WORKSPACE_ROLE_MAPPING[filters.role].value
                 : undefined
             }
           }

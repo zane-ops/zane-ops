@@ -58,6 +58,8 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { WorkspaceRoleBadge } from "~/components/workspace-role-badge";
+import { WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
+import { createDevLogger } from "~/lib/logger";
 import {
   ensureMinRole,
   paginationListFilters,
@@ -79,6 +81,8 @@ import {
 } from "~/lib/workspace-store";
 import type { clientAction } from "~/routes/settings/workspace-invitation-details";
 import type { Route } from "./+types/workspace-invitation-list";
+
+const logger = createDevLogger(import.meta.url);
 
 export function meta() {
   return [
@@ -209,9 +213,6 @@ function WorkspaceInvitationsTable({
           </TableRow>
         ) : (
           invitations.map((invitation) => {
-            console.log({
-              invitation
-            });
             const createdAt = formattedTime(invitation.created_at);
             const expiresAt = formattedTime(invitation.expires_at);
             const isMember = hasMinRole(invitation, "Member");
@@ -220,7 +221,24 @@ function WorkspaceInvitationsTable({
               <TableRow className="px-2" key={invitation.id}>
                 <TableCell className="p-2">{invitation.username}</TableCell>
                 <TableCell className="p-2">
-                  <WorkspaceRoleBadge role={invitation.role_name} />
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex cursor-help">
+                          <WorkspaceRoleBadge role={invitation.role_name} />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        className="max-w-60 text-pretty"
+                      >
+                        {
+                          WORKSPACE_ROLE_MAPPING[invitation.role_name]
+                            .description
+                        }
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableCell>
 
                 <TableCell className="p-2">

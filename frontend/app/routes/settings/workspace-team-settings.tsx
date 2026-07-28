@@ -319,7 +319,21 @@ function WorkspaceMembersTable({ members }: WorkspaceMembersTableProps) {
                   )}
                 </TableCell>
                 <TableCell className="p-2">
-                  <WorkspaceRoleBadge role={member.role_name} />
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex cursor-help">
+                          <WorkspaceRoleBadge role={member.role_name} />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        className="max-w-60 text-pretty"
+                      >
+                        {WORKSPACE_ROLE_MAPPING[member.role_name].description}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableCell>
                 <TableCell className="p-2">
                   {isMember ? (
