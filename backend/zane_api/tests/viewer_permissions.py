@@ -54,6 +54,12 @@ class ViewerGrantedEndpointsViewTests(ViewerEndpointsTestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
+    def test_viewer_can_view_server_resource_limits(self):
+        self.setup_viewer_with_service()
+        response = self.client.get(reverse("zane_api:server.resource_limits"))
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
     def test_viewer_can_list_services(self):
         project, _, _ = self.setup_viewer_with_service()
 
