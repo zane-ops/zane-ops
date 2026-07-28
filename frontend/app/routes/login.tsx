@@ -88,10 +88,6 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 
     let redirectTo = href("/");
 
-    if (authedUser?.membership?.role_name === "Viewer") {
-      redirectTo = href("/workspace/viewer");
-    }
-
     if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
       redirectTo = redirect_to;
     }

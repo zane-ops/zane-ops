@@ -38,15 +38,10 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 
   const queryClient = getQueryClient();
 
-  const [authedUser] = await Promise.all([
-    // `staleTime: 0` force refetch, while `fetchQuery` writes in the cache
-    queryClient.fetchQuery({ ...userQueries.authedUser, staleTime: 0 }),
+  await Promise.all([
+    queryClient.invalidateQueries(userQueries.authedUser),
     queryClient.invalidateQueries(userQueries.memberships)
   ]);
-
-  if (authedUser?.membership?.role_name === "Viewer") {
-    throw redirect(href("/workspace/viewer"));
-  }
 
   throw redirect(href("/workspace"));
 }

@@ -48,10 +48,6 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     getCurrentWorkspace(queryClient)
   ]);
 
-  if (!hasMinRole(authedUser, "Member")) {
-    throw redirect(href("/workspace/viewer"));
-  }
-
   const searchParams = new URL(request.url).searchParams;
 
   const search = projectSearchSchema.parse(searchParams);
