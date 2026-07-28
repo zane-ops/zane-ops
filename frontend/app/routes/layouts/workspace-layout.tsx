@@ -8,7 +8,7 @@ import { WorkspaceProjectListHeaderDropdown } from "~/components/header/workspac
 import { createDevLogger } from "~/lib/logger";
 import { projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, hasMinRole, metaTitle } from "~/lib/utils";
+import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/workspace-layout";
 
 const logger = createDevLogger(import.meta.url);
@@ -33,14 +33,10 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
     throw redirect(href("/"));
   }
 
-  const isMember = hasMinRole(user, "Member");
-
   const [projects, currentProject] = await Promise.all([
-    isMember
-      ? queryClient.ensureQueryData(
-          projectQueries.list({ workspaceId: workspace.id })
-        )
-      : [],
+    queryClient.ensureQueryData(
+      projectQueries.list({ workspaceId: workspace.id })
+    ),
     params.projectSlug
       ? queryClient.ensureQueryData(
           projectQueries.single(workspace.id, params.projectSlug)
