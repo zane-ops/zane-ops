@@ -20,7 +20,7 @@ Other permission classes ([permissions.py](../zane_api/permissions.py)):
 - `InternalZaneAppPermission` — Basic auth with `zaneops:$SECRET_KEY`, for internal agents (fluentd).
 - `AllowAny` / `IsAuthenticated` — DRF built-ins.
 
-The DRF default (`settings.REST_FRAMEWORK.DEFAULT_PERMISSION_CLASSES`, [settings.py:294](../backend/settings.py#L294)) is **`[HasWorkspace, IsWorkspaceViewer]`**. Five views rely on it rather than declaring their own: `SettingsView`, `SwitchWorkspaceAPIView`, `WorkspaceLeaveAPIView`, `ProjectServiceListAPIView`, `HttpLogsFieldsAPIView`.
+The DRF default (`settings.REST_FRAMEWORK.DEFAULT_PERMISSION_CLASSES`, [settings.py:294](../backend/settings.py#L294)) is **`[HasWorkspace, IsWorkspaceViewer]`**, but every view now declares its own — nothing falls through. Since the default is the *loosest* role, a view that forgets to declare silently becomes Viewer-reachable; new views should always be explicit.
 
 ## Project scoping
 
@@ -42,6 +42,8 @@ These views override `get_permissions()`, so read is looser than write. Listed o
 | `/api/projects/{slug}/environment-details/{env_slug}` | GET, PATCH, DELETE | Member | Admin | [environments.py:445](../zane_api/views/environments.py#L445) |
 | `/api/projects/{project_slug}/{env_slug}/variables` | GET, POST | Member | Admin | [environments.py:589](../zane_api/views/environments.py#L589) |
 | `/api/projects/{project_slug}/{env_slug}/variables/{pk}` | GET, PUT, PATCH, DELETE | Member | Admin | [environments.py:589](../zane_api/views/environments.py#L589) |
+| `/api/projects/{project_slug}/{env_slug}/service-details/{slug}` | GET, PATCH | **Viewer** | Member | [docker_services.py:1158](../zane_api/views/docker_services.py#L1158) |
+| `/api/compose/stacks/{project_slug}/{env_slug}/{slug}` | GET, PUT | **Viewer** | Member | [stacks.py:343](../compose/views/stacks.py#L343) |
 | `/api/registries/credentials` | GET, POST | Member | Admin | [credentials.py:24](../container_registry/views/credentials.py#L24) |
 | `/api/registries/credentials/{id}` | GET, PATCH, DELETE | Member | Admin | [credentials.py:159](../container_registry/views/credentials.py#L159) |
 | `/api/connectors/{id}` | GET, DELETE | Member | Admin | [generic.py:33](../git_connectors/views/generic.py#L33) |
@@ -89,18 +91,41 @@ The `{deploy_token}` and webhook routes are `AllowAny` but authenticate on the s
 
 ## `HasWorkspace + IsWorkspaceViewer`
 
+A Viewer sees what an app *is* and whether it is up — names, public URLs, status, deployment history, metrics. Never logs, env variables, deploy tokens, the member list or detected ports.
+
 | Method | Path | View |
 | --- | --- | --- |
-| GET | `/api/settings` | [settings.py:21](../zane_api/views/settings.py#L21) `SettingsView` *(default)* |
-| POST | `/api/workspaces/switch` | [workspace.py:377](../zane_api/views/workspace.py#L377) `SwitchWorkspaceAPIView` *(default)* |
-| POST | `/api/workspace/leave` | [workspace.py:406](../zane_api/views/workspace.py#L406) `WorkspaceLeaveAPIView` *(default)* |
-| GET | `/api/projects/{slug}/{env_slug}/service-list` | [projects.py:369](../zane_api/views/projects.py#L369) `ProjectServiceListAPIView` *(default)* |
-| GET | `/api/http-logs/fields` | [logs.py:272](../zane_api/views/logs.py#L272) `HttpLogsFieldsAPIView` *(default)* |
+| GET | `/api/settings` | [settings.py:21](../zane_api/views/settings.py#L21) `SettingsView` |
+| GET | `/api/server/resource-limits` | [settings.py:48](../zane_api/views/settings.py#L48) `ResourceLimitsView` |
+| POST | `/api/workspaces/switch` | [workspace.py:377](../zane_api/views/workspace.py#L377) `SwitchWorkspaceAPIView` |
+| POST | `/api/workspace/leave` | [workspace.py:406](../zane_api/views/workspace.py#L406) `WorkspaceLeaveAPIView` |
 | GET | `/api/search-resources` | [search.py:36](../zane_api/views/search.py#L36) `ResourceSearchAPIView` |
+| GET | `/api/projects/{slug}/{env_slug}/service-list` | [projects.py:369](../zane_api/views/projects.py#L369) `ProjectServiceListAPIView` |
+| GET | `/api/recent-deployments` | [deployments.py:724](../zane_api/views/deployments.py#L724) `RecentDeploymentsAPIView` |
+| GET | `.../service-details/{service_slug}/deployments` | [deployments.py:603](../zane_api/views/deployments.py#L603) `ServiceDeploymentsAPIView` |
+| GET | `.../service-details/{service_slug}/deployments/{deployment_hash}` | [deployments.py:670](../zane_api/views/deployments.py#L670) `ServiceDeploymentSingleAPIView` |
+| GET | `.../service-details/{service_slug}/metrics` | [metrics.py:40](../zane_api/views/metrics.py#L40) `ServiceMetricsAPIView` |
+| GET | `.../deployments/{deployment_hash}/metrics` | [metrics.py:40](../zane_api/views/metrics.py#L40) `ServiceMetricsAPIView` |
+| GET | `/api/compose/stacks/{project_slug}/{env_slug}` | [stacks.py:72](../compose/views/stacks.py#L72) `ComposeStackListAPIView` |
+| GET | `.../{slug}/deployments` | [stacks.py:506](../compose/views/stacks.py#L506) `ComposeStackDeploymentListAPIView` |
+| GET | `.../{slug}/deployments/{hash}` | [stacks.py:562](../compose/views/stacks.py#L562) `ComposeStackDeploymentDetailsAPIView` |
+| GET | `.../{slug}/metrics` | [metrics.py:39](../compose/views/metrics.py#L39) `ComposeStackMetricsAPIView` |
 
-*(plus `GET /api/workspace` from the method-dependent table above)*
+*(plus `GET /api/workspace`, `GET service-details/{slug}` and `GET` on the compose stack details, from the method-dependent table above)*
 
 The workspace owner cannot leave the workspace ([workspace.py:420](../zane_api/views/workspace.py#L420)).
+
+### Field-level stripping
+
+The role check alone is not enough on these payloads: `deploy_token` is a working credential for the `AllowAny` webhook routes, and the service/stack bodies carry env variables and registry credentials. `to_representation()` drops them below Member, driven by `get_sensitive_fields()` on the model and `has_min_role()` ([permissions.py:58](../zane_api/permissions.py#L58)):
+
+| Model | Stripped below Member |
+| --- | --- |
+| `Service` ([models/main.py:433](../zane_api/models/main.py#L433)) | `deploy_token`, `env_variables`, `system_env_variables`, `credentials`, `container_registry_credentials`, `unapplied_changes` |
+| `ComposeStack` ([compose/models.py:108](../compose/models.py#L108)) | `deploy_token`, `user_content`, `computed_content`, `env_overrides`, `configs`, `unapplied_changes` |
+| `ComposeStackDeployment` ([compose/models.py:392](../compose/models.py#L392)) | `changes` |
+
+This applies to the nested snapshots too (`service_snapshot`, `stack_snapshot`), so the deployment endpoints don't leak what service details hides. Stripping happens at serialization time only — the snapshot persisted in the DB keeps every field, since redeploys need them.
 
 ## `HasWorkspace + IsWorkspaceMember`
 
@@ -108,7 +133,6 @@ The workspace owner cannot leave the workspace ([workspace.py:420](../zane_api/v
 
 | Method | Path | View |
 | --- | --- | --- |
-| GET, PATCH | `/api/projects/{project_slug}/{env_slug}/service-details/{slug}` | [docker_services.py:1158](../zane_api/views/docker_services.py#L1158) `ServiceDetailsAPIView` |
 | POST | `/api/projects/{project_slug}/{env_slug}/create-service/docker` | [docker_services.py:109](../zane_api/views/docker_services.py#L109) `CreateDockerServiceAPIView` |
 | POST | `/api/projects/{project_slug}/{env_slug}/create-service/git` | [git_services.py:85](../zane_api/views/git_services.py#L85) `CreateGitServiceAPIView` |
 | PUT | `/api/projects/{project_slug}/{env_slug}/request-service-changes/{service_slug}` | [docker_services.py:218](../zane_api/views/docker_services.py#L218) `RequestServiceChangesAPIView` |
@@ -131,21 +155,17 @@ The workspace owner cannot leave the workspace ([workspace.py:420](../zane_api/v
 | PUT | `/api/projects/{project_slug}/{env_slug}/bulk-deploy-services` | [deployments.py:327](../zane_api/views/deployments.py#L327) `BulkDeployServicesAPIView` |
 | PUT | `/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/cleanup-deployment-queue` | [deployments.py:416](../zane_api/views/deployments.py#L416) `CleanupDeploymentQueueAPIView` |
 | PATCH | `/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/regenerate-deploy-token` | [deployments.py:70](../zane_api/views/deployments.py#L70) `RegenerateServiceDeployTokenAPIView` |
-| GET | `/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments` | [deployments.py:603](../zane_api/views/deployments.py#L603) `ServiceDeploymentsAPIView` |
-| GET | `/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}` | [deployments.py:670](../zane_api/views/deployments.py#L670) `ServiceDeploymentSingleAPIView` |
-| GET | `/api/recent-deployments` | [deployments.py:724](../zane_api/views/deployments.py#L724) `RecentDeploymentsAPIView` |
 
-### Logs & metrics
+### Logs
 
 | Method | Path | View |
 | --- | --- | --- |
 | GET | `/api/http-logs` | [logs.py:335](../zane_api/views/logs.py#L335) `HttpLogsAPIView` |
+| GET | `/api/http-logs/fields` | [logs.py:270](../zane_api/views/logs.py#L270) `HttpLogsFieldsAPIView` |
 | GET | `/api/http-logs/{request_uuid}` | [logs.py:391](../zane_api/views/logs.py#L391) `SingleHttpLogAPIView` |
 | GET | `.../deployments/{deployment_hash}/runtime-logs` | [logs.py:429](../zane_api/views/logs.py#L429) `ServiceDeploymentRuntimeLogsAPIView` |
 | GET | `.../deployments/{deployment_hash}/runtime-logs/with-context/{time}` | [logs.py:489](../zane_api/views/logs.py#L489) `ServiceDeploymentRuntimeLogsWithContextAPIView` |
 | GET | `.../deployments/{deployment_hash}/build-logs` | [logs.py:554](../zane_api/views/logs.py#L554) `ServiceDeploymentBuildLogsAPIView` |
-| GET | `.../service-details/{service_slug}/metrics` | [metrics.py:40](../zane_api/views/metrics.py#L40) `ServiceMetricsAPIView` |
-| GET | `.../deployments/{deployment_hash}/metrics` | [metrics.py:40](../zane_api/views/metrics.py#L40) `ServiceMetricsAPIView` |
 
 ### Compose stacks
 
@@ -153,22 +173,17 @@ Paths below are relative to `/api/compose/stacks/{project_slug}/{env_slug}`.
 
 | Method | Path | View |
 | --- | --- | --- |
-| GET | `` (list) | [stacks.py:72](../compose/views/stacks.py#L72) `ComposeStackListAPIView` |
 | POST | `/create` | [stacks.py:307](../compose/views/stacks.py#L307) `ComposeStackCreateAPIView` |
 | POST | `/create-from-dokploy/base-64` | [stacks.py:115](../compose/views/stacks.py#L115) `ComposeStackCreateFromDokployBase64APIView` |
 | POST | `/create-from-dokploy/object` | [stacks.py:210](../compose/views/stacks.py#L210) `ComposeStackCreateFromDokployObjectAPIView` |
-| GET, PUT | `/{slug}` | [stacks.py:343](../compose/views/stacks.py#L343) `ComposeStackDetailsAPIView` |
 | PUT | `/{slug}/request-changes` | [stacks.py:981](../compose/views/stacks.py#L981) `ComposeStackRequestChangesAPIView` |
 | DELETE | `/{slug}/cancel-changes/{change_id}` | [stacks.py:914](../compose/views/stacks.py#L914) `ComposeStackCancelChangesAPIView` |
 | PUT | `/{slug}/deploy` | [stacks.py:841](../compose/views/stacks.py#L841) `ComposeStackDeployAPIView` |
 | PUT | `/{slug}/deploy/{hash}` | [stacks.py:622](../compose/views/stacks.py#L622) `ComposeStackReDeployAPIView` |
-| GET | `/{slug}/deployments` | [stacks.py:506](../compose/views/stacks.py#L506) `ComposeStackDeploymentListAPIView` |
-| GET | `/{slug}/deployments/{hash}` | [stacks.py:562](../compose/views/stacks.py#L562) `ComposeStackDeploymentDetailsAPIView` |
 | PUT | `/{slug}/deployments/{hash}/cancel` | [stacks.py:1077](../compose/views/stacks.py#L1077) `CancelComposeStackDeploymentAPIView` |
 | GET | `/{slug}/deployments/{hash}/build-logs` | [logs.py:82](../compose/views/logs.py#L82) `ComposeStackDeploymentBuildLogsAPIView` |
 | GET | `/{slug}/runtime-logs` | [logs.py:28](../compose/views/logs.py#L28) `ComposeStackRuntimeLogsAPIView` |
 | GET | `/{slug}/runtime-logs/with-context/{time}` | [logs.py:147](../compose/views/logs.py#L147) `ComposeStackRuntimeLogsWithContextAPIView` |
-| GET | `/{slug}/metrics` | [metrics.py:39](../compose/views/metrics.py#L39) `ComposeStackMetricsAPIView` |
 | PUT | `/{slug}/toggle` | [stacks.py:1169](../compose/views/stacks.py#L1169) `ToggleComposeStackAPIView` |
 | PUT | `/{slug}/regenerate-deploy-token` | [stacks.py:398](../compose/views/stacks.py#L398) `ComposeStackRegenerateDeployTokenAPIView` |
 
@@ -183,7 +198,6 @@ Paths below are relative to `/api/compose/stacks/{project_slug}/{env_slug}`.
 | GET | `/api/connectors/gitlab/{id}` | [gitlab.py:297](../git_connectors/views/gitlab.py#L297) `GitlabAppDetailsAPIView` |
 | GET | `/api/registries/credentials/{id}/test` | [credentials.py:50](../container_registry/views/credentials.py#L50) `TestSharedRegistryCredentialsAPIView` |
 | GET | `/api/docker/image-search` | [docker.py:25](../zane_api/views/docker.py#L25) `DockerImageSearchView` |
-| GET | `/api/server/resource-limits` | [settings.py:48](../zane_api/views/settings.py#L48) `ResourceLimitsView` |
 | GET | `/api/workspace/members` | [workspace.py:187](../zane_api/views/workspace.py#L187) `ListWorkspaceMembersAPIView` |
 
 ## `HasWorkspace + IsWorkspaceAdmin`
