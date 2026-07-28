@@ -301,9 +301,9 @@ class ViewerComposeStackSecretFieldsViewTests(ViewerComposeStackTestBase):
                 },
             )
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
         data = response.json()
         jprint(data)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         for stack in data:
             non_stripped_fields = self.STACK_MEMBER_ONLY_FIELDS & stack.keys()
@@ -323,14 +323,14 @@ class ViewerComposeStackSecretFieldsViewTests(ViewerComposeStackTestBase):
                 },
             )
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
         snapshot = response.json()["stack_snapshot"]
         jprint(snapshot)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
         non_stripped_fields = self.SNAPSHOT_MEMBER_ONLY_FIELDS & snapshot.keys()
         self.assertEqual(EMPTY_SET, non_stripped_fields)
 
-    def test_member_sees_changes_in_stack_deployment(self):
+    def test_member_sees_secret_fields_in_stack_deployment(self):
         project, stack = self.create_compose_stack(
             content=DOCKER_COMPOSE_WEB_SERVICE, slug="my-stack"
         )
@@ -368,7 +368,7 @@ class ViewerComposeStackSecretFieldsViewTests(ViewerComposeStackTestBase):
         )
         self.assertEqual(EMPTY_SET, missing_fields)
 
-    def test_viewer_does_not_see_changes_in_stack_deployment(self):
+    def test_viewer_does_not_see_secret_fields_in_stack_deployment(self):
         """
         `changes` records carry the compose content and env overrides in their
         `old_value` / `new_value`.
@@ -386,10 +386,10 @@ class ViewerComposeStackSecretFieldsViewTests(ViewerComposeStackTestBase):
                 },
             )
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
         data = response.json()
         jprint(data)
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Check that deployment does not contain secret fields
         non_stripped_fields = self.DEPLOYMENT_MEMBER_ONLY_FIELDS & data.keys()

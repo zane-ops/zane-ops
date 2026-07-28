@@ -338,6 +338,33 @@ class ComposeStackDeploymentSerializer(serializers.ModelSerializer):
     def get_redeploy_hash(self, obj: ComposeStackDeployment):
         return obj.is_redeploy_of.hash if obj.is_redeploy_of is not None else None
 
+    def get_fields(self):
+        fields = super().get_fields()
+        sensitive_fields = ComposeStackDeployment.get_sensitive_fields()
+        for field_name, field in fields.items():
+            field.allow_null = field.allow_null or field_name in sensitive_fields
+
+        return fields
+
+    def to_representation(self, instance: ComposeStack):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(request, WorkspaceRole.MEMBER):
+            sensitive_fields = ComposeStackDeployment.get_sensitive_fields()
+            for key in dict(data):
+                if key in sensitive_fields:
+                    data.pop(key)
+
+            snapshot = data.get("stack_snapshot")
+            if snapshot is not None:
+                service_sensitive_fields = ComposeStack.get_sensitive_fields()
+                for key in dict(snapshot):
+                    if key in service_sensitive_fields:
+                        data["stack_snapshot"].pop(key)
+
+        return data
+
     class Meta:
         model = ComposeStackDeployment
         fields = [

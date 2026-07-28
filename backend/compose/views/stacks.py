@@ -76,7 +76,7 @@ class ComposeStackListAPIView(ListAPIView):
     pagination_class = None
     filter_backends = [DjangoFilterBackend]
     filterset_class = ComposeStacksListFilterSet
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     def get_queryset(self) -> QuerySet[ComposeStack]:  # type: ignore
         project_slug = self.kwargs["project_slug"]
@@ -346,7 +346,11 @@ class ComposeStackDetailsAPIView(RetrieveUpdateAPIView):
     lookup_field = "slug"
     http_method_names = ["get", "put"]
     queryset = ComposeStack.objects.all()
-    permission_classes = [HasWorkspace, IsWorkspaceViewer]
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [HasWorkspace(), IsWorkspaceViewer()]
+        return [HasWorkspace(), IsWorkspaceMember()]
 
     @extend_schema(
         operation_id="getComposeStackDetails",
@@ -510,7 +514,7 @@ class ComposeStackDeploymentListAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = ComposeStackDeploymentListFilterSet
     pagination_class = ComposeStackDeploymentListPagination
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     @extend_schema(
         operation_id="listComposeStackDeployments",
@@ -564,7 +568,7 @@ class ComposeStackDeploymentDetailsAPIView(RetrieveAPIView):
     serializer_class = ComposeStackDeploymentSerializer
     lookup_field = "hash"
     queryset = ComposeStackDeployment.objects.all()
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     @extend_schema(
         operation_id="getComposeStackDeploymentDetails",

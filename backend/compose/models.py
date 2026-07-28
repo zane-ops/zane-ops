@@ -388,6 +388,10 @@ class ComposeStackDeployment(TimestampedModel):
     def workflow_id(self):
         return f"deploy-compose-{self.stack.id}"
 
+    @staticmethod
+    def get_sensitive_fields():
+        return ["changes"]
+
     class Meta:  # type: ignore
         ordering = ["-queued_at"]
         indexes = [models.Index(fields=["queued_at"]), models.Index(fields=["status"])]
