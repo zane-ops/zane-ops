@@ -30,6 +30,7 @@ import {
   FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
 import { WorkspaceRoleBadge } from "~/components/workspace-role-badge";
+import { createDevLogger } from "~/lib/logger";
 import { userQueries, workspaceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -49,6 +50,8 @@ export function meta() {
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
+const logger = createDevLogger(import.meta.url);
+
 export async function clientLoader({
   params,
   request
@@ -65,9 +68,7 @@ export async function clientLoader({
     const params = new URLSearchParams([["redirect_to", url.pathname]]);
 
     const redirectPathName = [href("/login"), "?", params.toString()].join("");
-    console.log(
-      `[workspace-invitation/clientLoader] redirect to \`${redirectPathName}\``
-    );
+    logger.info(`redirect to \`${redirectPathName}\``);
     throw redirect(redirectPathName);
   }
 

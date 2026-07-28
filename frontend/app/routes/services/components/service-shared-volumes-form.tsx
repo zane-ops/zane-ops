@@ -37,6 +37,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { createDevLogger } from "~/lib/logger";
 import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { useCurrentWorkspace } from "~/lib/workspace-store";
@@ -44,6 +45,8 @@ import {
   useFetcherWithCallbacks,
   useServiceQuery
 } from "~/routes/services/settings/service-settings";
+
+const logger = createDevLogger(import.meta.url);
 
 export type ServiceSharedVolumesFormProps = {
   project_slug: string;
@@ -160,10 +163,6 @@ function ServiceSharedVolumeItem({
 
     return map;
   }, [volumes, volume]);
-
-  console.log({
-    volumeMap
-  });
 
   const {
     fetcher: updateFetcher,

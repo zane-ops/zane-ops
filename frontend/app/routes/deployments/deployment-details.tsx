@@ -65,6 +65,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { createDevLogger } from "~/lib/logger";
 import { deploymentQueries } from "~/lib/queries";
 import {
   capitalizeText,
@@ -78,6 +79,8 @@ import {
   useCurrentWorkspace,
   useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
+
+const logger = createDevLogger(import.meta.url);
 
 hljs.registerLanguage("json", json);
 
@@ -543,16 +546,17 @@ export default function DeploymentDetailsPage({
                             variant="ghost"
                             className="px-2.5 py-0.5 absolute top-2 right-2"
                             onClick={() => {
+                              const copyString = JSON.stringify(
+                                deployment.service_snapshot,
+                                null,
+                                2
+                              );
                               navigator.clipboard
-                                .writeText(
-                                  JSON.stringify(
-                                    deployment.service_snapshot,
-                                    null,
-                                    2
-                                  )
-                                )
+                                .writeText(copyString)
                                 .then(() => {
-                                  console.log("copied !");
+                                  logger
+                                    .scope("copyServiceSnapshot")
+                                    .info("copied !", { copyString });
                                   // show pending state (which is success state), until the user has stopped clicking the button
                                   startTransition(() => wait(1000));
                                 });

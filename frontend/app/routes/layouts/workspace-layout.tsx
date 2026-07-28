@@ -5,10 +5,13 @@ import { ProjectEnvironmentListHeaderHeaderDropdown } from "~/components/header/
 import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
 import { WorkspaceMembershipListHeaderDropdown } from "~/components/header/workspace-list-header-dropdown";
 import { WorkspaceProjectListHeaderDropdown } from "~/components/header/workspace-project-list-header-dropdown";
+import { createDevLogger } from "~/lib/logger";
 import { projectQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, hasMinRole, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/workspace-layout";
+
+const logger = createDevLogger(import.meta.url);
 
 export function meta() {
   return [
@@ -26,7 +29,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const workspace = user?.membership?.workspace;
 
   if (!workspace) {
-    console.log("[workspace-layout/clientLoader] redirect to `/`");
+    logger.info("redirect to `/`");
     throw redirect(href("/"));
   }
 

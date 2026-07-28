@@ -1,5 +1,8 @@
 import { QueryClient, keepPreviousData } from "@tanstack/react-query";
+import { createDevLogger } from "~/lib/logger";
 import { durationToMs } from "~/lib/utils";
+
+const logger = createDevLogger(import.meta.url);
 
 export function makeQueryClient() {
   return new QueryClient({
@@ -21,16 +24,14 @@ let browserQueryClient: QueryClient | undefined;
 
 export function getQueryClient() {
   if (typeof window === "undefined") {
-    console.log("[getQueryClient] call makeQueryClient() from server");
+    logger.info("call makeQueryClient() from server");
     return makeQueryClient();
   }
   if (!browserQueryClient) {
-    console.log("[getQueryClient] Creating browserQueryClient", {
-      browserQueryClient
-    });
+    logger.info("Creating browserQueryClient", { browserQueryClient });
     browserQueryClient = makeQueryClient();
   } else {
-    console.log("[getQueryClient] Returning singleton browserQueryClient", {
+    logger.info("Returning singleton browserQueryClient", {
       browserQueryClient
     });
   }

@@ -21,11 +21,14 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { createDevLogger } from "~/lib/logger";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   type clientAction,
   useServiceQuery
 } from "~/routes/services/settings/service-settings";
+
+const logger = createDevLogger(import.meta.url);
 
 export type ServiceAutoDeployFormProps = {
   service_slug: string;
@@ -100,9 +103,6 @@ export function ServiceAutoDeployForm({
               defaultChecked={service.auto_deploy_enabled}
               checked={autoDeployEnabled}
               onCheckedChange={(checked) => {
-                console.log({
-                  checked
-                });
                 setAutoDeployEnabled(Boolean(checked));
               }}
             />

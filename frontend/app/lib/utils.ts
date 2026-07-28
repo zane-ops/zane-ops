@@ -11,11 +11,14 @@ import type {
   WorkspaceRoleValue
 } from "~/api/types";
 import { WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
+import { createDevLogger } from "~/lib/logger";
 import type {
   DotNotationToObject,
   MergeUnions,
   RecursivePartial
 } from "~/lib/types";
+
+const logger = createDevLogger(import.meta.url);
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -629,13 +632,15 @@ export function hasMinRole(
   const membership = "membership" in user ? user.membership : user;
 
   const hasRole = Boolean(
-    membership && membership.role >= WORKSPACE_ROLE_MAPPING[roleName]
+    membership && membership.role >= WORKSPACE_ROLE_MAPPING[roleName].value
   );
-  console.log("[hasMinRole]", {
+
+  logger.info({
     membership,
     roleName,
     hasRole
   });
+
   return hasRole;
 }
 

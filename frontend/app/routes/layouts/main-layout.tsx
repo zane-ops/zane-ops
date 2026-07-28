@@ -21,9 +21,12 @@ import { cn, hasMinRole } from "~/lib/utils";
 
 import type { ServerSettings } from "~/api/types";
 import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
+import { createDevLogger } from "~/lib/logger";
 import { getQueryClient } from "~/lib/query-client";
 import { syncWorkspaceStore } from "~/lib/workspace-store";
 import type { Route } from "./+types/main-layout";
+
+const logger = createDevLogger(import.meta.url);
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
@@ -34,7 +37,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   ]);
 
   if (!userExistQuery.data?.exists) {
-    console.log("[main-layout/clientLoader] redirect to `/onboarding`");
+    logger.info("redirect to `/onboarding`");
     throw redirect(href("/onboarding"));
   }
 
@@ -48,9 +51,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
       redirectPathName = [href("/login"), "?", params.toString()].join("");
     }
 
-    console.log(
-      `[main-layout/clientLoader] redirect to \`${redirectPathName}\``
-    );
+    logger.info(`redirect to \`${redirectPathName}\``);
     throw redirect(redirectPathName);
   }
 

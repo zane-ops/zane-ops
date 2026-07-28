@@ -28,6 +28,7 @@ import {
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
+import { createDevLogger } from "~/lib/logger";
 import {
   ensureMinRole,
   sharedRegistryCredentialsQueries,
@@ -45,6 +46,8 @@ import {
   useCurrentWorkspace
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/registry-credentials-details";
+
+const logger = createDevLogger(import.meta.url);
 
 export function meta() {
   return [
@@ -269,11 +272,6 @@ export async function clientAction({
   const formData = await request.formData();
 
   const intent = formData.get("intent");
-
-  console.log({
-    intent,
-    data: Object.fromEntries(formData.entries())
-  });
 
   switch (intent) {
     case "update":
