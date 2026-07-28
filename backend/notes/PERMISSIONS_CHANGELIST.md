@@ -28,11 +28,11 @@ A Viewer reads the token off the detail response and deploys. Read-only role, wr
 
 ## 2. Viewer — remove
 
-| Capability | Drafted | Change to | Why |
-|---|---|---|---|
-| View logs (runtime, build, HTTP) | Viewer | **Member** | Apps print connection strings on startup failures; stack traces carry tokens; build logs echo build args and registry creds. Contradicts the env-var restriction one row below it. |
-| List workspace members | Viewer | **Member** | An outsider doesn't need the team roster. Netlify's Reviewer doesn't get it. |
-| View detected ports | Viewer | **Member** | *(minor)* Internal config detail, not product surface. Low impact — drop only if it's free. |
+| Capability                       | Drafted | Change to  | Why                                                                                                                                                                                |
+| -------------------------------- | ------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| View logs (runtime, build, HTTP) | Viewer  | **Member** | Apps print connection strings on startup failures; stack traces carry tokens; build logs echo build args and registry creds. Contradicts the env-var restriction one row below it. |
+| List workspace members           | Viewer  | **Member** | An outsider doesn't need the team roster. Netlify's Reviewer doesn't get it.                                                                                                       |
+| View detected ports              | Viewer  | **Member** | *(minor)* Internal config detail, not product surface. Low impact — drop only if it's free.                                                                                        |
 
 Viewer **keeps** metrics and deployment status/history. That's the health signal without the payload, and it matches Render's Viewer, which gets events and metrics but explicitly no logs.
 
@@ -55,10 +55,10 @@ Not: logs of any kind, env variables, deploy tokens, terminal, member list, conf
 
 Owner-only currently covers routine work. On a small team that means either the Owner gets pinged weekly or the team shares the Owner login — the second is what actually happens, and it's worse than granting the permission.
 
-| Capability | Drafted | Change to |
-|---|---|---|
-| Git connectors — setup / create / edit / delete | Owner | **Admin** |
-| Registry credentials — create / edit / delete | Owner | **Admin** |
+| Capability                                      | Drafted | Change to |
+| ----------------------------------------------- | ------- | --------- |
+| Git connectors — setup / create / edit / delete | Owner   | **Admin** |
+| Registry credentials — create / edit / delete   | Owner   | **Admin** |
 
 Owner keeps only the irreversible and the financial: transfer ownership, delete workspace, edit workspace settings.
 
@@ -75,6 +75,10 @@ The draft puts "Manage env variables" (environment-level) at **Member**; today w
 ---
 
 ## 5. Building block for later — single deploy check
+
+**Deferred — nothing to do yet.** This ships as a pure no-op; its only value is making protected environments (§6) a one-function change instead of fourteen edits. Kept here so it isn't re-derived when that feature is scheduled.
+
+> Since this was written, [`has_min_role(request, role)`](../zane_api/permissions.py#L58) landed for the field-level stripping in §1. That makes the `get_workspace_role()` helper below redundant — `can_deploy` becomes `return has_min_role(request, WorkspaceRole.MEMBER)`, and only the `environment` argument is new.
 
 Deploy authorization is currently repeated as `permission_classes` across ~12 deploy / redeploy / toggle views. Collapsing it into one helper makes protected environments a one-function change later instead of twelve edits. No model change needed now.
 
@@ -129,11 +133,12 @@ check_can_deploy(request, environment)
 
 - **Contributor role (20).** The slot stays commented out. Its only unique contribution was "deploys but can't read secrets", which is advisory anyway for git services — anyone who controls the code can print the environment to stdout. Revisit if a paying team asks.
 - **Protected environments** (`Environment.is_protected`, Member deploys unprotected / Admin deploys protected). Right feature, wrong time — this is what every competitor uses for the prod gate, but small teams don't need it. Item 5 keeps it cheap to add.
-- **EE-gating Viewer.** Render can put Viewer behind Scale+ because it sells to enterprises. The right comparable is Netlify's Reviewer: free and unlimited, because the point is inviting people who aren't on your team. Gating it kills the one role that earns its keep at this size.
 
 ---
 
 ## 7. UI labels — the important part
+
+**Applied.**
 
 At this team size the invite dropdown does more enforcement than the permission classes. The failure mode is not privilege escalation, it's **someone picking the wrong role for their contractor**. A Viewer granted Member by mistake is the realistic incident.
 
@@ -141,17 +146,57 @@ Every role needs a one-line consequence, not a job title. Name what the role *ca
 
 ### Invite / role-picker copy
 
-| Role | Label | Helper text |
-|---|---|---|
-| Viewer | **Viewer** — read-only | For clients, stakeholders and contractors. Can see your apps, their URLs and whether they're up. **Cannot see logs, environment variables, or deploy.** Limited to the projects you pick. |
-| Member | **Member** — full access | For your team. Can create, configure and deploy services, and read all environment variables and logs. Cannot delete services or projects, or manage members. |
-| Admin | **Admin** — manages the workspace | Everything a Member can do, plus deleting services and projects, managing environments, connectors and registries, and inviting people. |
-| Owner | **Owner** | Owns the workspace and the server. Only the Owner can change workspace settings, transfer ownership or delete the workspace. |
+| Role   | Label                             | Helper text                                                                                                                                                                               |
+| ------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Viewer | **Viewer** — read-only            | For clients, stakeholders and contractors. Can see your apps, their URLs and whether they're up. **Cannot see logs, environment variables, or deploy.** Limited to the projects you pick. |
+| Member | **Member** — full access          | For your team. Can create, configure and deploy services, and read all environment variables and logs. Cannot delete services or projects, or manage members.                             |
+| Admin  | **Admin** — manages the workspace | Everything a Member can do, plus deleting services and projects, managing environments, connectors and registries, and inviting people.                                                   |
+| Owner  | **Owner**                         | Owns the workspace and the server. Only the Owner can change workspace settings, transfer ownership or delete the workspace.                                                              |
 
 ### Rules
 
-- **Default to Member.** Already the case ([main.py:122](../zane_api/models/main.py#L122)). Viewer must be a deliberate choice, never a default someone clicks past.
+- **Default to Member.** Already the case on the model ([main.py:122](../zane_api/models/main.py#L122)) — but the invite form defaulted its dropdown to **Viewer**, so every invite started on the wrong tier. Fixed.
 - **Viewer requires picking projects.** The project selector should be part of the invite flow, not a settings page visited afterwards — an unscoped Viewer is the accident this prevents.
 - **Say "cannot" out loud on Viewer.** "Read-only" is not specific enough; people assume read-only includes logs. It doesn't, and that's the whole point of the tier.
 - **Owner is not selectable.** It's reached only through transfer of ownership.
-- **Show the role on the member list**, not just in the invite dialog. Misassignments are found by scanning the roster, not by re-opening an invite.
+- **Show the role on the member list**, not just in the invite dialog. Misassignments are found by scanning the roster, not by re-opening an invite. Already there — the members table has a Role column.
+- **Viewer requires picking projects** was already satisfied: the project multi-select appears inline in both the invite and edit-permissions forms when Viewer is selected, and the backend rejects an empty list ([serializers/workspace.py:78](../zane_api/views/serializers/workspace.py#L78)).
+
+Copy lives on `WORKSPACE_ROLE_MAPPING` ([constants.tsx:202](../../frontend/app/lib/constants.tsx#L202)), alongside each role's numeric value so there is a single constant describing roles — a `summary` shown beside the role name in the dropdown, and a `description` shown under the picker for the selected role and in a tooltip on the members table role badges. The forms render it inline rather than sharing a component.
+
+---
+
+## 8. Frontend route guards — out of sync with the backend
+
+Worth its own section rather than folding into §7: only part of it is mechanical, and the non-mechanical part is a hole rather than an annoyance.
+
+`ensureMinRole()` throws `notFound()` ([queries.ts:99](../../frontend/app/lib/queries.ts#L99)), so a guard that is too strict shows a **404**, not a 403. A user who genuinely has the permission is told the page does not exist — which reads as a bug, not as a permission error.
+
+### 8a. Guards still asking for Owner *(mechanical)*
+
+§3 moved these to Admin on the backend; the frontend still gates them at Owner, so an Admin gets a 404 on a page they can now use.
+
+| Route | Should be |
+|---|---|
+| `settings/git-apps-list.tsx:45` | Admin |
+| `settings/create-github-app.tsx:29` | Admin |
+| `settings/create-gitlab-app.tsx:32` | Admin |
+| `settings/gitlab-app-details.tsx:33` | Admin |
+| `settings/create-registry-credentials.tsx:47` | Admin |
+| `settings/registry-credentials-details.tsx:57` | Admin |
+| `settings/registry-credentials-list.tsx:50` | **Member** — listing stayed Member, only create/edit/delete are Admin |
+| `services/create-private-git-service.tsx:106` | Admin — `hasMinRole`, gates the "set up a connector" branch |
+
+Note the list route is the odd one out: copying Admin everywhere would wrongly hide the credential list from Members who need to pick one when creating a service.
+
+### 8b. Guards still asking for Member *(not mechanical)*
+
+§2 granted the Viewer a real surface, but the frontend still assumes Viewer sees nothing. [workspace-layout.tsx:33](../../frontend/app/routes/layouts/workspace-layout.tsx#L33) skips the project list entirely unless `hasMinRole(user, "Member")`, and the nav tab sets in `deployment-layout`, `environment-layout` and `project-settings-layout` are Member-gated as a block.
+
+So a Viewer today logs in to an empty shell, even though the backend now serves them projects, services, stacks, deployments and metrics. Deciding what that UI *is* — which tabs survive, what a service detail page looks like with env vars and logs removed — is design work, not a guard swap. The dedicated `/workspace/viewer` route that used to stand in for this is gone.
+
+The rule to apply per route: **Viewer** for anything the backend now serves them (project list, service list and details, deployments, metrics, stacks); **Member** for logs, env variables, detected ports, terminal and the member list.
+
+### 8c. Unrelated but adjacent
+
+`hasMinRole` logs the full membership object to the browser console on every call ([utils.ts:634](../../frontend/app/lib/utils.ts#L634)). Leftover debugging — should go.

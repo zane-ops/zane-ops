@@ -11,7 +11,6 @@ from django.contrib.auth.models import AnonymousUser, AbstractUser
 from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
 from .models import Project
-from rest_framework.request import Request
 
 
 User = get_user_model()
