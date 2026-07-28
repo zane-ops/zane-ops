@@ -6,7 +6,6 @@ import {
   ContainerIcon,
   KeyRoundIcon,
   LoaderIcon,
-  type LucideIcon,
   Search,
   SettingsIcon
 } from "lucide-react";
@@ -22,7 +21,7 @@ import {
 } from "react-router";
 import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
-import { NavLink } from "~/components/nav-link";
+import { type NavItem, NavLink } from "~/components/nav-link";
 import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -103,12 +102,6 @@ export async function clientLoader({
 
   return { environment, project };
 }
-
-type NavItem = {
-  title: string;
-  href: string;
-  icon: LucideIcon;
-};
 
 export default function EnvironmentLayout({
   params,

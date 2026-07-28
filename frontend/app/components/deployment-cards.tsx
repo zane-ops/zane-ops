@@ -826,8 +826,9 @@ export function RecentDeploymentCard({
     serviceSlug: service_slug
   };
 
-  const deploymentCardLink = hasMinRole(membership, "Member")
-    ? isPending || status === "FAILED" || status === "CANCELLED"
+  const deploymentCardLink =
+    hasMinRole(membership, "Member") &&
+    (isPending || status === "FAILED" || status === "CANCELLED")
       ? href(
           "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
           urlParams
@@ -835,11 +836,7 @@ export function RecentDeploymentCard({
       : href(
           "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
           urlParams
-        )
-    : href(
-        "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/details",
-        urlParams
-      );
+        );
 
   return (
     <Card

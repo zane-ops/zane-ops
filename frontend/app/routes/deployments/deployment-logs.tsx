@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
-import { useSearchParams } from "react-router";
+import { href, redirect, useSearchParams } from "react-router";
 import { Virtuoso } from "react-virtuoso";
 import { useDebouncedCallback } from "use-debounce";
 import type { Writeable } from "zod";
@@ -43,10 +43,10 @@ import {
   LOG_LEVELS,
   deploymentLogSearchSchema,
   deploymentQueries,
-  userQueries
+  ensureAuthedUser
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, formatLogTime } from "~/lib/utils";
+import { cn, formatLogTime, hasMinRole } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
@@ -54,16 +54,30 @@ import {
 import type { Route } from "./+types/deployment-logs";
 
 export async function clientLoader({
-  params: {
+  params,
+  request
+}: Route.ClientLoaderArgs) {
+  const {
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug,
     deploymentHash: deployment_hash
-  },
-  request
-}: Route.ClientLoaderArgs) {
+  } = params;
   const queryClient = getQueryClient();
-  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
+  const [{ id: workspaceId }, authedUser] = await Promise.all([
+    getCurrentWorkspace(queryClient),
+    ensureAuthedUser(queryClient)
+  ]);
+
+  if (!hasMinRole(authedUser, "Member")) {
+    throw redirect(
+      href(
+        "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/details",
+        params
+      )
+    );
+  }
+
   const searchParams = new URL(request.url).searchParams;
   const search = deploymentLogSearchSchema.parse(searchParams);
   const filters = {

@@ -99,7 +99,7 @@ export default [
           "./routes/environments/review-deployment.tsx"
         ),
 
-        route("settings", "./routes/layouts/settings-layout.tsx", [
+        route("settings", "./routes/layouts/workspace-settings-layout.tsx", [
           index("./routes/settings/workspace-settings.tsx"),
 
           ...prefix("team", [

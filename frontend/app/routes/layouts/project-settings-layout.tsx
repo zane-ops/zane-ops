@@ -1,10 +1,6 @@
-import {
-  BookDashedIcon,
-  type LucideIcon,
-  NetworkIcon,
-  SettingsIcon
-} from "lucide-react";
+import { BookDashedIcon, NetworkIcon, SettingsIcon } from "lucide-react";
 import { Link, NavLink, Outlet, href } from "react-router";
+import type { NavItem } from "~/components/nav-link";
 import { Button } from "~/components/ui/button";
 import { projectQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
@@ -29,13 +25,6 @@ export function meta({ error, params }: Route.MetaArgs) {
       : "Oops";
   return [metaTitle(title)] satisfies ReturnType<Route.MetaFunction>;
 }
-
-type NavItem = {
-  title: string;
-  href: string;
-  icon: LucideIcon;
-  disabled?: boolean;
-};
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();

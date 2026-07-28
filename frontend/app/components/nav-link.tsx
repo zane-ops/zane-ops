@@ -1,5 +1,13 @@
+import type { LucideIcon } from "lucide-react";
 import { type NavLinkProps, NavLink as ReactRouterNavLink } from "react-router";
 import { cn } from "~/lib/utils";
+
+export type NavItem = {
+  title: string;
+  href: string;
+  icon: LucideIcon;
+  disabled?: boolean;
+};
 
 export function NavLink({ className, ...props }: NavLinkProps) {
   return (

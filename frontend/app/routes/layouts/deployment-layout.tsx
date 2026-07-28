@@ -11,7 +11,7 @@ import {
   TextSearchIcon
 } from "lucide-react";
 import { Link, Outlet, href, useFetcher, useParams } from "react-router";
-import { NavLink } from "~/components/nav-link";
+import { type NavItem, NavLink } from "~/components/nav-link";
 import { SubmitButton } from "~/components/ui/button";
 
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
@@ -25,13 +25,15 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
   formattedTime,
+  hasMinRole,
   isNotFoundError,
   metaTitle,
   notFound
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
 import type { Route } from "./+types/deployment-layout";
@@ -87,6 +89,7 @@ export default function DeploymentLayoutPage({
     deploymentHash: deployment_hash
   } = params;
   const workspaceId = useCurrentWorkspace().id;
+  const membership = useCurrentWorkspaceMembership();
 
   const { data: deployment } = useQuery({
     ...deploymentQueries.single({
@@ -107,6 +110,7 @@ export default function DeploymentLayoutPage({
     "RESTARTING"
   ];
   const isCancellable =
+    hasMinRole(membership, "Member") &&
     !deployment.finished_at &&
     cancellableDeploymentsStatuses.includes(deployment.status);
 
@@ -124,6 +128,46 @@ export default function DeploymentLayoutPage({
     CANCELLING: "⏹️",
     CANCELLED: "🚫"
   } satisfies Record<(typeof deployment)["status"], string>;
+
+  const navItems: NavItem[] = [];
+
+  if (hasMinRole(membership, "Member")) {
+    navItems.push(
+      {
+        href: "./build-logs",
+        title: "Deployment logs",
+        icon: SquareChartGanttIcon
+      },
+      {
+        href: ".",
+        title: "Runtime logs",
+        icon: TextSearchIcon
+      },
+      {
+        href: "./http-logs",
+        title: "HTTP logs",
+        icon: GlobeIcon
+      },
+      {
+        href: "./terminal",
+        title: "Terminal",
+        icon: TerminalIcon
+      }
+    );
+  }
+
+  navItems.push(
+    {
+      href: "./metrics",
+      title: "Metrics",
+      icon: ChartNoAxesColumnIcon
+    },
+    {
+      href: "./details",
+      title: "Details",
+      icon: InfoIcon
+    }
+  );
 
   return (
     <>
@@ -181,45 +225,14 @@ export default function DeploymentLayoutPage({
             "inline-flex items-stretch p-0.5 text-muted-foreground"
           )}
         >
-          <li>
-            <NavLink to="./build-logs" prefetch="viewport">
-              <span>Deployment logs</span>
-              <SquareChartGanttIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="." prefetch="viewport">
-              <span>Runtime logs</span>
-              <TextSearchIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-
-          <li>
-            <NavLink to="./http-logs" prefetch="viewport">
-              <span>HTTP logs</span>
-              <GlobeIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="./terminal" prefetch="viewport">
-              <span>Terminal</span>
-              <TerminalIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-
-          <li>
-            <NavLink to="./metrics">
-              <span>Metrics</span>
-              <ChartNoAxesColumnIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-
-          <li>
-            <NavLink to="./details">
-              <span>Details</span>
-              <InfoIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
+          {navItems.map((item) => (
+            <li key={item.title}>
+              <NavLink to={item.href} prefetch="viewport">
+                <span>{item.title}</span>
+                <item.icon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+          ))}
         </ul>
       </nav>
       <section className="mt-2">
