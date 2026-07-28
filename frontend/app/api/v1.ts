@@ -7583,7 +7583,7 @@ export interface components {
       network_aliases: readonly string[];
       unprefixed_hash: string;
       service_snapshot: components["schemas"]["DeploymentDocker"];
-      changes: readonly components["schemas"]["DeploymentChange"][];
+      changes: (readonly components["schemas"]["DeploymentChange"][]) | null;
       commit_message: string;
       commit_author_name: string | null;
       commit_sha: string | null;

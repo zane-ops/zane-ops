@@ -31017,6 +31017,7 @@ components:
           items:
             $ref: '#/components/schemas/DeploymentChange'
           readOnly: true
+          nullable: true
         commit_message:
           type: string
         commit_author_name:

@@ -615,7 +615,7 @@ class ServiceDeploymentSerializer(serializers.ModelSerializer):
     )
     service_snapshot = DeploymentDockerSerializer()
     redeploy_hash = serializers.SerializerMethodField(allow_null=True)
-    changes = DeploymentChangeSerializer(many=True, read_only=True)
+    changes = DeploymentChangeSerializer(many=True, read_only=True, allow_null=True)
     urls = ServiceDeploymentURLSerializer(many=True, read_only=True)
 
     @extend_schema_field(OpenApiTypes.STR)
