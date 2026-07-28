@@ -3089,14 +3089,13 @@ export interface components {
       volumes: readonly components["schemas"]["Volume"][];
       deploy_token: string | null;
       ports: readonly components["schemas"]["PortConfiguration"][];
-      env_variables: readonly components["schemas"]["EnvVariable"][];
+      env_variables: (readonly components["schemas"]["EnvVariable"][]) | null;
       network_aliases: readonly string[];
       network_alias: string | null;
       global_network_alias: string;
-      unapplied_changes: readonly components["schemas"]["DeploymentChange"][];
+      unapplied_changes: (readonly components["schemas"]["DeploymentChange"][]) | null;
       resource_limits: components["schemas"]["ResourceLimits"] | null;
-      /** @default [] */
-      system_env_variables: readonly components["schemas"]["SystemEnvVariables"][];
+      system_env_variables: (readonly components["schemas"]["SystemEnvVariables"][]) | null;
       configs: readonly components["schemas"]["Config"][];
       git_app: components["schemas"]["GitApp"] | null;
       git_repository: components["schemas"]["GitRepository"] | null;
@@ -7545,14 +7544,13 @@ export interface components {
       volumes: readonly components["schemas"]["Volume"][];
       deploy_token: string | null;
       ports: readonly components["schemas"]["PortConfiguration"][];
-      env_variables: readonly components["schemas"]["EnvVariable"][];
+      env_variables: (readonly components["schemas"]["EnvVariable"][]) | null;
       network_aliases: readonly string[];
       network_alias: string | null;
       global_network_alias: string;
-      unapplied_changes: readonly components["schemas"]["DeploymentChange"][];
+      unapplied_changes: (readonly components["schemas"]["DeploymentChange"][]) | null;
       resource_limits: components["schemas"]["ResourceLimits"] | null;
-      /** @default [] */
-      system_env_variables: readonly components["schemas"]["SystemEnvVariables"][];
+      system_env_variables: (readonly components["schemas"]["SystemEnvVariables"][]) | null;
       configs: readonly components["schemas"]["Config"][];
       git_app: components["schemas"]["GitApp"] | null;
       git_repository: components["schemas"]["GitRepository"] | null;

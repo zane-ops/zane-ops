@@ -11,6 +11,7 @@ from django.contrib.auth.models import AnonymousUser, AbstractUser
 from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
 from .models import Project
+from rest_framework.request import Request
 
 
 User = get_user_model()
@@ -52,6 +53,18 @@ class HasWorkspace(BasePermission):
 
         request.workspace = workspace  # type: ignore
         return request.workspace is not None
+
+
+def has_min_role(request: Request, role: WorkspaceRole):
+    membership = (
+        WorkspaceMembership.objects.filter(
+            user=request.user, workspace=request.workspace
+        )
+        .prefetch_related("accessible_projects")
+        .first()
+    )
+
+    return membership is not None and membership.role >= role
 
 
 def get_accessible_projects(user: AbstractUser, workspace: Workspace):

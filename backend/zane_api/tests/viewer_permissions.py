@@ -340,6 +340,9 @@ class ViewerDeniedEndpointsViewTests(ViewerEndpointsTestBase):
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
 
 
+EMPTY_SET = frozenset()
+
+
 class ViewerSecretFieldsViewTests(ViewerEndpointsTestBase):
     """
     `deploy_token` is enough to deploy through the `AllowAny` webhook routes, so
@@ -348,17 +351,28 @@ class ViewerSecretFieldsViewTests(ViewerEndpointsTestBase):
     the change records carry the same values in their `old_value`/`new_value`.
     """
 
-    MEMBER_ONLY_FIELDS = [
-        "deploy_token",
-        "env_variables",
-        "system_env_variables",
-        "credentials",
-        "container_registry_credentials",
-        "unapplied_changes",
-    ]
-    DEPLOYMENT_MEMBER_ONLY_FIELDS = [
-        "changes",
-    ]
+    # The tests below assert on these sets against `payload.keys()`, which is
+    # itself a set-like view, using set algebra (union, intersection, difference, etc.):
+    #
+    #   FIELDS & payload.keys()  -> intersection: Are there secrets fields included in the response for a viewer ?
+    #                               Should be empty for a viewer, since any field in common means the field wasn't stripped.
+    #
+    #   FIELDS - payload.keys()  -> difference: Is there any field missing_fields in the response for a member ?
+    #                               Should be empty for a member, since any element missing_fields means the field was wrongly stripped.
+    #
+    # Both are asserted equal to the empty set rather than tested per element,
+    # so a failure reports every offending field at once.
+    SERVICE_MEMBER_ONLY_FIELDS = frozenset(
+        [
+            "deploy_token",
+            "env_variables",
+            "system_env_variables",
+            "credentials",
+            "container_registry_credentials",
+            "unapplied_changes",
+        ]
+    )
+    DEPLOYMENT_MEMBER_ONLY_FIELDS = frozenset(["changes"])
 
     def test_member_sees_secret_fields_in_service_details(self):
         project, service = self.create_redis_docker_service()
@@ -378,8 +392,8 @@ class ViewerSecretFieldsViewTests(ViewerEndpointsTestBase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        for field in self.MEMBER_ONLY_FIELDS:
-            self.assertIn(field, response.json())
+        missing_fields = self.SERVICE_MEMBER_ONLY_FIELDS - response.json().keys()
+        self.assertEqual(frozenset(), missing_fields)
 
     def test_viewer_does_not_see_secret_fields_in_service_details(self):
         project, service, _ = self.setup_viewer_with_service()
@@ -398,8 +412,8 @@ class ViewerSecretFieldsViewTests(ViewerEndpointsTestBase):
 
         data = response.json()
         jprint(data)
-        for field in self.MEMBER_ONLY_FIELDS:
-            self.assertNotIn(field, data)
+        non_stripped_fields = self.SERVICE_MEMBER_ONLY_FIELDS & data.keys()
+        self.assertEqual(EMPTY_SET, non_stripped_fields)
 
     def test_viewer_does_not_see_secret_fields_in_deployment_snapshot(self):
         project, service, deployment = self.setup_viewer_with_service()
@@ -419,10 +433,10 @@ class ViewerSecretFieldsViewTests(ViewerEndpointsTestBase):
 
         snapshot = response.json()["service_snapshot"]
         jprint(snapshot)
-        for field in self.MEMBER_ONLY_FIELDS:
-            self.assertNotIn(field, snapshot)
+        non_stripped_fields = self.SERVICE_MEMBER_ONLY_FIELDS & snapshot.keys()
+        self.assertEqual(EMPTY_SET, non_stripped_fields)
 
-    def test_member_sees_changes_in_deployment(self):
+    def test_member_sees_secret_fields_in_deployment(self):
         project, service = self.create_redis_docker_service()
         deployment = service.prepare_new_docker_deployment()
         WorkspaceMembership.objects.filter(workspace=project.workspace).update(
@@ -441,10 +455,20 @@ class ViewerSecretFieldsViewTests(ViewerEndpointsTestBase):
             )
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        for field in self.DEPLOYMENT_MEMBER_ONLY_FIELDS:
-            self.assertIn(field, response.json())
+        data = response.json()
+        jprint(data)
 
-    def test_viewer_does_not_see_changes_in_deployment(self):
+        # Check that secret fields from deployment are included
+        missing_fields = self.DEPLOYMENT_MEMBER_ONLY_FIELDS - data.keys()
+        self.assertEqual(EMPTY_SET, missing_fields)
+
+        # Also Check that secret fields from snapshot are included
+        missing_fields = (
+            self.SERVICE_MEMBER_ONLY_FIELDS - data["service_snapshot"].keys()
+        )
+        self.assertEqual(EMPTY_SET, missing_fields)
+
+    def test_viewer_does_not_see_deployment_secret_fields(self):
         """
         `changes` records carry the same secrets as the service payload in their
         `old_value` / `new_value` — env variables, source credentials, configs.
@@ -464,12 +488,19 @@ class ViewerSecretFieldsViewTests(ViewerEndpointsTestBase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        data = response.json()
-        jprint(data)
-        for field in self.DEPLOYMENT_MEMBER_ONLY_FIELDS:
-            self.assertNotIn(field, data)
+        deployment = response.json()
+        jprint(deployment)
 
-    def test_viewer_does_not_see_changes_in_deployment_list(self):
+        # Check that deployment does not contain secret fields
+        non_stripped_fields = self.DEPLOYMENT_MEMBER_ONLY_FIELDS & deployment.keys()
+        self.assertEqual(EMPTY_SET, non_stripped_fields)
+
+        # Check that snapshots also do not contain secret fields
+        snapshot = deployment["service_snapshot"]
+        non_stripped_fields = self.SERVICE_MEMBER_ONLY_FIELDS & snapshot.keys()
+        self.assertEqual(EMPTY_SET, non_stripped_fields)
+
+    def test_viewer_does_not_see_deployment_secret_fields_in_deployment_list(self):
         project, service, _ = self.setup_viewer_with_service()
 
         response = self.client.get(
@@ -483,10 +514,17 @@ class ViewerSecretFieldsViewTests(ViewerEndpointsTestBase):
             )
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
+        data = response.json()
+        jprint(data)
 
-        for deployment in response.json()["results"]:
-            for field in self.DEPLOYMENT_MEMBER_ONLY_FIELDS:
-                self.assertNotIn(field, deployment)
+        for deployment in data["results"]:
+            # Check that deployment does not contain secret fields
+            non_stripped_fields = self.DEPLOYMENT_MEMBER_ONLY_FIELDS & deployment.keys()
+            self.assertEqual(EMPTY_SET, non_stripped_fields)
+            # Check that snapshots also do not contain secret fields
+            snapshot = deployment["service_snapshot"]
+            non_stripped_fields = self.SERVICE_MEMBER_ONLY_FIELDS & snapshot.keys()
+            self.assertEqual(EMPTY_SET, non_stripped_fields)
 
     def test_deployment_snapshot_stored_in_db_keeps_secret_fields(self):
         """
@@ -497,5 +535,7 @@ class ViewerSecretFieldsViewTests(ViewerEndpointsTestBase):
         _, service = self.create_redis_docker_service()
         deployment = service.prepare_new_docker_deployment()
 
-        for field in self.MEMBER_ONLY_FIELDS:
-            self.assertIn(field, deployment.service_snapshot)  # type: ignore
+        missing_fields = (
+            self.SERVICE_MEMBER_ONLY_FIELDS - deployment.service_snapshot.keys()  # type: ignore
+        )
+        self.assertEqual(EMPTY_SET, missing_fields)

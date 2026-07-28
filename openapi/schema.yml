@@ -21442,6 +21442,7 @@ components:
           items:
             $ref: '#/components/schemas/EnvVariable'
           readOnly: true
+          nullable: true
         network_aliases:
           type: array
           items:
@@ -21460,6 +21461,7 @@ components:
           items:
             $ref: '#/components/schemas/DeploymentChange'
           readOnly: true
+          nullable: true
         resource_limits:
           allOf:
           - $ref: '#/components/schemas/ResourceLimits'
@@ -21470,7 +21472,7 @@ components:
           items:
             $ref: '#/components/schemas/SystemEnvVariables'
           readOnly: true
-          default: []
+          nullable: true
         configs:
           type: array
           items:
@@ -30839,6 +30841,7 @@ components:
           items:
             $ref: '#/components/schemas/EnvVariable'
           readOnly: true
+          nullable: true
         network_aliases:
           type: array
           items:
@@ -30857,6 +30860,7 @@ components:
           items:
             $ref: '#/components/schemas/DeploymentChange'
           readOnly: true
+          nullable: true
         resource_limits:
           allOf:
           - $ref: '#/components/schemas/ResourceLimits'
@@ -30867,7 +30871,7 @@ components:
           items:
             $ref: '#/components/schemas/SystemEnvVariables'
           readOnly: true
-          default: []
+          nullable: true
         configs:
           type: array
           items:

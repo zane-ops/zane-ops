@@ -429,6 +429,20 @@ class Service(BaseService):
     environment_id: str
     shared_volumes: Manager["SharedVolume"]
 
+    @classmethod
+    def get_sensitive_fields(self):
+        """
+        Fields that contain potentially secret values
+        """
+        return [
+            "deploy_token",
+            "env_variables",
+            "system_env_variables",
+            "credentials",
+            "container_registry_credentials",
+            "unapplied_changes",
+        ]
+
     class ServiceType(models.TextChoices):
         DOCKER_REGISTRY = "DOCKER_REGISTRY", _("Docker repository")
         GIT_REPOSITORY = "GIT_REPOSITORY", _("Git repository")
@@ -1630,6 +1644,13 @@ class Deployment(BaseDeployment):
     ignore_build_cache = models.BooleanField(default=False)
     build_started_at = models.DateTimeField(null=True)
     build_finished_at = models.DateTimeField(null=True)
+
+    @classmethod
+    def get_sensitive_fields(self):
+        """
+        Fields that contain potentially secret values
+        """
+        return ["changes"]
 
     @classmethod
     def get_next_deployment_slot(
