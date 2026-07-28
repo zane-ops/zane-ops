@@ -176,16 +176,16 @@ Worth its own section rather than folding into §7: only part of it is mechanica
 
 §3 moved these to Admin on the backend; the frontend still gates them at Owner, so an Admin gets a 404 on a page they can now use.
 
-| Route | Should be |
-|---|---|
-| `settings/git-apps-list.tsx:45` | Admin |
-| `settings/create-github-app.tsx:29` | Admin |
-| `settings/create-gitlab-app.tsx:32` | Admin |
-| `settings/gitlab-app-details.tsx:33` | Admin |
-| `settings/create-registry-credentials.tsx:47` | Admin |
-| `settings/registry-credentials-details.tsx:57` | Admin |
-| `settings/registry-credentials-list.tsx:50` | **Member** — listing stayed Member, only create/edit/delete are Admin |
-| `services/create-private-git-service.tsx:106` | Admin — `hasMinRole`, gates the "set up a connector" branch |
+| Route                                          | Should be                                                             |
+| ---------------------------------------------- | --------------------------------------------------------------------- |
+| `settings/git-apps-list.tsx:45`                | Admin                                                                 |
+| `settings/create-github-app.tsx:29`            | Admin                                                                 |
+| `settings/create-gitlab-app.tsx:32`            | Admin                                                                 |
+| `settings/gitlab-app-details.tsx:33`           | Admin                                                                 |
+| `settings/create-registry-credentials.tsx:47`  | Admin                                                                 |
+| `settings/registry-credentials-details.tsx:57` | Admin                                                                 |
+| `settings/registry-credentials-list.tsx:50`    | **Member** — listing stayed Member, only create/edit/delete are Admin |
+| `services/create-private-git-service.tsx:106`  | Admin — `hasMinRole`, gates the "set up a connector" branch           |
 
 Note the list route is the odd one out: copying Admin everywhere would wrongly hide the credential list from Members who need to pick one when creating a service.
 
@@ -197,6 +197,3 @@ So a Viewer today logs in to an empty shell, even though the backend now serves 
 
 The rule to apply per route: **Viewer** for anything the backend now serves them (project list, service list and details, deployments, metrics, stacks); **Member** for logs, env variables, detected ports, terminal and the member list.
 
-### 8c. Unrelated but adjacent
-
-`hasMinRole` logs the full membership object to the browser console on every call ([utils.ts:634](../../frontend/app/lib/utils.ts#L634)). Leftover debugging — should go.
