@@ -26,7 +26,7 @@ from zane_api.git_client import GitClient
 from zane_api.permissions import (
     HasWorkspace,
     IsWorkspaceMember,
-    IsWorkspaceOwner,
+    IsWorkspaceAdmin,
 )
 
 
@@ -34,12 +34,11 @@ class GitAppDetailsAPIView(RetrieveDestroyAPIView):
     serializer_class = GitAppSerializer
     queryset = GitApp.objects.filter().select_related("github", "gitlab")
     lookup_field = "id"
-    permission_classes = [HasWorkspace, IsWorkspaceOwner]
 
     def get_permissions(self):
         if self.request.method == "GET":
             return [HasWorkspace(), IsWorkspaceMember()]
-        return [HasWorkspace(), IsWorkspaceOwner()]
+        return [HasWorkspace(), IsWorkspaceAdmin()]
 
     def get_queryset(self):
         return (

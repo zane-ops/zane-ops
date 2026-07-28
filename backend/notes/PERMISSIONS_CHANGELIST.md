@@ -62,13 +62,15 @@ Owner-only currently covers routine work. On a small team that means either the 
 
 Owner keeps only the irreversible and the financial: transfer ownership, delete workspace, edit workspace settings.
 
+**Applied.** Registry credential *creation* was Member rather than Owner ([credentials.py:24](../container_registry/views/credentials.py#L24)); it moved up to Admin so the whole row sits at one level. Listing stays Member — services reference credentials by id.
+
 ---
 
 ## 4. Confirm — shared env variables
 
 The draft puts "Manage env variables" (environment-level) at **Member**; today write is **Admin** ([environments.py:589](../zane_api/views/environments.py#L589)). Shared env vars propagate to every service in the environment, so this widens the blast radius.
 
-Consistent with Member managing service-level env vars, so probably deliberate — just confirming it isn't drift.
+**Resolved: stays Admin.** The draft's Member was the drift; no code change.
 
 ---
 

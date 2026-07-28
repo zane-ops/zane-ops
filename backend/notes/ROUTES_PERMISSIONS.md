@@ -42,8 +42,9 @@ These views override `get_permissions()`, so read is looser than write. Listed o
 | `/api/projects/{slug}/environment-details/{env_slug}` | GET, PATCH, DELETE | Member | Admin | [environments.py:445](../zane_api/views/environments.py#L445) |
 | `/api/projects/{project_slug}/{env_slug}/variables` | GET, POST | Member | Admin | [environments.py:589](../zane_api/views/environments.py#L589) |
 | `/api/projects/{project_slug}/{env_slug}/variables/{pk}` | GET, PUT, PATCH, DELETE | Member | Admin | [environments.py:589](../zane_api/views/environments.py#L589) |
-| `/api/registries/credentials/{id}` | GET, PATCH, DELETE | Member | Owner | [credentials.py:159](../container_registry/views/credentials.py#L159) |
-| `/api/connectors/{id}` | GET, DELETE | Member | Owner | [generic.py:33](../git_connectors/views/generic.py#L33) |
+| `/api/registries/credentials` | GET, POST | Member | Admin | [credentials.py:24](../container_registry/views/credentials.py#L24) |
+| `/api/registries/credentials/{id}` | GET, PATCH, DELETE | Member | Admin | [credentials.py:159](../container_registry/views/credentials.py#L159) |
+| `/api/connectors/{id}` | GET, DELETE | Member | Admin | [generic.py:33](../git_connectors/views/generic.py#L33) |
 
 ## `AllowAny` — public
 
@@ -180,7 +181,6 @@ Paths below are relative to `/api/compose/stacks/{project_slug}/{env_slug}`.
 | GET | `/api/connectors/{id}/paginated-repositories` | [generic.py:191](../git_connectors/views/generic.py#L191) `ListGitRepositoriesPaginatedAPIView` |
 | GET | `/api/connectors/repository-branches` | [generic.py:96](../git_connectors/views/generic.py#L96) `ListGitRepositoryBranchesAPIView` |
 | GET | `/api/connectors/gitlab/{id}` | [gitlab.py:297](../git_connectors/views/gitlab.py#L297) `GitlabAppDetailsAPIView` |
-| GET, POST | `/api/registries/credentials` | [credentials.py:24](../container_registry/views/credentials.py#L24) `SharedRegistryCredentialsListAPIView` |
 | GET | `/api/registries/credentials/{id}/test` | [credentials.py:50](../container_registry/views/credentials.py#L50) `TestSharedRegistryCredentialsAPIView` |
 | GET | `/api/docker/image-search` | [docker.py:25](../zane_api/views/docker.py#L25) `DockerImageSearchView` |
 | GET | `/api/server/resource-limits` | [settings.py:48](../zane_api/views/settings.py#L48) `ResourceLimitsView` |
@@ -212,11 +212,10 @@ Additional guards inside the membership/invitation views, not enforced by the pe
 - An Admin cannot edit another Admin's permissions ([workspace.py:151](../zane_api/views/workspace.py#L151)).
 - Only the Owner can promote a user to Admin or above, whether by edit ([workspace.py:169](../zane_api/views/workspace.py#L169)) or by invitation ([workspace_invitations.py:286](../zane_api/views/workspace_invitations.py#L286)).
 
-## `HasWorkspace + IsWorkspaceOwner`
+### Git connectors
 
 | Method | Path | View |
 | --- | --- | --- |
-| POST | `/api/workspace/transfer-ownership` | [workspace.py:446](../zane_api/views/workspace.py#L446) `WorkspaceTransferOwnershipAPIView` |
 | GET | `/api/connectors/github/setup` | [github.py:62](../git_connectors/views/github.py#L62) `SetupGithubAppAPIView` |
 | GET, PATCH | `/api/connectors/github/{id}` | [github.py:148](../git_connectors/views/github.py#L148) `GithubAppDetailsAPIView` |
 | GET | `/api/connectors/github/{id}/test` | [github.py:159](../git_connectors/views/github.py#L159) `TestGithubAppAPIView` |
@@ -225,6 +224,14 @@ Additional guards inside the membership/invitation views, not enforced by the pe
 | PUT | `/api/connectors/gitlab/{id}/update` | [gitlab.py:307](../git_connectors/views/gitlab.py#L307) `GitlabAppUpdateAPIView` |
 | PUT | `/api/connectors/gitlab/{id}/sync-repositories` | [gitlab.py:258](../git_connectors/views/gitlab.py#L258) `SyncRepositoriesAPIView` |
 | GET | `/api/connectors/gitlab/{id}/test` | [gitlab.py:200](../git_connectors/views/gitlab.py#L200) `TestGitlabAppAPIView` |
+
+## `HasWorkspace + IsWorkspaceOwner`
+
+Only the irreversible and the financial.
+
+| Method | Path | View |
+| --- | --- | --- |
+| POST | `/api/workspace/transfer-ownership` | [workspace.py:446](../zane_api/views/workspace.py#L446) `WorkspaceTransferOwnershipAPIView` |
 
 Ownership can only be transferred to a member who is already Admin or above; the previous owner is demoted to Admin ([workspace.py:470](../zane_api/views/workspace.py#L470)).
 
