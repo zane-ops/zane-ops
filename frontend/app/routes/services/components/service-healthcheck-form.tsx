@@ -55,7 +55,7 @@ export function ServiceHealthcheckForm({
         const service = data.data;
         let updatedHealthCheck = healthcheck;
         if ("healthcheck" in service) {
-          const healthcheckChange = service.unapplied_changes.find(
+          const healthcheckChange = (service.unapplied_changes ?? []).find(
             (change) => change.field === "healthcheck"
           );
           const newHealthCheck =
@@ -84,7 +84,7 @@ export function ServiceHealthcheckForm({
     }
   });
 
-  const healthcheckChange = service.unapplied_changes.find(
+  const healthcheckChange = (service.unapplied_changes ?? []).find(
     (change) => change.field === "healthcheck"
   );
 
@@ -113,7 +113,7 @@ export function ServiceHealthcheckForm({
     defaultHealthCheckAssociatedPortValue =
       urlWithAssociatedPort.associated_port;
   }
-  const urlChangeWithAssociatedPort = service.unapplied_changes.find(
+  const urlChangeWithAssociatedPort = (service.unapplied_changes ?? []).find(
     (ch) =>
       ch.field === "urls" &&
       Boolean((ch.new_value as Service["urls"][number] | null)?.associated_port)

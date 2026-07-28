@@ -69,7 +69,7 @@ export function ServiceBuilderForm({
         if (!srv.slug) {
           srv = service;
         }
-        const serviceBuilderChange = srv.unapplied_changes.find(
+        const serviceBuilderChange = (srv.unapplied_changes ?? []).find(
           (change) => change.field === "builder"
         ) as
           | {
@@ -126,7 +126,7 @@ export function ServiceBuilderForm({
 
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
-  const serviceBuilderChange = service.unapplied_changes.find(
+  const serviceBuilderChange = (service.unapplied_changes ?? []).find(
     (change) => change.field === "builder"
   ) as
     | {

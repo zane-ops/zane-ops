@@ -70,7 +70,7 @@ export function ServiceSourceForm({
     env_slug
   });
 
-  const serviceSourcheChange = service.unapplied_changes.find(
+  const serviceSourcheChange = (service.unapplied_changes ?? []).find(
     (change) => change.field === "source"
   ) as
     | {

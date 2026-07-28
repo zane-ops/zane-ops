@@ -41,7 +41,7 @@ export function ServiceCommandForm({
     }
   });
 
-  const startingCommandChange = service?.unapplied_changes.find(
+  const startingCommandChange = (service?.unapplied_changes ?? []).find(
     (change) => change.field === "command"
   );
   const isEmptyChange =

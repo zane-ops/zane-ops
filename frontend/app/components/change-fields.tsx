@@ -27,7 +27,7 @@ import { cn } from "~/lib/utils";
 
 export type ChangeItemProps = {
   change:
-    | Service["unapplied_changes"][number]
+    | NonNullable<Service["unapplied_changes"]>[number]
     | ComposeStack["unapplied_changes"][number];
   unapplied?: boolean;
 };
@@ -2048,8 +2048,12 @@ export function EnvVariableChangeItem({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as Service["env_variables"][number] | null;
-  const old_value = change.old_value as Service["env_variables"][number] | null;
+  const new_value = change.new_value as
+    | NonNullable<Service["env_variables"]>[number]
+    | null;
+  const old_value = change.old_value as
+    | NonNullable<Service["env_variables"]>[number]
+    | null;
 
   const [isOldEnvValueShown, setIsOldEnvValueShown] = React.useState(false);
   const [isNewEnvValueShown, setIsNewEnvValueShown] = React.useState(false);

@@ -51,7 +51,7 @@ export function ServiceAutoDeployForm({
     env_slug
   });
 
-  const serviceSourceChange = service.unapplied_changes.find(
+  const serviceSourceChange = (service.unapplied_changes ?? []).find(
     (change) => change.field === "git_source"
   ) as
     | {

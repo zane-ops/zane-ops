@@ -144,7 +144,7 @@ export default function ServiceDetailsLayout({
     currentSelectedTab = TABS.HTTP_LOGS;
   }
 
-  const serviceGitSourceChange = service.unapplied_changes.find(
+  const serviceGitSourceChange = (service.unapplied_changes ?? []).find(
     (change) => change.field === "git_source"
   ) as
     | {
@@ -159,8 +159,9 @@ export default function ServiceDetailsLayout({
   let serviceImage =
     service.image ??
     (
-      service.unapplied_changes.filter((change) => change.field === "source")[0]
-        ?.new_value as Pick<Service, "image" | "credentials">
+      (service.unapplied_changes ?? []).filter(
+        (change) => change.field === "source"
+      )[0]?.new_value as Pick<Service, "image" | "credentials">
     )?.image;
 
   const serviceGitApp =

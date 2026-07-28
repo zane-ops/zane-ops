@@ -50,7 +50,7 @@ export function ServiceResourceLimits({
       const service = data.data!;
       let updatedResourceLimits = resourceLimits;
       if ("resource_limits" in service) {
-        const resouceLimitsChange = service.unapplied_changes.find(
+        const resouceLimitsChange = (service.unapplied_changes ?? []).find(
           (change) => change.field === "resource_limits"
         );
         const newResourceLimits =
@@ -82,7 +82,7 @@ export function ServiceResourceLimits({
   const cpuInputRef = React.useRef<React.ComponentRef<"input">>(null);
   const memoryInputRef = React.useRef<React.ComponentRef<"input">>(null);
 
-  const resouceLimitsChange = service.unapplied_changes.find(
+  const resouceLimitsChange = (service.unapplied_changes ?? []).find(
     (change) => change.field === "resource_limits"
   );
   const isPending = fetcher.state !== "idle";

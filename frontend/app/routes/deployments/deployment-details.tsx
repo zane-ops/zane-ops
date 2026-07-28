@@ -114,7 +114,7 @@ export default function DeploymentDetailsPage({
     { language: "json" }
   ).value;
 
-  const changes = deployment.changes.map((ch) => {
+  const changes = (deployment.changes ?? []).map((ch) => {
     // @ts-expect-error : this is to support old versions of the changes fields
     if (ch.field === "image") {
       return {
@@ -122,7 +122,7 @@ export default function DeploymentDetailsPage({
         field: "source",
         new_value: { image: ch.new_value },
         old_value: { image: ch.old_value }
-      } as (typeof deployment.changes)[number];
+      } as NonNullable<typeof deployment.changes>[number];
     }
     // @ts-expect-error : this is to support old versions of the changes fields
     if (ch.field === "credentials") {
@@ -131,7 +131,7 @@ export default function DeploymentDetailsPage({
         field: "source",
         new_value: { credentials: ch.new_value },
         old_value: { credentials: ch.old_value }
-      } as (typeof deployment.changes)[number];
+      } as NonNullable<typeof deployment.changes>[number];
     }
 
     return ch;
@@ -161,7 +161,7 @@ export default function DeploymentDetailsPage({
   }, [deployment.started_at, deployment.finished_at]);
 
   const IconFieldMap: Record<
-    Service["unapplied_changes"][number]["field"],
+    NonNullable<Service["unapplied_changes"]>[number]["field"],
     React.ComponentType<React.ComponentProps<typeof HardDriveIcon>>
   > = {
     source: ContainerIcon,
