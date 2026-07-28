@@ -12,7 +12,6 @@ import {
 import {
   Link,
   href,
-  redirect,
   useLoaderData,
   useMatches,
   useSearchParams
@@ -31,8 +30,7 @@ import {
   deploymentQueries,
   ensureAuthedUser,
   projectQueries,
-  projectSearchSchema,
-  userQueries
+  projectSearchSchema
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, hasMinRole } from "~/lib/utils";
@@ -125,7 +123,7 @@ export default function ProjectList({
         )}
       </div>
       <ProjectsListSection />
-      {hasMinRole(user, "Member") && <RecentDeploymentsSection />}
+      <RecentDeploymentsSection />
     </main>
   );
 }

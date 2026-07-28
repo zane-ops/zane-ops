@@ -47,8 +47,10 @@ import {
   excerpt,
   formatElapsedTime,
   formattedTime,
+  hasMinRole,
   mergeTimeAgoFormatterAndFormattedDate
 } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
 import type { clientAction as redeployClientAction } from "~/routes/deployments/redeploy-docker-deployment";
 
@@ -792,6 +794,8 @@ export function RecentDeploymentCard({
     started_at ? Math.ceil((now.getTime() - started_at.getTime()) / 1000) : 0
   );
 
+  const membership = useCurrentWorkspaceMembership();
+
   React.useEffect(() => {
     if (started_at && !finished_at) {
       const timer = setInterval(() => {
@@ -814,6 +818,29 @@ export function RecentDeploymentCard({
   ];
 
   const isPending = !finished_at && runningDeploymentsStatuses.includes(status);
+
+  const urlParams = {
+    deploymentHash: hash,
+    projectSlug: project_slug,
+    envSlug: env_slug,
+    serviceSlug: service_slug
+  };
+
+  const deploymentCardLink = hasMinRole(membership, "Member")
+    ? isPending || status === "FAILED" || status === "CANCELLED"
+      ? href(
+          "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
+          urlParams
+        )
+      : href(
+          "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
+          urlParams
+        )
+    : href(
+        "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/details",
+        urlParams
+      );
+
   return (
     <Card
       className={cn(
@@ -851,27 +878,7 @@ export function RecentDeploymentCard({
       <div className="w-full shrink inline-flex flex-wrap gap-0.5 min-w-0">
         <Link
           prefetch="viewport"
-          to={
-            isPending || status === "FAILED" || status === "CANCELLED"
-              ? href(
-                  "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
-                  {
-                    deploymentHash: hash,
-                    projectSlug: project_slug,
-                    envSlug: env_slug,
-                    serviceSlug: service_slug
-                  }
-                )
-              : href(
-                  "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
-                  {
-                    deploymentHash: hash,
-                    projectSlug: project_slug,
-                    envSlug: env_slug,
-                    serviceSlug: service_slug
-                  }
-                )
-          }
+          to={deploymentCardLink}
           className={cn(
             "whitespace-nowrap inline-block my-1 w-full overflow-x-hidden text-ellipsis",
             "max-w-full min-w-0",
