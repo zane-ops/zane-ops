@@ -30,7 +30,7 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  await ensureMinRole(queryClient, "Owner");
+  await ensureMinRole(queryClient, "Admin");
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const app = await queryClient.ensureQueryData(
     gitAppsQueries.gitlab(workspaceId, params.id)

@@ -29,7 +29,7 @@ export function meta() {
 
 export async function clientLoader() {
   const queryClient = getQueryClient();
-  await ensureMinRole(queryClient, "Owner");
+  await ensureMinRole(queryClient, "Admin");
   const settings = await queryClient.ensureQueryData(serverQueries.settings);
   return { settings };
 }

@@ -32,10 +32,11 @@ import {
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import { ensureMinRole, sharedRegistryCredentialsQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { metaTitle } from "~/lib/utils";
+import { hasMinRole, metaTitle } from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/registry-credentials-list";
 
@@ -47,7 +48,7 @@ export function meta() {
 
 export async function clientLoader() {
   const queryClient = getQueryClient();
-  await ensureMinRole(queryClient, "Owner");
+  await ensureMinRole(queryClient, "Member");
 
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const credentials = await queryClient.ensureQueryData(
@@ -60,6 +61,8 @@ export default function ContainerRegistryCredentialsPage({
   loaderData
 }: Route.ComponentProps) {
   const workspaceId = useCurrentWorkspace().id;
+  const membership = useCurrentWorkspaceMembership();
+  const isAdmin = hasMinRole(membership, "Admin");
   const { data: credentials } = useQuery({
     ...sharedRegistryCredentialsQueries.list(workspaceId),
     initialData: loaderData.credentials
@@ -69,11 +72,13 @@ export default function ContainerRegistryCredentialsPage({
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
         <h2 className="text-2xl">Shared Container Registry Credentials</h2>
-        <Button asChild variant="secondary" className="flex gap-2">
-          <Link to="new" prefetch="intent">
-            New <PlusIcon size={18} />
-          </Link>
-        </Button>
+        {isAdmin && (
+          <Button asChild variant="secondary" className="flex gap-2">
+            <Link to="new" prefetch="intent">
+              New <PlusIcon size={18} />
+            </Link>
+          </Button>
+        )}
       </div>
       <Separator />
       <h3 className="text-grey">
@@ -157,6 +162,7 @@ function CredentialActions({
   credentials
 }: { credentials: Omit<SharedRegistryCredentials, "password"> }) {
   const testFetcher = useFetcher();
+  const isAdmin = hasMinRole(useCurrentWorkspaceMembership(), "Admin");
   return (
     <div className="flex items-center gap-1">
       <testFetcher.Form
@@ -173,18 +179,22 @@ function CredentialActions({
         <input type="hidden" name="url" value={credentials.url ?? ""} />
       </testFetcher.Form>
       <TooltipProvider>
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <Button size="sm" variant="ghost" asChild className="gap-1">
-              <Link to={`./${credentials.id}`}>
-                <span className="sr-only">Edit</span>
-                <PencilLineIcon className="flex-none size-4" />
-              </Link>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Edit Credentials</TooltipContent>
-        </Tooltip>
-        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+        {isAdmin && (
+          <>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button size="sm" variant="ghost" asChild className="gap-1">
+                  <Link to={`./${credentials.id}`}>
+                    <span className="sr-only">Edit</span>
+                    <PencilLineIcon className="flex-none size-4" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Edit Credentials</TooltipContent>
+            </Tooltip>
+            <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+          </>
+        )}
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <SubmitButton
@@ -209,9 +219,11 @@ function CredentialActions({
           </TooltipTrigger>
           <TooltipContent>Test Credentials</TooltipContent>
         </Tooltip>
-        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+        {isAdmin && (
+          <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+        )}
       </TooltipProvider>
-      <DeleteConfirmationFormDialog credentials={credentials} />
+      {isAdmin && <DeleteConfirmationFormDialog credentials={credentials} />}
     </div>
   );
 }

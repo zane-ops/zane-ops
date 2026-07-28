@@ -42,12 +42,16 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
     });
   }
 
-  if (hasMinRole(membership, "Owner")) {
+  if (hasMinRole(membership, "Admin")) {
     sidebarNavItems.push({
       title: "Git",
       href: href("/workspace/settings/git-apps"),
       icon: GitBranchIcon
     });
+  }
+
+  // members pick a shared credential when creating a service, they just can't edit them
+  if (hasMinRole(membership, "Member")) {
     sidebarNavItems.push({
       title: "Shared Credentials",
       href: href("/workspace/settings/shared-credentials"),
