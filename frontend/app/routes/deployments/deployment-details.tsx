@@ -71,9 +71,13 @@ import {
   cn,
   formatElapsedTime,
   formattedTime,
+  hasMinRole,
   wait
 } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/workspace-store";
 
 hljs.registerLanguage("json", json);
 
@@ -89,6 +93,7 @@ export default function DeploymentDetailsPage({
   }
 }: Route.ComponentProps) {
   const workspaceId = useCurrentWorkspace().id;
+  const membership = useCurrentWorkspaceMembership();
   const { data: deployment } = useQuery({
     ...deploymentQueries.single({
       workspaceId,
@@ -184,6 +189,8 @@ export default function DeploymentDetailsPage({
     API: "Using deploy webhook URL",
     MANUAL: "manual"
   };
+
+  const isMember = hasMinRole(membership, "Member");
 
   return (
     <div className="my-6 flex flex-col lg:w-4/5">
@@ -371,6 +378,7 @@ export default function DeploymentDetailsPage({
             <GitCompareArrowsIcon size={15} className="flex-none text-grey" />
           </div>
           <div className="h-full border border-grey/50"></div>
+          {!isMember && <div className="bg-grey/50 rounded-md size-2" />}
         </div>
 
         <div className="w-full flex flex-col gap-5 pt-1 pb-8">
@@ -503,75 +511,77 @@ export default function DeploymentDetailsPage({
         </div>
       </section>
 
-      <section id="snapshot" className="flex gap-1 scroll-mt-20">
-        <div className="w-16 hidden md:flex flex-col items-center">
-          <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
-            <FilmIcon size={15} className="flex-none text-grey" />
+      {isMember && (
+        <section id="snapshot" className="flex gap-1 scroll-mt-20">
+          <div className="w-16 hidden md:flex flex-col items-center">
+            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+              <FilmIcon size={15} className="flex-none text-grey" />
+            </div>
           </div>
-        </div>
 
-        <div className="shrink min-w-0 flex flex-col gap-5 pt-1 pb-14 w-full">
-          <h2 className="text-lg text-grey">Snapshot</h2>
-          <p className="text-gray-400">
-            The status of the service at the time of the deployment.
-          </p>
-          <Accordion
-            type="single"
-            collapsible
-            className="border-y border-border w-full"
-          >
-            <AccordionItem value="system">
-              <AccordionTrigger className="text-muted-foreground font-normal text-sm hover:underline">
-                <ChevronRightIcon className="h-4 w-4 shrink-0 transition-transform duration-200" />
-                JSON structure
-              </AccordionTrigger>
-              <AccordionContent className="flex flex-col gap-2">
-                <div className="overflow-x-auto max-w-full shrink min-w-0 bg-card rounded-md p-2 grow relative">
-                  <TooltipProvider>
-                    <Tooltip delayDuration={0}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="px-2.5 py-0.5 absolute top-2 right-2"
-                          onClick={() => {
-                            navigator.clipboard
-                              .writeText(
-                                JSON.stringify(
-                                  deployment.service_snapshot,
-                                  null,
-                                  2
+          <div className="shrink min-w-0 flex flex-col gap-5 pt-1 pb-14 w-full">
+            <h2 className="text-lg text-grey">Snapshot</h2>
+            <p className="text-gray-400">
+              The status of the service at the time of the deployment.
+            </p>
+            <Accordion
+              type="single"
+              collapsible
+              className="border-y border-border w-full"
+            >
+              <AccordionItem value="system">
+                <AccordionTrigger className="text-muted-foreground font-normal text-sm hover:underline">
+                  <ChevronRightIcon className="h-4 w-4 shrink-0 transition-transform duration-200" />
+                  JSON structure
+                </AccordionTrigger>
+                <AccordionContent className="flex flex-col gap-2">
+                  <div className="overflow-x-auto max-w-full shrink min-w-0 bg-card rounded-md p-2 grow relative">
+                    <TooltipProvider>
+                      <Tooltip delayDuration={0}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="px-2.5 py-0.5 absolute top-2 right-2"
+                            onClick={() => {
+                              navigator.clipboard
+                                .writeText(
+                                  JSON.stringify(
+                                    deployment.service_snapshot,
+                                    null,
+                                    2
+                                  )
                                 )
-                              )
-                              .then(() => {
-                                console.log("copied !");
-                                // show pending state (which is success state), until the user has stopped clicking the button
-                                startTransition(() => wait(1000));
-                              });
-                          }}
-                        >
-                          {hasCopied ? (
-                            <CheckIcon size={15} className="flex-none" />
-                          ) : (
-                            <CopyIcon size={15} className="flex-none" />
-                          )}
-                          <span className="sr-only">Copy</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Copy</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <pre
-                    className="text-sm [&_.hljs-punctuation]:text-white dark:[&_.hljs-punctuation]:text-foreground"
-                    dangerouslySetInnerHTML={{
-                      __html: highlightedCode
-                    }}
-                  />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-      </section>
+                                .then(() => {
+                                  console.log("copied !");
+                                  // show pending state (which is success state), until the user has stopped clicking the button
+                                  startTransition(() => wait(1000));
+                                });
+                            }}
+                          >
+                            {hasCopied ? (
+                              <CheckIcon size={15} className="flex-none" />
+                            ) : (
+                              <CopyIcon size={15} className="flex-none" />
+                            )}
+                            <span className="sr-only">Copy</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copy</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <pre
+                      className="text-sm [&_.hljs-punctuation]:text-white dark:[&_.hljs-punctuation]:text-foreground"
+                      dangerouslySetInnerHTML={{
+                        __html: highlightedCode
+                      }}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
