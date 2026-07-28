@@ -95,6 +95,7 @@ deploy: ### Install and deploy zaneops based on MODE (https or http)
 	docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1; \
 	echo -e "\n🏁 Deploy initiated"; \
 	spinner=( '◐' '◓' '◑' '◒' ); i=0; \
+	deploy_timeout=$${DEPLOY_TIMEOUT:-300}; started=$$SECONDS; timed_out=0; \
 	while true; do \
 		incomplete=0; \
 		while IFS=";" read -r svc_name svc_replicas; do \
@@ -111,11 +112,56 @@ deploy: ### Install and deploy zaneops based on MODE (https or http)
 			fi; \
 		done < <(docker service ls --filter "name=zane_" --format "{{.Name}};{{.Replicas}}"); \
 		if [ $$incomplete -eq 0 ]; then break; fi; \
+		if [ $$(( SECONDS - started )) -ge $$deploy_timeout ]; then timed_out=1; break; fi; \
 		printf "\rWaiting for all services to reach desired state, this should take less than 5 minutes... \033[33m%s\033[0m " "$${spinner[$$((i % 4))]}"; \
 		i=$$((i+1)); \
 		sleep 0.1; \
 	done; \
-	printf "\rWaiting for all services to reach desired state... Done 💓                                 \n"; \
+	if [ $$timed_out -eq 1 ]; then \
+		printf "\rWaiting for all services to reach desired state... \033[33mgave up after %ss\033[0m ⏱                 \n" "$$deploy_timeout"; \
+	else \
+		printf "\rWaiting for all services to reach desired state... Done 💓                                 \n"; \
+	fi; \
+	stuck=$$(for svc in $$(docker service ls --filter "name=zane_" --format '{{.Name}}'); do \
+		docker service ps "$$svc" --no-trunc --filter "desired-state=running" --format '{{.CurrentState}}' \
+			| grep -q '^Pending' && echo "$$svc"; \
+	done); \
+	if [ -n "$$stuck" ]; then \
+		echo -e "\n\x1b[91m⚠️  The rollout of these services is stuck in 'Pending':\x1b[0m"; \
+		for svc in $$stuck; do \
+			reason=$$(docker service ps "$$svc" --no-trunc --filter "desired-state=running" --format '{{.Error}}' | grep -v '^$$' | head -1); \
+			echo -e "  \x1b[96m$$svc\x1b[0m: $${reason:-no reason reported by docker}"; \
+		done; \
+		echo -e "\nTheir previous containers are still running with the \x1b[33mold configuration\x1b[0m,"; \
+		echo -e "so this deploy has \x1b[33mnot\x1b[0m taken effect for them."; \
+		echo -e "Recreating them stops the old container before starting the new one,"; \
+		echo -e "which \x1b[33mbriefly interrupts the traffic they serve\x1b[0m."; \
+		reply="n"; \
+		if [ -n "$$FORCE_REDEPLOY" ]; then \
+			reply="y"; \
+		elif [ -t 0 ]; then \
+			read -r -p "Recreate them now? [y/N] " reply; \
+		else \
+			echo -e "Not running interactively; re-run with \x1b[96mFORCE_REDEPLOY=1 make deploy\x1b[0m to recreate them automatically."; \
+		fi; \
+		case "$$reply" in \
+			[yY]*) \
+				for svc in $$stuck; do \
+					echo "Recreating $$svc..."; \
+					docker service scale "$$svc"=0 >/dev/null && docker service scale "$$svc"=1 >/dev/null; \
+				done; \
+				echo -e "\x1b[92mRecreated ✅\x1b[0m"; \
+				;; \
+			*) \
+				echo -e "\n\x1b[91m❌ Deploy incomplete: the services above are still running the old configuration.\x1b[0m" >&2; \
+				exit 1; \
+				;; \
+		esac; \
+	elif [ $$timed_out -eq 1 ]; then \
+		echo -e "\n\x1b[91m❌ Deploy timed out after $${deploy_timeout}s and some services never reached their desired state.\x1b[0m" >&2; \
+		echo -e "Inspect them with \x1b[96mdocker service ls --filter name=zane_\x1b[0m, or raise the budget with \x1b[96mDEPLOY_TIMEOUT=900 make deploy\x1b[0m." >&2; \
+		exit 1; \
+	fi; \
 	echo -e "\n> You can now access your ZaneOps dashboard at \x1b[96m$$ACCESS_URL\x1b[0m"; \
 	echo -e "====== \x1b[94mDONE Deploying ZaneOps ✅\x1b[0m"
 
