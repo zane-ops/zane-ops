@@ -151,14 +151,14 @@ Every role needs a one-line consequence, not a job title. Name what the role *ca
 | Viewer | **Viewer** — read-only            | For clients, stakeholders and contractors. Can see your apps, their URLs and whether they're up. **Cannot see logs, environment variables, or deploy.** Limited to the projects you pick. |
 | Member | **Member** — full access          | For your team. Can create, configure and deploy services, and read all environment variables and logs. Cannot delete services or projects, or manage members.                             |
 | Admin  | **Admin** — manages the workspace | Everything a Member can do, plus deleting services and projects, managing environments, connectors and registries, and inviting people.                                                   |
-| Owner  | **Owner**                         | Owns the workspace and the server. Only the Owner can change workspace settings, transfer ownership or delete the workspace.                                                              |
+| Owner  | **Owner**                         | Full control of the workspace. Only the Owner can change workspace settings, transfer ownership or delete the workspace. Reached through transfer of ownership, not by being assigned.    |
 
 ### Rules
 
 - **Default to Member.** Already the case on the model ([main.py:122](../zane_api/models/main.py#L122)) — but the invite form defaulted its dropdown to **Viewer**, so every invite started on the wrong tier. Fixed.
 - **Viewer requires picking projects.** The project selector should be part of the invite flow, not a settings page visited afterwards — an unscoped Viewer is the accident this prevents.
 - **Say "cannot" out loud on Viewer.** "Read-only" is not specific enough; people assume read-only includes logs. It doesn't, and that's the whole point of the tier.
-- **Owner is not selectable.** It's reached only through transfer of ownership.
+- **Owner is not selectable.** It's reached only through transfer of ownership. Note the draft copy said the Owner "owns the workspace and the server" — that is wrong. Server admin is `is_superuser` / `IsInstanceOwner`, entirely separate from `WorkspaceRole.OWNER`, and [transfer-ownership](../zane_api/views/workspace.py#L481) only flips the membership role. In practice the first Owner is usually also the superuser, but nothing enforces it and a transfer breaks the overlap.
 - **Show the role on the member list**, not just in the invite dialog. Misassignments are found by scanning the roster, not by re-opening an invite. Already there — the members table has a Role column.
 - **Viewer requires picking projects** was already satisfied: the project multi-select appears inline in both the invite and edit-permissions forms when Viewer is selected, and the backend rejects an empty list ([serializers/workspace.py:78](../zane_api/views/serializers/workspace.py#L78)).
 
