@@ -17417,6 +17417,7 @@ components:
           items:
             $ref: '#/components/schemas/ComposeStackChange'
           readOnly: true
+          nullable: true
         finished_at:
           type: string
           format: date-time

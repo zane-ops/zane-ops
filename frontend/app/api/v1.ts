@@ -1222,17 +1222,17 @@ export interface components {
       id: string;
       slug: string;
       network_alias_prefix: string;
-      user_content: string;
+      user_content: string | null;
       /** @description Processed YAML */
       computed_content: string | null;
-      unapplied_changes: readonly components["schemas"]["ComposeStackChange"][];
+      unapplied_changes: (readonly components["schemas"]["ComposeStackChange"][]) | null;
       urls: {
         [key: string]: components["schemas"]["ComposeStackUrlRoute"][];
       };
       configs: {
         [key: string]: components["schemas"]["ComposeConfigVersion"];
-      };
-      env_overrides: readonly components["schemas"]["ComposeStackEnvOverride"][];
+      } | null;
+      env_overrides: (readonly components["schemas"]["ComposeStackEnvOverride"][]) | null;
       services: {
         [key: string]: components["schemas"]["ComposeStackServiceStatus"];
       };
@@ -1285,7 +1285,7 @@ export interface components {
       queued_at: string;
       /** Format: date-time */
       started_at: string | null;
-      changes: readonly components["schemas"]["ComposeStackChange"][];
+      changes: (readonly components["schemas"]["ComposeStackChange"][]) | null;
       /** Format: date-time */
       finished_at: string | null;
       redeploy_hash: string | null;
@@ -1325,7 +1325,7 @@ export interface components {
     };
     ComposeStackRequest: {
       slug?: string;
-      user_content: string;
+      user_content: string | null;
     };
     ComposeStackSearchResponse: {
       id: string;
@@ -1496,7 +1496,7 @@ export interface components {
       name: string;
       slug: string;
       network_alias_prefix: string;
-      user_content: string;
+      user_content: string | null;
       /** @description Processed YAML */
       computed_content: string | null;
       urls: {
@@ -1504,8 +1504,8 @@ export interface components {
       };
       configs: {
         [key: string]: components["schemas"]["ComposeConfigVersion"];
-      };
-      env_overrides: readonly components["schemas"]["ComposeStackEnvOverride"][];
+      } | null;
+      env_overrides: (readonly components["schemas"]["ComposeStackEnvOverride"][]) | null;
     };
     ComposeStackToggleRequestRequest: {
       desired_state: components["schemas"]["DesiredStateEnum"];
@@ -1515,17 +1515,17 @@ export interface components {
       id: string;
       slug: string;
       network_alias_prefix: string;
-      user_content: string;
+      user_content: string | null;
       /** @description Processed YAML */
       computed_content: string | null;
-      unapplied_changes: readonly components["schemas"]["ComposeStackChange"][];
+      unapplied_changes: (readonly components["schemas"]["ComposeStackChange"][]) | null;
       urls: {
         [key: string]: components["schemas"]["ComposeStackUrlRoute"][];
       };
       configs: {
         [key: string]: components["schemas"]["ComposeConfigVersion"];
-      };
-      env_overrides: readonly components["schemas"]["ComposeStackEnvOverride"][];
+      } | null;
+      env_overrides: (readonly components["schemas"]["ComposeStackEnvOverride"][]) | null;
       services: {
         [key: string]: components["schemas"]["ComposeStackServiceStatus"];
       };
@@ -1597,13 +1597,12 @@ export interface components {
       /**
        * @description * `blank` - blank
        * * `invalid` - invalid
-       * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ComposeStacksCreateCreateValidationError: {
