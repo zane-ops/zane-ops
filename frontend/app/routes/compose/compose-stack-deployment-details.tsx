@@ -34,8 +34,11 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { composeStackQueries } from "~/lib/queries";
-import { cn, formatElapsedTime, formattedTime } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import { cn, formatElapsedTime, formattedTime, hasMinRole } from "~/lib/utils";
+import {
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-deployment-details";
 
 hljs.registerLanguage("json", json);
@@ -47,6 +50,7 @@ export default function ComposeStackDeploymentDetailsPage({
   }
 }: Route.ComponentProps) {
   const workspaceId = useCurrentWorkspace().id;
+  const membership = useCurrentWorkspaceMembership();
   const { data: deployment } = useQuery({
     ...composeStackQueries.singleDeployment({
       workspaceId: workspaceId,
@@ -102,6 +106,8 @@ export default function ComposeStackDeploymentDetailsPage({
     compose_content: FileTextIcon,
     env_overrides: KeyRoundIcon
   };
+
+  const isMember = hasMinRole(membership, "Member");
 
   return (
     <div className="my-6 flex flex-col lg:w-5/6">
@@ -192,75 +198,77 @@ export default function ComposeStackDeploymentDetailsPage({
         </div>
       </section>
 
-      <section id="changes" className="flex gap-1 scroll-mt-20">
-        <div className="w-16 hidden md:flex flex-col items-center">
-          <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
-            <GitCompareArrowsIcon size={15} className="flex-none text-grey" />
-          </div>
-          <div className="h-full border border-grey/50"></div>
-        </div>
-
-        <div className="w-full flex flex-col gap-5 pt-1 pb-8">
-          <h2 className="text-lg text-grey">Changes</h2>
-          <p className="text-gray-400">
-            All the changes applied by this deployment.
-          </p>
-
-          {deploymentChanges.length === 0 && (
-            <div
-              className={cn(
-                "flex flex-col gap-2 items-center py-8 bg-muted/20",
-                "border-border border-dashed rounded-md border-1"
-              )}
-            >
-              No changes made in this deployment
+      {isMember && (
+        <section id="changes" className="flex gap-1 scroll-mt-20">
+          <div className="w-16 hidden md:flex flex-col items-center">
+            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+              <GitCompareArrowsIcon size={15} className="flex-none text-grey" />
             </div>
-          )}
+            <div className="h-full border border-grey/50"></div>
+          </div>
 
-          {Object.entries(groupedDeploymentChanges).map((item) => {
-            const field = item[0] as keyof typeof groupedDeploymentChanges;
-            const changes = item[1] as NonNullable<
-              (typeof groupedDeploymentChanges)[typeof field]
-            >;
-            const Icon = IconFieldMap[field];
-            const fieldNames: Record<
-              (typeof deploymentChanges)[number]["field"],
-              string
-            > = {
-              compose_content: "Compose stack file contents",
-              env_overrides: "Environment overrides"
-            };
+          <div className="w-full flex flex-col gap-5 pt-1 pb-8">
+            <h2 className="text-lg text-grey">Changes</h2>
+            <p className="text-gray-400">
+              All the changes applied by this deployment.
+            </p>
 
-            return (
-              <div key={field} className="flex flex-col gap-1.5 flex-1">
-                <h3 className="text-lg flex gap-2 items-center border-b py-2 border-border">
-                  <Icon size={15} className="flex-none text-grey" />
-                  <span>{fieldNames[field]}</span>
-                </h3>
-                <div className="pl-4 py-2 flex flex-col gap-2">
-                  {field === "env_overrides" &&
-                    changes.map((change) => (
-                      <React.Fragment key={change.id}>
-                        <EnvVariableChangeItem
-                          change={change}
-                          key={change.id}
-                        />
-                        <hr className="border border-dashed border-border" />
-                      </React.Fragment>
-                    ))}
-                  {field === "compose_content" && (
-                    <PatchCodeEditor
-                      original={(changes[0].old_value as string) ?? ""}
-                      modified={changes[0].new_value as string}
-                      filename="docker-compose.yml"
-                    />
-                  )}
-                </div>
+            {deploymentChanges.length === 0 && (
+              <div
+                className={cn(
+                  "flex flex-col gap-2 items-center py-8 bg-muted/20",
+                  "border-border border-dashed rounded-md border-1"
+                )}
+              >
+                No changes made in this deployment
               </div>
-            );
-          })}
-        </div>
-      </section>
+            )}
+
+            {Object.entries(groupedDeploymentChanges).map((item) => {
+              const field = item[0] as keyof typeof groupedDeploymentChanges;
+              const changes = item[1] as NonNullable<
+                (typeof groupedDeploymentChanges)[typeof field]
+              >;
+              const Icon = IconFieldMap[field];
+              const fieldNames: Record<
+                (typeof deploymentChanges)[number]["field"],
+                string
+              > = {
+                compose_content: "Compose stack file contents",
+                env_overrides: "Environment overrides"
+              };
+
+              return (
+                <div key={field} className="flex flex-col gap-1.5 flex-1">
+                  <h3 className="text-lg flex gap-2 items-center border-b py-2 border-border">
+                    <Icon size={15} className="flex-none text-grey" />
+                    <span>{fieldNames[field]}</span>
+                  </h3>
+                  <div className="pl-4 py-2 flex flex-col gap-2">
+                    {field === "env_overrides" &&
+                      changes.map((change) => (
+                        <React.Fragment key={change.id}>
+                          <EnvVariableChangeItem
+                            change={change}
+                            key={change.id}
+                          />
+                          <hr className="border border-dashed border-border" />
+                        </React.Fragment>
+                      ))}
+                    {field === "compose_content" && (
+                      <PatchCodeEditor
+                        original={(changes[0].old_value as string) ?? ""}
+                        modified={changes[0].new_value as string}
+                        filename="docker-compose.yml"
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section id="snapshot" className="flex gap-1 scroll-mt-20">
         <div className="w-16 hidden md:flex flex-col items-center">
