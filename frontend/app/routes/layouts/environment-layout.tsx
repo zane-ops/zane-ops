@@ -155,19 +155,18 @@ export default function EnvironmentLayout({
   ];
 
   if (hasMinRole(membership, "Member")) {
-    sidebarNavItems.push(
-      {
-        title: "Variables",
-        href: "variables",
-        icon: KeyRoundIcon
-      },
-      {
-        title: "Settings",
-        href: "settings",
-        icon: SettingsIcon
-      }
-    );
+    sidebarNavItems.push({
+      title: "Variables",
+      href: "variables",
+      icon: KeyRoundIcon
+    });
   }
+
+  sidebarNavItems.push({
+    title: "Settings",
+    href: "settings",
+    icon: SettingsIcon
+  });
 
   return (
     <section>

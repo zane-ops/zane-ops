@@ -20,7 +20,6 @@ import {
   useCurrentWorkspace,
   useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
-import type { clientAction } from "~/routes/switch-workspace";
 
 export type WorkspaceMembershipListProps = {
   memberships: WorkspaceMembership[];
@@ -37,7 +36,7 @@ export function WorkspaceMembershipListHeaderDropdown({
     initialData: props.memberships
   });
 
-  const fetcher = useFetcher<typeof clientAction>();
+  const fetcher = useFetcher();
 
   const memberships = data ?? [];
   const workspaceColor = stringToColor(currentWorkspace.name);
