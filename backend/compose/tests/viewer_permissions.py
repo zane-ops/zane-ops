@@ -443,3 +443,26 @@ class ViewerComposeStackSecretFieldsViewTests(ViewerComposeStackTestBase):
             self.SNAPSHOT_MEMBER_ONLY_FIELDS - deployment.stack_snapshot.keys()  # type: ignore
         )
         self.assertEqual(EMPTY_SET, missing_fields)
+
+
+class ComposeStackWebhookDeployResponseViewTests(ComposeStackAPITestBase):
+    """
+    The webhook deploy route is `AllowAny` — anyone holding the deploy token can
+    call it, with no workspace and no role. Its response must not carry the
+    compose file, env overrides, configs or the token itself.
+    """
+
+    def test_webhook_deploy_returns_no_body(self):
+        _, stack = self.create_compose_stack(
+            content=DOCKER_COMPOSE_WEB_SERVICE, slug="my-stack"
+        )
+
+        response = self.client.put(
+            reverse(
+                "compose:stacks.webhook_deploy",
+                kwargs={"deploy_token": stack.deploy_token},
+            ),
+        )
+        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
+        self.assertFalse(response.content)
+        self.assertEqual(1, stack.deployments.count())

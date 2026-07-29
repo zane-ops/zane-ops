@@ -767,7 +767,6 @@ class ComposeStackReDeployAPIView(APIView):
 
 
 class ComposeStackWebhookDeployAPIView(APIView):
-    serializer_class = ComposeStackDeploymentSerializer
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
@@ -839,8 +838,7 @@ class ComposeStackWebhookDeployAPIView(APIView):
 
         transaction.on_commit(commit_callback)
 
-        serializer = ComposeStackDeploymentSerializer(deployment)
-        return Response(data=serializer.data)
+        return Response(status=status.HTTP_202_ACCEPTED)
 
 
 class ComposeStackDeployAPIView(APIView):

@@ -989,8 +989,7 @@ class TestDeployTokenComposeStackViewTests(ComposeStackAPITestBase):
                 kwargs={"deploy_token": stack.deploy_token},
             ),
         )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
 
         self.assertEqual(1, stack.deployments.count())
 
@@ -1025,8 +1024,7 @@ class TestDeployTokenComposeStackViewTests(ComposeStackAPITestBase):
                 kwargs={"deploy_token": stack.deploy_token},
             ),
         )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
 
         self.assertEqual(1, await stack.deployments.acount())
 
@@ -1057,8 +1055,7 @@ class TestDeployTokenComposeStackViewTests(ComposeStackAPITestBase):
             ),
             data=deploy_payload,
         )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
 
         # the user content should have been updated
         stack.refresh_from_db()
