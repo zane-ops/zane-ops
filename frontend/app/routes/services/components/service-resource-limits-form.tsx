@@ -21,8 +21,10 @@ import {
   cn,
   convertValueToBytes,
   formatStorageValue,
-  getFormErrorsFromResponseData
+  getFormErrorsFromResponseData,
+  hasMinRole
 } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
@@ -85,7 +87,13 @@ export function ServiceResourceLimits({
   const resouceLimitsChange = (service.unapplied_changes ?? []).find(
     (change) => change.field === "resource_limits"
   );
+
   const isPending = fetcher.state !== "idle";
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
+  // a viewer cannot edit anything, and a field with a pending change is
+  // locked until that change is applied or discarded
+  const isNotEditable = !isMember || resouceLimitsChange !== undefined;
 
   const newResourceLimits =
     resouceLimitsChange?.new_value as Service["resource_limits"];
@@ -149,17 +157,18 @@ export function ServiceResourceLimits({
             name="cpus"
             className="flex flex-col gap-2"
             errors={errors.new_value?.cpus}
-            disabled={resouceLimitsChange !== undefined}
+            disabled={isNotEditable}
           >
             <div className="flex justify-between gap-4 items-center">
               <FieldSetLabel>CPU</FieldSetLabel>
               <FieldSetInput
                 className={cn(
                   "inline-flex placeholder-shown:font-mono shrink w-28",
-                  "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                  "dark:disabled:bg-secondary-foreground disabled:opacity-100",
-                  "disabled:border-transparent"
+                  "disabled:placeholder-shown:font-mono data-[edited=true]:bg-secondary/60",
+                  "dark:data-[edited=true]:bg-secondary-foreground disabled:opacity-100",
+                  "data-[edited=true]:border-transparent"
                 )}
+                data-edited={resouceLimitsChange !== undefined}
                 placeholder="<no-limit>"
                 defaultValue={resourceLimits?.cpus ?? ""}
                 ref={cpuInputRef}
@@ -175,7 +184,7 @@ export function ServiceResourceLimits({
               min={0.1}
               aria-hidden="true"
               value={[cpuLimit ?? resourceLimitsQuery.data?.no_of_cpus ?? 0]}
-              disabled={resouceLimitsChange !== undefined}
+              disabled={isNotEditable}
               onValueChange={(value) => {
                 setCPULimit(value[0]);
                 if (cpuInputRef.current) {
@@ -193,7 +202,7 @@ export function ServiceResourceLimits({
             name="memory"
             className="flex flex-col gap-2"
             errors={errors.new_value?.memory?.value}
-            disabled={resouceLimitsChange !== undefined}
+            disabled={isNotEditable}
           >
             <div className="flex justify-between gap-4 items-center">
               <FieldSetLabel>Memory (in MiB)</FieldSetLabel>
@@ -203,12 +212,13 @@ export function ServiceResourceLimits({
                 </span>
                 <FieldSetInput
                   ref={memoryInputRef}
+                  data-edited={resouceLimitsChange !== undefined}
                   placeholder="<no-limit>"
                   className={cn(
                     "inline-flex placeholder-shown:font-mono shrink w-28",
-                    "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                    "dark:disabled:bg-secondary-foreground disabled:opacity-100",
-                    "disabled:border-transparent"
+                    "disabled:placeholder-shown:font-mono data-[edited=true]:bg-secondary/60",
+                    "dark:data-[edited=true]:bg-secondary-foreground disabled:opacity-100",
+                    "data-[edited=true]:border-transparent"
                   )}
                   defaultValue={resourceLimits?.memory?.value ?? ""}
                   onChange={(ev) => {
@@ -225,7 +235,7 @@ export function ServiceResourceLimits({
               min={6}
               aria-hidden="true"
               value={[memoryLimit ?? max_memory_in_mb]}
-              disabled={resouceLimitsChange !== undefined}
+              disabled={isNotEditable}
               onValueChange={(value) => {
                 setMemoryLimit(value[0]);
                 if (memoryInputRef.current) {
@@ -240,82 +250,85 @@ export function ServiceResourceLimits({
             </div>
           </FieldSet>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {resouceLimitsChange ? (
-            <SubmitButton
-              isPending={isPending}
-              variant="outline"
-              name="intent"
-              value="cancel-service-change"
-            >
-              {isPending ? (
-                <>
-                  <LoaderIcon className="animate-spin" size={15} />
-                  <span>Discarding...</span>
-                </>
-              ) : (
-                <>
-                  <Undo2Icon size={15} className="flex-none" />
-                  <span>Discard change</span>
-                </>
-              )}
-            </SubmitButton>
-          ) : (
-            <>
+        {isMember && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {resouceLimitsChange ? (
               <SubmitButton
                 isPending={isPending}
-                variant="secondary"
+                variant="outline"
                 name="intent"
-                value="request-service-change"
-                disabled={!resourceLimitsQuery.data}
+                value="cancel-service-change"
               >
                 {isPending ? (
                   <>
                     <LoaderIcon className="animate-spin" size={15} />
-                    <span>Updating...</span>
+                    <span>Discarding...</span>
                   </>
                 ) : (
                   <>
-                    <CheckIcon size={15} className="flex-none" />
-                    <span>Update</span>
+                    <Undo2Icon size={15} className="flex-none" />
+                    <span>Discard change</span>
                   </>
                 )}
               </SubmitButton>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  reset();
-                  setCPULimit(resourceLimits?.cpus ?? null);
-                  setMemoryLimit(resourceLimits?.memory?.value ?? null);
-                }}
-                type="reset"
-              >
-                Reset
-              </Button>
-              {service?.resource_limits !== null && resourceLimits !== null && (
+            ) : (
+              <>
                 <SubmitButton
-                  value="remove-service-resource-limits"
-                  name="intent"
                   isPending={isPending}
-                  variant="destructive"
-                  className="inline-flex gap-1 items-center"
+                  variant="secondary"
+                  name="intent"
+                  value="request-service-change"
+                  disabled={!resourceLimitsQuery.data}
                 >
                   {isPending ? (
                     <>
                       <LoaderIcon className="animate-spin" size={15} />
-                      <span>Removing...</span>
+                      <span>Updating...</span>
                     </>
                   ) : (
                     <>
-                      <Trash2Icon size={15} className="flex-none" />
-                      <span>Remove limits</span>
+                      <CheckIcon size={15} className="flex-none" />
+                      <span>Update</span>
                     </>
                   )}
                 </SubmitButton>
-              )}
-            </>
-          )}
-        </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    reset();
+                    setCPULimit(resourceLimits?.cpus ?? null);
+                    setMemoryLimit(resourceLimits?.memory?.value ?? null);
+                  }}
+                  type="reset"
+                >
+                  Reset
+                </Button>
+                {service?.resource_limits !== null &&
+                  resourceLimits !== null && (
+                    <SubmitButton
+                      value="remove-service-resource-limits"
+                      name="intent"
+                      isPending={isPending}
+                      variant="destructive"
+                      className="inline-flex gap-1 items-center"
+                    >
+                      {isPending ? (
+                        <>
+                          <LoaderIcon className="animate-spin" size={15} />
+                          <span>Removing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Trash2Icon size={15} className="flex-none" />
+                          <span>Remove limits</span>
+                        </>
+                      )}
+                    </SubmitButton>
+                  )}
+              </>
+            )}
+          </div>
+        )}
       </fieldset>
     </fetcher.Form>
   );

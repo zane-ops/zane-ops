@@ -37,7 +37,8 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData, hasMinRole } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
@@ -54,6 +55,8 @@ export function ServiceConfigsForm({
   service_slug,
   env_slug
 }: ServiceConfigsFormProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const { data: service } = useServiceQuery({
     project_slug,
     service_slug,
@@ -101,9 +104,13 @@ export function ServiceConfigsForm({
         </>
       )}
 
-      <hr className="border-border" />
-      <h3 className="text-lg">Add new config file</h3>
-      <NewServiceConfigForm />
+      {isMember && (
+        <>
+          <hr className="border-border" />
+          <h3 className="text-lg">Add new config file</h3>
+          <NewServiceConfigForm />
+        </>
+      )}
     </div>
   );
 }
@@ -123,6 +130,8 @@ function ServiceConfigItem({
   change_type,
   change_id
 }: ConfigItem) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const [accordionValue, setAccordionValue] = React.useState("");
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const [changedConfigLanguage, setChangedConfigLanguage] =
@@ -210,7 +219,7 @@ function ServiceConfigItem({
         )}
 
         <TooltipProvider>
-          {change_id !== undefined ? (
+          {isMember && change_id !== undefined ? (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <Button
@@ -228,6 +237,7 @@ function ServiceConfigItem({
               <TooltipContent>Discard change</TooltipContent>
             </Tooltip>
           ) : (
+            isMember &&
             id && (
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
@@ -315,7 +325,7 @@ function ServiceConfigItem({
                   onValueChange={(language) =>
                     setChangedConfigLanguage(language)
                   }
-                  disabled={!!change_id}
+                  disabled={!isMember || !!change_id}
                 >
                   <SelectTrigger
                     id={`language-${id}`}
@@ -323,10 +333,10 @@ function ServiceConfigItem({
                     data-edited={change_type === "UPDATE"}
                     data-added={change_type === "ADD"}
                     className={cn(
-                      "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
-                      "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                      "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:bg-secondary/60",
+                      "dark:data-[edited=true]:bg-secondary-foreground",
                       "data-[added=true]:dark:disabled:bg-primary-foreground",
-                      "disabled:border-transparent disabled:opacity-100"
+                      "data-[edited=true]:border-transparent disabled:opacity-100"
                     )}
                   >
                     <SelectValue placeholder="Select a language" />
@@ -351,14 +361,14 @@ function ServiceConfigItem({
                 <FieldSetInput
                   placeholder="ex: /data"
                   defaultValue={mount_path}
-                  disabled={!!change_id}
+                  disabled={!isMember || !!change_id}
                   data-edited={change_type === "UPDATE"}
                   data-added={change_type === "ADD"}
                   className={cn(
-                    "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
-                    "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                    "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:data-[edited=true]:bg-secondary/60",
+                    "data-[edited=true]:dark:data-[edited=true]:bg-secondary-foreground",
                     "data-[added=true]:dark:disabled:bg-primary-foreground",
-                    "disabled:border-transparent disabled:opacity-100"
+                    "data-[edited=true]:border-transparent disabled:opacity-100"
                   )}
                 />
               </FieldSet>
@@ -372,14 +382,14 @@ function ServiceConfigItem({
                 <FieldSetInput
                   placeholder="ex: postgresl-data"
                   defaultValue={name}
-                  disabled={!!change_id}
+                  disabled={!isMember || !!change_id}
                   data-edited={change_type === "UPDATE"}
                   data-added={change_type === "ADD"}
                   className={cn(
-                    "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
-                    "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                    "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:data-[edited=true]:bg-secondary/60",
+                    "data-[edited=true]:dark:data-[edited=true]:bg-secondary-foreground",
                     "data-[added=true]:dark:disabled:bg-primary-foreground",
-                    "disabled:border-transparent disabled:opacity-100"
+                    "data-[edited=true]:border-transparent disabled:opacity-100"
                   )}
                 />
               </FieldSet>
@@ -402,7 +412,7 @@ function ServiceConfigItem({
                   containerClassName="w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[855px]"
                   language={changedConfigLanguage}
                   value={changedContents}
-                  readOnly={!!change_id}
+                  readOnly={!isMember || !!change_id}
                   onChange={(value) => setChangedContents(value ?? "")}
                 />
               </FieldSet>

@@ -28,7 +28,7 @@ import { cn } from "~/lib/utils";
 export type ChangeItemProps = {
   change:
     | NonNullable<Service["unapplied_changes"]>[number]
-    | ComposeStack["unapplied_changes"][number];
+    | NonNullable<ComposeStack["unapplied_changes"]>[number];
   unapplied?: boolean;
 };
 

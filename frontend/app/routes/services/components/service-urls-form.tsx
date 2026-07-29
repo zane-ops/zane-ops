@@ -35,7 +35,13 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn, getFormErrorsFromResponseData, wait } from "~/lib/utils";
+import {
+  cn,
+  getFormErrorsFromResponseData,
+  hasMinRole,
+  wait
+} from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
@@ -58,6 +64,8 @@ export function ServiceURLsForm({
   service_slug,
   env_slug
 }: ServiceURLsFormProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const { data: service } = useServiceQuery({
     project_slug,
     service_slug,
@@ -115,9 +123,13 @@ export function ServiceURLsForm({
           </ul>
         </>
       )}
-      <hr className="border-border" />
-      <h3 className="text-lg">Add new url</h3>
-      <NewServiceURLForm />
+      {isMember && (
+        <>
+          <hr className="border-border" />
+          <h3 className="text-lg">Add new url</h3>
+          <NewServiceURLForm />
+        </>
+      )}
     </div>
   );
 }
@@ -138,6 +150,8 @@ function ServiceURLFormItem({
   strip_prefix,
   id
 }: ServiceURLFormItemProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const [isRedirect, setIsRedirect] = React.useState(Boolean(redirect_to));
   const [hasCopied, startTransition] = React.useTransition();
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
@@ -251,7 +265,7 @@ function ServiceURLFormItem({
             </TooltipTrigger>
             <TooltipContent>Copy url</TooltipContent>
           </Tooltip>
-          {change_id !== undefined ? (
+          {isMember && change_id !== undefined ? (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <Button
@@ -269,6 +283,7 @@ function ServiceURLFormItem({
               <TooltipContent>Discard change</TooltipContent>
             </Tooltip>
           ) : (
+            isMember &&
             id && (
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
@@ -302,7 +317,7 @@ function ServiceURLFormItem({
         <AccordionItem
           value={`${domain}/${base_path}`}
           className="border-none"
-          disabled={!!change_id}
+          disabled={!isMember || !!change_id}
         >
           <AccordionTrigger
             className={cn(
@@ -375,6 +390,7 @@ function ServiceURLFormItem({
                   >
                     <FieldSetLabel>Forwarded port</FieldSetLabel>
                     <FieldSetInput
+                      disabled={!isMember}
                       placeholder="ex: 3000"
                       name="associated_port"
                       defaultValue={associated_port ?? ""}
@@ -389,6 +405,7 @@ function ServiceURLFormItem({
                 >
                   <FieldSetLabel>Domain</FieldSetLabel>
                   <FieldSetInput
+                    disabled={!isMember}
                     name="domain"
                     placeholder="ex: www.mysupersaas.co"
                     defaultValue={domain}
@@ -401,6 +418,7 @@ function ServiceURLFormItem({
                 >
                   <FieldSetLabel>Base path</FieldSetLabel>
                   <FieldSetInput
+                    disabled={!isMember}
                     placeholder="ex: /"
                     name="base_path"
                     defaultValue={base_path ?? "/"}
@@ -413,7 +431,10 @@ function ServiceURLFormItem({
                   errors={errors.new_value?.strip_prefix}
                 >
                   <div className="inline-flex gap-2 items-center">
-                    <FieldSetCheckbox defaultChecked={strip_prefix} />
+                    <FieldSetCheckbox
+                      defaultChecked={strip_prefix}
+                      disabled={!isMember}
+                    />
 
                     <FieldSetLabel className="inline-flex gap-1 items-center">
                       <span>Strip path prefix ?</span>
@@ -439,6 +460,7 @@ function ServiceURLFormItem({
                 >
                   <div className="inline-flex gap-2 items-center">
                     <FieldSetCheckbox
+                      disabled={!isMember}
                       name="is_redirect"
                       defaultChecked={isRedirect}
                       onCheckedChange={(state) => setIsRedirect(Boolean(state))}
@@ -459,6 +481,7 @@ function ServiceURLFormItem({
                     >
                       <FieldSetLabel>Redirect to url</FieldSetLabel>
                       <FieldSetInput
+                        disabled={!isMember}
                         name="redirect_to_url"
                         placeholder="ex: https://mysupersaas.co/"
                         defaultValue={redirect_to?.url}
@@ -471,6 +494,7 @@ function ServiceURLFormItem({
                     >
                       <div className="inline-flex items-center gap-2">
                         <FieldSetCheckbox
+                          disabled={!isMember}
                           name="redirect_to_permanent"
                           defaultChecked={redirect_to?.permanent}
                         />

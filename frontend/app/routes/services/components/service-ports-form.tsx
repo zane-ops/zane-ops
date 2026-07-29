@@ -32,7 +32,8 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData, hasMinRole } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import {
   type clientAction,
   useFetcherWithCallbacks,
@@ -50,6 +51,8 @@ export function ServicePortsForm({
   project_slug,
   env_slug
 }: ServicePortsFormProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const { data: service } = useServiceQuery({
     project_slug,
     service_slug,
@@ -126,9 +129,13 @@ export function ServicePortsForm({
         </>
       )}
 
-      <hr className="border-border" />
-      <h3 className="text-lg">Add new port</h3>
-      <NewServicePortForm />
+      {isMember && (
+        <>
+          <hr className="border-border" />
+          <h3 className="text-lg">Add new port</h3>
+          <NewServicePortForm />
+        </>
+      )}
     </div>
   );
 }
@@ -146,6 +153,8 @@ function ServicePortItem({
   id,
   change_type
 }: ServicePortItemProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const [accordionValue, setAccordionValue] = React.useState("");
   const updateFetcher = useFetcher<typeof clientAction>();
   const isUpdatingExposedPort = updateFetcher.state !== "idle";
@@ -205,7 +214,7 @@ function ServicePortItem({
           </deleteFetcher.Form>
         )}
         <TooltipProvider>
-          {change_id !== undefined ? (
+          {isMember && change_id !== undefined ? (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <Button
@@ -223,6 +232,7 @@ function ServicePortItem({
               <TooltipContent>Discard change</TooltipContent>
             </Tooltip>
           ) : (
+            isMember &&
             id && (
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
@@ -256,7 +266,7 @@ function ServicePortItem({
         <AccordionItem
           value={`${host}:${forwarded}`}
           className="border-none"
-          disabled={!!change_id}
+          disabled={!isMember || !!change_id}
         >
           <AccordionTrigger
             className={cn(
@@ -299,6 +309,7 @@ function ServicePortItem({
                     <Input
                       placeholder="ex: 8080"
                       id={`forwarded-${id}`}
+                      disabled={!isMember}
                       defaultValue={forwarded}
                       name="forwarded"
                       aria-invalid={Boolean(errors.new_value?.forwarded)}
@@ -325,6 +336,7 @@ function ServicePortItem({
                       placeholder="ex: 80"
                       defaultValue={host}
                       id={`host-${id}`}
+                      disabled={!isMember}
                       name="host"
                       aria-invalid={Boolean(errors.new_value?.host)}
                       aria-labelledby={`host-error-${id}`}

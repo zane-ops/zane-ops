@@ -38,7 +38,8 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData, hasMinRole } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
@@ -55,6 +56,8 @@ export function ServiceVolumesForm({
   service_slug,
   env_slug
 }: ServiceVolumesFormProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const { data: service } = useServiceQuery({
     project_slug,
     service_slug,
@@ -117,9 +120,13 @@ export function ServiceVolumesForm({
           </ul>
         </>
       )}
-      <hr className="border-border" />
-      <h3 className="text-lg">Add new volume</h3>
-      <NewServiceVolumeForm />
+      {isMember && (
+        <>
+          <hr className="border-border" />
+          <h3 className="text-lg">Add new volume</h3>
+          <NewServiceVolumeForm />
+        </>
+      )}
     </div>
   );
 }
@@ -139,6 +146,8 @@ function ServiceVolumeItem({
   mode,
   change_id
 }: VolumeItem) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const [accordionValue, setAccordionValue] = React.useState("");
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const [changedVolumeMode, setChangedVolumeMode] = React.useState(mode);
@@ -215,7 +224,7 @@ function ServiceVolumeItem({
         )}
 
         <TooltipProvider>
-          {change_id !== undefined ? (
+          {isMember && change_id !== undefined ? (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <Button
@@ -233,6 +242,7 @@ function ServiceVolumeItem({
               <TooltipContent>Discard change</TooltipContent>
             </Tooltip>
           ) : (
+            isMember &&
             id && (
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
@@ -265,7 +275,7 @@ function ServiceVolumeItem({
         <AccordionItem
           value={name}
           className="border-none"
-          disabled={!!change_id}
+          disabled={!isMember || !!change_id}
         >
           <AccordionTrigger
             className={cn(
@@ -319,6 +329,7 @@ function ServiceVolumeItem({
                     Mode
                   </label>
                   <FieldSetSelect
+                    disabled={!isMember}
                     value={changedVolumeMode}
                     onValueChange={(mode) =>
                       setChangedVolumeMode(mode as VolumeMode)
@@ -345,6 +356,7 @@ function ServiceVolumeItem({
                     Name
                   </FieldSetLabel>
                   <FieldSetInput
+                    disabled={!isMember}
                     placeholder="ex: postgresl-data"
                     defaultValue={name}
                   />
@@ -358,6 +370,7 @@ function ServiceVolumeItem({
                 >
                   <FieldSetLabel>Container path</FieldSetLabel>
                   <FieldSetInput
+                    disabled={!isMember}
                     placeholder="ex: /data"
                     defaultValue={container_path}
                   />
@@ -369,6 +382,7 @@ function ServiceVolumeItem({
                 >
                   <FieldSetLabel>Host path</FieldSetLabel>
                   <FieldSetInput
+                    disabled={!isMember}
                     placeholder="ex: /etc/localtime"
                     defaultValue={host_path ?? ""}
                   />

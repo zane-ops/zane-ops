@@ -39,8 +39,11 @@ import {
 } from "~/components/ui/tooltip";
 import { createDevLogger } from "~/lib/logger";
 import { serviceQueries } from "~/lib/queries";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import { cn, getFormErrorsFromResponseData, hasMinRole } from "~/lib/utils";
+import {
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/workspace-store";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
@@ -59,6 +62,8 @@ export function ServiceSharedVolumesForm({
   service_slug,
   env_slug
 }: ServiceSharedVolumesFormProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const { data: service } = useServiceQuery({
     project_slug,
     service_slug,
@@ -118,13 +123,17 @@ export function ServiceSharedVolumesForm({
           </ul>
         </>
       )}
-      <hr className="border-border" />
-      <h3 className="text-lg">Add new shared volume</h3>
-      <NewServiceSharedVolumeForm
-        service_slug={service_slug}
-        project_slug={project_slug}
-        env_slug={env_slug}
-      />
+      {isMember && (
+        <>
+          <hr className="border-border" />
+          <h3 className="text-lg">Add new shared volume</h3>
+          <NewServiceSharedVolumeForm
+            service_slug={service_slug}
+            project_slug={project_slug}
+            env_slug={env_slug}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -144,6 +153,8 @@ function ServiceSharedVolumeItem({
   change_id,
   ...props
 }: SharedVolumeItem & ServiceSharedVolumesFormProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const workspaceId = useCurrentWorkspace().id;
   const [accordionValue, setAccordionValue] = React.useState("");
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
@@ -232,7 +243,7 @@ function ServiceSharedVolumeItem({
         )}
 
         <TooltipProvider>
-          {change_id !== undefined ? (
+          {isMember && change_id !== undefined ? (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <Button
@@ -250,6 +261,7 @@ function ServiceSharedVolumeItem({
               <TooltipContent>Discard change</TooltipContent>
             </Tooltip>
           ) : (
+            isMember &&
             id && (
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
@@ -282,7 +294,7 @@ function ServiceSharedVolumeItem({
         <AccordionItem
           value={volume_id}
           className="border-none"
-          disabled={!!change_id}
+          disabled={!isMember || !!change_id}
         >
           <AccordionTrigger
             className={cn(
@@ -336,6 +348,7 @@ function ServiceSharedVolumeItem({
                     Volume
                   </label>
                   <FieldSetSelect
+                    disabled={!isMember}
                     value={changedVolumeId}
                     onValueChange={setChangedVolumeId}
                   >
@@ -370,6 +383,7 @@ function ServiceSharedVolumeItem({
                 >
                   <FieldSetLabel>Container path</FieldSetLabel>
                   <FieldSetInput
+                    disabled={!isMember}
                     placeholder="ex: /data"
                     defaultValue={container_path}
                   />

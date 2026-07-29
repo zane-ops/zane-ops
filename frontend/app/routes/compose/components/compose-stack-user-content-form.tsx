@@ -37,7 +37,7 @@ export function ComposeStackUserContentForm({
   const [data, setData] = React.useState(fetcher.data);
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
-  const composeContentChange = stack?.unapplied_changes.find(
+  const composeContentChange = (stack?.unapplied_changes ?? []).find(
     (change) => change.field === "compose_content"
   );
   const isEmptyChange =

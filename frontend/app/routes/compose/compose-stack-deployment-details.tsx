@@ -72,8 +72,10 @@ export default function ComposeStackDeploymentDetailsPage({
     { language: "json" }
   ).value;
 
-  const deploymentChanges = Object.groupBy(
-    deployment.changes,
+  const deploymentChanges = deployment.changes ?? [];
+
+  const groupedDeploymentChanges = Object.groupBy(
+    deploymentChanges,
     ({ field }) => field
   );
 
@@ -93,10 +95,8 @@ export default function ComposeStackDeploymentDetailsPage({
     }
   }, [deployment.started_at, deployment.finished_at]);
 
-  const [hasCopied, startTransition] = React.useTransition();
-
   const IconFieldMap: Record<
-    (typeof deployment.changes)[number]["field"],
+    (typeof deploymentChanges)[number]["field"],
     LucideIcon
   > = {
     compose_content: FileTextIcon,
@@ -206,7 +206,7 @@ export default function ComposeStackDeploymentDetailsPage({
             All the changes applied by this deployment.
           </p>
 
-          {deployment.changes.length === 0 && (
+          {deploymentChanges.length === 0 && (
             <div
               className={cn(
                 "flex flex-col gap-2 items-center py-8 bg-muted/20",
@@ -217,14 +217,14 @@ export default function ComposeStackDeploymentDetailsPage({
             </div>
           )}
 
-          {Object.entries(deploymentChanges).map((item) => {
-            const field = item[0] as keyof typeof deploymentChanges;
+          {Object.entries(groupedDeploymentChanges).map((item) => {
+            const field = item[0] as keyof typeof groupedDeploymentChanges;
             const changes = item[1] as NonNullable<
-              (typeof deploymentChanges)[typeof field]
+              (typeof groupedDeploymentChanges)[typeof field]
             >;
             const Icon = IconFieldMap[field];
             const fieldNames: Record<
-              (typeof deployment.changes)[number]["field"],
+              (typeof deploymentChanges)[number]["field"],
               string
             > = {
               compose_content: "Compose stack file contents",

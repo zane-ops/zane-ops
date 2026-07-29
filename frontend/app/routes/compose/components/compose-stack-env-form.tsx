@@ -68,9 +68,12 @@ export function ComposeStackEnvForm({ stack }: ComposeStackEnvFormProps) {
       value: env.value
     });
   }
-  for (const ch of stack.unapplied_changes.filter(
+
+  const stack_changes = (stack.unapplied_changes ?? []).filter(
     (ch) => ch.field === "env_overrides"
-  )) {
+  );
+
+  for (const ch of stack_changes) {
     const keyValue = (ch.new_value ?? ch.old_value) as {
       key: string;
       value: string;
@@ -83,6 +86,7 @@ export function ComposeStackEnvForm({ stack }: ComposeStackEnvFormProps) {
       change_type: ch.type
     });
   }
+
   return (
     <div className="w-full max-w-4xl flex flex-col gap-5">
       <p className="text-gray-400">
