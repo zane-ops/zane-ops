@@ -110,6 +110,16 @@ export function ServicePortsForm({
         </Alert>
       </div>
 
+      {!isMember && ports.size === 0 && (
+        <div
+          className={cn(
+            "flex flex-col gap-2 items-center py-8 bg-muted/20",
+            "border-border border-dashed rounded-md border-1"
+          )}
+        >
+          No exposed ports in this service
+        </div>
+      )}
       {ports.size > 0 && (
         <>
           <hr className="border-border" />

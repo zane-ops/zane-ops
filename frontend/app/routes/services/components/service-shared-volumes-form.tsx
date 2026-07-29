@@ -106,6 +106,16 @@ export function ServiceSharedVolumesForm({
           </a>
         </p>
       </div>
+      {!isMember && volumes.size === 0 && (
+        <div
+          className={cn(
+            "flex flex-col gap-2 items-center py-8 bg-muted/20",
+            "border-border border-dashed rounded-md border-1"
+          )}
+        >
+          No shared volumes in this service
+        </div>
+      )}
       {volumes.size > 0 && (
         <>
           <hr className="border-border" />

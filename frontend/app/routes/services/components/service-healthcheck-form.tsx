@@ -190,6 +190,7 @@ export function ServiceHealthcheckForm({
                 className={cn(
                   "data-[edited=true]:bg-secondary/60 dark:data-[edited=true]:bg-secondary-foreground",
                   "data-disabled:opacity-100 data-[edited=true]:border-transparent",
+                  "data-disabled:bg-muted data-[edited=false]:disabled:text-gray-400",
                   healthcheckType === "none" && "text-muted-foreground"
                 )}
               >
@@ -197,7 +198,7 @@ export function ServiceHealthcheckForm({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem disabled value="none">
-                  Select a type
+                  {isNotEditable ? "<empty>" : "Select a type"}
                 </SelectItem>
                 <SelectItem value="PATH">Path</SelectItem>
                 <SelectItem value="COMMAND">Command</SelectItem>
