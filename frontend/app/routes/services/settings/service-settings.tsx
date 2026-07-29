@@ -90,6 +90,7 @@ export default function ServiceSettingsPage({
 }: Route.ComponentProps) {
   const membership = useCurrentWorkspaceMembership();
   const isAdmin = hasMinRole(membership, "Admin");
+  const isMember = hasMinRole(membership, "Member");
 
   return (
     <div className="my-6 grid lg:grid-cols-12 gap-10 relative max-w-full">
@@ -234,18 +235,22 @@ export default function ServiceSettingsPage({
               service_slug={service_slug}
               env_slug={env_slug}
             />
-            <hr className="w-full max-w-4xl border-border" />
-            <ServiceDeployURLForm
-              project_slug={project_slug}
-              service_slug={service_slug}
-              env_slug={env_slug}
-            />
-            {service.type === "GIT_REPOSITORY" && (
-              <ServicePreviewDeployURLForm
-                project_slug={project_slug}
-                service_slug={service_slug}
-                env_slug={env_slug}
-              />
+            {isMember && (
+              <>
+                <hr className="w-full max-w-4xl border-border" />
+                <ServiceDeployURLForm
+                  project_slug={project_slug}
+                  service_slug={service_slug}
+                  env_slug={env_slug}
+                />
+                {service.type === "GIT_REPOSITORY" && (
+                  <ServicePreviewDeployURLForm
+                    project_slug={project_slug}
+                    service_slug={service_slug}
+                    env_slug={env_slug}
+                  />
+                )}
+              </>
             )}
           </div>
         </section>

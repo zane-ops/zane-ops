@@ -8,7 +8,8 @@ import {
   FieldSetInput,
   FieldSetLabel
 } from "~/components/ui/fieldset";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData, hasMinRole } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import type { clientAction } from "~/routes/compose/compose-stack-settings";
 
 export type ComposeStackSlugFormProps = {
@@ -23,6 +24,8 @@ export function ComposeStackSlugForm({
   stack_slug
 }: ComposeStackSlugFormProps) {
   const [isEditing, setIsEditing] = React.useState(false);
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const fetcher = useFetcher<typeof clientAction>();
   const isPending = fetcher.state !== "idle";
   const navigate = useNavigate();
@@ -77,7 +80,7 @@ export function ComposeStackSlugForm({
               )}
             />
 
-            {!isEditing && (
+            {!isEditing && isMember && (
               <Button
                 variant="outline"
                 onClick={() => {
