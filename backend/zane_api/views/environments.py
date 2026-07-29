@@ -233,7 +233,9 @@ class CloneEnviromentAPIView(APIView):
 
             transaction.on_commit(on_commit)
 
-            serializer = EnvironmentWithVariablesSerializer(new_environment)
+            serializer = EnvironmentWithVariablesSerializer(
+                new_environment, context={"request": request}
+            )
             return Response(status=status.HTTP_201_CREATED, data=serializer.data)
 
 
@@ -272,7 +274,9 @@ class ReviewPreviewEnvDeployAPIView(APIView):
                 detail=f"A pending preview env with the slug `{env_slug}` does not exist in this project"
             )
 
-        serializer = EnvironmentWithVariablesSerializer(environment)
+        serializer = EnvironmentWithVariablesSerializer(
+            environment, context={"request": request}
+        )
         return Response(data=serializer.data)
 
     @extend_schema(
