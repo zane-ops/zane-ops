@@ -17,8 +17,15 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { ensureMinRole } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/deployment-terminal";
+
+export async function clientLoader({}: Route.ClientLoaderArgs) {
+  await ensureMinRole(getQueryClient(), "Member");
+  return;
+}
 
 export default function DeploymentTerminalPage({
   params

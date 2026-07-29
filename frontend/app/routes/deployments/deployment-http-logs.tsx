@@ -45,8 +45,8 @@ import {
   type HttpLog,
   REQUEST_METHODS,
   deploymentQueries,
-  httpLogSearchSchema,
-  userQueries
+  ensureMinRole,
+  httpLogSearchSchema
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection } from "~/lib/types";
@@ -67,6 +67,7 @@ export async function clientLoader({
   }
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Member");
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const searchParams = new URL(request.url).searchParams;
   const search = httpLogSearchSchema.parse(searchParams);
