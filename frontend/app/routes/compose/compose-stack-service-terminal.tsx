@@ -22,10 +22,16 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { composeStackQueries } from "~/lib/queries";
+import { composeStackQueries, ensureMinRole } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
 import { useCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-service-terminal";
+
+export async function clientLoader({}: Route.ClientLoaderArgs) {
+  await ensureMinRole(getQueryClient(), "Member");
+  return;
+}
 
 export default function ComposeStackServiceTerminalPage({
   params,

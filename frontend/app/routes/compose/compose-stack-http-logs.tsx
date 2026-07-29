@@ -28,8 +28,8 @@ import {
   type HttpLog,
   REQUEST_METHODS,
   composeStackQueries,
-  httpLogSearchSchema,
-  userQueries
+  ensureMinRole,
+  httpLogSearchSchema
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
@@ -63,6 +63,7 @@ export async function clientLoader({
   }
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Member");
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const stack = await queryClient.ensureQueryData(
     composeStackQueries.single({
