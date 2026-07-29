@@ -12,10 +12,17 @@ import { NavLink } from "~/components/nav-link";
 import { SubmitButton } from "~/components/ui/button";
 import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, formattedTime, metaTitle, notFound } from "~/lib/utils";
+import {
+  cn,
+  formattedTime,
+  hasMinRole,
+  metaTitle,
+  notFound
+} from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import type { clientAction as cancelDeploymentAction } from "~/routes/compose/cancel-compose-deployment";
 import type { Route } from "./+types/compose-stack-deployment-layout";
@@ -54,6 +61,8 @@ export default function ComposeStackDeploymentLayoutPage({
   loaderData,
   params
 }: Route.ComponentProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const workspaceId = useCurrentWorkspace().id;
   const { data: deployment } = useQuery({
     ...composeStackQueries.singleDeployment({
@@ -133,12 +142,14 @@ export default function ComposeStackDeploymentLayoutPage({
             "inline-flex items-stretch p-0.5 text-muted-foreground"
           )}
         >
-          <li>
-            <NavLink to="." prefetch="viewport">
-              <span>Build logs</span>
-              <SquareChartGanttIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
+          {isMember && (
+            <li>
+              <NavLink to="." prefetch="viewport">
+                <span>Build logs</span>
+                <SquareChartGanttIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+          )}
 
           <li>
             <NavLink to="./details">

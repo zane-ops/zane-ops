@@ -22,10 +22,17 @@ import {
 } from "~/components/ui/tooltip";
 import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, isNotFoundError, metaTitle, notFound } from "~/lib/utils";
+import {
+  cn,
+  hasMinRole,
+  isNotFoundError,
+  metaTitle,
+  notFound
+} from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import { ComposeStackActionsPopover } from "~/routes/compose/components/compose-stack-actions-popover";
 import { ComposeStackChangesModal } from "~/routes/compose/components/compose-stack-changes-modal";
@@ -62,6 +69,8 @@ export default function ComposeStackLayoutPage({
   params,
   loaderData
 }: Route.ComponentProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const workspaceId = useCurrentWorkspace().id;
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
@@ -150,12 +159,14 @@ export default function ComposeStackLayoutPage({
             </NavLink>
           </li>
 
-          <li>
-            <NavLink to="./http-logs" prefetch="viewport">
-              <span>Http logs</span>
-              <GlobeIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
+          {isMember && (
+            <li>
+              <NavLink to="./http-logs" prefetch="viewport">
+                <span>Http logs</span>
+                <GlobeIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+          )}
 
           <li>
             <NavLink to="./metrics">

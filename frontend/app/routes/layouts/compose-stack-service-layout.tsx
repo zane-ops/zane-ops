@@ -51,6 +51,7 @@ import {
   durationToMs,
   formatURL,
   getDockerImageIconURL,
+  hasMinRole,
   metaTitle,
   notFound,
   pluralize,
@@ -58,7 +59,8 @@ import {
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 import type { Route } from "./+types/compose-stack-service-layout";
@@ -94,6 +96,8 @@ export default function ComposeStackServiceLayoutPage({
   params,
   loaderData
 }: Route.ComponentProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const workspaceId = useCurrentWorkspace().id;
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
@@ -321,25 +325,31 @@ export default function ComposeStackServiceLayoutPage({
             </NavLink>
           </li>
 
-          <li>
-            <NavLink to="./runtime-logs">
-              <span>Runtime Logs</span>
-              <ScrollTextIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="./terminal">
-              <span>Terminal</span>
-              <TerminalIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
+          {isMember && (
+            <li>
+              <NavLink to="./runtime-logs">
+                <span>Runtime Logs</span>
+                <ScrollTextIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+          )}
+          {isMember && (
+            <li>
+              <NavLink to="./terminal">
+                <span>Terminal</span>
+                <TerminalIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+          )}
 
-          <li>
-            <NavLink to="./http-logs" prefetch="viewport">
-              <span>Http logs</span>
-              <GlobeIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
+          {isMember && (
+            <li>
+              <NavLink to="./http-logs" prefetch="viewport">
+                <span>Http logs</span>
+                <GlobeIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+          )}
 
           <li>
             <NavLink to="./metrics">
