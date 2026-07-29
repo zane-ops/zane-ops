@@ -38,8 +38,11 @@ import {
   dockerHubQueries,
   sharedRegistryCredentialsQueries
 } from "~/lib/queries";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import { cn, getFormErrorsFromResponseData, hasMinRole } from "~/lib/utils";
+import {
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/workspace-store";
 import {
   type clientAction,
   useServiceQuery
@@ -111,6 +114,9 @@ export function ServiceSourceForm({
   );
 
   const imageList = imageListData?.data?.images ?? [];
+
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
 
   React.useEffect(() => {
     if (errors.non_field_errors && errors.non_field_errors.length > 0) {
@@ -303,85 +309,87 @@ export function ServiceSourceForm({
             </FieldSetSelect>
           </FieldSet>
         </fieldset>
-        <div className="flex gap-4">
-          {serviceSourcheChange !== undefined ? (
-            <>
-              <SubmitButton
-                isPending={isPending}
-                variant="outline"
-                name="intent"
-                value="cancel-service-change"
-              >
-                {isPending ? (
-                  <>
-                    <LoaderIcon className="animate-spin" size={15} />
-                    <span>Discarding...</span>
-                  </>
-                ) : (
-                  <>
-                    <Undo2Icon size={15} className="flex-none" />
-                    <span>Discard change</span>
-                  </>
-                )}
-              </SubmitButton>
-            </>
-          ) : (
-            <>
-              {isEditing && (
+        {isMember && (
+          <div className="flex gap-4">
+            {serviceSourcheChange !== undefined ? (
+              <>
                 <SubmitButton
                   isPending={isPending}
-                  variant="secondary"
-                  className="self-start"
+                  variant="outline"
                   name="intent"
-                  value="request-service-change"
+                  value="cancel-service-change"
                 >
                   {isPending ? (
                     <>
                       <LoaderIcon className="animate-spin" size={15} />
-                      <span>Updating...</span>
+                      <span>Discarding...</span>
                     </>
                   ) : (
                     <>
-                      <CheckIcon size={15} className="flex-none" />
-                      <span>Update</span>
+                      <Undo2Icon size={15} className="flex-none" />
+                      <span>Discard change</span>
                     </>
                   )}
                 </SubmitButton>
-              )}
-              <Button
-                variant="outline"
-                type="reset"
-                disabled={isPending}
-                onClick={() => {
-                  const newIsEditing = !isEditing;
-                  flushSync(() => {
-                    setIsEditing(newIsEditing);
-                    setContainerRegistryCredentials(
-                      container_registry_credentials_id
-                    );
-                  });
-                  if (newIsEditing) {
-                    inputRef.current?.focus();
-                  }
-                  setData(undefined);
-                }}
-                className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
-              >
-                {!isEditing ? (
-                  <>
-                    <span>Edit</span>
-                    <PencilLineIcon size={15} className="flex-none" />
-                  </>
-                ) : (
-                  <>
-                    <XIcon size={15} className="flex-none" />
-                    <span>Cancel</span>
-                  </>
+              </>
+            ) : (
+              <>
+                {isEditing && (
+                  <SubmitButton
+                    isPending={isPending}
+                    variant="secondary"
+                    className="self-start"
+                    name="intent"
+                    value="request-service-change"
+                  >
+                    {isPending ? (
+                      <>
+                        <LoaderIcon className="animate-spin" size={15} />
+                        <span>Updating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckIcon size={15} className="flex-none" />
+                        <span>Update</span>
+                      </>
+                    )}
+                  </SubmitButton>
                 )}
-              </Button>
-            </>
-          )}
-        </div>
+                <Button
+                  variant="outline"
+                  type="reset"
+                  disabled={isPending}
+                  onClick={() => {
+                    const newIsEditing = !isEditing;
+                    flushSync(() => {
+                      setIsEditing(newIsEditing);
+                      setContainerRegistryCredentials(
+                        container_registry_credentials_id
+                      );
+                    });
+                    if (newIsEditing) {
+                      inputRef.current?.focus();
+                    }
+                    setData(undefined);
+                  }}
+                  className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+                >
+                  {!isEditing ? (
+                    <>
+                      <span>Edit</span>
+                      <PencilLineIcon size={15} className="flex-none" />
+                    </>
+                  ) : (
+                    <>
+                      <XIcon size={15} className="flex-none" />
+                      <span>Cancel</span>
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </div>
+        )}
       </fetcher.Form>
     </div>
   );

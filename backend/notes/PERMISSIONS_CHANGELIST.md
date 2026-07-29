@@ -172,7 +172,7 @@ Worth its own section rather than folding into §7: only part of it is mechanica
 
 `ensureMinRole()` throws `notFound()` ([queries.ts:99](../../frontend/app/lib/queries.ts#L99)), so a guard that is too strict shows a **404**, not a 403. A user who genuinely has the permission is told the page does not exist — which reads as a bug, not as a permission error.
 
-### 8a. Guards still asking for Owner *(mechanical)*
+### 8a. Guards still asking for Owner *(mechanical)* — **applied**
 
 §3 moved these to Admin on the backend; the frontend still gates them at Owner, so an Admin gets a 404 on a page they can now use.
 
@@ -189,11 +189,27 @@ Worth its own section rather than folding into §7: only part of it is mechanica
 
 Note the list route is the odd one out: copying Admin everywhere would wrongly hide the credential list from Members who need to pick one when creating a service.
 
-### 8b. Guards still asking for Member *(not mechanical)*
+Two more surfaced while applying it, both places where the page became reachable but the affordance stayed hidden or over-exposed:
+
+- The settings sidebar hid **Git** and **Shared Credentials** below Owner ([workspace-settings-layout.tsx:45](../../frontend/app/routes/layouts/workspace-settings-layout.tsx#L45)), so an Admin could only reach the fixed pages by typing the URL. Split: Git at Admin, Shared Credentials at Member.
+- Opening the credentials list to Members exposed **New / Edit / Delete** to them, all of which now 403 or 404. Gated on Admin ([registry-credentials-list.tsx](../../frontend/app/routes/settings/registry-credentials-list.tsx)). *Test* stays available to Members — the backend keeps it at Member.
+
+### 8b. Guards still asking for Member *(not mechanical)* — **partly applied**
 
 §2 granted the Viewer a real surface, but the frontend still assumes Viewer sees nothing. [workspace-layout.tsx:33](../../frontend/app/routes/layouts/workspace-layout.tsx#L33) skips the project list entirely unless `hasMinRole(user, "Member")`, and the nav tab sets in `deployment-layout`, `environment-layout` and `project-settings-layout` are Member-gated as a block.
 
 So a Viewer today logs in to an empty shell, even though the backend now serves them projects, services, stacks, deployments and metrics. Deciding what that UI *is* — which tabs survive, what a service detail page looks like with env vars and logs removed — is design work, not a guard swap. The dedicated `/workspace/viewer` route that used to stand in for this is gone.
 
 The rule to apply per route: **Viewer** for anything the backend now serves them (project list, service list and details, deployments, metrics, stacks); **Member** for logs, env variables, detected ports, terminal and the member list.
+
+**Done so far:**
+
+- [workspace-layout.tsx](../../frontend/app/routes/layouts/workspace-layout.tsx) no longer skips the project list below Member — the backend already scopes it to `accessible_projects`.
+- [environment-layout.tsx](../../frontend/app/routes/layouts/environment-layout.tsx) moved the **Settings** tab under the Member gate beside Variables; it pointed at a Member-only page, so a Viewer was shown a tab that 404s.
+- **`GET environment-details` moved to Viewer**, with `variables` stripped below Member via the same `get_sensitive_fields()` + `has_min_role()` pattern as §1. This was forced, not optional: the environment layout loader fetches environment details unconditionally, so leaving it at Member 403'd the whole environment page — including the service list the Viewer *is* granted. The dedicated `/variables` endpoints stay Member.
+  - Gotcha: `EnvironmentWithVariablesSerializer` was instantiated without context, so the stripping never fired until `context={"request": request}` was passed at the call site.
+
+`deployment-layout` and `project-settings-layout` needed nothing — they already tier their tabs correctly (logs and terminal at Member, metrics and details open).
+
+**Still open:** what a Viewer's service detail and project pages actually look like once env vars, logs and the terminal are gone.
 

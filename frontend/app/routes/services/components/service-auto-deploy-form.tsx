@@ -22,7 +22,8 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { createDevLogger } from "~/lib/logger";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData, hasMinRole } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import {
   type clientAction,
   useServiceQuery
@@ -72,6 +73,9 @@ export function ServiceAutoDeployForm({
   const [autoDeployEnabled, setAutoDeployEnabled] = React.useState(
     service.auto_deploy_enabled
   );
+
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
 
   React.useEffect(() => {
     setData(fetcher.data);
@@ -217,58 +221,60 @@ export function ServiceAutoDeployForm({
           </div>
         )}
 
-        <div className="flex gap-4">
-          {isEditing ? (
-            <>
-              <SubmitButton
-                isPending={isPending}
-                variant="secondary"
-                className="self-start"
-                name="intent"
-                value="update-auto-deploy"
-              >
-                {isPending ? (
-                  <>
-                    <LoaderIcon className="animate-spin" size={15} />
-                    <span>Updating...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckIcon size={15} className="flex-none" />
-                    <span>Update</span>
-                  </>
-                )}
-              </SubmitButton>
+        {isMember && (
+          <div className="flex gap-4">
+            {isEditing ? (
+              <>
+                <SubmitButton
+                  isPending={isPending}
+                  variant="secondary"
+                  className="self-start"
+                  name="intent"
+                  value="update-auto-deploy"
+                >
+                  {isPending ? (
+                    <>
+                      <LoaderIcon className="animate-spin" size={15} />
+                      <span>Updating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckIcon size={15} className="flex-none" />
+                      <span>Update</span>
+                    </>
+                  )}
+                </SubmitButton>
+                <Button
+                  variant="outline"
+                  type="reset"
+                  disabled={isPending}
+                  onClick={() => {
+                    setIsEditing(false);
+                    setData(undefined);
+                    setAutoDeployEnabled(service.auto_deploy_enabled);
+                  }}
+                  className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+                >
+                  <XIcon size={15} className="flex-none" />
+                  <span>Cancel</span>
+                </Button>
+              </>
+            ) : (
               <Button
                 variant="outline"
-                type="reset"
+                type="button"
                 disabled={isPending}
                 onClick={() => {
-                  setIsEditing(false);
-                  setData(undefined);
-                  setAutoDeployEnabled(service.auto_deploy_enabled);
+                  setIsEditing(true);
                 }}
                 className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
               >
-                <XIcon size={15} className="flex-none" />
-                <span>Cancel</span>
+                <span>Edit</span>
+                <PencilLineIcon size={15} className="flex-none" />
               </Button>
-            </>
-          ) : (
-            <Button
-              variant="outline"
-              type="button"
-              disabled={isPending}
-              onClick={() => {
-                setIsEditing(true);
-              }}
-              className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
-            >
-              <span>Edit</span>
-              <PencilLineIcon size={15} className="flex-none" />
-            </Button>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </fetcher.Form>
     </div>
   );

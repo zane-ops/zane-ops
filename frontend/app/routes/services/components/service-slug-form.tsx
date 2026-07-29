@@ -8,7 +8,8 @@ import {
   FieldSetInput,
   FieldSetLabel
 } from "~/components/ui/fieldset";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData, hasMinRole } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import type { clientAction } from "~/routes/services/settings/service-settings";
 
 export type ServiceSlugFormProps = {
@@ -29,6 +30,8 @@ export function ServiceSlugForm({
   const [data, setData] = React.useState(fetcher.data);
   const errors = getFormErrorsFromResponseData(data?.errors);
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
 
   React.useEffect(() => {
     setData(fetcher.data);
@@ -75,7 +78,7 @@ export function ServiceSlugForm({
               )}
             />
 
-            {!isEditing && (
+            {!isEditing && isMember && (
               <Button
                 variant="outline"
                 onClick={() => {

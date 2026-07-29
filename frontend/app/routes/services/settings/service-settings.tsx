@@ -29,6 +29,7 @@ import {
 } from "~/components/ui/tooltip";
 import { ZANEOPS_INTERNAL_DOMAIN } from "~/lib/constants";
 import {
+  ensureAuthedUser,
   environmentQueries,
   gitAppsQueries,
   resourceQueries,
@@ -64,10 +65,14 @@ import type { Route } from "./+types/service-settings";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
-  const gitAppList = await queryClient.ensureQueryData(
-    gitAppsQueries.list(workspaceId)
-  );
+  const [{ id: workspaceId }, authedUser] = await Promise.all([
+    getCurrentWorkspace(queryClient),
+    ensureAuthedUser(queryClient)
+  ]);
+
+  const gitAppList = hasMinRole(authedUser, "Member")
+    ? await queryClient.ensureQueryData(gitAppsQueries.list(workspaceId))
+    : [];
   return { gitAppList };
 }
 

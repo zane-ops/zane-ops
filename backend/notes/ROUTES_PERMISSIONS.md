@@ -39,7 +39,7 @@ These views override `get_permissions()`, so read is looser than write. Listed o
 | `/api/workspace` | GET, PUT, DELETE | **Viewer** | Owner | [workspace.py:230](../zane_api/views/workspace.py#L230) |
 | `/api/projects` | GET, POST | Member | Admin | [projects.py:81](../zane_api/views/projects.py#L81) |
 | `/api/projects/{slug}` | GET, PUT, DELETE | Member | Admin | [projects.py:240](../zane_api/views/projects.py#L240) |
-| `/api/projects/{slug}/environment-details/{env_slug}` | GET, PATCH, DELETE | Member | Admin | [environments.py:445](../zane_api/views/environments.py#L445) |
+| `/api/projects/{slug}/environment-details/{env_slug}` | GET, PATCH, DELETE | **Viewer** | Admin | [environments.py:445](../zane_api/views/environments.py#L445) |
 | `/api/projects/{project_slug}/{env_slug}/variables` | GET, POST | Member | Admin | [environments.py:589](../zane_api/views/environments.py#L589) |
 | `/api/projects/{project_slug}/{env_slug}/variables/{pk}` | GET, PUT, PATCH, DELETE | Member | Admin | [environments.py:589](../zane_api/views/environments.py#L589) |
 | `/api/projects/{project_slug}/{env_slug}/service-details/{slug}` | GET, PATCH | **Viewer** | Member | [docker_services.py:1158](../zane_api/views/docker_services.py#L1158) |
@@ -69,6 +69,8 @@ These views override `get_permissions()`, so read is looser than write. Listed o
 | POST | `/api/connectors/gitlab/webhook` | [gitlab.py:355](../git_connectors/views/gitlab.py#L355) `GitlabWebhookAPIView` |
 | GET | `/api/schema` | `SpectacularAPIView` *(DEBUG / `ENABLE_API_SCHEMA`)* |
 | GET | `/api/swagger-ui` | `SpectacularSwaggerView` *(DEBUG / `ENABLE_API_SCHEMA`)* |
+
+These routes answer `202` with an **empty body** — anyone holding the token can call them, so the response must not carry the compose file, env variables, credentials or the token itself. `webhookTriggerPreviewEnv` is the one exception, returning `SimpleEnvironmentSerializer` (id, name, is_preview, created_at) so the caller can address the environment it just created.
 
 The `{deploy_token}` and webhook routes are `AllowAny` but authenticate on the secret token in the URL (or a webhook signature), and are rate-limited via `ScopedRateThrottle` — scope `deploy_webhook` for the deploy/preview routes, `gitapp_webhook` for the GitHub/GitLab webhooks. `initial_registration` throttles the user-creation and invitation-link routes, `tls_certificates` the proxy check.
 
@@ -124,6 +126,8 @@ The role check alone is not enough on these payloads: `deploy_token` is a workin
 | `Service` ([models/main.py:433](../zane_api/models/main.py#L433)) | `deploy_token`, `env_variables`, `system_env_variables`, `credentials`, `container_registry_credentials`, `unapplied_changes` |
 | `ComposeStack` ([compose/models.py:108](../compose/models.py#L108)) | `deploy_token`, `user_content`, `computed_content`, `env_overrides`, `configs`, `unapplied_changes` |
 | `ComposeStackDeployment` ([compose/models.py:392](../compose/models.py#L392)) | `changes` |
+| `Environment` ([models/main.py:2127](../zane_api/models/main.py#L2127)) | `variables` |
+| `PreviewEnvMetadata` ([models/main.py:2083](../zane_api/models/main.py#L2083)) | `auth_user`, `auth_password` |
 
 This applies to the nested snapshots too (`service_snapshot`, `stack_snapshot`), so the deployment endpoints don't leak what service details hides. Stripping happens at serialization time only — the snapshot persisted in the DB keeps every field, since redeploys need them.
 

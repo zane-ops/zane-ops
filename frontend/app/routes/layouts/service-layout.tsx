@@ -17,7 +17,7 @@ import {
   SettingsIcon
 } from "lucide-react";
 import { Outlet, useLocation, useParams } from "react-router";
-import { NavLink } from "~/components/nav-link";
+import { type NavItem, NavLink } from "~/components/nav-link";
 import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
 import { ServiceChangesModal } from "~/routes/services/components/service-changes-modal";
@@ -38,7 +38,12 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { serverQueries, serviceQueries, userQueries } from "~/lib/queries";
+import {
+  ensureAuthedUser,
+  serverQueries,
+  serviceQueries,
+  userQueries
+} from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { ValueOf } from "~/lib/types";
 import {
@@ -46,6 +51,7 @@ import {
   durationToMs,
   formatURL,
   getDockerImageIconURL,
+  hasMinRole,
   isNotFoundError,
   metaTitle,
   notFound,
@@ -53,7 +59,8 @@ import {
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import { ServiceActionsPopover } from "~/routes/services/components/service-actions-popover";
 import type { Route } from "./+types/service-layout";
@@ -69,7 +76,10 @@ export function meta({ params, error }: Route.MetaArgs) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
+  const [{ id: workspaceId }, authedUser] = await Promise.all([
+    getCurrentWorkspace(queryClient),
+    ensureAuthedUser(queryClient)
+  ]);
   const [service, limits, detectedPorts] = await Promise.all([
     queryClient.ensureQueryData(
       serviceQueries.single({
@@ -80,14 +90,16 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
       })
     ),
     queryClient.ensureQueryData(serverQueries.resourceLimits),
-    queryClient.ensureQueryData(
-      serviceQueries.detectedPorts({
-        workspaceId,
-        project_slug: params.projectSlug,
-        service_slug: params.serviceSlug,
-        env_slug: params.envSlug
-      })
-    )
+    hasMinRole(authedUser, "Member")
+      ? queryClient.ensureQueryData(
+          serviceQueries.detectedPorts({
+            workspaceId,
+            project_slug: params.projectSlug,
+            service_slug: params.serviceSlug,
+            env_slug: params.envSlug
+          })
+        )
+      : []
   ]);
 
   if (!service) {
@@ -112,7 +124,8 @@ export default function ServiceDetailsLayout({
     envSlug: env_slug
   }
 }: Route.ComponentProps) {
-  const workspaceId = useCurrentWorkspace().id;
+  const { id: workspaceId } = useCurrentWorkspace();
+  const membership = useCurrentWorkspaceMembership();
   const location = useLocation();
 
   const { data: service } = useQuery({
@@ -125,14 +138,15 @@ export default function ServiceDetailsLayout({
     initialData: loaderData.service
   });
 
-  const { data: detectedPorts } = useQuery({
+  const { data: detectedPorts = [] } = useQuery({
     ...serviceQueries.detectedPorts({
       workspaceId,
       project_slug,
       service_slug,
       env_slug
     }),
-    initialData: loaderData.detectedPorts
+    initialData: loaderData.detectedPorts,
+    enabled: hasMinRole(membership, "Member")
   });
 
   let currentSelectedTab: ValueOf<typeof TABS> = TABS.DEPLOYMENTS;
@@ -209,12 +223,6 @@ export default function ServiceDetailsLayout({
     extraServiceUrls = rest;
   }
 
-  let extraPorts: typeof detectedPorts = [];
-  if (detectedPorts.length > 1) {
-    const [_, ...rest] = detectedPorts;
-    extraPorts = rest;
-  }
-
   const [iconNotFound, setIconNotFound] = React.useState(false);
 
   let iconSrc: string | null = null;
@@ -237,6 +245,41 @@ export default function ServiceDetailsLayout({
         .replace(/\-\/tree\/([a-zA-Z0-9_\/]+)/, " @ $1");
     }
   }
+
+  const navItems: NavItem[] = [
+    {
+      title: "Deployments",
+      icon: RocketIcon,
+      href: "."
+    }
+  ];
+
+  if (hasMinRole(membership, "Member")) {
+    navItems.push({
+      title: "Env Variables",
+      icon: KeyRoundIcon,
+      href: "./env-variables"
+    });
+  }
+  navItems.push({
+    title: "Settings",
+    icon: SettingsIcon,
+    href: "./settings"
+  });
+
+  if (hasMinRole(membership, "Member")) {
+    navItems.push({
+      title: "Http logs",
+      icon: GlobeIcon,
+      href: "./http-logs"
+    });
+  }
+
+  navItems.push({
+    title: "Metrics",
+    icon: ChartNoAxesColumn,
+    href: "./metrics"
+  });
 
   return (
     <>
@@ -484,39 +527,14 @@ export default function ServiceDetailsLayout({
             "inline-flex items-stretch p-0.5 text-muted-foreground"
           )}
         >
-          <li>
-            <NavLink to=".">
-              <span>Deployments</span>
-              <RocketIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-
-          <li>
-            <NavLink to="./env-variables">
-              <span>Env Variables</span>
-              <KeyRoundIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-
-          <li>
-            <NavLink to="./settings">
-              <span>Settings</span>
-              <SettingsIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-
-          <li>
-            <NavLink to="./http-logs" prefetch="viewport">
-              <span>Http logs</span>
-              <GlobeIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="./metrics">
-              <span>Metrics</span>
-              <ChartNoAxesColumn size={15} className="flex-none" />
-            </NavLink>
-          </li>
+          {navItems.map((item) => (
+            <li key={item.href}>
+              <NavLink to={item.href}>
+                <span>{item.title}</span>
+                <item.icon className="flex-none size-4" />
+              </NavLink>
+            </li>
+          ))}
         </ul>
       </nav>
       <section className="mt-2">
