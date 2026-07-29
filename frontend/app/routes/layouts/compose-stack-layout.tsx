@@ -13,7 +13,7 @@ import type { ComposeStack } from "~/api/types";
 import { getComposeStackStatus } from "~/components/compose-stack-cards";
 import { CopyButton } from "~/components/copy-button";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
-import { NavLink } from "~/components/nav-link";
+import { type NavItem, NavLink } from "~/components/nav-link";
 import {
   Tooltip,
   TooltipContent,
@@ -93,6 +93,38 @@ export default function ComposeStackLayoutPage({
 
   const { title } = metaTitle(`${status_emoji_map[stackStatus]} ${stack.slug}`);
 
+  const navItems: NavItem[] = [
+    {
+      title: "Services",
+      href: ".",
+      icon: BoxIcon
+    },
+    {
+      title: "Settings",
+      href: "./settings",
+      icon: SettingsIcon
+    },
+    {
+      title: "Deployments",
+      href: "./deployments/",
+      icon: RocketIcon
+    }
+  ];
+
+  if (isMember) {
+    navItems.push({
+      title: "Http logs",
+      href: "./http-logs",
+      icon: GlobeIcon
+    });
+  }
+
+  navItems.push({
+    title: "Metrics",
+    href: "./metrics",
+    icon: ChartNoAxesColumn
+  });
+
   return (
     <>
       <title>{title}</title>
@@ -139,41 +171,14 @@ export default function ComposeStackLayoutPage({
             "inline-flex items-stretch p-0.5 text-muted-foreground"
           )}
         >
-          <li>
-            <NavLink to=".">
-              <span>Services</span>
-              <BoxIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="./settings">
-              <span>Settings</span>
-              <SettingsIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-
-          <li>
-            <NavLink to="./deployments/">
-              <span>Deployments</span>
-              <RocketIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-
-          {isMember && (
-            <li>
-              <NavLink to="./http-logs" prefetch="viewport">
-                <span>Http logs</span>
-                <GlobeIcon size={15} className="flex-none" />
+          {navItems.map((item) => (
+            <li key={item.href}>
+              <NavLink to={item.href} prefetch="viewport">
+                <span>{item.title}</span>
+                <item.icon size={15} className="flex-none" />
               </NavLink>
             </li>
-          )}
-
-          <li>
-            <NavLink to="./metrics">
-              <span>Metrics</span>
-              <ChartNoAxesColumn size={15} className="flex-none" />
-            </NavLink>
-          </li>
+          ))}
         </ul>
       </nav>
 

@@ -18,19 +18,10 @@ import { Link, Navigate, Outlet, href, useFetcher } from "react-router";
 import { toast } from "sonner";
 import type { ComposeStackService } from "~/api/types";
 import { Code } from "~/components/code";
-import { getComposeStackStatus } from "~/components/compose-stack-cards";
 import { CopyButton } from "~/components/copy-button";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
-import { NavLink } from "~/components/nav-link";
+import { type NavItem, NavLink } from "~/components/nav-link";
 import { StatusBadge } from "~/components/status-badge";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
 import { SubmitButton } from "~/components/ui/button";
 import {
   Popover,
@@ -43,7 +34,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { composeStackQueries, userQueries } from "~/lib/queries";
+import { composeStackQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import {
@@ -162,6 +153,47 @@ export default function ComposeStackServiceLayoutPage({
 
   const is_job =
     service.mode === "global-job" || service.mode === "replicated-job";
+
+  const navItems: NavItem[] = [
+    {
+      title: "Replicas",
+      href: ".",
+      icon: LayersIcon
+    }
+  ];
+
+  if (isMember) {
+    navItems.push(
+      {
+        title: "Runtime Logs",
+        href: "./runtime-logs",
+        icon: ScrollTextIcon
+      },
+      {
+        title: "Terminal",
+        href: "./terminal",
+        icon: TerminalIcon
+      },
+      {
+        title: "Http logs",
+        href: "./http-logs",
+        icon: GlobeIcon
+      }
+    );
+  }
+
+  navItems.push(
+    {
+      title: "Metrics",
+      href: "./metrics",
+      icon: ChartNoAxesColumn
+    },
+    {
+      title: "Details",
+      href: "./details",
+      icon: InfoIcon
+    }
+  );
 
   return (
     <>
@@ -318,52 +350,14 @@ export default function ComposeStackServiceLayoutPage({
             "inline-flex items-stretch p-0.5 text-muted-foreground"
           )}
         >
-          <li>
-            <NavLink to=".">
-              <span>Replicas</span>
-              <LayersIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-
-          {isMember && (
-            <li>
-              <NavLink to="./runtime-logs">
-                <span>Runtime Logs</span>
-                <ScrollTextIcon size={15} className="flex-none" />
+          {navItems.map((item) => (
+            <li key={item.href}>
+              <NavLink to={item.href} prefetch="viewport">
+                <span>{item.title}</span>
+                <item.icon size={15} className="flex-none" />
               </NavLink>
             </li>
-          )}
-          {isMember && (
-            <li>
-              <NavLink to="./terminal">
-                <span>Terminal</span>
-                <TerminalIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
-          )}
-
-          {isMember && (
-            <li>
-              <NavLink to="./http-logs" prefetch="viewport">
-                <span>Http logs</span>
-                <GlobeIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
-          )}
-
-          <li>
-            <NavLink to="./metrics">
-              <span>Metrics</span>
-              <ChartNoAxesColumn size={15} className="flex-none" />
-            </NavLink>
-          </li>
-
-          <li>
-            <NavLink to="./details">
-              <span>Details</span>
-              <InfoIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
+          ))}
         </ul>
       </nav>
 

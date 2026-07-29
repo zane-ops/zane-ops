@@ -43,9 +43,9 @@ import {
   type HTTPLogFilters,
   type HttpLog,
   REQUEST_METHODS,
+  ensureMinRole,
   httpLogSearchSchema,
-  serviceQueries,
-  userQueries
+  serviceQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
@@ -65,6 +65,7 @@ export async function clientLoader({
   }
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Member");
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const service = await queryClient.ensureQueryData(
     serviceQueries.single({

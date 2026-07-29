@@ -8,9 +8,9 @@ import {
 } from "lucide-react";
 import { Link, Outlet, useFetcher } from "react-router";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
-import { NavLink } from "~/components/nav-link";
+import { type NavItem, NavLink } from "~/components/nav-link";
 import { SubmitButton } from "~/components/ui/button";
-import { composeStackQueries, userQueries } from "~/lib/queries";
+import { composeStackQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
@@ -96,6 +96,22 @@ export default function ComposeStackDeploymentLayoutPage({
     `${status_emoji_map[deployment.status]} ${params.composeStackSlug} / ${params.deploymentHash}`
   );
 
+  const navItems: NavItem[] = [];
+
+  if (isMember) {
+    navItems.push({
+      title: "Build logs",
+      href: ".",
+      icon: SquareChartGanttIcon
+    });
+  }
+
+  navItems.push({
+    title: "Details",
+    href: "./details",
+    icon: InfoIcon
+  });
+
   return (
     <>
       <title>{meta.title}</title>
@@ -142,21 +158,14 @@ export default function ComposeStackDeploymentLayoutPage({
             "inline-flex items-stretch p-0.5 text-muted-foreground"
           )}
         >
-          {isMember && (
-            <li>
-              <NavLink to="." prefetch="viewport">
-                <span>Build logs</span>
-                <SquareChartGanttIcon size={15} className="flex-none" />
+          {navItems.map((item) => (
+            <li key={item.href}>
+              <NavLink to={item.href} prefetch="viewport">
+                <span>{item.title}</span>
+                <item.icon size={15} className="flex-none" />
               </NavLink>
             </li>
-          )}
-
-          <li>
-            <NavLink to="./details">
-              <span>Details</span>
-              <InfoIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
+          ))}
         </ul>
       </nav>
       <section className="mt-2">
