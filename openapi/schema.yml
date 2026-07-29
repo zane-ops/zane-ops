@@ -14272,7 +14272,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvironmentWithVariables'
+                $ref: '#/components/schemas/SimpleEnvironment'
           description: ''
   /api/trigger-update/:
     post:
@@ -21988,6 +21988,7 @@ components:
           items:
             $ref: '#/components/schemas/SharedEnvVariable'
           readOnly: true
+          nullable: true
         preview_metadata:
           allOf:
           - $ref: '#/components/schemas/SimplePreviewMetadata'
@@ -22045,6 +22046,9 @@ components:
       description: '* `environment` - environment'
     EnvironmentWithVariables:
       type: object
+      description: |-
+        Same fields as `EnvironmentSerializer`, but `preview_metadata` is serialized
+        in full (branch, commit, PR details, git app) instead of the trimmed form.
       properties:
         id:
           type: string
@@ -22055,16 +22059,17 @@ components:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-        preview_metadata:
-          allOf:
-          - $ref: '#/components/schemas/PreviewMetadata'
-          readOnly: true
-          nullable: true
         variables:
           type: array
           items:
             $ref: '#/components/schemas/SharedEnvVariable'
           readOnly: true
+          nullable: true
+        preview_metadata:
+          allOf:
+          - $ref: '#/components/schemas/PreviewMetadata'
+          readOnly: true
+          nullable: true
       required:
       - id
       - is_preview

@@ -3296,7 +3296,7 @@ export interface components {
       id: string;
       is_preview: boolean;
       name: string;
-      variables: readonly components["schemas"]["SharedEnvVariable"][];
+      variables: (readonly components["schemas"]["SharedEnvVariable"][]) | null;
       preview_metadata: components["schemas"]["SimplePreviewMetadata"];
     };
     EnvironmentRequest: {
@@ -3318,12 +3318,16 @@ export interface components {
      * @enum {string}
      */
     EnvironmentSearchResponseTypeEnum: "environment";
+    /**
+     * @description Same fields as `EnvironmentSerializer`, but `preview_metadata` is serialized
+     * in full (branch, commit, PR details, git app) instead of the trimmed form.
+     */
     EnvironmentWithVariables: {
       id: string;
       is_preview: boolean;
       name: string;
+      variables: (readonly components["schemas"]["SharedEnvVariable"][]) | null;
       preview_metadata: components["schemas"]["PreviewMetadata"] | null;
-      variables: readonly components["schemas"]["SharedEnvVariable"][];
     };
     Error401: {
       code: components["schemas"]["ErrorCode401Enum"];
@@ -15324,7 +15328,7 @@ export interface operations {
     responses: {
       201: {
         content: {
-          "application/json": components["schemas"]["EnvironmentWithVariables"];
+          "application/json": components["schemas"]["SimpleEnvironment"];
         };
       };
       400: {
