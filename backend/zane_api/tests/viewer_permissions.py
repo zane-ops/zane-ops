@@ -3,11 +3,16 @@ from rest_framework import status
 
 from ..models import (
     Environment,
+    GitApp,
+    PreviewEnvMetadata,
+    Project,
+    Service,
     WorkspaceMembership,
     WorkspaceRole,
 )
-from ..utils import jprint
+from ..utils import generate_random_chars, jprint
 from .base import AuthAPITestCase
+from git_connectors.models import GitHubApp
 from uuid import uuid4
 
 
@@ -159,6 +164,25 @@ class ViewerGrantedEndpointsViewTests(ViewerEndpointsTestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
+    def test_viewer_can_view_environment_details(self):
+        """
+        The environment is the container for the service list a Viewer *is*
+        granted — denying it makes that surface unreachable.
+        """
+        project, _, _ = self.setup_viewer_with_service()
+
+        response = self.client.get(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={
+                    "slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            )
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
 
 class ViewerDeniedEndpointsViewTests(ViewerEndpointsTestBase):
     def test_viewer_cannot_view_runtime_logs(self):
@@ -264,21 +288,6 @@ class ViewerDeniedEndpointsViewTests(ViewerEndpointsTestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
 
-    def test_viewer_cannot_view_environment_details(self):
-        project, _, _ = self.setup_viewer_with_service()
-
-        response = self.client.get(
-            reverse(
-                "zane_api:projects.environment.details",
-                kwargs={
-                    "slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            )
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
-
     def test_viewer_cannot_list_shared_env_variables(self):
         project, _, _ = self.setup_viewer_with_service()
 
@@ -379,6 +388,8 @@ class ViewerSecretFieldsViewTests(ViewerEndpointsTestBase):
         ]
     )
     DEPLOYMENT_MEMBER_ONLY_FIELDS = frozenset(["changes"])
+    ENVIRONMENT_MEMBER_ONLY_FIELDS = frozenset(["variables"])
+    PREVIEW_METADATA_MEMBER_ONLY_FIELDS = frozenset(["auth_user", "auth_password"])
 
     def test_member_sees_secret_fields_in_service_details(self):
         project, service = self.create_redis_docker_service()
@@ -545,3 +556,200 @@ class ViewerSecretFieldsViewTests(ViewerEndpointsTestBase):
             self.SERVICE_MEMBER_ONLY_FIELDS - deployment.service_snapshot.keys()  # type: ignore
         )
         self.assertEqual(EMPTY_SET, missing_fields)
+
+    def test_member_sees_variables_in_environment_details(self):
+        project, _ = self.create_redis_docker_service()
+        WorkspaceMembership.objects.filter(workspace=project.workspace).update(
+            role=WorkspaceRole.MEMBER
+        )
+
+        response = self.client.get(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={
+                    "slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        data = response.json()
+        jprint(data)
+
+        missing_fields = self.ENVIRONMENT_MEMBER_ONLY_FIELDS - data.keys()
+        self.assertEqual(EMPTY_SET, missing_fields)
+
+    def test_viewer_does_not_see_variables_in_environment_details(self):
+        """
+        Shared env variables propagate to every service in the environment —
+        a Viewer gets the environment so the service list is reachable, but not
+        the values it carries.
+        """
+        project, _, _ = self.setup_viewer_with_service()
+
+        response = self.client.get(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={
+                    "slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        data = response.json()
+        jprint(data)
+
+        non_stripped_fields = self.ENVIRONMENT_MEMBER_ONLY_FIELDS & data.keys()
+        self.assertEqual(EMPTY_SET, non_stripped_fields)
+
+    def create_preview_environment(self, project: Project, auth_password: str):
+        """
+        A preview environment whose public URL is protected by HTTP basic auth —
+        the credentials Caddy enforces live on `PreviewEnvMetadata`.
+        """
+        service = Service.objects.filter(project=project).get()
+        github = GitHubApp.objects.create(
+            webhook_secret=generate_random_chars(10),
+            app_id=1,
+            name="zaneops",
+            client_id=generate_random_chars(10),
+            client_secret=generate_random_chars(10),
+            private_key=generate_random_chars(10),
+            app_url="https://github.com/apps/zaneops",
+            installation_id=1,
+        )
+        git_app = GitApp.objects.create(github=github, workspace=project.workspace)
+
+        preview_metadata = PreviewEnvMetadata.objects.create(
+            service=service,
+            git_app=git_app,
+            template=project.preview_templates.get(is_default=True),
+            branch_name="main",
+            external_url="https://preview.zaneops.local",
+            head_repository_url="https://github.com/zane-ops/docs",
+            source_trigger=Environment.PreviewSourceTrigger.API,
+            auth_enabled=True,
+            auth_user="preview",
+            auth_password=auth_password,
+        )
+        return Environment.objects.create(
+            name="preview-pr-1",
+            project=project,
+            is_preview=True,
+            preview_metadata=preview_metadata,
+        )
+
+    def test_member_sees_preview_auth_credentials(self):
+        project, service = self.create_redis_docker_service()
+        environment = self.create_preview_environment(project, auth_password="hunter2")
+        WorkspaceMembership.objects.filter(workspace=project.workspace).update(
+            role=WorkspaceRole.MEMBER
+        )
+
+        response = self.client.get(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": environment.name},
+            )
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        data = response.json()
+        jprint(data)
+
+        missing_fields = (
+            self.PREVIEW_METADATA_MEMBER_ONLY_FIELDS - data["preview_metadata"].keys()
+        )
+        self.assertEqual(EMPTY_SET, missing_fields)
+        self.assertEqual("hunter2", data["preview_metadata"]["auth_password"])
+
+    def test_viewer_does_not_see_preview_auth_credentials(self):
+        """
+        `auth_password` is the basic-auth password Caddy enforces on the preview
+        URL — a Viewer reading it off the environment payload walks straight
+        past the protection, same shape as the `deploy_token` hole.
+        """
+        project, service = self.create_redis_docker_service()
+        environment = self.create_preview_environment(project, auth_password="hunter2")
+
+        membership = WorkspaceMembership.objects.get(workspace=project.workspace)
+        membership.role = WorkspaceRole.VIEWER
+        membership.save()
+        membership.accessible_projects.add(project)
+
+        response = self.client.get(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": environment.name},
+            )
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        data = response.json()
+        jprint(data)
+
+        non_stripped_fields = (
+            self.PREVIEW_METADATA_MEMBER_ONLY_FIELDS & data["preview_metadata"].keys()
+        )
+        self.assertEqual(EMPTY_SET, non_stripped_fields)
+        # the fact that it *is* protected stays visible
+        self.assertTrue(data["preview_metadata"]["auth_enabled"])
+
+    def test_viewer_does_not_see_preview_auth_credentials_in_service_details(self):
+        """
+        Service details embed the environment through `ServiceSerializer`, which
+        nests the *simple* preview metadata serializer — a different class from
+        the one environment-details uses, so it needs its own coverage.
+        """
+        project, service = self.create_redis_docker_service()
+        environment = self.create_preview_environment(project, auth_password="hunter2")
+        service.environment = environment
+        service.save()
+
+        membership = WorkspaceMembership.objects.get(workspace=project.workspace)
+        membership.role = WorkspaceRole.VIEWER
+        membership.save()
+        membership.accessible_projects.add(project)
+
+        response = self.client.get(
+            reverse(
+                "zane_api:services.details",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": environment.name,
+                    "slug": service.slug,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        data = response.json()
+        jprint(data)
+
+        preview_metadata = data["environment"]["preview_metadata"]
+        non_stripped_fields = (
+            self.PREVIEW_METADATA_MEMBER_ONLY_FIELDS & preview_metadata.keys()
+        )
+        self.assertEqual(EMPTY_SET, non_stripped_fields)
+        self.assertTrue(preview_metadata["auth_enabled"])
+
+    def test_deployment_snapshot_stored_in_db_keeps_preview_auth_credentials(self):
+        """
+        The snapshot feeds `EnvironmentDto.from_dict()`, which passes
+        `auth_user` / `auth_password` to Caddy on every redeploy. Stripping them
+        at write time would silently unprotect preview URLs.
+        """
+        project, service = self.create_redis_docker_service()
+        environment = self.create_preview_environment(project, auth_password="hunter2")
+        service.environment = environment
+        service.save()
+
+        deployment = service.prepare_new_docker_deployment()
+        preview_metadata = deployment.service_snapshot["environment"][  # type: ignore
+            "preview_metadata"
+        ]
+        jprint(preview_metadata)
+
+        missing_fields = (
+            self.PREVIEW_METADATA_MEMBER_ONLY_FIELDS - preview_metadata.keys()
+        )
+        self.assertEqual(EMPTY_SET, missing_fields)
+        self.assertEqual("hunter2", preview_metadata["auth_password"])

@@ -232,6 +232,20 @@ class SimplePreviewMetadataSerializer(serializers.ModelSerializer):
     service = PreviewServiceSerializer()
     external_url = serializers.URLField(required=False)  # for backwards compatibility
 
+    def to_representation(self, instance: models.PreviewEnvMetadata):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(
+            request, models.WorkspaceRole.MEMBER
+        ):
+            sensitive_fields = models.PreviewEnvMetadata.get_sensitive_fields()
+            for key in dict(data):
+                if key in sensitive_fields:
+                    data.pop(key)
+
+        return data
+
     class Meta:
         model = models.PreviewEnvMetadata
         fields = [
@@ -250,6 +264,20 @@ class SimplePreviewMetadataSerializer(serializers.ModelSerializer):
 class PreviewMetadataSerializer(serializers.ModelSerializer):
     service = SimpleServiceSerializer(read_only=True)
     git_app = GitAppSerializer(read_only=True)
+
+    def to_representation(self, instance: models.PreviewEnvMetadata):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(
+            request, models.WorkspaceRole.MEMBER
+        ):
+            sensitive_fields = models.PreviewEnvMetadata.get_sensitive_fields()
+            for key in dict(data):
+                if key in sensitive_fields:
+                    data.pop(key)
+
+        return data
 
     class Meta:
         model = models.PreviewEnvMetadata
@@ -277,8 +305,22 @@ class PreviewMetadataSerializer(serializers.ModelSerializer):
 
 
 class EnvironmentSerializer(serializers.ModelSerializer):
-    variables = SharedEnvVariableSerializer(many=True, read_only=True)
+    variables = SharedEnvVariableSerializer(many=True, read_only=True, allow_null=True)
     preview_metadata = SimplePreviewMetadataSerializer(read_only=True)
+
+    def to_representation(self, instance: models.Environment):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(
+            request, models.WorkspaceRole.MEMBER
+        ):
+            sensitive_fields = models.Environment.get_sensitive_fields()
+            for key in dict(data):
+                if key in sensitive_fields:
+                    data.pop(key)
+
+        return data
 
     class Meta:
         model = models.Environment
@@ -708,19 +750,16 @@ class HttpLogSerializer(serializers.ModelSerializer):
         ]
 
 
-class EnvironmentWithVariablesSerializer(serializers.ModelSerializer):
-    preview_metadata = PreviewMetadataSerializer(read_only=True, allow_null=True)
-    variables = SharedEnvVariableSerializer(many=True, read_only=True)
+class EnvironmentWithVariablesSerializer(EnvironmentSerializer):
+    """
+    Same fields as `EnvironmentSerializer`, but `preview_metadata` is serialized
+    in full (branch, commit, PR details, git app) instead of the trimmed form.
+    """
 
-    class Meta:
-        model = models.Environment
-        fields = [
-            "id",
-            "is_preview",
-            "name",
-            "preview_metadata",
-            "variables",
-        ]
+    preview_metadata = PreviewMetadataSerializer(read_only=True, allow_null=True)
+
+    class Meta(EnvironmentSerializer.Meta):
+        pass
 
 
 class ProjectSerializer(serializers.ModelSerializer):

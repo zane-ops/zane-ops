@@ -34,6 +34,7 @@ from ..models import (
 )
 from ..serializers import (
     EnvironmentSerializer,
+    SimpleEnvironmentSerializer,
     EnvironmentWithVariablesSerializer,
     SharedEnvVariableSerializer,
     ErrorResponse409Serializer,
@@ -63,6 +64,7 @@ from rest_framework import serializers
 from ..permissions import (
     HasWorkspace,
     IsWorkspaceMember,
+    IsWorkspaceViewer,
     IsWorkspaceAdmin,
     get_accessible_projects,
 )
@@ -447,7 +449,7 @@ class EnvironmentDetailsAPIView(APIView):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [HasWorkspace(), IsWorkspaceMember()]
+            return [HasWorkspace(), IsWorkspaceViewer()]
         return [HasWorkspace(), IsWorkspaceAdmin()]
 
     @extend_schema(
@@ -478,7 +480,9 @@ class EnvironmentDetailsAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"A env with the slug `{env_slug}` does not exist in this project"
             )
-        serializer = EnvironmentWithVariablesSerializer(environment)
+        serializer = EnvironmentWithVariablesSerializer(
+            environment, context={"request": request}
+        )
         return Response(data=serializer.data)
 
     @extend_schema(
@@ -675,7 +679,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
     @transaction.atomic()
     @extend_schema(
         request=TriggerPreviewEnvRequestSerializer,
-        responses={201: EnvironmentWithVariablesSerializer},
+        responses={201: SimpleEnvironmentSerializer},
         operation_id="webhookTriggerPreviewEnv",
         summary="Webhook to trigger a new preview environment",
     )
@@ -686,10 +690,6 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                     deploy_token=deploy_token,
                     type=Service.ServiceType.GIT_REPOSITORY,
                     git_app__isnull=False,
-                    project__id__in=get_accessible_projects(
-                        self.request.user,  # type: ignore
-                        self.request.workspace,  # type: ignore
-                    ),
                 )
                 .select_related(
                     "project",
@@ -1004,7 +1004,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
 
         transaction.on_commit(on_commit)
 
-        serializer = EnvironmentWithVariablesSerializer(new_environment)
+        serializer = SimpleEnvironmentSerializer(new_environment)
         return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
 

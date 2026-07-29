@@ -2081,6 +2081,15 @@ class PreviewEnvMetadata(models.Model):
     auth_user = models.CharField(null=True)
     auth_password = models.CharField(null=True)
 
+    @staticmethod
+    def get_sensitive_fields():
+        """
+        Fields that contain potentially secret values.
+        `auth_enabled` stays visible — whether a preview URL is protected is not
+        a secret, the credentials that get past it are.
+        """
+        return ["auth_user", "auth_password"]
+
     def get_pull_request_deployment_blocked_comment_body(self, service: Service):
         project = service.project
         environment = service.environment
@@ -2124,6 +2133,13 @@ class Environment(TimestampedModel):
     services: Manager[Service]
     variables: Manager["SharedEnvVariable"]
     PRODUCTION_ENV_NAME = "production"
+
+    @staticmethod
+    def get_sensitive_fields():
+        """
+        Fields that contain potentially secret values
+        """
+        return ["variables"]
 
     class PreviewSourceTrigger(models.TextChoices):
         API = "API", _("Api")
