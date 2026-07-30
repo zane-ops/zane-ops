@@ -331,7 +331,7 @@ export default function ComposeStackServiceLayoutPage({
           </div>
         </div>
 
-        {!is_job && (
+        {isMember && !is_job && (
           <div>
             <ToggleServiceForm
               params={params}
