@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { type VariantProps, cva } from "class-variance-authority";
+import { Command as CommandPrimitive } from "cmdk";
 import { format } from "date-fns";
 import {
   CalendarIcon,
   CheckIcon,
   ChevronDown,
   LoaderIcon,
+  SearchIcon,
   XIcon
 } from "lucide-react";
 import * as React from "react";
@@ -24,7 +26,6 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList
 } from "~/components/ui/command";
@@ -599,7 +600,6 @@ const DeploymentStatusesMultiSelect = ({
   placeholder = "Select options",
   animation = 0,
   maxCount = 3,
-  modalPopover = false,
   asChild = false,
   className,
   ...props
@@ -638,11 +638,7 @@ const DeploymentStatusesMultiSelect = ({
   };
 
   return (
-    <Popover
-      open={isPopoverOpen}
-      onOpenChange={setIsPopoverOpen}
-      modal={modalPopover}
-    >
+    <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
       <PopoverTrigger asChild>
         <Button
           ref={ref}
@@ -785,16 +781,26 @@ const DeploymentStatusesMultiSelect = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-auto p-0"
+        className={cn(
+          "w-auto p-0 z-60 shadow-md rounded-lg bg-popover",
+          "min-w-(--radix-popover-trigger-width) max-w-(--radix-popover-trigger-width)",
+          "[&_[data-slot='command-list-wrapper']_*]:static",
+          "[&_[data-slot='command-input-wrapper']]:px-2"
+        )}
         align="start"
         onEscapeKeyDown={() => setIsPopoverOpen(false)}
       >
         <Command>
-          <CommandInput
-            placeholder="Filter Statuses..."
-            onKeyDown={handleInputKeyDown}
-          />
-          <CommandList>
+          <div className="flex px-3 py-3.5 items-center gap-1 w-full">
+            <SearchIcon className="size-4 flex-none text-grey" />
+            <CommandPrimitive.Input
+              placeholder="Filter Statuses..."
+              className="text-sm bg-inherit focus-visible:outline-hidden px-2 w-full"
+              onKeyDown={handleInputKeyDown}
+            />
+          </div>
+          <hr className="w-full border-border" />
+          <CommandList className="px-0 flex flex-col gap-2 w-full bg-transparent border-none">
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup>
               <CommandItem
@@ -804,13 +810,13 @@ const DeploymentStatusesMultiSelect = ({
               >
                 <div
                   className={cn(
-                    "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                    "mr-2 flex size-4 items-center justify-center rounded-sm border border-primary",
                     value.length === options.length
                       ? "bg-primary text-primary-foreground"
                       : "opacity-50 [&_svg]:invisible"
                   )}
                 >
-                  <CheckIcon className="h-4 w-4" />
+                  <CheckIcon className="size-4 flex-none" />
                 </div>
 
                 <div className="flex items-center justify-between w-full">
