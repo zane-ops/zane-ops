@@ -16,7 +16,7 @@ from zane_api.models import DeploymentChange
 
 from zane_api.permissions import (
     HasWorkspace,
-    IsWorkspaceOwner,
+    IsWorkspaceAdmin,
     IsWorkspaceMember,
 )
 
@@ -25,7 +25,11 @@ class SharedRegistryCredentialsListAPIView(ListCreateAPIView):
     serializer_class = SharedRegistryCredentialsListCreateSerializer
     queryset = SharedRegistryCredentials.objects.all()
     pagination_class = None
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [HasWorkspace(), IsWorkspaceMember()]
+        return [HasWorkspace(), IsWorkspaceAdmin()]
 
     def get_queryset(self):
         return (
@@ -165,7 +169,7 @@ class SharedRegistryCredentialsDetailsAPIView(RetrieveUpdateDestroyAPIView):
     def get_permissions(self):
         if self.request.method == "GET":
             return [HasWorkspace(), IsWorkspaceMember()]
-        return [HasWorkspace(), IsWorkspaceOwner()]
+        return [HasWorkspace(), IsWorkspaceAdmin()]
 
     def get_queryset(self):
         return (

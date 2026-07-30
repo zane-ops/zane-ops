@@ -3,6 +3,7 @@ import {
   AlertCircleIcon,
   CheckIcon,
   ChevronsUpDownIcon,
+  InfoIcon,
   LoaderIcon
 } from "lucide-react";
 import React from "react";
@@ -44,6 +45,7 @@ import { WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
 import { ensureMinRole, projectQueries, workspaceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
+  cn,
   formattedTime,
   getCsrfTokenHeader,
   getFormErrorsFromResponseData,
@@ -197,8 +199,9 @@ function InviteNewUserForm() {
   const isPending =
     navigation.state === "loading" || navigation.state === "submitting";
 
+  // Viewer must be a deliberate choice, never a default someone clicks past
   const [selectedRole, setSelectedRole] =
-    React.useState<WorkspaceRoleName>("Guest");
+    React.useState<WorkspaceRoleName>("Member");
 
   const [selectedProjects, setSelectedProjects] = React.useState<Project[]>([]);
   const validForOptions = Array.from({ length: 7 }, (_, i) => i + 1);
@@ -213,16 +216,27 @@ function InviteNewUserForm() {
     }
   );
 
-  const selectedRoleValue = WORKSPACE_ROLE_MAPPING[selectedRole];
+  const selectedRoleValue = WORKSPACE_ROLE_MAPPING[selectedRole].value;
 
   return (
     <Form
       method="POST"
       className="flex flex-col gap-4 items-start w-full lg:w-4/5"
     >
+      <Alert variant="info" className=" bg-link/10 my-3">
+        <InfoIcon className="size-4" />
+        <AlertTitle>
+          <span className="font-normal">Selected Role:</span>{" "}
+          <span className="text-card-foreground">{selectedRole}</span>
+        </AlertTitle>
+        <AlertDescription className="mt-3 text-card-foreground">
+          {WORKSPACE_ROLE_MAPPING[selectedRole].description}
+        </AlertDescription>
+      </Alert>
+
       {errors.non_field_errors && (
         <Alert variant="destructive">
-          <AlertCircleIcon className="h-4 w-4" />
+          <AlertCircleIcon className="size-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{errors.non_field_errors}</AlertDescription>
         </Alert>
@@ -251,13 +265,28 @@ function InviteNewUserForm() {
             value={selectedRole}
             onValueChange={(role) => setSelectedRole(role as WorkspaceRoleName)}
           >
-            <SelectTrigger id="role" className="w-32 gap-2">
+            <SelectTrigger
+              id="role"
+              className={cn(
+                "w-32 gap-2 [&_[data-summary]]:hidden [&>span]:inline [&>span]:whitespace-nowrap",
+                "md:w-64 md:[&_[data-summary]]:inline"
+              )}
+            >
               <SelectValue placeholder="Select role" />
             </SelectTrigger>
-            <SelectContent>
-              {workspaceRoleOptions.map(([roleName, roleValue]) => (
-                <SelectItem value={roleName} key={roleValue}>
-                  {roleName}
+            <SelectContent className="max-w-96 w-[var(--radix-select-trigger-width)]">
+              {workspaceRoleOptions.map(([roleName, role]) => (
+                <SelectItem
+                  value={roleName}
+                  key={roleName}
+                  className="w-full inline-flex"
+                >
+                  <span className="font-medium" data-label>
+                    {roleName}
+                  </span>
+                  <span className="text-grey" data-summary>
+                    &nbsp;&middot;&nbsp;{role.summary}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -294,7 +323,7 @@ function InviteNewUserForm() {
         />
       ))}
 
-      {selectedRole === "Guest" && (
+      {selectedRole === "Viewer" && (
         <div className="my-2 flex flex-col gap-1 w-full">
           <label htmlFor="accessible_projects" className="sr-only">
             Accessible projects
@@ -302,7 +331,7 @@ function InviteNewUserForm() {
 
           <MultiSelect
             value={selectedProjects.map((project) => project.slug)}
-            className="w-full border-muted"
+            className="w-full border-input"
             options={projects.map((project) => project.slug)}
             Icon={ChevronsUpDownIcon}
             id="accessible_projects"

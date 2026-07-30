@@ -319,7 +319,21 @@ function WorkspaceMembersTable({ members }: WorkspaceMembersTableProps) {
                   )}
                 </TableCell>
                 <TableCell className="p-2">
-                  <WorkspaceRoleBadge role={member.role_name} />
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex cursor-help">
+                          <WorkspaceRoleBadge role={member.role_name} />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        className="max-w-60 text-pretty"
+                      >
+                        {WORKSPACE_ROLE_MAPPING[member.role_name].description}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableCell>
                 <TableCell className="p-2">
                   {isMember ? (
@@ -368,9 +382,9 @@ function WorkspaceMembersTable({ members }: WorkspaceMembersTableProps) {
                                 <div
                                   className={cn(
                                     "size-6 flex-none rounded-md flex items-center justify-center",
-                                    "text-[var(--color-light)] dark:text-[var(--color-dark)]",
-                                    "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10",
-                                    "border  border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10"
+                                    "text-(--color-light) dark:text-(--color-dark)",
+                                    "bg-(--color-light)/10 dark:bg-(--color-dark)/10",
+                                    "border  border-(--color-light)/10 dark:border-(--color-dark)/10"
                                   )}
                                 >
                                   <span>

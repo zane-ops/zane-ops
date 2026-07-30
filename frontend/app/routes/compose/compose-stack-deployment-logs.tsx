@@ -6,7 +6,7 @@ import {
   Minimize2Icon
 } from "lucide-react";
 import * as React from "react";
-import { useSearchParams } from "react-router";
+import { href, redirect, useSearchParams } from "react-router";
 import { Virtuoso } from "react-virtuoso";
 import { Log } from "~/components/log";
 import { Ping } from "~/components/ping";
@@ -18,25 +18,42 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER } from "~/lib/constants";
-import { composeStackQueries, userQueries } from "~/lib/queries";
+import {
+  composeStackQueries,
+  ensureAuthedUser,
+  userQueries
+} from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn } from "~/lib/utils";
+import { cn, hasMinRole } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-deployment-logs";
 
-export async function clientLoader({
-  params: {
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const {
     projectSlug: project_slug,
     composeStackSlug: stack_slug,
     envSlug: env_slug,
     deploymentHash: deployment_hash
-  }
-}: Route.ClientLoaderArgs) {
+  } = params;
   const queryClient = getQueryClient();
-  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
+  const [{ id: workspaceId }, authedUser] = await Promise.all([
+    getCurrentWorkspace(queryClient),
+    ensureAuthedUser(queryClient)
+  ]);
+
+  // this is the index route of the deployment layout, but build logs are
+  // member-only — send viewers to the tab they can actually see
+  if (!hasMinRole(authedUser, "Member")) {
+    throw redirect(
+      href(
+        "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deployments/:deploymentHash/details",
+        params
+      )
+    );
+  }
   queryClient.prefetchInfiniteQuery(
     composeStackQueries.deploymentLogs({
       workspaceId,

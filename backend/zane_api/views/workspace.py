@@ -58,7 +58,7 @@ from ..permissions import (
     HasWorkspace,
     IsWorkspaceOwner,
     IsWorkspaceAdmin,
-    IsWorkspaceGuest,
+    IsWorkspaceViewer,
     IsWorkspaceMember,
 )
 
@@ -236,7 +236,7 @@ class WorkspaceDetailAPIView(RetrieveUpdateDestroyAPIView):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [HasWorkspace(), IsWorkspaceGuest()]
+            return [HasWorkspace(), IsWorkspaceViewer()]
         return [HasWorkspace(), IsWorkspaceOwner()]
 
     @transaction.atomic()

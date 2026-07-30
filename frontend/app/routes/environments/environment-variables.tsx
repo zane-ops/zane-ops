@@ -83,7 +83,7 @@ export default function EnvironmentVariablesPage({
     ),
     initialData: matchData.environment
   });
-  const { variables: env_variables } = environment;
+  const env_variables = environment.variables ?? [];
 
   const membership = useCurrentWorkspaceMembership();
 
@@ -130,7 +130,7 @@ export default function EnvironmentVariablesPage({
       <Separator />
 
       <div className="flex flex-col gap-2">
-        {environment.variables.map((variable) => (
+        {env_variables.map((variable) => (
           <EnVariableRow
             key={variable.id}
             name={variable.key}

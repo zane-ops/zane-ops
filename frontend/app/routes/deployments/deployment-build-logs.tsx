@@ -18,7 +18,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER } from "~/lib/constants";
-import { deploymentQueries, userQueries } from "~/lib/queries";
+import { deploymentQueries, ensureMinRole } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn } from "~/lib/utils";
 import {
@@ -36,6 +36,7 @@ export async function clientLoader({
   }
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Member");
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   queryClient.prefetchInfiniteQuery(
     deploymentQueries.buildLogs({

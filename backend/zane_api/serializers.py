@@ -1,3 +1,4 @@
+from copy import deepcopy
 import os
 
 
@@ -15,6 +16,7 @@ from git_connectors.serializers import GitAppSerializer, GitRepositorySerializer
 from container_registry.serializers import (
     SharedRegistryCredentialsListCreateSerializer,
 )
+from .permissions import has_min_role
 
 
 class ErrorCode409Enum(TextChoices):
@@ -230,6 +232,20 @@ class SimplePreviewMetadataSerializer(serializers.ModelSerializer):
     service = PreviewServiceSerializer()
     external_url = serializers.URLField(required=False)  # for backwards compatibility
 
+    def to_representation(self, instance: models.PreviewEnvMetadata):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(
+            request, models.WorkspaceRole.MEMBER
+        ):
+            sensitive_fields = models.PreviewEnvMetadata.get_sensitive_fields()
+            for key in dict(data):
+                if key in sensitive_fields:
+                    data.pop(key)
+
+        return data
+
     class Meta:
         model = models.PreviewEnvMetadata
         fields = [
@@ -248,6 +264,20 @@ class SimplePreviewMetadataSerializer(serializers.ModelSerializer):
 class PreviewMetadataSerializer(serializers.ModelSerializer):
     service = SimpleServiceSerializer(read_only=True)
     git_app = GitAppSerializer(read_only=True)
+
+    def to_representation(self, instance: models.PreviewEnvMetadata):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(
+            request, models.WorkspaceRole.MEMBER
+        ):
+            sensitive_fields = models.PreviewEnvMetadata.get_sensitive_fields()
+            for key in dict(data):
+                if key in sensitive_fields:
+                    data.pop(key)
+
+        return data
 
     class Meta:
         model = models.PreviewEnvMetadata
@@ -275,8 +305,22 @@ class PreviewMetadataSerializer(serializers.ModelSerializer):
 
 
 class EnvironmentSerializer(serializers.ModelSerializer):
-    variables = SharedEnvVariableSerializer(many=True, read_only=True)
+    variables = SharedEnvVariableSerializer(many=True, read_only=True, allow_null=True)
     preview_metadata = SimplePreviewMetadataSerializer(read_only=True)
+
+    def to_representation(self, instance: models.Environment):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(
+            request, models.WorkspaceRole.MEMBER
+        ):
+            sensitive_fields = models.Environment.get_sensitive_fields()
+            for key in dict(data):
+                if key in sensitive_fields:
+                    data.pop(key)
+
+        return data
 
     class Meta:
         model = models.Environment
@@ -345,6 +389,27 @@ class SharedVolumeSerializer(serializers.ModelSerializer):
 
 
 class ConfigSerializer(serializers.ModelSerializer):
+    def get_fields(self):
+        fields = super().get_fields()
+        sensitive_fields = models.Config.get_sensitive_fields()
+        for field_name, field in fields.items():
+            field.allow_null = field.allow_null or field_name in sensitive_fields
+        return fields
+
+    def to_representation(self, instance: models.Config):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(
+            request, models.WorkspaceRole.MEMBER
+        ):
+            sensitive_fields = models.Config.get_sensitive_fields()
+            for key in dict(data):
+                if key in sensitive_fields:
+                    data.pop(key)
+
+        return data
+
     class Meta:
         model = models.Config
         fields = [
@@ -496,18 +561,22 @@ class ServiceSerializer(serializers.ModelSerializer):
     configs = ConfigSerializer(read_only=True, many=True)
     urls = URLModelSerializer(read_only=True, many=True)
     ports = PortConfigurationSerializer(read_only=True, many=True)
-    env_variables = EnvVariableSerializer(many=True, read_only=True)
+    env_variables = EnvVariableSerializer(
+        many=True,
+        read_only=True,
+    )
     healthcheck = HealthCheckSerializer(read_only=True, allow_null=True)
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
     global_network_alias = serializers.CharField(read_only=True)
-    unapplied_changes = DeploymentChangeSerializer(many=True, read_only=True)
+    unapplied_changes = DeploymentChangeSerializer(
+        many=True,
+        read_only=True,
+    )
     credentials = DockerCredentialSerializer(allow_null=True)
     resource_limits = ResourceLimitsSerializer(allow_null=True)
-    system_env_variables = SystemEnvVariablesSerializer(
-        allow_null=False, many=True, default=[]
-    )
+    system_env_variables = SystemEnvVariablesSerializer(many=True)
     environment = EnvironmentSerializer(read_only=True)
     dockerfile_builder_options = DockerfileBuilderOptionsSerializer(allow_null=True)
     static_dir_builder_options = StaticDirectoryBuilderOptionsSerializer(
@@ -523,6 +592,20 @@ class ServiceSerializer(serializers.ModelSerializer):
     )
     shared_volumes = SharedVolumeSerializer(read_only=True, many=True, default=[])
 
+    def to_representation(self, instance: models.Service):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(
+            request, models.WorkspaceRole.MEMBER
+        ):
+            sensitive_fields = models.Service.get_sensitive_fields()
+            for key in dict(data):
+                if key in sensitive_fields:
+                    data.pop(key)
+
+        return data
+
     def get_fields(self):
         fields = super().get_fields()
         writable = {
@@ -532,9 +615,11 @@ class ServiceSerializer(serializers.ModelSerializer):
             "watch_paths",
             "cleanup_queue_on_auto_deploy",
         }
-        for name, field in fields.items():
-            if name not in writable:
-                field.read_only = True
+
+        sensitive_fields = models.Service.get_sensitive_fields()
+        for field_name, field in fields.items():
+            field.read_only = field_name not in writable
+            field.allow_null = field.allow_null or field_name in sensitive_fields
         return fields
 
     class Meta:
@@ -599,12 +684,33 @@ class ServiceDeploymentSerializer(serializers.ModelSerializer):
     )
     service_snapshot = DeploymentDockerSerializer()
     redeploy_hash = serializers.SerializerMethodField(allow_null=True)
-    changes = DeploymentChangeSerializer(many=True, read_only=True)
+    changes = DeploymentChangeSerializer(many=True, read_only=True, allow_null=True)
     urls = ServiceDeploymentURLSerializer(many=True, read_only=True)
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_redeploy_hash(self, obj: models.Deployment):
         return obj.is_redeploy_of.hash if obj.is_redeploy_of is not None else None
+
+    def to_representation(self, instance: models.Deployment):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(
+            request, models.WorkspaceRole.MEMBER
+        ):
+            deployment_sensitive_fields = models.Deployment.get_sensitive_fields()
+            for key in dict(data):
+                if key in deployment_sensitive_fields:
+                    data.pop(key)
+
+            snapshot = data.get("service_snapshot")
+            if snapshot is not None:
+                service_sensitive_fields = models.Service.get_sensitive_fields()
+                for key in dict(snapshot):
+                    if key in service_sensitive_fields:
+                        data["service_snapshot"].pop(key)
+
+        return data
 
     class Meta:
         model = models.Deployment
@@ -665,19 +771,16 @@ class HttpLogSerializer(serializers.ModelSerializer):
         ]
 
 
-class EnvironmentWithVariablesSerializer(serializers.ModelSerializer):
-    preview_metadata = PreviewMetadataSerializer(read_only=True, allow_null=True)
-    variables = SharedEnvVariableSerializer(many=True, read_only=True)
+class EnvironmentWithVariablesSerializer(EnvironmentSerializer):
+    """
+    Same fields as `EnvironmentSerializer`, but `preview_metadata` is serialized
+    in full (branch, commit, PR details, git app) instead of the trimmed form.
+    """
 
-    class Meta:
-        model = models.Environment
-        fields = [
-            "id",
-            "is_preview",
-            "name",
-            "preview_metadata",
-            "variables",
-        ]
+    preview_metadata = PreviewMetadataSerializer(read_only=True, allow_null=True)
+
+    class Meta(EnvironmentSerializer.Meta):
+        pass
 
 
 class ProjectSerializer(serializers.ModelSerializer):

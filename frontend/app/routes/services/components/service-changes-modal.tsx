@@ -84,15 +84,16 @@ export function ServiceChangesModal({
     }
   }, [fetcher.data, fetcher.state]);
 
+  const serviceChanges = service.unapplied_changes ?? [];
   const serviceChangeGroups = Object.groupBy(
-    service.unapplied_changes,
+    serviceChanges,
     ({ field }) => field
   );
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        {service.unapplied_changes.length === 0 ? (
+        {serviceChanges.length === 0 ? (
           <Button variant="ghost">
             <CircleCheckBigIcon size={15} />
             <span className="ml-1 underline">No pending changes</span>
@@ -101,8 +102,8 @@ export function ServiceChangesModal({
           <Button variant="warning">
             <TriangleAlert size={15} />
             <span className="mx-1">
-              {service.unapplied_changes.length}&nbsp;
-              {pluralize("pending change", service.unapplied_changes.length)}
+              {serviceChanges.length}&nbsp;
+              {pluralize("pending change", serviceChanges.length)}
             </span>
           </Button>
         )}
@@ -110,18 +111,17 @@ export function ServiceChangesModal({
       <DialogContent className="max-w-[min(var(--container-4xl),calc(100%_-_var(--spacing)*8))] gap-0">
         <DialogHeader className="pb-4">
           <DialogTitle>
-            {service.unapplied_changes.length === 0 ? (
+            {serviceChanges.length === 0 ? (
               "no changes to apply"
             ) : (
               <>
-                {service.unapplied_changes.length}&nbsp;
-                {pluralize("change", service.unapplied_changes.length)}&nbsp;to
-                apply
+                {serviceChanges.length}&nbsp;
+                {pluralize("change", serviceChanges.length)}&nbsp;to apply
               </>
             )}
           </DialogTitle>
         </DialogHeader>
-        {service.unapplied_changes.length === 0 && (
+        {serviceChanges.length === 0 && (
           <div className="border-t border-border -mx-6 px-6 py-4">
             <div
               className={cn(
@@ -134,7 +134,7 @@ export function ServiceChangesModal({
             </div>
           </div>
         )}
-        {service.unapplied_changes.length > 0 && (
+        {serviceChanges.length > 0 && (
           <Accordion
             type="multiple"
             className="border-t border-border -mx-6 px-6 flex flex-col gap-2 h-100 overflow-auto py-4"
@@ -356,7 +356,7 @@ export function ServiceChangesModal({
 
 function DiscardMultipleForm({
   changes
-}: { changes: Service["unapplied_changes"] }) {
+}: { changes: NonNullable<Service["unapplied_changes"]> }) {
   const fetcher = useFetcher();
   const isPending = fetcher.state !== "idle";
   return (

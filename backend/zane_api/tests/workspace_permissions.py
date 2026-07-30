@@ -42,7 +42,7 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
         )
         self.assertEqual(WorkspaceRole.ADMIN, membership.role)
 
-    def test_edit_guest_user_permissions_in_workspace(self):
+    def test_edit_viewer_user_permissions_in_workspace(self):
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:projects.list"),
@@ -63,7 +63,7 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
         )
 
         data = {
-            "role": WorkspaceRole.GUEST,
+            "role": WorkspaceRole.VIEWER,
             "accessible_project_ids": [project.id],
         }
 
@@ -81,7 +81,7 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
             user=user,
             workspace=workspace,
         )
-        self.assertEqual(WorkspaceRole.GUEST, membership.role)
+        self.assertEqual(WorkspaceRole.VIEWER, membership.role)
         self.assertEqual(1, membership.accessible_projects.count())
         self.assertEqual(project, membership.accessible_projects.first())
 
@@ -128,7 +128,7 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertIsNotNone(self.get_error_from_response(response, "role"))
 
-    def test_edit_guest_accessible_projects(self):
+    def test_edit_viewer_accessible_projects(self):
         self.loginUser()
         for slug in ["zaneops", "second-project"]:
             response = self.client.post(
@@ -143,14 +143,14 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
         workspace = cast(Workspace, Workspace.objects.first())
         user = User.objects.create_user(username="mohai", password="password")
         membership = WorkspaceMembership.objects.create(
-            role=WorkspaceRole.GUEST,
+            role=WorkspaceRole.VIEWER,
             user=user,
             workspace=workspace,
         )
         membership.accessible_projects.set([first_project])
 
         data = {
-            "role": WorkspaceRole.GUEST,
+            "role": WorkspaceRole.VIEWER,
             "accessible_project_ids": [second_project.id],
         }
 
@@ -168,7 +168,7 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
         self.assertEqual(1, membership.accessible_projects.count())
         self.assertEqual(second_project, membership.accessible_projects.first())
 
-    def test_edit_permissions_with_role_greater_than_guest_empties_accessible_projects(
+    def test_edit_permissions_with_role_greater_than_viewer_empties_accessible_projects(
         self,
     ):
         self.loginUser()
@@ -184,7 +184,7 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
         user = User.objects.create_user(username="mohai", password="password")
 
         membership = WorkspaceMembership.objects.create(
-            role=WorkspaceRole.GUEST,
+            role=WorkspaceRole.VIEWER,
             user=user,
             workspace=workspace,
         )
@@ -208,7 +208,7 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
         membership = WorkspaceMembership.objects.get(user=user, workspace=workspace)
         self.assertEqual(0, membership.accessible_projects.count())
 
-    def test_edit_guest_permissions_require_nonempty_accessible_projects(self):
+    def test_edit_viewer_permissions_require_nonempty_accessible_projects(self):
         self.loginUser()
 
         workspace = cast(Workspace, Workspace.objects.first())
@@ -222,7 +222,7 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
         )
 
         data = {
-            "role": WorkspaceRole.GUEST,
+            "role": WorkspaceRole.VIEWER,
             "accessible_project_ids": [],
         }
 
@@ -278,7 +278,7 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
         )
 
         data = {
-            "role": WorkspaceRole.GUEST,
+            "role": WorkspaceRole.VIEWER,
             "accessible_project_ids": [project.id],
         }
 
@@ -440,7 +440,7 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
         )
 
         data = {
-            "role": WorkspaceRole.GUEST,
+            "role": WorkspaceRole.VIEWER,
             "accessible_project_ids": [project.id],
         }
 
@@ -455,7 +455,7 @@ class EditWorkspaceUserPermissionsViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         membership = WorkspaceMembership.objects.get(user=user, workspace=workspace)
-        self.assertEqual(WorkspaceRole.GUEST, membership.role)
+        self.assertEqual(WorkspaceRole.VIEWER, membership.role)
 
     def test_owner_can_edit_an_admin_permissions(self):
         self.loginUser()

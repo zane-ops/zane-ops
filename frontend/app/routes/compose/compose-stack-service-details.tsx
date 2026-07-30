@@ -48,8 +48,11 @@ import {
 } from "~/components/ui/tooltip";
 import { ZANEOPS_INTERNAL_DOMAIN } from "~/lib/constants";
 import { composeStackQueries } from "~/lib/queries";
-import { cn, formatElapsedTime, pluralize } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import { cn, formatElapsedTime, hasMinRole, pluralize } from "~/lib/utils";
+import {
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/compose-stack-service-details";
 
 export default function ComposeStackServiceDetailsPage({
@@ -59,6 +62,8 @@ export default function ComposeStackServiceDetailsPage({
   }
 }: Route.ComponentProps) {
   const workspaceId = useCurrentWorkspace().id;
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
       workspaceId: workspaceId,
@@ -84,6 +89,8 @@ export default function ComposeStackServiceDetailsPage({
   }
   const [name, service] = serviceFound;
   const serviceUrls = stack.urls[name] ?? [];
+  // `environment` is stripped below the Member role
+  const serviceEnvironment = service.environment ?? [];
 
   const servicePrefix = `${stack.name}_${stack.hash_prefix}_`;
   let [serviceImage, imageSha] = service.image.split("@"); // the image is in the format 'image@sha'
@@ -232,62 +239,67 @@ export default function ComposeStackServiceDetailsPage({
           </div>
         </section>
 
-        <section id="environment" className="flex gap-1 scroll-mt-24 max-w-4xl">
-          <div className="w-16 hidden md:flex flex-col items-center">
-            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
-              <KeyRoundIcon size={15} className="flex-none text-grey" />
+        {isMember && (
+          <section
+            id="environment"
+            className="flex gap-1 scroll-mt-24 max-w-4xl"
+          >
+            <div className="w-16 hidden md:flex flex-col items-center">
+              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                <KeyRoundIcon size={15} className="flex-none text-grey" />
+              </div>
+              <div className="h-full border border-grey/50"></div>
             </div>
-            <div className="h-full border border-grey/50"></div>
-          </div>
 
-          <div className="w-full flex flex-col gap-5 pt-1 pb-8">
-            <h2 className="text-lg text-grey">Environment variables</h2>
-            <div className="w-full max-w-4xl">
-              {service.environment.length === 0 ? (
-                <div
-                  className={cn(
-                    "flex flex-col gap-2 items-center py-8 bg-muted/20",
-                    "border-border border-dashed rounded-md border-1"
-                  )}
-                >
-                  No variables in this service
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <hr className="border-border" />
-                  <h3 className="text-lg inline-flex gap-2 items-center">
-                    <span>
-                      {service.environment.length}&nbsp;
-                      {pluralize("variable", service.environment.length)}
-                    </span>
-                    <CopyButton
-                      variant="outline"
-                      size="sm"
-                      showLabel
-                      label={(hasCopied) =>
-                        hasCopied ? "Copied" : "Copy as .env"
-                      }
-                      value={service.environment
-                        .map((env) => `${env.key}="${env.value}"`)
-                        .join("\n")}
-                    />
-                  </h3>
+            <div className="w-full flex flex-col gap-5 pt-1 pb-8">
+              <h2 className="text-lg text-grey">Environment variables</h2>
+              <div className="w-full max-w-4xl">
+                {serviceEnvironment.length === 0 ? (
+                  <div
+                    className={cn(
+                      "flex flex-col gap-2 items-center py-8 bg-muted/20",
+                      "border-border border-dashed rounded-md border-1"
+                    )}
+                  >
+                    No variables in this service
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    <hr className="border-border" />
+                    <h3 className="text-lg inline-flex gap-2 items-center">
+                      <span>
+                        {serviceEnvironment.length}&nbsp;
+                        {pluralize("variable", serviceEnvironment.length)}
+                      </span>
+                      <CopyButton
+                        variant="outline"
+                        size="sm"
+                        showLabel
+                        label={(hasCopied) =>
+                          hasCopied ? "Copied" : "Copy as .env"
+                        }
+                        value={serviceEnvironment
+                          .map((env) => `${env.key}="${env.value}"`)
+                          .join("\n")}
+                      />
+                    </h3>
 
-                  <hr className="border-border" />
+                    <hr className="border-border" />
 
-                  {service.environment.map((env) => (
-                    <EnVariableRow
-                      key={`env-${env.key}`}
-                      name={env.key}
-                      value={env.value}
-                    />
-                  ))}
-                  <hr className="border-border" />
-                </div>
-              )}
+                    {serviceEnvironment.map((env) => (
+                      <EnVariableRow
+                        key={`env-${env.key}`}
+                        name={env.key}
+                        value={env.value}
+                      />
+                    ))}
+                    <hr className="border-border" />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         <section id="networking" className="flex gap-1 scroll-mt-24 max-w-4xl">
           <div className="w-16 hidden md:flex flex-col items-center">
@@ -627,12 +639,12 @@ export default function ComposeStackServiceDetailsPage({
           </div>
         </section>
       </div>
-      <SideNav />
+      <SideNav isMember={isMember} />
     </div>
   );
 }
 
-function SideNav() {
+function SideNav({ isMember }: { isMember: boolean }) {
   return (
     <aside className="col-span-2 hidden lg:flex flex-col h-full">
       <nav className="sticky top-24 flex flex-col gap-4">
@@ -657,15 +669,17 @@ function SideNav() {
             </Link>
           </li>
 
-          <li>
-            <Link
-              to={{
-                hash: "#environment"
-              }}
-            >
-              Environment variables
-            </Link>
-          </li>
+          {isMember && (
+            <li>
+              <Link
+                to={{
+                  hash: "#environment"
+                }}
+              >
+                Environment variables
+              </Link>
+            </li>
+          )}
 
           <li>
             <Link
@@ -822,6 +836,7 @@ function ConfigItem({
   stackPrefix
 }: ComposeStackService["configs"][number] & { stackPrefix: string }) {
   const [accordionValue, setAccordionValue] = React.useState("");
+  const isMember = hasMinRole(useCurrentWorkspaceMembership(), "Member");
 
   let prefix: string | null = null;
   let suffix = source;
@@ -839,7 +854,11 @@ function ConfigItem({
         setAccordionValue(state);
       }}
     >
-      <AccordionItem value={`${source}`} className="border-none">
+      <AccordionItem
+        value={`${source}`}
+        className="border-none"
+        disabled={!isMember}
+      >
         <AccordionTrigger
           className={cn(
             "rounded-md p-4 flex items-start gap-2 bg-muted",
@@ -869,7 +888,7 @@ function ConfigItem({
               <CodeEditor
                 containerClassName="w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[855px]"
                 path={target}
-                value={content}
+                value={content ?? undefined}
                 readOnly
               />
             </FieldSet>

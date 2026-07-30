@@ -55,12 +55,12 @@ from temporal.workflows import (
 from ..dtos import GitCommitInfo
 from zane_api.permissions import (
     HasWorkspace,
-    IsWorkspaceOwner,
+    IsWorkspaceAdmin,
 )
 
 
 class SetupGithubAppAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
 
     @transaction.atomic()
     @extend_schema(
@@ -150,14 +150,14 @@ class GithubAppDetailsAPIView(RetrieveUpdateAPIView):
     queryset = GitHubApp.objects.all()
     lookup_field = "id"
     http_method_names = ["patch", "get"]
-    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
 
     def get_queryset(self):
         return super().get_queryset().filter(gitapp__workspace=self.request.workspace)
 
 
 class TestGithubAppAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
 
     @extend_schema(
         responses={

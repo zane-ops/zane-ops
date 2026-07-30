@@ -1222,17 +1222,17 @@ export interface components {
       id: string;
       slug: string;
       network_alias_prefix: string;
-      user_content: string;
+      user_content: string | null;
       /** @description Processed YAML */
       computed_content: string | null;
-      unapplied_changes: readonly components["schemas"]["ComposeStackChange"][];
+      unapplied_changes: (readonly components["schemas"]["ComposeStackChange"][]) | null;
       urls: {
         [key: string]: components["schemas"]["ComposeStackUrlRoute"][];
       };
       configs: {
         [key: string]: components["schemas"]["ComposeConfigVersion"];
-      };
-      env_overrides: readonly components["schemas"]["ComposeStackEnvOverride"][];
+      } | null;
+      env_overrides: (readonly components["schemas"]["ComposeStackEnvOverride"][]) | null;
       services: {
         [key: string]: components["schemas"]["ComposeStackServiceStatus"];
       };
@@ -1285,7 +1285,7 @@ export interface components {
       queued_at: string;
       /** Format: date-time */
       started_at: string | null;
-      changes: readonly components["schemas"]["ComposeStackChange"][];
+      changes: (readonly components["schemas"]["ComposeStackChange"][]) | null;
       /** Format: date-time */
       finished_at: string | null;
       redeploy_hash: string | null;
@@ -1325,7 +1325,7 @@ export interface components {
     };
     ComposeStackRequest: {
       slug?: string;
-      user_content: string;
+      user_content: string | null;
     };
     ComposeStackSearchResponse: {
       id: string;
@@ -1345,12 +1345,12 @@ export interface components {
     ComposeStackServiceConfig: {
       source: string;
       target: string;
-      content: string;
+      content: string | null;
     };
     ComposeStackServiceConfigRequest: {
       source: string;
       target: string;
-      content: string;
+      content: string | null;
     };
     ComposeStackServiceEnvVar: {
       key: string;
@@ -1398,7 +1398,7 @@ export interface components {
       tasks: components["schemas"]["ComposeStackServiceTask"][];
       image: string;
       mode: components["schemas"]["ComposeStackServiceStatusModeEnum"];
-      environment: components["schemas"]["ComposeStackServiceEnvVar"][];
+      environment: components["schemas"]["ComposeStackServiceEnvVar"][] | null;
       volumes: components["schemas"]["ComposeStackServiceVolume"][];
       configs: components["schemas"]["ComposeStackServiceConfig"][];
       ports: components["schemas"]["ComposeStackServicePort"][];
@@ -1424,7 +1424,7 @@ export interface components {
       tasks: components["schemas"]["ComposeStackServiceTaskRequest"][];
       image: string;
       mode: components["schemas"]["ComposeStackServiceStatusModeEnum"];
-      environment: components["schemas"]["ComposeStackServiceEnvVarRequest"][];
+      environment: components["schemas"]["ComposeStackServiceEnvVarRequest"][] | null;
       volumes: components["schemas"]["ComposeStackServiceVolumeRequest"][];
       configs: components["schemas"]["ComposeStackServiceConfigRequest"][];
       ports: components["schemas"]["ComposeStackServicePortRequest"][];
@@ -1496,7 +1496,7 @@ export interface components {
       name: string;
       slug: string;
       network_alias_prefix: string;
-      user_content: string;
+      user_content: string | null;
       /** @description Processed YAML */
       computed_content: string | null;
       urls: {
@@ -1504,8 +1504,8 @@ export interface components {
       };
       configs: {
         [key: string]: components["schemas"]["ComposeConfigVersion"];
-      };
-      env_overrides: readonly components["schemas"]["ComposeStackEnvOverride"][];
+      } | null;
+      env_overrides: (readonly components["schemas"]["ComposeStackEnvOverride"][]) | null;
     };
     ComposeStackToggleRequestRequest: {
       desired_state: components["schemas"]["DesiredStateEnum"];
@@ -1515,17 +1515,17 @@ export interface components {
       id: string;
       slug: string;
       network_alias_prefix: string;
-      user_content: string;
+      user_content: string | null;
       /** @description Processed YAML */
       computed_content: string | null;
-      unapplied_changes: readonly components["schemas"]["ComposeStackChange"][];
+      unapplied_changes: (readonly components["schemas"]["ComposeStackChange"][]) | null;
       urls: {
         [key: string]: components["schemas"]["ComposeStackUrlRoute"][];
       };
       configs: {
         [key: string]: components["schemas"]["ComposeConfigVersion"];
-      };
-      env_overrides: readonly components["schemas"]["ComposeStackEnvOverride"][];
+      } | null;
+      env_overrides: (readonly components["schemas"]["ComposeStackEnvOverride"][]) | null;
       services: {
         [key: string]: components["schemas"]["ComposeStackServiceStatus"];
       };
@@ -1597,13 +1597,12 @@ export interface components {
       /**
        * @description * `blank` - blank
        * * `invalid` - invalid
-       * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ComposeStacksCreateCreateValidationError: {
@@ -1687,7 +1686,7 @@ export interface components {
       id: string;
       name: string;
       mount_path: string;
-      contents: string;
+      contents: string | null;
       language: string;
       version: number;
     };
@@ -1706,7 +1705,7 @@ export interface components {
       id?: string;
       name: string;
       mount_path: string;
-      contents?: string;
+      contents?: string | null;
       language?: string;
       version?: number;
     };
@@ -3089,14 +3088,13 @@ export interface components {
       volumes: readonly components["schemas"]["Volume"][];
       deploy_token: string | null;
       ports: readonly components["schemas"]["PortConfiguration"][];
-      env_variables: readonly components["schemas"]["EnvVariable"][];
+      env_variables: (readonly components["schemas"]["EnvVariable"][]) | null;
       network_aliases: readonly string[];
       network_alias: string | null;
       global_network_alias: string;
-      unapplied_changes: readonly components["schemas"]["DeploymentChange"][];
+      unapplied_changes: (readonly components["schemas"]["DeploymentChange"][]) | null;
       resource_limits: components["schemas"]["ResourceLimits"] | null;
-      /** @default [] */
-      system_env_variables: readonly components["schemas"]["SystemEnvVariables"][];
+      system_env_variables: (readonly components["schemas"]["SystemEnvVariables"][]) | null;
       configs: readonly components["schemas"]["Config"][];
       git_app: components["schemas"]["GitApp"] | null;
       git_repository: components["schemas"]["GitRepository"] | null;
@@ -3298,7 +3296,7 @@ export interface components {
       id: string;
       is_preview: boolean;
       name: string;
-      variables: readonly components["schemas"]["SharedEnvVariable"][];
+      variables: (readonly components["schemas"]["SharedEnvVariable"][]) | null;
       preview_metadata: components["schemas"]["SimplePreviewMetadata"];
     };
     EnvironmentRequest: {
@@ -3320,12 +3318,16 @@ export interface components {
      * @enum {string}
      */
     EnvironmentSearchResponseTypeEnum: "environment";
+    /**
+     * @description Same fields as `EnvironmentSerializer`, but `preview_metadata` is serialized
+     * in full (branch, commit, PR details, git app) instead of the trimmed form.
+     */
     EnvironmentWithVariables: {
       id: string;
       is_preview: boolean;
       name: string;
+      variables: (readonly components["schemas"]["SharedEnvVariable"][]) | null;
       preview_metadata: components["schemas"]["PreviewMetadata"] | null;
-      variables: readonly components["schemas"]["SharedEnvVariable"][];
     };
     Error401: {
       code: components["schemas"]["ErrorCode401Enum"];
@@ -7446,7 +7448,7 @@ export interface components {
       errors: components["schemas"]["ReviewWorkspaceInvitationError"][];
     };
     /**
-     * @description * `10` - Guest
+     * @description * `10` - Viewer
      * * `30` - Member
      * * `40` - Admin
      * * `50` - Owner
@@ -7454,7 +7456,7 @@ export interface components {
      */
     RoleEnum: 10 | 30 | 40 | 50;
     /** @enum {string} */
-    RoleNameEnum: "Owner" | "Admin" | "Member" | "Guest";
+    RoleNameEnum: "Owner" | "Admin" | "Member" | "Viewer";
     RuntimeLog: {
       id: string;
       service_id: string | null;
@@ -7545,14 +7547,13 @@ export interface components {
       volumes: readonly components["schemas"]["Volume"][];
       deploy_token: string | null;
       ports: readonly components["schemas"]["PortConfiguration"][];
-      env_variables: readonly components["schemas"]["EnvVariable"][];
+      env_variables: (readonly components["schemas"]["EnvVariable"][]) | null;
       network_aliases: readonly string[];
       network_alias: string | null;
       global_network_alias: string;
-      unapplied_changes: readonly components["schemas"]["DeploymentChange"][];
+      unapplied_changes: (readonly components["schemas"]["DeploymentChange"][]) | null;
       resource_limits: components["schemas"]["ResourceLimits"] | null;
-      /** @default [] */
-      system_env_variables: readonly components["schemas"]["SystemEnvVariables"][];
+      system_env_variables: (readonly components["schemas"]["SystemEnvVariables"][]) | null;
       configs: readonly components["schemas"]["Config"][];
       git_app: components["schemas"]["GitApp"] | null;
       git_repository: components["schemas"]["GitRepository"] | null;
@@ -7585,7 +7586,7 @@ export interface components {
       network_aliases: readonly string[];
       unprefixed_hash: string;
       service_snapshot: components["schemas"]["DeploymentDocker"];
-      changes: readonly components["schemas"]["DeploymentChange"][];
+      changes: (readonly components["schemas"]["DeploymentChange"][]) | null;
       commit_message: string;
       commit_author_name: string | null;
       commit_sha: string | null;
@@ -15327,7 +15328,7 @@ export interface operations {
     responses: {
       201: {
         content: {
-          "application/json": components["schemas"]["EnvironmentWithVariables"];
+          "application/json": components["schemas"]["SimpleEnvironment"];
         };
       };
       400: {
@@ -15338,11 +15339,6 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      403: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -15790,7 +15786,7 @@ export interface operations {
         per_page?: number;
         query?: string;
         /**
-         * @description * `10` - Guest
+         * @description * `10` - Viewer
          * * `30` - Member
          * * `40` - Admin
          * * `50` - Owner

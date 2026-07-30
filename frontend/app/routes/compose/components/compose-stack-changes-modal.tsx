@@ -73,14 +73,12 @@ export function ComposeStackChangesModal({
     }
   }, [fetcher.data, fetcher.state]);
 
-  const stackChangeGroups = Object.groupBy(
-    stack.unapplied_changes,
-    ({ field }) => field
-  );
+  const stack_changes = stack.unapplied_changes ?? [];
+  const stackChangeGroups = Object.groupBy(stack_changes, ({ field }) => field);
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        {stack.unapplied_changes.length === 0 ? (
+        {stack_changes.length === 0 ? (
           <Button variant="ghost">
             <CircleCheckBigIcon size={15} />
             <span className="ml-1 underline">No pending changes</span>
@@ -89,8 +87,8 @@ export function ComposeStackChangesModal({
           <Button variant="warning">
             <TriangleAlertIcon size={15} />
             <span className="mx-1">
-              {stack.unapplied_changes.length}&nbsp;
-              {pluralize("pending change", stack.unapplied_changes.length)}
+              {stack_changes.length}&nbsp;
+              {pluralize("pending change", stack_changes.length)}
             </span>
           </Button>
         )}
@@ -98,18 +96,17 @@ export function ComposeStackChangesModal({
       <DialogContent className="max-w-[min(var(--container-4xl),calc(100%_-_var(--spacing)*8))] gap-0">
         <DialogHeader className="pb-4">
           <DialogTitle>
-            {stack.unapplied_changes.length === 0 ? (
+            {stack_changes.length === 0 ? (
               "No changes to apply"
             ) : (
               <>
-                {stack.unapplied_changes.length}&nbsp;
-                {pluralize("change", stack.unapplied_changes.length)}&nbsp;to
-                apply
+                {stack_changes.length}&nbsp;
+                {pluralize("change", stack_changes.length)}&nbsp;to apply
               </>
             )}
           </DialogTitle>
         </DialogHeader>
-        {stack.unapplied_changes.length === 0 && (
+        {stack_changes.length === 0 && (
           <div className="border-t border-border -mx-6 px-6 py-4">
             <div
               className={cn(
@@ -122,7 +119,7 @@ export function ComposeStackChangesModal({
             </div>
           </div>
         )}
-        {stack.unapplied_changes.length > 0 && (
+        {stack_changes.length > 0 && (
           <Accordion
             type="multiple"
             className="border-t border-border -mx-6 px-6 flex flex-col gap-2 h-100 overflow-auto py-4"
@@ -225,7 +222,7 @@ export function ComposeStackChangesModal({
 
 function DiscardMultipleForm({
   changes
-}: { changes: ComposeStack["unapplied_changes"] }) {
+}: { changes: NonNullable<ComposeStack["unapplied_changes"]> }) {
   const fetcher = useFetcher();
   const isPending = fetcher.state !== "idle";
   return (

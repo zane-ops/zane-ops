@@ -2,26 +2,19 @@ import {
   Building2Icon,
   CreditCardIcon,
   GitBranchIcon,
-  type LucideIcon,
   MailIcon,
   UsersIcon
 } from "lucide-react";
 import { NavLink, Outlet, href } from "react-router";
+import type { NavItem } from "~/components/nav-link";
 import { Button } from "~/components/ui/button";
 import { cn, hasMinRole, metaTitle } from "~/lib/utils";
 import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
-import type { Route } from "./+types/settings-layout";
+import type { Route } from "./+types/workspace-settings-layout";
 
 export function meta() {
   return [metaTitle("Settings")] satisfies ReturnType<Route.MetaFunction>;
 }
-
-type NavItem = {
-  title: string;
-  href: string;
-  icon: LucideIcon;
-  disabled?: boolean;
-};
 
 export default function SettingsLayoutPage({}: Route.ComponentProps) {
   const membership = useCurrentWorkspaceMembership();
@@ -49,34 +42,21 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
     });
   }
 
-  if (hasMinRole(membership, "Owner")) {
+  if (hasMinRole(membership, "Admin")) {
     sidebarNavItems.push({
       title: "Git",
       href: href("/workspace/settings/git-apps"),
       icon: GitBranchIcon
     });
+  }
+
+  // members pick a shared credential when creating a service, they just can't edit them
+  if (hasMinRole(membership, "Member")) {
     sidebarNavItems.push({
       title: "Shared Credentials",
       href: href("/workspace/settings/shared-credentials"),
       icon: CreditCardIcon
     });
-
-    // Only in server admin
-    // {
-    //   title: "Registries",
-    //   href: "build-registries",
-    //   icon: ContainerIcon
-    // },
-    // {
-    //   title: "SSH Keys",
-    //   href: "ssh-keys",
-    //   icon: KeyIcon
-    // },
-    // {
-    //   title: "Console",
-    //   href: "server-console",
-    //   icon: TerminalIcon
-    // },
   }
 
   return (

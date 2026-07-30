@@ -102,7 +102,7 @@ from ..permissions import (
     HasWorkspace,
     IsWorkspaceMember,
     IsWorkspaceAdmin,
-    IsWorkspaceGuest,
+    IsWorkspaceViewer,
     get_accessible_projects,
 )
 
@@ -1166,7 +1166,7 @@ class ServiceDetailsAPIView(RetrieveUpdateAPIView):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [HasWorkspace(), IsWorkspaceGuest()]
+            return [HasWorkspace(), IsWorkspaceViewer()]
         return [HasWorkspace(), IsWorkspaceMember()]
 
     @extend_schema(

@@ -47,8 +47,7 @@ import {
   ensureMinRole,
   environmentQueries,
   projectQueries,
-  resourceQueries,
-  userQueries
+  resourceQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -66,7 +65,7 @@ import {
 import type { Route } from "./+types/environments-settings";
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
-  await ensureMinRole(getQueryClient(), "Member");
+  await ensureMinRole(getQueryClient(), "Viewer");
   return;
 }
 
@@ -95,6 +94,7 @@ export default function EnvironmentSettingsPage({
 
   const membership = useCurrentWorkspaceMembership();
   const isAdmin = hasMinRole(membership, "Admin");
+  const isMember = hasMinRole(membership, "Member");
 
   return (
     <section className="py-8 flex flex-col gap-4">
@@ -106,9 +106,10 @@ export default function EnvironmentSettingsPage({
                 <InfoIcon size={15} className="flex-none text-grey" />
               </div>
               <div className="h-full border border-grey/50"></div>
-              {(env.name === "production" || !isAdmin) && (
-                <div className="bg-grey/50 rounded-md size-2" />
-              )}
+              {!env.preview_metadata &&
+                (env.name === "production" || !isAdmin) && (
+                  <div className="bg-grey/50 rounded-md size-2" />
+                )}
             </div>
             <div
               className={cn(
@@ -129,6 +130,7 @@ export default function EnvironmentSettingsPage({
                   <FlaskConicalIcon size={15} className="flex-none text-grey" />
                 </div>
                 <div className="h-full border border-grey/50"></div>
+                {!isAdmin && <div className="bg-grey/50 rounded-md size-2" />}
               </div>
               <div className="w-full flex flex-col gap-5 pt-1 pb-8">
                 <h2 className="text-lg text-grey">Preview metadata</h2>
@@ -458,7 +460,7 @@ export default function EnvironmentSettingsPage({
                       )}
                     </fieldset>
 
-                    {env.preview_metadata.auth_enabled && (
+                    {env.preview_metadata.auth_enabled && isMember && (
                       <fieldset className="w-full flex flex-col gap-2">
                         <legend>Authentication</legend>
                         <p className="text-gray-400">

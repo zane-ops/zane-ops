@@ -1,6 +1,7 @@
 import { type QueryClient, hashKey } from "@tanstack/react-query";
 import { create } from "zustand";
 import type { AuthedUserResponse, WorkspaceMembership } from "~/api/types";
+import { createDevLogger } from "~/lib/logger";
 import { userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { notFound } from "~/lib/utils";
@@ -81,12 +82,14 @@ export async function getCurrentWorkspace(queryClient: QueryClient) {
  * `ensureQueryData` before any component renders, so this subscription can
  * update the stores in that same window, well before any component reads them.
  */
+const logger = createDevLogger(import.meta.url);
+
 const authedUserHash = hashKey(userQueries.authedUser.queryKey);
 
 export function syncWorkspaceStore(
   data: AuthedUserResponse | undefined | null
 ) {
-  console.log("[workspace-store/syncWorkspaceStore]", { data });
+  logger.info({ data });
   useWorkspaceMembershipStore.setState({
     membership: data?.membership ?? null
   });

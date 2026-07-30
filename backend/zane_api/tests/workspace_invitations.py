@@ -115,7 +115,7 @@ class WorkspaceInviteUserViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
-    def test_invite_with_guest_role(self):
+    def test_invite_with_viewer_role(self):
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:projects.list"),
@@ -127,7 +127,7 @@ class WorkspaceInviteUserViewTests(AuthAPITestCase):
 
         data = {
             "username": "mohai",
-            "role": WorkspaceRole.GUEST,
+            "role": WorkspaceRole.VIEWER,
             "accessible_project_ids": [project.id],
         }
         response = self.client.post(
@@ -141,7 +141,7 @@ class WorkspaceInviteUserViewTests(AuthAPITestCase):
         self.assertEqual(1, new_invitation.accessible_projects.count())
         self.assertEqual(project, new_invitation.accessible_projects.first())
 
-    def test_invite_user_with_role_greater_than_guest_empties_accessible_projects(
+    def test_invite_user_with_role_greater_than_viewer_empties_accessible_projects(
         self,
     ):
         self.loginUser()
@@ -168,13 +168,13 @@ class WorkspaceInviteUserViewTests(AuthAPITestCase):
         self.assertIsNotNone(new_invitation)
         self.assertEqual(0, new_invitation.accessible_projects.count())
 
-    def test_invite_user_with_guest_permission_require_nonempty_accessible_projects(
+    def test_invite_user_with_viewer_permission_require_nonempty_accessible_projects(
         self,
     ):
         self.loginUser()
         data = {
             "username": "mohai",
-            "role": WorkspaceRole.GUEST,
+            "role": WorkspaceRole.VIEWER,
             "accessible_project_ids": [],
         }
         response = self.client.post(
@@ -238,7 +238,7 @@ class WorkspaceInviteUserViewTests(AuthAPITestCase):
         # 4- Try to invite user with accesible project from other workspace
         data = {
             "username": "mohai",
-            "role": WorkspaceRole.GUEST,
+            "role": WorkspaceRole.VIEWER,
             "accessible_project_ids": [project.id],
         }
         response = self.client.post(
@@ -735,7 +735,7 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertIsNotNone(self.get_error_from_response(response, "password"))
 
-    def test_workspace_register_with_guest_role_populate_accessible_projects(self):
+    def test_workspace_register_with_viewer_role_populate_accessible_projects(self):
         self.loginUser()
 
         workspace = cast(Workspace, Workspace.objects.first())
@@ -752,7 +752,7 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
         # 1- Create invitation
         data = {
             "username": "mohai",
-            "role": WorkspaceRole.GUEST,
+            "role": WorkspaceRole.VIEWER,
             "accessible_project_ids": [project.id],
         }
         response = self.client.post(
@@ -795,7 +795,7 @@ class WorkspaceRespondToInvitationViewTests(AuthAPITestCase):
             ).first(),
         )
         self.assertIsNotNone(membership)
-        self.assertEqual(membership.role, WorkspaceRole.GUEST)
+        self.assertEqual(membership.role, WorkspaceRole.VIEWER)
         self.assertEqual(1, membership.accessible_projects.count())
         self.assertEqual(project, membership.accessible_projects.first())
 

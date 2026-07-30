@@ -44,7 +44,7 @@ export function meta() {
 
 export async function clientLoader() {
   const queryClient = getQueryClient();
-  await ensureMinRole(queryClient, "Owner");
+  await ensureMinRole(queryClient, "Admin");
 }
 
 export default function CreateRegistryCredentialsPage() {

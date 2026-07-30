@@ -1,4 +1,5 @@
 import { Separator } from "~/components/ui/separator";
+import { createDevLogger } from "~/lib/logger";
 import { buildRegistryQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { Route } from "./+types/build-registry-details";
@@ -40,6 +41,8 @@ import {
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
+
+const logger = createDevLogger(import.meta.url);
 
 export function meta() {
   return [
@@ -454,10 +457,6 @@ async function deleteRegistry(id: string, formData: FormData) {
     domain: formData.get("domain")?.toString() ?? "",
     scheme: formData.get("scheme")?.toString() ?? ""
   };
-
-  console.log({
-    formData: Object.fromEntries(formData.entries())
-  });
 
   const { error } = await apiClient.DELETE(
     "/api/registries/build-registries/{id}/",

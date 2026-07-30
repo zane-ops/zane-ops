@@ -103,7 +103,7 @@ export default function CreatePrivateGitServicePage({
             )}
           >
             <h2 className="text-2xl font-medium">No git app found</h2>
-            {hasMinRole(membership, "Owner") ? (
+            {hasMinRole(membership, "Admin") ? (
               <>
                 <h3 className="text-lg text-grey text-center">
                   start by creating one
@@ -149,7 +149,7 @@ export default function CreatePrivateGitServicePage({
               </>
             ) : (
               <h3 className="text-lg text-grey text-center">
-                Ask your workspace owner to create a new one.
+                Ask your workspace admin to create a new one.
               </h3>
             )}
           </div>

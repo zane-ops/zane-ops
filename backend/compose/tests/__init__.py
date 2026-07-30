@@ -9,3 +9,4 @@ from .stack_logs import *
 from .stack_clone_environments import *
 from .stack_metrics import *
 from .proxy import *
+from .viewer_permissions import *

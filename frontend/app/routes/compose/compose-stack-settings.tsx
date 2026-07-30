@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import {
   composeStackQueries,
+  ensureMinRole,
   environmentQueries,
   resourceQueries
 } from "~/lib/queries";
@@ -27,6 +28,13 @@ import { ComposeStackEnvForm } from "~/routes/compose/components/compose-stack-e
 import { ComposeStackSlugForm } from "~/routes/compose/components/compose-stack-slug-form";
 import { ComposeStackUserContentForm } from "~/routes/compose/components/compose-stack-user-content-form";
 import type { Route } from "./+types/compose-stack-settings";
+
+export async function clientLoader({}: Route.ClientLoaderArgs) {
+  // the compose file, env overrides and deploy token are all member-only,
+  // which leaves nothing on this page for a viewer
+  await ensureMinRole(getQueryClient(), "Member");
+  return;
+}
 
 export default function ComposeStackSettingsPage({
   params,
@@ -47,6 +55,7 @@ export default function ComposeStackSettingsPage({
 
   const membership = useCurrentWorkspaceMembership();
   const isAdmin = hasMinRole(membership, "Admin");
+  const isMember = hasMinRole(membership, "Member");
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 relative mt-8 max-w-full">
@@ -91,6 +100,7 @@ export default function ComposeStackSettingsPage({
               <KeyRoundIcon size={15} className="flex-none text-grey" />
             </div>
             <div className="h-full border border-grey/50"></div>
+            {!isMember && <div className="bg-grey/50 rounded-md size-2" />}
           </div>
           <div className="w-full flex flex-col gap-12 pt-1 pb-14">
             <div className="flex flex-col gap-6">
@@ -101,25 +111,27 @@ export default function ComposeStackSettingsPage({
           </div>
         </section>
 
-        <section id="deploy" className="flex gap-1 scroll-mt-24">
-          <div className="w-16 hidden md:flex flex-col items-center">
-            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
-              <HammerIcon size={15} className="flex-none text-grey" />
+        {isMember && (
+          <section id="deploy" className="flex gap-1 scroll-mt-24">
+            <div className="w-16 hidden md:flex flex-col items-center">
+              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                <HammerIcon size={15} className="flex-none text-grey" />
+              </div>
+              <div className="h-full border border-grey/50"></div>
+              {!isAdmin && <div className="bg-grey/50 rounded-md size-2" />}
             </div>
-            <div className="h-full border border-grey/50"></div>
-            {!isAdmin && <div className="bg-grey/50 rounded-md size-2" />}
-          </div>
-          <div
-            className={cn(
-              "w-full flex flex-col gap-12 pt-1",
-              isAdmin ? "pb-14" : "pb-8"
-            )}
-          >
-            <h2 className="text-lg text-grey">Deploy</h2>
+            <div
+              className={cn(
+                "w-full flex flex-col gap-12 pt-1",
+                isAdmin ? "pb-14" : "pb-8"
+              )}
+            >
+              <h2 className="text-lg text-grey">Deploy</h2>
 
-            <ComposeStackDeployURLForm stack={stack} />
-          </div>
-        </section>
+              <ComposeStackDeployURLForm stack={stack} />
+            </div>
+          </section>
+        )}
 
         {isAdmin && (
           <section id="danger" className="flex gap-1 scroll-mt-24">
@@ -140,12 +152,15 @@ export default function ComposeStackSettingsPage({
         )}
       </div>
 
-      <StackSettingsSideNav isAdmin={isAdmin} />
+      <StackSettingsSideNav isAdmin={isAdmin} isMember={isMember} />
     </div>
   );
 }
 
-function StackSettingsSideNav({ isAdmin = false }: { isAdmin?: boolean }) {
+function StackSettingsSideNav({
+  isAdmin = false,
+  isMember = false
+}: { isAdmin?: boolean; isMember?: boolean }) {
   return (
     <aside className="col-span-2 hidden lg:flex flex-col h-full">
       <nav className="sticky top-20 flex flex-col gap-4">
@@ -177,15 +192,17 @@ function StackSettingsSideNav({ isAdmin = false }: { isAdmin?: boolean }) {
               Environment overrides
             </Link>
           </li>
-          <li>
-            <Link
-              to={{
-                hash: "#deploy"
-              }}
-            >
-              Deploy
-            </Link>
-          </li>
+          {isMember && (
+            <li>
+              <Link
+                to={{
+                  hash: "#deploy"
+                }}
+              >
+                Deploy
+              </Link>
+            </li>
+          )}
 
           {isAdmin && (
             <li className="text-red-400">

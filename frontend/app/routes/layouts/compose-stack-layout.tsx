@@ -13,7 +13,7 @@ import type { ComposeStack } from "~/api/types";
 import { getComposeStackStatus } from "~/components/compose-stack-cards";
 import { CopyButton } from "~/components/copy-button";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
-import { NavLink } from "~/components/nav-link";
+import { type NavItem, NavLink } from "~/components/nav-link";
 import {
   Tooltip,
   TooltipContent,
@@ -22,10 +22,17 @@ import {
 } from "~/components/ui/tooltip";
 import { composeStackQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, isNotFoundError, metaTitle, notFound } from "~/lib/utils";
+import {
+  cn,
+  hasMinRole,
+  isNotFoundError,
+  metaTitle,
+  notFound
+} from "~/lib/utils";
 import {
   getCurrentWorkspace,
-  useCurrentWorkspace
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import { ComposeStackActionsPopover } from "~/routes/compose/components/compose-stack-actions-popover";
 import { ComposeStackChangesModal } from "~/routes/compose/components/compose-stack-changes-modal";
@@ -62,6 +69,8 @@ export default function ComposeStackLayoutPage({
   params,
   loaderData
 }: Route.ComponentProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const workspaceId = useCurrentWorkspace().id;
   const { data: stack } = useQuery({
     ...composeStackQueries.single({
@@ -83,6 +92,40 @@ export default function ComposeStackLayoutPage({
   const stackStatus = getComposeStackStatus(stack);
 
   const { title } = metaTitle(`${status_emoji_map[stackStatus]} ${stack.slug}`);
+
+  const navItems: NavItem[] = [
+    {
+      title: "Services",
+      href: ".",
+      icon: BoxIcon
+    },
+    {
+      title: "Deployments",
+      href: "./deployments/",
+      icon: RocketIcon
+    }
+  ];
+
+  if (isMember) {
+    navItems.push(
+      {
+        title: "Settings",
+        href: "./settings",
+        icon: SettingsIcon
+      },
+      {
+        title: "Http logs",
+        href: "./http-logs",
+        icon: GlobeIcon
+      }
+    );
+  }
+
+  navItems.push({
+    title: "Metrics",
+    href: "./metrics",
+    icon: ChartNoAxesColumn
+  });
 
   return (
     <>
@@ -120,7 +163,9 @@ export default function ComposeStackLayoutPage({
           </div>
         </div>
 
-        <DeployStackForm stack={stack} params={params} />
+        {hasMinRole(membership, "Member") && (
+          <DeployStackForm stack={stack} params={params} />
+        )}
       </section>
 
       <nav className="mt-5">
@@ -130,39 +175,14 @@ export default function ComposeStackLayoutPage({
             "inline-flex items-stretch p-0.5 text-muted-foreground"
           )}
         >
-          <li>
-            <NavLink to=".">
-              <span>Services</span>
-              <BoxIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="./settings">
-              <span>Settings</span>
-              <SettingsIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-
-          <li>
-            <NavLink to="./deployments/">
-              <span>Deployments</span>
-              <RocketIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-
-          <li>
-            <NavLink to="./http-logs" prefetch="viewport">
-              <span>Http logs</span>
-              <GlobeIcon size={15} className="flex-none" />
-            </NavLink>
-          </li>
-
-          <li>
-            <NavLink to="./metrics">
-              <span>Metrics</span>
-              <ChartNoAxesColumn size={15} className="flex-none" />
-            </NavLink>
-          </li>
+          {navItems.map((item) => (
+            <li key={item.href}>
+              <NavLink to={item.href} prefetch="viewport">
+                <span>{item.title}</span>
+                <item.icon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+          ))}
         </ul>
       </nav>
 
@@ -180,8 +200,6 @@ type DeployStackFormProps = {
 };
 
 function DeployStackForm({ className, stack, params }: DeployStackFormProps) {
-  const fetcher = useFetcher();
-
   return (
     <div
       className={cn(

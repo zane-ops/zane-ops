@@ -102,7 +102,11 @@ export async function ensureMinRole(
 ) {
   const user = await ensureAuthedUser(queryClient);
   if (!hasMinRole(user, roleName)) {
-    throw notFound();
+    throw notFound(
+      import.meta.env.DEV
+        ? "You do have permission to view this page"
+        : "Not found"
+    );
   }
   return user;
 }
@@ -3063,7 +3067,7 @@ export const workspaceMemberListFilters = zfd.formData({
   query: z.string().optional(),
   per_page: zfd.numeric().optional().catch(10).optional(),
   role: z
-    .enum(["Guest", "Member", "Admin", "Owner"])
+    .enum(["Viewer", "Member", "Admin", "Owner"])
     .optional()
     .catch(undefined)
 });
@@ -3087,7 +3091,7 @@ export const workspaceQueries = {
             query: {
               ...filters,
               role: filters.role
-                ? WORKSPACE_ROLE_MAPPING[filters.role]
+                ? WORKSPACE_ROLE_MAPPING[filters.role].value
                 : undefined
             }
           }

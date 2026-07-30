@@ -38,8 +38,11 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { gitAppsQueries } from "~/lib/queries";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import { cn, getFormErrorsFromResponseData, hasMinRole } from "~/lib/utils";
+import {
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/workspace-store";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
@@ -59,7 +62,7 @@ export function ServiceGitSourceForm({
 }: ServiceGitSourceFormProps) {
   const loaderData = useLoaderData<Route.ComponentProps["loaderData"]>();
   const workspaceId = useCurrentWorkspace().id;
-  const { data: gitAppList } = useQuery({
+  const gitAppListQuery = useQuery({
     ...gitAppsQueries.list(workspaceId),
     initialData: loaderData.gitAppList
   });
@@ -70,7 +73,7 @@ export function ServiceGitSourceForm({
     env_slug
   });
 
-  const serviceSourceChange = service.unapplied_changes.find(
+  const serviceSourceChange = (service.unapplied_changes ?? []).find(
     (change) => change.field === "git_source"
   ) as
     | {
@@ -114,7 +117,6 @@ export function ServiceGitSourceForm({
   const serviceCommitSha =
     serviceSourceChange?.new_value.commit_sha ?? service.commit_sha!;
 
-  const serviceRepo = service.next_git_repository ?? service.git_repository;
   const serviceGitApp = serviceSourceChange
     ? serviceSourceChange.new_value.git_app
     : service.git_app;
@@ -134,6 +136,9 @@ export function ServiceGitSourceForm({
     React.useState(selectedBranch);
   const [repositoryURL, setRepositoryURL] = React.useState(serviceRepoURL);
 
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
+
   const resetDefaultValues = () => {
     const serviceGitApp = serviceSourceChange
       ? serviceSourceChange.new_value.git_app
@@ -148,6 +153,17 @@ export function ServiceGitSourceForm({
     setSelectedBranch(serviceBranch);
     setBranchSearchQuery(serviceBranch);
   };
+
+  const gitAppList = React.useMemo(() => {
+    const appList = gitAppListQuery.data;
+    if (
+      selectedGitApp &&
+      !appList.find((app) => app.id === selectedGitApp.id)
+    ) {
+      appList.push(selectedGitApp);
+    }
+    return appList;
+  }, [gitAppListQuery.data, selectedGitApp]);
 
   return (
     <div className="w-full max-w-4xl">
@@ -223,6 +239,7 @@ export function ServiceGitSourceForm({
                 >
                   {"<no app>"}
                 </SelectItem>
+
                 {gitAppList.map((gitapp) =>
                   gitapp.github ? (
                     <SelectItem
@@ -372,88 +389,90 @@ export function ServiceGitSourceForm({
             </div>
           </FieldSet>
         </div>
-        <div className="flex gap-4">
-          {serviceSourceChange !== undefined ? (
-            <>
-              <SubmitButton
-                isPending={isPending}
-                variant="outline"
-                name="intent"
-                value="cancel-service-change"
-              >
-                {isPending ? (
+        {isMember && (
+          <div className="flex gap-4">
+            {serviceSourceChange !== undefined ? (
+              <>
+                <SubmitButton
+                  isPending={isPending}
+                  variant="outline"
+                  name="intent"
+                  value="cancel-service-change"
+                >
+                  {isPending ? (
+                    <>
+                      <LoaderIcon className="animate-spin" size={15} />
+                      <span>Discarding...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Undo2Icon size={15} className="flex-none" />
+                      <span>Discard change</span>
+                    </>
+                  )}
+                </SubmitButton>
+              </>
+            ) : (
+              <>
+                {isEditing ? (
                   <>
-                    <LoaderIcon className="animate-spin" size={15} />
-                    <span>Discarding...</span>
+                    <SubmitButton
+                      isPending={isPending}
+                      variant="secondary"
+                      className="self-start"
+                      name="intent"
+                      value="request-service-change"
+                    >
+                      {isPending ? (
+                        <>
+                          <LoaderIcon className="animate-spin" size={15} />
+                          <span>Updating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckIcon size={15} className="flex-none" />
+                          <span>Update</span>
+                        </>
+                      )}
+                    </SubmitButton>
+                    <Button
+                      variant="outline"
+                      type="reset"
+                      disabled={isPending}
+                      onClick={() => {
+                        setIsEditing(false);
+                        resetDefaultValues();
+                        reset();
+                      }}
+                      className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+                    >
+                      <>
+                        <XIcon size={15} className="flex-none" />
+                        <span>Cancel</span>
+                      </>
+                    </Button>
                   </>
                 ) : (
-                  <>
-                    <Undo2Icon size={15} className="flex-none" />
-                    <span>Discard change</span>
-                  </>
-                )}
-              </SubmitButton>
-            </>
-          ) : (
-            <>
-              {isEditing ? (
-                <>
-                  <SubmitButton
-                    isPending={isPending}
-                    variant="secondary"
-                    className="self-start"
-                    name="intent"
-                    value="request-service-change"
-                  >
-                    {isPending ? (
-                      <>
-                        <LoaderIcon className="animate-spin" size={15} />
-                        <span>Updating...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckIcon size={15} className="flex-none" />
-                        <span>Update</span>
-                      </>
-                    )}
-                  </SubmitButton>
                   <Button
                     variant="outline"
-                    type="reset"
+                    type="button"
                     disabled={isPending}
                     onClick={() => {
-                      setIsEditing(false);
-                      resetDefaultValues();
-                      reset();
+                      flushSync(() => {
+                        setIsEditing(true);
+                      });
+                      SelectTriggerRef.current?.focus();
                     }}
                     className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
                   >
-                    <>
-                      <XIcon size={15} className="flex-none" />
-                      <span>Cancel</span>
-                    </>
+                    <span>Edit</span>
+                    <PencilLineIcon size={15} className="flex-none" />
                   </Button>
-                </>
-              ) : (
-                <Button
-                  variant="outline"
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => {
-                    flushSync(() => {
-                      setIsEditing(true);
-                    });
-                    SelectTriggerRef.current?.focus();
-                  }}
-                  className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
-                >
-                  <span>Edit</span>
-                  <PencilLineIcon size={15} className="flex-none" />
-                </Button>
-              )}
-            </>
-          )}
-        </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </fetcher.Form>
     </div>
   );

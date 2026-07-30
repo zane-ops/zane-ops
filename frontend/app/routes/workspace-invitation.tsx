@@ -30,6 +30,7 @@ import {
   FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
 import { WorkspaceRoleBadge } from "~/components/workspace-role-badge";
+import { createDevLogger } from "~/lib/logger";
 import { userQueries, workspaceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -49,6 +50,8 @@ export function meta() {
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
+const logger = createDevLogger(import.meta.url);
+
 export async function clientLoader({
   params,
   request
@@ -65,9 +68,7 @@ export async function clientLoader({
     const params = new URLSearchParams([["redirect_to", url.pathname]]);
 
     const redirectPathName = [href("/login"), "?", params.toString()].join("");
-    console.log(
-      `[workspace-invitation/clientLoader] redirect to \`${redirectPathName}\``
-    );
+    logger.info(`redirect to \`${redirectPathName}\``);
     throw redirect(redirectPathName);
   }
 
@@ -169,9 +170,9 @@ function ReviewInvitationForm({ invitation }: InvitationFormProps) {
           }
           className={cn(
             "size-16 text-2xl flex-none rounded-md flex items-center justify-center",
-            "text-[var(--color-light)] dark:text-[var(--color-dark)]",
-            "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10",
-            "border  border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10"
+            "text-(--color-light) dark:text-(--color-dark)",
+            "bg-(--color-light)/10 dark:bg-(--color-dark)/10",
+            "border  border-(--color-light)/10 dark:border-(--color-dark)/10"
           )}
         >
           <span>{invitation.workspace.name.charAt(0).toUpperCase()}</span>

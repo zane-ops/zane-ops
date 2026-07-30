@@ -16,7 +16,8 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn, wait } from "~/lib/utils";
+import { cn, hasMinRole, wait } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import {
   type clientAction,
   useServiceQuery
@@ -42,12 +43,18 @@ export function ServiceDeployURLForm({
     service_slug,
     env_slug
   });
+  const membership = useCurrentWorkspaceMembership();
   const currentURL = new URL(window.location.href);
   const deployURL = service.deploy_token
     ? `${currentURL.protocol}//${currentURL.host}/api/deploy-service/${service.type === "DOCKER_REGISTRY" ? "docker" : "git"}/${service.deploy_token}`
     : null;
 
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+
+  if (!hasMinRole(membership, "Member")) {
+    // the deploy token is member-only, so there is no URL to show
+    return null;
+  }
 
   return (
     <div className="w-full max-w-4xl">
@@ -176,12 +183,18 @@ export function ServicePreviewDeployURLForm({
     service_slug,
     env_slug
   });
+  const membership = useCurrentWorkspaceMembership();
   const currentURL = new URL(window.location.href);
   const deployURL = service.deploy_token
     ? `${currentURL.protocol}//${currentURL.host}/api/trigger-preview/${service.deploy_token}`
     : null;
 
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+
+  if (!hasMinRole(membership, "Member")) {
+    // the deploy token is member-only, so there is no URL to show
+    return null;
+  }
 
   return (
     <div className="w-full max-w-4xl">

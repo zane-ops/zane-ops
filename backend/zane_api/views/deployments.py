@@ -63,6 +63,7 @@ from temporal.shared import (
 from ..permissions import (
     HasWorkspace,
     IsWorkspaceMember,
+    IsWorkspaceViewer,
     get_accessible_projects,
 )
 
@@ -606,7 +607,7 @@ class ServiceDeploymentsAPIView(ListAPIView):
     filterset_class = DockerServiceDeploymentFilterSet
     pagination_class = DeploymentListPagination
     queryset = Deployment.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     @extend_schema(
         summary="List all deployments",
@@ -671,12 +672,12 @@ class ServiceDeploymentSingleAPIView(RetrieveAPIView):
     serializer_class = ServiceDeploymentSerializer
     lookup_url_kwarg = "deployment_hash"  # This corresponds to the URL configuration
     queryset = Deployment.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     def get_object(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
+        env_slug = self.kwargs.get("env_slug", Environment.PRODUCTION_ENV_NAME)
         deployment_hash = self.kwargs["deployment_hash"]
 
         try:
@@ -725,7 +726,7 @@ class RecentDeploymentsAPIView(ListAPIView):
     serializer_class = SimpleDeploymentSerializer
     queryset = Deployment.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
     pagination_class = None
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     @extend_schema(
         summary="List recent deployments",

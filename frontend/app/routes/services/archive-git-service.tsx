@@ -1,6 +1,7 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
+import { createDevLogger } from "~/lib/logger";
 import {
   environmentQueries,
   resourceQueries,
@@ -12,6 +13,8 @@ import type { ErrorResponseFromAPI } from "~/lib/utils";
 import { getCsrfTokenHeader } from "~/lib/utils";
 import { getCurrentWorkspace } from "~/lib/workspace-store";
 import type { Route } from "./+types/archive-git-service";
+
+const logger = createDevLogger(import.meta.url);
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
@@ -36,9 +39,6 @@ export async function clientAction({
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const formData = await request.formData();
 
-  console.log({
-    service_slug: formData.get("service_slug")?.toString().trim()
-  });
   if (
     formData.get("service_slug")?.toString().trim() !==
     `${project_slug}/${env_slug}/${service_slug}`
