@@ -83,9 +83,9 @@ export default function ProjectLayout({
               }
               className={cn(
                 "size-12 text-xl flex-none rounded-md flex items-center justify-center",
-                "text-[var(--color-light)] dark:text-[var(--color-dark)]",
-                "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10",
-                "border  border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10",
+                "text-(--color-light) dark:text-(--color-dark)",
+                "bg-(--color-light)/10 dark:bg-(--color-dark)/10",
+                "border  border-(--color-light)/10 dark:border-(--color-dark)/10",
                 "focus-visible:outline-hidden focus-visible:ring-2",
                 "focus-visible:ring-ring focus-visible:ring-offset-2",
                 "ring-offset-background transition-colors"

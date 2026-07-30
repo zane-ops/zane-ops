@@ -64,9 +64,9 @@ export function WorkspaceMembershipListHeaderDropdown({
             }
             className={cn(
               "size-6 flex-none rounded-md flex items-center justify-center",
-              "text-[var(--color-light)] dark:text-[var(--color-dark)]",
-              "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10",
-              "border  border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10"
+              "text-(--color-light) dark:text-(--color-dark)",
+              "bg-(--color-light)/10 dark:bg-(--color-dark)/10",
+              "border  border-(--color-light)/10 dark:border-(--color-dark)/10"
             )}
           >
             <span>{currentWorkspace.name.charAt(0).toUpperCase()}</span>
@@ -129,9 +129,9 @@ export function WorkspaceMembershipListHeaderDropdown({
                     <div
                       className={cn(
                         "size-6 flex-none rounded-md flex items-center justify-center",
-                        "text-[var(--color-light)] dark:text-[var(--color-dark)]",
-                        "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10",
-                        "border border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10"
+                        "text-(--color-light) dark:text-(--color-dark)",
+                        "bg-(--color-light)/10 dark:bg-(--color-dark)/10",
+                        "border border-(--color-light)/10 dark:border-(--color-dark)/10"
                       )}
                     >
                       <span>{m.workspace.name.charAt(0).toUpperCase()}</span>

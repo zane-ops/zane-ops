@@ -170,9 +170,9 @@ function ReviewInvitationForm({ invitation }: InvitationFormProps) {
           }
           className={cn(
             "size-16 text-2xl flex-none rounded-md flex items-center justify-center",
-            "text-[var(--color-light)] dark:text-[var(--color-dark)]",
-            "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10",
-            "border  border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10"
+            "text-(--color-light) dark:text-(--color-dark)",
+            "bg-(--color-light)/10 dark:bg-(--color-dark)/10",
+            "border  border-(--color-light)/10 dark:border-(--color-dark)/10"
           )}
         >
           <span>{invitation.workspace.name.charAt(0).toUpperCase()}</span>
