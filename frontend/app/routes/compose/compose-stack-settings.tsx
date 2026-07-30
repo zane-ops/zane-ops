@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import {
   composeStackQueries,
+  ensureMinRole,
   environmentQueries,
   resourceQueries
 } from "~/lib/queries";
@@ -27,6 +28,13 @@ import { ComposeStackEnvForm } from "~/routes/compose/components/compose-stack-e
 import { ComposeStackSlugForm } from "~/routes/compose/components/compose-stack-slug-form";
 import { ComposeStackUserContentForm } from "~/routes/compose/components/compose-stack-user-content-form";
 import type { Route } from "./+types/compose-stack-settings";
+
+export async function clientLoader({}: Route.ClientLoaderArgs) {
+  // the compose file, env overrides and deploy token are all member-only,
+  // which leaves nothing on this page for a viewer
+  await ensureMinRole(getQueryClient(), "Member");
+  return;
+}
 
 export default function ComposeStackSettingsPage({
   params,

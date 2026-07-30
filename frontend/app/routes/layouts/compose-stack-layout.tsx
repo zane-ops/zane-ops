@@ -100,11 +100,6 @@ export default function ComposeStackLayoutPage({
       icon: BoxIcon
     },
     {
-      title: "Settings",
-      href: "./settings",
-      icon: SettingsIcon
-    },
-    {
       title: "Deployments",
       href: "./deployments/",
       icon: RocketIcon
@@ -112,11 +107,18 @@ export default function ComposeStackLayoutPage({
   ];
 
   if (isMember) {
-    navItems.push({
-      title: "Http logs",
-      href: "./http-logs",
-      icon: GlobeIcon
-    });
+    navItems.push(
+      {
+        title: "Settings",
+        href: "./settings",
+        icon: SettingsIcon
+      },
+      {
+        title: "Http logs",
+        href: "./http-logs",
+        icon: GlobeIcon
+      }
+    );
   }
 
   navItems.push({
