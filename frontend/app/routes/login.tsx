@@ -82,6 +82,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   }
   if (data?.success) {
     queryClient.removeQueries(userQueries.memberships);
+    queryClient.removeQueries(userQueries.authedUser);
 
     const redirect_to = searchParams.get("redirect_to");
 
