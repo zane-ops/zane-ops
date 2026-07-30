@@ -100,7 +100,7 @@ export function ServiceURLsForm({
         <h3 className="text-lg">URL Routes</h3>
         <p className="text-gray-400">
           The domains and base path which are associated to this service. Use{" "}
-          <Code>*.example.com</Code> for wildcard support.
+          <Code>*.example.com</Code> for wildcard support.{" "}
           <a
             href="https://zaneops.dev/configuring-zaneops/"
             target="_blank"
