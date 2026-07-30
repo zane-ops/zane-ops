@@ -92,21 +92,23 @@ export function ServiceVolumesForm({
           Used for persisting the data from your services.
         </p>
 
-        <Alert variant="warning">
-          <TriangleAlertIcon size={15} />
-          <AlertTitle>Warning</AlertTitle>
-          <AlertDescription>
-            Adding volumes will disable&nbsp;
-            <a
-              href="https://zaneops.dev/knowledge-base/zero-downtime-deploys/#situations-that-disable-zero-downtime-deployment"
-              target="_blank"
-              className="text-link underline inline-flex gap-1 items-center"
-            >
-              zero-downtime deployments <ExternalLinkIcon size={12} />
-            </a>
-            .
-          </AlertDescription>
-        </Alert>
+        {isMember && (
+          <Alert variant="warning">
+            <TriangleAlertIcon size={15} />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              Adding volumes will disable&nbsp;
+              <a
+                href="https://zaneops.dev/knowledge-base/zero-downtime-deploys/#situations-that-disable-zero-downtime-deployment"
+                target="_blank"
+                className="text-link underline inline-flex gap-1 items-center"
+              >
+                zero-downtime deployments <ExternalLinkIcon size={12} />
+              </a>
+              .
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
       {!isMember && volumes.size === 0 && (
         <div
@@ -120,7 +122,7 @@ export function ServiceVolumesForm({
       )}
       {volumes.size > 0 && (
         <>
-          <hr className="border-border" />
+          {isMember && <hr className="border-border" />}
           <ul className="flex flex-col gap-2">
             {[...volumes.entries()].map(([key, volume]) => (
               <li key={key}>

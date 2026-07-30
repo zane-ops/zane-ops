@@ -93,21 +93,23 @@ export function ServicePortsForm({
           and instead add a URL route.
         </p>
 
-        <Alert variant="warning">
-          <TriangleAlertIcon size={15} />
-          <AlertTitle>Warning</AlertTitle>
-          <AlertDescription>
-            Adding ports will disable&nbsp;
-            <a
-              href="https://zaneops.dev/knowledge-base/zero-downtime-deploys/#situations-that-disable-zero-downtime-deployment"
-              target="_blank"
-              className="text-link underline inline-flex gap-1 items-center"
-            >
-              zero-downtime deployments <ExternalLinkIcon size={12} />
-            </a>
-            .
-          </AlertDescription>
-        </Alert>
+        {isMember && (
+          <Alert variant="warning">
+            <TriangleAlertIcon size={15} />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              Adding ports will disable&nbsp;
+              <a
+                href="https://zaneops.dev/knowledge-base/zero-downtime-deploys/#situations-that-disable-zero-downtime-deployment"
+                target="_blank"
+                className="text-link underline inline-flex gap-1 items-center"
+              >
+                zero-downtime deployments <ExternalLinkIcon size={12} />
+              </a>
+              .
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
 
       {!isMember && ports.size === 0 && (
@@ -122,7 +124,7 @@ export function ServicePortsForm({
       )}
       {ports.size > 0 && (
         <>
-          <hr className="border-border" />
+          {isMember && <hr className="border-border" />}
           <ul className="flex flex-col gap-1">
             {[...ports.entries()].map(([key, value]) => (
               <li key={key}>

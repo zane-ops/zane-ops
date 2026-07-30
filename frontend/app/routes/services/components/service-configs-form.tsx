@@ -103,7 +103,7 @@ export function ServiceConfigsForm({
       )}
       {configs.size > 0 && (
         <>
-          <hr className="border-border" />
+          {isMember && <hr className="border-border" />}
           <ul className="flex flex-col gap-2">
             {[...configs.entries()].map(([key, config]) => (
               <li key={key}>
@@ -404,28 +404,30 @@ function ServiceConfigItem({
                 />
               </FieldSet>
 
-              <FieldSet
-                name="contents"
-                errors={errors.new_value?.contents}
-                className="flex flex-col gap-1.5 flex-1"
-              >
-                <FieldSetLabel className="text-muted-foreground">
-                  contents
-                </FieldSetLabel>
-                <FieldSetTextarea
-                  className="sr-only"
-                  value={changedContents ?? ""}
-                  readOnly
-                />
+              {isMember && (
+                <FieldSet
+                  name="contents"
+                  errors={errors.new_value?.contents}
+                  className="flex flex-col gap-1.5 flex-1"
+                >
+                  <FieldSetLabel className="text-muted-foreground">
+                    contents
+                  </FieldSetLabel>
+                  <FieldSetTextarea
+                    className="sr-only"
+                    value={changedContents ?? ""}
+                    readOnly
+                  />
 
-                <CodeEditor
-                  containerClassName="w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[855px]"
-                  language={changedConfigLanguage}
-                  value={changedContents ?? undefined}
-                  readOnly={!isMember || !!change_id}
-                  onChange={(value) => setChangedContents(value ?? "")}
-                />
-              </FieldSet>
+                  <CodeEditor
+                    containerClassName="w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[855px]"
+                    language={changedConfigLanguage}
+                    value={changedContents ?? undefined}
+                    readOnly={!!change_id}
+                    onChange={(value) => setChangedContents(value ?? "")}
+                  />
+                </FieldSet>
+              )}
 
               <hr className="-mx-4 border-border" />
               <div className="flex justify-end items-center gap-2">

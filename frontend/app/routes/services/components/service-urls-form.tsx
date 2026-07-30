@@ -123,7 +123,7 @@ export function ServiceURLsForm({
       )}
       {urls.size > 0 && (
         <>
-          <hr className="border-border" />
+          {isMember && <hr className="border-border" />}
           <ul className="flex flex-col gap-2">
             {[...urls.entries()].map(([key, value]) => (
               <li key={key}>

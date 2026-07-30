@@ -118,7 +118,7 @@ export function ServiceSharedVolumesForm({
       )}
       {volumes.size > 0 && (
         <>
-          <hr className="border-border" />
+          {isMember && <hr className="border-border" />}
           <ul className="flex flex-col gap-2">
             {[...volumes.entries()].map(([key, volume]) => (
               <li key={key}>
