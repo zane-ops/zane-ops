@@ -132,16 +132,31 @@ token_hash = hashlib.sha256(secret.encode()).hexdigest()
 
 Scopes are named `resource:action`. `write` also gives you `read` on the same resource. Start small — once a scope name is public we're stuck with it.
 
-| Scope | What it allows |
+> **This list is provisional.** It covers roughly half the API. The remaining areas are listed in [§6.1](#61-areas-still-to-cover) and get their scopes assigned during step 4, by walking every route in [ROUTES_PERMISSIONS.md](./ROUTES_PERMISSIONS.md).
+
+| Scope | Area it unlocks |
 | --- | --- |
-| `deploy:write` | Trigger deployments and preview environments, cancel, redeploy |
-| `service:read` | Read service configuration and details |
-| `service:write` | Create / update / delete services |
-| `env:read` | Read environment variables (**sensitive** — see below) |
-| `env:write` | Create / update / delete environment variables |
+| `deploy:write` | Triggering deployments and preview environments, cancelling, redeploying |
+| `service:read` | Reading service and compose-stack configuration and details |
+| `service:write` | Changing services and compose stacks |
+| `env:read` | Reading environment variables (**sensitive** — see below) |
+| `env:write` | Changing environment variables |
 | `logs:read` | Runtime logs, build logs, metrics |
-| `project:read` | List and read projects and environments |
-| `project:write` | Create / update / delete projects and environments |
+| `project:read` | Listing and reading projects and environments |
+| `project:write` | Changing projects and environments |
+
+**A scope never grants anything — it only takes away.** It says which *area* of the API a token may touch; the role still decides *how far into that area* it gets. Both checks run, and either can reject the request.
+
+Worked example — a token with role `Member` and scope `service:write`:
+
+| Request | Role check | Scope check | Result |
+| --- | --- | --- | --- |
+| Create a service ([docker_services.py:112](../zane_api/views/docker_services.py#L112)) | Member ✅ | ✅ | allowed |
+| Update service config ([docker_services.py:652](../zane_api/views/docker_services.py#L652)) | Member ✅ | ✅ | allowed |
+| Archive a service ([docker_services.py:1238](../zane_api/views/docker_services.py#L1238)) | needs Admin ❌ | ✅ | **403** |
+| Read env variables | Member ✅ | no `env:read` ❌ | **403** |
+
+The third row is the one to remember: holding `service:write` does **not** promote the token to Admin. Deleting a service is an Admin action and stays one.
 
 Rules:
 
@@ -150,7 +165,31 @@ Rules:
 - **A view with no `required_scopes` cannot be reached by a token at all.** This is deliberate: if we forget to annotate a view, the result is that tokens get *denied*, not accidentally allowed. With ~137 routes, we will forget at least one, and this way the mistake is harmless.
 - What you can ask for is limited by your role: a Member cannot create a token with an Admin-only scope. (Viewers can't create tokens at all — see §9.)
 
-The list of which scope covers which route still has to be written. Use [ROUTES_PERMISSIONS.md](./ROUTES_PERMISSIONS.md) as the checklist.
+### 6.1 Areas still to cover
+
+The route surface is 77 patterns in [zane_api/urls.py](../zane_api/urls.py) plus five other url modules. These areas have **no scope yet** and need one during step 4:
+
+| Area | Where | Note |
+| --- | --- | --- |
+| **Git connectors** | 16 routes, `git_apps.*` / `github.*` / `gitlab.*` in [git_connectors/urls.py](../git_connectors/urls.py) | The two `*.webhook` routes authenticate by signature, not token — leave them alone |
+| **Container registries** | 6 routes, `build_registries.*` / `credentials.*` in [container_registry/urls.py](../container_registry/urls.py) | Registry credentials are as sensitive as env vars — treat the read scope like `env:read` |
+| **Reading deployments** | `deployments.recent`, `services.deployments_list`, `services.deployment_single` | `deploy:write` is write-only; a `deploy:read` is needed |
+| **Workspace info** | `workspace.details`, `workspace.list_members` | Read-only workspace info may be legitimate for a token. Everything else workspace-related (invitations, roles, ownership) stays on the deny list in §10 |
+
+Likely names: `gitapp:read` / `gitapp:write`, `registry:read` / `registry:write`, `deploy:read`, `workspace:read`. Not final — decide when the routes are actually walked.
+
+Also confirm during step 4 whether `s3_targets` has any HTTP surface. It's an installed app with no url module.
+
+### 6.2 Decisions already made
+
+- **Compose stacks reuse the `service:*` and `deploy:*` scopes.** No `stack:read` / `stack:write`. The 19 routes in [compose/urls.py](../compose/urls.py) are gated by exactly the same role ladder as services — Viewer to read ([stacks.py:79](../compose/views/stacks.py#L79)), Member to write ([stacks.py:117](../compose/views/stacks.py#L117)), Admin to archive ([stacks.py:449](../compose/views/stacks.py#L449)) — so a second scope family would duplicate an identical structure. A CI token shouldn't have to know whether the thing it deploys is stored as a `Service` or a `ComposeStack`.
+
+  Note this is mildly one-way: if we ever want a token that can deploy services but not stacks, introducing `stack:*` later would break tokens that relied on `service:*` covering stacks. Judged unlikely, and accepted.
+
+  `stacks.webhook_deploy` and `stacks.regenerate_deploy_token` are the same `AllowAny` situation as services ([stacks.py:770](../compose/views/stacks.py#L770), same commented-out TODO), so §7 applies to them unchanged.
+- **Toggling a service on/off, cancelling a deployment, and cleaning the deployment queue are `deploy:write`**, not `service:write`. (`services.docker.toggle`, `services.bulk_toggle_state`, `services.cancel_deployment`, `services.cleanup_deployment_queue`, and the compose equivalents.) They act on running deployments, not on stored configuration.
+- **Metrics fold into `logs:read`.** `services.metrics`, `services.deployment_metrics` and `stacks.metrics` don't get their own scope. Stack logs ([compose/views/logs.py](../compose/views/logs.py)) fold in the same way.
+- **Utility endpoints get no scope, so tokens cannot reach them** — see §10.
 
 ---
 
@@ -244,11 +283,14 @@ Viewer-level tokens still exist and are still useful (a read-only token for a st
 
 §6 already blocks these (no `required_scopes` means no token access), but write explicit tests for them:
 
-- Instance-owner routes — auto-update, instance settings ([auto_update_docker_services.py:42](../zane_api/views/auto_update_docker_services.py#L42))
+- Instance-owner routes — auto-update (`app.trigger_update`, `app.check_ongoing_update`), instance settings ([auto_update_docker_services.py:42](../zane_api/views/auto_update_docker_services.py#L42))
 - Everything in [views/auth.py](../zane_api/views/auth.py) — login, logout, registration, changing password
+- **The whole `console` app** ([console/urls.py](../console/urls.py)) — instance users, system settings, password-reset tokens, workspace transfer
 - **Creating tokens.** A token must not be able to create another token, or a narrow short-lived token could be used to create a wide permanent one.
-- Workspace invitations and changing members' roles
-- **Webshell** ([webshell/consumers/](../webshell/consumers/)) — a shell is basically arbitrary code execution on the server. No token access in v1.
+- Workspace invitations, changing members' roles, transferring ownership
+- **Webshell** — the consumers ([webshell/consumers/](../webshell/consumers/)) and the SSH key routes (`ssh.keys`). A shell is basically arbitrary code execution on the server. No token access in v1.
+- `logs.ingest` — this is fluentd's route, protected by `InternalZaneAppPermission` (Basic auth with the secret key). Leave it as is.
+- **Utility endpoints.** These exist for the browser app and have no reason to be scripted, so they get no scope and stay unreachable by tokens: `ping`, `csrf`, `settings`, `server.resource_limits`, `docker.image_search`, `proxy.check_certificates`, `resources.search`.
 
 ---
 
