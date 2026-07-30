@@ -109,13 +109,6 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   return { limits, service, detectedPorts };
 }
 
-const TABS = {
-  DEPLOYMENTS: "deployments",
-  ENV_VARIABLES: "envVariables",
-  SETTINGS: "settings",
-  HTTP_LOGS: "http-logs"
-} as const;
-
 export default function ServiceDetailsLayout({
   loaderData,
   params: {
@@ -149,14 +142,7 @@ export default function ServiceDetailsLayout({
     enabled: hasMinRole(membership, "Member")
   });
 
-  let currentSelectedTab: ValueOf<typeof TABS> = TABS.DEPLOYMENTS;
-  if (location.pathname.match(/env\-variables\/?$/)) {
-    currentSelectedTab = TABS.ENV_VARIABLES;
-  } else if (location.pathname.match(/settings\/?$/)) {
-    currentSelectedTab = TABS.SETTINGS;
-  } else if (location.pathname.match(/http\-logs\/?$/)) {
-    currentSelectedTab = TABS.HTTP_LOGS;
-  }
+  const isSettingsTabsSelected = location.pathname.match(/settings\/?$/);
 
   const serviceGitSourceChange = (service.unapplied_changes ?? []).find(
     (change) => change.field === "git_source"
@@ -498,10 +484,12 @@ export default function ServiceDetailsLayout({
           </div>
         </div>
 
-        <DeployServiceForm service={service} />
+        {hasMinRole(membership, "Member") && (
+          <DeployServiceForm service={service} />
+        )}
       </section>
 
-      {currentSelectedTab === TABS.SETTINGS && (
+      {isSettingsTabsSelected && (
         <Button
           variant="outline"
           className={cn(

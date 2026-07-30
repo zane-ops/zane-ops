@@ -161,7 +161,9 @@ export default function ComposeStackLayoutPage({
           </div>
         </div>
 
-        <DeployStackForm stack={stack} params={params} />
+        {hasMinRole(membership, "Member") && (
+          <DeployStackForm stack={stack} params={params} />
+        )}
       </section>
 
       <nav className="mt-5">
@@ -196,8 +198,6 @@ type DeployStackFormProps = {
 };
 
 function DeployStackForm({ className, stack, params }: DeployStackFormProps) {
-  const fetcher = useFetcher();
-
   return (
     <div
       className={cn(
