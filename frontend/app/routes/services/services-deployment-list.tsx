@@ -794,7 +794,7 @@ const DeploymentStatusesMultiSelect = ({
           <div className="flex px-3 py-3.5 items-center gap-1 w-full">
             <SearchIcon className="size-4 flex-none text-grey" />
             <CommandPrimitive.Input
-              placeholder="Filter Statuses..."
+              placeholder="Filter Statuses"
               className="text-sm bg-inherit focus-visible:outline-hidden px-2 w-full"
               onKeyDown={handleInputKeyDown}
             />
