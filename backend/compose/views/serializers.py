@@ -100,6 +100,25 @@ class ComposeStackServiceConfigSerializer(serializers.Serializer):
     target = serializers.CharField()
     content = serializers.CharField()
 
+    # the source and target stay visible — only the body is withheld
+    MEMBER_ONLY_FIELDS = ["content"]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        for field_name, field in fields.items():
+            field.allow_null = field.allow_null or field_name in self.MEMBER_ONLY_FIELDS
+        return fields
+
+    def to_representation(self, instance):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(request, WorkspaceRole.MEMBER):
+            for key in self.MEMBER_ONLY_FIELDS:
+                data.pop(key, None)
+
+        return data
+
 
 class ComposeStackServicePortSerializer(serializers.Serializer):
     published = serializers.IntegerField()
@@ -143,6 +162,26 @@ class ComposeStackServiceStatusSerializer(serializers.Serializer):
     healthcheck = ComposeStackServiceHealthCheckSerializer(
         required=False, allow_null=True
     )
+
+    # `stack.services` is a status blob, but the resolved environment of every
+    # container lives in it — same secrets as `env_overrides`
+    MEMBER_ONLY_FIELDS = ["environment"]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        for field_name, field in fields.items():
+            field.allow_null = field.allow_null or field_name in self.MEMBER_ONLY_FIELDS
+        return fields
+
+    def to_representation(self, instance):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(request, WorkspaceRole.MEMBER):
+            for key in self.MEMBER_ONLY_FIELDS:
+                data.pop(key, None)
+
+        return data
 
 
 class ComposeConfigVersionSerializer(serializers.Serializer):

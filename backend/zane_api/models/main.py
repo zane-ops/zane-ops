@@ -1536,6 +1536,14 @@ class Config(TimestampedModel):
     language = models.CharField(default="plaintext", max_length=255)
     version = models.PositiveIntegerField(default=1)
 
+    @staticmethod
+    def get_sensitive_fields():
+        """
+        Fields that contain potentially secret values.
+        The name and mount path stay visible — only the body is withheld.
+        """
+        return ["contents"]
+
     def __str__(self):
         return f"Config({self.name})"
 

@@ -414,14 +414,14 @@ function ServiceConfigItem({
                 </FieldSetLabel>
                 <FieldSetTextarea
                   className="sr-only"
-                  value={changedContents}
+                  value={changedContents ?? ""}
                   readOnly
                 />
 
                 <CodeEditor
                   containerClassName="w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[855px]"
                   language={changedConfigLanguage}
-                  value={changedContents}
+                  value={changedContents ?? undefined}
                   readOnly={!isMember || !!change_id}
                   onChange={(value) => setChangedContents(value ?? "")}
                 />

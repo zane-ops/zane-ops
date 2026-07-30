@@ -2,6 +2,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from ..models import (
+    Config,
     Environment,
     GitApp,
     PreviewEnvMetadata,
@@ -390,6 +391,7 @@ class ViewerSecretFieldsViewTests(ViewerEndpointsTestBase):
     DEPLOYMENT_MEMBER_ONLY_FIELDS = frozenset(["changes"])
     ENVIRONMENT_MEMBER_ONLY_FIELDS = frozenset(["variables"])
     PREVIEW_METADATA_MEMBER_ONLY_FIELDS = frozenset(["auth_user", "auth_password"])
+    CONFIG_MEMBER_ONLY_FIELDS = frozenset(["contents"])
 
     def test_member_sees_secret_fields_in_service_details(self):
         project, service = self.create_redis_docker_service()
@@ -753,3 +755,70 @@ class ViewerSecretFieldsViewTests(ViewerEndpointsTestBase):
         )
         self.assertEqual(EMPTY_SET, missing_fields)
         self.assertEqual("hunter2", preview_metadata["auth_password"])
+
+    def add_config_to_service(self, service: Service, contents: str):
+        """A config file mounted into the service — its body can hold anything."""
+        config = Config.objects.create(
+            name="caddyfile",
+            mount_path="/etc/caddy/Caddyfile",
+            contents=contents,
+        )
+        service.configs.add(config)
+        return config
+
+    def get_service_details(self, project: Project, service: Service):
+        response = self.client.get(
+            reverse(
+                "zane_api:services.details",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": service.slug,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        return response.json()
+
+    def test_member_sees_config_contents_in_service_details(self):
+        project, service = self.create_redis_docker_service()
+        self.add_config_to_service(service, contents="basicauth { admin hunter2 }")
+        WorkspaceMembership.objects.filter(workspace=project.workspace).update(
+            role=WorkspaceRole.MEMBER
+        )
+
+        data = self.get_service_details(project, service)
+        jprint(data["configs"])
+        self.assertEqual(1, len(data["configs"]))
+        missing_fields = self.CONFIG_MEMBER_ONLY_FIELDS - data["configs"][0].keys()
+        self.assertEqual(EMPTY_SET, missing_fields)
+
+    def test_viewer_does_not_see_config_contents_in_service_details(self):
+        """
+        Config files are arbitrary text — Caddyfiles with basic-auth hashes,
+        app config with connection strings. The name and mount path are safe,
+        the body is not.
+        """
+        project, service, _ = self.setup_viewer_with_service()
+        self.add_config_to_service(service, contents="basicauth { admin hunter2 }")
+
+        data = self.get_service_details(project, service)
+        jprint(data["configs"])
+        self.assertEqual(1, len(data["configs"]))
+        config = data["configs"][0]
+        non_stripped_fields = self.CONFIG_MEMBER_ONLY_FIELDS & config.keys()
+        self.assertEqual(EMPTY_SET, non_stripped_fields)
+        # the config is still listed, just without its body
+        self.assertEqual("caddyfile", config["name"])
+
+    def test_deployment_snapshot_stored_in_db_keeps_config_contents(self):
+        _, service = self.create_redis_docker_service()
+        self.add_config_to_service(service, contents="basicauth { admin hunter2 }")
+
+        deployment = service.prepare_new_docker_deployment()
+        configs = deployment.service_snapshot["configs"]  # type: ignore
+        jprint(configs)
+        self.assertEqual(
+            "basicauth { admin hunter2 }",
+            configs[0]["contents"],
+        )

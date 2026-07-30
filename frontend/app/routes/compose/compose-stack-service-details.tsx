@@ -89,6 +89,8 @@ export default function ComposeStackServiceDetailsPage({
   }
   const [name, service] = serviceFound;
   const serviceUrls = stack.urls[name] ?? [];
+  // `environment` is stripped below the Member role
+  const serviceEnvironment = service.environment ?? [];
 
   const servicePrefix = `${stack.name}_${stack.hash_prefix}_`;
   let [serviceImage, imageSha] = service.image.split("@"); // the image is in the format 'image@sha'
@@ -252,7 +254,7 @@ export default function ComposeStackServiceDetailsPage({
             <div className="w-full flex flex-col gap-5 pt-1 pb-8">
               <h2 className="text-lg text-grey">Environment variables</h2>
               <div className="w-full max-w-4xl">
-                {service.environment.length === 0 ? (
+                {serviceEnvironment.length === 0 ? (
                   <div
                     className={cn(
                       "flex flex-col gap-2 items-center py-8 bg-muted/20",
@@ -266,8 +268,8 @@ export default function ComposeStackServiceDetailsPage({
                     <hr className="border-border" />
                     <h3 className="text-lg inline-flex gap-2 items-center">
                       <span>
-                        {service.environment.length}&nbsp;
-                        {pluralize("variable", service.environment.length)}
+                        {serviceEnvironment.length}&nbsp;
+                        {pluralize("variable", serviceEnvironment.length)}
                       </span>
                       <CopyButton
                         variant="outline"
@@ -276,7 +278,7 @@ export default function ComposeStackServiceDetailsPage({
                         label={(hasCopied) =>
                           hasCopied ? "Copied" : "Copy as .env"
                         }
-                        value={service.environment
+                        value={serviceEnvironment
                           .map((env) => `${env.key}="${env.value}"`)
                           .join("\n")}
                       />
@@ -284,7 +286,7 @@ export default function ComposeStackServiceDetailsPage({
 
                     <hr className="border-border" />
 
-                    {service.environment.map((env) => (
+                    {serviceEnvironment.map((env) => (
                       <EnVariableRow
                         key={`env-${env.key}`}
                         name={env.key}
@@ -886,7 +888,7 @@ function ConfigItem({
               <CodeEditor
                 containerClassName="w-[80dvw] sm:w-[88dvw] md:w-[82dvw] lg:w-[70dvw] xl:w-[855px]"
                 path={target}
-                value={content}
+                value={content ?? undefined}
                 readOnly
               />
             </FieldSet>

@@ -1,9 +1,14 @@
 from django.urls import reverse
 from rest_framework import status
-from zane_api.models import Environment, WorkspaceMembership, WorkspaceRole
+from zane_api.models import (
+    Environment,
+    Project,
+    WorkspaceMembership,
+    WorkspaceRole,
+)
 from zane_api.utils import jprint
 
-from ..models import ComposeStackDeployment
+from ..models import ComposeStack, ComposeStackDeployment
 from .fixtures import DOCKER_COMPOSE_WEB_SERVICE
 from .stacks import ComposeStackAPITestBase
 
@@ -466,3 +471,91 @@ class ComposeStackWebhookDeployResponseViewTests(ComposeStackAPITestBase):
         self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
         self.assertFalse(response.content)
         self.assertEqual(1, stack.deployments.count())
+
+
+class ViewerComposeStackServiceStatusViewTests(ViewerComposeStackTestBase):
+    """
+    `stack.services` is the per-service runtime status blob. It is not covered by
+    `ComposeStack.get_sensitive_fields()`, but it carries the resolved
+    environment of every container and the body of every config file.
+    """
+
+    SERVICE_MEMBER_ONLY_FIELDS = frozenset(["environment"])
+    CONFIG_MEMBER_ONLY_FIELDS = frozenset(["content"])
+
+    def set_service_status(self, stack: ComposeStack):
+        stack.services = {
+            "web": {
+                "id": "srv_web",
+                "status": "HEALTHY",
+                "network_alias": "web",
+                "global_alias": "web",
+                "running_replicas": 1,
+                "desired_replicas": 1,
+                "updated_at": "2026-01-01T00:00:00Z",
+                "tasks": [],
+                "image": "caddy:2.8-alpine",
+                "mode": "replicated",
+                "environment": [{"key": "DATABASE_URL", "value": "postgres://s3cret"}],
+                "volumes": [],
+                "configs": [
+                    {
+                        "source": "caddyfile",
+                        "target": "/etc/caddy/Caddyfile",
+                        "content": "basicauth { admin hunter2 }",
+                    }
+                ],
+                "ports": [],
+                "healthcheck": None,
+            }
+        }
+        stack.save()
+
+    def get_stack_service(self, project: Project, stack: ComposeStack):
+        response = self.client.get(
+            reverse(
+                "compose:stacks.details",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            )
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        return response.json()["services"]["web"]
+
+    def test_member_sees_service_environment_and_config_contents(self):
+        project, stack = self.create_compose_stack(
+            content=DOCKER_COMPOSE_WEB_SERVICE, slug="my-stack"
+        )
+        self.set_service_status(stack)
+        WorkspaceMembership.objects.filter(workspace=project.workspace).update(
+            role=WorkspaceRole.MEMBER
+        )
+
+        service = self.get_stack_service(project, stack)
+        jprint(service)
+        self.assertEqual(EMPTY_SET, self.SERVICE_MEMBER_ONLY_FIELDS - service.keys())
+        self.assertEqual(
+            EMPTY_SET, self.CONFIG_MEMBER_ONLY_FIELDS - service["configs"][0].keys()
+        )
+
+    def test_viewer_does_not_see_service_environment(self):
+        project, stack, _ = self.setup_viewer_with_stack()
+        self.set_service_status(stack)
+
+        service = self.get_stack_service(project, stack)
+        jprint(service)
+        self.assertEqual(EMPTY_SET, self.SERVICE_MEMBER_ONLY_FIELDS & service.keys())
+
+    def test_viewer_does_not_see_service_config_contents(self):
+        project, stack, _ = self.setup_viewer_with_stack()
+        self.set_service_status(stack)
+
+        service = self.get_stack_service(project, stack)
+        jprint(service)
+        config = service["configs"][0]
+        self.assertEqual(EMPTY_SET, self.CONFIG_MEMBER_ONLY_FIELDS & config.keys())
+        # the config is still listed, just without its body
+        self.assertEqual("/etc/caddy/Caddyfile", config["target"])

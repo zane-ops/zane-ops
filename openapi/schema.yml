@@ -17575,6 +17575,7 @@ components:
           type: string
         content:
           type: string
+          nullable: true
       required:
       - content
       - source
@@ -17590,6 +17591,7 @@ components:
           minLength: 1
         content:
           type: string
+          nullable: true
           minLength: 1
       required:
       - content
@@ -17723,6 +17725,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ComposeStackServiceEnvVar'
+          nullable: true
         volumes:
           type: array
           items:
@@ -17801,6 +17804,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ComposeStackServiceEnvVarRequest'
+          nullable: true
         volumes:
           type: array
           items:
@@ -18489,6 +18493,7 @@ components:
           maxLength: 255
         contents:
           type: string
+          nullable: true
         language:
           type: string
           maxLength: 255
@@ -18541,6 +18546,7 @@ components:
           maxLength: 255
         contents:
           type: string
+          nullable: true
         language:
           type: string
           minLength: 1

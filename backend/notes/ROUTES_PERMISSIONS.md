@@ -128,6 +128,10 @@ The role check alone is not enough on these payloads: `deploy_token` is a workin
 | `ComposeStackDeployment` ([compose/models.py:392](../compose/models.py#L392)) | `changes` |
 | `Environment` ([models/main.py:2127](../zane_api/models/main.py#L2127)) | `variables` |
 | `PreviewEnvMetadata` ([models/main.py:2083](../zane_api/models/main.py#L2083)) | `auth_user`, `auth_password` |
+| `Config` ([models/main.py:1539](../zane_api/models/main.py#L1539)) | `contents` — the body only; name and mount path stay visible |
+| compose per-service status ([compose/views/serializers.py:134](../compose/views/serializers.py#L134)) | `environment`, and `content` on each config |
+
+The last row is not a model — `stack.services` is a JSON status blob, so the field lists live on `ComposeStackServiceStatusSerializer` / `ComposeStackServiceConfigSerializer` as `MEMBER_ONLY_FIELDS`.
 
 This applies to the nested snapshots too (`service_snapshot`, `stack_snapshot`), so the deployment endpoints don't leak what service details hides. Stripping happens at serialization time only — the snapshot persisted in the DB keeps every field, since redeploys need them.
 

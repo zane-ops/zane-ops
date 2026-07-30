@@ -2651,7 +2651,7 @@ export function ConfigChangeItem({
           <CodeEditor
             containerClassName="w-full"
             language={(old_value ?? new_value).language}
-            value={(old_value ?? new_value).contents}
+            value={(old_value ?? new_value).contents ?? undefined}
             readOnly
           />
         </div>
@@ -2682,7 +2682,7 @@ export function ConfigChangeItem({
               <CodeEditor
                 containerClassName="w-full"
                 language={new_value.language}
-                value={new_value.contents}
+                value={new_value.contents ?? undefined}
                 readOnly
               />
             </div>

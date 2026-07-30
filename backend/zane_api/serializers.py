@@ -389,6 +389,27 @@ class SharedVolumeSerializer(serializers.ModelSerializer):
 
 
 class ConfigSerializer(serializers.ModelSerializer):
+    def get_fields(self):
+        fields = super().get_fields()
+        sensitive_fields = models.Config.get_sensitive_fields()
+        for field_name, field in fields.items():
+            field.allow_null = field.allow_null or field_name in sensitive_fields
+        return fields
+
+    def to_representation(self, instance: models.Config):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(
+            request, models.WorkspaceRole.MEMBER
+        ):
+            sensitive_fields = models.Config.get_sensitive_fields()
+            for key in dict(data):
+                if key in sensitive_fields:
+                    data.pop(key)
+
+        return data
+
     class Meta:
         model = models.Config
         fields = [

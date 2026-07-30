@@ -1345,12 +1345,12 @@ export interface components {
     ComposeStackServiceConfig: {
       source: string;
       target: string;
-      content: string;
+      content: string | null;
     };
     ComposeStackServiceConfigRequest: {
       source: string;
       target: string;
-      content: string;
+      content: string | null;
     };
     ComposeStackServiceEnvVar: {
       key: string;
@@ -1398,7 +1398,7 @@ export interface components {
       tasks: components["schemas"]["ComposeStackServiceTask"][];
       image: string;
       mode: components["schemas"]["ComposeStackServiceStatusModeEnum"];
-      environment: components["schemas"]["ComposeStackServiceEnvVar"][];
+      environment: components["schemas"]["ComposeStackServiceEnvVar"][] | null;
       volumes: components["schemas"]["ComposeStackServiceVolume"][];
       configs: components["schemas"]["ComposeStackServiceConfig"][];
       ports: components["schemas"]["ComposeStackServicePort"][];
@@ -1424,7 +1424,7 @@ export interface components {
       tasks: components["schemas"]["ComposeStackServiceTaskRequest"][];
       image: string;
       mode: components["schemas"]["ComposeStackServiceStatusModeEnum"];
-      environment: components["schemas"]["ComposeStackServiceEnvVarRequest"][];
+      environment: components["schemas"]["ComposeStackServiceEnvVarRequest"][] | null;
       volumes: components["schemas"]["ComposeStackServiceVolumeRequest"][];
       configs: components["schemas"]["ComposeStackServiceConfigRequest"][];
       ports: components["schemas"]["ComposeStackServicePortRequest"][];
@@ -1686,7 +1686,7 @@ export interface components {
       id: string;
       name: string;
       mount_path: string;
-      contents: string;
+      contents: string | null;
       language: string;
       version: number;
     };
@@ -1705,7 +1705,7 @@ export interface components {
       id?: string;
       name: string;
       mount_path: string;
-      contents?: string;
+      contents?: string | null;
       language?: string;
       version?: number;
     };
