@@ -148,7 +148,6 @@ export const DEFAULT_REGISTRIES: Record<
       <DockerHubLogo {...props} className={cn("size-4 flex-none", className)} />
     )
   },
-
   GITHUB: {
     name: "Github Container Registry",
     url: "https://ghcr.io",
@@ -157,7 +156,6 @@ export const DEFAULT_REGISTRIES: Record<
       <GithubLogo {...props} className={cn("size-4 flex-none", className)} />
     )
   },
-
   GITLAB: {
     name: "Gitlab Container Registry",
     url: "https://registry.gitlab.com",
@@ -184,7 +182,6 @@ export const DEFAULT_REGISTRIES: Record<
       <AWSECSLogo {...props} className={cn("size-4 flex-none", className)} />
     )
   },
-
   GENERIC: {
     name: "Generic Registry",
     Icon: ({ className, ...props }) => (
