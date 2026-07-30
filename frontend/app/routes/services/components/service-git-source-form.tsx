@@ -62,7 +62,7 @@ export function ServiceGitSourceForm({
 }: ServiceGitSourceFormProps) {
   const loaderData = useLoaderData<Route.ComponentProps["loaderData"]>();
   const workspaceId = useCurrentWorkspace().id;
-  const { data: gitAppList } = useQuery({
+  const gitAppListQuery = useQuery({
     ...gitAppsQueries.list(workspaceId),
     initialData: loaderData.gitAppList
   });
@@ -154,6 +154,17 @@ export function ServiceGitSourceForm({
     setBranchSearchQuery(serviceBranch);
   };
 
+  const gitAppList = React.useMemo(() => {
+    const appList = gitAppListQuery.data;
+    if (
+      selectedGitApp &&
+      !appList.find((app) => app.id === selectedGitApp.id)
+    ) {
+      appList.push(selectedGitApp);
+    }
+    return appList;
+  }, [gitAppListQuery.data, selectedGitApp]);
+
   return (
     <div className="w-full max-w-4xl">
       <fetcher.Form
@@ -228,6 +239,7 @@ export function ServiceGitSourceForm({
                 >
                   {"<no app>"}
                 </SelectItem>
+
                 {gitAppList.map((gitapp) =>
                   gitapp.github ? (
                     <SelectItem
