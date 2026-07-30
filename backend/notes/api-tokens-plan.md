@@ -148,7 +148,7 @@ Rules:
 - **`env:read` is never given automatically**, not even by `service:read`. Environment variables hold database passwords and API keys. Making people ask for it explicitly is the main reason scopes are worth building.
 - Each view gets a `required_scopes: list[TokenScope]` attribute. Having **any one** of the listed scopes is enough. A new `HasRequiredScopes` permission class checks it, and does nothing when `request.access.scopes is None` (a logged-in user).
 - **A view with no `required_scopes` cannot be reached by a token at all.** This is deliberate: if we forget to annotate a view, the result is that tokens get *denied*, not accidentally allowed. With ~137 routes, we will forget at least one, and this way the mistake is harmless.
-- What you can ask for is limited by your role: a Viewer cannot create a token with `service:write`.
+- What you can ask for is limited by your role: a Member cannot create a token with an Admin-only scope. (Viewers can't create tokens at all — see §9.)
 
 The list of which scope covers which route still has to be written. Use [ROUTES_PERMISSIONS.md](./ROUTES_PERMISSIONS.md) as the checklist.
 
@@ -218,7 +218,7 @@ New routes under `/api/workspace/tokens`:
 | Route | Method | Who can use it |
 | --- | --- | --- |
 | `/api/workspace/tokens` | GET | your own tokens; Admin and above see all in the workspace |
-| `/api/workspace/tokens` | POST | Member and above (limits below) — returns the full token **once** |
+| `/api/workspace/tokens` | POST | **Member and above only** (limits below) — returns the full token **once** |
 | `/api/workspace/tokens/{id}` | GET, PATCH | the token's creator, or Admin and above |
 | `/api/workspace/tokens/{id}/revoke` | POST | the token's creator, or Admin and above |
 
@@ -226,12 +226,17 @@ What each role can create:
 
 | Your role | Highest token role you can create | Projects |
 | --- | --- | --- |
-| Viewer | Viewer | only the projects you can access |
+| Viewer | **nothing — cannot create tokens** | — |
 | Member | Member | any in the workspace |
 | Admin | Admin | any |
 | Owner | Owner | any |
 
-Never above your own role. Check this in the serializer when creating, **and** again on every request (§4) — because you might get demoted after creating the token.
+Two separate rules:
+
+- **A Viewer cannot create tokens at all.** A read-only role should not be able to hand out credentials. The `POST` route requires Member or above.
+- **Nobody can create a token above their own role.** Check this in the serializer at creation time **and** again on every request (§4), because the creator can be demoted later.
+
+Viewer-level tokens still exist and are still useful (a read-only token for a status dashboard, say) — an Admin just has to be the one to create it.
 
 ---
 
