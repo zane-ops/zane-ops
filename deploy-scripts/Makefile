@@ -135,7 +135,10 @@ deploy: ### Install and deploy zaneops based on MODE (https or http)
 		echo -e "\nTheir previous containers are still running with the \x1b[33mold configuration\x1b[0m,"; \
 		echo -e "so this deploy has \x1b[33mnot\x1b[0m taken effect for them."; \
 		echo -e "Recreating them stops the old container before starting the new one,"; \
-		echo -e "which \x1b[33mbriefly interrupts the traffic they serve\x1b[0m."; \
+		echo -e "which \x1b[33minterrupts the traffic they serve\x1b[0m."; \
+		echo -e "If the reason above is a port conflict, the new task can bind once the old one exits."; \
+		echo -e "For anything else (resources, placement constraints) the new task still will not"; \
+		echo -e "schedule, and the old container is the only one serving, so \x1b[33mfix the reason first\x1b[0m."; \
 		reply="n"; \
 		if [ -n "$$FORCE_REDEPLOY" ]; then \
 			reply="y"; \
@@ -148,8 +151,19 @@ deploy: ### Install and deploy zaneops based on MODE (https or http)
 			[yY]*) \
 				for svc in $$stuck; do \
 					echo "Recreating $$svc..."; \
-					docker service scale "$$svc"=0 >/dev/null && docker service scale "$$svc"=1 >/dev/null; \
+					docker service scale --detach "$$svc"=0 >/dev/null && docker service scale --detach "$$svc"=1 >/dev/null; \
 				done; \
+				sleep 5; \
+				still_stuck=""; \
+				for svc in $$stuck; do \
+					docker service ps "$$svc" --no-trunc --filter "desired-state=running" --format '{{.CurrentState}}' \
+						| grep -q '^Pending' && still_stuck="$$still_stuck $$svc"; \
+				done; \
+				if [ -n "$$still_stuck" ]; then \
+					echo -e "\n\x1b[91m❌ Still pending after being recreated:$$still_stuck\x1b[0m" >&2; \
+					echo -e "These services are now \x1b[91mdown\x1b[0m, not stale. Fix the reason docker reported, then run \x1b[96mmake deploy\x1b[0m again." >&2; \
+					exit 1; \
+				fi; \
 				echo -e "\x1b[92mRecreated ✅\x1b[0m"; \
 				;; \
 			*) \
