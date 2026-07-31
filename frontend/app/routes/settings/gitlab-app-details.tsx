@@ -1,8 +1,10 @@
-import { AlertCircleIcon, LoaderIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { AlertCircleIcon, GitlabIcon, LoaderIcon } from "lucide-react";
 import React from "react";
 import { redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
+import { GitlabLogo } from "~/components/gitlab-logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
 import {
@@ -19,7 +21,10 @@ import {
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
-import { getCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  getCurrentWorkspace,
+  useCurrentWorkspace
+} from "~/lib/workspace-store";
 import type { Route } from "./+types/gitlab-app-details";
 
 export function meta() {
@@ -39,16 +44,30 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 }
 
 export default function GitlabAppDetailsPage({
-  loaderData
+  loaderData,
+  params
 }: Route.ComponentProps) {
+  const { id: workspaceId } = useCurrentWorkspace();
+
+  const { data: app } = useQuery({
+    ...gitAppsQueries.gitlab(workspaceId, params.id),
+    initialData: loaderData.app
+  });
+
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
+        <div className="max-w-5 max-h-5 flex items-center flex-none justify-center">
+          <GitlabLogo className="flex-none size-10 [&_path]:fill-orange-400" />
+        </div>
+
         <h2 className="text-2xl">Edit Gitlab app</h2>
       </div>
       <Separator />
 
-      <EditGitlabAppForm {...loaderData} />
+      <p className="text-grey">Update gitlab app credentials.</p>
+
+      <EditGitlabAppForm app={app} />
     </section>
   );
 }
@@ -79,11 +98,6 @@ function EditGitlabAppForm({ app }: EditGitlabAppFormProps) {
 
   return (
     <>
-      <p>
-        If you have renewed the gitlab secret, please paste the new key down
-        below:
-      </p>
-
       {errors.non_field_errors && (
         <Alert variant="destructive" className="my-2">
           <AlertCircleIcon className="h-4 w-4" />
