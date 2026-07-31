@@ -58,7 +58,7 @@ export default function GitlabAppDetailsPage({
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
         <div className="max-w-5 max-h-5 flex items-center flex-none justify-center">
-          <GitlabLogo className="flex-none size-10 [&_path]:fill-orange-400" />
+          <GitlabLogo className="flex-none size-10 [&_path]:fill-orange-400!" />
         </div>
 
         <h2 className="text-2xl">Edit Gitlab app</h2>

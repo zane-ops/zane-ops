@@ -37,7 +37,7 @@ export function GitlabAppCard({ app, children }: GitlabAppCardProps) {
       <CardContent className="rounded-md p-4 gap-4 flex flex-col items-start md:flex-row md:items-center bg-toggle">
         <div className="flex-none flex-col gap-2 items-center text-grey hidden md:flex">
           <div className="max-w-7.5 max-h-7.5 flex items-center flex-none justify-center">
-            <GitlabLogo className="flex-none size-14 [&_path]:fill-orange-400" />
+            <GitlabLogo className="flex-none size-14 [&_path]:fill-orange-400!" />
           </div>
           <Badge variant="outline" className="text-grey">
             app
@@ -170,7 +170,7 @@ export function GitlabAppCardLink({ app, parent_id }: GitlabAppCardLinkProps) {
         <div>
           <div className="flex flex-col gap-2 items-center text-grey">
             <div className="max-w-7.5 max-h-7.5 flex items-center flex-none justify-center">
-              <GitlabLogo className="flex-none size-14 [&_path]:fill-orange-400" />
+              <GitlabLogo className="flex-none size-14 " />
             </div>
             <Badge variant="outline" className="text-grey">
               app

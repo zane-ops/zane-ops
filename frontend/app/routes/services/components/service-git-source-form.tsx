@@ -227,7 +227,7 @@ export function ServiceGitSourceForm({
                   )}
                   {selectedGitApp?.gitlab && (
                     <div className="max-w-4 max-h-4 flex items-center flex-none justify-center">
-                      <GitlabLogo className="flex-none size-8 [&_path]:fill-orange-400" />
+                      <GitlabLogo className="flex-none size-8 [&_path]:fill-orange-400!" />
                     </div>
                   )}
                 </div>
@@ -260,7 +260,7 @@ export function ServiceGitSourceForm({
                       rightIcon={({ className, ...props }) => (
                         <div className="max-w-4 max-h-4 flex items-center flex-none justify-center">
                           <GitlabLogo
-                            className="flex-none size-8 [&_path]:fill-orange-400"
+                            className="flex-none size-8 [&_path]:fill-orange-400!"
                             {...props}
                           />
                         </div>
