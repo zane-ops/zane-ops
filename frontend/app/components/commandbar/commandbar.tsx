@@ -1,10 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Command as CommandPrimitive } from "cmdk";
-import type { LucideIcon } from "lucide-react";
+import { LoaderIcon, type LucideIcon } from "lucide-react";
 import * as React from "react";
 import { useNavigate } from "react-router";
 import { useDebounce } from "use-debounce";
-import type { AuthedUserResponse, WorkspaceRoleName } from "~/api/types";
+import type {
+  AuthedUserResponse,
+  SearchResource,
+  WorkspaceRoleName
+} from "~/api/types";
 import { useCommandBarStore } from "~/components/commandbar/commandbar-store";
 import { Button } from "~/components/ui/button";
 import {
@@ -18,6 +22,7 @@ import {
 import { createDevLogger } from "~/lib/logger";
 import { resourceQueries, userQueries } from "~/lib/queries";
 import { cn, hasMinRole, isEditableTarget } from "~/lib/utils";
+import { useWorkspaceStore } from "~/lib/workspace-store";
 
 const logger = createDevLogger(import.meta.url);
 
@@ -52,6 +57,8 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
   const { open, setOpen, toggle } = useCommandBarStore();
   const [search, setSearch] = React.useState("");
 
+  const workspaceId = useWorkspaceStore((s) => s.workspace?.id);
+
   const { data } = useQuery({
     ...userQueries.authedUser,
     initialData: authedUser
@@ -84,10 +91,7 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
     data: resourceListData,
     isLoading,
     isFetching
-  } = useQuery({
-    ...resourceQueries.search(debouncedValue),
-    enabled: search.trim().length > 0
-  });
+  } = useQuery(resourceQueries.search(workspaceId ?? "", debouncedValue));
 
   const navigationGroups = React.useMemo(() => {
     if (!data) return [];
@@ -124,10 +128,10 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, toggle]);
 
-  const isActionMode = search.startsWith(">");
-
   if (!data?.user) return null;
 
+  const resourceList = resourceListData?.data ?? [];
+  //   const isActionMode = search.startsWith(">");
   const hint = 'Type ">" To Open Action Mode'; // Or press [escape] to quit context
 
   return (
@@ -181,7 +185,16 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
           "rounded-t-none border-x-0 border-b-0 px-0"
         )}
       >
-        <CommandEmpty>No results</CommandEmpty>
+        <CommandEmpty>
+          {isLoading || isFetching ? (
+            <div className="flex items-center gap-2 w-full justify-center">
+              Searching...
+              <LoaderIcon className="size-4 flex-none text-grey animate-spin" />
+            </div>
+          ) : (
+            "No results"
+          )}
+        </CommandEmpty>
 
         <CommandGroup
           heading={hint}
@@ -216,4 +229,8 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
       </CommandList>
     </CommandDialog>
   );
+}
+
+function getNavGroupsFromSearchResources(resources: SearchResource[]) {
+  // ...
 }

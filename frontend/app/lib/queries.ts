@@ -26,7 +26,7 @@ import {
   WORKSPACE_ROLE_MAPPING
 } from "~/lib/constants";
 import type { Writeable } from "~/lib/types";
-import { durationToMs, hasMinRole, notFound } from "~/lib/utils";
+import { durationToMs, hasMinRole, notFound, wait } from "~/lib/utils";
 
 export const userQueries = {
   authedUser: queryOptions({
@@ -2539,7 +2539,8 @@ export const resourceQueries = {
   search: (workspaceId: string, query?: string) =>
     queryOptions({
       queryKey: [...workspaceKey(workspaceId), "RESOURCES", query] as const,
-      queryFn: ({ signal }) => {
+      queryFn: async ({ signal }) => {
+        await wait(durationToMs(1.5, "seconds"));
         return apiClient.GET("/api/search-resources/", {
           params: {
             query: {
@@ -2549,7 +2550,7 @@ export const resourceQueries = {
           signal
         });
       },
-      enabled: (query ?? "").trim().length > 0
+      enabled: (query ?? "").trim().length > 0 && workspaceId.trim().length > 0
     })
 };
 

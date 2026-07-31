@@ -89,6 +89,10 @@ export type ComposeStackDeployment = ApiResponse<
 >;
 
 export type ServerSettings = ApiResponse<"get", "/api/settings/">;
+export type SearchResource = ApiResponse<
+  "get",
+  "/api/search-resources/"
+>[number];
 
 export type TemplateDocument = {
   id: string;
