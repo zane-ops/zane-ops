@@ -4,6 +4,7 @@ import React from "react";
 import { href, redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
+import { GithubLogo } from "~/components/github-logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
 import {
@@ -24,7 +25,6 @@ import {
   useCurrentWorkspace
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/github-app-details";
-import { GithubLogo } from "~/components/github-logo";
 
 export function meta() {
   return [
