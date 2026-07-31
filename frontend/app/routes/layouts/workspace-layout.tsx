@@ -83,7 +83,7 @@ export default function WorkspaceLayout({
         ]}
         rigthSlot={[<CommandBarTrigger />, <UserHeaderDropdown user={user} />]}
       />
-      <CommandBar navItems={MAIN_NAV_GROUPS} />
+
       <main
         className={cn(
           "grow container p-6 relative overflow-y-clip",

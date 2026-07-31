@@ -1,4 +1,3 @@
-import type { DialogProps } from "@radix-ui/react-dialog";
 import { Command as CommandPrimitive } from "cmdk";
 import type * as React from "react";
 
@@ -20,7 +19,7 @@ function Command({
   );
 }
 
-interface CommandDialogProps extends DialogProps {
+interface CommandDialogProps extends React.ComponentProps<typeof Dialog> {
   commandProps?: React.ComponentProps<typeof CommandPrimitive>;
   className?: string;
 }
@@ -34,13 +33,16 @@ function CommandDialog({
   const { className: commandClassName, ...restCommandProps } = commandProps;
   return (
     <Dialog {...props}>
-      <DialogContent className={cn("overflow-hidden p-0 shadow-lg", className)}>
+      <DialogContent
+        className={cn("overflow-hidden p-0 shadow-lg", className)}
+        hideCloseButton
+      >
         <Command
           className={cn(
             "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground",
             "[&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 ",
             "[&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12",
-            "[&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5",
+            "[&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:size-4",
             commandClassName
           )}
           {...restCommandProps}
@@ -76,8 +78,8 @@ function CommandList({
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.List>) {
   return (
-    <div className="relative w-full z-20" data-slot="command-list-wrapper">
-      <div className="absolute top-2 -left-1 -right-1">
+    <div className="relative w-full z-99" data-slot="command-list-wrapper">
+      <div className="absolute top-2 -left-1 -right-1 z-100">
         <CommandPrimitive.List
           className={cn(
             "max-h-[300px] p-1 shadow-md bg-popover rounded-md border border-border overflow-y-auto overflow-x-hidden",

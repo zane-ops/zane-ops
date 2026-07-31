@@ -20,6 +20,8 @@ import { serverQueries, userQueries } from "~/lib/queries";
 import { cn, hasMinRole } from "~/lib/utils";
 
 import type { ServerSettings } from "~/api/types";
+import { CommandBar } from "~/components/commandbar/commandbar";
+import { MAIN_NAV_GROUPS } from "~/components/commandbar/commandbar-nav-items";
 import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
 import { createDevLogger } from "~/lib/logger";
 import { getQueryClient } from "~/lib/query-client";
@@ -73,6 +75,8 @@ export default function MainLayout({ loaderData }: Route.ComponentProps) {
   return (
     <div className="min-h-screen flex flex-col justify-between">
       <NavigationProgress />
+
+      <CommandBar navGroups={MAIN_NAV_GROUPS} authedUser={user} />
 
       <Outlet />
 
