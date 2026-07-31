@@ -46,6 +46,7 @@ export type CommandBarAction = {
   icon: LucideIcon;
   href?: string;
   onSelect?: () => void;
+  minRole?: WorkspaceRoleName | "ServerAdmin";
 };
 
 export type CommandBarProps = {
@@ -217,9 +218,9 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
                   key={item.href}
                   value={`${item.title} ${group.heading}`}
                   onSelect={() => runCommand(() => navigate(item.href))}
-                  className="h-9 flex items-center gap-2 px-0"
+                  className="h-9 flex items-center gap-2 px-0 font-medium"
                 >
-                  <item.icon className="flex-none text-gray-400" />
+                  <item.icon className="flex-none text-grey" />
                   <span className="text-card-foreground">{item.title}</span>
                 </CommandItem>
               ))}
