@@ -27,7 +27,15 @@ export function CommandBarTrigger({ className }: CommandBarTriggerProps) {
       <span>Command palette</span>
       &nbsp;
       <span className="font-mono gap-0.5 inline-flex items-center bg-muted rounded-md  px-1 text-foreground">
-        {isMac ? <CommandIcon className="size-3 flex-none" /> : "Ctrl"}&nbsp;K
+        {isMac ? (
+          <CommandIcon className="size-3 flex-none" />
+        ) : (
+          <>
+            <span>Ctrl</span>
+            <span>+</span>
+          </>
+        )}
+        <span>K</span>
       </span>
     </Button>
   );

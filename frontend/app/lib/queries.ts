@@ -9,12 +9,11 @@ import {
 import { href, redirect } from "react-router";
 import { preprocess, z } from "zod";
 import { zfd } from "zod-form-data";
-import type { ApiResponse, RequestInput, RequestParams } from "~/api/client";
+import type { ApiResponse, RequestParams } from "~/api/client";
 import { apiClient } from "~/api/client";
 import type {
   TemplateDetailsApiResponse,
-  TemplateSearchAPIResponse,
-  WorkspaceMembership
+  TemplateSearchAPIResponse
 } from "~/api/types";
 import {
   DEFAULT_LOGS_PER_PAGE,
@@ -26,7 +25,7 @@ import {
   WORKSPACE_ROLE_MAPPING
 } from "~/lib/constants";
 import type { Writeable } from "~/lib/types";
-import { durationToMs, hasMinRole, notFound, wait } from "~/lib/utils";
+import { durationToMs, hasMinRole, notFound } from "~/lib/utils";
 
 export const userQueries = {
   authedUser: queryOptions({
@@ -2540,7 +2539,6 @@ export const resourceQueries = {
     queryOptions({
       queryKey: [...workspaceKey(workspaceId), "RESOURCES", query] as const,
       queryFn: async ({ signal }) => {
-        await wait(durationToMs(1.5, "seconds"));
         return apiClient.GET("/api/search-resources/", {
           params: {
             query: {

@@ -1,8 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { Command as CommandPrimitive } from "cmdk";
-import { LoaderIcon, type LucideIcon } from "lucide-react";
+import {
+  BoxesIcon,
+  ChevronRightIcon,
+  ContainerIcon,
+  FolderIcon,
+  GithubIcon,
+  GitlabIcon,
+  LoaderIcon,
+  type LucideIcon,
+  NetworkIcon
+} from "lucide-react";
 import * as React from "react";
-import { useNavigate } from "react-router";
+import { href, useNavigate } from "react-router";
 import { useDebounce } from "use-debounce";
 import type {
   AuthedUserResponse,
@@ -21,7 +31,13 @@ import {
 } from "~/components/ui/command";
 import { createDevLogger } from "~/lib/logger";
 import { resourceQueries, userQueries } from "~/lib/queries";
-import { cn, hasMinRole, isEditableTarget } from "~/lib/utils";
+import {
+  capitalizeText,
+  cn,
+  excerpt,
+  hasMinRole,
+  isEditableTarget
+} from "~/lib/utils";
 import { useWorkspaceStore } from "~/lib/workspace-store";
 
 const logger = createDevLogger(import.meta.url);
@@ -38,6 +54,15 @@ export type CommandBarNavItem = {
   icon: LucideIcon;
   showInEE?: boolean;
   minRole?: WorkspaceRoleName | "ServerAdmin";
+};
+
+export type CommandBarSearchItem = Omit<
+  CommandBarNavItem,
+  "showInEE" | "minRole"
+> & {
+  resource: SearchResource;
+  /** ancestors of the resource, ex: `["my-project", "production"]` for a service */
+  parents: string[];
 };
 
 export type CommandBarAction = {
@@ -86,13 +111,17 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
     [setOpen]
   );
 
-  const [debouncedValue] = useDebounce(search, 300);
+  const [debouncedValue] = useDebounce(search, 150);
+  const isActionMode = search.startsWith(">");
 
   const {
     data: resourceListData,
     isLoading,
     isFetching
-  } = useQuery(resourceQueries.search(workspaceId ?? "", debouncedValue));
+  } = useQuery({
+    ...resourceQueries.search(workspaceId ?? "", debouncedValue),
+    enabled: Boolean(workspaceId && search.trim().length > 0 && !isActionMode)
+  });
 
   const navigationGroups = React.useMemo(() => {
     if (!data) return [];
@@ -107,6 +136,14 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
       }))
       .filter((group) => group.items.length > 0);
   }, [navGroups, data]);
+
+  const searchItems = React.useMemo(
+    () =>
+      search.trim().length > 0
+        ? getNavItemsFromSearchResources(resourceListData?.data ?? [])
+        : [],
+    [resourceListData, search]
+  );
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -131,9 +168,14 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
 
   if (!data?.user) return null;
 
-  const resourceList = resourceListData?.data ?? [];
-  //   const isActionMode = search.startsWith(">");
-  const hint = 'Type ">" To Open Action Mode'; // Or press [escape] to quit context
+  const hint = (
+    <div className="inline-flex items-center gap-1">
+      <strong className="font-semibold">Tip:</strong>
+      <span>Type</span>
+      <kbd className="rounded-sm px-1  font-mono bg-muted">{">"}</kbd>
+      <span>To Open Action Mode</span>
+    </div>
+  ); // Or press [escape] to quit context
 
   return (
     <CommandDialog
@@ -155,6 +197,7 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
               search,
               value
             });
+            // TODO
           }
 
           if (value.toLowerCase().includes(search.trim().toLowerCase())) {
@@ -227,11 +270,113 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
             </CommandGroup>
           </React.Fragment>
         ))}
+
+        {searchItems.length > 0 && (
+          <>
+            {navigationGroups.length > 0 && <CommandSeparator />}
+            <CommandGroup
+              heading="Search results"
+              className={cn(
+                "[&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs",
+                navigationGroups.length > 0 && "[&_[cmdk-group-heading]]:pt-3",
+                "pb-2 !px-2"
+              )}
+            >
+              {searchItems.map((item) => (
+                <CommandItem
+                  key={item.resource.id}
+                  value={`${item.parents.join(" ")} ${item.title} ${item.resource.type} ${item.resource.id}`}
+                  onSelect={() => runCommand(() => navigate(item.href))}
+                  className="h-9 flex items-center gap-2 px-0"
+                >
+                  <item.icon className="flex-none text-grey" />
+                  <div className="inline-flex gap-0.5 items-baseline">
+                    {item.parents.map((parent, index) => (
+                      <React.Fragment key={`${parent}-${index}`}>
+                        <span className="text-grey">{excerpt(parent, 40)}</span>
+                        <ChevronRightIcon className="size-4 flex-none text-grey relative top-1" />
+                      </React.Fragment>
+                    ))}
+                    <span className="text-card-foreground font-medium">
+                      {item.title}
+                    </span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </>
+        )}
       </CommandList>
     </CommandDialog>
   );
 }
 
-function getNavGroupsFromSearchResources(resources: SearchResource[]) {
-  // ...
+function getNavItemFromSearchResource(
+  resource: SearchResource
+): Omit<CommandBarSearchItem, "resource"> {
+  switch (resource.type) {
+    case "project":
+      return {
+        title: resource.slug,
+        href: href("/workspace/project/:projectSlug/:envSlug", {
+          projectSlug: resource.slug,
+          envSlug: "production"
+        }),
+        icon: FolderIcon,
+        parents: ["Projects"]
+      };
+    case "environment":
+      return {
+        title: resource.name,
+        href: href("/workspace/project/:projectSlug/:envSlug", {
+          projectSlug: resource.project_slug,
+          envSlug: resource.name
+        }),
+        icon: NetworkIcon,
+        parents: ["Projects", resource.project_slug]
+      };
+    case "service":
+      return {
+        title: resource.slug,
+        href: href(
+          "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+          {
+            projectSlug: resource.project_slug,
+            envSlug: resource.environment,
+            serviceSlug: resource.slug
+          }
+        ),
+        icon:
+          resource.kind === "DOCKER_REGISTRY"
+            ? ContainerIcon
+            : resource.git_provider === "gitlab"
+              ? GitlabIcon
+              : GithubIcon,
+        parents: ["Projects", resource.project_slug, resource.environment]
+      };
+    case "compose_stack":
+      return {
+        title: resource.slug,
+        href: href(
+          "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+          {
+            projectSlug: resource.project_slug,
+            envSlug: resource.environment,
+            composeStackSlug: resource.slug
+          }
+        ),
+        icon: BoxesIcon,
+        parents: ["Projects", resource.project_slug, resource.environment]
+      };
+  }
+}
+
+function getNavItemsFromSearchResources(
+  resources: SearchResource[]
+): CommandBarSearchItem[] {
+  // the API already returns them sorted by relevance, keep that order
+  return resources.map((resource) => ({
+    ...getNavItemFromSearchResource(resource),
+    resource
+  }));
 }
