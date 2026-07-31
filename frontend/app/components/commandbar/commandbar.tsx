@@ -7,6 +7,7 @@ import {
   FolderIcon,
   GithubIcon,
   GitlabIcon,
+  LightbulbIcon,
   LoaderIcon,
   type LucideIcon,
   NetworkIcon
@@ -73,6 +74,15 @@ export type CommandBarProps = {
   navGroups?: CommandBarNavGroup[];
   authedUser?: AuthedUserResponse | null;
 };
+
+const SEARCH_RESULTS_HINT_VALUE = "[search-results-hint]";
+const SELECTED_ITEM_HINT_VALUE = "[selected-item-hint]";
+
+/** values that the filter should always keep visible, whatever the query is */
+const ALWAYS_VISIBLE_VALUES = new Set([
+  SEARCH_RESULTS_HINT_VALUE,
+  SELECTED_ITEM_HINT_VALUE
+]);
 
 export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
   const { open, setOpen, toggle } = useCommandBarStore();
@@ -165,14 +175,41 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
 
   if (!data?.user) return null;
 
-  const hint = (
-    <div className="inline-flex items-center gap-1">
-      <strong className="font-semibold">Tip:</strong>
+  const actionModeHint = (
+    <div className="inline-flex items-center gap-1 text-muted-foreground">
+      <LightbulbIcon className="size-3 flex-none" />
       <span>Type</span>
       <kbd className="rounded-sm px-1  font-mono bg-muted">{">"}</kbd>
       <span>To Open Action Mode</span>
     </div>
-  ); // Or press [escape] to quit context
+  );
+
+  const searchItemHint = (
+    <div className="inline-flex items-center gap-1 whitespace-nowrap text-muted-foreground font-medium">
+      <LightbulbIcon className="size-3 flex-none" />
+
+      <span>Type</span>
+      <kbd className="rounded-sm px-1  font-mono bg-muted">Enter</kbd>
+      <span>to jump to item</span>
+
+      <span className="text-grey">&middot;</span>
+
+      <span>Type</span>
+      <kbd className="rounded-sm px-1  font-mono bg-muted">Tab</kbd>
+      <span>to select item</span>
+    </div>
+  );
+
+  const selectedItemContextHint = (
+    <div className="inline-flex items-center gap-1 whitespace-nowrap">
+      <LightbulbIcon className="size-3 flex-none" />
+      <strong className="font-semibold"></strong>
+
+      <span>Press</span>
+      <kbd className="rounded-sm px-1  font-mono bg-muted">escape</kbd>
+      <span>to deselect item</span>
+    </div>
+  );
 
   return (
     <CommandDialog
@@ -197,7 +234,15 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
             // TODO
           }
 
-          if (value.toLowerCase().includes(search.trim().toLowerCase())) {
+          logger.scope("CommandDialog", "commandProps", "filter").info({
+            search,
+            value
+          });
+
+          if (
+            ALWAYS_VISIBLE_VALUES.has(value) ||
+            value.toLowerCase().includes(search.trim().toLowerCase())
+          ) {
             return 1;
           }
           return 0;
@@ -237,10 +282,25 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
           )}
         </CommandEmpty>
 
-        <CommandGroup
-          heading={hint}
-          className="[&_[cmdk-group-heading]]:text-xs overflow-visible"
-        />
+        {searchGroups.length === 0 && (
+          <CommandGroup
+            heading={actionModeHint}
+            className="[&_[cmdk-group-heading]]:text-xs overflow-visible"
+          />
+        )}
+        {searchGroups.length > 0 && (
+          <CommandGroup className="overflow-visible !px-2 py-0 [&_[cmdk-item]]:py-2.5!">
+            {/* `disabled` keeps it out of the keyboard navigation, while still
+                counting as a visible item so that cmdk doesn't hide the group */}
+            <CommandItem
+              disabled
+              value={SEARCH_RESULTS_HINT_VALUE}
+              className="px-0 py-0 text-xs text-muted-foreground data-[disabled='true']:opacity-100 font-medium [&[cmdk-item]_svg]:size-3"
+            >
+              {searchItemHint}
+            </CommandItem>
+          </CommandGroup>
+        )}
 
         {navigationGroups.map((group, groupIndex) => (
           <React.Fragment key={group.heading}>
@@ -249,7 +309,9 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
               heading={group.heading}
               className={cn(
                 "[&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs",
-                groupIndex > 0 && "[&_[cmdk-group-heading]]:pt-3",
+                groupIndex === 0
+                  ? "scroll-pt-10"
+                  : "[&_[cmdk-group-heading]]:pt-3",
                 "pb-2 !px-2"
               )}
             >
@@ -260,7 +322,7 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
                   onSelect={() => runCommand(() => navigate(item.href))}
                   className="h-9 flex items-center gap-2 px-0 font-medium"
                 >
-                  <item.icon className="flex-none text-grey" />
+                  <item.icon className="flex-none text-grey size-4" />
                   <span className="text-card-foreground">{item.title}</span>
                 </CommandItem>
               ))}
@@ -289,8 +351,8 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
                     onSelect={() => runCommand(() => navigate(item.href))}
                     className="h-9 flex items-center gap-2 px-0"
                   >
-                    <item.icon className="flex-none text-grey" />
-                    <div className="inline-flex gap-0.5 items-baseline">
+                    <item.icon className="flex-none text-grey size-4" />
+                    <div className="inline-flex gap-0.5 items-baseline w-full">
                       {item.parents.map((parent, index) => (
                         <React.Fragment key={`${parent}-${index}`}>
                           <span className="text-grey">
@@ -299,9 +361,9 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
                           <ChevronRightIcon className="size-4 flex-none text-grey relative top-1" />
                         </React.Fragment>
                       ))}
-                      <span className="text-card-foreground font-medium">
+                      <p className="text-card-foreground font-medium">
                         {item.title}
-                      </span>
+                      </p>
                     </div>
                   </CommandItem>
                 ))}
