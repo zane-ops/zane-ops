@@ -53,6 +53,7 @@ export type WorkspaceInvitationLink = ApiResponse<
 >;
 
 export type WorkspaceRoleName = WorkspaceMember["role_name"];
+export type UserRole = WorkspaceRoleName | "ServerAdmin";
 export type WorkspaceRoleValue = WorkspaceMember["role"];
 
 export type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;

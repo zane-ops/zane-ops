@@ -4,11 +4,10 @@ import { twMerge } from "tailwind-merge";
 import { apiClient } from "~/api/client";
 import type {
   AuthedUserResponse,
+  UserRole,
   WorkspaceInvitation,
   WorkspaceMember,
-  WorkspaceMembership,
-  WorkspaceRoleName,
-  WorkspaceRoleValue
+  WorkspaceMembership
 } from "~/api/types";
 import { WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
 import { createDevLogger } from "~/lib/logger";
@@ -619,7 +618,7 @@ export type UserWithMembership =
 
 export function hasMinRole(
   user: UserWithMembership,
-  roleName: WorkspaceRoleName | "ServerAdmin"
+  roleName: UserRole
 ): boolean {
   if (roleName === "ServerAdmin") {
     return (

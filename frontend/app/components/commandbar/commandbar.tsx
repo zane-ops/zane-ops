@@ -14,11 +14,7 @@ import {
 import * as React from "react";
 import { href, useNavigate } from "react-router";
 import { useDebounce } from "use-debounce";
-import type {
-  AuthedUserResponse,
-  SearchResource,
-  WorkspaceRoleName
-} from "~/api/types";
+import type { AuthedUserResponse, SearchResource, UserRole } from "~/api/types";
 import { useCommandBarStore } from "~/components/commandbar/commandbar-store";
 import { Button } from "~/components/ui/button";
 import {
@@ -31,13 +27,7 @@ import {
 } from "~/components/ui/command";
 import { createDevLogger } from "~/lib/logger";
 import { resourceQueries, userQueries } from "~/lib/queries";
-import {
-  capitalizeText,
-  cn,
-  excerpt,
-  hasMinRole,
-  isEditableTarget
-} from "~/lib/utils";
+import { cn, excerpt, hasMinRole, isEditableTarget } from "~/lib/utils";
 import { useWorkspaceStore } from "~/lib/workspace-store";
 
 const logger = createDevLogger(import.meta.url);
@@ -45,7 +35,7 @@ const logger = createDevLogger(import.meta.url);
 export type CommandBarNavGroup = {
   heading: string;
   items: CommandBarNavItem[];
-  minRole?: WorkspaceRoleName | "ServerAdmin";
+  minRole?: UserRole;
 };
 
 export type CommandBarNavItem = {
@@ -53,7 +43,7 @@ export type CommandBarNavItem = {
   title: string;
   icon: LucideIcon;
   showInEE?: boolean;
-  minRole?: WorkspaceRoleName | "ServerAdmin";
+  minRole?: UserRole;
 };
 
 export type CommandBarSearchItem = Omit<
@@ -65,13 +55,18 @@ export type CommandBarSearchItem = Omit<
   parents: string[];
 };
 
+export type CommandBarSearchGroup = {
+  heading: string;
+  items: CommandBarSearchItem[];
+};
+
 export type CommandBarAction = {
   id: string;
   title: string;
   icon: LucideIcon;
   href?: string;
   onSelect?: () => void;
-  minRole?: WorkspaceRoleName | "ServerAdmin";
+  minRole?: UserRole;
 };
 
 export type CommandBarProps = {
@@ -137,11 +132,13 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
       .filter((group) => group.items.length > 0);
   }, [navGroups, data]);
 
-  const searchItems = React.useMemo(
+  const searchGroups = React.useMemo(
     () =>
-      search.trim().length > 0
-        ? getNavItemsFromSearchResources(resourceListData?.data ?? [])
-        : [],
+      groupSearchItemsByType(
+        search.trim().length > 0
+          ? getNavItemsFromSearchResources(resourceListData?.data ?? [])
+          : []
+      ),
     [resourceListData, search]
   );
 
@@ -271,44 +268,79 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
           </React.Fragment>
         ))}
 
-        {searchItems.length > 0 && (
-          <>
-            {navigationGroups.length > 0 && <CommandSeparator />}
-            <CommandGroup
-              heading="Search results"
-              className={cn(
-                "[&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs",
-                navigationGroups.length > 0 && "[&_[cmdk-group-heading]]:pt-3",
-                "pb-2 !px-2"
-              )}
-            >
-              {searchItems.map((item) => (
-                <CommandItem
-                  key={item.resource.id}
-                  value={`${item.parents.join(" ")} ${item.title} ${item.resource.type} ${item.resource.id}`}
-                  onSelect={() => runCommand(() => navigate(item.href))}
-                  className="h-9 flex items-center gap-2 px-0"
-                >
-                  <item.icon className="flex-none text-grey" />
-                  <div className="inline-flex gap-0.5 items-baseline">
-                    {item.parents.map((parent, index) => (
-                      <React.Fragment key={`${parent}-${index}`}>
-                        <span className="text-grey">{excerpt(parent, 40)}</span>
-                        <ChevronRightIcon className="size-4 flex-none text-grey relative top-1" />
-                      </React.Fragment>
-                    ))}
-                    <span className="text-card-foreground font-medium">
-                      {item.title}
-                    </span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </>
-        )}
+        {searchGroups.map((group, groupIndex) => {
+          const hasContentAbove = navigationGroups.length > 0 || groupIndex > 0;
+
+          return (
+            <React.Fragment key={group.heading}>
+              {hasContentAbove && <CommandSeparator />}
+              <CommandGroup
+                heading={group.heading}
+                className={cn(
+                  "[&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs",
+                  hasContentAbove && "[&_[cmdk-group-heading]]:pt-3",
+                  "pb-2 !px-2"
+                )}
+              >
+                {group.items.map((item) => (
+                  <CommandItem
+                    key={item.resource.id}
+                    value={`${item.parents.join(" ")} ${item.title} ${item.resource.type} ${item.resource.id}`}
+                    onSelect={() => runCommand(() => navigate(item.href))}
+                    className="h-9 flex items-center gap-2 px-0"
+                  >
+                    <item.icon className="flex-none text-grey" />
+                    <div className="inline-flex gap-0.5 items-baseline">
+                      {item.parents.map((parent, index) => (
+                        <React.Fragment key={`${parent}-${index}`}>
+                          <span className="text-grey">
+                            {excerpt(parent, 40)}
+                          </span>
+                          <ChevronRightIcon className="size-4 flex-none text-grey relative top-1" />
+                        </React.Fragment>
+                      ))}
+                      <span className="text-card-foreground font-medium">
+                        {item.title}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </React.Fragment>
+          );
+        })}
       </CommandList>
     </CommandDialog>
   );
+}
+
+const SEARCH_GROUP_HEADINGS: Record<SearchResource["type"], string> = {
+  service: "Services",
+  compose_stack: "Compose Stacks",
+  project: "Projects",
+  environment: "Environments"
+};
+
+function groupSearchItemsByType(
+  items: CommandBarSearchItem[]
+): CommandBarSearchGroup[] {
+  // the API already returns the resources ranked & grouped by type,
+  // so the insertion order of the map is the order it sent them in
+  const groups = new Map<SearchResource["type"], CommandBarSearchItem[]>();
+
+  for (const item of items) {
+    const group = groups.get(item.resource.type);
+    if (group) {
+      group.push(item);
+    } else {
+      groups.set(item.resource.type, [item]);
+    }
+  }
+
+  return Array.from(groups, ([type, items]) => ({
+    heading: SEARCH_GROUP_HEADINGS[type],
+    items
+  }));
 }
 
 function getNavItemFromSearchResource(
@@ -323,7 +355,7 @@ function getNavItemFromSearchResource(
           envSlug: "production"
         }),
         icon: FolderIcon,
-        parents: ["Projects"]
+        parents: []
       };
     case "environment":
       return {
@@ -333,7 +365,7 @@ function getNavItemFromSearchResource(
           envSlug: resource.name
         }),
         icon: NetworkIcon,
-        parents: ["Projects", resource.project_slug]
+        parents: [resource.project_slug]
       };
     case "service":
       return {
@@ -352,7 +384,7 @@ function getNavItemFromSearchResource(
             : resource.git_provider === "gitlab"
               ? GitlabIcon
               : GithubIcon,
-        parents: ["Projects", resource.project_slug, resource.environment]
+        parents: [resource.project_slug, resource.environment]
       };
     case "compose_stack":
       return {
@@ -366,7 +398,7 @@ function getNavItemFromSearchResource(
           }
         ),
         icon: BoxesIcon,
-        parents: ["Projects", resource.project_slug, resource.environment]
+        parents: [resource.project_slug, resource.environment]
       };
   }
 }
