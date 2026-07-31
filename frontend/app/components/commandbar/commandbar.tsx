@@ -3,6 +3,7 @@ import { Command as CommandPrimitive } from "cmdk";
 import type { LucideIcon } from "lucide-react";
 import * as React from "react";
 import { useNavigate } from "react-router";
+import { useDebounce } from "use-debounce";
 import type { AuthedUserResponse, WorkspaceRoleName } from "~/api/types";
 import { useCommandBarStore } from "~/components/commandbar/commandbar-store";
 import { Button } from "~/components/ui/button";
@@ -15,7 +16,7 @@ import {
   CommandSeparator
 } from "~/components/ui/command";
 import { createDevLogger } from "~/lib/logger";
-import { userQueries } from "~/lib/queries";
+import { resourceQueries, userQueries } from "~/lib/queries";
 import { cn, hasMinRole, isEditableTarget } from "~/lib/utils";
 
 const logger = createDevLogger(import.meta.url);
@@ -49,36 +50,12 @@ export type CommandBarProps = {
 
 export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
   const { open, setOpen, toggle } = useCommandBarStore();
+  const [search, setSearch] = React.useState("");
 
   const { data } = useQuery({
     ...userQueries.authedUser,
     initialData: authedUser
   });
-
-  React.useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (
-        event.key.toLowerCase() !== "k" ||
-        !(event.metaKey || event.ctrlKey)
-      ) {
-        return;
-      }
-
-      if (!open && isEditableTarget(event.target)) {
-        return;
-      }
-
-      event.preventDefault();
-      toggle();
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, toggle]);
-
-  const [search, setSearch] = React.useState("");
-
-  const isActionMode = search.startsWith(">");
 
   const handleOpenChange = React.useCallback(
     (nextOpen: boolean) => {
@@ -101,6 +78,17 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
     [setOpen]
   );
 
+  const [debouncedValue] = useDebounce(search, 300);
+
+  const {
+    data: resourceListData,
+    isLoading,
+    isFetching
+  } = useQuery({
+    ...resourceQueries.search(debouncedValue),
+    enabled: search.trim().length > 0
+  });
+
   const navigationGroups = React.useMemo(() => {
     if (!data) return [];
 
@@ -114,6 +102,29 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
       }))
       .filter((group) => group.items.length > 0);
   }, [navGroups, data]);
+
+  React.useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (
+        event.key.toLowerCase() !== "k" ||
+        !(event.metaKey || event.ctrlKey)
+      ) {
+        return;
+      }
+
+      if (!open && isEditableTarget(event.target)) {
+        return;
+      }
+
+      event.preventDefault();
+      toggle();
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open, toggle]);
+
+  const isActionMode = search.startsWith(">");
 
   if (!data?.user) return null;
 
