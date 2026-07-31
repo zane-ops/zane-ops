@@ -13,7 +13,10 @@ import type { ComposeStack } from "~/api/types";
 import { getComposeStackStatus } from "~/components/compose-stack-cards";
 import { CopyButton } from "~/components/copy-button";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
-import { type NavItem, NavLink } from "~/components/nav-link";
+import {
+  HorizontalNavLink,
+  type NavItem
+} from "~/components/horizontal-nav-link";
 import {
   Tooltip,
   TooltipContent,
@@ -177,10 +180,10 @@ export default function ComposeStackLayoutPage({
         >
           {navItems.map((item) => (
             <li key={item.href}>
-              <NavLink to={item.href} prefetch="viewport">
+              <HorizontalNavLink to={item.href} prefetch="viewport">
                 <span>{item.title}</span>
                 <item.icon size={15} className="flex-none" />
-              </NavLink>
+              </HorizontalNavLink>
             </li>
           ))}
         </ul>

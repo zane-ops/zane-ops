@@ -6,7 +6,7 @@ import {
   UsersIcon
 } from "lucide-react";
 import { NavLink, Outlet, href } from "react-router";
-import type { NavItem } from "~/components/nav-link";
+import type { NavItem } from "~/components/horizontal-nav-link";
 import { Button } from "~/components/ui/button";
 import { cn, hasMinRole, metaTitle } from "~/lib/utils";
 import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";

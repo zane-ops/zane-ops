@@ -11,7 +11,10 @@ import {
   TextSearchIcon
 } from "lucide-react";
 import { Link, Outlet, href, useFetcher, useParams } from "react-router";
-import { type NavItem, NavLink } from "~/components/nav-link";
+import {
+  HorizontalNavLink,
+  type NavItem
+} from "~/components/horizontal-nav-link";
 import { SubmitButton } from "~/components/ui/button";
 
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
@@ -227,10 +230,10 @@ export default function DeploymentLayoutPage({
         >
           {navItems.map((item) => (
             <li key={item.title}>
-              <NavLink to={item.href} prefetch="viewport">
+              <HorizontalNavLink to={item.href} prefetch="viewport">
                 <span>{item.title}</span>
                 <item.icon size={15} className="flex-none" />
-              </NavLink>
+              </HorizontalNavLink>
             </li>
           ))}
         </ul>

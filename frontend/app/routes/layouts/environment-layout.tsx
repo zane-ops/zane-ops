@@ -21,7 +21,10 @@ import {
 } from "react-router";
 import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
-import { type NavItem, NavLink } from "~/components/nav-link";
+import {
+  HorizontalNavLink,
+  type NavItem
+} from "~/components/horizontal-nav-link";
 import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -306,10 +309,10 @@ export default function EnvironmentLayout({
         >
           {sidebarNavItems.map((item) => (
             <li key={item.title}>
-              <NavLink to={item.href}>
+              <HorizontalNavLink to={item.href}>
                 <span>{item.title}</span>
                 <item.icon size={15} className="flex-none" />
-              </NavLink>
+              </HorizontalNavLink>
             </li>
           ))}
         </ul>
