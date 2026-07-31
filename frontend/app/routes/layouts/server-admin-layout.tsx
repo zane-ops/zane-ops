@@ -1,4 +1,6 @@
 import { Outlet } from "react-router";
+import { CommandBar } from "~/components/commandbar/commandbar";
+import { SERVER_ADMIN_NAV_GROUPS } from "~/components/commandbar/commandbar-nav-items";
 import { ensureMinRole } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { metaTitle } from "~/lib/utils";
@@ -17,6 +19,7 @@ export async function clientLoader({}: Route.ClientLoaderArgs) {
 export default function ServerAdminLayout({}: Route.ComponentProps) {
   return (
     <>
+      <CommandBar navItems={SERVER_ADMIN_NAV_GROUPS} />
       <Outlet />
     </>
   );

@@ -649,3 +649,10 @@ export function getUserDisplayName(
 ) {
   return user.first_name.trim() ? user.first_name : user.username;
 }
+
+export function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tagName = target.tagName;
+  return ["input", "textarea", "select"].includes(tagName.toLowerCase());
+}

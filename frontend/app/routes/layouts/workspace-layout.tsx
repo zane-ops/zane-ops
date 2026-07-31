@@ -1,4 +1,6 @@
 import { Outlet, href, redirect } from "react-router";
+import { CommandBar } from "~/components/commandbar/commandbar";
+import { MAIN_NAV_GROUPS } from "~/components/commandbar/commandbar-nav-items";
 import { CommandBarTrigger } from "~/components/commandbar/commandbar-trigger";
 import { Header } from "~/components/header/header";
 import { ProjectEnvironmentListHeaderHeaderDropdown } from "~/components/header/project-environment-list-header-dropdown";
@@ -81,6 +83,7 @@ export default function WorkspaceLayout({
         ]}
         rigthSlot={[<CommandBarTrigger />, <UserHeaderDropdown user={user} />]}
       />
+      <CommandBar navItems={MAIN_NAV_GROUPS} />
       <main
         className={cn(
           "grow container p-6 relative overflow-y-clip",
