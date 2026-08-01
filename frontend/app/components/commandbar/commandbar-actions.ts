@@ -40,7 +40,7 @@ export function useCommandBarActionGroups(): CommandBarActionGroup[] {
         items: [
           {
             id: "create-project",
-            title: "New Project",
+            title: "Create Project",
             href: href("/workspace/create-project"),
             icon: FolderPlusIcon
           },
@@ -49,26 +49,6 @@ export function useCommandBarActionGroups(): CommandBarActionGroup[] {
             title: "Invite Member",
             href: href("/workspace/settings/team/invite"),
             icon: UserPlusIcon
-          }
-        ]
-      },
-
-      {
-        heading: "Account",
-        items: [
-          {
-            id: "toggle-theme",
-            // show where the toggle takes you, not where you are
-            ...THEME_ACTION[getNextTheme(theme)],
-            onSelect: toggleTheme
-          },
-          {
-            id: "logout",
-            title: "Log Out",
-            icon: LogOutIcon,
-            // `/logout` redirects on GET, it only accepts a POST
-            onSelect: () =>
-              fetcher.submit(null, { method: "post", action: href("/logout") })
           }
         ]
       },
@@ -87,6 +67,25 @@ export function useCommandBarActionGroups(): CommandBarActionGroup[] {
             title: "New Build Registry",
             href: href("/admin/build-registries/new"),
             icon: ContainerIcon
+          }
+        ]
+      },
+      {
+        heading: "Account",
+        items: [
+          {
+            id: "toggle-theme",
+            // show where the toggle takes you, not where you are
+            ...THEME_ACTION[getNextTheme(theme)],
+            onSelect: toggleTheme
+          },
+          {
+            id: "logout",
+            title: "Log Out",
+            icon: LogOutIcon,
+            // `/logout` redirects on GET, it only accepts a POST
+            onSelect: () =>
+              fetcher.submit(null, { method: "post", action: href("/logout") })
           }
         ]
       }

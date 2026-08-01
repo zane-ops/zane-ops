@@ -231,7 +231,7 @@ export function CommandBar({
     >
       <div className="flex flex-col gap-1 pt-3 px-3 items-start">
         <Button type="button" size="xs" variant="outline" className="text-xs">
-          Home
+          {isActionMode ? "Action mode" : "Home"}
         </Button>
         <div className="flex items-center gap-1 w-full px-0">
           <CommandPrimitive.Input
