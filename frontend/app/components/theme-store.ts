@@ -6,22 +6,10 @@ import { THEME_STORAGE_KEY } from "~/lib/constants";
 const themeSchema = z.enum(["LIGHT", "DARK", "SYSTEM"]);
 export type Theme = z.infer<typeof themeSchema>;
 
-/** the order `toggleTheme` cycles through */
-const THEME_CYCLE = [
-  "LIGHT",
-  "DARK",
-  "SYSTEM"
-] as const satisfies readonly Theme[];
-
 export function getThemePreference(): Theme {
   const stored = localStorage.getItem(THEME_STORAGE_KEY);
   const parseResult = themeSchema.safeParse(stored);
   return parseResult.success ? parseResult.data : "SYSTEM";
-}
-
-export function getNextTheme(theme: Theme): Theme {
-  const nextIndex = (THEME_CYCLE.indexOf(theme) + 1) % THEME_CYCLE.length;
-  return THEME_CYCLE[nextIndex];
 }
 
 /**
@@ -45,16 +33,14 @@ function applyTheme(theme: Theme) {
 type ThemeStore = {
   theme: Theme;
   setTheme: (theme: Theme) => void;
-  toggleTheme: () => void;
 };
 
-export const useThemeStore = create<ThemeStore>((set, get) => ({
+export const useThemeStore = create<ThemeStore>((set) => ({
   theme: "SYSTEM",
   setTheme: (theme) => {
     applyTheme(theme);
     set({ theme });
-  },
-  toggleTheme: () => get().setTheme(getNextTheme(get().theme))
+  }
 }));
 
 /**

@@ -111,8 +111,8 @@ export function CommandBar({
 
   const runCommand = React.useCallback(
     (command: () => void) => {
-      setOpen(false);
       command();
+      setOpen(false);
       setSearch("");
     },
     [setOpen]

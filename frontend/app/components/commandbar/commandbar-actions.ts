@@ -12,17 +12,17 @@ import {
 import * as React from "react";
 import { href, useFetcher } from "react-router";
 import type { CommandBarActionGroup } from "~/components/commandbar/commandbar";
-import {
-  type Theme,
-  getNextTheme,
-  useThemeStore
-} from "~/components/theme-store";
+import { type Theme, useThemeStore } from "~/components/theme-store";
 
-const THEME_ACTION: Record<Theme, { title: string; icon: LucideIcon }> = {
-  LIGHT: { title: "Switch To Light Theme", icon: SunIcon },
-  DARK: { title: "Switch To Dark Theme", icon: MoonIcon },
-  SYSTEM: { title: "Switch To System Theme", icon: LaptopMinimalIcon }
-};
+const THEME_ACTIONS = [
+  { theme: "LIGHT", title: "Switch To Light Theme", icon: SunIcon },
+  { theme: "DARK", title: "Switch To Dark Theme", icon: MoonIcon },
+  { theme: "SYSTEM", title: "Switch To System Theme", icon: LaptopMinimalIcon }
+] as const satisfies readonly {
+  theme: Theme;
+  title: string;
+  icon: LucideIcon;
+}[];
 
 /**
  * Workspace wide actions, the ones scoped to a project, a service or a
@@ -30,10 +30,20 @@ const THEME_ACTION: Record<Theme, { title: string; icon: LucideIcon }> = {
  */
 export function useCommandBarActionGroups(): CommandBarActionGroup[] {
   const fetcher = useFetcher();
-  const { theme, toggleTheme } = useThemeStore();
+  const { theme: currentTheme, setTheme } = useThemeStore();
 
-  return React.useMemo(
-    () => [
+  return React.useMemo(() => {
+    // the theme already in use is not worth offering
+    const themeActions = THEME_ACTIONS.filter(
+      (action) => action.theme !== currentTheme
+    ).map(({ theme, title, icon }) => ({
+      id: `switch-to-${theme.toLowerCase()}-theme`,
+      title,
+      icon,
+      onSelect: () => setTheme(theme)
+    }));
+
+    return [
       {
         heading: "Workspace",
         minRole: "Admin",
@@ -73,12 +83,7 @@ export function useCommandBarActionGroups(): CommandBarActionGroup[] {
       {
         heading: "Account",
         items: [
-          {
-            id: "toggle-theme",
-            // show where the toggle takes you, not where you are
-            ...THEME_ACTION[getNextTheme(theme)],
-            onSelect: toggleTheme
-          },
+          ...themeActions,
           {
             id: "logout",
             title: "Log Out",
@@ -89,7 +94,6 @@ export function useCommandBarActionGroups(): CommandBarActionGroup[] {
           }
         ]
       }
-    ],
-    [theme, toggleTheme, fetcher]
-  );
+    ];
+  }, [currentTheme, setTheme, fetcher]);
 }
