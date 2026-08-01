@@ -70,21 +70,23 @@ export type CommandBarAction = {
   minRole?: UserRole;
 };
 
+export type CommandBarActionGroup = {
+  heading: string;
+  items: CommandBarAction[];
+  minRole?: UserRole;
+};
+
 export type CommandBarProps = {
   navGroups?: CommandBarNavGroup[];
+  actionGroups?: CommandBarActionGroup[];
   authedUser?: AuthedUserResponse | null;
 };
 
-const SEARCH_RESULTS_HINT_VALUE = "[search-results-hint]";
-const SELECTED_ITEM_HINT_VALUE = "[selected-item-hint]";
-
-/** values that the filter should always keep visible, whatever the query is */
-const ALWAYS_VISIBLE_VALUES = new Set([
-  SEARCH_RESULTS_HINT_VALUE,
-  SELECTED_ITEM_HINT_VALUE
-]);
-
-export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
+export function CommandBar({
+  navGroups = [],
+  actionGroups = [],
+  authedUser
+}: CommandBarProps) {
   const { open, setOpen, toggle } = useCommandBarStore();
   const [search, setSearch] = React.useState("");
 
@@ -130,19 +132,15 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
     )
   });
 
-  const navigationGroups = React.useMemo(() => {
-    if (!data) return [];
+  const navigationGroups = React.useMemo(
+    () => filterGroupsByRole(navGroups, data),
+    [navGroups, data]
+  );
 
-    return navGroups
-      .filter((group) => !group.minRole || hasMinRole(data, group.minRole))
-      .map((group) => ({
-        ...group,
-        items: group.items.filter(
-          (item) => !item.minRole || hasMinRole(data, item.minRole)
-        )
-      }))
-      .filter((group) => group.items.length > 0);
-  }, [navGroups, data]);
+  const actionModeGroups = React.useMemo(
+    () => filterGroupsByRole(actionGroups, data),
+    [actionGroups, data]
+  );
 
   const searchGroups = React.useMemo(
     () =>
@@ -217,7 +215,6 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
               search,
               value
             });
-            // TODO
           }
 
           logger.scope("CommandDialog", "commandProps", "filter").info({
@@ -225,10 +222,7 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
             value
           });
 
-          if (
-            ALWAYS_VISIBLE_VALUES.has(value) ||
-            value.toLowerCase().includes(search.trim().toLowerCase())
-          ) {
+          if (value.toLowerCase().includes(search.trim().toLowerCase())) {
             return 1;
           }
           return 0;
@@ -268,100 +262,161 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
           )}
         </CommandEmpty>
 
-        <CommandGroup
-          heading={actionModeHint}
-          className="[&_[cmdk-group-heading]]:text-xs overflow-visible"
-        />
+        {!isActionMode && (
+          <CommandGroup
+            heading={actionModeHint}
+            className="[&_[cmdk-group-heading]]:text-xs overflow-visible"
+          />
+        )}
 
-        {navigationGroups.map((group, groupIndex) => (
-          <React.Fragment key={group.heading}>
-            {groupIndex > 0 && <CommandSeparator />}
-            <CommandGroup
-              heading={group.heading}
-              className={cn(
-                "[&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs",
-                groupIndex === 0
-                  ? "scroll-pt-10"
-                  : "[&_[cmdk-group-heading]]:pt-3",
-                "pb-2 !px-2"
-              )}
-            >
-              {group.items.map((item) => (
-                <CommandItem
-                  key={item.href}
-                  value={`${item.title} ${group.heading}`}
-                  onSelect={() => runCommand(() => navigate(item.href))}
-                  className="h-9 flex items-center gap-2 px-0 font-medium"
-                >
-                  <item.icon className="flex-none text-grey size-4" />
-                  <span className="text-card-foreground">{item.title}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </React.Fragment>
-        ))}
-
-        {searchGroups.map((group, groupIndex) => {
-          const hasContentAbove = navigationGroups.length > 0 || groupIndex > 0;
-
-          return (
+        {isActionMode &&
+          actionModeGroups.map((group, groupIndex) => (
             <React.Fragment key={group.heading}>
-              {hasContentAbove && <CommandSeparator />}
+              {groupIndex > 0 && <CommandSeparator />}
               <CommandGroup
                 heading={group.heading}
                 className={cn(
                   "[&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs",
-                  hasContentAbove && "[&_[cmdk-group-heading]]:pt-3",
+                  groupIndex > 0 && "[&_[cmdk-group-heading]]:pt-3",
+                  "pb-2 !px-2"
+                )}
+              >
+                {group.items.map((action) => (
+                  <CommandItem
+                    key={action.id}
+                    value={`${action.title} ${group.heading}`}
+                    onSelect={() =>
+                      runCommand(() => {
+                        if (action.href) {
+                          navigate(action.href);
+                          return;
+                        }
+                        action.onSelect?.();
+                      })
+                    }
+                    className="h-9 flex items-center gap-2 px-0 font-medium"
+                  >
+                    <action.icon className="flex-none text-grey size-4" />
+                    <span className="text-card-foreground">{action.title}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </React.Fragment>
+          ))}
+
+        {!isActionMode &&
+          navigationGroups.map((group, groupIndex) => (
+            <React.Fragment key={group.heading}>
+              {groupIndex > 0 && <CommandSeparator />}
+              <CommandGroup
+                heading={group.heading}
+                className={cn(
+                  "[&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs",
+                  groupIndex === 0
+                    ? "scroll-pt-10"
+                    : "[&_[cmdk-group-heading]]:pt-3",
                   "pb-2 !px-2"
                 )}
               >
                 {group.items.map((item) => (
                   <CommandItem
-                    key={item.resource.id}
-                    value={`${item.parents.join(" ")} ${item.title} ${item.resource.type} ${item.resource.id}`}
+                    key={item.href}
+                    value={`${item.title} ${group.heading}`}
                     onSelect={() => runCommand(() => navigate(item.href))}
-                    className={cn(
-                      "h-9 flex items-center gap-2 px-0",
-                      "aria-selected:*:data-[slot=kbd-shortcuts]:inline-block"
-                    )}
+                    className="h-9 flex items-center gap-2 px-0 font-medium"
                   >
                     <item.icon className="flex-none text-grey size-4" />
-                    <div className="inline-flex gap-0.5 items-baseline w-full">
-                      {item.parents.map((parent, index) => (
-                        <React.Fragment key={`${parent}-${index}`}>
-                          <span className="text-grey">
-                            {excerpt(parent, 40)}
-                          </span>
-                          <ChevronRightIcon className="size-4 flex-none text-grey relative top-1" />
-                        </React.Fragment>
-                      ))}
-                      <p className="text-card-foreground font-medium">
-                        {item.title}
-                      </p>
-                    </div>
-                    <div
-                      className="whitespace-nowrap hidden text-xs"
-                      data-slot="kbd-shortcuts"
-                    >
-                      <kbd className="rounded-sm px-1  font-mono bg-muted">
-                        Enter
-                      </kbd>{" "}
-                      <span>to go to</span>
-                      <span>&nbsp;&nbsp;</span>
-                      <kbd className="rounded-sm px-1  font-mono bg-muted">
-                        Tab
-                      </kbd>{" "}
-                      <span>to select</span>
-                    </div>
+                    <span className="text-card-foreground">{item.title}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
             </React.Fragment>
-          );
-        })}
+          ))}
+
+        {!isActionMode &&
+          searchGroups.map((group, groupIndex) => {
+            const hasContentAbove =
+              navigationGroups.length > 0 || groupIndex > 0;
+
+            return (
+              <React.Fragment key={group.heading}>
+                {hasContentAbove && <CommandSeparator />}
+                <CommandGroup
+                  heading={group.heading}
+                  className={cn(
+                    "[&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs",
+                    hasContentAbove && "[&_[cmdk-group-heading]]:pt-3",
+                    "pb-2 !px-2"
+                  )}
+                >
+                  {group.items.map((item) => (
+                    <CommandItem
+                      key={item.resource.id}
+                      value={`${item.parents.join(" ")} ${item.title} ${item.resource.type} ${item.resource.id}`}
+                      onSelect={() => runCommand(() => navigate(item.href))}
+                      className={cn(
+                        "h-9 flex items-center gap-2 px-0",
+                        "aria-selected:*:data-[slot=kbd-shortcuts]:inline-block"
+                      )}
+                    >
+                      <item.icon className="flex-none text-grey size-4" />
+                      <div className="inline-flex gap-0.5 items-baseline w-full">
+                        {item.parents.map((parent, index) => (
+                          <React.Fragment key={`${parent}-${index}`}>
+                            <span className="text-grey">
+                              {excerpt(parent, 40)}
+                            </span>
+                            <ChevronRightIcon className="size-4 flex-none text-grey relative top-1" />
+                          </React.Fragment>
+                        ))}
+                        <p className="text-card-foreground font-medium">
+                          {item.title}
+                        </p>
+                      </div>
+                      <div
+                        className="whitespace-nowrap hidden text-xs"
+                        data-slot="kbd-shortcuts"
+                      >
+                        <kbd className="rounded-sm px-1  font-mono bg-muted">
+                          Enter
+                        </kbd>{" "}
+                        <span>to go to</span>
+                        <span>&nbsp;&nbsp;</span>
+                        <kbd className="rounded-sm px-1  font-mono bg-muted">
+                          Tab
+                        </kbd>{" "}
+                        <span>to select</span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </React.Fragment>
+            );
+          })}
       </CommandList>
     </CommandDialog>
   );
+}
+
+/**
+ * Hide the groups & items the user doesn't have the role for,
+ * then drop the groups left without any item.
+ */
+function filterGroupsByRole<
+  TItem extends { minRole?: UserRole },
+  TGroup extends { minRole?: UserRole; items: TItem[] }
+>(groups: TGroup[], user: AuthedUserResponse | null | undefined): TGroup[] {
+  if (!user) return [];
+
+  return groups
+    .filter((group) => !group.minRole || hasMinRole(user, group.minRole))
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => !item.minRole || hasMinRole(user, item.minRole)
+      )
+    }))
+    .filter((group) => group.items.length > 0);
 }
 
 const SEARCH_GROUP_HEADINGS: Record<SearchResource["type"], string> = {
