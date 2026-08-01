@@ -125,7 +125,9 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
     isFetching
   } = useQuery({
     ...resourceQueries.search(workspaceId ?? "", debouncedValue),
-    enabled: Boolean(workspaceId && search.trim().length > 0 && !isActionMode)
+    enabled: Boolean(
+      workspaceId && open && search.trim().length > 0 && !isActionMode
+    )
   });
 
   const navigationGroups = React.useMemo(() => {
