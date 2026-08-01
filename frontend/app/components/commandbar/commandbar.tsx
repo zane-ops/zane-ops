@@ -10,12 +10,14 @@ import {
   LightbulbIcon,
   LoaderIcon,
   type LucideIcon,
-  NetworkIcon
+  NetworkIcon,
+  XIcon
 } from "lucide-react";
 import * as React from "react";
-import { href, useNavigate } from "react-router";
+import { data, href, useNavigate } from "react-router";
 import { useDebounce } from "use-debounce";
 import type { AuthedUserResponse, SearchResource, UserRole } from "~/api/types";
+import { getResourceActionGroups } from "~/components/commandbar/commandbar-resource-actions";
 import { useCommandBarStore } from "~/components/commandbar/commandbar-store";
 import { Button } from "~/components/ui/button";
 import {
@@ -100,6 +102,9 @@ export function CommandBar({
   const [debouncedValue] = useDebounce(search, 150);
   const isActionMode = search.startsWith(">");
 
+  const [selectedResource, setSelectedResource] =
+    React.useState<SearchResource | null>(null);
+
   const {
     data: resourceListData,
     isLoading,
@@ -107,7 +112,11 @@ export function CommandBar({
   } = useQuery({
     ...resourceQueries.search(workspaceId ?? "", debouncedValue),
     enabled: Boolean(
-      workspaceId && open && search.trim().length > 0 && !isActionMode
+      workspaceId &&
+        open &&
+        search.trim().length > 0 &&
+        !isActionMode &&
+        !selectedResource
     )
   });
 
@@ -131,17 +140,102 @@ export function CommandBar({
     [resourceListData, search]
   );
 
-  const [selectedResource, setSelectedResource] =
-    React.useState<SearchResource | null>(null);
+  const selectedItem = selectedResource
+    ? getNavItemFromSearchResource(selectedResource)
+    : null;
+
+  const resourceActionGroups = React.useMemo(
+    () =>
+      filterGroupsByRole(
+        selectedResource ? getResourceActionGroups(selectedResource) : [],
+        data
+      ),
+    [selectedResource, data]
+  );
+
+  // the resource context & the action mode both render `CommandBarActionGroup`s
+  const commandActionsGroups = selectedResource
+    ? resourceActionGroups
+    : isActionMode
+      ? actionModeGroups
+      : [];
+
+  /** the value of the item currently highlighted in the list */
+  const [highlightedValue, setHighlightedValue] = React.useState("");
+
+  // `Tab` selects whatever is highlighted, so we need to map it back to its item
+  const searchItemsByValue = React.useMemo(() => {
+    const itemsByValue = new Map<string, CommandBarSearchItem>();
+
+    for (const group of searchGroups) {
+      for (const item of group.items) {
+        itemsByValue.set(getSearchItemValue(item), item);
+      }
+    }
+
+    return itemsByValue;
+  }, [searchGroups]);
+
+  const clearSelectedResource = React.useCallback(() => {
+    setSearch("");
+    setSelectedResource(null);
+  }, []);
 
   const handleOpenChange = React.useCallback(
     (nextOpen: boolean) => {
+      logger
+        .scope("CommandBar", "handleOpenChange")
+        .info({ selectedResource, nextOpen });
+
+      if (!nextOpen && selectedResource) return;
+
+      if (!nextOpen) clearSelectedResource();
+
       setOpen(nextOpen);
-      if (!nextOpen) {
+    },
+    [setOpen, selectedResource]
+  );
+
+  const handleInputKeyDown = React.useCallback(
+    (ev: React.KeyboardEvent<HTMLDivElement>) => {
+      // `Tab` selects whatever is highlighted if found
+      if (ev.key === "Tab") {
+        const item = searchItemsByValue.get(highlightedValue);
+
+        logger
+          .scope("handleInputKeyDown")
+          .info({ highlightedValue, item, searchItemsByValue });
+
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        if (!item) return;
+
         setSearch("");
+        setSelectedResource(item.resource);
       }
     },
-    [setOpen]
+    [searchItemsByValue, highlightedValue]
+  );
+
+  logger.info({ selectedResource });
+
+  const handleCommandBarKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      // `escape` clears the context first, it only closes the dialog
+      // once there is nothing left to clear
+      logger
+        .scope("CommandBar", "handleCommandBarKeyDown")
+        .info({ selectedResource, "event.key": event.key });
+
+      if (event.key === "Escape" && selectedResource) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        clearSelectedResource();
+      }
+    },
+    [selectedResource]
   );
 
   const navigate = useNavigate();
@@ -188,10 +282,8 @@ export function CommandBar({
   );
 
   const selectedItemContextHint = (
-    <div className="inline-flex items-center gap-1 whitespace-nowrap">
+    <div className="inline-flex items-center gap-1 whitespace-nowrap text-muted-foreground">
       <LightbulbIcon className="size-3 flex-none" />
-      <strong className="font-semibold"></strong>
-
       <span>Press</span>
       <kbd className="rounded-sm px-1  font-mono bg-muted">escape</kbd>
       <span>to deselect item</span>
@@ -209,21 +301,14 @@ export function CommandBar({
       )}
       commandProps={{
         loop: true,
+        value: highlightedValue,
+        onValueChange: setHighlightedValue,
+        onKeyDown: handleCommandBarKeyDown,
         filter(value, query) {
           let search = query;
           if (query.startsWith(">")) {
             search = query.substring(1);
-
-            logger.scope("CommandDialog", "commandProps", "filter").info({
-              search,
-              value
-            });
           }
-
-          logger.scope("CommandDialog", "commandProps", "filter").info({
-            search,
-            value
-          });
 
           if (value.toLowerCase().includes(search.trim().toLowerCase())) {
             return 1;
@@ -233,13 +318,38 @@ export function CommandBar({
       }}
     >
       <div className="flex flex-col gap-1 pt-3 px-3 items-start">
-        <Button type="button" size="xs" variant="outline" className="text-xs">
-          {isActionMode ? "Action mode" : "Home"}
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          className={cn("text-xs gap-1.5", selectedItem && "pr-1")}
+          onClick={() => {
+            if (selectedItem) clearSelectedResource();
+          }}
+        >
+          {selectedItem ? (
+            <>
+              <span className="inline-flex items-center gap-1">
+                <selectedItem.icon className="size-3 flex-none text-grey" />
+                {selectedItem.title}
+              </span>
+              <XIcon className="size-3 flex-none" />
+            </>
+          ) : isActionMode ? (
+            "Action mode"
+          ) : (
+            "Home"
+          )}
         </Button>
         <div className="flex items-center gap-1 w-full px-0">
           <CommandPrimitive.Input
             autoFocus
-            placeholder="Search pages, resources, actions..."
+            onKeyDown={handleInputKeyDown}
+            placeholder={
+              selectedItem
+                ? `Search actions for ${selectedItem.title}...`
+                : "Search pages, resources, actions..."
+            }
             className="text-base bg-inherit focus-visible:outline-hidden px-2 w-full grow"
             value={search}
             onValueChange={setSearch}
@@ -265,49 +375,58 @@ export function CommandBar({
           )}
         </CommandEmpty>
 
-        {!isActionMode && (
+        {!isActionMode && !selectedResource && (
           <CommandGroup
             heading={actionModeHint}
             className="[&_[cmdk-group-heading]]:text-xs overflow-visible"
           />
         )}
 
-        {isActionMode &&
-          actionModeGroups.map((group, groupIndex) => (
-            <React.Fragment key={group.heading}>
-              {groupIndex > 0 && <CommandSeparator />}
-              <CommandGroup
-                heading={group.heading}
-                className={cn(
-                  "[&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs",
-                  groupIndex > 0 && "[&_[cmdk-group-heading]]:pt-3",
-                  "pb-2 !px-2"
-                )}
-              >
-                {group.items.map((action) => (
-                  <CommandItem
-                    key={action.id}
-                    value={`${action.title} ${group.heading}`}
-                    onSelect={() =>
-                      runCommand(() => {
-                        if (action.href) {
-                          navigate(action.href);
-                          return;
-                        }
-                        action.onSelect?.();
-                      })
-                    }
-                    className="h-9 flex items-center gap-2 px-0 font-medium"
-                  >
-                    <action.icon className="flex-none text-grey size-4" />
-                    <span className="text-card-foreground">{action.title}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </React.Fragment>
-          ))}
+        {selectedResource && (
+          <CommandGroup
+            heading={selectedItemContextHint}
+            className="[&_[cmdk-group-heading]]:text-xs overflow-visible"
+          />
+        )}
 
+        {/* Actions for a selected item */}
+        {commandActionsGroups.map((group, groupIndex) => (
+          <React.Fragment key={group.heading}>
+            {groupIndex > 0 && <CommandSeparator />}
+            <CommandGroup
+              heading={group.heading}
+              className={cn(
+                "[&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs",
+                groupIndex > 0 && "[&_[cmdk-group-heading]]:pt-3",
+                "pb-2 !px-2"
+              )}
+            >
+              {group.items.map((action) => (
+                <CommandItem
+                  key={action.id}
+                  value={`${action.title} ${group.heading}`}
+                  onSelect={() =>
+                    runCommand(() => {
+                      if (action.href) {
+                        navigate(action.href);
+                        return;
+                      }
+                      action.onSelect?.();
+                    })
+                  }
+                  className="h-9 flex items-center gap-2 px-0 font-medium"
+                >
+                  <action.icon className="flex-none text-grey size-4" />
+                  <span className="text-card-foreground">{action.title}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </React.Fragment>
+        ))}
+
+        {/* Navigation items */}
         {!isActionMode &&
+          !selectedResource &&
           navigationGroups.map((group, groupIndex) => (
             <React.Fragment key={group.heading}>
               {groupIndex > 0 && <CommandSeparator />}
@@ -336,7 +455,9 @@ export function CommandBar({
             </React.Fragment>
           ))}
 
+        {/* Search results */}
         {!isActionMode &&
+          !selectedResource &&
           searchGroups.map((group, groupIndex) => {
             const hasContentAbove =
               navigationGroups.length > 0 || groupIndex > 0;
@@ -355,7 +476,7 @@ export function CommandBar({
                   {group.items.map((item) => (
                     <CommandItem
                       key={item.resource.id}
-                      value={`${item.parents.join(" ")} ${item.title} ${item.resource.type} ${item.resource.id}`}
+                      value={getSearchItemValue(item)}
                       onSelect={() => runCommand(() => navigate(item.href))}
                       className={cn(
                         "h-9 flex items-center gap-2 px-0",
@@ -509,6 +630,14 @@ function getNavItemFromSearchResource(
         parents: [resource.project_slug, resource.environment]
       };
   }
+}
+
+/**
+ * Unique per resource, the id is included because two services in different
+ * projects can share the same slug.
+ */
+function getSearchItemValue(item: CommandBarSearchItem) {
+  return `${item.parents.join(" ")} ${item.title} ${item.resource.type} ${item.resource.id}`.trim();
 }
 
 function getNavItemsFromSearchResources(
