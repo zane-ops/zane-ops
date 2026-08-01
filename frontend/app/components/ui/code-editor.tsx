@@ -1,4 +1,3 @@
-import path from "path";
 import MonacoEditor, {
   type DiffEditorProps,
   type EditorProps,
@@ -12,7 +11,7 @@ import {
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { Maximize2Icon, Minimize2Icon } from "lucide-react";
 import * as React from "react";
-import { useTheme } from "~/components/theme-context";
+import { useThemeStore } from "~/components/theme-store";
 import { Button } from "~/components/ui/button";
 import {
   Tooltip,
@@ -46,7 +45,7 @@ export function CodeEditor({
   options,
   hasError
 }: CodeEditorProps) {
-  const { theme } = useTheme();
+  const theme = useThemeStore((s) => s.theme);
   const isDark = useMediaQuery("(prefers-color-scheme: dark)");
   const resolvedTheme =
     theme === "SYSTEM" ? (isDark ? "DARK" : "LIGHT") : theme;
@@ -156,7 +155,7 @@ export function DiffCodeEditor({
   options,
   hasError
 }: DiffCodeEditorProps) {
-  const { theme } = useTheme();
+  const theme = useThemeStore((s) => s.theme);
   const isDark = useMediaQuery("(prefers-color-scheme: dark)");
   const resolvedTheme =
     theme === "SYSTEM" ? (isDark ? "DARK" : "LIGHT") : theme;
@@ -241,7 +240,7 @@ export function PatchCodeEditor({
   filename,
   lang
 }: PatchCodeEditorProps) {
-  const { theme } = useTheme();
+  const theme = useThemeStore((s) => s.theme);
   const isDark = useMediaQuery("(prefers-color-scheme: dark)");
   const isPhone = useMediaQuery("(max-width: 768px)");
   const resolvedTheme =

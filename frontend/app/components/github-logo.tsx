@@ -1,9 +1,9 @@
 import type * as React from "react";
-import { useTheme } from "~/components/theme-context";
+import { useThemeStore } from "~/components/theme-store";
 import { cn } from "~/lib/utils";
 
 export function GithubLogo(props: React.ComponentProps<"svg">) {
-  const theme = useTheme().theme;
+  const theme = useThemeStore((s) => s.theme);
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 98 98" {...props}>
       <path
