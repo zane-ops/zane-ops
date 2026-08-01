@@ -184,22 +184,6 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
     </div>
   );
 
-  const searchItemHint = (
-    <div className="inline-flex items-center gap-1 whitespace-nowrap text-muted-foreground font-medium">
-      <LightbulbIcon className="size-3 flex-none" />
-
-      <span>Type</span>
-      <kbd className="rounded-sm px-1  font-mono bg-muted">Enter</kbd>
-      <span>to jump to item</span>
-
-      <span className="text-grey">&middot;</span>
-
-      <span>Type</span>
-      <kbd className="rounded-sm px-1  font-mono bg-muted">Tab</kbd>
-      <span>to select item</span>
-    </div>
-  );
-
   const selectedItemContextHint = (
     <div className="inline-flex items-center gap-1 whitespace-nowrap">
       <LightbulbIcon className="size-3 flex-none" />
@@ -282,25 +266,10 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
           )}
         </CommandEmpty>
 
-        {searchGroups.length === 0 && (
-          <CommandGroup
-            heading={actionModeHint}
-            className="[&_[cmdk-group-heading]]:text-xs overflow-visible"
-          />
-        )}
-        {searchGroups.length > 0 && (
-          <CommandGroup className="overflow-visible !px-2 py-0 [&_[cmdk-item]]:py-2.5!">
-            {/* `disabled` keeps it out of the keyboard navigation, while still
-                counting as a visible item so that cmdk doesn't hide the group */}
-            <CommandItem
-              disabled
-              value={SEARCH_RESULTS_HINT_VALUE}
-              className="px-0 py-0 text-xs text-muted-foreground data-[disabled='true']:opacity-100 font-medium [&[cmdk-item]_svg]:size-3"
-            >
-              {searchItemHint}
-            </CommandItem>
-          </CommandGroup>
-        )}
+        <CommandGroup
+          heading={actionModeHint}
+          className="[&_[cmdk-group-heading]]:text-xs overflow-visible"
+        />
 
         {navigationGroups.map((group, groupIndex) => (
           <React.Fragment key={group.heading}>
@@ -349,7 +318,10 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
                     key={item.resource.id}
                     value={`${item.parents.join(" ")} ${item.title} ${item.resource.type} ${item.resource.id}`}
                     onSelect={() => runCommand(() => navigate(item.href))}
-                    className="h-9 flex items-center gap-2 px-0"
+                    className={cn(
+                      "h-9 flex items-center gap-2 px-0",
+                      "aria-selected:*:data-[slot=kbd-shortcuts]:inline-block"
+                    )}
                   >
                     <item.icon className="flex-none text-grey size-4" />
                     <div className="inline-flex gap-0.5 items-baseline w-full">
@@ -364,6 +336,20 @@ export function CommandBar({ navGroups = [], authedUser }: CommandBarProps) {
                       <p className="text-card-foreground font-medium">
                         {item.title}
                       </p>
+                    </div>
+                    <div
+                      className="whitespace-nowrap hidden text-xs"
+                      data-slot="kbd-shortcuts"
+                    >
+                      <kbd className="rounded-sm px-1  font-mono bg-muted">
+                        Enter
+                      </kbd>{" "}
+                      <span>to go to</span>
+                      <span>&nbsp;&nbsp;</span>
+                      <kbd className="rounded-sm px-1  font-mono bg-muted">
+                        Tab
+                      </kbd>{" "}
+                      <span>to select</span>
                     </div>
                   </CommandItem>
                 ))}
