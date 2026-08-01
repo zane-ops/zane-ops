@@ -369,7 +369,7 @@ export function CommandBar({
                             <ChevronRightIcon className="size-4 flex-none text-grey relative top-1" />
                           </React.Fragment>
                         ))}
-                        <p className="text-card-foreground font-medium">
+                        <p className="text-card-foreground font-medium whitespace-nowrap overflow-ellipsis">
                           {item.title}
                         </p>
                       </div>
@@ -380,7 +380,7 @@ export function CommandBar({
                         <kbd className="rounded-sm px-1  font-mono bg-muted">
                           Enter
                         </kbd>{" "}
-                        <span>to go to</span>
+                        <span>to jump to</span>
                         <span>&nbsp;&nbsp;</span>
                         <kbd className="rounded-sm px-1  font-mono bg-muted">
                           Tab
