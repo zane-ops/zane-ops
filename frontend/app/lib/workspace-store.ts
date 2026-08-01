@@ -105,6 +105,7 @@ getQueryClient()
     // if we query is removed, normally the page should get updated before
     // components, but while the page is loading, this component get updated and rerender all its subscribers
     if (event.type !== "removed" && event.query.queryHash === authedUserHash) {
+      logger.scope("getQueryClient", "subscribe").info({ event });
       syncWorkspaceStore(
         event.query.state.data as AuthedUserResponse | undefined
       );
