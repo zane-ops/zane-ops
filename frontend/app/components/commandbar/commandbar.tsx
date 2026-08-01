@@ -97,27 +97,6 @@ export function CommandBar({
     initialData: authedUser
   });
 
-  const handleOpenChange = React.useCallback(
-    (nextOpen: boolean) => {
-      setOpen(nextOpen);
-      if (!nextOpen) {
-        setSearch("");
-      }
-    },
-    [setOpen]
-  );
-
-  const navigate = useNavigate();
-
-  const runCommand = React.useCallback(
-    (command: () => void) => {
-      command();
-      setOpen(false);
-      setSearch("");
-    },
-    [setOpen]
-  );
-
   const [debouncedValue] = useDebounce(search, 150);
   const isActionMode = search.startsWith(">");
 
@@ -150,6 +129,30 @@ export function CommandBar({
           : []
       ),
     [resourceListData, search]
+  );
+
+  const [selectedResource, setSelectedResource] =
+    React.useState<SearchResource | null>(null);
+
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      setOpen(nextOpen);
+      if (!nextOpen) {
+        setSearch("");
+      }
+    },
+    [setOpen]
+  );
+
+  const navigate = useNavigate();
+
+  const runCommand = React.useCallback(
+    (command: () => void) => {
+      command();
+      setOpen(false);
+      setSearch("");
+    },
+    [setOpen]
   );
 
   React.useEffect(() => {
