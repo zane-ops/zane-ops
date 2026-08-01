@@ -21,7 +21,7 @@ import { cn, hasMinRole } from "~/lib/utils";
 
 import type { ServerSettings } from "~/api/types";
 import { CommandBar } from "~/components/commandbar/commandbar";
-// import { useCommandBarActionGroups } from "~/components/commandbar/commandbar-actions";
+import { useCommandBarActionGroups } from "~/components/commandbar/commandbar-actions";
 import { MAIN_NAV_GROUPS } from "~/components/commandbar/commandbar-nav-items";
 import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
 import { createDevLogger } from "~/lib/logger";
@@ -71,7 +71,7 @@ export default function MainLayout({ loaderData }: Route.ComponentProps) {
     initialData: loaderData.user
   });
 
-  // const actionGroups = useCommandBarActionGroups();
+  const actionGroups = useCommandBarActionGroups();
 
   if (!user) return null;
 
@@ -81,7 +81,7 @@ export default function MainLayout({ loaderData }: Route.ComponentProps) {
 
       <CommandBar
         navGroups={MAIN_NAV_GROUPS}
-        // actionGroups={actionGroups}
+        actionGroups={actionGroups}
         authedUser={user}
       />
 
