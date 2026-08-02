@@ -30,7 +30,7 @@ import {
   CommandSeparator
 } from "~/components/ui/command";
 import { userQueries } from "~/lib/queries";
-import { cn, excerpt } from "~/lib/utils";
+import { cn } from "~/lib/utils";
 
 export type CommandBarProps = {
   navGroups?: CommandBarNavGroup[];
