@@ -381,21 +381,25 @@ export async function toggleServiceStateToast({
   while (total_tries < MAX_TRIES && currentState !== desiredState) {
     total_tries++;
 
-    // refetch queries to get fresh data
-    const deploymentList =
-      (
-        await queryClient.fetchQuery(
-          serviceQueries.deploymentList({
-            workspaceId,
-            project_slug: projectSlug,
-            service_slug: serviceSlug,
-            env_slug: envSlug
-          })
-        )
-      )?.results ?? [];
+    try {
+      // refetch queries to get fresh data
+      const deploymentList =
+        (
+          await queryClient.fetchQuery(
+            serviceQueries.deploymentList({
+              workspaceId,
+              project_slug: projectSlug,
+              service_slug: serviceSlug,
+              env_slug: envSlug
+            })
+          )
+        )?.results ?? [];
 
-    currentProductionDeployment =
-      deploymentList.find((dpl) => dpl.is_current_production) ?? null;
+      currentProductionDeployment =
+        deploymentList.find((dpl) => dpl.is_current_production) ?? null;
+    } catch (error) {
+      currentProductionDeployment = null;
+    }
 
     if (!currentProductionDeployment) break;
 
