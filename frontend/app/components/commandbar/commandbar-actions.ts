@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { href, useFetcher } from "react-router";
-import type { CommandBarActionGroup } from "~/components/commandbar/commandbar";
+import type { CommandBarActionGroup } from "~/components/commandbar/commandbar-types";
 import { type Theme, useThemeStore } from "~/components/theme-store";
 
 const THEME_ACTIONS = [

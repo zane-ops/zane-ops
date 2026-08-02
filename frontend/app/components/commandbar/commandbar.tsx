@@ -4,20 +4,21 @@ import {
   ChevronRightIcon,
   LightbulbIcon,
   LoaderIcon,
-  type LucideIcon,
   XIcon
 } from "lucide-react";
 import React from "react";
 import { useNavigate } from "react-router";
-import { useDebounce } from "use-debounce";
-import type { AuthedUserResponse, SearchResource, UserRole } from "~/api/types";
+import type { AuthedUserResponse } from "~/api/types";
 import { useResourceActionGroups } from "~/components/commandbar/commandbar-resource-actions";
 import {
   getNavItemFromSearchResource,
-  getSearchItemValue,
-  useCommandBarSearch
+  getSearchItemValue
 } from "~/components/commandbar/commandbar-search";
-import { useCommandBarStore } from "~/components/commandbar/commandbar-store";
+import { useCommandBarState } from "~/components/commandbar/commandbar-state";
+import type {
+  CommandBarActionGroup,
+  CommandBarNavGroup
+} from "~/components/commandbar/commandbar-types";
 import { filterGroupsByRole } from "~/components/commandbar/commandbar-utils";
 import { Button } from "~/components/ui/button";
 import {
@@ -28,55 +29,8 @@ import {
   CommandList,
   CommandSeparator
 } from "~/components/ui/command";
-import { createDevLogger } from "~/lib/logger";
 import { userQueries } from "~/lib/queries";
-import { cn, excerpt, isEditableTarget } from "~/lib/utils";
-
-const logger = createDevLogger(import.meta.url);
-
-export type CommandBarNavGroup = {
-  heading: string;
-  items: CommandBarNavItem[];
-  minRole?: UserRole;
-};
-
-export type CommandBarNavItem = {
-  href: string;
-  title: string;
-  icon: LucideIcon;
-  showInEE?: boolean;
-  minRole?: UserRole;
-};
-
-export type CommandBarSearchItem = Omit<
-  CommandBarNavItem,
-  "showInEE" | "minRole"
-> & {
-  resource: SearchResource;
-  /** ancestors of the resource, ex: `["my-project", "production"]` for a service */
-  parents: string[];
-};
-
-export type CommandBarSearchGroup = {
-  heading: string;
-  items: CommandBarSearchItem[];
-};
-
-export type CommandBarAction = {
-  id: string;
-  title: string;
-  icon: LucideIcon;
-  /** where to navigate to, runs after `onSelect` when both are set */
-  href?: string;
-  onSelect?: () => void;
-  minRole?: UserRole;
-};
-
-export type CommandBarActionGroup = {
-  heading: string;
-  items: CommandBarAction[];
-  minRole?: UserRole;
-};
+import { cn, excerpt } from "~/lib/utils";
 
 export type CommandBarProps = {
   navGroups?: CommandBarNavGroup[];
@@ -89,43 +43,45 @@ export function CommandBar({
   actionGroups = [],
   authedUser
 }: CommandBarProps) {
-  const { open, setOpen, toggle } = useCommandBarStore();
-  const [search, setSearch] = React.useState("");
-
-  const { data } = useQuery({
+  const { data: user } = useQuery({
     ...userQueries.authedUser,
     initialData: authedUser
   });
 
-  const [debouncedValue] = useDebounce(search, 150);
-  const isActionMode = search.startsWith(">");
-
-  const [selectedResource, setSelectedResource] =
-    React.useState<SearchResource | null>(null);
-
-  const { searchGroups, searchItemsByValue, isLoading, isFetching } =
-    useCommandBarSearch({
-      search,
-      debouncedSearch: debouncedValue,
-      isOpen: open,
-      isPaused: isActionMode || selectedResource !== null
-    });
+  const {
+    open,
+    search,
+    setSearch,
+    isActionMode,
+    selectedResource,
+    highlightedValue,
+    setHighlightedValue,
+    inputRef,
+    clearSelectedResource,
+    handleOpenChange,
+    handleCmdInputKeyDown,
+    handleCmdBarKeyDown,
+    runCmd,
+    searchGroups,
+    isLoading,
+    isFetching
+  } = useCommandBarState();
 
   const navigationGroups = React.useMemo(
-    () => filterGroupsByRole(navGroups, data),
-    [navGroups, data]
+    () => filterGroupsByRole(navGroups, user),
+    [navGroups, user]
   );
 
   const actionModeGroups = React.useMemo(
-    () => filterGroupsByRole(actionGroups, data),
-    [actionGroups, data]
+    () => filterGroupsByRole(actionGroups, user),
+    [actionGroups, user]
   );
+
+  const resourceActionGroups = useResourceActionGroups(selectedResource, user);
 
   const selectedItem = selectedResource
     ? getNavItemFromSearchResource(selectedResource)
     : null;
-
-  const resourceActionGroups = useResourceActionGroups(selectedResource, data);
 
   // the resource context & the action mode both render `CommandBarActionGroup`s
   const commandActionsGroups = selectedResource
@@ -134,104 +90,9 @@ export function CommandBar({
       ? actionModeGroups
       : [];
 
-  /** the value of the item currently highlighted in the list */
-  const [highlightedValue, setHighlightedValue] = React.useState("");
-
-  const clearSelectedResource = React.useCallback(() => {
-    setSearch("");
-    setSelectedResource(null);
-  }, []);
-
-  const handleOpenChange = React.useCallback(
-    (nextOpen: boolean) => {
-      logger
-        .scope("CommandBar", "handleOpenChange")
-        .info({ selectedResource, nextOpen });
-
-      if (!nextOpen && selectedResource) return;
-
-      if (!nextOpen) clearSelectedResource();
-
-      setOpen(nextOpen);
-    },
-    [setOpen, selectedResource]
-  );
-
-  const handleInputKeyDown = React.useCallback(
-    (ev: React.KeyboardEvent<HTMLDivElement>) => {
-      // `Tab` selects whatever is highlighted if found
-      if (ev.key === "Tab") {
-        const item = searchItemsByValue.get(highlightedValue);
-
-        logger
-          .scope("handleInputKeyDown")
-          .info({ highlightedValue, item, searchItemsByValue });
-
-        ev.preventDefault();
-        ev.stopPropagation();
-
-        if (!item) return;
-
-        setSearch("");
-        setSelectedResource(item.resource);
-      }
-    },
-    [searchItemsByValue, highlightedValue]
-  );
-
-  const handleCommandBarKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      // `escape` clears the context first, it only closes the dialog
-      // once there is nothing left to clear
-      logger
-        .scope("CommandBar", "handleCommandBarKeyDown")
-        .info({ selectedResource, "event.key": event.key });
-
-      if (event.key === "Escape" && selectedResource) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        clearSelectedResource();
-      }
-    },
-    [selectedResource]
-  );
-
   const navigate = useNavigate();
 
-  const runCommand = React.useCallback(
-    (command: () => void) => {
-      command();
-      setOpen(false);
-      clearSelectedResource();
-    },
-    [setOpen, clearSelectedResource]
-  );
-
-  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
-
-  React.useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (
-        event.key.toLowerCase() !== "k" ||
-        !(event.metaKey || event.ctrlKey)
-      ) {
-        return;
-      }
-
-      if (!open && isEditableTarget(event.target)) {
-        return;
-      }
-
-      event.preventDefault();
-      toggle();
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, toggle]);
-
-  if (!data?.user) return null;
+  if (!user?.user) return null;
 
   const actionModeHint = (
     <div className="inline-flex items-center gap-1 text-muted-foreground">
@@ -264,7 +125,7 @@ export function CommandBar({
         loop: true,
         value: highlightedValue,
         onValueChange: setHighlightedValue,
-        onKeyDown: handleCommandBarKeyDown,
+        onKeyDown: handleCmdBarKeyDown,
         filter(value, query) {
           let search = query;
           if (query.startsWith(">")) {
@@ -314,7 +175,7 @@ export function CommandBar({
         <div className="flex items-center gap-1 w-full px-0">
           <CommandPrimitive.Input
             autoFocus
-            onKeyDown={handleInputKeyDown}
+            onKeyDown={handleCmdInputKeyDown}
             placeholder={
               selectedItem
                 ? `Search actions for ${selectedItem.title}...`
@@ -377,7 +238,7 @@ export function CommandBar({
                   key={action.id}
                   value={`${action.title} ${group.heading}`}
                   onSelect={() =>
-                    runCommand(() => {
+                    runCmd(() => {
                       // both can be set: `onSelect` runs the action &
                       // `href` is where the user lands afterwards
                       action.onSelect?.();
@@ -416,7 +277,7 @@ export function CommandBar({
                   <CommandItem
                     key={item.href}
                     value={`${item.title} ${group.heading}`}
-                    onSelect={() => runCommand(() => navigate(item.href))}
+                    onSelect={() => runCmd(() => navigate(item.href))}
                     className="h-9 flex items-center gap-2 px-0 font-medium"
                   >
                     <item.icon className="flex-none text-grey size-4" />
@@ -449,7 +310,7 @@ export function CommandBar({
                     <CommandItem
                       key={item.resource.id}
                       value={getSearchItemValue(item)}
-                      onSelect={() => runCommand(() => navigate(item.href))}
+                      onSelect={() => runCmd(() => navigate(item.href))}
                       className={cn(
                         "h-9 flex items-center gap-2 px-0",
                         "aria-selected:*:data-[slot=kbd-shortcuts]:inline-block"

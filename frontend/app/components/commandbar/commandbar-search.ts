@@ -13,7 +13,7 @@ import type { SearchResource } from "~/api/types";
 import type {
   CommandBarSearchGroup,
   CommandBarSearchItem
-} from "~/components/commandbar/commandbar";
+} from "~/components/commandbar/commandbar-types";
 import { resourceQueries } from "~/lib/queries";
 import { useWorkspaceStore } from "~/lib/workspace-store";
 

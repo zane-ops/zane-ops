@@ -12,7 +12,7 @@ import {
   UsersIcon
 } from "lucide-react";
 import { href } from "react-router";
-import type { CommandBarNavGroup } from "~/components/commandbar/commandbar";
+import type { CommandBarNavGroup } from "~/components/commandbar/commandbar-types";
 
 export const WORKSPACE_NAV_GROUP: CommandBarNavGroup = {
   heading: "Workspace",

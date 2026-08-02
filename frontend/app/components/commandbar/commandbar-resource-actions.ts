@@ -15,7 +15,7 @@ import * as React from "react";
 import { href, useFetcher } from "react-router";
 import { toast } from "sonner";
 import type { AuthedUserResponse, SearchResource } from "~/api/types";
-import type { CommandBarActionGroup } from "~/components/commandbar/commandbar";
+import type { CommandBarActionGroup } from "~/components/commandbar/commandbar-types";
 import { filterGroupsByRole } from "~/components/commandbar/commandbar-utils";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import { useWorkspaceStore } from "~/lib/workspace-store";
