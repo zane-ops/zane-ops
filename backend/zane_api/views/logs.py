@@ -129,20 +129,31 @@ class LogIngestAPIView(APIView):
                             except json.JSONDecodeError:
                                 pass
                             else:
-                                service_id = content.get("zane_service_id")
-                                stack_id = content.get("zane_stack_id")
-                                registry_id = content.get("zane_registry_id")
-                                if service_id or stack_id or registry_id:
-                                    log_serializer = HTTPServiceLogSerializer(
-                                        data=content
-                                    )
-                                    if log_serializer.is_valid():
-                                        log_content: dict = log_serializer.data  # type: ignore
+                                log_serializer = HTTPServiceLogSerializer(data=content)
+                                if log_serializer.is_valid():
+                                    log_content = cast(dict, log_serializer.data)
 
-                                        service_type = log_content.get(
-                                            "zane_service_type"
-                                        )
+                                    service_type = log_content.get("zane_service_type")
+                                    service_id = log_content.get("zane_service_id")
+                                    stack_id = log_content.get("zane_stack_id")
+                                    registry_id = log_content.get("zane_registry_id")
+
+                                    if (
+                                        service_id
+                                        or stack_id
+                                        or registry_id
+                                        or service_type
+                                        == ZaneProxyClient.ServiceType.ZANE_OPS
+                                    ):
                                         match service_type:
+                                            case ZaneProxyClient.ServiceType.ZANE_OPS:
+                                                http_logs.append(
+                                                    _build_http_log(
+                                                        log["time"],
+                                                        log_content,
+                                                        source=HttpLog.LogSource.ZANE_OPS,
+                                                    )
+                                                )
                                             case ZaneProxyClient.ServiceType.BUILD_REGISTRY:
                                                 if registry_id:
                                                     http_logs.append(
@@ -150,6 +161,7 @@ class LogIngestAPIView(APIView):
                                                             log["time"],
                                                             log_content,
                                                             registry_id=registry_id,
+                                                            source=HttpLog.LogSource.BUILD_REGISTRY,
                                                         )
                                                     )
                                             case ZaneProxyClient.ServiceType.COMPOSE_STACK_SERVICE:
@@ -163,6 +175,7 @@ class LogIngestAPIView(APIView):
                                                             log_content,
                                                             stack_id=stack_id,
                                                             stack_service_name=stack_service_name,
+                                                            source=HttpLog.LogSource.COMPOSE_STACK,
                                                         )
                                                     )
                                             case ZaneProxyClient.ServiceType.MANAGED_SERVICE:
@@ -198,6 +211,7 @@ class LogIngestAPIView(APIView):
                                                                 "zane_service_id"
                                                             ),
                                                             deployment_id=deployment_id,
+                                                            source=HttpLog.LogSource.SERVICE,
                                                         )
                                                     )
 
