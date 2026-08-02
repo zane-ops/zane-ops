@@ -459,6 +459,9 @@ try:
 except Exception:
     TEMPORALIO_MAX_CONCURRENT_DEPLOYS = 5
 
+ZANE_OPS_STATIC_PATH_PREFIXES = ("/assets/", "/fonts/", "/logo/")
+ZANE_OPS_PROXY_APP_NAME = "zane_ops"
+
 if BACKEND_COMPONENT == "API" and not TESTING:
     register_zaneops_app_on_proxy(
         proxy_url=CADDY_PROXY_ADMIN_HOST,
@@ -467,6 +470,7 @@ if BACKEND_COMPONENT == "API" and not TESTING:
         zane_api_internal_domain=ZANE_API_SERVICE_INTERNAL_DOMAIN,
         internal_tls=DEBUG,
         cloudflare_api_token=CLOUDFLARE_API_TOKEN,
+        app_name=ZANE_OPS_PROXY_APP_NAME,
     )
 
 # Docker image version

@@ -81,9 +81,11 @@ def _build_http_log(
     log_source = HttpLog.LogSource.UNKNOWN
 
     # Static files should be ignored
-    ZANE_OPS_IGNORED_PATH_PREFIXES = ("/assets/", "/fonts/", "/logo/")
     is_zaneops_ignored_path = any(
-        [full_url.path.startswith(path) for path in ZANE_OPS_IGNORED_PATH_PREFIXES],
+        [
+            full_url.path.startswith(path)
+            for path in settings.ZANE_OPS_STATIC_PATH_PREFIXES
+        ],
     )
     match source:
         case ZaneProxyClient.ServiceType.MANAGED_SERVICE:
