@@ -13,8 +13,8 @@ import {
   NetworkIcon,
   XIcon
 } from "lucide-react";
-import * as React from "react";
-import { data, href, useNavigate } from "react-router";
+import React from "react";
+import { href, useNavigate } from "react-router";
 import { useDebounce } from "use-debounce";
 import type { AuthedUserResponse, SearchResource, UserRole } from "~/api/types";
 import { getResourceActionGroups } from "~/components/commandbar/commandbar-resource-actions";
@@ -244,10 +244,12 @@ export function CommandBar({
     (command: () => void) => {
       command();
       setOpen(false);
-      setSearch("");
+      clearSelectedResource();
     },
-    [setOpen]
+    [setOpen, clearSelectedResource]
   );
+
+  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -324,7 +326,10 @@ export function CommandBar({
           variant="outline"
           className={cn("text-xs gap-1.5", selectedItem && "pr-1")}
           onClick={() => {
-            if (selectedItem) clearSelectedResource();
+            if (selectedItem) {
+              clearSelectedResource();
+              inputRef.current?.focus();
+            }
           }}
         >
           {selectedItem ? (
@@ -352,6 +357,7 @@ export function CommandBar({
             }
             className="text-base bg-inherit focus-visible:outline-hidden px-2 w-full grow"
             value={search}
+            ref={inputRef}
             onValueChange={setSearch}
           />
         </div>
@@ -389,7 +395,7 @@ export function CommandBar({
           />
         )}
 
-        {/* Actions for a selected item */}
+        {/* Actions for a selected item/Global actions */}
         {commandActionsGroups.map((group, groupIndex) => (
           <React.Fragment key={group.heading}>
             {groupIndex > 0 && <CommandSeparator />}
