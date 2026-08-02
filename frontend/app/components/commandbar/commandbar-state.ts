@@ -122,11 +122,12 @@ export function useCommandBarState() {
 
       event.preventDefault();
       toggle();
+      if (open) clearSelectedResource();
     }
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, toggle]);
+  }, [open, toggle, clearSelectedResource]);
 
   return {
     open,

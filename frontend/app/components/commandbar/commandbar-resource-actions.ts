@@ -1,11 +1,14 @@
 import {
   BookDashedIcon,
   BoxIcon,
+  BoxesIcon,
   ChartNoAxesColumn,
   ContainerIcon,
   GlobeIcon,
   KeyRoundIcon,
+  LayersPlusIcon,
   NetworkIcon,
+  PackagePlusIcon,
   PauseIcon,
   PlayIcon,
   RocketIcon,
@@ -69,7 +72,10 @@ export function getResourceActionGroups(
 ): CommandBarActionGroup[] {
   switch (resource.type) {
     case "project": {
-      const projectSlug = resource.slug;
+      const params = {
+        projectSlug: resource.slug,
+        envSlug: "production"
+      };
 
       return [
         {
@@ -78,18 +84,13 @@ export function getResourceActionGroups(
             {
               id: "project-production",
               title: "Production Environment",
-              href: href("/workspace/project/:projectSlug/:envSlug", {
-                projectSlug,
-                envSlug: "production"
-              }),
+              href: href("/workspace/project/:projectSlug/:envSlug", params),
               icon: ContainerIcon
             },
             {
               id: "project-settings",
               title: "General Settings",
-              href: href("/workspace/project/:projectSlug/settings", {
-                projectSlug
-              }),
+              href: href("/workspace/project/:projectSlug/settings", params),
               icon: SettingsIcon
             },
             {
@@ -97,7 +98,7 @@ export function getResourceActionGroups(
               title: "Environments",
               href: href(
                 "/workspace/project/:projectSlug/settings/environments",
-                { projectSlug }
+                params
               ),
               icon: NetworkIcon,
               minRole: "Member"
@@ -107,10 +108,35 @@ export function getResourceActionGroups(
               title: "Preview Templates",
               href: href(
                 "/workspace/project/:projectSlug/settings/preview-templates",
-                { projectSlug }
+                params
               ),
               icon: BookDashedIcon,
               minRole: "Admin"
+            }
+          ]
+        },
+        {
+          heading: "Actions",
+          items: [
+            {
+              id: "create-service",
+              title: "Create Service In Production Env",
+              href: href(
+                "/workspace/project/:projectSlug/:envSlug/create-service",
+                params
+              ),
+              icon: PackagePlusIcon,
+              minRole: "Member"
+            },
+            {
+              id: "create-compose-stack",
+              title: "Create Compose Stack In Production Env",
+              href: href(
+                "/workspace/project/:projectSlug/:envSlug/create-compose-stack",
+                params
+              ),
+              icon: LayersPlusIcon,
+              minRole: "Member"
             }
           ]
         }
@@ -150,6 +176,31 @@ export function getResourceActionGroups(
                 params
               ),
               icon: SettingsIcon
+            }
+          ]
+        },
+        {
+          heading: "Actions",
+          items: [
+            {
+              id: "create-service",
+              title: "Create Service",
+              href: href(
+                "/workspace/project/:projectSlug/:envSlug/create-service",
+                params
+              ),
+              icon: PackagePlusIcon,
+              minRole: "Member"
+            },
+            {
+              id: "create-compose-stack",
+              title: "Create Compose Stack",
+              href: href(
+                "/workspace/project/:projectSlug/:envSlug/create-compose-stack",
+                params
+              ),
+              icon: LayersPlusIcon,
+              minRole: "Member"
             }
           ]
         }
