@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useDebounce } from "@uidotdev/usehooks";
 import {
   BoxesIcon,
   ContainerIcon,
@@ -9,7 +10,6 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { href } from "react-router";
-import { useDebounce } from "use-debounce";
 import type { SearchResource } from "~/api/types";
 import type {
   CommandBarSearchGroup,
@@ -139,7 +139,7 @@ export function useCommandBarSearch({
 }: UseCommandBarSearchOptions) {
   const workspaceId = useWorkspaceStore((s) => s.workspace?.id);
 
-  const [debouncedSearch] = useDebounce(search, 150);
+  const debouncedSearch = useDebounce(search, 150);
 
   const { data, isLoading, isFetching } = useQuery({
     ...resourceQueries.search(workspaceId ?? "", debouncedSearch),

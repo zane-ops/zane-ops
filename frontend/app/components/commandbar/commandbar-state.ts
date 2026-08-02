@@ -1,5 +1,4 @@
 import * as React from "react";
-import { useDebounce } from "use-debounce";
 import type { SearchResource } from "~/api/types";
 import { useCommandBarSearch } from "~/components/commandbar/commandbar-search";
 import { useCommandBarStore } from "~/components/commandbar/commandbar-store";
@@ -47,7 +46,7 @@ export function useCommandBarState() {
   const handleOpenChange = React.useCallback(
     (nextOpen: boolean) => {
       logger
-        .scope("CommandBar", "handleOpenChange")
+        .scope("useCommandBarState", "handleOpenChange")
         .info({ selectedResource, nextOpen });
 
       if (!nextOpen && selectedResource) return;
@@ -66,7 +65,7 @@ export function useCommandBarState() {
         const item = searchItemsByValue.get(highlightedValue);
 
         logger
-          .scope("handleCmdInputKeyDown")
+          .scope("useCommandBarState", "handleCmdInputKeyDown")
           .info({ highlightedValue, item, searchItemsByValue });
 
         ev.preventDefault();
@@ -86,7 +85,7 @@ export function useCommandBarState() {
       // `escape` clears the context first, it only closes the dialog
       // once there is nothing left to clear
       logger
-        .scope("CommandBar", "handleCmdBarKeyDown")
+        .scope("useCommandBarState", "handleCmdBarKeyDown")
         .info({ selectedResource, "event.key": event.key });
 
       if (event.key === "Escape" && selectedResource) {
