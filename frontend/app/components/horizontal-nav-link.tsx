@@ -9,7 +9,7 @@ export type NavItem = {
   disabled?: boolean;
 };
 
-export function NavLink({ className, ...props }: NavLinkProps) {
+export function HorizontalNavLink({ className, ...props }: NavLinkProps) {
   return (
     <ReactRouterNavLink
       {...props}

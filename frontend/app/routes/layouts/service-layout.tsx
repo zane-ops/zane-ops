@@ -17,7 +17,10 @@ import {
   SettingsIcon
 } from "lucide-react";
 import { Outlet, useLocation, useParams } from "react-router";
-import { type NavItem, NavLink } from "~/components/nav-link";
+import {
+  HorizontalNavLink,
+  type NavItem
+} from "~/components/horizontal-nav-link";
 import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
 import { ServiceChangesModal } from "~/routes/services/components/service-changes-modal";
@@ -517,10 +520,10 @@ export default function ServiceDetailsLayout({
         >
           {navItems.map((item) => (
             <li key={item.href}>
-              <NavLink to={item.href}>
+              <HorizontalNavLink to={item.href}>
                 <span>{item.title}</span>
                 <item.icon className="flex-none size-4" />
-              </NavLink>
+              </HorizontalNavLink>
             </li>
           ))}
         </ul>

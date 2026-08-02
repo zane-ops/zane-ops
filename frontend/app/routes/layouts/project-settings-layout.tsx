@@ -1,6 +1,6 @@
 import { BookDashedIcon, NetworkIcon, SettingsIcon } from "lucide-react";
 import { Link, NavLink, Outlet, href } from "react-router";
-import type { NavItem } from "~/components/nav-link";
+import type { NavItem } from "~/components/horizontal-nav-link";
 import { Button } from "~/components/ui/button";
 import { projectQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";

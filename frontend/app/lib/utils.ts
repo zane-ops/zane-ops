@@ -4,11 +4,10 @@ import { twMerge } from "tailwind-merge";
 import { apiClient } from "~/api/client";
 import type {
   AuthedUserResponse,
+  UserRole,
   WorkspaceInvitation,
   WorkspaceMember,
-  WorkspaceMembership,
-  WorkspaceRoleName,
-  WorkspaceRoleValue
+  WorkspaceMembership
 } from "~/api/types";
 import { WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
 import { createDevLogger } from "~/lib/logger";
@@ -619,7 +618,7 @@ export type UserWithMembership =
 
 export function hasMinRole(
   user: UserWithMembership,
-  roleName: WorkspaceRoleName | "ServerAdmin"
+  roleName: UserRole
 ): boolean {
   if (roleName === "ServerAdmin") {
     return (
@@ -648,4 +647,11 @@ export function getUserDisplayName(
   user: Pick<AuthedUserResponse["user"], "first_name" | "username">
 ) {
   return user.first_name.trim() ? user.first_name : user.username;
+}
+
+export function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tagName = target.tagName;
+  return ["input", "textarea", "select"].includes(tagName.toLowerCase());
 }

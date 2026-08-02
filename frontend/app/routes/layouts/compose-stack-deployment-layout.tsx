@@ -8,7 +8,10 @@ import {
 } from "lucide-react";
 import { Link, Outlet, useFetcher } from "react-router";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
-import { type NavItem, NavLink } from "~/components/nav-link";
+import {
+  HorizontalNavLink,
+  type NavItem
+} from "~/components/horizontal-nav-link";
 import { SubmitButton } from "~/components/ui/button";
 import { composeStackQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
@@ -160,10 +163,10 @@ export default function ComposeStackDeploymentLayoutPage({
         >
           {navItems.map((item) => (
             <li key={item.href}>
-              <NavLink to={item.href} prefetch="viewport">
+              <HorizontalNavLink to={item.href} prefetch="viewport">
                 <span>{item.title}</span>
                 <item.icon size={15} className="flex-none" />
-              </NavLink>
+              </HorizontalNavLink>
             </li>
           ))}
         </ul>

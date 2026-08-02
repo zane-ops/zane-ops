@@ -9,12 +9,11 @@ import {
 import { href, redirect } from "react-router";
 import { preprocess, z } from "zod";
 import { zfd } from "zod-form-data";
-import type { ApiResponse, RequestInput, RequestParams } from "~/api/client";
+import type { ApiResponse, RequestParams } from "~/api/client";
 import { apiClient } from "~/api/client";
 import type {
   TemplateDetailsApiResponse,
-  TemplateSearchAPIResponse,
-  WorkspaceMembership
+  TemplateSearchAPIResponse
 } from "~/api/types";
 import {
   DEFAULT_LOGS_PER_PAGE,
@@ -2539,7 +2538,7 @@ export const resourceQueries = {
   search: (workspaceId: string, query?: string) =>
     queryOptions({
       queryKey: [...workspaceKey(workspaceId), "RESOURCES", query] as const,
-      queryFn: ({ signal }) => {
+      queryFn: async ({ signal }) => {
         return apiClient.GET("/api/search-resources/", {
           params: {
             query: {
@@ -2548,8 +2547,7 @@ export const resourceQueries = {
           },
           signal
         });
-      },
-      enabled: (query ?? "").trim().length > 0
+      }
     })
 };
 

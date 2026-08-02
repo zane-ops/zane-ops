@@ -176,9 +176,9 @@ class ResourceSearchAPIView(APIView):
         return Response(
             [
                 *ServiceSearchResponseSerializer(services_list, many=True).data,
+                *ComposeStackSearchResponseSerializer(stacks_list, many=True).data,
                 *ProjectSearchResponseSerializer(projects_list, many=True).data,
                 *EnvironmentSearchResponseSerializer(environments_list, many=True).data,
-                *ComposeStackSearchResponseSerializer(stacks_list, many=True).data,
             ],
             status=status.HTTP_200_OK,
         )

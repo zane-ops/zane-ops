@@ -2,8 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BanIcon,
   CheckIcon,
-  GithubIcon,
-  GitlabIcon,
   InfoIcon,
   LoaderIcon,
   PencilLineIcon,
@@ -17,8 +15,9 @@ import type { Service } from "~/api/types";
 import { Code } from "~/components/code";
 import { GitRepositoryBranchListInput } from "~/components/git-repository-branch-list-input";
 import { GitRepositoryListInput } from "~/components/git-repository-list-input";
-import { Button } from "~/components/ui/button";
-import { SubmitButton } from "~/components/ui/button";
+import { GithubLogo } from "~/components/github-logo";
+import { GitlabLogo } from "~/components/gitlab-logo";
+import { Button, SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetInput,
@@ -221,13 +220,15 @@ export function ServiceGitSourceForm({
                     placeholder="Select a Git app"
                   />
                   {!selectedGitApp && (
-                    <BanIcon className="opacity-50" size={15} />
+                    <BanIcon className="opacity-50 size-4 flex-none" />
                   )}
                   {selectedGitApp?.github && (
-                    <GithubIcon className="opacity-50" size={15} />
+                    <GithubLogo className="opacity-50 size-4 flex-none" />
                   )}
                   {selectedGitApp?.gitlab && (
-                    <GitlabIcon className="opacity-50" size={15} />
+                    <div className="max-w-4 max-h-4 flex items-center flex-none justify-center">
+                      <GitlabLogo className="flex-none size-8 [&_path]:fill-orange-400!" />
+                    </div>
                   )}
                 </div>
               </SelectTrigger>
@@ -247,7 +248,7 @@ export function ServiceGitSourceForm({
                       disabled={!gitapp.github.is_installed}
                       value={gitapp.id}
                       className="text-grey font-mono flex items-center gap-2"
-                      rightIcon={GithubIcon}
+                      rightIcon={GithubLogo}
                     >
                       {gitapp.github.name}
                     </SelectItem>
@@ -256,7 +257,14 @@ export function ServiceGitSourceForm({
                       key={gitapp.id}
                       value={gitapp.id}
                       className="text-grey font-mono flex items-center gap-2"
-                      rightIcon={GitlabIcon}
+                      rightIcon={({ className, ...props }) => (
+                        <div className="max-w-4 max-h-4 flex items-center flex-none justify-center">
+                          <GitlabLogo
+                            className="flex-none size-8 [&_path]:fill-orange-400!"
+                            {...props}
+                          />
+                        </div>
+                      )}
                     >
                       {gitapp.gitlab.name}
                     </SelectItem>

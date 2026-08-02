@@ -53,6 +53,7 @@ export type WorkspaceInvitationLink = ApiResponse<
 >;
 
 export type WorkspaceRoleName = WorkspaceMember["role_name"];
+export type UserRole = WorkspaceRoleName | "ServerAdmin";
 export type WorkspaceRoleValue = WorkspaceMember["role"];
 
 export type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
@@ -89,6 +90,10 @@ export type ComposeStackDeployment = ApiResponse<
 >;
 
 export type ServerSettings = ApiResponse<"get", "/api/settings/">;
+export type SearchResource = ApiResponse<
+  "get",
+  "/api/search-resources/"
+>[number];
 
 export type TemplateDocument = {
   id: string;
