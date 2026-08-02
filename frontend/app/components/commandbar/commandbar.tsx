@@ -1,24 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { Command as CommandPrimitive } from "cmdk";
 import {
-  BoxesIcon,
   ChevronRightIcon,
-  ContainerIcon,
-  FolderIcon,
-  GithubIcon,
-  GitlabIcon,
   LightbulbIcon,
   LoaderIcon,
   type LucideIcon,
-  NetworkIcon,
   XIcon
 } from "lucide-react";
 import React from "react";
-import { href, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { useDebounce } from "use-debounce";
 import type { AuthedUserResponse, SearchResource, UserRole } from "~/api/types";
-import { getResourceActionGroups } from "~/components/commandbar/commandbar-resource-actions";
+import { useResourceActionGroups } from "~/components/commandbar/commandbar-resource-actions";
+import {
+  getNavItemFromSearchResource,
+  getSearchItemValue,
+  useCommandBarSearch
+} from "~/components/commandbar/commandbar-search";
 import { useCommandBarStore } from "~/components/commandbar/commandbar-store";
+import { filterGroupsByRole } from "~/components/commandbar/commandbar-utils";
 import { Button } from "~/components/ui/button";
 import {
   CommandDialog,
@@ -29,9 +29,8 @@ import {
   CommandSeparator
 } from "~/components/ui/command";
 import { createDevLogger } from "~/lib/logger";
-import { resourceQueries, userQueries } from "~/lib/queries";
-import { cn, excerpt, hasMinRole, isEditableTarget } from "~/lib/utils";
-import { useWorkspaceStore } from "~/lib/workspace-store";
+import { userQueries } from "~/lib/queries";
+import { cn, excerpt, isEditableTarget } from "~/lib/utils";
 
 const logger = createDevLogger(import.meta.url);
 
@@ -67,6 +66,7 @@ export type CommandBarAction = {
   id: string;
   title: string;
   icon: LucideIcon;
+  /** where to navigate to, runs after `onSelect` when both are set */
   href?: string;
   onSelect?: () => void;
   minRole?: UserRole;
@@ -92,8 +92,6 @@ export function CommandBar({
   const { open, setOpen, toggle } = useCommandBarStore();
   const [search, setSearch] = React.useState("");
 
-  const workspaceId = useWorkspaceStore((s) => s.workspace?.id);
-
   const { data } = useQuery({
     ...userQueries.authedUser,
     initialData: authedUser
@@ -105,20 +103,13 @@ export function CommandBar({
   const [selectedResource, setSelectedResource] =
     React.useState<SearchResource | null>(null);
 
-  const {
-    data: resourceListData,
-    isLoading,
-    isFetching
-  } = useQuery({
-    ...resourceQueries.search(workspaceId ?? "", debouncedValue),
-    enabled: Boolean(
-      workspaceId &&
-        open &&
-        search.trim().length > 0 &&
-        !isActionMode &&
-        !selectedResource
-    )
-  });
+  const { searchGroups, searchItemsByValue, isLoading, isFetching } =
+    useCommandBarSearch({
+      search,
+      debouncedSearch: debouncedValue,
+      isOpen: open,
+      isPaused: isActionMode || selectedResource !== null
+    });
 
   const navigationGroups = React.useMemo(
     () => filterGroupsByRole(navGroups, data),
@@ -130,28 +121,11 @@ export function CommandBar({
     [actionGroups, data]
   );
 
-  const searchGroups = React.useMemo(
-    () =>
-      groupSearchItemsByType(
-        search.trim().length > 0
-          ? getNavItemsFromSearchResources(resourceListData?.data ?? [])
-          : []
-      ),
-    [resourceListData, search]
-  );
-
   const selectedItem = selectedResource
     ? getNavItemFromSearchResource(selectedResource)
     : null;
 
-  const resourceActionGroups = React.useMemo(
-    () =>
-      filterGroupsByRole(
-        selectedResource ? getResourceActionGroups(selectedResource) : [],
-        data
-      ),
-    [selectedResource, data]
-  );
+  const resourceActionGroups = useResourceActionGroups(selectedResource, data);
 
   // the resource context & the action mode both render `CommandBarActionGroup`s
   const commandActionsGroups = selectedResource
@@ -162,19 +136,6 @@ export function CommandBar({
 
   /** the value of the item currently highlighted in the list */
   const [highlightedValue, setHighlightedValue] = React.useState("");
-
-  // `Tab` selects whatever is highlighted, so we need to map it back to its item
-  const searchItemsByValue = React.useMemo(() => {
-    const itemsByValue = new Map<string, CommandBarSearchItem>();
-
-    for (const group of searchGroups) {
-      for (const item of group.items) {
-        itemsByValue.set(getSearchItemValue(item), item);
-      }
-    }
-
-    return itemsByValue;
-  }, [searchGroups]);
 
   const clearSelectedResource = React.useCallback(() => {
     setSearch("");
@@ -217,8 +178,6 @@ export function CommandBar({
     },
     [searchItemsByValue, highlightedValue]
   );
-
-  logger.info({ selectedResource });
 
   const handleCommandBarKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -336,7 +295,13 @@ export function CommandBar({
             <>
               <span className="inline-flex items-center gap-1">
                 <selectedItem.icon className="size-3 flex-none text-grey" />
-                {selectedItem.title}
+                <div className="inline-flex items-center gap-0 5">
+                  <span className="capitalize">
+                    {selectedResource?.type.replace("_", " ") + "s"}
+                  </span>
+                  <ChevronRightIcon className="size-3 flex-none text-grey" />
+                  {selectedItem.title}
+                </div>
               </span>
               <XIcon className="size-3 flex-none" />
             </>
@@ -413,11 +378,12 @@ export function CommandBar({
                   value={`${action.title} ${group.heading}`}
                   onSelect={() =>
                     runCommand(() => {
+                      // both can be set: `onSelect` runs the action &
+                      // `href` is where the user lands afterwards
+                      action.onSelect?.();
                       if (action.href) {
                         navigate(action.href);
-                        return;
                       }
-                      action.onSelect?.();
                     })
                   }
                   className="h-9 flex items-center gap-2 px-0 font-medium"
@@ -526,132 +492,4 @@ export function CommandBar({
       </CommandList>
     </CommandDialog>
   );
-}
-
-/**
- * Hide the groups & items the user doesn't have the role for,
- * then drop the groups left without any item.
- */
-function filterGroupsByRole<
-  TItem extends { minRole?: UserRole },
-  TGroup extends { minRole?: UserRole; items: TItem[] }
->(groups: TGroup[], user: AuthedUserResponse | null | undefined): TGroup[] {
-  if (!user) return [];
-
-  return groups
-    .filter((group) => !group.minRole || hasMinRole(user, group.minRole))
-    .map((group) => ({
-      ...group,
-      items: group.items.filter(
-        (item) => !item.minRole || hasMinRole(user, item.minRole)
-      )
-    }))
-    .filter((group) => group.items.length > 0);
-}
-
-const SEARCH_GROUP_HEADINGS: Record<SearchResource["type"], string> = {
-  service: "Services",
-  compose_stack: "Compose Stacks",
-  project: "Projects",
-  environment: "Environments"
-};
-
-function groupSearchItemsByType(
-  items: CommandBarSearchItem[]
-): CommandBarSearchGroup[] {
-  // the API already returns the resources ranked & grouped by type,
-  // so the insertion order of the map is the order it sent them in
-  const groups = new Map<SearchResource["type"], CommandBarSearchItem[]>();
-
-  for (const item of items) {
-    const group = groups.get(item.resource.type);
-    if (group) {
-      group.push(item);
-    } else {
-      groups.set(item.resource.type, [item]);
-    }
-  }
-
-  return Array.from(groups, ([type, items]) => ({
-    heading: SEARCH_GROUP_HEADINGS[type],
-    items
-  }));
-}
-
-function getNavItemFromSearchResource(
-  resource: SearchResource
-): Omit<CommandBarSearchItem, "resource"> {
-  switch (resource.type) {
-    case "project":
-      return {
-        title: resource.slug,
-        href: href("/workspace/project/:projectSlug/:envSlug", {
-          projectSlug: resource.slug,
-          envSlug: "production"
-        }),
-        icon: FolderIcon,
-        parents: []
-      };
-    case "environment":
-      return {
-        title: resource.name,
-        href: href("/workspace/project/:projectSlug/:envSlug", {
-          projectSlug: resource.project_slug,
-          envSlug: resource.name
-        }),
-        icon: NetworkIcon,
-        parents: [resource.project_slug]
-      };
-    case "service":
-      return {
-        title: resource.slug,
-        href: href(
-          "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
-          {
-            projectSlug: resource.project_slug,
-            envSlug: resource.environment,
-            serviceSlug: resource.slug
-          }
-        ),
-        icon:
-          resource.kind === "DOCKER_REGISTRY"
-            ? ContainerIcon
-            : resource.git_provider === "gitlab"
-              ? GitlabIcon
-              : GithubIcon,
-        parents: [resource.project_slug, resource.environment]
-      };
-    case "compose_stack":
-      return {
-        title: resource.slug,
-        href: href(
-          "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
-          {
-            projectSlug: resource.project_slug,
-            envSlug: resource.environment,
-            composeStackSlug: resource.slug
-          }
-        ),
-        icon: BoxesIcon,
-        parents: [resource.project_slug, resource.environment]
-      };
-  }
-}
-
-/**
- * Unique per resource, the id is included because two services in different
- * projects can share the same slug.
- */
-function getSearchItemValue(item: CommandBarSearchItem) {
-  return `${item.parents.join(" ")} ${item.title} ${item.resource.type} ${item.resource.id}`.trim();
-}
-
-function getNavItemsFromSearchResources(
-  resources: SearchResource[]
-): CommandBarSearchItem[] {
-  // the API already returns them sorted by relevance, keep that order
-  return resources.map((resource) => ({
-    ...getNavItemFromSearchResource(resource),
-    resource
-  }));
 }

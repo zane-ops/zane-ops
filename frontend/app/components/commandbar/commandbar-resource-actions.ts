@@ -6,22 +6,66 @@ import {
   GlobeIcon,
   KeyRoundIcon,
   NetworkIcon,
+  PauseIcon,
+  PlayIcon,
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
-import { href } from "react-router";
-import type { SearchResource } from "~/api/types";
+import * as React from "react";
+import { href, useFetcher } from "react-router";
+import { toast } from "sonner";
+import type { AuthedUserResponse, SearchResource } from "~/api/types";
 import type { CommandBarActionGroup } from "~/components/commandbar/commandbar";
+import { filterGroupsByRole } from "~/components/commandbar/commandbar-utils";
+import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
+import { useWorkspaceStore } from "~/lib/workspace-store";
+import { toggleStackStateToast } from "~/routes/compose/components/compose-stack-actions-popover";
+import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
+import { toggleServiceStateToast } from "~/routes/services/components/service-actions-popover";
+import type { ToggleServiceState } from "~/routes/services/toggle-service-state";
+
+export type ServiceSearchResource = Extract<
+  SearchResource,
+  { type: "service" }
+>;
+
+export type ComposeStackSearchResource = Extract<
+  SearchResource,
+  { type: "compose_stack" }
+>;
+
+/** `useFetcher().submit`, narrowed to what the actions below need */
+export type SubmitAction = (
+  body: Record<string, string>,
+  options: { method: "post"; action: string }
+) => void;
+
+export type ResourceActionHandlers = {
+  submit: SubmitAction;
+  /**
+   * Toggling is not instant, these keep a loading toast up until the resource
+   * settles into its new state (or the timeout is reached).
+   */
+  toggleServiceState: (
+    resource: ServiceSearchResource,
+    desiredState: ToggleServiceState
+  ) => void;
+  toggleStackState: (
+    resource: ComposeStackSearchResource,
+    desiredState: ToggleStackState
+  ) => void;
+};
 
 /**
- * Where a resource can be navigated to once selected as the command bar
- * context. Titles, icons & roles mirror the sidebar of each resource layout.
+ * What can be done with a resource once selected as the command bar context.
+ * Titles, icons & roles mirror the sidebar & action bar of each resource layout.
  *
- * Only navigations for now: actions needing an input (rename, clone) or a
- * confirmation (archive) can't run from a single `Enter`.
+ * Actions needing an input (rename, clone, discard changes) or a confirmation
+ * (archive) are left out, they can't run from a single `Enter`.
  */
 export function getResourceActionGroups(
-  resource: SearchResource
+  resource: SearchResource,
+  { submit, toggleServiceState, toggleStackState }: ResourceActionHandlers
 ): CommandBarActionGroup[] {
   switch (resource.type) {
     case "project": {
@@ -80,7 +124,7 @@ export function getResourceActionGroups(
 
       return [
         {
-          heading: "Go to",
+          heading: "Jump to",
           items: [
             {
               id: "environment-services",
@@ -117,18 +161,20 @@ export function getResourceActionGroups(
         envSlug: resource.environment,
         serviceSlug: resource.slug
       };
+      // where every action lands the user, so they can follow what it did
+      const home = href(
+        "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
+        params
+      );
 
       return [
         {
-          heading: "Go to",
+          heading: "Jump to",
           items: [
             {
               id: "service-deployments",
               title: "Deployments",
-              href: href(
-                "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug",
-                params
-              ),
+              href: home,
               icon: RocketIcon
             },
             {
@@ -170,6 +216,50 @@ export function getResourceActionGroups(
               icon: ChartNoAxesColumn
             }
           ]
+        },
+        {
+          heading: "Run",
+          minRole: "Member",
+          items: [
+            {
+              id: "service-deploy",
+              title: "Deploy",
+              icon: RocketIcon,
+              href: home,
+              // every field of the deploy form is optional
+              onSelect: () =>
+                submit(
+                  {},
+                  {
+                    method: "post",
+                    action:
+                      resource.kind === "DOCKER_REGISTRY"
+                        ? href(
+                            "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deploy-docker-service",
+                            params
+                          )
+                        : href(
+                            "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deploy-git-service",
+                            params
+                          )
+                  }
+                )
+            },
+            {
+              id: "service-start",
+              title: "Start Service",
+              icon: PlayIcon,
+              href: home,
+              onSelect: () => toggleServiceState(resource, "start")
+            },
+            {
+              id: "service-stop",
+              title: "Stop Service",
+              icon: PauseIcon,
+              href: home,
+              onSelect: () => toggleServiceState(resource, "stop")
+            }
+          ]
         }
       ];
     }
@@ -180,17 +270,20 @@ export function getResourceActionGroups(
         composeStackSlug: resource.slug
       };
 
+      // where every action lands the user, so they can follow what it did
+      const home = href(
+        "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
+        params
+      );
+
       return [
         {
-          heading: "Go to",
+          heading: "Jump to",
           items: [
             {
               id: "stack-services",
               title: "Services",
-              href: href(
-                "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug",
-                params
-              ),
+              href: home,
               icon: BoxIcon
             },
             {
@@ -232,8 +325,151 @@ export function getResourceActionGroups(
               icon: ChartNoAxesColumn
             }
           ]
+        },
+        {
+          heading: "Run",
+          minRole: "Member",
+          items: [
+            {
+              id: "stack-deploy",
+              title: "Deploy",
+              icon: RocketIcon,
+              href: home,
+              // `commit_message` is the only field & it is optional
+              onSelect: () =>
+                submit(
+                  {},
+                  {
+                    method: "post",
+                    action: href(
+                      "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/deploy",
+                      params
+                    )
+                  }
+                )
+            },
+            {
+              id: "stack-start",
+              title: "Start Stack",
+              icon: PlayIcon,
+              href: home,
+              onSelect: () => toggleStackState(resource, "start")
+            },
+            {
+              id: "stack-stop",
+              title: "Stop Stack",
+              icon: PauseIcon,
+              href: home,
+              onSelect: () => toggleStackState(resource, "stop")
+            }
+          ]
         }
       ];
     }
   }
+}
+
+/**
+ * Builds the actions available for the resource currently selected as the
+ * command bar context, already filtered down to what the user can do.
+ */
+export function useResourceActionGroups(
+  resource: SearchResource | null,
+  user: AuthedUserResponse | null | undefined
+): CommandBarActionGroup[] {
+  const workspaceId = useWorkspaceStore((s) => s.workspace?.id);
+  const { submit } = useFetcher();
+
+  const { queue, queueToggleItem, dequeueToggleItem } =
+    useToggleStateQueueStore();
+
+  const toggleServiceState = React.useCallback(
+    async (
+      resource: ServiceSearchResource,
+      desiredState: ToggleServiceState
+    ) => {
+      if (queue.has(resource.id)) {
+        toast.info("The service is already being toggled in the background.");
+        return;
+      }
+
+      await submit(
+        { desired_state: desiredState },
+        {
+          method: "post",
+          action: href(
+            "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/toggle-service-state",
+            {
+              projectSlug: resource.project_slug,
+              envSlug: resource.environment,
+              serviceSlug: resource.slug
+            }
+          )
+        }
+      );
+
+      queueToggleItem(resource.id);
+      toggleServiceStateToast({
+        workspaceId: workspaceId ?? "",
+        desiredState,
+        projectSlug: resource.project_slug,
+        serviceSlug: resource.slug,
+        envSlug: resource.environment
+      }).finally(() => dequeueToggleItem(resource.id));
+    },
+    [queue, queueToggleItem, dequeueToggleItem, submit, workspaceId]
+  );
+
+  const toggleStackState = React.useCallback(
+    async (
+      resource: ComposeStackSearchResource,
+      desiredState: ToggleStackState
+    ) => {
+      if (queue.has(resource.id)) {
+        toast.info("The stack is already being toggled in the background.");
+        return;
+      }
+
+      await submit(
+        // no `service_name` => the whole stack
+        { desired_state: desiredState },
+        {
+          method: "post",
+          action: href(
+            "/workspace/project/:projectSlug/:envSlug/compose-stacks/:composeStackSlug/toggle",
+            {
+              projectSlug: resource.project_slug,
+              envSlug: resource.environment,
+              composeStackSlug: resource.slug
+            }
+          )
+        }
+      );
+
+      queueToggleItem(resource.id);
+      toggleStackStateToast({
+        workspaceId: workspaceId ?? "",
+        desiredState,
+        projectSlug: resource.project_slug,
+        stackSlug: resource.slug,
+        envSlug: resource.environment
+      }).finally(() => dequeueToggleItem(resource.id));
+    },
+    [queue, queueToggleItem, dequeueToggleItem, submit, workspaceId]
+  );
+
+  return React.useMemo(
+    () =>
+      filterGroupsByRole(
+        resource
+          ? getResourceActionGroups(resource, {
+              submit,
+              toggleServiceState,
+              toggleStackState
+            })
+          : [],
+        user
+      ),
+    [resource, user, submit, toggleServiceState, toggleStackState]
+  );
 }
