@@ -127,50 +127,52 @@ deploy: ### Install and deploy zaneops based on MODE (https or http)
 			| grep -q '^Pending' && echo "$$svc"; \
 	done); \
 	if [ -n "$$stuck" ]; then \
-		echo -e "\n\x1b[91m⚠️  The rollout of these services is stuck in 'Pending':\x1b[0m"; \
+		echo -e "\n\x1b[38;5;208m⚠️  Warning: the rollout of these services is stuck in 'Pending':\x1b[0m"; \
 		for svc in $$stuck; do \
 			reason=$$(docker service ps "$$svc" --no-trunc --filter "desired-state=running" --format '{{.Error}}' | grep -v '^$$' | head -1); \
 			echo -e "  \x1b[96m$$svc\x1b[0m: $${reason:-no reason reported by docker}"; \
 		done; \
-		echo -e "\nTheir previous containers are still running with the \x1b[33mold configuration\x1b[0m,"; \
-		echo -e "so this deploy has \x1b[33mnot\x1b[0m taken effect for them."; \
-		echo -e "Recreating them stops the old container before starting the new one,"; \
-		echo -e "which \x1b[33minterrupts the traffic they serve\x1b[0m."; \
-		echo -e "If the reason above is a port conflict, the new task can bind once the old one exits."; \
-		echo -e "For anything else (resources, placement constraints) the new task still will not"; \
-		echo -e "schedule, and the old container is the only one serving, so \x1b[33mfix the reason first\x1b[0m."; \
-		reply="n"; \
-		if [ -n "$$FORCE_REDEPLOY" ]; then \
+		echo -e "\nThey are still \x1b[33mup and serving traffic\x1b[0m, but with their \x1b[33mprevious configuration\x1b[0m,"; \
+		echo -e "so this deploy has not taken effect for them."; \
+		echo -e "\n\x1b[92mIf you did not change any setting or environment variable related to these"; \
+		echo -e "services (ex: \x1b[96mCLOUDFLARE_*\x1b[0m/\x1b[96mCF_*\x1b[0m variables for the proxy), you can safely ignore this.\x1b[0m"; \
+		echo -e "\nOtherwise, to apply the new configuration:"; \
+		echo -e "  1. Check the reason above: a \x1b[33mport conflict\x1b[0m just means the old task still holds the"; \
+		echo -e "     published port, and the new one can bind as soon as it exits."; \
+		echo -e "     Anything else (resources, placement constraints) must be \x1b[33mfixed first\x1b[0m,"; \
+		echo -e "     otherwise the new task will not schedule either."; \
+		echo -e "  2. Re-run \x1b[96mRECREATE_STUCK_SERVICES=1 make deploy\x1b[0m to recreate them."; \
+		echo -e "     This stops the old container before starting the new one, which"; \
+		echo -e "     \x1b[33mbriefly interrupts the traffic they serve\x1b[0m."; \
+		if [ -n "$$RECREATE_STUCK_SERVICES" ]; then \
 			reply="y"; \
-		elif [ -t 0 ]; then \
-			read -r -p "Recreate them now? [y/N] " reply; \
-		else \
-			echo -e "Not running interactively; re-run with \x1b[96mFORCE_REDEPLOY=1 make deploy\x1b[0m to recreate them automatically."; \
+			if [ -t 0 ]; then \
+				read -r -p $$'\nRecreate them now? [y/N] ' reply; \
+			fi; \
+			case "$$reply" in \
+				[yY]*) \
+					for svc in $$stuck; do \
+						echo "Recreating $$svc..."; \
+						docker service scale --detach "$$svc"=0 >/dev/null && docker service scale --detach "$$svc"=1 >/dev/null; \
+					done; \
+					sleep 5; \
+					still_stuck=""; \
+					for svc in $$stuck; do \
+						docker service ps "$$svc" --no-trunc --filter "desired-state=running" --format '{{.CurrentState}}' \
+							| grep -q '^Pending' && still_stuck="$$still_stuck $$svc"; \
+					done; \
+					if [ -n "$$still_stuck" ]; then \
+						echo -e "\n\x1b[91m❌ Still pending after being recreated:$$still_stuck\x1b[0m" >&2; \
+						echo -e "These services are now \x1b[91mdown\x1b[0m, not stale. Fix the reason docker reported, then run \x1b[96mmake deploy\x1b[0m again." >&2; \
+						exit 1; \
+					fi; \
+					echo -e "\x1b[92mRecreated ✅\x1b[0m"; \
+					;; \
+				*) \
+					echo -e "\nSkipped, the services above are still running their previous configuration."; \
+					;; \
+			esac; \
 		fi; \
-		case "$$reply" in \
-			[yY]*) \
-				for svc in $$stuck; do \
-					echo "Recreating $$svc..."; \
-					docker service scale --detach "$$svc"=0 >/dev/null && docker service scale --detach "$$svc"=1 >/dev/null; \
-				done; \
-				sleep 5; \
-				still_stuck=""; \
-				for svc in $$stuck; do \
-					docker service ps "$$svc" --no-trunc --filter "desired-state=running" --format '{{.CurrentState}}' \
-						| grep -q '^Pending' && still_stuck="$$still_stuck $$svc"; \
-				done; \
-				if [ -n "$$still_stuck" ]; then \
-					echo -e "\n\x1b[91m❌ Still pending after being recreated:$$still_stuck\x1b[0m" >&2; \
-					echo -e "These services are now \x1b[91mdown\x1b[0m, not stale. Fix the reason docker reported, then run \x1b[96mmake deploy\x1b[0m again." >&2; \
-					exit 1; \
-				fi; \
-				echo -e "\x1b[92mRecreated ✅\x1b[0m"; \
-				;; \
-			*) \
-				echo -e "\n\x1b[91m❌ Deploy incomplete: the services above are still running the old configuration.\x1b[0m" >&2; \
-				exit 1; \
-				;; \
-		esac; \
 	elif [ $$timed_out -eq 1 ]; then \
 		echo -e "\n\x1b[91m❌ Deploy timed out after $${deploy_timeout}s and some services never reached their desired state.\x1b[0m" >&2; \
 		echo -e "Inspect them with \x1b[96mdocker service ls --filter name=zane_\x1b[0m, or raise the budget with \x1b[96mDEPLOY_TIMEOUT=900 make deploy\x1b[0m." >&2; \
