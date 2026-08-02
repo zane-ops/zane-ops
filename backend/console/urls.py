@@ -1,4 +1,5 @@
 from django.urls import re_path
+from zane_api.urls import UUID_REGEX
 from . import views
 
 app_name = "console"
@@ -48,5 +49,20 @@ urlpatterns = [
         r"^system-settings/?$",
         views.SystemSettingsAPIView.as_view(),
         name="system.settings",
+    ),
+    re_path(
+        r"^proxy/http-logs/?$",
+        views.ProxyHttpLogsAPIView.as_view(),
+        name="proxy.http_logs",
+    ),
+    re_path(
+        r"^proxy/http-logs/fields/?$",
+        views.ProxyHttpLogsFieldsAPIView.as_view(),
+        name="proxy.http_logs.fields",
+    ),
+    re_path(
+        rf"^proxy/http-logs/(?P<request_uuid>{UUID_REGEX})/?$",
+        views.SingleProxyHttpLogAPIView.as_view(),
+        name="proxy.http_logs.single",
     ),
 ]

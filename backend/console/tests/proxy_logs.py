@@ -466,7 +466,7 @@ class ProxyMasterHttpLogViewTests(ProxyLogTestBase):
         response = self.client.get(
             reverse(
                 "console:proxy.http_logs",
-                query={"source": HttpLog.LogSource.ZANE_OPS},
+                query={"source": HttpLog.LogSource.ZANE_OPS_API},
             )
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
@@ -481,7 +481,7 @@ class ProxyMasterHttpLogViewTests(ProxyLogTestBase):
             reverse(
                 "console:proxy.http_logs",
                 query=[
-                    ("source", HttpLog.LogSource.ZANE_OPS),
+                    ("source", HttpLog.LogSource.ZANE_OPS_API),
                     ("source", HttpLog.LogSource.UNKNOWN),
                 ],
             )
@@ -527,7 +527,7 @@ class ProxyMasterHttpLogViewTests(ProxyLogTestBase):
     def test_view_single_zaneops_http_log(self):
         self.setup_logs()
 
-        log: HttpLog = HttpLog.objects.get(source=HttpLog.LogSource.ZANE_OPS)
+        log: HttpLog = HttpLog.objects.get(source=HttpLog.LogSource.ZANE_OPS_API)
         response = self.client.get(
             reverse(
                 "console:proxy.http_logs.single",

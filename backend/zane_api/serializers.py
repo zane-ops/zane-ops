@@ -751,6 +751,7 @@ class HttpLogSerializer(serializers.ModelSerializer):
         model = models.HttpLog
         fields = [
             "id",
+            "source",
             "status",
             "time",
             "deployment_id",
