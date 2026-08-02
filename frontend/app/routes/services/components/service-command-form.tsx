@@ -6,7 +6,8 @@ import {
   FieldSetInput,
   FieldSetLabel
 } from "~/components/ui/fieldset";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData, hasMinRole } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
@@ -41,9 +42,10 @@ export function ServiceCommandForm({
     }
   });
 
-  const startingCommandChange = service?.unapplied_changes.find(
+  const startingCommandChange = (service?.unapplied_changes ?? []).find(
     (change) => change.field === "command"
   );
+
   const isEmptyChange =
     startingCommandChange !== undefined &&
     startingCommandChange.new_value === null;
@@ -54,6 +56,11 @@ export function ServiceCommandForm({
 
   const errors = getFormErrorsFromResponseData(data?.errors);
   const isPending = fetcher.state !== "idle";
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
+  // a viewer cannot edit anything, and a field with a pending change is
+  // locked until that change is applied or discarded
+  const isNotEditable = !isMember || startingCommandChange !== undefined;
 
   return (
     <fetcher.Form
@@ -86,69 +93,74 @@ export function ServiceCommandForm({
             Value
           </FieldSetLabel>
           <FieldSetInput
-            placeholder={isEmptyChange ? "<empty>" : "ex: npm run start"}
-            disabled={startingCommandChange !== undefined}
+            placeholder={
+              isNotEditable || isEmptyChange ? "<empty>" : "ex: npm run start"
+            }
+            disabled={isNotEditable}
+            data-edited={startingCommandChange !== undefined}
             className={cn(
-              "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-              "dark:disabled:bg-secondary-foreground disabled:opacity-100",
-              "disabled:border-transparent"
+              "disabled:placeholder-shown:font-mono data-[edited=true]:bg-secondary/60",
+              "dark:data-[edited=true]:bg-secondary-foreground disabled:opacity-100",
+              "data-[edited=true]:border-transparent"
             )}
             defaultValue={command}
           />
         </div>
       </FieldSet>
 
-      <div className="inline-flex items-center gap-2">
-        {startingCommandChange !== undefined ? (
-          <SubmitButton
-            isPending={isPending}
-            variant="outline"
-            name="intent"
-            value="cancel-service-change"
-          >
-            {isPending ? (
-              <>
-                <LoaderIcon className="animate-spin" size={15} />
-                <span>Discarding...</span>
-              </>
-            ) : (
-              <>
-                <Undo2Icon size={15} className="flex-none" />
-                <span>Discard change</span>
-              </>
-            )}
-          </SubmitButton>
-        ) : (
-          <>
+      {isMember && (
+        <div className="inline-flex items-center gap-2">
+          {startingCommandChange !== undefined ? (
             <SubmitButton
               isPending={isPending}
-              variant="secondary"
+              variant="outline"
               name="intent"
-              value="request-service-change"
+              value="cancel-service-change"
             >
               {isPending ? (
                 <>
                   <LoaderIcon className="animate-spin" size={15} />
-                  <span>Updating ...</span>
+                  <span>Discarding...</span>
                 </>
               ) : (
                 <>
-                  <CheckIcon size={15} className="flex-none" />
-                  <span>Update</span>
+                  <Undo2Icon size={15} className="flex-none" />
+                  <span>Discard change</span>
                 </>
               )}
             </SubmitButton>
-            <Button
-              variant="outline"
-              onClick={reset}
-              type="reset"
-              className="flex-1 md:flex-none"
-            >
-              Reset
-            </Button>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              <SubmitButton
+                isPending={isPending}
+                variant="secondary"
+                name="intent"
+                value="request-service-change"
+              >
+                {isPending ? (
+                  <>
+                    <LoaderIcon className="animate-spin" size={15} />
+                    <span>Updating ...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckIcon size={15} className="flex-none" />
+                    <span>Update</span>
+                  </>
+                )}
+              </SubmitButton>
+              <Button
+                variant="outline"
+                onClick={reset}
+                type="reset"
+                className="flex-1 md:flex-none"
+              >
+                Reset
+              </Button>
+            </>
+          )}
+        </div>
+      )}
     </fetcher.Form>
   );
 }

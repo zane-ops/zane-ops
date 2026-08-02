@@ -20,7 +20,7 @@ import {
 import { Loader } from "~/components/loader";
 import { Logo } from "~/components/logo";
 import { TailwindIndicator } from "~/components/tailwind-indicator";
-import { ThemeProvider, getThemePreference } from "~/components/theme-context";
+import { getThemePreference, useThemeSync } from "~/components/theme-store";
 import { Button } from "~/components/ui/button";
 import { Toaster } from "~/components/ui/sonner";
 import { THEME_STORAGE_KEY } from "~/lib/constants";
@@ -103,18 +103,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const queryClient = getQueryClient();
+  useThemeSync();
 
   // we don't need persistence in DEV, because it might cause cache issues
   if (import.meta.env.DEV) {
     return (
-      <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <Outlet />
-          <Toaster closeButton />
-          <ReactQueryDevtools />
-          <TailwindIndicator />
-        </QueryClientProvider>
-      </ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <Outlet />
+        <Toaster closeButton />
+        <ReactQueryDevtools />
+        <TailwindIndicator />
+      </QueryClientProvider>
     );
   }
 
@@ -127,19 +126,17 @@ export default function App() {
   });
 
   return (
-    <ThemeProvider>
-      <PersistQueryClientProvider
-        client={queryClient}
-        persistOptions={{
-          persister,
-          maxAge: durationToMs(3, "days"),
-          buster: __BUILD_ID__
-        }}
-      >
-        <Outlet />
-        <Toaster />
-      </PersistQueryClientProvider>
-    </ThemeProvider>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: durationToMs(3, "days"),
+        buster: __BUILD_ID__
+      }}
+    >
+      <Outlet />
+      <Toaster />
+    </PersistQueryClientProvider>
   );
 }
 

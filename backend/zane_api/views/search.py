@@ -29,12 +29,12 @@ from compose.models import ComposeStack
 from ..permissions import (
     get_accessible_projects,
     HasWorkspace,
-    IsWorkspaceGuest,
+    IsWorkspaceViewer,
 )
 
 
 class ResourceSearchAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceGuest]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     @extend_schema(
         operation_id="searchResources",
@@ -176,9 +176,9 @@ class ResourceSearchAPIView(APIView):
         return Response(
             [
                 *ServiceSearchResponseSerializer(services_list, many=True).data,
+                *ComposeStackSearchResponseSerializer(stacks_list, many=True).data,
                 *ProjectSearchResponseSerializer(projects_list, many=True).data,
                 *EnvironmentSearchResponseSerializer(environments_list, many=True).data,
-                *ComposeStackSearchResponseSerializer(stacks_list, many=True).data,
             ],
             status=status.HTTP_200_OK,
         )

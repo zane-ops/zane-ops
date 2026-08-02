@@ -28,6 +28,7 @@ import {
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
+import { createDevLogger } from "~/lib/logger";
 import {
   ensureMinRole,
   sharedRegistryCredentialsQueries,
@@ -46,6 +47,8 @@ import {
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/registry-credentials-details";
 
+const logger = createDevLogger(import.meta.url);
+
 export function meta() {
   return [
     metaTitle("Edit Registry Credentials")
@@ -54,7 +57,7 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  await ensureMinRole(queryClient, "Owner");
+  await ensureMinRole(queryClient, "Admin");
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const credentials = await queryClient.ensureQueryData(
     sharedRegistryCredentialsQueries.single(workspaceId, params.id)
@@ -269,11 +272,6 @@ export async function clientAction({
   const formData = await request.formData();
 
   const intent = formData.get("intent");
-
-  console.log({
-    intent,
-    data: Object.fromEntries(formData.entries())
-  });
 
   switch (intent) {
     case "update":

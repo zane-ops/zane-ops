@@ -14211,6 +14211,7 @@ paths:
               $ref: '#/components/schemas/TriggerPreviewEnvRequestRequest'
       security:
       - cookieAuth: []
+      - {}
       responses:
         '400':
           content:
@@ -14237,20 +14238,6 @@ paths:
                     errors:
                     - code: not_authenticated
                       detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse403'
-              examples:
-                PermissionDenied:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: permission_denied
-                      detail: You do not have permission to perform this action.
                       attr: null
           description: ''
         '404':
@@ -14285,7 +14272,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvironmentWithVariables'
+                $ref: '#/components/schemas/SimpleEnvironment'
           description: ''
   /api/trigger-update/:
     post:
@@ -15264,7 +15251,7 @@ paths:
           - 40
           - 50
         description: |-
-          * `10` - Guest
+          * `10` - Viewer
           * `30` - Member
           * `40` - Admin
           * `50` - Owner
@@ -17261,6 +17248,7 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
         user_content:
           type: string
+          nullable: true
         computed_content:
           type: string
           readOnly: true
@@ -17271,6 +17259,7 @@ components:
           items:
             $ref: '#/components/schemas/ComposeStackChange'
           readOnly: true
+          nullable: true
         urls:
           type: object
           additionalProperties:
@@ -17283,11 +17272,13 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/ComposeConfigVersion'
           readOnly: true
+          nullable: true
         env_overrides:
           type: array
           items:
             $ref: '#/components/schemas/ComposeStackEnvOverride'
           readOnly: true
+          nullable: true
         services:
           type: object
           additionalProperties:
@@ -17426,6 +17417,7 @@ components:
           items:
             $ref: '#/components/schemas/ComposeStackChange'
           readOnly: true
+          nullable: true
         finished_at:
           type: string
           format: date-time
@@ -17538,6 +17530,7 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
         user_content:
           type: string
+          nullable: true
           minLength: 1
       required:
       - user_content
@@ -17582,6 +17575,7 @@ components:
           type: string
         content:
           type: string
+          nullable: true
       required:
       - content
       - source
@@ -17597,6 +17591,7 @@ components:
           minLength: 1
         content:
           type: string
+          nullable: true
           minLength: 1
       required:
       - content
@@ -17730,6 +17725,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ComposeStackServiceEnvVar'
+          nullable: true
         volumes:
           type: array
           items:
@@ -17808,6 +17804,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ComposeStackServiceEnvVarRequest'
+          nullable: true
         volumes:
           type: array
           items:
@@ -18013,6 +18010,7 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
         user_content:
           type: string
+          nullable: true
         computed_content:
           type: string
           readOnly: true
@@ -18030,11 +18028,13 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/ComposeConfigVersion'
           readOnly: true
+          nullable: true
         env_overrides:
           type: array
           items:
             $ref: '#/components/schemas/ComposeStackEnvOverride'
           readOnly: true
+          nullable: true
       required:
       - computed_content
       - configs
@@ -18076,6 +18076,7 @@ components:
         user_content:
           type: string
           readOnly: true
+          nullable: true
         computed_content:
           type: string
           readOnly: true
@@ -18086,6 +18087,7 @@ components:
           items:
             $ref: '#/components/schemas/ComposeStackChange'
           readOnly: true
+          nullable: true
         urls:
           type: object
           additionalProperties:
@@ -18098,11 +18100,13 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/ComposeConfigVersion'
           readOnly: true
+          nullable: true
         env_overrides:
           type: array
           items:
             $ref: '#/components/schemas/ComposeStackEnvOverride'
           readOnly: true
+          nullable: true
         services:
           type: object
           additionalProperties:
@@ -18271,7 +18275,6 @@ components:
           enum:
           - blank
           - invalid
-          - 'null'
           - null_characters_not_allowed
           - required
           - surrogate_characters_not_allowed
@@ -18279,7 +18282,6 @@ components:
           description: |-
             * `blank` - blank
             * `invalid` - invalid
-            * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -18491,6 +18493,7 @@ components:
           maxLength: 255
         contents:
           type: string
+          nullable: true
         language:
           type: string
           maxLength: 255
@@ -18543,6 +18546,7 @@ components:
           maxLength: 255
         contents:
           type: string
+          nullable: true
         language:
           type: string
           minLength: 1
@@ -21455,6 +21459,7 @@ components:
           items:
             $ref: '#/components/schemas/EnvVariable'
           readOnly: true
+          nullable: true
         network_aliases:
           type: array
           items:
@@ -21473,6 +21478,7 @@ components:
           items:
             $ref: '#/components/schemas/DeploymentChange'
           readOnly: true
+          nullable: true
         resource_limits:
           allOf:
           - $ref: '#/components/schemas/ResourceLimits'
@@ -21483,7 +21489,7 @@ components:
           items:
             $ref: '#/components/schemas/SystemEnvVariables'
           readOnly: true
-          default: []
+          nullable: true
         configs:
           type: array
           items:
@@ -21988,6 +21994,7 @@ components:
           items:
             $ref: '#/components/schemas/SharedEnvVariable'
           readOnly: true
+          nullable: true
         preview_metadata:
           allOf:
           - $ref: '#/components/schemas/SimplePreviewMetadata'
@@ -22045,6 +22052,9 @@ components:
       description: '* `environment` - environment'
     EnvironmentWithVariables:
       type: object
+      description: |-
+        Same fields as `EnvironmentSerializer`, but `preview_metadata` is serialized
+        in full (branch, commit, PR details, git app) instead of the trimmed form.
       properties:
         id:
           type: string
@@ -22055,16 +22065,17 @@ components:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-        preview_metadata:
-          allOf:
-          - $ref: '#/components/schemas/PreviewMetadata'
-          readOnly: true
-          nullable: true
         variables:
           type: array
           items:
             $ref: '#/components/schemas/SharedEnvVariable'
           readOnly: true
+          nullable: true
+        preview_metadata:
+          allOf:
+          - $ref: '#/components/schemas/PreviewMetadata'
+          readOnly: true
+          nullable: true
       required:
       - id
       - is_preview
@@ -30538,7 +30549,7 @@ components:
       - 50
       type: integer
       description: |-
-        * `10` - Guest
+        * `10` - Viewer
         * `30` - Member
         * `40` - Admin
         * `50` - Owner
@@ -30547,7 +30558,7 @@ components:
       - Owner
       - Admin
       - Member
-      - Guest
+      - Viewer
       type: string
     RuntimeLog:
       type: object
@@ -30852,6 +30863,7 @@ components:
           items:
             $ref: '#/components/schemas/EnvVariable'
           readOnly: true
+          nullable: true
         network_aliases:
           type: array
           items:
@@ -30870,6 +30882,7 @@ components:
           items:
             $ref: '#/components/schemas/DeploymentChange'
           readOnly: true
+          nullable: true
         resource_limits:
           allOf:
           - $ref: '#/components/schemas/ResourceLimits'
@@ -30880,7 +30893,7 @@ components:
           items:
             $ref: '#/components/schemas/SystemEnvVariables'
           readOnly: true
-          default: []
+          nullable: true
         configs:
           type: array
           items:
@@ -31026,6 +31039,7 @@ components:
           items:
             $ref: '#/components/schemas/DeploymentChange'
           readOnly: true
+          nullable: true
         commit_message:
           type: string
         commit_author_name:

@@ -37,13 +37,19 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { createDevLogger } from "~/lib/logger";
 import { serviceQueries } from "~/lib/queries";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import { cn, getFormErrorsFromResponseData, hasMinRole } from "~/lib/utils";
+import {
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/workspace-store";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
 } from "~/routes/services/settings/service-settings";
+
+const logger = createDevLogger(import.meta.url);
 
 export type ServiceSharedVolumesFormProps = {
   project_slug: string;
@@ -56,6 +62,8 @@ export function ServiceSharedVolumesForm({
   service_slug,
   env_slug
 }: ServiceSharedVolumesFormProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const { data: service } = useServiceQuery({
     project_slug,
     service_slug,
@@ -98,9 +106,19 @@ export function ServiceSharedVolumesForm({
           </a>
         </p>
       </div>
+      {!isMember && volumes.size === 0 && (
+        <div
+          className={cn(
+            "flex flex-col gap-2 items-center py-8 bg-muted/20",
+            "border-border border-dashed rounded-md border-1"
+          )}
+        >
+          No shared volumes in this service
+        </div>
+      )}
       {volumes.size > 0 && (
         <>
-          <hr className="border-border" />
+          {isMember && <hr className="border-border" />}
           <ul className="flex flex-col gap-2">
             {[...volumes.entries()].map(([key, volume]) => (
               <li key={key}>
@@ -115,13 +133,17 @@ export function ServiceSharedVolumesForm({
           </ul>
         </>
       )}
-      <hr className="border-border" />
-      <h3 className="text-lg">Add new shared volume</h3>
-      <NewServiceSharedVolumeForm
-        service_slug={service_slug}
-        project_slug={project_slug}
-        env_slug={env_slug}
-      />
+      {isMember && (
+        <>
+          <hr className="border-border" />
+          <h3 className="text-lg">Add new shared volume</h3>
+          <NewServiceSharedVolumeForm
+            service_slug={service_slug}
+            project_slug={project_slug}
+            env_slug={env_slug}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -141,6 +163,8 @@ function ServiceSharedVolumeItem({
   change_id,
   ...props
 }: SharedVolumeItem & ServiceSharedVolumesFormProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const workspaceId = useCurrentWorkspace().id;
   const [accordionValue, setAccordionValue] = React.useState("");
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
@@ -160,10 +184,6 @@ function ServiceSharedVolumeItem({
 
     return map;
   }, [volumes, volume]);
-
-  console.log({
-    volumeMap
-  });
 
   const {
     fetcher: updateFetcher,
@@ -233,7 +253,7 @@ function ServiceSharedVolumeItem({
         )}
 
         <TooltipProvider>
-          {change_id !== undefined ? (
+          {isMember && change_id !== undefined ? (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <Button
@@ -251,6 +271,7 @@ function ServiceSharedVolumeItem({
               <TooltipContent>Discard change</TooltipContent>
             </Tooltip>
           ) : (
+            isMember &&
             id && (
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
@@ -283,7 +304,7 @@ function ServiceSharedVolumeItem({
         <AccordionItem
           value={volume_id}
           className="border-none"
-          disabled={!!change_id}
+          disabled={!isMember || !!change_id}
         >
           <AccordionTrigger
             className={cn(
@@ -337,6 +358,7 @@ function ServiceSharedVolumeItem({
                     Volume
                   </label>
                   <FieldSetSelect
+                    disabled={!isMember}
                     value={changedVolumeId}
                     onValueChange={setChangedVolumeId}
                   >
@@ -371,6 +393,7 @@ function ServiceSharedVolumeItem({
                 >
                   <FieldSetLabel>Container path</FieldSetLabel>
                   <FieldSetInput
+                    disabled={!isMember}
                     placeholder="ex: /data"
                     defaultValue={container_path}
                   />

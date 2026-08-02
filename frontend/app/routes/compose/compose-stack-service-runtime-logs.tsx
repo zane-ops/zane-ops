@@ -52,8 +52,8 @@ import {
   type ComposeStackRuntimeLogFilters,
   LOG_LEVELS,
   composeStackQueries,
-  stackRuntimeLogSearchSchema,
-  userQueries
+  ensureMinRole,
+  stackRuntimeLogSearchSchema
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, formatLogTime } from "~/lib/utils";
@@ -73,6 +73,7 @@ export async function clientLoader({
   request
 }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
+  await ensureMinRole(queryClient, "Member");
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
   const searchParams = new URL(request.url).searchParams;
   const search = stackRuntimeLogSearchSchema.parse(searchParams);

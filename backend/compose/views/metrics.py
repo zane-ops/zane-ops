@@ -25,7 +25,7 @@ from django.db.models import (
 )
 from zane_api.permissions import (
     HasWorkspace,
-    IsWorkspaceMember,
+    IsWorkspaceViewer,
     get_accessible_projects,
 )
 
@@ -38,7 +38,7 @@ class ExtractEpoch(Func):
 
 class ComposeStackMetricsAPIView(APIView):
     serializer_class = ComposeStackMetricsResponseSerializer
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     @extend_schema(
         parameters=[ComposeStackMetricsQuery],

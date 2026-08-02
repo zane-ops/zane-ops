@@ -1128,8 +1128,9 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
             .get()
         )
         self.assertEqual(
-            default_template.ttl_seconds, preview_env.preview_metadata.ttl_seconds
-        )  # type: ignore
+            default_template.ttl_seconds,
+            preview_env.preview_metadata.ttl_seconds,  # type: ignore
+        )
 
     @responses.activate
     def test_deleting_project_should_delete_preview_envs_too(

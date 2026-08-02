@@ -6,7 +6,6 @@ import {
   ContainerIcon,
   KeyRoundIcon,
   LoaderIcon,
-  type LucideIcon,
   Search,
   SettingsIcon
 } from "lucide-react";
@@ -22,7 +21,10 @@ import {
 } from "react-router";
 import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
-import { NavLink } from "~/components/nav-link";
+import {
+  HorizontalNavLink,
+  type NavItem
+} from "~/components/horizontal-nav-link";
 import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -103,12 +105,6 @@ export async function clientLoader({
 
   return { environment, project };
 }
-
-type NavItem = {
-  title: string;
-  href: string;
-  icon: LucideIcon;
-};
 
 export default function EnvironmentLayout({
   params,
@@ -210,9 +206,9 @@ export default function EnvironmentLayout({
                 }
                 className={cn(
                   "size-12 text-xl flex-none rounded-md flex items-center justify-center",
-                  "text-[var(--color-light)] dark:text-[var(--color-dark)]",
-                  "bg-[var(--color-light)]/10 dark:bg-[var(--color-dark)]/10",
-                  "border  border-[var(--color-light)]/10 dark:border-[var(--color-dark)]/10",
+                  "text-(--color-light) dark:text-(--color-dark)",
+                  "bg-(--color-light)/10 dark:bg-(--color-dark)/10",
+                  "border  border-(--color-light)/10 dark:border-(--color-dark)/10",
                   "focus-visible:outline-hidden focus-visible:ring-2",
                   "focus-visible:ring-ring focus-visible:ring-offset-2",
                   "ring-offset-background transition-colors"
@@ -313,10 +309,10 @@ export default function EnvironmentLayout({
         >
           {sidebarNavItems.map((item) => (
             <li key={item.title}>
-              <NavLink to={item.href}>
+              <HorizontalNavLink to={item.href}>
                 <span>{item.title}</span>
                 <item.icon size={15} className="flex-none" />
-              </NavLink>
+              </HorizontalNavLink>
             </li>
           ))}
         </ul>

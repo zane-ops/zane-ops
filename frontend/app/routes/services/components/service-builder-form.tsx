@@ -31,7 +31,8 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData, hasMinRole } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
@@ -69,7 +70,7 @@ export function ServiceBuilderForm({
         if (!srv.slug) {
           srv = service;
         }
-        const serviceBuilderChange = srv.unapplied_changes.find(
+        const serviceBuilderChange = (srv.unapplied_changes ?? []).find(
           (change) => change.field === "builder"
         ) as
           | {
@@ -123,10 +124,12 @@ export function ServiceBuilderForm({
     }
   });
   const isPending = fetcher.state !== "idle";
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
 
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
-  const serviceBuilderChange = service.unapplied_changes.find(
+  const serviceBuilderChange = (service.unapplied_changes ?? []).find(
     (change) => change.field === "builder"
   ) as
     | {
@@ -134,6 +137,10 @@ export function ServiceBuilderForm({
         id: string;
       }
     | undefined;
+
+  // a viewer cannot edit anything, and a field with a pending change is
+  // locked until that change is applied or discarded
+  const isNotEditable = !isMember || serviceBuilderChange !== undefined;
 
   const [serviceBuilder, setServiceBuilder] = React.useState<ServiceBuilder>(
     serviceBuilderChange?.new_value.builder ?? (service.builder || "NIXPACKS")
@@ -321,7 +328,7 @@ export function ServiceBuilderForm({
           <AccordionItem
             value="builder"
             className="border-none"
-            disabled={!!serviceBuilderChange}
+            disabled={!isMember || !!serviceBuilderChange}
           >
             <AccordionTrigger
               className={cn(
@@ -475,13 +482,14 @@ export function ServiceBuilderForm({
               </FieldSetLabel>
               <div className="relative">
                 <FieldSetInput
-                  disabled={serviceBuilderChange !== undefined}
                   placeholder="ex: ./apps/web"
                   defaultValue={build_context_dir}
+                  disabled={isNotEditable}
+                  data-edited={serviceBuilderChange !== undefined}
                   className={cn(
-                    "disabled:bg-secondary/60",
-                    "dark:disabled:bg-secondary-foreground",
-                    "disabled:border-transparent disabled:opacity-100"
+                    "data-[edited=true]:bg-secondary/60",
+                    "dark:data-[edited=true]:bg-secondary-foreground",
+                    "data-[edited=true]:border-transparent disabled:opacity-100"
                   )}
                 />
               </div>
@@ -508,13 +516,14 @@ export function ServiceBuilderForm({
               </FieldSetLabel>
               <div className="relative">
                 <FieldSetInput
-                  disabled={serviceBuilderChange !== undefined}
+                  disabled={isNotEditable}
+                  data-edited={serviceBuilderChange !== undefined}
                   placeholder="ex: ./apps/web/Dockerfile"
                   defaultValue={dockerfile_path}
                   className={cn(
-                    "disabled:bg-secondary/60",
-                    "dark:disabled:bg-secondary-foreground",
-                    "disabled:border-transparent disabled:opacity-100"
+                    "data-[edited=true]:bg-secondary/60",
+                    "dark:data-[edited=true]:bg-secondary-foreground",
+                    "data-[edited=true]:border-transparent disabled:opacity-100"
                   )}
                 />
               </div>
@@ -540,17 +549,18 @@ export function ServiceBuilderForm({
               </FieldSetLabel>
               <div className="relative">
                 <FieldSetInput
-                  disabled={serviceBuilderChange !== undefined}
+                  disabled={isNotEditable}
+                  data-edited={serviceBuilderChange !== undefined}
                   placeholder={
-                    serviceBuilderChange && !build_stage_target
+                    isNotEditable && !build_stage_target
                       ? "<empty>"
                       : "ex: builder"
                   }
                   defaultValue={build_stage_target ?? ""}
                   className={cn(
-                    "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                    "dark:disabled:bg-secondary-foreground",
-                    "disabled:border-transparent disabled:opacity-100"
+                    "disabled:placeholder-shown:font-mono data-[edited=true]:bg-secondary/60",
+                    "dark:data-[edited=true]:bg-secondary-foreground",
+                    "data-[edited=true]:border-transparent disabled:opacity-100"
                   )}
                 />
               </div>
@@ -573,11 +583,12 @@ export function ServiceBuilderForm({
                 <FieldSetInput
                   placeholder="ex: ./public"
                   defaultValue={static_publish_directory}
-                  disabled={serviceBuilderChange !== undefined}
+                  disabled={isNotEditable}
+                  data-edited={serviceBuilderChange !== undefined}
                   className={cn(
-                    "disabled:bg-secondary/60",
-                    "dark:disabled:bg-secondary-foreground",
-                    "disabled:border-transparent disabled:opacity-100"
+                    "data-[edited=true]:bg-secondary/60",
+                    "dark:data-[edited=true]:bg-secondary-foreground",
+                    "data-[edited=true]:border-transparent disabled:opacity-100"
                   )}
                 />
               </div>
@@ -605,13 +616,14 @@ export function ServiceBuilderForm({
                 </FieldSetLabel>
                 <div className="relative">
                   <FieldSetInput
-                    disabled={serviceBuilderChange !== undefined}
+                    disabled={isNotEditable}
+                    data-edited={serviceBuilderChange !== undefined}
                     placeholder="ex: ./404.html"
                     defaultValue={static_not_found_page}
                     className={cn(
-                      "disabled:bg-secondary/60",
-                      "dark:disabled:bg-secondary-foreground",
-                      "disabled:border-transparent disabled:opacity-100"
+                      "data-[edited=true]:bg-secondary/60",
+                      "dark:data-[edited=true]:bg-secondary-foreground",
+                      "data-[edited=true]:border-transparent disabled:opacity-100"
                     )}
                   />
                 </div>
@@ -625,7 +637,7 @@ export function ServiceBuilderForm({
               <div className="inline-flex gap-2 items-center">
                 <FieldSetCheckbox
                   checked={isStaticSpaChecked}
-                  disabled={serviceBuilderChange !== undefined}
+                  disabled={isNotEditable}
                   onCheckedChange={(state) =>
                     setIsStaticSpaChecked(Boolean(state))
                   }
@@ -659,13 +671,14 @@ export function ServiceBuilderForm({
                 </FieldSetLabel>
                 <div className="relative">
                   <FieldSetInput
-                    disabled={serviceBuilderChange !== undefined}
+                    disabled={isNotEditable}
+                    data-edited={serviceBuilderChange !== undefined}
                     placeholder="ex: ./index.html"
                     defaultValue={static_index_page}
                     className={cn(
-                      "disabled:bg-secondary/60",
-                      "dark:disabled:bg-secondary-foreground",
-                      "disabled:border-transparent disabled:opacity-100"
+                      "data-[edited=true]:bg-secondary/60",
+                      "dark:data-[edited=true]:bg-secondary-foreground",
+                      "data-[edited=true]:border-transparent disabled:opacity-100"
                     )}
                   />
                 </div>
@@ -720,11 +733,12 @@ export function ServiceBuilderForm({
               <div className="relative">
                 <FieldSetInput
                   placeholder="ex: ./apps/web"
-                  disabled={serviceBuilderChange !== undefined}
+                  disabled={isNotEditable}
+                  data-edited={serviceBuilderChange !== undefined}
                   className={cn(
-                    "disabled:bg-secondary/60",
-                    "dark:disabled:bg-secondary-foreground",
-                    "disabled:border-transparent disabled:opacity-100"
+                    "data-[edited=true]:bg-secondary/60",
+                    "dark:data-[edited=true]:bg-secondary-foreground",
+                    "data-[edited=true]:border-transparent disabled:opacity-100"
                   )}
                   defaultValue={build_directory}
                 />
@@ -754,11 +768,12 @@ export function ServiceBuilderForm({
               <div className="relative">
                 <FieldSetInput
                   placeholder="ex: pnpm run install"
-                  disabled={serviceBuilderChange !== undefined}
+                  disabled={isNotEditable}
+                  data-edited={serviceBuilderChange !== undefined}
                   className={cn(
-                    "disabled:bg-secondary/60",
-                    "dark:disabled:bg-secondary-foreground",
-                    "disabled:border-transparent disabled:opacity-100"
+                    "data-[edited=true]:bg-secondary/60",
+                    "dark:data-[edited=true]:bg-secondary-foreground",
+                    "data-[edited=true]:border-transparent disabled:opacity-100"
                   )}
                   defaultValue={custom_install_command}
                 />
@@ -788,11 +803,12 @@ export function ServiceBuilderForm({
               <div className="relative">
                 <FieldSetInput
                   placeholder="ex: pnpm run build"
-                  disabled={serviceBuilderChange !== undefined}
+                  disabled={isNotEditable}
+                  data-edited={serviceBuilderChange !== undefined}
                   className={cn(
-                    "disabled:bg-secondary/60",
-                    "dark:disabled:bg-secondary-foreground",
-                    "disabled:border-transparent disabled:opacity-100"
+                    "data-[edited=true]:bg-secondary/60",
+                    "dark:data-[edited=true]:bg-secondary-foreground",
+                    "data-[edited=true]:border-transparent disabled:opacity-100"
                   )}
                   defaultValue={custom_build_command}
                 />
@@ -823,11 +839,12 @@ export function ServiceBuilderForm({
                 </FieldSetLabel>
                 <div className="relative">
                   <FieldSetInput
-                    disabled={serviceBuilderChange !== undefined}
+                    disabled={isNotEditable}
+                    data-edited={serviceBuilderChange !== undefined}
                     className={cn(
-                      "disabled:bg-secondary/60",
-                      "dark:disabled:bg-secondary-foreground",
-                      "disabled:border-transparent disabled:opacity-100"
+                      "data-[edited=true]:bg-secondary/60",
+                      "dark:data-[edited=true]:bg-secondary-foreground",
+                      "data-[edited=true]:border-transparent disabled:opacity-100"
                     )}
                     placeholder="ex: pnpm run start"
                     defaultValue={custom_start_command}
@@ -844,7 +861,7 @@ export function ServiceBuilderForm({
               <div className="inline-flex gap-2 items-center">
                 <FieldSetCheckbox
                   checked={isNixpacksStaticChecked}
-                  disabled={serviceBuilderChange !== undefined}
+                  disabled={isNotEditable}
                   onCheckedChange={(state) =>
                     setIsNixpacksStaticChecked(Boolean(state))
                   }
@@ -877,7 +894,7 @@ export function ServiceBuilderForm({
                   <div className="inline-flex gap-2 items-center">
                     <FieldSetCheckbox
                       checked={isNixpacksSpaChecked}
-                      disabled={serviceBuilderChange !== undefined}
+                      disabled={isNotEditable}
                       onCheckedChange={(state) =>
                         setIsNixpacksSpaChecked(Boolean(state))
                       }
@@ -913,11 +930,12 @@ export function ServiceBuilderForm({
                     <FieldSetInput
                       placeholder="ex: ./public"
                       defaultValue={nixpacks_publish_directory}
-                      disabled={serviceBuilderChange !== undefined}
+                      disabled={isNotEditable}
+                      data-edited={serviceBuilderChange !== undefined}
                       className={cn(
-                        "disabled:bg-secondary/60",
-                        "dark:disabled:bg-secondary-foreground",
-                        "disabled:border-transparent disabled:opacity-100"
+                        "data-[edited=true]:bg-secondary/60",
+                        "dark:data-[edited=true]:bg-secondary-foreground",
+                        "data-[edited=true]:border-transparent disabled:opacity-100"
                       )}
                     />
                   </div>
@@ -945,13 +963,14 @@ export function ServiceBuilderForm({
                     </FieldSetLabel>
                     <div className="relative">
                       <FieldSetInput
-                        disabled={serviceBuilderChange !== undefined}
+                        disabled={isNotEditable}
+                        data-edited={serviceBuilderChange !== undefined}
                         placeholder="ex: ./404.html"
                         defaultValue={nixpacks_not_found_page}
                         className={cn(
-                          "disabled:bg-secondary/60",
-                          "dark:disabled:bg-secondary-foreground",
-                          "disabled:border-transparent disabled:opacity-100"
+                          "data-[edited=true]:bg-secondary/60",
+                          "dark:data-[edited=true]:bg-secondary-foreground",
+                          "data-[edited=true]:border-transparent disabled:opacity-100"
                         )}
                       />
                     </div>
@@ -979,13 +998,14 @@ export function ServiceBuilderForm({
                     </FieldSetLabel>
                     <div className="relative">
                       <FieldSetInput
-                        disabled={serviceBuilderChange !== undefined}
+                        disabled={isNotEditable}
+                        data-edited={serviceBuilderChange !== undefined}
                         placeholder="ex: ./index.html"
                         defaultValue={nixpacks_index_page}
                         className={cn(
-                          "disabled:bg-secondary/60",
-                          "dark:disabled:bg-secondary-foreground",
-                          "disabled:border-transparent disabled:opacity-100"
+                          "data-[edited=true]:bg-secondary/60",
+                          "dark:data-[edited=true]:bg-secondary-foreground",
+                          "data-[edited=true]:border-transparent disabled:opacity-100"
                         )}
                       />
                     </div>
@@ -1043,11 +1063,12 @@ export function ServiceBuilderForm({
               <div className="relative">
                 <FieldSetInput
                   placeholder="ex: ./apps/web"
-                  disabled={serviceBuilderChange !== undefined}
+                  disabled={isNotEditable}
+                  data-edited={serviceBuilderChange !== undefined}
                   className={cn(
-                    "disabled:bg-secondary/60",
-                    "dark:disabled:bg-secondary-foreground",
-                    "disabled:border-transparent disabled:opacity-100"
+                    "data-[edited=true]:bg-secondary/60",
+                    "dark:data-[edited=true]:bg-secondary-foreground",
+                    "data-[edited=true]:border-transparent disabled:opacity-100"
                   )}
                   defaultValue={railpack_build_directory}
                 />
@@ -1065,16 +1086,15 @@ export function ServiceBuilderForm({
               <div className="relative">
                 <FieldSetInput
                   placeholder={
-                    serviceBuilderChange !== undefined
-                      ? "<empty>"
-                      : "ex: pnpm run install"
+                    isNotEditable ? "<empty>" : "ex: pnpm run install"
                   }
-                  disabled={serviceBuilderChange !== undefined}
+                  disabled={isNotEditable}
+                  data-edited={serviceBuilderChange !== undefined}
                   className={cn(
-                    "disabled:placeholder-shown:font-mono",
-                    "disabled:bg-secondary/60",
-                    "dark:disabled:bg-secondary-foreground",
-                    "disabled:border-transparent disabled:opacity-100"
+                    "disabled:placeholder-shown:font-mono disabled:opacity-100",
+                    "data-[edited=true]:bg-secondary/60",
+                    "dark:data-[edited=true]:bg-secondary-foreground",
+                    "data-[edited=true]:border-transparent disabled:opacity-100"
                   )}
                   defaultValue={railpack_custom_install_command}
                 />
@@ -1091,17 +1111,14 @@ export function ServiceBuilderForm({
               </FieldSetLabel>
               <div className="relative">
                 <FieldSetInput
-                  placeholder={
-                    serviceBuilderChange !== undefined
-                      ? "<empty>"
-                      : "ex: pnpm run build"
-                  }
-                  disabled={serviceBuilderChange !== undefined}
+                  placeholder={isNotEditable ? "<empty>" : "ex: pnpm run build"}
+                  disabled={isNotEditable}
+                  data-edited={serviceBuilderChange !== undefined}
                   className={cn(
-                    "disabled:placeholder-shown:font-mono",
-                    "disabled:bg-secondary/60",
-                    "dark:disabled:bg-secondary-foreground",
-                    "disabled:border-transparent disabled:opacity-100"
+                    "disabled:placeholder-shown:font-mono disabled:opacity-100",
+                    "data-[edited=true]:bg-secondary/60",
+                    "dark:data-[edited=true]:bg-secondary-foreground",
+                    "data-[edited=true]:border-transparent disabled:opacity-100"
                   )}
                   defaultValue={railpack_custom_build_command}
                 />
@@ -1120,16 +1137,15 @@ export function ServiceBuilderForm({
                 <div className="relative">
                   <FieldSetInput
                     placeholder={
-                      serviceBuilderChange !== undefined
-                        ? "<empty>"
-                        : "ex: pnpm run start"
+                      isNotEditable ? "<empty>" : "ex: pnpm run start"
                     }
-                    disabled={serviceBuilderChange !== undefined}
+                    disabled={isNotEditable}
+                    data-edited={serviceBuilderChange !== undefined}
                     className={cn(
                       "disabled:placeholder-shown:font-mono",
-                      "disabled:bg-secondary/60",
-                      "dark:disabled:bg-secondary-foreground",
-                      "disabled:border-transparent disabled:opacity-100"
+                      "data-[edited=true]:bg-secondary/60",
+                      "dark:data-[edited=true]:bg-secondary-foreground",
+                      "data-[edited=true]:border-transparent disabled:opacity-100"
                     )}
                     defaultValue={railpack_custom_start_command}
                   />
@@ -1145,7 +1161,7 @@ export function ServiceBuilderForm({
               <div className="inline-flex gap-2 items-center">
                 <FieldSetCheckbox
                   checked={isRailpackStaticChecked}
-                  disabled={serviceBuilderChange !== undefined}
+                  disabled={isNotEditable}
                   onCheckedChange={(state) =>
                     setIsRailpackStaticChecked(Boolean(state))
                   }
@@ -1178,7 +1194,7 @@ export function ServiceBuilderForm({
                   <div className="inline-flex gap-2 items-center">
                     <FieldSetCheckbox
                       checked={isRailpackSpaChecked}
-                      disabled={serviceBuilderChange !== undefined}
+                      disabled={isNotEditable}
                       onCheckedChange={(state) =>
                         setIsRailpackSpaChecked(Boolean(state))
                       }
@@ -1214,11 +1230,12 @@ export function ServiceBuilderForm({
                     <FieldSetInput
                       placeholder="ex: ./public"
                       defaultValue={railpack_publish_directory}
-                      disabled={serviceBuilderChange !== undefined}
+                      disabled={isNotEditable}
+                      data-edited={serviceBuilderChange !== undefined}
                       className={cn(
-                        "disabled:bg-secondary/60",
-                        "dark:disabled:bg-secondary-foreground",
-                        "disabled:border-transparent disabled:opacity-100"
+                        "data-[edited=true]:bg-secondary/60",
+                        "dark:data-[edited=true]:bg-secondary-foreground",
+                        "data-[edited=true]:border-transparent disabled:opacity-100"
                       )}
                     />
                   </div>
@@ -1246,13 +1263,14 @@ export function ServiceBuilderForm({
                     </FieldSetLabel>
                     <div className="relative">
                       <FieldSetInput
-                        disabled={serviceBuilderChange !== undefined}
+                        disabled={isNotEditable}
+                        data-edited={serviceBuilderChange !== undefined}
                         placeholder="ex: ./404.html"
                         defaultValue={railpack_not_found_page}
                         className={cn(
-                          "disabled:bg-secondary/60",
-                          "dark:disabled:bg-secondary-foreground",
-                          "disabled:border-transparent disabled:opacity-100"
+                          "data-[edited=true]:bg-secondary/60",
+                          "dark:data-[edited=true]:bg-secondary-foreground",
+                          "data-[edited=true]:border-transparent disabled:opacity-100"
                         )}
                       />
                     </div>
@@ -1280,13 +1298,14 @@ export function ServiceBuilderForm({
                     </FieldSetLabel>
                     <div className="relative">
                       <FieldSetInput
-                        disabled={serviceBuilderChange !== undefined}
+                        disabled={isNotEditable}
+                        data-edited={serviceBuilderChange !== undefined}
                         placeholder="ex: ./index.html"
                         defaultValue={railpack_index_page}
                         className={cn(
-                          "disabled:bg-secondary/60",
-                          "dark:disabled:bg-secondary-foreground",
-                          "disabled:border-transparent disabled:opacity-100"
+                          "data-[edited=true]:bg-secondary/60",
+                          "dark:data-[edited=true]:bg-secondary-foreground",
+                          "data-[edited=true]:border-transparent disabled:opacity-100"
                         )}
                       />
                     </div>
@@ -1319,79 +1338,81 @@ export function ServiceBuilderForm({
           </>
         )}
 
-        <div className="flex items-center gap-4">
-          {serviceBuilderChange !== undefined ? (
-            <SubmitButton
-              isPending={isPending}
-              variant="outline"
-              name="intent"
-              value="cancel-service-change"
-            >
-              {isPending ? (
-                <>
-                  <LoaderIcon className="animate-spin" size={15} />
-                  <span>Discarding...</span>
-                </>
-              ) : (
-                <>
-                  <Undo2Icon size={15} className="flex-none" />
-                  <span>Discard change</span>
-                </>
-              )}
-            </SubmitButton>
-          ) : (
-            <>
+        {isMember && (
+          <div className="flex items-center gap-4">
+            {serviceBuilderChange !== undefined ? (
               <SubmitButton
                 isPending={isPending}
-                variant="secondary"
+                variant="outline"
                 name="intent"
-                value="request-service-change"
+                value="cancel-service-change"
               >
                 {isPending ? (
                   <>
                     <LoaderIcon className="animate-spin" size={15} />
-                    <span>Updating ...</span>
+                    <span>Discarding...</span>
                   </>
                 ) : (
                   <>
-                    <CheckIcon size={15} className="flex-none" />
-                    <span>Update</span>
+                    <Undo2Icon size={15} className="flex-none" />
+                    <span>Discard change</span>
                   </>
                 )}
               </SubmitButton>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setAccordionValue("");
-                  setServiceBuilder(service.builder || "NIXPACKS");
+            ) : (
+              <>
+                <SubmitButton
+                  isPending={isPending}
+                  variant="secondary"
+                  name="intent"
+                  value="request-service-change"
+                >
+                  {isPending ? (
+                    <>
+                      <LoaderIcon className="animate-spin" size={15} />
+                      <span>Updating ...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckIcon size={15} className="flex-none" />
+                      <span>Update</span>
+                    </>
+                  )}
+                </SubmitButton>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setAccordionValue("");
+                    setServiceBuilder(service.builder || "NIXPACKS");
 
-                  setIsStaticSpaChecked(
-                    service.static_dir_builder_options?.is_spa ?? false
-                  );
+                    setIsStaticSpaChecked(
+                      service.static_dir_builder_options?.is_spa ?? false
+                    );
 
-                  setIsNixpacksSpaChecked(
-                    service.nixpacks_builder_options?.is_spa ?? false
-                  );
-                  setIsNixpacksStaticChecked(
-                    service.nixpacks_builder_options?.is_static ?? false
-                  );
+                    setIsNixpacksSpaChecked(
+                      service.nixpacks_builder_options?.is_spa ?? false
+                    );
+                    setIsNixpacksStaticChecked(
+                      service.nixpacks_builder_options?.is_static ?? false
+                    );
 
-                  setIsRailpackSpaChecked(
-                    service.railpack_builder_options?.is_spa ?? false
-                  );
-                  setIsRailpackStaticChecked(
-                    service.railpack_builder_options?.is_static ?? false
-                  );
+                    setIsRailpackSpaChecked(
+                      service.railpack_builder_options?.is_spa ?? false
+                    );
+                    setIsRailpackStaticChecked(
+                      service.railpack_builder_options?.is_static ?? false
+                    );
 
-                  reset();
-                }}
-                type="reset"
-              >
-                Reset
-              </Button>
-            </>
-          )}
-        </div>
+                    reset();
+                  }}
+                  type="reset"
+                >
+                  Reset
+                </Button>
+              </>
+            )}
+          </div>
+        )}
       </fetcher.Form>
     </div>
   );

@@ -171,7 +171,7 @@ function ToggleStackForm({
 
     const desiredState = formData.get("desired_state") as "stop" | "start";
     queueToggleItem(stack.id);
-    toggleStateToast({
+    toggleStackStateToast({
       workspaceId,
       desiredState,
       projectSlug,
@@ -226,7 +226,7 @@ function ToggleStackForm({
   );
 }
 
-async function toggleStateToast({
+export async function toggleStackStateToast({
   workspaceId,
   desiredState,
   projectSlug,
@@ -256,16 +256,15 @@ async function toggleStateToast({
     </Link>
   );
 
-  const toastId = toast.loading(
-    desiredState === "start" ? (
-      <span>Starting {stackLink}, this may take up to a minute...</span>
-    ) : (
-      <span>Stopping {stackLink}, this may take up to a minute...</span>
-    ),
-    {
-      closeButton: false
-    }
-  );
+  const toastId = toast.loading("Loading...", {
+    description:
+      desiredState === "start" ? (
+        <span>Starting {stackLink}, this may take up to a minute...</span>
+      ) : (
+        <span>Stopping {stackLink}, this may take up to a minute...</span>
+      ),
+    closeButton: false
+  });
 
   const MAX_TRIES = 12; // wait max for `1min` (12*5s = 60s)
   let total_tries = 0;

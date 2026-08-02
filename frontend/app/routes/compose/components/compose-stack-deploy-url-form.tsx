@@ -17,7 +17,8 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn, wait } from "~/lib/utils";
+import { cn, hasMinRole, wait } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import type { clientAction } from "~/routes/compose/compose-stack-settings";
 
 export type ServiceDeployURLFormProps = {
@@ -38,6 +39,12 @@ export function ComposeStackDeployURLForm({
     : null;
 
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+  const membership = useCurrentWorkspaceMembership();
+
+  if (!hasMinRole(membership, "Member")) {
+    // the deploy token is member-only, so there is no URL to show
+    return null;
+  }
 
   return (
     <div className="w-full max-w-4xl">

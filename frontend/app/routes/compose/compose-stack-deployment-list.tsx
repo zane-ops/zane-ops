@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { type VariantProps, cva } from "class-variance-authority";
+import { Command as CommandPrimitive } from "cmdk";
 import { format } from "date-fns";
 import {
   Ban,
@@ -12,6 +13,7 @@ import {
   LoaderIcon,
   Redo2,
   ScanTextIcon,
+  SearchIcon,
   TimerIcon,
   Undo2Icon,
   XIcon
@@ -28,7 +30,6 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList
 } from "~/components/ui/command";
@@ -50,11 +51,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import {
-  composeStackQueries,
-  stackDeploymentListFilters,
-  userQueries
-} from "~/lib/queries";
+import { composeStackQueries, stackDeploymentListFilters } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   capitalizeText,
@@ -141,14 +138,6 @@ export default function ComposeStackDeploymentListPage({
     "QUEUED",
     "DEPLOYING"
   ];
-
-  const newDeployments = deploymentList.filter((dpl) =>
-    newDeploymentsStatuses.includes(dpl.status)
-  );
-
-  const previousDeployments = deploymentList.filter(
-    (dpl) => !newDeploymentsStatuses.includes(dpl.status)
-  );
 
   const noDeploymentsYet = deploymentList.length === 0 && noFilters;
   const noResultsFound = !noFilters && deploymentList.length === 0;
@@ -591,13 +580,6 @@ interface MultiSelectProps
   maxCount?: number;
 
   /**
-   * The modality of the popover. When set to true, interaction with outside elements
-   * will be disabled and only popover content will be visible to screen readers.
-   * Optional, defaults to false.
-   */
-  modalPopover?: boolean;
-
-  /**
    * If true, renders the multi-select component as a child of another component.
    * Optional, defaults to false.
    */
@@ -619,7 +601,6 @@ const DeploymentStatusesMultiSelect = ({
   placeholder = "Select options",
   animation = 0,
   maxCount = 3,
-  modalPopover = false,
   asChild = false,
   className,
   ...props
@@ -658,18 +639,14 @@ const DeploymentStatusesMultiSelect = ({
   };
 
   return (
-    <Popover
-      open={isPopoverOpen}
-      onOpenChange={setIsPopoverOpen}
-      modal={modalPopover}
-    >
+    <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
       <PopoverTrigger asChild>
         <Button
           ref={ref}
           {...props}
           onClick={handleTogglePopover}
           className={cn(
-            "flex w-full p-1 rounded-md border border-border min-h-10 h-auto items-center justify-between bg-inherit hover:bg-inherit",
+            "flex min-w-52 w-full p-1 rounded-md border border-border min-h-10 h-auto items-center justify-between bg-inherit hover:bg-inherit",
             className
           )}
         >
@@ -736,16 +713,26 @@ const DeploymentStatusesMultiSelect = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-auto p-0"
         align="start"
+        className={cn(
+          "w-auto p-0 z-60 shadow-md rounded-lg bg-popover",
+          "min-w-(--radix-popover-trigger-width) max-w-(--radix-popover-trigger-width)",
+          "[&_[data-slot='command-list-wrapper']_*]:static",
+          "[&_[data-slot='command-input-wrapper']]:px-2"
+        )}
         onEscapeKeyDown={() => setIsPopoverOpen(false)}
       >
         <Command>
-          <CommandInput
-            placeholder="Filter Statuses..."
-            onKeyDown={handleInputKeyDown}
-          />
-          <CommandList>
+          <div className="flex px-3 py-3.5 items-center gap-1 w-full">
+            <SearchIcon className="size-4 flex-none text-grey" />
+            <CommandPrimitive.Input
+              placeholder="Filter Statuses"
+              className="text-sm bg-inherit focus-visible:outline-hidden px-2 w-full"
+              onKeyDown={handleInputKeyDown}
+            />
+          </div>
+          <hr className="w-full border-border" />
+          <CommandList className="px-0 flex flex-col gap-2 w-full bg-transparent border-none">
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup>
               <CommandItem
@@ -755,13 +742,13 @@ const DeploymentStatusesMultiSelect = ({
               >
                 <div
                   className={cn(
-                    "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                    "mr-2 flex size-4 items-center justify-center rounded-sm border border-primary",
                     value.length === options.length
                       ? "bg-primary text-primary-foreground"
                       : "opacity-50 [&_svg]:invisible"
                   )}
                 >
-                  <CheckIcon className="h-4 w-4" />
+                  <CheckIcon className="size-4 flex-none" />
                 </div>
 
                 <div className="flex items-center justify-between w-full">
@@ -778,7 +765,7 @@ const DeploymentStatusesMultiSelect = ({
                   >
                     <div
                       className={cn(
-                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                        "mr-2 flex size-4 items-center justify-center rounded-sm border border-primary",
                         isSelected
                           ? "bg-primary text-primary-foreground"
                           : "opacity-50 [&_svg]:invisible"

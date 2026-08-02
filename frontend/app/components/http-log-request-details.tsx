@@ -76,11 +76,11 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
     ([key]) => key.toLowerCase() === ZANE_DEPLOYMENT_HASH_HEADER
   );
 
-  const routeParams = useParams<{
+  const routeParams = useParams() as {
     projectSlug: string;
     envSlug: string;
     serviceSlug: string;
-  }>();
+  };
 
   return (
     <>
@@ -110,9 +110,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
                 to={href(
                   "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
                   {
-                    projectSlug: routeParams.projectSlug!,
-                    envSlug: routeParams.envSlug!,
-                    serviceSlug: routeParams.serviceSlug!,
+                    ...routeParams,
                     deploymentHash: deploymentHashHeader[1][0]
                   }
                 )}

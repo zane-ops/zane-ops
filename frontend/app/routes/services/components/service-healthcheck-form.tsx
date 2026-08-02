@@ -22,7 +22,8 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData, hasMinRole } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
@@ -55,7 +56,7 @@ export function ServiceHealthcheckForm({
         const service = data.data;
         let updatedHealthCheck = healthcheck;
         if ("healthcheck" in service) {
-          const healthcheckChange = service.unapplied_changes.find(
+          const healthcheckChange = (service.unapplied_changes ?? []).find(
             (change) => change.field === "healthcheck"
           );
           const newHealthCheck =
@@ -84,7 +85,7 @@ export function ServiceHealthcheckForm({
     }
   });
 
-  const healthcheckChange = service.unapplied_changes.find(
+  const healthcheckChange = (service.unapplied_changes ?? []).find(
     (change) => change.field === "healthcheck"
   );
 
@@ -99,6 +100,11 @@ export function ServiceHealthcheckForm({
   >(healthcheck?.type ?? "none");
 
   const isPending = fetcher.state !== "idle";
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
+  // a viewer cannot edit anything, and a field with a pending change is
+  // locked until that change is applied or discarded
+  const isNotEditable = !isMember || healthcheckChange !== undefined;
   const non_field_errors = Array.isArray(errors.new_value)
     ? [...errors.new_value, ...(errors.non_field_errors ?? [])]
     : errors.non_field_errors;
@@ -113,7 +119,7 @@ export function ServiceHealthcheckForm({
     defaultHealthCheckAssociatedPortValue =
       urlWithAssociatedPort.associated_port;
   }
-  const urlChangeWithAssociatedPort = service.unapplied_changes.find(
+  const urlChangeWithAssociatedPort = (service.unapplied_changes ?? []).find(
     (ch) =>
       ch.field === "urls" &&
       Boolean((ch.new_value as Service["urls"][number] | null)?.associated_port)
@@ -168,7 +174,7 @@ export function ServiceHealthcheckForm({
             <FieldSetLabel htmlFor="healthcheck_type">Type</FieldSetLabel>
             <FieldSetSelect
               name="type"
-              disabled={healthcheckChange !== undefined}
+              disabled={isNotEditable}
               value={healthcheckType}
               defaultValue={healthcheckType}
               onValueChange={(value) =>
@@ -180,9 +186,11 @@ export function ServiceHealthcheckForm({
               <SelectTrigger
                 id="healthcheck_type"
                 ref={SelectTriggerRef}
+                data-edited={healthcheckChange !== undefined}
                 className={cn(
-                  "data-disabled:bg-secondary/60 dark:data-disabled:bg-secondary-foreground",
-                  "data-disabled:opacity-100 data-disabled:border-transparent",
+                  "data-[edited=true]:bg-secondary/60 dark:data-[edited=true]:bg-secondary-foreground",
+                  "data-disabled:opacity-100 data-[edited=true]:border-transparent",
+                  "data-disabled:bg-muted data-[edited=false]:disabled:text-gray-400",
                   healthcheckType === "none" && "text-muted-foreground"
                 )}
               >
@@ -190,7 +198,7 @@ export function ServiceHealthcheckForm({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem disabled value="none">
-                  Select a type
+                  {isNotEditable ? "<empty>" : "Select a type"}
                 </SelectItem>
                 <SelectItem value="PATH">Path</SelectItem>
                 <SelectItem value="COMMAND">Command</SelectItem>
@@ -211,18 +219,19 @@ export function ServiceHealthcheckForm({
               Value
             </FieldSetLabel>
             <FieldSetInput
-              disabled={healthcheckChange !== undefined}
+              disabled={isNotEditable}
+              data-edited={healthcheckChange !== undefined}
               placeholder={
-                healthcheckChange && healthcheck === null
+                isNotEditable && healthcheck === null
                   ? "<empty>"
                   : healthcheckType === "COMMAND"
                     ? "ex: redis-cli ping"
                     : "ex: /healthcheck"
               }
               className={cn(
-                "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                "dark:disabled:bg-secondary-foreground disabled:opacity-100",
-                "disabled:border-transparent"
+                "disabled:placeholder-shown:font-mono data-[edited=true]:bg-secondary/60",
+                "dark:data-[edited=true]:bg-secondary-foreground disabled:opacity-100",
+                "data-[edited=true]:border-transparent"
               )}
               defaultValue={healthcheck?.value}
             />
@@ -239,16 +248,15 @@ export function ServiceHealthcheckForm({
                 Listening port
               </FieldSetLabel>
               <FieldSetInput
-                disabled={healthcheckChange !== undefined}
+                disabled={isNotEditable}
+                data-edited={healthcheckChange !== undefined}
                 placeholder={
-                  healthcheckChange && healthcheck === null
-                    ? "<empty>"
-                    : "ex: 80"
+                  isNotEditable && healthcheck === null ? "<empty>" : "ex: 80"
                 }
                 className={cn(
-                  "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                  "dark:disabled:bg-secondary-foreground disabled:opacity-100",
-                  "disabled:border-transparent"
+                  "disabled:placeholder-shown:font-mono data-[edited=true]:bg-secondary/60",
+                  "dark:data-[edited=true]:bg-secondary-foreground disabled:opacity-100",
+                  "data-[edited=true]:border-transparent"
                 )}
                 defaultValue={
                   healthcheck?.associated_port ??
@@ -265,9 +273,10 @@ export function ServiceHealthcheckForm({
         >
           <FieldSetLabel>Timeout in seconds</FieldSetLabel>
           <FieldSetInput
-            disabled={healthcheckChange !== undefined}
+            disabled={isNotEditable}
+            data-edited={healthcheckChange !== undefined}
             placeholder={
-              healthcheckChange && healthcheck === null ? "<empty>" : "ex: 30"
+              isNotEditable && healthcheck === null ? "<empty>" : "ex: 30"
             }
             defaultValue={
               healthcheckChange && healthcheck === null
@@ -275,9 +284,9 @@ export function ServiceHealthcheckForm({
                 : healthcheck?.timeout_seconds
             }
             className={cn(
-              "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-              "dark:disabled:bg-secondary-foreground disabled:opacity-100",
-              "disabled:border-transparent"
+              "disabled:placeholder-shown:font-mono data-[edited=true]:bg-secondary/60",
+              "dark:data-[edited=true]:bg-secondary-foreground disabled:opacity-100",
+              "data-[edited=true]:border-transparent"
             )}
           />
         </FieldSet>
@@ -291,98 +300,101 @@ export function ServiceHealthcheckForm({
           </FieldSetLabel>
           <FieldSetInput
             placeholder={
-              healthcheckChange && healthcheck === null ? "<empty>" : "ex: 30"
+              isNotEditable && healthcheck === null ? "<empty>" : "ex: 30"
             }
-            disabled={healthcheckChange !== undefined}
+            disabled={isNotEditable}
+            data-edited={healthcheckChange !== undefined}
             defaultValue={
               healthcheckChange && healthcheck === null
                 ? ""
                 : healthcheck?.interval_seconds
             }
             className={cn(
-              "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-              "dark:disabled:bg-secondary-foreground disabled:opacity-100",
-              "disabled:border-transparent"
+              "disabled:placeholder-shown:font-mono data-[edited=true]:bg-secondary/60",
+              "dark:data-[edited=true]:bg-secondary-foreground disabled:opacity-100",
+              "data-[edited=true]:border-transparent"
             )}
           />
         </FieldSet>
       </fieldset>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        {healthcheckChange ? (
-          <SubmitButton
-            isPending={isPending}
-            variant="outline"
-            name="intent"
-            value="cancel-service-change"
-          >
-            {isPending ? (
-              <>
-                <LoaderIcon className="animate-spin" size={15} />
-                <span>Discarding...</span>
-              </>
-            ) : (
-              <>
-                <Undo2Icon size={15} className="flex-none" />
-                <span>Discard change</span>
-              </>
-            )}
-          </SubmitButton>
-        ) : (
-          <>
+      {isMember && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {healthcheckChange ? (
             <SubmitButton
               isPending={isPending}
-              variant="secondary"
+              variant="outline"
               name="intent"
-              value="request-service-change"
+              value="cancel-service-change"
             >
               {isPending ? (
                 <>
                   <LoaderIcon className="animate-spin" size={15} />
-                  <span>Updating...</span>
+                  <span>Discarding...</span>
                 </>
               ) : (
                 <>
-                  <CheckIcon size={15} className="flex-none" />
-                  <span>Update</span>
+                  <Undo2Icon size={15} className="flex-none" />
+                  <span>Discard change</span>
                 </>
               )}
             </SubmitButton>
-            <Button
-              variant="outline"
-              onClick={() => {
-                reset();
-                setHealthCheckType(healthcheck?.type ?? "none");
-              }}
-              type="reset"
-            >
-              Reset
-            </Button>
-
-            {service?.healthcheck !== null && healthcheck !== null && (
+          ) : (
+            <>
               <SubmitButton
-                value="remove-service-healthcheck"
-                name="intent"
                 isPending={isPending}
-                variant="destructive"
-                className="inline-flex gap-1 items-center"
+                variant="secondary"
+                name="intent"
+                value="request-service-change"
               >
                 {isPending ? (
                   <>
                     <LoaderIcon className="animate-spin" size={15} />
-                    <span>Removing...</span>
+                    <span>Updating...</span>
                   </>
                 ) : (
                   <>
-                    <Trash2Icon size={15} className="flex-none" />
-                    <span>Remove healthcheck</span>
+                    <CheckIcon size={15} className="flex-none" />
+                    <span>Update</span>
                   </>
                 )}
               </SubmitButton>
-            )}
-          </>
-        )}
-      </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  reset();
+                  setHealthCheckType(healthcheck?.type ?? "none");
+                }}
+                type="reset"
+              >
+                Reset
+              </Button>
+
+              {service?.healthcheck !== null && healthcheck !== null && (
+                <SubmitButton
+                  value="remove-service-healthcheck"
+                  name="intent"
+                  isPending={isPending}
+                  variant="destructive"
+                  className="inline-flex gap-1 items-center"
+                >
+                  {isPending ? (
+                    <>
+                      <LoaderIcon className="animate-spin" size={15} />
+                      <span>Removing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2Icon size={15} className="flex-none" />
+                      <span>Remove healthcheck</span>
+                    </>
+                  )}
+                </SubmitButton>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </fetcher.Form>
   );
 }

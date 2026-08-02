@@ -148,7 +148,6 @@ export const DEFAULT_REGISTRIES: Record<
       <DockerHubLogo {...props} className={cn("size-4 flex-none", className)} />
     )
   },
-
   GITHUB: {
     name: "Github Container Registry",
     url: "https://ghcr.io",
@@ -157,7 +156,6 @@ export const DEFAULT_REGISTRIES: Record<
       <GithubLogo {...props} className={cn("size-4 flex-none", className)} />
     )
   },
-
   GITLAB: {
     name: "Gitlab Container Registry",
     url: "https://registry.gitlab.com",
@@ -184,7 +182,6 @@ export const DEFAULT_REGISTRIES: Record<
       <AWSECSLogo {...props} className={cn("size-4 flex-none", className)} />
     )
   },
-
   GENERIC: {
     name: "Generic Registry",
     Icon: ({ className, ...props }) => (
@@ -200,8 +197,31 @@ export const ZANEOPS_INTERNAL_DOMAIN = "zaneops.internal";
 export const TEMPLATE_API_HOST = "https://templates.zaneops.dev";
 
 export const WORKSPACE_ROLE_MAPPING = {
-  Guest: 10,
-  Member: 30,
-  Admin: 40,
-  Owner: 50
-} satisfies Record<WorkspaceRoleName, WorkspaceRoleValue>;
+  Viewer: {
+    value: 10,
+    summary: "client or contractor",
+    description:
+      "For clients, stakeholders and contractors. Can see your apps, their URLs and whether they're up. Cannot see logs, environment variables, or deploy. Limited to the projects you pick."
+  },
+  Member: {
+    value: 30,
+    summary: "team developer",
+    description:
+      "For your team. Can create, configure and deploy services, and read all environment variables and logs. Cannot delete services or projects, or manage members."
+  },
+  Admin: {
+    value: 40,
+    summary: "workspace manager",
+    description:
+      "Everything a Member can do, plus deleting services and projects, managing environments, connectors and registries, and inviting people."
+  },
+  Owner: {
+    value: 50,
+    summary: "workspace creator",
+    description:
+      "Full control of the workspace. Only the Owner can change workspace settings, transfer ownership or delete the workspace. Can be reached through transfer of ownership, but cannot be assigned."
+  }
+} satisfies Record<
+  WorkspaceRoleName,
+  { value: WorkspaceRoleValue; summary: string; description: React.ReactNode }
+>;

@@ -42,9 +42,11 @@ import {
 import {
   cn,
   getFormErrorsFromResponseData,
+  hasMinRole,
   pluralize,
   wait
 } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import type { clientAction } from "~/routes/compose/compose-stack-settings";
 
 export type ComposeStackEnvFormProps = {
@@ -60,6 +62,8 @@ type EnvVariableUI = {
 };
 
 export function ComposeStackEnvForm({ stack }: ComposeStackEnvFormProps) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const env_variables: Map<string, EnvVariableUI> = new Map();
   for (const env of stack?.env_overrides ?? []) {
     env_variables.set(env.id, {
@@ -68,9 +72,12 @@ export function ComposeStackEnvForm({ stack }: ComposeStackEnvFormProps) {
       value: env.value
     });
   }
-  for (const ch of stack.unapplied_changes.filter(
+
+  const stack_changes = (stack.unapplied_changes ?? []).filter(
     (ch) => ch.field === "env_overrides"
-  )) {
+  );
+
+  for (const ch of stack_changes) {
     const keyValue = (ch.new_value ?? ch.old_value) as {
       key: string;
       value: string;
@@ -83,6 +90,7 @@ export function ComposeStackEnvForm({ stack }: ComposeStackEnvFormProps) {
       change_type: ch.type
     });
   }
+
   return (
     <div className="w-full max-w-4xl flex flex-col gap-5">
       <p className="text-gray-400">
@@ -139,14 +147,29 @@ export function ComposeStackEnvForm({ stack }: ComposeStackEnvFormProps) {
             </ul>
           </>
         )}
-        <hr className="border-border" />
+        {!isMember && env_variables.size === 0 && (
+          <div
+            className={cn(
+              "flex flex-col gap-2 items-center py-8 bg-muted/20",
+              "border-border border-dashed rounded-md border-1"
+            )}
+          >
+            No environment overrides in this stack
+          </div>
+        )}
 
-        <h3 className="">Add new variable</h3>
-        <p className="text-grey">
-          Use <Code className="text-sm">{"{{env.VARIABLE_NAME}}"}</Code> to
-          reference shared variables from the parent environment
-        </p>
-        <NewEnvVariableForm />
+        {isMember && (
+          <>
+            <hr className="border-border" />
+
+            <h3 className="">Add new variable</h3>
+            <p className="text-grey">
+              Use <Code className="text-sm">{"{{env.VARIABLE_NAME}}"}</Code> to
+              reference shared variables from the parent environment
+            </p>
+            <NewEnvVariableForm />
+          </>
+        )}
       </section>
     </div>
   );
@@ -159,6 +182,8 @@ function EnVariableRow({
   change_id,
   id
 }: EnvVariableUI) {
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
   const [isEnvValueShown, setIsEnvValueShown] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
   const [hasCopied, startTransition] = React.useTransition();
@@ -289,68 +314,70 @@ function EnVariableRow({
               <input type="hidden" name="change_type" value="DELETE" />
             </deleteFetcher.Form>
           )}
-          <Menubar className="border-none h-auto w-fit">
-            <MenubarMenu>
-              <MenubarTrigger
-                className="flex justify-center items-center gap-2"
-                asChild
-              >
-                <Button
-                  variant="ghost"
-                  className="px-2.5 py-0.5 hover:bg-inherit"
+          {isMember && (
+            <Menubar className="border-none h-auto w-fit">
+              <MenubarMenu>
+                <MenubarTrigger
+                  className="flex justify-center items-center gap-2"
+                  asChild
                 >
-                  <EllipsisVerticalIcon size={15} />
-                </Button>
-              </MenubarTrigger>
-              <MenubarContent
-                side="bottom"
-                align="end"
-                alignOffset={-30}
-                className="border min-w-0 mx-9 border-border"
-              >
-                {change_id !== undefined ? (
-                  <>
-                    <button
-                      form={`${idPrefix}-cancel-form`}
-                      disabled={cancelFetcher.state !== "idle"}
-                      onClick={(e) => {
-                        e.currentTarget.form?.requestSubmit();
-                      }}
-                    >
-                      <MenubarContentItem
-                        icon={Undo2Icon}
-                        text="Discard change"
-                        className="text-red-400"
-                      />
-                    </button>
-                  </>
-                ) : (
-                  id && (
+                  <Button
+                    variant="ghost"
+                    className="px-2.5 py-0.5 hover:bg-inherit"
+                  >
+                    <EllipsisVerticalIcon size={15} />
+                  </Button>
+                </MenubarTrigger>
+                <MenubarContent
+                  side="bottom"
+                  align="end"
+                  alignOffset={-30}
+                  className="border min-w-0 mx-9 border-border"
+                >
+                  {change_id !== undefined ? (
                     <>
-                      <MenubarContentItem
-                        icon={EditIcon}
-                        text="Edit"
-                        onClick={() => setIsEditing(true)}
-                      />
                       <button
-                        form={`${idPrefix}-delete-form`}
-                        disabled={deleteFetcher.state !== "idle"}
+                        form={`${idPrefix}-cancel-form`}
+                        disabled={cancelFetcher.state !== "idle"}
                         onClick={(e) => {
                           e.currentTarget.form?.requestSubmit();
                         }}
                       >
                         <MenubarContentItem
-                          icon={Trash2Icon}
-                          text="Remove"
+                          icon={Undo2Icon}
+                          text="Discard change"
                           className="text-red-400"
                         />
                       </button>
                     </>
-                  )
-                )}
-              </MenubarContent>
-            </MenubarMenu>
-          </Menubar>
+                  ) : (
+                    id && (
+                      <>
+                        <MenubarContentItem
+                          icon={EditIcon}
+                          text="Edit"
+                          onClick={() => setIsEditing(true)}
+                        />
+                        <button
+                          form={`${idPrefix}-delete-form`}
+                          disabled={deleteFetcher.state !== "idle"}
+                          onClick={(e) => {
+                            e.currentTarget.form?.requestSubmit();
+                          }}
+                        >
+                          <MenubarContentItem
+                            icon={Trash2Icon}
+                            text="Remove"
+                            className="text-red-400"
+                          />
+                        </button>
+                      </>
+                    )
+                  )}
+                </MenubarContent>
+              </MenubarMenu>
+            </Menubar>
+          )}
         </div>
       )}
     </div>

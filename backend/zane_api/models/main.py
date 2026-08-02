@@ -77,8 +77,8 @@ class Workspace(TimestampedModel):
 
 
 class WorkspaceRole(models.IntegerChoices):
-    # Read-only user: View projects and preview deployments only
-    GUEST = 10, "Guest"
+    # Read-only user with no access to sensitive fields
+    VIEWER = 10, "Viewer"
 
     # 3rd party contributor to the team (usually temporary)
     # + View logs, env vars, trigger deploys, manage own tokens
@@ -126,11 +126,11 @@ class WorkspaceInvitation(TimestampedModel):
         on_delete=models.CASCADE,
         related_name="created_invitations",
     )
-    # Only relevant for GUEST and CONTRIBUTOR
+    # Only relevant for VIEWER and CONTRIBUTOR
     accessible_projects = models.ManyToManyField("Project", blank=True)
 
     @property
-    def role_name(self) -> Literal["Owner", "Admin", "Member", "Guest"]:
+    def role_name(self) -> Literal["Owner", "Admin", "Member", "Viewer"]:
         return self.get_role_display()
 
     @property
@@ -166,11 +166,11 @@ class WorkspaceMembership(models.Model):
         default=WorkspaceRole.MEMBER,
     )
 
-    # Only relevant for GUEST and CONTRIBUTOR
+    # Only relevant for VIEWER and CONTRIBUTOR
     accessible_projects = models.ManyToManyField("Project", blank=True)
 
     @property
-    def role_name(self) -> Literal["Owner", "Admin", "Member", "Guest"]:
+    def role_name(self) -> Literal["Owner", "Admin", "Member", "Viewer"]:
         return self.get_role_display()
 
     class Meta:
@@ -428,6 +428,20 @@ class Service(BaseService):
     project_id: str
     environment_id: str
     shared_volumes: Manager["SharedVolume"]
+
+    @staticmethod
+    def get_sensitive_fields():
+        """
+        Fields that contain potentially secret values
+        """
+        return [
+            "deploy_token",
+            "env_variables",
+            "system_env_variables",
+            "credentials",
+            "container_registry_credentials",
+            "unapplied_changes",
+        ]
 
     class ServiceType(models.TextChoices):
         DOCKER_REGISTRY = "DOCKER_REGISTRY", _("Docker repository")
@@ -1522,6 +1536,14 @@ class Config(TimestampedModel):
     language = models.CharField(default="plaintext", max_length=255)
     version = models.PositiveIntegerField(default=1)
 
+    @staticmethod
+    def get_sensitive_fields():
+        """
+        Fields that contain potentially secret values.
+        The name and mount path stay visible — only the body is withheld.
+        """
+        return ["contents"]
+
     def __str__(self):
         return f"Config({self.name})"
 
@@ -1630,6 +1652,13 @@ class Deployment(BaseDeployment):
     ignore_build_cache = models.BooleanField(default=False)
     build_started_at = models.DateTimeField(null=True)
     build_finished_at = models.DateTimeField(null=True)
+
+    @staticmethod
+    def get_sensitive_fields():
+        """
+        Fields that contain potentially secret values
+        """
+        return ["changes"]
 
     @classmethod
     def get_next_deployment_slot(
@@ -2060,6 +2089,15 @@ class PreviewEnvMetadata(models.Model):
     auth_user = models.CharField(null=True)
     auth_password = models.CharField(null=True)
 
+    @staticmethod
+    def get_sensitive_fields():
+        """
+        Fields that contain potentially secret values.
+        `auth_enabled` stays visible — whether a preview URL is protected is not
+        a secret, the credentials that get past it are.
+        """
+        return ["auth_user", "auth_password"]
+
     def get_pull_request_deployment_blocked_comment_body(self, service: Service):
         project = service.project
         environment = service.environment
@@ -2103,6 +2141,13 @@ class Environment(TimestampedModel):
     services: Manager[Service]
     variables: Manager["SharedEnvVariable"]
     PRODUCTION_ENV_NAME = "production"
+
+    @staticmethod
+    def get_sensitive_fields():
+        """
+        Fields that contain potentially secret values
+        """
+        return ["variables"]
 
     class PreviewSourceTrigger(models.TextChoices):
         API = "API", _("Api")

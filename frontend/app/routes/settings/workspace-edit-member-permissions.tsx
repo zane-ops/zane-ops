@@ -1,5 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronsUpDownIcon, LoaderIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  ChevronsUpDownIcon,
+  InfoIcon,
+  LoaderIcon
+} from "lucide-react";
 import * as React from "react";
 import {
   Form,
@@ -13,6 +18,7 @@ import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import type { Project, WorkspaceMember, WorkspaceRoleName } from "~/api/types";
 import { MultiSelect } from "~/components/multi-select";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
@@ -154,7 +160,7 @@ function EditWorkspaceMemberForm({ member }: EditWorkspaceMemberFormProps) {
     }
   );
 
-  const selectedRoleValue = WORKSPACE_ROLE_MAPPING[selectedRole];
+  const selectedRoleValue = WORKSPACE_ROLE_MAPPING[selectedRole].value;
   const errors = getFormErrorsFromResponseData(actionData?.errors);
 
   return (
@@ -172,6 +178,25 @@ function EditWorkspaceMemberForm({ member }: EditWorkspaceMemberFormProps) {
         />
       ))}
 
+      <Alert variant="info" className=" bg-link/10 my-3">
+        <InfoIcon className="size-4" />
+        <AlertTitle>
+          <span className="font-normal">Selected Role:</span>{" "}
+          <span className="text-card-foreground">{selectedRole}</span>
+        </AlertTitle>
+        <AlertDescription className="mt-3 text-card-foreground">
+          {WORKSPACE_ROLE_MAPPING[selectedRole].description}
+        </AlertDescription>
+      </Alert>
+
+      {errors.non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="size-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errors.non_field_errors}</AlertDescription>
+        </Alert>
+      )}
+
       <FieldSet name="role_value" errors={errors.role} className="w-full">
         <FieldSetLabel>Role</FieldSetLabel>
 
@@ -182,17 +207,20 @@ function EditWorkspaceMemberForm({ member }: EditWorkspaceMemberFormProps) {
           <SelectTrigger id="role" className="w-full gap-2">
             <SelectValue placeholder="Select role" />
           </SelectTrigger>
-          <SelectContent>
-            {workspaceRoleOptions.map(([roleName, roleValue]) => (
-              <SelectItem value={roleName} key={roleValue}>
-                {roleName}
+          <SelectContent className="max-w-96">
+            {workspaceRoleOptions.map(([roleName, role]) => (
+              <SelectItem value={roleName} key={roleName}>
+                <span className="font-medium">{roleName}</span>
+                <span className="text-grey">
+                  &nbsp;&middot;&nbsp;{role.summary}
+                </span>
               </SelectItem>
             ))}
           </SelectContent>
         </FieldSetSelect>
       </FieldSet>
 
-      {selectedRole === "Guest" && (
+      {selectedRole === "Viewer" && (
         <div className="my-2 flex flex-col gap-1 w-full">
           <label htmlFor="accessible_projects" className="sr-only">
             Accessible projects
@@ -200,7 +228,7 @@ function EditWorkspaceMemberForm({ member }: EditWorkspaceMemberFormProps) {
 
           <MultiSelect
             value={selectedProjects.map((project) => project.slug)}
-            className="w-full border-muted"
+            className="w-full border-input"
             options={projects.map((project) => project.slug)}
             Icon={ChevronsUpDownIcon}
             id="accessible_projects"

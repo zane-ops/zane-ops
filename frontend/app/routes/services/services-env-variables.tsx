@@ -111,7 +111,7 @@ export default function ServiceEnvVariablesPage({
       value: env.value
     });
   }
-  for (const ch of service.unapplied_changes.filter(
+  for (const ch of (service.unapplied_changes ?? []).filter(
     (ch) => ch.field === "env_variables"
   )) {
     const keyValue = (ch.new_value ?? ch.old_value) as {

@@ -29,6 +29,7 @@ import {
 } from "~/components/ui/tooltip";
 import { ZANEOPS_INTERNAL_DOMAIN } from "~/lib/constants";
 import {
+  ensureAuthedUser,
   environmentQueries,
   gitAppsQueries,
   resourceQueries,
@@ -64,10 +65,14 @@ import type { Route } from "./+types/service-settings";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-  const { id: workspaceId } = await getCurrentWorkspace(queryClient);
-  const gitAppList = await queryClient.ensureQueryData(
-    gitAppsQueries.list(workspaceId)
-  );
+  const [{ id: workspaceId }, authedUser] = await Promise.all([
+    getCurrentWorkspace(queryClient),
+    ensureAuthedUser(queryClient)
+  ]);
+
+  const gitAppList = hasMinRole(authedUser, "Member")
+    ? await queryClient.ensureQueryData(gitAppsQueries.list(workspaceId))
+    : [];
   return { gitAppList };
 }
 
@@ -85,6 +90,7 @@ export default function ServiceSettingsPage({
 }: Route.ComponentProps) {
   const membership = useCurrentWorkspaceMembership();
   const isAdmin = hasMinRole(membership, "Admin");
+  const isMember = hasMinRole(membership, "Member");
 
   return (
     <div className="my-6 grid lg:grid-cols-12 gap-10 relative max-w-full">
@@ -229,18 +235,22 @@ export default function ServiceSettingsPage({
               service_slug={service_slug}
               env_slug={env_slug}
             />
-            <hr className="w-full max-w-4xl border-border" />
-            <ServiceDeployURLForm
-              project_slug={project_slug}
-              service_slug={service_slug}
-              env_slug={env_slug}
-            />
-            {service.type === "GIT_REPOSITORY" && (
-              <ServicePreviewDeployURLForm
-                project_slug={project_slug}
-                service_slug={service_slug}
-                env_slug={env_slug}
-              />
+            {isMember && (
+              <>
+                <hr className="w-full max-w-4xl border-border" />
+                <ServiceDeployURLForm
+                  project_slug={project_slug}
+                  service_slug={service_slug}
+                  env_slug={env_slug}
+                />
+                {service.type === "GIT_REPOSITORY" && (
+                  <ServicePreviewDeployURLForm
+                    project_slug={project_slug}
+                    service_slug={service_slug}
+                    env_slug={env_slug}
+                  />
+                )}
+              </>
             )}
           </div>
         </section>

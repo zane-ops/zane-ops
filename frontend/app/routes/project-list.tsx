@@ -30,8 +30,7 @@ import {
   deploymentQueries,
   ensureAuthedUser,
   projectQueries,
-  projectSearchSchema,
-  userQueries
+  projectSearchSchema
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, hasMinRole } from "~/lib/utils";
@@ -61,9 +60,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     queryClient.ensureQueryData(
       projectQueries.list({ workspaceId: workspace.id, filters })
     ),
-    hasMinRole(authedUser, "Member")
-      ? queryClient.ensureQueryData(deploymentQueries.recent(workspace.id))
-      : []
+    queryClient.ensureQueryData(deploymentQueries.recent(workspace.id))
   ]);
   return {
     projectList,
@@ -126,7 +123,7 @@ export default function ProjectList({
         )}
       </div>
       <ProjectsListSection />
-      {hasMinRole(user, "Member") && <RecentDeploymentsSection />}
+      <RecentDeploymentsSection />
     </main>
   );
 }

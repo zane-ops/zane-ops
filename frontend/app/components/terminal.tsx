@@ -1,9 +1,9 @@
+import { useMediaQuery } from "@uidotdev/usehooks";
 import { FitAddon } from "@xterm/addon-fit";
 import { type ITheme, Terminal as XTermTerminal } from "@xterm/xterm";
-import * as React from "react";
 import "@xterm/xterm/css/xterm.css";
-import { useMediaQuery } from "@uidotdev/usehooks";
-import { useTheme } from "~/components/theme-context";
+import * as React from "react";
+import { useThemeStore } from "~/components/theme-store";
 import { cn } from "~/lib/utils";
 
 type TerminalProps = {
@@ -72,7 +72,7 @@ export function Terminal({
   const fitAddon = React.useRef<FitAddon>(new FitAddon());
   const socketRef = React.useRef<WebSocket | null>(null);
 
-  const theme = useTheme().theme;
+  const theme = useThemeStore((s) => s.theme);
 
   // Send terminal size to backend over WebSocket
   const sendResize = () => {

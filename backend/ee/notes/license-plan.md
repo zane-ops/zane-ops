@@ -47,11 +47,10 @@
 
 
 - Implement frontend for Workspace admin :
-  - [ ] New dashboard header to show workspace & user profile
-  - [ ] Instance dashboard admin
+  - [x] New dashboard header to show workspace & user profile
+  - [x] List invitations
   - [ ] New cmd+k as a dialog with more options (?)
-  - [ ] List invitations
-- [ ] Implement Guest UI: show only the accessible projects
+- [ ] Implement Viewer UI: show only the accessible projects
 - Implement Instance Admin UI
   - [ ] Workspaces CRUD
   - [ ] Users CRUD

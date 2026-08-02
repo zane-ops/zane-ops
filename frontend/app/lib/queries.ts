@@ -9,12 +9,11 @@ import {
 import { href, redirect } from "react-router";
 import { preprocess, z } from "zod";
 import { zfd } from "zod-form-data";
-import type { ApiResponse, RequestInput, RequestParams } from "~/api/client";
+import type { ApiResponse, RequestParams } from "~/api/client";
 import { apiClient } from "~/api/client";
 import type {
   TemplateDetailsApiResponse,
-  TemplateSearchAPIResponse,
-  WorkspaceMembership
+  TemplateSearchAPIResponse
 } from "~/api/types";
 import {
   DEFAULT_LOGS_PER_PAGE,
@@ -102,7 +101,11 @@ export async function ensureMinRole(
 ) {
   const user = await ensureAuthedUser(queryClient);
   if (!hasMinRole(user, roleName)) {
-    throw notFound();
+    throw notFound(
+      import.meta.env.DEV
+        ? "You do have permission to view this page"
+        : "Not found"
+    );
   }
   return user;
 }
@@ -2535,7 +2538,7 @@ export const resourceQueries = {
   search: (workspaceId: string, query?: string) =>
     queryOptions({
       queryKey: [...workspaceKey(workspaceId), "RESOURCES", query] as const,
-      queryFn: ({ signal }) => {
+      queryFn: async ({ signal }) => {
         return apiClient.GET("/api/search-resources/", {
           params: {
             query: {
@@ -2544,8 +2547,7 @@ export const resourceQueries = {
           },
           signal
         });
-      },
-      enabled: (query ?? "").trim().length > 0
+      }
     })
 };
 
@@ -3063,7 +3065,7 @@ export const workspaceMemberListFilters = zfd.formData({
   query: z.string().optional(),
   per_page: zfd.numeric().optional().catch(10).optional(),
   role: z
-    .enum(["Guest", "Member", "Admin", "Owner"])
+    .enum(["Viewer", "Member", "Admin", "Owner"])
     .optional()
     .catch(undefined)
 });
@@ -3087,7 +3089,7 @@ export const workspaceQueries = {
             query: {
               ...filters,
               role: filters.role
-                ? WORKSPACE_ROLE_MAPPING[filters.role]
+                ? WORKSPACE_ROLE_MAPPING[filters.role].value
                 : undefined
             }
           }

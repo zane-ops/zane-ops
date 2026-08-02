@@ -104,6 +104,17 @@ class ComposeStack(TimestampedModel):
     #     "db": {...}
     # }
 
+    @staticmethod
+    def get_sensitive_fields():
+        return [
+            "deploy_token",
+            "user_content",
+            "computed_content",
+            "env_overrides",
+            "configs",
+            "unapplied_changes",
+        ]
+
     class Meta:  # type: ignore
         constraints = [
             models.UniqueConstraint(
@@ -376,6 +387,10 @@ class ComposeStackDeployment(TimestampedModel):
     @property
     def workflow_id(self):
         return f"deploy-compose-{self.stack.id}"
+
+    @staticmethod
+    def get_sensitive_fields():
+        return ["changes"]
 
     class Meta:  # type: ignore
         ordering = ["-queued_at"]

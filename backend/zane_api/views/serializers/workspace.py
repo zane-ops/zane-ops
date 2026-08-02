@@ -75,7 +75,7 @@ class WorkspaceEditPermissionsRequestSerializer(serializers.Serializer):
         if role < WorkspaceRole.MEMBER and len(accessible_projects) == 0:
             raise serializers.ValidationError(
                 {
-                    "accessible_project_ids": "Users with the Guest role must be granted access to at least one project."
+                    "accessible_project_ids": "Users with the Viewer role must be granted access to at least one project."
                 }
             )
         if role >= WorkspaceRole.MEMBER:
@@ -126,7 +126,7 @@ class InviteUserIntoWorkspaceRequestSerializer(serializers.Serializer):
     )
     role = serializers.ChoiceField(
         choices=WorkspaceRole.choices,
-        default=WorkspaceRole.GUEST,
+        default=WorkspaceRole.VIEWER,
     )
     username = serializers.CharField(
         min_length=1,
@@ -156,13 +156,13 @@ class InviteUserIntoWorkspaceRequestSerializer(serializers.Serializer):
         return projects
 
     def validate(self, attrs: dict):
-        role = attrs.get("role", WorkspaceRole.GUEST)
+        role = attrs.get("role", WorkspaceRole.VIEWER)
         accessible_projects = attrs["accessible_project_ids"]
 
         if role < WorkspaceRole.MEMBER and len(accessible_projects) == 0:
             raise serializers.ValidationError(
                 {
-                    "accessible_project_ids": "Users with the Guest role must be granted access to at least one project."
+                    "accessible_project_ids": "Users with the Viewer role must be granted access to at least one project."
                 }
             )
         if role >= WorkspaceRole.MEMBER:

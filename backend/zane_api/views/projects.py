@@ -73,7 +73,8 @@ from temporal.workflows import (
 from ..permissions import (
     HasWorkspace,
     IsWorkspaceAdmin,
-    IsWorkspaceGuest,
+    IsWorkspaceMember,
+    IsWorkspaceViewer,
     get_accessible_projects,
 )
 
@@ -87,7 +88,7 @@ class ProjectsListAPIView(ListCreateAPIView):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [HasWorkspace(), IsWorkspaceGuest()]
+            return [HasWorkspace(), IsWorkspaceViewer()]
         return [HasWorkspace(), IsWorkspaceAdmin()]
 
     def get_queryset(self) -> QuerySet[Project]:  # type: ignore
@@ -237,12 +238,12 @@ class ProjectsListAPIView(ListCreateAPIView):
         raise NotImplementedError("should never reach here")
 
 
-class ProjectDetailsView(APIView):
+class ProjectDetailsAPIView(APIView):
     serializer_class = ProjectSerializer
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [HasWorkspace(), IsWorkspaceGuest()]
+            return [HasWorkspace(), IsWorkspaceViewer()]
         return [HasWorkspace(), IsWorkspaceAdmin()]
 
     def get_object(self) -> Project:  # type: ignore

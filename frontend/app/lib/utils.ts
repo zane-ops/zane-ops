@@ -4,18 +4,20 @@ import { twMerge } from "tailwind-merge";
 import { apiClient } from "~/api/client";
 import type {
   AuthedUserResponse,
+  UserRole,
   WorkspaceInvitation,
   WorkspaceMember,
-  WorkspaceMembership,
-  WorkspaceRoleName,
-  WorkspaceRoleValue
+  WorkspaceMembership
 } from "~/api/types";
 import { WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
+import { createDevLogger } from "~/lib/logger";
 import type {
   DotNotationToObject,
   MergeUnions,
   RecursivePartial
 } from "~/lib/types";
+
+const logger = createDevLogger(import.meta.url);
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -616,7 +618,7 @@ export type UserWithMembership =
 
 export function hasMinRole(
   user: UserWithMembership,
-  roleName: WorkspaceRoleName | "ServerAdmin"
+  roleName: UserRole
 ): boolean {
   if (roleName === "ServerAdmin") {
     return (
@@ -627,13 +629,29 @@ export function hasMinRole(
   }
 
   const membership = "membership" in user ? user.membership : user;
-  return Boolean(
-    membership && membership.role >= WORKSPACE_ROLE_MAPPING[roleName]
+
+  const hasRole = Boolean(
+    membership && membership.role >= WORKSPACE_ROLE_MAPPING[roleName].value
   );
+
+  logger.info({
+    membership,
+    roleName,
+    hasRole
+  });
+
+  return hasRole;
 }
 
 export function getUserDisplayName(
   user: Pick<AuthedUserResponse["user"], "first_name" | "username">
 ) {
   return user.first_name.trim() ? user.first_name : user.username;
+}
+
+export function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tagName = target.tagName;
+  return ["input", "textarea", "select"].includes(tagName.toLowerCase());
 }

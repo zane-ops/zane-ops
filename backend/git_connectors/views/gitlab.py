@@ -59,11 +59,11 @@ from temporal.shared import (
 )
 from ..dtos import GitCommitInfo
 from ..constants import GITLAB_NULL_COMMIT
-from zane_api.permissions import HasWorkspace, IsWorkspaceOwner, IsWorkspaceMember
+from zane_api.permissions import HasWorkspace, IsWorkspaceAdmin, IsWorkspaceMember
 
 
 class CreateGitlabAppAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
 
     @extend_schema(
         request=CreateGitlabAppRequestSerializer,
@@ -93,7 +93,7 @@ class CreateGitlabAppAPIView(APIView):
 
 
 class SetupGitlabAppAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
 
     @transaction.atomic()
     @extend_schema(
@@ -198,7 +198,7 @@ class SetupGitlabAppAPIView(APIView):
 
 
 class TestGitlabAppAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
 
     @extend_schema(
         responses={
@@ -256,7 +256,7 @@ class TestGitlabAppAPIView(APIView):
 
 
 class SyncRepositoriesAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
 
     @transaction.atomic()
     @extend_schema(
@@ -305,7 +305,7 @@ class GitlabAppDetailsAPIView(RetrieveAPIView):
 
 
 class GitlabAppUpdateAPIView(APIView):
-    permission_classes = [HasWorkspace, IsWorkspaceOwner]
+    permission_classes = [HasWorkspace, IsWorkspaceAdmin]
 
     @transaction.atomic()
     @extend_schema(

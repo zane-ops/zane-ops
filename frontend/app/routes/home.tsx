@@ -1,8 +1,11 @@
 import { href, redirect } from "react-router";
+import { createDevLogger } from "~/lib/logger";
 import { userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/home";
+
+const logger = createDevLogger(import.meta.url);
 
 export function meta() {
   return [metaTitle("Dashboard")] satisfies ReturnType<Route.MetaFunction>;
@@ -15,7 +18,7 @@ export async function clientLoader({}: Route.ClientLoaderArgs) {
   const workspace = authedUser?.membership?.workspace;
 
   if (workspace) {
-    console.log("[home/clientLoader] redirect to `/workspace`");
+    logger.info("redirect to `/workspace`");
     throw redirect(href("/workspace"));
   }
 

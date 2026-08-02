@@ -9,8 +9,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { Link, href, useFetcher, useNavigate } from "react-router";
-import { Button } from "~/components/ui/button";
-import { SubmitButton } from "~/components/ui/button";
+import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -25,7 +24,6 @@ import type {
 
 import { toast } from "sonner";
 import type { Service } from "~/api/types";
-import type { getComposeStackStatus } from "~/components/compose-stack-cards";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Dialog,
@@ -35,11 +33,14 @@ import {
   DialogTitle,
   DialogTrigger
 } from "~/components/ui/dialog";
+import { createDevLogger } from "~/lib/logger";
 import { getQueryClient } from "~/lib/query-client";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import { cn, durationToMs, wait } from "~/lib/utils";
 import { ServiceCleanupQueueConfirmModal } from "~/routes/services/components/service-cleanup-queue-confirm-modal";
 import type { clientAction as deployClientAction } from "~/routes/services/deploy-docker-service";
+
+const logger = createDevLogger(import.meta.url);
 
 export type ServiceActionsPopoverProps = {
   service: Service;
@@ -191,7 +192,7 @@ function ToggleServiceForm({
 
     const desiredState = formData.get("desired_state") as "stop" | "start";
     queueToggleItem(service.id);
-    toggleStateToast({
+    toggleServiceStateToast({
       workspaceId,
       desiredState,
       projectSlug,
@@ -320,7 +321,7 @@ function StopServiceConfirmationDialog({
   );
 }
 
-async function toggleStateToast({
+export async function toggleServiceStateToast({
   workspaceId,
   desiredState,
   projectSlug,
@@ -350,16 +351,15 @@ async function toggleStateToast({
     </Link>
   );
 
-  const toastId = toast.loading(
-    desiredState === "start" ? (
-      <span>Restarting {serviceLink}, this may take up to a minute...</span>
-    ) : (
-      <span>Stopping {serviceLink}, this may take up to a minute...</span>
-    ),
-    {
-      closeButton: false
-    }
-  );
+  const toastId = toast.loading("Loading...", {
+    description:
+      desiredState === "start" ? (
+        <span>Restarting {serviceLink}, this may take up to a minute...</span>
+      ) : (
+        <span>Stopping {serviceLink}, this may take up to a minute...</span>
+      ),
+    closeButton: false
+  });
 
   const MAX_TRIES = 12; // wait max for `1min` (12*5s = 60s)
   let total_tries = 0;
@@ -378,33 +378,33 @@ async function toggleStateToast({
 
   let currentState: ToggleServiceState | null = null;
 
-  while (
-    total_tries < MAX_TRIES &&
-    currentProductionDeployment !== null &&
-    currentState !== desiredState
-  ) {
+  while (total_tries < MAX_TRIES && currentState !== desiredState) {
     total_tries++;
 
-    // refetch queries to get fresh data
-    const deploymentList =
-      (
-        await queryClient.fetchQuery(
-          serviceQueries.deploymentList({
-            workspaceId,
-            project_slug: projectSlug,
-            service_slug: serviceSlug,
-            env_slug: envSlug
-          })
-        )
-      )?.results ?? [];
+    try {
+      // refetch queries to get fresh data
+      const deploymentList =
+        (
+          await queryClient.fetchQuery(
+            serviceQueries.deploymentList({
+              workspaceId,
+              project_slug: projectSlug,
+              service_slug: serviceSlug,
+              env_slug: envSlug
+            })
+          )
+        )?.results ?? [];
 
-    currentProductionDeployment =
-      deploymentList.find((dpl) => dpl.is_current_production) ?? null;
-
-    if (currentProductionDeployment) {
-      currentState =
-        currentProductionDeployment.status === "SLEEPING" ? "stop" : "start";
+      currentProductionDeployment =
+        deploymentList.find((dpl) => dpl.is_current_production) ?? null;
+    } catch (error) {
+      currentProductionDeployment = null;
     }
+
+    if (!currentProductionDeployment) break;
+
+    currentState =
+      currentProductionDeployment.status === "SLEEPING" ? "stop" : "start";
 
     if (currentState !== desiredState && total_tries < MAX_TRIES) {
       await wait(durationToMs(5, "seconds"));
@@ -420,10 +420,12 @@ async function toggleStateToast({
           <>{serviceLink} stopped successfully</>
         ),
       closeButton: true,
+      icon: undefined,
       id: toastId
     });
   } else {
     toast.warning("Warning", {
+      icon: undefined,
       description:
         desiredState === "start" ? (
           <>

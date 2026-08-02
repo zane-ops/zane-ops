@@ -16,6 +16,7 @@ import {
   FieldSetLabel,
   FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
+import { createDevLogger } from "~/lib/logger";
 import { userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -28,6 +29,8 @@ import type { Route } from "./+types/login";
 
 export const meta: Route.MetaFunction = () => [metaTitle("Login")];
 
+const logger = createDevLogger(import.meta.url);
+
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
   const [user, userExistQuery] = await Promise.all([
@@ -36,7 +39,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   ]);
 
   if (!userExistQuery.data?.exists) {
-    console.log(`[login/clientLoader] redirect to \`/onboarding\``);
+    logger.info(`redirect to \`/onboarding\``);
     throw redirect(href("/onboarding"));
   }
 
@@ -49,7 +52,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
       redirectTo = redirect_to;
     }
 
-    console.log(`[login/clientLoader] redirect to \`/${redirectTo}\``);
+    logger.info(`redirect to \`/${redirectTo}\``);
     throw redirect(redirectTo);
   }
   return;
@@ -78,11 +81,13 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     };
   }
   if (data?.success) {
-    queryClient.removeQueries(userQueries.authedUser);
     queryClient.removeQueries(userQueries.memberships);
+    queryClient.removeQueries(userQueries.authedUser);
 
     const redirect_to = searchParams.get("redirect_to");
+
     let redirectTo = href("/");
+
     if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
       redirectTo = redirect_to;
     }

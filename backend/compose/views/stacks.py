@@ -64,6 +64,7 @@ from drf_standardized_errors.formatter import ExceptionFormatter
 from zane_api.permissions import (
     HasWorkspace,
     IsWorkspaceMember,
+    IsWorkspaceViewer,
     IsWorkspaceAdmin,
     get_accessible_projects,
 )
@@ -75,7 +76,7 @@ class ComposeStackListAPIView(ListAPIView):
     pagination_class = None
     filter_backends = [DjangoFilterBackend]
     filterset_class = ComposeStacksListFilterSet
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     def get_queryset(self) -> QuerySet[ComposeStack]:  # type: ignore
         project_slug = self.kwargs["project_slug"]
@@ -345,7 +346,11 @@ class ComposeStackDetailsAPIView(RetrieveUpdateAPIView):
     lookup_field = "slug"
     http_method_names = ["get", "put"]
     queryset = ComposeStack.objects.all()
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [HasWorkspace(), IsWorkspaceViewer()]
+        return [HasWorkspace(), IsWorkspaceMember()]
 
     @extend_schema(
         operation_id="getComposeStackDetails",
@@ -509,7 +514,7 @@ class ComposeStackDeploymentListAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = ComposeStackDeploymentListFilterSet
     pagination_class = ComposeStackDeploymentListPagination
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     @extend_schema(
         operation_id="listComposeStackDeployments",
@@ -563,7 +568,7 @@ class ComposeStackDeploymentDetailsAPIView(RetrieveAPIView):
     serializer_class = ComposeStackDeploymentSerializer
     lookup_field = "hash"
     queryset = ComposeStackDeployment.objects.all()
-    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
 
     @extend_schema(
         operation_id="getComposeStackDeploymentDetails",
@@ -762,7 +767,6 @@ class ComposeStackReDeployAPIView(APIView):
 
 
 class ComposeStackWebhookDeployAPIView(APIView):
-    serializer_class = ComposeStackDeploymentSerializer
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
@@ -834,8 +838,7 @@ class ComposeStackWebhookDeployAPIView(APIView):
 
         transaction.on_commit(commit_callback)
 
-        serializer = ComposeStackDeploymentSerializer(deployment)
-        return Response(data=serializer.data)
+        return Response(status=status.HTTP_202_ACCEPTED)
 
 
 class ComposeStackDeployAPIView(APIView):

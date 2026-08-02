@@ -1,30 +1,26 @@
 import {
   ArrowBigDownDashIcon,
-  CheckIcon,
   ChevronRightIcon,
   ClockIcon,
   ExternalLinkIcon,
-  GithubIcon,
   LoaderIcon,
   PenLineIcon,
-  UnplugIcon,
-  XIcon
+  UnplugIcon
 } from "lucide-react";
-import * as React from "react";
-import { flushSync } from "react-dom";
+import type * as React from "react";
 import { Link, useFetcher } from "react-router";
 import type { GithubApp } from "~/api/types";
+import { GithubLogo } from "~/components/github-logo";
 import { Badge } from "~/components/ui/badge";
 import { Button, SubmitButton } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
-import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn, formattedDate, getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn, formattedDate } from "~/lib/utils";
 import type { clientAction } from "~/routes/settings/github-app-details";
 
 export type GithubAppCardProps = {
@@ -34,103 +30,37 @@ export type GithubAppCardProps = {
 
 export function GithubAppCard({ app, children }: GithubAppCardProps) {
   const testConnectionFetcher = useFetcher<typeof clientAction>();
-  const renameFetcher = useFetcher<typeof clientAction>();
-  const isRenaming = renameFetcher.state !== "idle";
-  const [isEditing, setIsEditing] = React.useState(false);
-  const [data, setData] = React.useState(renameFetcher.data);
-  const errors = getFormErrorsFromResponseData(data?.errors);
-  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
-
-  React.useEffect(() => {
-    setData(renameFetcher.data);
-
-    if (renameFetcher.state === "idle" && renameFetcher.data?.data) {
-      setIsEditing(false);
-    }
-  }, [renameFetcher.state, renameFetcher.data]);
 
   return (
     <Card>
       <CardContent className="rounded-md p-4 gap-4 flex flex-col items-start md:flex-row md:items-center bg-toggle">
         <div className=" flex-col gap-2 items-center text-grey hidden md:flex">
-          <GithubIcon size={30} className="flex-none" />
+          <GithubLogo className="flex-none size-7.5" />
           <Badge variant="outline" className="text-grey">
             app
           </Badge>
         </div>
         <div className="flex flex-col flex-1 gap-0.5">
-          <renameFetcher.Form
-            className={cn(
-              "flex group gap-2",
-              isEditing ? "items-start" : "items-center"
-            )}
-            method="post"
-            action={`./github/${app.id}`}
-          >
-            <input type="hidden" name="intent" value="rename_github_app" />
-            {isEditing ? (
-              <>
-                <FieldSet name="name" errors={errors.name}>
-                  <FieldSetInput
-                    ref={inputRef}
-                    placeholder="github app name"
-                    defaultValue={app.name}
-                  />
-                </FieldSet>
-                <SubmitButton
-                  isPending={isRenaming}
-                  variant="outline"
-                  className="bg-inherit"
-                  name="intent"
-                  value="update-slug"
-                  size="sm"
-                >
-                  {isRenaming ? (
-                    <>
-                      <LoaderIcon className="animate-spin" size={15} />
-                      <span className="sr-only">Submiting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckIcon size={15} className="flex-none" />
-                      <span className="sr-only">Submit</span>
-                    </>
-                  )}
-                </SubmitButton>
-                <Button
-                  onClick={(ev) => {
-                    ev.currentTarget.form?.reset();
-                    setIsEditing(false);
-                    setData(undefined);
-                  }}
-                  variant="outline"
-                  className="bg-inherit"
-                  type="reset"
-                  size="sm"
-                >
-                  <XIcon size={15} className="flex-none" />
-                  <span className="sr-only">Cancel</span>
-                </Button>
-              </>
-            ) : (
-              <>
-                <h3 className="text-lg font-medium">{app.name}</h3>
-                <Button
-                  type="button"
-                  className="opacity-100 md:opacity-0 focus:opacity-100 group-hover:opacity-100"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    flushSync(() => setIsEditing(true));
-                    inputRef.current?.focus();
-                  }}
-                >
-                  <PenLineIcon size={15} className="flex-none" />
-                  <span className="sr-only">Rename app</span>
-                </Button>
-              </>
-            )}
-          </renameFetcher.Form>
+          <div className="relative">
+            <Link
+              to={`./github/${app.id}`}
+              className={cn(
+                "after:absolute after:inset-0",
+                "text-lg font-medium hover:underline flex items-center gap-2",
+                "group"
+              )}
+            >
+              <span className="opacity-100">{app.name}</span>
+              <PenLineIcon
+                size={15}
+                className={cn(
+                  "flex-none",
+                  "opacity-100 md:opacity-0 group-hover:opacity-100 group-focus:opacity-100"
+                )}
+              />
+              <span className="sr-only">Rename app</span>
+            </Link>
+          </div>
           <div className="text-sm text-link flex items-center gap-1">
             <ExternalLinkIcon size={15} className="flex-none" />
             <a href={app.app_url} className="break-all" target="_blank">
@@ -225,7 +155,7 @@ export function GithubAppCardLink({ app, parent_id }: GithubAppCardLinkProps) {
             >
               <div>
                 <div className="flex flex-col gap-2 items-center text-grey">
-                  <GithubIcon size={30} className="flex-none" />
+                  <GithubLogo className="flex-none size-7.5" />
                   <Badge variant="outline" className="text-grey">
                     app
                   </Badge>

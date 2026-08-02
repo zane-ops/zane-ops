@@ -17,7 +17,7 @@ from ..models import (
 from faker import Faker
 import time
 from ..processor import ComposeSpecProcessor
-from zane_api.models import Project, Environment
+from zane_api.models import Project, Environment, WorkspaceRole
 from django.core.exceptions import ValidationError
 from ..dtos import ComposeStackServiceStatus, ComposeStackEnvOverrideDto
 from zane_api.utils import DockerSwarmTaskState, EnhancedJSONEncoder
@@ -31,6 +31,7 @@ from drf_spectacular.utils import extend_schema_field
 from search.dtos import RuntimeLogLevel
 from search.serializers import RuntimeLogsContextParamsSerializer
 from rest_framework import pagination
+from zane_api.permissions import has_min_role
 
 
 class ComposeStackChangeSerializer(serializers.ModelSerializer):
@@ -99,6 +100,25 @@ class ComposeStackServiceConfigSerializer(serializers.Serializer):
     target = serializers.CharField()
     content = serializers.CharField()
 
+    # the source and target stay visible — only the body is withheld
+    MEMBER_ONLY_FIELDS = ["content"]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        for field_name, field in fields.items():
+            field.allow_null = field.allow_null or field_name in self.MEMBER_ONLY_FIELDS
+        return fields
+
+    def to_representation(self, instance):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(request, WorkspaceRole.MEMBER):
+            for key in self.MEMBER_ONLY_FIELDS:
+                data.pop(key, None)
+
+        return data
+
 
 class ComposeStackServicePortSerializer(serializers.Serializer):
     published = serializers.IntegerField()
@@ -142,6 +162,26 @@ class ComposeStackServiceStatusSerializer(serializers.Serializer):
     healthcheck = ComposeStackServiceHealthCheckSerializer(
         required=False, allow_null=True
     )
+
+    # `stack.services` is a status blob, but the resolved environment of every
+    # container lives in it — same secrets as `env_overrides`
+    MEMBER_ONLY_FIELDS = ["environment"]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        for field_name, field in fields.items():
+            field.allow_null = field.allow_null or field_name in self.MEMBER_ONLY_FIELDS
+        return fields
+
+    def to_representation(self, instance):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(request, WorkspaceRole.MEMBER):
+            for key in self.MEMBER_ONLY_FIELDS:
+                data.pop(key, None)
+
+        return data
 
 
 class ComposeConfigVersionSerializer(serializers.Serializer):
@@ -260,9 +300,24 @@ class ComposeStackSerializer(serializers.ModelSerializer):
     def get_fields(self):
         fields = super().get_fields()
         writable = ["slug", "user_content"]
+        sensitive_fields = ComposeStack.get_sensitive_fields()
         for field_name, field in fields.items():
             field.read_only = field_name not in writable
+            field.allow_null = field.allow_null or field_name in sensitive_fields
+
         return fields
+
+    def to_representation(self, instance: ComposeStack):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(request, WorkspaceRole.MEMBER):
+            sensitive_fields = ComposeStack.get_sensitive_fields()
+            for key in dict(data):
+                if key in sensitive_fields:
+                    data.pop(key)
+
+        return data
 
     class Meta:
         model = ComposeStack
@@ -288,12 +343,11 @@ class ComposeStackUpdateSerializer(ComposeStackSerializer):
     def get_fields(self):
         fields = super().get_fields()
         for field_name, field in fields.items():
-            if field_name == "slug":
-                field.read_only = (
-                    False  # only `slug` should be writable here, rest is read-only
-                )
-            else:
-                field.read_only = True
+            field.read_only = (
+                field_name
+                != "slug"  # only `slug` should be writable here, rest is read-only
+            )
+
         return fields
 
 
@@ -322,6 +376,33 @@ class ComposeStackDeploymentSerializer(serializers.ModelSerializer):
     @extend_schema_field(OpenApiTypes.STR)
     def get_redeploy_hash(self, obj: ComposeStackDeployment):
         return obj.is_redeploy_of.hash if obj.is_redeploy_of is not None else None
+
+    def get_fields(self):
+        fields = super().get_fields()
+        sensitive_fields = ComposeStackDeployment.get_sensitive_fields()
+        for field_name, field in fields.items():
+            field.allow_null = field.allow_null or field_name in sensitive_fields
+
+        return fields
+
+    def to_representation(self, instance: ComposeStack):
+        data = dict(super().to_representation(instance))
+
+        request = self.context.get("request")
+        if request is not None and not has_min_role(request, WorkspaceRole.MEMBER):
+            sensitive_fields = ComposeStackDeployment.get_sensitive_fields()
+            for key in dict(data):
+                if key in sensitive_fields:
+                    data.pop(key)
+
+            snapshot = data.get("stack_snapshot")
+            if snapshot is not None:
+                service_sensitive_fields = ComposeStack.get_sensitive_fields()
+                for key in dict(snapshot):
+                    if key in service_sensitive_fields:
+                        data["stack_snapshot"].pop(key)
+
+        return data
 
     class Meta:
         model = ComposeStackDeployment

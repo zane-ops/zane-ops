@@ -23,7 +23,8 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData, hasMinRole } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import type { clientAction } from "~/routes/compose/compose-stack-settings";
 
 export type ComposeStackUserContentFormProps = {
@@ -37,7 +38,7 @@ export function ComposeStackUserContentForm({
   const [data, setData] = React.useState(fetcher.data);
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
-  const composeContentChange = stack?.unapplied_changes.find(
+  const composeContentChange = (stack?.unapplied_changes ?? []).find(
     (change) => change.field === "compose_content"
   );
   const isEmptyChange =
@@ -54,6 +55,11 @@ export function ComposeStackUserContentForm({
 
   const errors = getFormErrorsFromResponseData(data?.errors);
   const isPending = fetcher.state !== "idle";
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
+
+  // a viewer cannot edit anything, and the file is locked while a change is pending
+  const isNotEditable = !isMember || composeContentChange !== undefined;
 
   const [userContent, setUserContent] = React.useState(defaultContents);
   const [accordionValue, setAccordionValue] = React.useState("");
@@ -134,66 +140,68 @@ export function ComposeStackUserContentForm({
             )}
             language="yaml"
             value={userContent}
-            readOnly={!!composeContentChange}
+            readOnly={isNotEditable}
             onChange={(value) => setUserContent(value ?? "")}
           />
         </FieldSet>
       </div>
 
-      <div className="inline-flex items-center gap-2 self-end">
-        {composeContentChange !== undefined ? (
-          <SubmitButton
-            isPending={isPending}
-            variant="outline"
-            name="intent"
-            value="cancel-stack-change"
-          >
-            {isPending ? (
-              <>
-                <LoaderIcon className="animate-spin" size={15} />
-                <span>Discarding...</span>
-              </>
-            ) : (
-              <>
-                <Undo2Icon size={15} className="flex-none" />
-                <span>Discard change</span>
-              </>
-            )}
-          </SubmitButton>
-        ) : (
-          <>
+      {isMember && (
+        <div className="inline-flex items-center gap-2 self-end">
+          {composeContentChange !== undefined ? (
             <SubmitButton
               isPending={isPending}
-              variant="secondary"
+              variant="outline"
               name="intent"
-              value="request-stack-change"
+              value="cancel-stack-change"
             >
               {isPending ? (
                 <>
                   <LoaderIcon className="animate-spin" size={15} />
-                  <span>Updating ...</span>
+                  <span>Discarding...</span>
                 </>
               ) : (
                 <>
-                  <CheckIcon size={15} className="flex-none" />
-                  <span>Update</span>
+                  <Undo2Icon size={15} className="flex-none" />
+                  <span>Discard change</span>
                 </>
               )}
             </SubmitButton>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setData(undefined);
-                setUserContent(defaultContents);
-              }}
-              type="reset"
-              className="flex-1 md:flex-none"
-            >
-              Reset
-            </Button>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              <SubmitButton
+                isPending={isPending}
+                variant="secondary"
+                name="intent"
+                value="request-stack-change"
+              >
+                {isPending ? (
+                  <>
+                    <LoaderIcon className="animate-spin" size={15} />
+                    <span>Updating ...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckIcon size={15} className="flex-none" />
+                    <span>Update</span>
+                  </>
+                )}
+              </SubmitButton>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setData(undefined);
+                  setUserContent(defaultContents);
+                }}
+                type="reset"
+                className="flex-1 md:flex-none"
+              >
+                Reset
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       <hr className="my-2 border-border w-full" />
 

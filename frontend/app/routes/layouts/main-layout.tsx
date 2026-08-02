@@ -13,17 +13,23 @@ import {
 } from "lucide-react";
 import { Outlet, href, redirect } from "react-router";
 import { NavigationProgress } from "~/components/navigation-progress";
-import { type Theme, useTheme } from "~/components/theme-context";
+import { type Theme, useThemeStore } from "~/components/theme-store";
 import { Button } from "~/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { serverQueries, userQueries } from "~/lib/queries";
 import { cn, hasMinRole } from "~/lib/utils";
 
 import type { ServerSettings } from "~/api/types";
+import { CommandBar } from "~/components/commandbar/commandbar";
+import { useCommandBarActionGroups } from "~/components/commandbar/commandbar-actions";
+import { MAIN_NAV_GROUPS } from "~/components/commandbar/commandbar-nav-items";
 import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
+import { createDevLogger } from "~/lib/logger";
 import { getQueryClient } from "~/lib/query-client";
 import { syncWorkspaceStore } from "~/lib/workspace-store";
 import type { Route } from "./+types/main-layout";
+
+const logger = createDevLogger(import.meta.url);
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
@@ -34,7 +40,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   ]);
 
   if (!userExistQuery.data?.exists) {
-    console.log("[main-layout/clientLoader] redirect to `/onboarding`");
+    logger.info("redirect to `/onboarding`");
     throw redirect(href("/onboarding"));
   }
 
@@ -48,9 +54,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
       redirectPathName = [href("/login"), "?", params.toString()].join("");
     }
 
-    console.log(
-      `[main-layout/clientLoader] redirect to \`${redirectPathName}\``
-    );
+    logger.info(`redirect to \`${redirectPathName}\``);
     throw redirect(redirectPathName);
   }
 
@@ -67,11 +71,19 @@ export default function MainLayout({ loaderData }: Route.ComponentProps) {
     initialData: loaderData.user
   });
 
+  const actionGroups = useCommandBarActionGroups();
+
   if (!user) return null;
 
   return (
     <div className="min-h-screen flex flex-col justify-between">
       <NavigationProgress />
+
+      <CommandBar
+        navGroups={MAIN_NAV_GROUPS}
+        actionGroups={actionGroups}
+        authedUser={user}
+      />
 
       <Outlet />
 
@@ -147,7 +159,7 @@ function Footer() {
     image_version_url = `https://github.com/zane-ops/zane-ops/tree/${data.image_version}`;
   }
 
-  const { setTheme, theme } = useTheme();
+  const { theme, setTheme } = useThemeStore();
 
   return (
     <footer className="flex flex-wrap justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">

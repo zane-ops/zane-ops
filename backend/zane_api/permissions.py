@@ -9,12 +9,9 @@ from typing import Any, cast
 from django.contrib.auth.models import AnonymousUser, AbstractUser
 
 from django.contrib.auth import get_user_model
+from django.db.models import QuerySet
 from .models import Project
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from django.db.models.query import ValuesQuerySet
 
 User = get_user_model()
 
@@ -57,6 +54,18 @@ class HasWorkspace(BasePermission):
         return request.workspace is not None
 
 
+def has_min_role(request: Request, role: WorkspaceRole):
+    membership = (
+        WorkspaceMembership.objects.filter(
+            user=request.user, workspace=request.workspace
+        )
+        .prefetch_related("accessible_projects")
+        .first()
+    )
+
+    return membership is not None and membership.role >= role
+
+
 def get_accessible_projects(user: AbstractUser, workspace: Workspace):
     membership = (
         WorkspaceMembership.objects.filter(user=user, workspace=workspace)
@@ -64,7 +73,7 @@ def get_accessible_projects(user: AbstractUser, workspace: Workspace):
         .first()
     )
 
-    queryset: ValuesQuerySet[Project, str]
+    queryset: QuerySet[Project, tuple[str]]
 
     if membership is None:
         queryset = Project.objects.filter(id__in=[]).values_list(
@@ -86,7 +95,7 @@ async def aget_accessible_projects(user: AbstractUser, workspace: Workspace):
         .afirst()
     )
 
-    queryset: ValuesQuerySet[Project, str]
+    queryset: QuerySet[Project, tuple[str]]
 
     if membership is None:
         queryset = Project.objects.filter(id__in=[]).values_list(
@@ -101,7 +110,7 @@ async def aget_accessible_projects(user: AbstractUser, workspace: Workspace):
     return queryset
 
 
-class IsWorkspaceGuest(BasePermission):
+class IsWorkspaceViewer(BasePermission):
     def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
         if not request.user or isinstance(request.user, AnonymousUser):
             return False
@@ -110,7 +119,7 @@ class IsWorkspaceGuest(BasePermission):
             user=request.user, workspace=request.workspace
         ).first()
 
-        return membership is not None and membership.role >= WorkspaceRole.GUEST
+        return membership is not None and membership.role >= WorkspaceRole.VIEWER
 
 
 class IsWorkspaceMember(BasePermission):
