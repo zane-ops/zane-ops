@@ -47,10 +47,6 @@ class ProxyHttpLogsAPIView(ListAPIView):
             raise e
 
 
-@extend_schema(
-    operation_id="getSingleProxyHttpLog",
-    summary="Get a single HTTP log",
-)
 class SingleProxyHttpLogAPIView(RetrieveAPIView):
     serializer_class = HttpLogSerializer
     queryset = HttpLog.objects.all()

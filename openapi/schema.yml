@@ -4775,6 +4775,422 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/console/proxy/http-logs/:
+    get:
+      operationId: getProxyHttpLogs
+      description: Every request that went through the proxy, for all the services
+        of the instance and for ZaneOps itself.
+      summary: Get all HTTP logs
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: deployment_id
+        schema:
+          type: string
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: request_host
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: request_ip
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: request_method
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - DELETE
+            - GET
+            - HEAD
+            - OPTIONS
+            - PATCH
+            - POST
+            - PUT
+        description: |-
+          * `GET` - GET
+          * `POST` - POST
+          * `PUT` - PUT
+          * `DELETE` - DELETE
+          * `PATCH` - PATCH
+          * `OPTIONS` - OPTIONS
+          * `HEAD` - HEAD
+        explode: true
+        style: form
+      - in: query
+        name: request_path
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: request_query
+        schema:
+          type: string
+      - in: query
+        name: request_user_agent
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: service_id
+        schema:
+          type: string
+      - in: query
+        name: sort_by
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - -request_duration_ns
+            - -time
+            - request_duration_ns
+            - time
+        description: |-
+          Ordering
+
+          * `time` - Time
+          * `-time` - Time (descending)
+          * `request_duration_ns` - Request duration ns
+          * `-request_duration_ns` - Request duration ns (descending)
+        explode: false
+        style: form
+      - in: query
+        name: source
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: stack_id
+        schema:
+          type: string
+      - in: query
+        name: stack_service_name
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: status
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
+        name: time_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: time_before
+        schema:
+          type: string
+          format: date-time
+      tags:
+      - console
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProxyHttpLogsErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHttpLogList'
+          description: ''
+  /api/console/proxy/http-logs/{request_uuid}/:
+    get:
+      operationId: console_proxy_http_logs_retrieve
+      parameters:
+      - in: path
+        name: request_uuid
+        schema:
+          type: string
+          pattern: ^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$
+        required: true
+      tags:
+      - console
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleProxyHttpLogsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpLog'
+          description: ''
+  /api/console/proxy/http-logs/fields/:
+    get:
+      operationId: getProxyHttpLogsFields
+      summary: Get http logs fields values
+      parameters:
+      - in: query
+        name: field
+        schema:
+          enum:
+          - request_host
+          - request_path
+          - request_user_agent
+          - request_ip
+          type: string
+          minLength: 1
+        description: |-
+          * `request_host` - request_host
+          * `request_path` - request_path
+          * `request_user_agent` - request_user_agent
+          * `request_ip` - request_ip
+        required: true
+      - in: query
+        name: value
+        schema:
+          type: string
+        required: true
+      tags:
+      - console
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProxyHttpLogsFieldsErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+          description: ''
   /api/console/system-settings/:
     get:
       operationId: console_system_settings_retrieve
@@ -18847,6 +19263,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleProxyHttpLogsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ConsoleSystemSettingsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -22376,6 +22799,189 @@ components:
       required:
       - errors
       - type
+    GetProxyHttpLogsDeploymentIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - deployment_id
+          type: string
+          description: '* `deployment_id` - deployment_id'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    GetProxyHttpLogsError:
+      oneOf:
+      - $ref: '#/components/schemas/GetProxyHttpLogsTimeErrorComponent'
+      - $ref: '#/components/schemas/GetProxyHttpLogsRequestMethodErrorComponent'
+      - $ref: '#/components/schemas/GetProxyHttpLogsRequestQueryErrorComponent'
+      - $ref: '#/components/schemas/GetProxyHttpLogsStackIdErrorComponent'
+      - $ref: '#/components/schemas/GetProxyHttpLogsServiceIdErrorComponent'
+      - $ref: '#/components/schemas/GetProxyHttpLogsDeploymentIdErrorComponent'
+      - $ref: '#/components/schemas/GetProxyHttpLogsSortByErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          time: '#/components/schemas/GetProxyHttpLogsTimeErrorComponent'
+          request_method: '#/components/schemas/GetProxyHttpLogsRequestMethodErrorComponent'
+          request_query: '#/components/schemas/GetProxyHttpLogsRequestQueryErrorComponent'
+          stack_id: '#/components/schemas/GetProxyHttpLogsStackIdErrorComponent'
+          service_id: '#/components/schemas/GetProxyHttpLogsServiceIdErrorComponent'
+          deployment_id: '#/components/schemas/GetProxyHttpLogsDeploymentIdErrorComponent'
+          sort_by: '#/components/schemas/GetProxyHttpLogsSortByErrorComponent'
+    GetProxyHttpLogsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/GetProxyHttpLogsValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/GetProxyHttpLogsValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetProxyHttpLogsFieldsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetProxyHttpLogsRequestMethodErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - request_method
+          type: string
+          description: '* `request_method` - request_method'
+        code:
+          enum:
+          - invalid_choice
+          - invalid_list
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `invalid_list` - invalid_list
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    GetProxyHttpLogsRequestQueryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - request_query
+          type: string
+          description: '* `request_query` - request_query'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    GetProxyHttpLogsServiceIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_id
+          type: string
+          description: '* `service_id` - service_id'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    GetProxyHttpLogsSortByErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - sort_by
+          type: string
+          description: '* `sort_by` - sort_by'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    GetProxyHttpLogsStackIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - stack_id
+          type: string
+          description: '* `stack_id` - stack_id'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    GetProxyHttpLogsTimeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - time
+          type: string
+          description: '* `time` - time'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    GetProxyHttpLogsValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetProxyHttpLogsError'
+      required:
+      - errors
+      - type
     GetRegistryCredentialsErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -23061,6 +23667,8 @@ components:
           type: string
           format: uuid
           readOnly: true
+        source:
+          $ref: '#/components/schemas/HttpLogSourceEnum'
         status:
           type: integer
           maximum: 2147483647
@@ -23136,10 +23744,27 @@ components:
       - request_uuid
       - response_headers
       - service_id
+      - source
       - stack_id
       - stack_service_name
       - status
       - time
+    HttpLogSourceEnum:
+      enum:
+      - SERVICE
+      - COMPOSE_STACK
+      - BUILD_REGISTRY
+      - ZANE_OPS_API
+      - ZANE_OPS_FRONTEND
+      - UNKNOWN
+      type: string
+      description: |-
+        * `SERVICE` - Service
+        * `COMPOSE_STACK` - Compose stack
+        * `BUILD_REGISTRY` - Build registry
+        * `ZANE_OPS_API` - ZaneOps API
+        * `ZANE_OPS_FRONTEND` - ZaneOps Frontend
+        * `UNKNOWN` - Unknown
     HttpLogsFieldsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -30593,7 +31218,7 @@ components:
         level:
           $ref: '#/components/schemas/LevelEnum'
         source:
-          $ref: '#/components/schemas/SourceEnum'
+          $ref: '#/components/schemas/RuntimeLogSourceEnum'
       required:
       - container_id
       - content
@@ -30607,6 +31232,14 @@ components:
       - stack_service_name
       - time
       - timestamp
+    RuntimeLogSourceEnum:
+      enum:
+      - SYSTEM
+      - SERVICE
+      type: string
+      description: |-
+        * `SYSTEM` - System Logs
+        * `SERVICE` - Service Logs
     RuntimeLogsContext:
       type: object
       properties:
@@ -31766,14 +32399,6 @@ components:
       description: |-
         * `BLUE` - Blue
         * `GREEN` - Green
-    SourceEnum:
-      enum:
-      - SYSTEM
-      - SERVICE
-      type: string
-      description: |-
-        * `SYSTEM` - System Logs
-        * `SERVICE` - Service Logs
     SourceTriggerEnum:
       enum:
       - API

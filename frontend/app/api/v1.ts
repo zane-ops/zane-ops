@@ -215,6 +215,20 @@ export interface paths {
     get: operations["console_password_tokens_retrieve"];
     delete: operations["console_password_tokens_destroy"];
   };
+  "/api/console/proxy/http-logs/": {
+    /**
+     * Get all HTTP logs
+     * @description Every request that went through the proxy, for all the services of the instance and for ZaneOps itself.
+     */
+    get: operations["getProxyHttpLogs"];
+  };
+  "/api/console/proxy/http-logs/{request_uuid}/": {
+    get: operations["console_proxy_http_logs_retrieve"];
+  };
+  "/api/console/proxy/http-logs/fields/": {
+    /** Get http logs fields values */
+    get: operations["getProxyHttpLogsFields"];
+  };
   "/api/console/system-settings/": {
     get: operations["console_system_settings_retrieve"];
     put: operations["console_system_settings_update"];
@@ -1833,6 +1847,7 @@ export interface components {
     ConsolePasswordTokensDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsolePasswordTokensListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsolePasswordTokensRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsoleProxyHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsoleSystemSettingsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsoleSystemSettingsUpdateAppDataCleanupCronScheduleErrorComponent: {
       /**
@@ -3446,6 +3461,105 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["GetProjectListError"][];
     };
+    GetProxyHttpLogsDeploymentIdErrorComponent: {
+      /**
+       * @description * `deployment_id` - deployment_id
+       * @enum {string}
+       */
+      attr: "deployment_id";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    GetProxyHttpLogsError: components["schemas"]["GetProxyHttpLogsTimeErrorComponent"] | components["schemas"]["GetProxyHttpLogsRequestMethodErrorComponent"] | components["schemas"]["GetProxyHttpLogsRequestQueryErrorComponent"] | components["schemas"]["GetProxyHttpLogsStackIdErrorComponent"] | components["schemas"]["GetProxyHttpLogsServiceIdErrorComponent"] | components["schemas"]["GetProxyHttpLogsDeploymentIdErrorComponent"] | components["schemas"]["GetProxyHttpLogsSortByErrorComponent"];
+    GetProxyHttpLogsErrorResponse400: components["schemas"]["GetProxyHttpLogsValidationError"] | components["schemas"]["ParseErrorResponse"];
+    GetProxyHttpLogsFieldsErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetProxyHttpLogsRequestMethodErrorComponent: {
+      /**
+       * @description * `request_method` - request_method
+       * @enum {string}
+       */
+      attr: "request_method";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `invalid_list` - invalid_list
+       * @enum {string}
+       */
+      code: "invalid_choice" | "invalid_list";
+      detail: string;
+    };
+    GetProxyHttpLogsRequestQueryErrorComponent: {
+      /**
+       * @description * `request_query` - request_query
+       * @enum {string}
+       */
+      attr: "request_query";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    GetProxyHttpLogsServiceIdErrorComponent: {
+      /**
+       * @description * `service_id` - service_id
+       * @enum {string}
+       */
+      attr: "service_id";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    GetProxyHttpLogsSortByErrorComponent: {
+      /**
+       * @description * `sort_by` - sort_by
+       * @enum {string}
+       */
+      attr: "sort_by";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * @enum {string}
+       */
+      code: "invalid_choice";
+      detail: string;
+    };
+    GetProxyHttpLogsStackIdErrorComponent: {
+      /**
+       * @description * `stack_id` - stack_id
+       * @enum {string}
+       */
+      attr: "stack_id";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    GetProxyHttpLogsTimeErrorComponent: {
+      /**
+       * @description * `time` - time
+       * @enum {string}
+       */
+      attr: "time";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    GetProxyHttpLogsValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["GetProxyHttpLogsError"][];
+    };
     GetRegistryCredentialsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSSHKeyListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -3735,6 +3849,7 @@ export interface components {
     HttpLog: {
       /** Format: uuid */
       id: string;
+      source: components["schemas"]["HttpLogSourceEnum"];
       status: number;
       /** Format: date-time */
       time: string;
@@ -3760,6 +3875,16 @@ export interface components {
       stack_id: string | null;
       stack_service_name: string | null;
     };
+    /**
+     * @description * `SERVICE` - Service
+     * * `COMPOSE_STACK` - Compose stack
+     * * `BUILD_REGISTRY` - Build registry
+     * * `ZANE_OPS_API` - ZaneOps API
+     * * `ZANE_OPS_FRONTEND` - ZaneOps Frontend
+     * * `UNKNOWN` - Unknown
+     * @enum {string}
+     */
+    HttpLogSourceEnum: "SERVICE" | "COMPOSE_STACK" | "BUILD_REGISTRY" | "ZANE_OPS_API" | "ZANE_OPS_FRONTEND" | "UNKNOWN";
     HttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     HttpLogsListDeploymentIdErrorComponent: {
       /**
@@ -7470,8 +7595,14 @@ export interface components {
       content: unknown;
       content_text: string | null;
       level: components["schemas"]["LevelEnum"];
-      source: components["schemas"]["SourceEnum"];
+      source: components["schemas"]["RuntimeLogSourceEnum"];
     };
+    /**
+     * @description * `SYSTEM` - System Logs
+     * * `SERVICE` - Service Logs
+     * @enum {string}
+     */
+    RuntimeLogSourceEnum: "SYSTEM" | "SERVICE";
     RuntimeLogsContext: {
       results: components["schemas"]["RuntimeLog"][];
       before_count: number;
@@ -7848,12 +7979,6 @@ export interface components {
      * @enum {string}
      */
     SlotEnum: "BLUE" | "GREEN";
-    /**
-     * @description * `SYSTEM` - System Logs
-     * * `SERVICE` - Service Logs
-     * @enum {string}
-     */
-    SourceEnum: "SYSTEM" | "SERVICE";
     /**
      * @description * `API` - Api
      * * `PULL_REQUEST` - Pull request
@@ -11156,6 +11281,172 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Get all HTTP logs
+   * @description Every request that went through the proxy, for all the services of the instance and for ZaneOps itself.
+   */
+  getProxyHttpLogs: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        deployment_id?: string;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+        /** @description Multiple values may be separated by commas. */
+        request_host?: string[];
+        /** @description Multiple values may be separated by commas. */
+        request_ip?: string[];
+        /**
+         * @description * `GET` - GET
+         * * `POST` - POST
+         * * `PUT` - PUT
+         * * `DELETE` - DELETE
+         * * `PATCH` - PATCH
+         * * `OPTIONS` - OPTIONS
+         * * `HEAD` - HEAD
+         */
+        request_method?: ("DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT")[];
+        /** @description Multiple values may be separated by commas. */
+        request_path?: string[];
+        request_query?: string;
+        /** @description Multiple values may be separated by commas. */
+        request_user_agent?: string[];
+        service_id?: string;
+        /**
+         * @description Ordering
+         *
+         * * `time` - Time
+         * * `-time` - Time (descending)
+         * * `request_duration_ns` - Request duration ns
+         * * `-request_duration_ns` - Request duration ns (descending)
+         */
+        sort_by?: ("-request_duration_ns" | "-time" | "request_duration_ns" | "time")[];
+        /** @description Multiple values may be separated by commas. */
+        source?: string[];
+        stack_id?: string;
+        /** @description Multiple values may be separated by commas. */
+        stack_service_name?: string[];
+        /** @description Multiple values may be separated by commas. */
+        status?: string[];
+        time_after?: string;
+        time_before?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedHttpLogList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetProxyHttpLogsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  console_proxy_http_logs_retrieve: {
+    parameters: {
+      path: {
+        request_uuid: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["HttpLog"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsoleProxyHttpLogsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get http logs fields values */
+  getProxyHttpLogsFields: {
+    parameters: {
+      query: {
+        /**
+         * @description * `request_host` - request_host
+         * * `request_path` - request_path
+         * * `request_user_agent` - request_user_agent
+         * * `request_ip` - request_ip
+         */
+        field: "request_host" | "request_path" | "request_user_agent" | "request_ip";
+        value: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": string[];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetProxyHttpLogsFieldsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {
