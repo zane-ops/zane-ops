@@ -1,0 +1,27 @@
+from django.db import migrations
+
+
+def backfill_http_log_source(apps, schema_editor):
+    """
+    Before this migration, only requests routed to a service, a compose stack
+    or a build registry were stored, so the source can be derived from the ids.
+    """
+    HttpLog = apps.get_model("zane_api", "HttpLog")
+
+    HttpLog.objects.filter(stack_id__isnull=False).update(source="COMPOSE_STACK")
+    HttpLog.objects.filter(registry_id__isnull=False).update(source="BUILD_REGISTRY")
+
+
+def noop(apps, schema_editor):
+    pass
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("zane_api", "0343_httplog_request_country_code_httplog_source_and_more"),
+    ]
+
+    operations = [
+        migrations.RunPython(backfill_http_log_source, noop),
+    ]

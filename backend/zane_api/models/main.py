@@ -1989,6 +1989,19 @@ class HttpLog(models.Model):
         HTTP_2 = "HTTP/2.0", _("HTTP/2.0")
         HTTP_3 = "HTTP/3.0", _("HTTP/3.0")
 
+    class LogSource(models.TextChoices):
+        SERVICE = "SERVICE", _("Service")
+        COMPOSE_STACK = "COMPOSE_STACK", _("Compose stack")
+        BUILD_REGISTRY = "BUILD_REGISTRY", _("Build registry")
+        ZANE_OPS = "ZANE_OPS", _("ZaneOps")
+        # requests that did not match any route, ex: the 404 catchall
+        UNKNOWN = "UNKNOWN", _("Unknown")
+
+    source = models.CharField(
+        max_length=20,
+        choices=LogSource.choices,
+        default=LogSource.SERVICE,
+    )
     request_method = models.CharField(
         max_length=7,
         choices=RequestMethod.choices,
@@ -2012,6 +2025,9 @@ class HttpLog(models.Model):
         unique=True,
     )
     request_user_agent = models.TextField(blank=True, null=True)
+    # ISO 3166-1 alpha-2 country code resolved from `request_ip`,
+    # `null` when GeoIP is not configured or the IP is not in the database
+    request_country_code = models.CharField(max_length=2, null=True, blank=True)
 
     class Meta:
         indexes = [
@@ -2029,6 +2045,8 @@ class HttpLog(models.Model):
             models.Index(fields=["request_ip"]),
             models.Index(fields=["request_uuid"]),
             models.Index(fields=["request_query"]),
+            models.Index(fields=["source"]),
+            models.Index(fields=["request_country_code"]),
         ]
         ordering = ("-time",)
 
