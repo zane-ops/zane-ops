@@ -191,7 +191,7 @@ function ToggleServiceForm({
 
     const desiredState = formData.get("desired_state") as "stop" | "start";
     queueToggleItem(service.id);
-    toggleStateToast({
+    toggleServiceStateToast({
       workspaceId,
       desiredState,
       projectSlug,
@@ -320,7 +320,7 @@ function StopServiceConfirmationDialog({
   );
 }
 
-export async function toggleStateToast({
+export async function toggleServiceStateToast({
   workspaceId,
   desiredState,
   projectSlug,

@@ -171,7 +171,7 @@ function ToggleStackForm({
 
     const desiredState = formData.get("desired_state") as "stop" | "start";
     queueToggleItem(stack.id);
-    toggleStateToast({
+    toggleStackStateToast({
       workspaceId,
       desiredState,
       projectSlug,
@@ -226,7 +226,7 @@ function ToggleStackForm({
   );
 }
 
-async function toggleStateToast({
+export async function toggleStackStateToast({
   workspaceId,
   desiredState,
   projectSlug,
