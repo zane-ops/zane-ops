@@ -1993,7 +1993,8 @@ class HttpLog(models.Model):
         SERVICE = "SERVICE", _("Service")
         COMPOSE_STACK = "COMPOSE_STACK", _("Compose stack")
         BUILD_REGISTRY = "BUILD_REGISTRY", _("Build registry")
-        ZANE_OPS = "ZANE_OPS", _("ZaneOps")
+        ZANE_OPS_API = "ZANE_OPS_API", _("ZaneOps API")
+        ZANE_OPS_FRONTEND = "ZANE_OPS_FRONTEND", _("ZaneOps Frontend")
         # requests that did not match any route, ex: the 404 catchall
         UNKNOWN = "UNKNOWN", _("Unknown")
 

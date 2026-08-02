@@ -67,7 +67,9 @@ from temporal.proxy import ZaneProxyClient
 from django.db.models import Q
 
 
-def _build_http_log(log_time: str, log_content: dict, **extra_fields) -> HttpLog:
+def _build_http_log(
+    log_time: str, log_content: dict, source: str, **extra_fields
+) -> HttpLog | None:
     """Build an HttpLog from proxy log content with common fields extracted."""
     req = log_content["request"]
     duration_in_seconds = log_content["duration"]
@@ -75,6 +77,29 @@ def _build_http_log(log_time: str, log_content: dict, **extra_fields) -> HttpLog
 
     client_ip = req["headers"].get("X-Forwarded-For", req["remote_ip"])
     user_agent = req["headers"].get("User-Agent")
+
+    log_source = HttpLog.LogSource.UNKNOWN
+
+    # Static files should be ignored
+    ZANE_OPS_IGNORED_PATH_PREFIXES = ("/assets/", "/fonts/", "/logo/")
+    is_zaneops_ignored_path = any(
+        [full_url.path.startswith(path) for path in ZANE_OPS_IGNORED_PATH_PREFIXES],
+    )
+    match source:
+        case ZaneProxyClient.ServiceType.MANAGED_SERVICE:
+            log_source = HttpLog.LogSource.SERVICE
+        case ZaneProxyClient.ServiceType.COMPOSE_STACK_SERVICE:
+            log_source = HttpLog.LogSource.COMPOSE_STACK
+        case ZaneProxyClient.ServiceType.BUILD_REGISTRY:
+            log_source = HttpLog.LogSource.BUILD_REGISTRY
+        case ZaneProxyClient.ServiceType.ZANE_OPS:
+            if is_zaneops_ignored_path:
+                return
+            log_source = (
+                HttpLog.LogSource.ZANE_OPS_API
+                if full_url.path.startswith("/api")
+                else HttpLog.LogSource.ZANE_OPS_FRONTEND
+            )
 
     return HttpLog(
         time=log_time,
@@ -92,6 +117,7 @@ def _build_http_log(log_time: str, log_content: dict, **extra_fields) -> HttpLog
         else client_ip,
         request_uuid=log_content.get("uuid"),
         request_method=req["method"],
+        source=log_source,
         **extra_fields,
     )
 
@@ -138,6 +164,8 @@ class LogIngestAPIView(APIView):
                                     stack_id = log_content.get("zane_stack_id")
                                     registry_id = log_content.get("zane_registry_id")
 
+                                    http_log: HttpLog | None = None
+
                                     if (
                                         service_id
                                         or stack_id
@@ -147,36 +175,32 @@ class LogIngestAPIView(APIView):
                                     ):
                                         match service_type:
                                             case ZaneProxyClient.ServiceType.ZANE_OPS:
-                                                http_logs.append(
-                                                    _build_http_log(
-                                                        log["time"],
-                                                        log_content,
-                                                        source=HttpLog.LogSource.ZANE_OPS,
-                                                    )
+                                                http_log = _build_http_log(
+                                                    log["time"],
+                                                    log_content,
+                                                    source=ZaneProxyClient.ServiceType.ZANE_OPS,
                                                 )
+
                                             case ZaneProxyClient.ServiceType.BUILD_REGISTRY:
                                                 if registry_id:
-                                                    http_logs.append(
-                                                        _build_http_log(
-                                                            log["time"],
-                                                            log_content,
-                                                            registry_id=registry_id,
-                                                            source=HttpLog.LogSource.BUILD_REGISTRY,
-                                                        )
+                                                    http_log = _build_http_log(
+                                                        log["time"],
+                                                        log_content,
+                                                        registry_id=registry_id,
+                                                        source=ZaneProxyClient.ServiceType.BUILD_REGISTRY,
                                                     )
+
                                             case ZaneProxyClient.ServiceType.COMPOSE_STACK_SERVICE:
                                                 stack_service_name = content.get(
                                                     "zane_stack_service_name"
                                                 )
                                                 if stack_service_name:
-                                                    http_logs.append(
-                                                        _build_http_log(
-                                                            log["time"],
-                                                            log_content,
-                                                            stack_id=stack_id,
-                                                            stack_service_name=stack_service_name,
-                                                            source=HttpLog.LogSource.COMPOSE_STACK,
-                                                        )
+                                                    http_log = _build_http_log(
+                                                        log["time"],
+                                                        log_content,
+                                                        stack_id=stack_id,
+                                                        stack_service_name=stack_service_name,
+                                                        source=ZaneProxyClient.ServiceType.COMPOSE_STACK_SERVICE,
                                                     )
                                             case ZaneProxyClient.ServiceType.MANAGED_SERVICE:
                                                 upstream: str = log_content.get(
@@ -203,18 +227,18 @@ class LogIngestAPIView(APIView):
                                                         )
 
                                                 if deployment_id:
-                                                    http_logs.append(
-                                                        _build_http_log(
-                                                            log["time"],
-                                                            log_content,
-                                                            service_id=log_content.get(
-                                                                "zane_service_id"
-                                                            ),
-                                                            deployment_id=deployment_id,
-                                                            source=HttpLog.LogSource.SERVICE,
-                                                        )
+                                                    http_log = _build_http_log(
+                                                        log["time"],
+                                                        log_content,
+                                                        service_id=log_content.get(
+                                                            "zane_service_id"
+                                                        ),
+                                                        deployment_id=deployment_id,
+                                                        source=ZaneProxyClient.ServiceType.MANAGED_SERVICE,
                                                     )
 
+                                        if http_log:
+                                            http_logs.append(http_log)
                                         continue
                         case ZaneServices.API | ZaneServices.WORKER:
                             # do nothing for now...

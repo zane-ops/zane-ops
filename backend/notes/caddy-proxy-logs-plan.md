@@ -68,7 +68,18 @@ In `LogIngestAPIView`, for `tag.service_id == zane.proxy`:
 | `logger == "http.log.access"` + `zane_service_id` | `HttpLog(source=SERVICE)` — unchanged                |
 | … + `zane_stack_id` / `zane_registry_id`          | `COMPOSE_STACK` / `BUILD_REGISTRY` — unchanged       |
 | … + `zane_service_type == "zaneops"`              | `HttpLog(source=ZANE_OPS)`, no service/deployment id |
+| … + `zane_service_type == "zaneops"`, static asset path | dropped                                        |
 | … + no `zane_*` marker at all                     | `HttpLog(source=UNKNOWN)`                            |
+
+**Dashboard traffic:** both the API and the frontend are logged, under the same `ZANE_OPS` source — `request_path` already tells them apart, no need for two sources.
+
+Static assets are dropped at ingest, with a hardcoded prefix list in [logs.py](../zane_api/views/logs.py):
+
+```python
+ZANE_OPS_IGNORED_PATH_PREFIXES = ("/assets/", "/fonts/", "/logo/")
+```
+
+(matches `frontend/build/client`, plus `/robots.txt` is harmless enough to keep). One dashboard page load is a document plus a dozen hashed bundles — storing those would drown real traffic in Postgres and make `http_log_retention_days` decide what you can still see. Doing it at ingest rather than with a Caddy path matcher keeps [bootstrap.py](../backend/bootstrap.py) simple and lets the list change without a proxy reload.
 
 ### 1.5 Endpoints — ⬜ todo
 

@@ -335,6 +335,11 @@ def register_zaneops_app_on_proxy(
                         {
                             "handle": [
                                 {
+                                    "handler": "log_append",
+                                    "key": "zane_service_type",
+                                    "value": "zane_ops",
+                                },
+                                {
                                     "handler": "encode",
                                     "encodings": {"gzip": {}},
                                     "prefer": ["gzip"],
