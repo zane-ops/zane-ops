@@ -68,7 +68,7 @@ from django.db.models import Q
 
 
 def _build_http_log(
-    log_time: str, log_content: dict, source: str, **extra_fields
+    log_time: str, log_content: dict, source: str | None, **extra_fields
 ) -> HttpLog | None:
     """Build an HttpLog from proxy log content with common fields extracted."""
     req = log_content["request"]
@@ -100,6 +100,8 @@ def _build_http_log(
                 if full_url.path.startswith("/api")
                 else HttpLog.LogSource.ZANE_OPS_FRONTEND
             )
+        case None:
+            log_source = HttpLog.LogSource.UNKNOWN
 
     return HttpLog(
         time=log_time,
@@ -237,9 +239,16 @@ class LogIngestAPIView(APIView):
                                                         source=ZaneProxyClient.ServiceType.MANAGED_SERVICE,
                                                     )
 
-                                        if http_log:
-                                            http_logs.append(http_log)
-                                        continue
+                                    else:
+                                        http_log = _build_http_log(
+                                            log["time"],
+                                            log_content,
+                                            source=None,
+                                        )
+
+                                    if http_log:
+                                        http_logs.append(http_log)
+                                    continue
                         case ZaneServices.API | ZaneServices.WORKER:
                             # do nothing for now...
                             pass
