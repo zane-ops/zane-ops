@@ -17,7 +17,7 @@ class CustomProxyConfig(TimestampedModel):
     ID_PREFIX = "prx_cfg_"
     CADDY_ID_PREFIX = "zane-custom-config-"
 
-    id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)
+    id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)  # type: ignore
     slug = models.SlugField(max_length=255, unique=True)
     contents = models.TextField()
     enabled = models.BooleanField(default=True)
