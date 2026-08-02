@@ -320,7 +320,7 @@ function StopServiceConfirmationDialog({
   );
 }
 
-async function toggleStateToast({
+export async function toggleStateToast({
   workspaceId,
   desiredState,
   projectSlug,
