@@ -319,15 +319,23 @@ export function CommandBar({
                     >
                       <item.icon className="flex-none text-grey size-4" />
                       <div className="inline-flex gap-0.5 items-baseline w-full">
-                        {item.parents.map((parent, index) => (
-                          <React.Fragment key={`${parent}-${index}`}>
-                            <span className="text-grey">
-                              {excerpt(parent, 40)}
-                            </span>
-                            <ChevronRightIcon className="size-4 flex-none text-grey relative top-1" />
-                          </React.Fragment>
-                        ))}
-                        <p className="text-card-foreground font-medium whitespace-nowrap overflow-ellipsis">
+                        <div className="inline-flex gap-0.5 items-baseline max-w-60">
+                          {item.parents.map((parent, index) => (
+                            <React.Fragment key={`${parent}-${index}`}>
+                              <p
+                                className={cn(
+                                  "text-grey whitespace-nowrap",
+                                  index === item.parents.length - 1 &&
+                                    "overflow-ellipsis overflow-x-hidden"
+                                )}
+                              >
+                                {parent}
+                              </p>
+                              <ChevronRightIcon className="size-4 flex-none text-grey relative top-1" />
+                            </React.Fragment>
+                          ))}
+                        </div>
+                        <p className="text-card-foreground font-medium whitespace-nowrap">
                           {item.title}
                         </p>
                       </div>
