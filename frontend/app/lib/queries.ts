@@ -2547,8 +2547,7 @@ export const resourceQueries = {
           },
           signal
         });
-      },
-      enabled: (query ?? "").trim().length > 0 && workspaceId.trim().length > 0
+      }
     })
 };
 
