@@ -156,10 +156,12 @@ export function CommandBar({
               <span className="inline-flex items-center gap-1">
                 <selectedItem.icon className="size-3 flex-none text-grey" />
                 <div className="inline-flex items-center gap-0 5">
-                  <span className="capitalize">
-                    {selectedResource?.type.replace("_", " ") + "s"}
-                  </span>
-                  <ChevronRightIcon className="size-3 flex-none text-grey" />
+                  {selectedItem.parents.map((parent, idx) => (
+                    <React.Fragment key={idx}>
+                      <span>{parent}</span>
+                      <ChevronRightIcon className="size-3 flex-none text-grey" />
+                    </React.Fragment>
+                  ))}
                   {selectedItem.title}
                 </div>
               </span>
