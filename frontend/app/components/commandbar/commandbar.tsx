@@ -319,7 +319,7 @@ export function CommandBar({
                     >
                       <item.icon className="flex-none text-grey size-4" />
                       <div className="inline-flex gap-0.5 items-baseline w-full">
-                        <div className="inline-flex gap-0.5 items-baseline max-w-60">
+                        <div className="inline-flex gap-0.5 items-baseline max-w-50">
                           {item.parents.map((parent, index) => (
                             <React.Fragment key={`${parent}-${index}`}>
                               <p
