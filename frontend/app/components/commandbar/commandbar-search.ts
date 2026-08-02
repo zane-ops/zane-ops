@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { href } from "react-router";
+import { useDebounce } from "use-debounce";
 import type { SearchResource } from "~/api/types";
 import type {
   CommandBarSearchGroup,
@@ -126,11 +127,7 @@ function groupSearchItemsByType(
 
 export type UseCommandBarSearchOptions = {
   search: string;
-  debouncedSearch: string;
-  /** searching is pointless when the palette is closed... */
-  isOpen: boolean;
-  /** ...or when the list shows something else than resources */
-  isPaused: boolean;
+  shouldSearch: boolean;
 };
 
 /**
@@ -138,17 +135,15 @@ export type UseCommandBarSearchOptions = {
  */
 export function useCommandBarSearch({
   search,
-  debouncedSearch,
-  isOpen,
-  isPaused
+  shouldSearch
 }: UseCommandBarSearchOptions) {
   const workspaceId = useWorkspaceStore((s) => s.workspace?.id);
 
+  const [debouncedSearch] = useDebounce(search, 150);
+
   const { data, isLoading, isFetching } = useQuery({
     ...resourceQueries.search(workspaceId ?? "", debouncedSearch),
-    enabled: Boolean(
-      workspaceId && isOpen && search.trim().length > 0 && !isPaused
-    )
+    enabled: Boolean(workspaceId && shouldSearch && search.trim().length > 0)
   });
 
   const searchGroups = React.useMemo(
@@ -174,5 +169,9 @@ export function useCommandBarSearch({
     return itemsByValue;
   }, [searchGroups]);
 
-  return { searchGroups, searchItemsByValue, isLoading, isFetching };
+  return {
+    searchGroups,
+    searchItemsByValue,
+    isSearchingResources: isLoading || isFetching
+  };
 }

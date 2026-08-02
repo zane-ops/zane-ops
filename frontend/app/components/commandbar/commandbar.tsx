@@ -63,8 +63,7 @@ export function CommandBar({
     handleCmdBarKeyDown,
     runCmd,
     searchGroups,
-    isLoading,
-    isFetching
+    isSearchingResources
   } = useCommandBarState();
 
   const navigationGroups = React.useMemo(
@@ -197,7 +196,7 @@ export function CommandBar({
         )}
       >
         <CommandEmpty>
-          {isLoading || isFetching ? (
+          {isSearchingResources ? (
             <div className="flex items-center gap-2 w-full justify-center">
               Searching...
               <LoaderIcon className="size-4 flex-none text-grey animate-spin" />

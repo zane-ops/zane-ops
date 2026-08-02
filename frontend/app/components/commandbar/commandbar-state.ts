@@ -20,7 +20,6 @@ export function useCommandBarState() {
   const { open, setOpen, toggle } = useCommandBarStore();
 
   const [search, setSearch] = React.useState("");
-  const [debouncedSearch] = useDebounce(search, 150);
 
   const [selectedResource, setSelectedResource] =
     React.useState<SearchResource | null>(null);
@@ -34,9 +33,9 @@ export function useCommandBarState() {
 
   const searchState = useCommandBarSearch({
     search,
-    debouncedSearch,
-    isOpen: open,
-    isPaused: isActionMode || selectedResource !== null
+    // Searching is pointless when the palette is closed
+    // or when the list shows something else than resources
+    shouldSearch: open && !isActionMode && !selectedResource
   });
   const { searchItemsByValue } = searchState;
 
