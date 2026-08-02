@@ -83,6 +83,11 @@ export const SERVER_ADMIN_NAV_GROUP: CommandBarNavGroup = {
   minRole: "ServerAdmin",
   items: [
     {
+      title: "Users",
+      href: href("/admin"),
+      icon: UsersIcon
+    },
+    {
       title: "SSH Keys",
       href: href("/admin/ssh-keys"),
       icon: KeyRoundIcon
