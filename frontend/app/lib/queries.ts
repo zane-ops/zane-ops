@@ -1742,6 +1742,9 @@ export const httpLogSearchSchema = zfd.formData({
   request_path: zfd
     .repeatable(z.array(z.string()).optional().catch(undefined))
     .transform((val) => (val?.length === 0 ? undefined : val)),
+  request_country_code: zfd
+    .repeatable(z.array(z.string()).optional().catch(undefined))
+    .transform((val) => (val?.length === 0 ? undefined : val)),
   request_host: zfd
     .repeatable(z.array(z.string()).optional().catch(undefined))
     .transform((val) => (val?.length === 0 ? undefined : val)),

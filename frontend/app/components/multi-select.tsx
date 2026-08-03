@@ -42,6 +42,10 @@ export type MultiSelectOption =
       value: string;
     };
 
+export function getMultiSelectOptionValue(option: MultiSelectOption) {
+  return typeof option === "string" ? option : option.value;
+}
+
 interface MultiSelectProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof multiSelectVariants> {
@@ -101,6 +105,16 @@ interface MultiSelectProps
   order?: "icon-label" | "label-icon";
   Icon?: React.ComponentType<LucideProps>;
   closeOnSelect?: boolean;
+  /**
+   * Whether to force the automatic filtering from the command bar instead manually filtering
+   * the items
+   */
+  autoFilter?: boolean;
+  sortOptions?: (
+    optionA: MultiSelectOption,
+    optionB: MultiSelectOption,
+    selectedValues: string[]
+  ) => number;
   acceptArbitraryValues?: boolean;
   ref?: React.RefObject<HTMLButtonElement>;
   inputValue?: string;
@@ -123,11 +137,13 @@ export const MultiSelect = ({
   Icon = ChevronDownIcon,
   closeOnSelect,
   acceptArbitraryValues = false,
+  autoFilter = false,
   inputValue: customInputValue,
   order = "icon-label",
   onInputValueChange,
   popoverClassName,
   itemClassName,
+  sortOptions,
   ...props
 }: MultiSelectProps) => {
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
@@ -144,30 +160,64 @@ export const MultiSelect = ({
     onValueChange(newSelectedValues);
   };
 
-  const handleTogglePopover = () => {
-    setIsPopoverOpen((prev) => !prev);
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setInputValue("");
+    }
+    setIsPopoverOpen(nextOpen);
   };
 
   const [value, setInputValue] = React.useState("");
 
   const inputValue = customInputValue ?? value;
 
-  const visibleOptions = new Set(options);
-  if (inputValue.trim().length > 0 && acceptArbitraryValues) {
-    visibleOptions.add(inputValue.trim());
-  }
+  const visibleOptions = React.useMemo(() => {
+    let visible = [...options];
+    const inputValueTrimmed = inputValue.trim();
+    if (
+      acceptArbitraryValues &&
+      inputValueTrimmed.length > 0 &&
+      !values.includes(inputValueTrimmed) &&
+      !visible.some(
+        (option) => getMultiSelectOptionValue(option) === inputValueTrimmed
+      )
+    ) {
+      visible.push(inputValueTrimmed);
+    }
+
+    // Manual filtering
+    if (!autoFilter) {
+      const search = inputValue.toLowerCase();
+      visible = visible.filter((option) =>
+        getMultiSelectOptionValue(option).toLowerCase().includes(search)
+      );
+    }
+
+    if (sortOptions) {
+      visible.sort((a, b) => sortOptions(a, b, values));
+    }
+
+    return visible;
+  }, [
+    options,
+    acceptArbitraryValues,
+    autoFilter,
+    inputValue,
+    values,
+    sortOptions
+  ]);
 
   return (
     <Popover
       open={isPopoverOpen}
-      onOpenChange={setIsPopoverOpen}
+      onOpenChange={handleOpenChange}
       modal={modalPopover}
     >
       <PopoverTrigger asChild>
         <Button
           ref={ref}
           {...props}
-          onClick={handleTogglePopover}
+          onClick={() => handleOpenChange(!isPopoverOpen)}
           className={cn(
             "flex w-full py-1 px-2 rounded-md border border-border border-dashed",
             "min-h-10 h-auto items-center justify-between",
@@ -222,7 +272,7 @@ export const MultiSelect = ({
         onEscapeKeyDown={() => setIsPopoverOpen(false)}
       >
         <Command
-          shouldFilter={!acceptArbitraryValues}
+          shouldFilter={!acceptArbitraryValues || autoFilter}
           className="flex w-full flex-col rounded-md bg-popover border-border border text-popover-foreground px-2"
         >
           <CommandPrimitive.Input
@@ -235,42 +285,35 @@ export const MultiSelect = ({
             }}
           />
           <hr className="-mx-2 border-border" />
-          <CommandPrimitive.List className="w-full overflow-y-auto overflow-x-hidden py-2">
+          <CommandPrimitive.List className="w-full overflow-y-auto overflow-x-hidden py-2 max-h-118 max-w-52">
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandPrimitive.Group>
-              {[...visibleOptions]
-                .filter((option) => {
-                  const value =
-                    typeof option === "string" ? option : option.value;
-                  return value.toLowerCase().includes(inputValue.toLowerCase());
-                })
-                .map((option) => {
-                  const value =
-                    typeof option === "string" ? option : option.value;
-                  const isSelected = values.includes(value);
-                  return (
-                    <CommandItem
-                      key={value}
-                      onSelect={() => toggleOption(value)}
-                      className="cursor-pointer flex gap-1 "
-                    >
-                      <CheckIcon
-                        size={15}
-                        className={cn(
-                          "flex-none transition-transform duration-75",
-                          isSelected ? "scale-100" : "scale-0"
-                        )}
-                      />
-                      <div className="flex items-center justify-between w-full break-all">
-                        {typeof option === "string" ? (
-                          <span>{option}</span>
-                        ) : (
-                          option.label
-                        )}
-                      </div>
-                    </CommandItem>
-                  );
-                })}
+              {visibleOptions.map((option) => {
+                const value = getMultiSelectOptionValue(option);
+                const isSelected = values.includes(value);
+                return (
+                  <CommandItem
+                    key={value}
+                    onSelect={() => toggleOption(value)}
+                    className="cursor-pointer flex gap-1 "
+                  >
+                    <CheckIcon
+                      size={15}
+                      className={cn(
+                        "flex-none transition-transform duration-75",
+                        isSelected ? "scale-100" : "scale-0"
+                      )}
+                    />
+                    <div className="flex items-center justify-between w-full break-all">
+                      {typeof option === "string" ? (
+                        <span>{option}</span>
+                      ) : (
+                        option.label
+                      )}
+                    </div>
+                  </CommandItem>
+                );
+              })}
             </CommandPrimitive.Group>
           </CommandPrimitive.List>
         </Command>

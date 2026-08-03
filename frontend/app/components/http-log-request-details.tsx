@@ -30,12 +30,7 @@ import {
 } from "~/lib/constants";
 import { COUNTRY_CODE_LIST } from "~/lib/countryCodeList";
 import type { HttpLog } from "~/lib/queries";
-import {
-  cn,
-  countryCodeToFlagEmoji,
-  formatDuration,
-  formattedTime
-} from "~/lib/utils";
+import { cn, formatDuration, formattedTime } from "~/lib/utils";
 
 type HttpLogRequestDetailsProps = {
   log?: HttpLog;
@@ -88,7 +83,12 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
     serviceSlug: string;
   };
 
-  const country_iso = log.request_country_code;
+  const country = log.request_country_code
+    ? {
+        ...COUNTRY_CODE_LIST[log.request_country_code],
+        alpha2: log.request_country_code
+      }
+    : null;
 
   return (
     <>
@@ -239,7 +239,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
         <div className="grid grid-cols-2 items-center gap-x-4 w-full group">
           <dt className="text-grey inline-flex items-center">
             <span>Client IP Country</span>
-            {country_iso && (
+            {country && (
               <TooltipProvider>
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
@@ -247,7 +247,10 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
                       variant="ghost"
                       className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
                       onClick={() => {
-                        searchParams.set("country", country_iso);
+                        searchParams.set(
+                          "request_country_code",
+                          country.alpha2
+                        );
                         searchParams.delete("request_id");
                         setSearchParams(searchParams, { replace: true });
                       }}
@@ -262,13 +265,11 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
             )}
           </dt>
           <dd className="text-sm break-all text-grey">
-            {country_iso ? (
+            {country ? (
               <>
-                <span className="text-base">
-                  {countryCodeToFlagEmoji(country_iso)}
-                </span>
+                <span className="text-base">{country.flag}</span>
                 &nbsp;
-                <span>{COUNTRY_CODE_LIST[country_iso].name}</span>
+                <span>{country.name}</span>
               </>
             ) : (
               <span className="font-mono">N/A</span>

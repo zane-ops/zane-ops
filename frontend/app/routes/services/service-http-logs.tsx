@@ -22,7 +22,11 @@ import { useLoaderData, useParams, useSearchParams } from "react-router";
 import { useDebouncedCallback } from "use-debounce";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import { HttpLogRequestDetails } from "~/components/http-log-request-details";
-import { MultiSelect } from "~/components/multi-select";
+import {
+  MultiSelect,
+  type MultiSelectOption,
+  getMultiSelectOptionValue
+} from "~/components/multi-select";
 import { Ping } from "~/components/ping";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -39,6 +43,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { COUNTRY_CODE_LIST } from "~/lib/countryCodeList";
 import {
   type HTTPLogFilters,
   type HttpLog,
@@ -49,13 +54,7 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
-import {
-  cn,
-  countryCodeToFlagEmoji,
-  formatDuration,
-  formatLogTime,
-  notFound
-} from "~/lib/utils";
+import { cn, formatDuration, formatLogTime, notFound } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
@@ -97,6 +96,7 @@ export async function clientLoader({
     request_path: search.request_path,
     request_query: search.request_query,
     request_user_agent: search.request_user_agent,
+    request_country_code: search.request_country_code,
     status: search.status,
     sort_by: search.sort_by
   } satisfies HTTPLogFilters;
@@ -158,6 +158,7 @@ export default function ServiceHttpLogsPage({
     request_path: search.request_path,
     request_query: search.request_query,
     request_user_agent: search.request_user_agent,
+    request_country_code: search.request_country_code,
     status: search.status,
     sort_by
   } satisfies HTTPLogFilters;
@@ -582,7 +583,7 @@ function LogTableRowContent({ log }: LogTableRowProps) {
           {log.request_country_code ? (
             <span>
               {log.request_country_code}{" "}
-              {countryCodeToFlagEmoji(log.request_country_code)}
+              {COUNTRY_CODE_LIST[log.request_country_code].flag}
             </span>
           ) : (
             <span className="font-mono">N/A</span>
@@ -599,7 +600,8 @@ const FIELD_LABEL_MAP: Record<string, string> = {
   query: "request_query",
   "user agent": "request_user_agent",
   "client ip": "request_ip",
-  status: "status"
+  status: "status",
+  country: "request_country_code"
 };
 
 function HeaderSection() {
@@ -620,7 +622,8 @@ function HeaderSection() {
     "request_query",
     "request_user_agent",
     "request_ip",
-    "status"
+    "status",
+    "request_country_code"
   ] satisfies Array<keyof HTTPLogFilters>;
 
   const [selectedFields, setSelectedFields] = React.useState(() => {
@@ -873,6 +876,29 @@ function HeaderSection() {
             </div>
           )}
 
+          {selectedFields.includes("request_country_code") && (
+            <div className="inline-flex items-center gap-1">
+              <CountryCodeFilter
+                countryCodes={search.request_country_code ?? []}
+              />
+              <Button
+                onClick={() => {
+                  setSelectedFields((fields) =>
+                    fields.filter((field) => field !== "request_country_code")
+                  );
+                  searchParams.delete("request_country_code");
+                  setSearchParams(searchParams, { replace: true });
+                }}
+                variant="outline"
+                className="bg-inherit"
+                type="button"
+              >
+                <XIcon size={15} className="flex-none" />
+                <span className="sr-only">Remove field</span>
+              </Button>
+            </div>
+          )}
+
           {selectedFields.includes("request_user_agent") && (
             <div className="inline-flex items-center gap-1">
               <UserAgentFilter userAgents={search.request_user_agent ?? []} />
@@ -1101,6 +1127,57 @@ function ClientIpFilter({ clientIps }: ClientIpFilterProps) {
       }}
       label="client ip"
       acceptArbitraryValues
+    />
+  );
+}
+
+type CountryCodeFilterProps = {
+  countryCodes: string[];
+};
+
+function CountryCodeFilter({ countryCodes }: CountryCodeFilterProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const countryCodeOptions: MultiSelectOption[] = React.useMemo(
+    () =>
+      Object.entries(COUNTRY_CODE_LIST).map(([iso, country]) => ({
+        value: iso,
+        label: (
+          <span className="inline-flex items-start gap-1">
+            <span className="text-base">{country.flag}</span>
+            <span>{country.name}</span>
+          </span>
+        )
+      })),
+    [COUNTRY_CODE_LIST]
+  );
+
+  return (
+    <MultiSelect
+      value={countryCodes}
+      className="w-auto"
+      name="request_country_code"
+      options={countryCodeOptions}
+      closeOnSelect
+      autoFilter
+      // Sort by selected values first
+      sortOptions={(optionA, optionB) => {
+        const isSelectedA = countryCodes.includes(
+          getMultiSelectOptionValue(optionA)
+        );
+        const isSelectedB = countryCodes.includes(
+          getMultiSelectOptionValue(optionB)
+        );
+        return Number(isSelectedB) - Number(isSelectedA);
+      }}
+      onValueChange={(statuses) => {
+        searchParams.delete("request_country_code");
+        statuses.forEach((status) =>
+          searchParams.append("request_country_code", status)
+        );
+        setSearchParams(searchParams, { replace: true });
+      }}
+      label="country"
     />
   );
 }
