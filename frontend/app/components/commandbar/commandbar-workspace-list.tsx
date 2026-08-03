@@ -39,7 +39,7 @@ export function CommandBarWorkspaceList({
             key={membership.id}
             value={membership.workspace.name}
             onSelect={() => onSelectWorkspace(membership.workspace.id)}
-            className="flex items-center gap-2 px-0 py-2"
+            className="flex items-center gap-2 px-0 py-2 h-9"
             style={
               {
                 "--color-light": color.light,
@@ -49,16 +49,18 @@ export function CommandBarWorkspaceList({
           >
             <div
               className={cn(
-                "size-6 flex-none rounded-md flex items-center justify-center",
+                "size-5 flex-none rounded-md flex items-center justify-center",
                 "text-(--color-light) dark:text-(--color-dark)",
                 "bg-(--color-light)/10 dark:bg-(--color-dark)/10",
                 "border border-(--color-light)/10 dark:border-(--color-dark)/10"
               )}
             >
-              <span>{membership.workspace.name.charAt(0).toUpperCase()}</span>
+              <span className="text-xs">
+                {membership.workspace.name.charAt(0).toUpperCase()}
+              </span>
             </div>
 
-            <div className="flex flex-col items-start gap-0.5 min-w-0">
+            <div className="flex items-center gap-1 min-w-0">
               <span className="font-medium text-card-foreground truncate">
                 {membership.workspace.name}
               </span>

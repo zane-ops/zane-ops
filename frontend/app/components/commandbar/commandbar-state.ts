@@ -128,9 +128,24 @@ export function useCommandBarState() {
     [canExit, exitView]
   );
 
+  /**
+   * `keepOpen` is for the commands that only switch the bar to another view,
+   * closing it would defeat their purpose.
+   */
   const runCmd = React.useCallback(
-    (command: () => void) => {
+    (
+      command: () => void,
+      { keepOpen = false }: { keepOpen?: boolean } = {}
+    ) => {
       command();
+
+      if (keepOpen) {
+        // the query that got us here means nothing to the view we land in
+        setSearch("");
+        inputRef.current?.focus();
+        return;
+      }
+
       setOpen(false);
       exitView();
     },

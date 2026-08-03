@@ -284,24 +284,19 @@ export function CommandBar({
                 <CommandItem
                   key={action.id}
                   value={`${action.title} ${group.heading}`}
-                  onSelect={() => {
-                    // these only switch the command bar to another view,
-                    // closing it would defeat the purpose
-                    if (action.keepOpen) {
-                      action.onSelect?.();
-                      inputRef.current?.focus();
-                      return;
-                    }
-
-                    runCmd(() => {
-                      // both can be set: `onSelect` runs the action &
-                      // `href` is where the user lands afterwards
-                      action.onSelect?.();
-                      if (action.href) {
-                        navigate(action.href);
-                      }
-                    });
-                  }}
+                  onSelect={() =>
+                    runCmd(
+                      () => {
+                        // both can be set: `onSelect` runs the action &
+                        // `href` is where the user lands afterwards
+                        action.onSelect?.();
+                        if (action.href) {
+                          navigate(action.href);
+                        }
+                      },
+                      { keepOpen: action.keepOpen }
+                    )
+                  }
                   className="h-9 flex items-center gap-2 px-0 font-medium"
                 >
                   <action.icon className="flex-none text-grey size-4" />
