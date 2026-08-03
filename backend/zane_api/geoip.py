@@ -31,4 +31,5 @@ def lookup_country_code(ip: str):
             else:
                 iso_code = response.country.iso_code
 
+    print(f"[lookup_country_code] {iso_code=}")
     return iso_code
