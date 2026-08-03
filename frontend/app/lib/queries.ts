@@ -2523,16 +2523,7 @@ export type DeploymentLog = Awaited<
   >
 >["results"][number];
 
-export type HttpLog = Awaited<
-  ReturnType<
-    NonNullable<
-      Exclude<
-        ReturnType<typeof deploymentQueries.httpLogs>["queryFn"],
-        typeof skipToken
-      >
-    >
-  >
->["results"][number];
+export type HttpLog = ApiResponse<"get", "/api/http-logs/{request_uuid}/">;
 
 export const resourceQueries = {
   search: (workspaceId: string, query?: string) =>

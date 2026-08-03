@@ -28,8 +28,14 @@ import {
   STANDARD_HTTP_STATUS_CODES,
   ZANE_DEPLOYMENT_HASH_HEADER
 } from "~/lib/constants";
+import { COUNTRY_CODE_LIST } from "~/lib/countryCodeList";
 import type { HttpLog } from "~/lib/queries";
-import { cn, formatDuration, formattedTime } from "~/lib/utils";
+import {
+  cn,
+  countryCodeToFlagEmoji,
+  formatDuration,
+  formattedTime
+} from "~/lib/utils";
 
 type HttpLogRequestDetailsProps = {
   log?: HttpLog;
@@ -81,6 +87,8 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
     envSlug: string;
     serviceSlug: string;
   };
+
+  const country_iso = log.request_country_code;
 
   return (
     <>
@@ -226,6 +234,44 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
             </TooltipProvider>
           </dt>
           <dd className="text-sm break-all text-grey">{log.request_ip}</dd>
+        </div>
+
+        <div className="grid grid-cols-2 items-center gap-x-4 w-full group">
+          <dt className="text-grey inline-flex items-center">
+            <span>Client IP Country</span>
+            {country_iso && (
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                      onClick={() => {
+                        searchParams.set("country", country_iso);
+                        searchParams.delete("request_id");
+                        setSearchParams(searchParams, { replace: true });
+                      }}
+                    >
+                      <FilterIcon size={15} />
+                      <span className="sr-only">Add Filter</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Add Filter</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </dt>
+          <dd className="text-sm break-all text-grey">
+            {country_iso ? (
+              <span>
+                {countryCodeToFlagEmoji(country_iso)}
+                &nbsp;
+                {COUNTRY_CODE_LIST[country_iso].name}
+              </span>
+            ) : (
+              <span className="font-mono">N/A</span>
+            )}
+          </dd>
         </div>
 
         <div className="grid grid-cols-2 items-start gap-x-4 w-full group">

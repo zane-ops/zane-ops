@@ -49,7 +49,13 @@ import {
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { SortDirection, Writeable } from "~/lib/types";
-import { cn, formatDuration, formatLogTime, notFound } from "~/lib/utils";
+import {
+  cn,
+  countryCodeToFlagEmoji,
+  formatDuration,
+  formatLogTime,
+  notFound
+} from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
@@ -418,12 +424,15 @@ export default function ServiceHttpLogsPage({
                 <TableHead className="sticky top-0 z-20 bg-toggle">
                   Client IP
                 </TableHead>
+                <TableHead className="sticky top-0 z-20 bg-toggle">
+                  Country
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-4 text-sm text-grey h-6 border-b border-border py-2"
                 >
                   <div className="h-px" ref={fetchPreviousPageRef} />
@@ -443,7 +452,7 @@ export default function ServiceHttpLogsPage({
               {virtualizerPaddingBefore > 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     style={{ height: virtualizerPaddingBefore }}
                   />
                 </tr>
@@ -473,13 +482,13 @@ export default function ServiceHttpLogsPage({
               })}
               {virtualizerPaddingAfter > 0 && (
                 <tr>
-                  <td colSpan={7} style={{ height: virtualizerPaddingAfter }} />
+                  <td colSpan={8} style={{ height: virtualizerPaddingAfter }} />
                 </tr>
               )}
 
               {logs.length > 0 && (
                 <TableRow className="hover:bg-transparent text-gray-500 px-2">
-                  <TableCell colSpan={7} className="relative">
+                  <TableCell colSpan={8} className="relative">
                     {logsQuery.hasNextPage || logsQuery.isFetchingNextPage ? (
                       <div
                         ref={fetchNextPageRef}
@@ -565,6 +574,19 @@ function LogTableRowContent({ log }: LogTableRowProps) {
       <TableCell>
         <p className="text-grey whitespace-nowrap max-w-[150px] text-ellipsis overflow-x-hidden flex-shrink">
           {log.request_ip}
+        </p>
+      </TableCell>
+
+      <TableCell>
+        <p className="text-grey whitespace-nowrap max-w-[150px] text-ellipsis overflow-x-hidden flex-shrink">
+          {log.request_country_code ? (
+            <span>
+              {log.request_country_code}{" "}
+              {countryCodeToFlagEmoji(log.request_country_code)}
+            </span>
+          ) : (
+            <span className="font-mono">N/A</span>
+          )}
         </p>
       </TableCell>
     </>
