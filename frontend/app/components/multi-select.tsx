@@ -35,6 +35,13 @@ const multiSelectVariants = cva(
   }
 );
 
+export type MultiSelectOption =
+  | string
+  | {
+      label: React.ReactNode;
+      value: string;
+    };
+
 interface MultiSelectProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof multiSelectVariants> {
@@ -42,7 +49,7 @@ interface MultiSelectProps
    * An array of option objects to be displayed in the multi-select component.
    * Each option object has a label, value, and an optional icon.
    */
-  options: string[];
+  options: MultiSelectOption[];
 
   /**
    * Callback function triggered when the selected values change.
@@ -232,15 +239,19 @@ export const MultiSelect = ({
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandPrimitive.Group>
               {[...visibleOptions]
-                .filter((option) =>
-                  option.toLowerCase().includes(inputValue.toLowerCase())
-                )
+                .filter((option) => {
+                  const value =
+                    typeof option === "string" ? option : option.value;
+                  return value.toLowerCase().includes(inputValue.toLowerCase());
+                })
                 .map((option) => {
-                  const isSelected = values.includes(option);
+                  const value =
+                    typeof option === "string" ? option : option.value;
+                  const isSelected = values.includes(value);
                   return (
                     <CommandItem
-                      key={option}
-                      onSelect={() => toggleOption(option)}
+                      key={value}
+                      onSelect={() => toggleOption(value)}
                       className="cursor-pointer flex gap-1 "
                     >
                       <CheckIcon
@@ -251,7 +262,11 @@ export const MultiSelect = ({
                         )}
                       />
                       <div className="flex items-center justify-between w-full break-all">
-                        <span>{option}</span>
+                        {typeof option === "string" ? (
+                          <span>{option}</span>
+                        ) : (
+                          option.label
+                        )}
                       </div>
                     </CommandItem>
                   );
