@@ -300,14 +300,12 @@ export function getResourceActionGroups(
               id: "service-start",
               title: "Start Service",
               icon: PlayIcon,
-              href: home,
               onSelect: () => toggleServiceState(resource, "start")
             },
             {
               id: "service-stop",
               title: "Stop Service",
               icon: PauseIcon,
-              href: home,
               onSelect: () => toggleServiceState(resource, "stop")
             }
           ]
@@ -403,14 +401,12 @@ export function getResourceActionGroups(
               id: "stack-start",
               title: "Start Stack",
               icon: PlayIcon,
-              href: home,
               onSelect: () => toggleStackState(resource, "start")
             },
             {
               id: "stack-stop",
               title: "Stop Stack",
               icon: PauseIcon,
-              href: home,
               onSelect: () => toggleStackState(resource, "stop")
             }
           ]
