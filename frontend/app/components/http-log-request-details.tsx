@@ -263,11 +263,13 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
           </dt>
           <dd className="text-sm break-all text-grey">
             {country_iso ? (
-              <span>
-                {countryCodeToFlagEmoji(country_iso)}
+              <>
+                <span className="text-base">
+                  {countryCodeToFlagEmoji(country_iso)}
+                </span>
                 &nbsp;
-                {COUNTRY_CODE_LIST[country_iso].name}
-              </span>
+                <span>{COUNTRY_CODE_LIST[country_iso].name}</span>
+              </>
             ) : (
               <span className="font-mono">N/A</span>
             )}
