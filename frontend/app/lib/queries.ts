@@ -2508,12 +2508,17 @@ type DeploymentLogQueryData = Pick<
   cursor?: string | null;
 };
 
-type HttpLogQueryData = Pick<
+export type HttpLogQueryData = Pick<
   NonNullable<ApiResponse<"get", "/api/http-logs/">>,
   "next" | "previous" | "results"
 > & {
   cursor?: string | null;
 };
+
+export type HttpLogFilterField = RequestParams<
+  "get",
+  "/api/http-logs/fields/"
+>["field"];
 
 export type DeploymentLog = Awaited<
   ReturnType<
