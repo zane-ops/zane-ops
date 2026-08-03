@@ -4799,6 +4799,15 @@ paths:
         schema:
           type: integer
       - in: query
+        name: request_country_code
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
+      - in: query
         name: request_host
         schema:
           type: array
@@ -6522,6 +6531,15 @@ paths:
         description: Number of results to return per page.
         schema:
           type: integer
+      - in: query
+        name: request_country_code
+        schema:
+          type: array
+          items:
+            type: string
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
       - in: query
         name: request_host
         schema:
@@ -23729,9 +23747,14 @@ components:
         stack_service_name:
           type: string
           nullable: true
+        request_country_code:
+          type: string
+          nullable: true
+          maxLength: 2
       required:
       - deployment_id
       - id
+      - request_country_code
       - request_duration_ns
       - request_headers
       - request_host

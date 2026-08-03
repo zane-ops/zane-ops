@@ -3874,6 +3874,7 @@ export interface components {
       request_user_agent: string | null;
       stack_id: string | null;
       stack_service_name: string | null;
+      request_country_code: string | null;
     };
     /**
      * @description * `SERVICE` - Service
@@ -11303,6 +11304,8 @@ export interface operations {
         /** @description Number of results to return per page. */
         per_page?: number;
         /** @description Multiple values may be separated by commas. */
+        request_country_code?: string[];
+        /** @description Multiple values may be separated by commas. */
         request_host?: string[];
         /** @description Multiple values may be separated by commas. */
         request_ip?: string[];
@@ -12064,6 +12067,8 @@ export interface operations {
         deployment_id?: string;
         /** @description Number of results to return per page. */
         per_page?: number;
+        /** @description Multiple values may be separated by commas. */
+        request_country_code?: string[];
         /** @description Multiple values may be separated by commas. */
         request_host?: string[];
         /** @description Multiple values may be separated by commas. */
