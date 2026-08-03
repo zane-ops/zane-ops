@@ -592,196 +592,196 @@ class ProxyMasterHttpLogViewTests(ProxyLogTestBase):
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
 
-# class ProxyApplicationLogIngestViewTests(ProxyLogTestBase):
-#     def test_ingest_proxy_application_logs(self):
-#         self.loginUser()
+class ProxyApplicationLogIngestViewTests(ProxyLogTestBase):
+    def test_ingest_proxy_application_logs(self):
+        self.loginUser()
 
-#         app_log = {
-#             "level": "info",
-#             "ts": datetime.datetime.now().timestamp(),
-#             "logger": "tls.obtain",
-#             "msg": "certificate obtained successfully",
-#             "identifier": "web.zaneops.local",
-#         }
-#         self.ingest([fluentd_proxy_entry(app_log, source="stderr")])
+        app_log = {
+            "level": "info",
+            "ts": datetime.datetime.now().timestamp(),
+            "logger": "tls.obtain",
+            "msg": "certificate obtained successfully",
+            "identifier": "web.zaneops.local",
+        }
+        self.ingest([fluentd_proxy_entry(app_log, source="stderr")])
 
-#         data = self.search_client.search(
-#             query={"source": [RuntimeLogSource.PROXY]},
-#         )
-#         self.assertEqual(1, len(data["results"]))
-#         log = data["results"][0]
-#         self.assertEqual(RuntimeLogSource.PROXY, log["source"])
-#         self.assertEqual(RuntimeLogLevel.INFO, log["level"])
-#         self.assertEqual(json.dumps(app_log), log["content"])
+        data = self.search_client.search(
+            query={"source": [RuntimeLogSource.PROXY]},
+        )
+        self.assertEqual(1, len(data["results"]))
+        log = data["results"][0]
+        self.assertEqual(RuntimeLogSource.PROXY, log["source"])
+        self.assertEqual(RuntimeLogLevel.INFO, log["level"])
+        self.assertEqual(json.dumps(app_log), log["content"])
 
-#     def test_ingest_proxy_application_logs_map_caddy_level_to_log_level(self):
-#         self.loginUser()
+    def test_ingest_proxy_application_logs_map_caddy_level_to_log_level(self):
+        self.loginUser()
 
-#         self.ingest(
-#             [
-#                 fluentd_proxy_entry(
-#                     {
-#                         "level": "error",
-#                         "ts": datetime.datetime.now().timestamp(),
-#                         "logger": "tls.obtain",
-#                         "msg": "could not get certificate from issuer",
-#                         "identifier": "web.zaneops.local",
-#                     },
-#                     source="stderr",
-#                 ),
-#                 fluentd_proxy_entry(
-#                     {
-#                         "level": "warn",
-#                         "ts": datetime.datetime.now().timestamp(),
-#                         "logger": "tls",
-#                         "msg": "storage cleaning happened too recently",
-#                     },
-#                     source="stderr",
-#                 ),
-#                 fluentd_proxy_entry(
-#                     {
-#                         "level": "debug",
-#                         "ts": datetime.datetime.now().timestamp(),
-#                         "logger": "http",
-#                         "msg": "provisioning server",
-#                     },
-#                     source="stderr",
-#                 ),
-#             ]
-#         )
+        self.ingest(
+            [
+                fluentd_proxy_entry(
+                    {
+                        "level": "error",
+                        "ts": datetime.datetime.now().timestamp(),
+                        "logger": "tls.obtain",
+                        "msg": "could not get certificate from issuer",
+                        "identifier": "web.zaneops.local",
+                    },
+                    source="stderr",
+                ),
+                fluentd_proxy_entry(
+                    {
+                        "level": "warn",
+                        "ts": datetime.datetime.now().timestamp(),
+                        "logger": "tls",
+                        "msg": "storage cleaning happened too recently",
+                    },
+                    source="stderr",
+                ),
+                fluentd_proxy_entry(
+                    {
+                        "level": "debug",
+                        "ts": datetime.datetime.now().timestamp(),
+                        "logger": "http",
+                        "msg": "provisioning server",
+                    },
+                    source="stderr",
+                ),
+            ]
+        )
 
-#         errors = self.search_client.search(
-#             query={
-#                 "source": [RuntimeLogSource.PROXY],
-#                 "level": [RuntimeLogLevel.ERROR],
-#             },
-#         )
-#         self.assertEqual(2, len(errors["results"]))
+        errors = self.search_client.search(
+            query={
+                "source": [RuntimeLogSource.PROXY],
+                "level": [RuntimeLogLevel.ERROR],
+            },
+        )
+        self.assertEqual(2, len(errors["results"]))
 
-#         infos = self.search_client.search(
-#             query={
-#                 "source": [RuntimeLogSource.PROXY],
-#                 "level": [RuntimeLogLevel.INFO],
-#             },
-#         )
-#         self.assertEqual(1, len(infos["results"]))
+        infos = self.search_client.search(
+            query={
+                "source": [RuntimeLogSource.PROXY],
+                "level": [RuntimeLogLevel.INFO],
+            },
+        )
+        self.assertEqual(1, len(infos["results"]))
 
-#     def test_ingest_non_json_proxy_logs(self):
-#         self.loginUser()
+    def test_ingest_non_json_proxy_logs(self):
+        self.loginUser()
 
-#         self.ingest(
-#             [
-#                 fluentd_proxy_entry(
-#                     "run: loading initial config: loading new config: http app module: start: listening on :443",
-#                     source="stderr",
-#                 )
-#             ]
-#         )
+        self.ingest(
+            [
+                fluentd_proxy_entry(
+                    "run: loading initial config: loading new config: http app module: start: listening on :443",
+                    source="stderr",
+                )
+            ]
+        )
 
-#         data = self.search_client.search(query={"source": [RuntimeLogSource.PROXY]})
-#         self.assertEqual(1, len(data["results"]))
-#         self.assertEqual(RuntimeLogLevel.INFO, data["results"][0]["level"])
+        data = self.search_client.search(query={"source": [RuntimeLogSource.PROXY]})
+        self.assertEqual(1, len(data["results"]))
+        self.assertEqual(RuntimeLogLevel.INFO, data["results"][0]["level"])
 
-#     def test_ingest_does_not_store_access_logs_as_application_logs(self):
-#         self.loginUser()
+    def test_ingest_does_not_store_access_logs_as_application_logs(self):
+        self.loginUser()
 
-#         self.ingest(
-#             [
-#                 fluentd_proxy_entry(
-#                     {**caddy_access_log(), "uuid": str(uuid.uuid4())},
-#                 )
-#             ]
-#         )
+        self.ingest(
+            [
+                fluentd_proxy_entry(
+                    {**caddy_access_log(), "uuid": str(uuid.uuid4())},
+                )
+            ]
+        )
 
-#         data = self.search_client.search(query={"source": [RuntimeLogSource.PROXY]})
-#         self.assertEqual(0, len(data["results"]))
-#         self.assertEqual(1, HttpLog.objects.count())
+        data = self.search_client.search(query={"source": [RuntimeLogSource.PROXY]})
+        self.assertEqual(0, len(data["results"]))
+        self.assertEqual(1, HttpLog.objects.count())
 
 
-# class ProxyApplicationLogViewTests(ProxyLogTestBase):
-#     def setup_logs(self):
-#         self.loginUser()
-#         self.ingest(
-#             [
-#                 fluentd_proxy_entry(
-#                     {
-#                         "level": "error",
-#                         "ts": datetime.datetime.now().timestamp(),
-#                         "logger": "tls.obtain",
-#                         "msg": "could not get certificate from issuer",
-#                         "identifier": "web.zaneops.local",
-#                     },
-#                     source="stderr",
-#                 ),
-#                 fluentd_proxy_entry(
-#                     {
-#                         "level": "info",
-#                         "ts": datetime.datetime.now().timestamp(),
-#                         "logger": "admin.api",
-#                         "msg": "load complete",
-#                     },
-#                     source="stderr",
-#                 ),
-#             ]
-#         )
+class ProxyApplicationLogViewTests(ProxyLogTestBase):
+    def setup_logs(self):
+        self.loginUser()
+        self.ingest(
+            [
+                fluentd_proxy_entry(
+                    {
+                        "level": "error",
+                        "ts": datetime.datetime.now().timestamp(),
+                        "logger": "tls.obtain",
+                        "msg": "could not get certificate from issuer",
+                        "identifier": "web.zaneops.local",
+                    },
+                    source="stderr",
+                ),
+                fluentd_proxy_entry(
+                    {
+                        "level": "info",
+                        "ts": datetime.datetime.now().timestamp(),
+                        "logger": "admin.api",
+                        "msg": "load complete",
+                    },
+                    source="stderr",
+                ),
+            ]
+        )
 
-#     def test_view_proxy_logs(self):
-#         self.setup_logs()
+    def test_view_proxy_logs(self):
+        self.setup_logs()
 
-#         response = self.client.get(reverse("console:proxy.logs"))
-#         jprint(response.json())
-#         self.assertEqual(status.HTTP_200_OK, response.status_code)
-#         self.assertEqual(2, len(response.json()["results"]))
+        response = self.client.get(reverse("console:proxy.logs"))
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(2, len(response.json()["results"]))
 
-#     def test_filter_proxy_logs_by_level(self):
-#         self.setup_logs()
+    def test_filter_proxy_logs_by_level(self):
+        self.setup_logs()
 
-#         response = self.client.get(
-#             reverse("console:proxy.logs", query={"level": RuntimeLogLevel.ERROR})
-#         )
-#         self.assertEqual(status.HTTP_200_OK, response.status_code)
-#         self.assertEqual(1, len(response.json()["results"]))
+        response = self.client.get(
+            reverse("console:proxy.logs", query={"level": RuntimeLogLevel.ERROR})
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(1, len(response.json()["results"]))
 
-#     def test_search_proxy_logs_by_content(self):
-#         self.setup_logs()
+    def test_search_proxy_logs_by_content(self):
+        self.setup_logs()
 
-#         response = self.client.get(
-#             reverse("console:proxy.logs", query={"query": "load complete"})
-#         )
-#         self.assertEqual(status.HTTP_200_OK, response.status_code)
-#         self.assertEqual(1, len(response.json()["results"]))
+        response = self.client.get(
+            reverse("console:proxy.logs", query={"query": "load complete"})
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(1, len(response.json()["results"]))
 
-#     def test_proxy_logs_do_not_include_service_logs(self):
-#         _, service = self.create_and_deploy_redis_docker_service()
-#         deployment: Deployment = service.deployments.first()
+    def test_proxy_logs_do_not_include_service_logs(self):
+        _, service = self.create_and_deploy_redis_docker_service()
+        deployment: Deployment = service.deployments.first()
 
-#         self.ingest(
-#             [
-#                 {
-#                     "log": "1:M 30 Jun 2024 03:17:14.376 * Ready to accept connections tcp",
-#                     "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
-#                     "container_name": "/srv-redis.1.zm0uncmx8w4wvnokdl6qxt55e",
-#                     "time": (
-#                         datetime.datetime.now() - timedelta(seconds=1)
-#                     ).isoformat(),
-#                     "tag": json.dumps(
-#                         {
-#                             "deployment_id": deployment.hash,
-#                             "service_id": service.id,
-#                         }
-#                     ),
-#                     "source": "stdout",
-#                 }
-#             ]
-#         )
+        self.ingest(
+            [
+                {
+                    "log": "1:M 30 Jun 2024 03:17:14.376 * Ready to accept connections tcp",
+                    "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                    "container_name": "/srv-redis.1.zm0uncmx8w4wvnokdl6qxt55e",
+                    "time": (
+                        datetime.datetime.now() - timedelta(seconds=1)
+                    ).isoformat(),
+                    "tag": json.dumps(
+                        {
+                            "deployment_id": deployment.hash,
+                            "service_id": service.id,
+                        }
+                    ),
+                    "source": "stdout",
+                }
+            ]
+        )
 
-#         response = self.client.get(reverse("console:proxy.logs"))
-#         self.assertEqual(status.HTTP_200_OK, response.status_code)
-#         self.assertEqual(0, len(response.json()["results"]))
+        response = self.client.get(reverse("console:proxy.logs"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(0, len(response.json()["results"]))
 
-#     def test_non_instance_owner_cannot_view_proxy_logs(self):
-#         self.setup_logs()
-#         self.loginAsSimpleUser()
+    def test_non_instance_owner_cannot_view_proxy_logs(self):
+        self.setup_logs()
+        self.loginAsSimpleUser()
 
-#         response = self.client.get(reverse("console:proxy.logs"))
-#         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        response = self.client.get(reverse("console:proxy.logs"))
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
