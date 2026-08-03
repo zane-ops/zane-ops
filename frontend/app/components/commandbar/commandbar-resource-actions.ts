@@ -274,7 +274,7 @@ export function getResourceActionGroups(
           items: [
             {
               id: "service-deploy",
-              title: "Deploy",
+              title: "Deploy Service",
               icon: RocketIcon,
               href: home,
               // every field of the deploy form is optional
@@ -381,7 +381,7 @@ export function getResourceActionGroups(
           items: [
             {
               id: "stack-deploy",
-              title: "Deploy",
+              title: "Deploy Stack",
               icon: RocketIcon,
               href: home,
               // `commit_message` is the only field & it is optional

@@ -7,7 +7,7 @@ import {
   XIcon
 } from "lucide-react";
 import React from "react";
-import { useNavigate } from "react-router";
+import { href, useFetcher, useNavigate } from "react-router";
 import type { AuthedUserResponse } from "~/api/types";
 import { useResourceActionGroups } from "~/components/commandbar/commandbar-resource-actions";
 import {
@@ -20,6 +20,7 @@ import type {
   CommandBarNavGroup
 } from "~/components/commandbar/commandbar-types";
 import { filterGroupsByRole } from "~/components/commandbar/commandbar-utils";
+import { CommandBarWorkspaceList } from "~/components/commandbar/commandbar-workspace-list";
 import { Button } from "~/components/ui/button";
 import {
   CommandDialog,
@@ -52,12 +53,11 @@ export function CommandBar({
     open,
     search,
     setSearch,
-    isActionMode,
-    selectedResource,
+    view,
+    exitView,
     highlightedValue,
     setHighlightedValue,
     inputRef,
-    clearSelectedResource,
     handleOpenChange,
     handleCmdInputKeyDown,
     handleCmdBarKeyDown,
@@ -71,29 +71,37 @@ export function CommandBar({
     [navGroups, user]
   );
 
-  const actionModeGroups = React.useMemo(
+  const actionViewGroups = React.useMemo(
     () => filterGroupsByRole(actionGroups, user),
     [actionGroups, user]
   );
 
-  const resourceActionGroups = useResourceActionGroups(selectedResource, user);
+  const resourceActionGroups = useResourceActionGroups(
+    view.type === "resource" ? view.resource : null,
+    user
+  );
 
-  const selectedItem = selectedResource
-    ? getNavItemFromSearchResource(selectedResource)
-    : null;
+  const selectedItem =
+    view.type === "resource"
+      ? getNavItemFromSearchResource(view.resource)
+      : null;
 
-  // the resource context & the action mode both render `CommandBarActionGroup`s
-  const commandActionsGroups = selectedResource
-    ? resourceActionGroups
-    : isActionMode
-      ? actionModeGroups
-      : [];
+  // the resource & the action views both render `CommandBarActionGroup`s
+  const commandActionsGroups =
+    view.type === "resource"
+      ? resourceActionGroups
+      : view.type === "action"
+        ? actionViewGroups
+        : [];
 
   const navigate = useNavigate();
+  // this fetcher lives in `CommandBar` & not in the list, so the submission
+  // isn't cancelled when the dialog closes right after selecting a workspace
+  const { submit } = useFetcher();
 
   if (!user?.user) return null;
 
-  const actionModeHint = (
+  const actionViewHint = (
     <div className="inline-flex items-center gap-1 text-muted-foreground">
       <LightbulbIcon className="size-3 flex-none" />
       <span>Type</span>
@@ -102,12 +110,21 @@ export function CommandBar({
     </div>
   );
 
-  const selectedItemContextHint = (
+  const resourceViewHint = (
     <div className="inline-flex items-center gap-1 whitespace-nowrap text-muted-foreground">
       <LightbulbIcon className="size-3 flex-none" />
       <span>Press</span>
       <kbd className="rounded-sm px-1  font-mono bg-muted">escape</kbd>
       <span>to deselect item</span>
+    </div>
+  );
+
+  const workspaceViewHint = (
+    <div className="inline-flex items-center gap-1 whitespace-nowrap text-muted-foreground">
+      <LightbulbIcon className="size-3 flex-none" />
+      <span>Press</span>
+      <kbd className="rounded-sm px-1  font-mono bg-muted">escape</kbd>
+      <span>to exit workspace switch</span>
     </div>
   );
 
@@ -143,10 +160,13 @@ export function CommandBar({
           type="button"
           size="xs"
           variant="outline"
-          className={cn("text-xs gap-1.5", selectedItem && "pr-1")}
+          className={cn(
+            "text-xs gap-1.5",
+            (selectedItem || view.type === "workspace") && "pr-1"
+          )}
           onClick={() => {
-            if (selectedItem) {
-              clearSelectedResource();
+            if (view.type === "resource" || view.type === "workspace") {
+              exitView();
               inputRef.current?.focus();
             }
           }}
@@ -167,7 +187,12 @@ export function CommandBar({
               </span>
               <XIcon className="size-3 flex-none" />
             </>
-          ) : isActionMode ? (
+          ) : view.type === "workspace" ? (
+            <>
+              <span>Switch workspace</span>
+              <XIcon className="size-3 flex-none" />
+            </>
+          ) : view.type === "action" ? (
             "Action mode"
           ) : (
             "Home"
@@ -180,7 +205,9 @@ export function CommandBar({
             placeholder={
               selectedItem
                 ? `Search actions for ${selectedItem.title}...`
-                : "Search pages, resources, actions..."
+                : view.type === "workspace"
+                  ? "Search workspaces..."
+                  : "Search pages, resources, actions..."
             }
             className="text-base bg-inherit focus-visible:outline-hidden px-2 w-full grow"
             value={search}
@@ -208,18 +235,37 @@ export function CommandBar({
           )}
         </CommandEmpty>
 
-        {!isActionMode && !selectedResource && (
+        {view.type === "home" && (
           <CommandGroup
-            heading={actionModeHint}
+            heading={actionViewHint}
             className="[&_[cmdk-group-heading]]:text-xs overflow-visible"
           />
         )}
 
-        {selectedResource && (
+        {view.type === "resource" && (
           <CommandGroup
-            heading={selectedItemContextHint}
+            heading={resourceViewHint}
             className="[&_[cmdk-group-heading]]:text-xs overflow-visible"
           />
+        )}
+
+        {view.type === "workspace" && (
+          <>
+            <CommandGroup
+              heading={workspaceViewHint}
+              className="[&_[cmdk-group-heading]]:text-xs overflow-visible"
+            />
+            <CommandBarWorkspaceList
+              onSelectWorkspace={(workspaceId) =>
+                runCmd(() =>
+                  submit(
+                    { workspace_id: workspaceId },
+                    { method: "post", action: href("/switch-workspace") }
+                  )
+                )
+              }
+            />
+          </>
         )}
 
         {/* Actions for a selected item/Global actions */}
@@ -238,7 +284,15 @@ export function CommandBar({
                 <CommandItem
                   key={action.id}
                   value={`${action.title} ${group.heading}`}
-                  onSelect={() =>
+                  onSelect={() => {
+                    // these only switch the command bar to another view,
+                    // closing it would defeat the purpose
+                    if (action.keepOpen) {
+                      action.onSelect?.();
+                      inputRef.current?.focus();
+                      return;
+                    }
+
                     runCmd(() => {
                       // both can be set: `onSelect` runs the action &
                       // `href` is where the user lands afterwards
@@ -246,8 +300,8 @@ export function CommandBar({
                       if (action.href) {
                         navigate(action.href);
                       }
-                    })
-                  }
+                    });
+                  }}
                   className="h-9 flex items-center gap-2 px-0 font-medium"
                 >
                   <action.icon className="flex-none text-grey size-4" />
@@ -259,8 +313,7 @@ export function CommandBar({
         ))}
 
         {/* Navigation items */}
-        {!isActionMode &&
-          !selectedResource &&
+        {view.type === "home" &&
           navigationGroups.map((group, groupIndex) => (
             <React.Fragment key={group.heading}>
               {groupIndex > 0 && <CommandSeparator />}
@@ -290,8 +343,7 @@ export function CommandBar({
           ))}
 
         {/* Search results */}
-        {!isActionMode &&
-          !selectedResource &&
+        {view.type === "home" &&
           searchGroups.map((group, groupIndex) => {
             const hasContentAbove =
               navigationGroups.length > 0 || groupIndex > 0;
