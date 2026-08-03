@@ -1160,15 +1160,21 @@ function CountryCodeFilter({ countryCodes }: CountryCodeFilterProps) {
       options={countryCodeOptions}
       closeOnSelect
       autoFilter
+      keepValuesCase
       // Sort by selected values first
       sortOptions={(optionA, optionB) => {
-        const isSelectedA = countryCodes.includes(
-          getMultiSelectOptionValue(optionA)
-        );
-        const isSelectedB = countryCodes.includes(
-          getMultiSelectOptionValue(optionB)
-        );
-        return Number(isSelectedB) - Number(isSelectedA);
+        const valueA = getMultiSelectOptionValue(optionA);
+        const valueB = getMultiSelectOptionValue(optionB);
+        const isSelectedA = countryCodes.includes(valueA);
+        const isSelectedB = countryCodes.includes(valueB);
+        if (isSelectedA || isSelectedB) {
+          return Number(isSelectedB) - Number(isSelectedA);
+        }
+
+        return valueA.localeCompare(valueB, undefined, {
+          numeric: true,
+          sensitivity: "base"
+        });
       }}
       onValueChange={(statuses) => {
         searchParams.delete("request_country_code");

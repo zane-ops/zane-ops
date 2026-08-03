@@ -105,6 +105,7 @@ interface MultiSelectProps
   order?: "icon-label" | "label-icon";
   Icon?: React.ComponentType<LucideProps>;
   closeOnSelect?: boolean;
+  keepValuesCase?: boolean;
   /**
    * Whether to force the automatic filtering from the command bar instead manually filtering
    * the items
@@ -131,6 +132,7 @@ export const MultiSelect = ({
   maxCount = 2,
   modalPopover = false,
   asChild = false,
+  keepValuesCase = false,
   className,
   align = "end",
   sideOffset = 0,
@@ -250,7 +252,7 @@ export const MultiSelect = ({
                             itemClassName
                           )}
                         >
-                          {capitalizeText(val)}
+                          {keepValuesCase ? val : capitalizeText(val)}
                         </p>
                       ))}
                     </>
@@ -272,6 +274,7 @@ export const MultiSelect = ({
         onEscapeKeyDown={() => setIsPopoverOpen(false)}
       >
         <Command
+          loop
           shouldFilter={!acceptArbitraryValues || autoFilter}
           className="flex w-full flex-col rounded-md bg-popover border-border border text-popover-foreground px-2"
         >
