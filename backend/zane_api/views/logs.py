@@ -65,6 +65,7 @@ from compose.models import ComposeStack
 from temporal.proxy import ZaneProxyClient
 
 from django.db.models import Q
+from zane_api.geoip import lookup_country_code
 
 
 def _build_http_log(
@@ -76,6 +77,10 @@ def _build_http_log(
     full_url = urlparse(f"https://{req['host']}{req['uri']}")
 
     client_ip = req["headers"].get("X-Forwarded-For", req["remote_ip"])
+    request_ip = (
+        client_ip[0].split(",")[0] if isinstance(client_ip, list) else client_ip
+    )
+
     user_agent = req["headers"].get("User-Agent")
 
     log_source = HttpLog.LogSource.UNKNOWN
@@ -116,12 +121,11 @@ def _build_http_log(
         request_headers=req["headers"],
         response_headers=log_content["resp_headers"],
         request_user_agent=user_agent[0] if isinstance(user_agent, list) else None,
-        request_ip=client_ip[0].split(",")[0]
-        if isinstance(client_ip, list)
-        else client_ip,
+        request_ip=request_ip,
         request_uuid=log_content.get("uuid"),
         request_method=req["method"],
         source=log_source,
+        request_country_code=lookup_country_code(request_ip),
         **extra_fields,
     )
 

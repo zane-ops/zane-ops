@@ -769,6 +769,7 @@ class HttpLogSerializer(serializers.ModelSerializer):
             "request_user_agent",
             "stack_id",
             "stack_service_name",
+            "request_country_code",
         ]
 
 

@@ -7,6 +7,7 @@ x-backend-vars: &env-vars
   TEMPORALIO_SERVER_URL: zane.temporal:7233
   LOKI_HOST: http://zane.loki:3100
   ZANE_APP_DOMAIN: ${ZANE_APP_DOMAIN:-127-0-0-1.sslip.io}
+  MAXMIND_DB_PATH: ${MAXMIND_DB_PATH:-}
 
 services:
   zane-loki:
@@ -120,6 +121,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - docker-buildx-store:/root/.docker/buildx
       - docker-data:/root/.docker
+      - ../backend/GeoLite2-Country.mmdb:${MAXMIND_DB_PATH}
     depends_on:
       - zane-db
       - zane-redis

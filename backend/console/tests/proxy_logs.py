@@ -4,16 +4,19 @@ import datetime
 import json
 import uuid
 from datetime import timedelta
+from typing import cast
 from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import override_settings
 from django.urls import reverse
+from geoip2.errors import AddressNotFoundError
 from rest_framework import status
 
 from search.dtos import RuntimeLogLevel, RuntimeLogSource
 from temporal.proxy import ZaneProxyClient
+from zane_api import geoip
 from zane_api.models import Deployment, HttpLog
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import jprint
@@ -94,8 +97,6 @@ class FakeGeoIPReader:
         pass
 
     def country(self, ip: str):
-        from geoip2.errors import AddressNotFoundError
-
         code = self.ip_to_country.get(ip)
         if code is None:
             raise AddressNotFoundError(f"{ip} not found in database")
@@ -305,105 +306,101 @@ class ProxyHttpLogIngestViewTests(ProxyLogTestBase):
         self.assertEqual(0, HttpLog.objects.count())
 
 
-# @override_settings(MAXMIND_DB_PATH="/tmp/GeoLite2-Country.mmdb")
-# class ProxyHttpLogGeoIPTests(ProxyLogTestBase):
-#     def setUp(self):
-#         super().setUp()
-#         from zane_api import geoip
+@override_settings(MAXMIND_DB_PATH="/tmp/GeoLite2-Country.mmdb")
+class ProxyHttpLogGeoIPTests(ProxyLogTestBase):
+    def setUp(self):
+        super().setUp()
+        geoip.get_geoip_reader.cache_clear()
+        self.addCleanup(geoip.get_geoip_reader.cache_clear)
+        patch("zane_api.geoip.geoip2.database.Reader", new=FakeGeoIPReader).start()
 
-#         geoip.get_geoip_reader.cache_clear()
-#         self.addCleanup(geoip.get_geoip_reader.cache_clear)
-#         patch("zane_api.geoip.Reader", new=FakeGeoIPReader).start()
+    def ingest_request_from(self, ip: str):
+        self.ingest(
+            [
+                fluentd_proxy_entry(
+                    {
+                        **caddy_access_log(forwarded_for=ip),
+                        "uuid": str(uuid.uuid4()),
+                    }
+                )
+            ]
+        )
+        return cast(HttpLog, HttpLog.objects.first())
 
-#     def test_ingest_resolves_country_from_forwarded_ip(self):
-#         self.loginUser()
+    def test_ingest_resolves_country_from_forwarded_ip(self):
+        self.loginUser()
 
-#         self.ingest(
-#             [
-#                 fluentd_proxy_entry(
-#                     {
-#                         **caddy_access_log(forwarded_for="88.99.73.23"),
-#                         "uuid": str(uuid.uuid4()),
-#                     }
-#                 )
-#             ]
-#         )
+        log = self.ingest_request_from("88.99.73.23")
+        self.assertEqual("88.99.73.23", log.request_ip)
+        self.assertEqual("DE", log.request_country_code)
 
-#         log: HttpLog = HttpLog.objects.first()
-#         self.assertEqual("88.99.73.23", log.request_ip)
-#         self.assertEqual("DE", log.request_country_code)
+    def test_ingest_resolves_country_for_ipv6(self):
+        self.loginUser()
 
-#     def test_ingest_resolves_country_for_ipv6(self):
-#         self.loginUser()
+        log = self.ingest_request_from("2001:0db8:0000:0000:0000:ff00:0042:8329")
+        self.assertEqual("FR", log.request_country_code)
 
-#         self.ingest(
-#             [
-#                 fluentd_proxy_entry(
-#                     {
-#                         **caddy_access_log(
-#                             forwarded_for="2001:0db8:0000:0000:0000:ff00:0042:8329"
-#                         ),
-#                         "uuid": str(uuid.uuid4()),
-#                     }
-#                 )
-#             ]
-#         )
+    def test_ingest_country_is_null_for_unknown_ip(self):
+        self.loginUser()
 
-#         log: HttpLog = HttpLog.objects.first()
-#         self.assertEqual("FR", log.request_country_code)
+        log = self.ingest_request_from("192.168.1.10")
+        self.assertIsNone(log.request_country_code)
 
-#     def test_ingest_country_is_null_for_unknown_ip(self):
-#         self.loginUser()
+    @override_settings(MAXMIND_DB_PATH=None)
+    def test_ingest_country_is_null_when_geoip_is_not_configured(self):
+        self.loginUser()
 
-#         self.ingest(
-#             [
-#                 fluentd_proxy_entry(
-#                     {
-#                         **caddy_access_log(forwarded_for="192.168.1.10"),
-#                         "uuid": str(uuid.uuid4()),
-#                     }
-#                 )
-#             ]
-#         )
+        log = self.ingest_request_from("88.99.73.23")
+        self.assertIsNone(log.request_country_code)
 
-#         log: HttpLog = HttpLog.objects.first()
-#         self.assertIsNone(log.request_country_code)
+    @override_settings(MAXMIND_DB_PATH="/tmp/this-file-does-not-exist.mmdb")
+    def test_ingest_does_not_fail_when_the_database_is_missing(self):
+        self.loginUser()
+        patch(
+            "zane_api.geoip.geoip2.database.Reader", side_effect=FileNotFoundError
+        ).start()
 
-#     @override_settings(MAXMIND_DB_PATH=None)
-#     def test_ingest_country_is_null_when_geoip_is_not_configured(self):
-#         self.loginUser()
+        log = self.ingest_request_from("88.99.73.23")
+        self.assertIsNone(log.request_country_code)
 
-#         self.ingest(
-#             [
-#                 fluentd_proxy_entry(
-#                     {
-#                         **caddy_access_log(forwarded_for="88.99.73.23"),
-#                         "uuid": str(uuid.uuid4()),
-#                     }
-#                 )
-#             ]
-#         )
+    def test_geoip_country_is_exposed_in_the_api(self):
+        self.loginUser()
+        self.ingest_request_from("88.99.73.23")
 
-#         log: HttpLog = HttpLog.objects.first()
-#         self.assertIsNone(log.request_country_code)
+        response = self.client.get(reverse("console:proxy.http_logs"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual("DE", response.json()["results"][0]["request_country_code"])
 
-#     def test_geoip_country_is_exposed_in_the_api(self):
-#         self.loginUser()
+    def test_filter_http_logs_by_country(self):
+        self.loginUser()
+        self.ingest_request_from("88.99.73.23")
+        self.ingest_request_from("2001:0db8:0000:0000:0000:ff00:0042:8329")
 
-#         self.ingest(
-#             [
-#                 fluentd_proxy_entry(
-#                     {
-#                         **caddy_access_log(forwarded_for="88.99.73.23"),
-#                         "uuid": str(uuid.uuid4()),
-#                     }
-#                 )
-#             ]
-#         )
+        response = self.client.get(
+            reverse("console:proxy.http_logs", query={"request_country_code": "FR"})
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        results = response.json()["results"]
+        self.assertEqual(1, len(results))
+        self.assertEqual("FR", results[0]["request_country_code"])
 
-#         response = self.client.get(reverse("console:proxy.http_logs"))
-#         self.assertEqual(status.HTTP_200_OK, response.status_code)
-#         self.assertEqual("DE", response.json()["results"][0]["request_country_code"])
+    def test_filter_http_logs_by_multiple_countries(self):
+        self.loginUser()
+        self.ingest_request_from("88.99.73.23")
+        self.ingest_request_from("2001:0db8:0000:0000:0000:ff00:0042:8329")
+        self.ingest_request_from("192.168.1.10")
+
+        response = self.client.get(
+            reverse(
+                "console:proxy.http_logs",
+                query=[
+                    ("request_country_code", "FR"),
+                    ("request_country_code", "DE"),
+                ],
+            )
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(2, len(response.json()["results"]))
 
 
 class ProxyMasterHttpLogViewTests(ProxyLogTestBase):
