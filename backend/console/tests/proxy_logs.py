@@ -666,6 +666,32 @@ class ProxyApplicationLogIngestViewTests(ProxyLogTestBase):
         )
         self.assertEqual(1, len(infos["results"]))
 
+    def test_ingest_proxy_application_logs_map_fatal_levels_to_error(self):
+        self.loginUser()
+
+        self.ingest(
+            [
+                fluentd_proxy_entry(
+                    {
+                        "level": level,
+                        "ts": datetime.datetime.now().timestamp(),
+                        "logger": "admin",
+                        "msg": "the proxy is having a bad day",
+                    },
+                    source="stderr",
+                )
+                for level in ["fatal", "panic"]
+            ]
+        )
+
+        errors = self.search_client.search(
+            query={
+                "source": [RuntimeLogSource.PROXY],
+                "level": [RuntimeLogLevel.ERROR],
+            },
+        )
+        self.assertEqual(2, len(errors["results"]))
+
     def test_ingest_non_json_proxy_logs(self):
         self.loginUser()
 
@@ -681,6 +707,18 @@ class ProxyApplicationLogIngestViewTests(ProxyLogTestBase):
         data = self.search_client.search(query={"source": [RuntimeLogSource.PROXY]})
         self.assertEqual(1, len(data["results"]))
         self.assertEqual(RuntimeLogLevel.INFO, data["results"][0]["level"])
+
+    def test_ingest_proxy_logs_keep_the_raw_line_and_strip_ansi_colors(self):
+        self.loginUser()
+
+        raw_line = "\x1b[34mINFO\x1b[0m\tserving initial configuration"
+        self.ingest([fluentd_proxy_entry(raw_line, source="stderr")])
+
+        data = self.search_client.search(query={"source": [RuntimeLogSource.PROXY]})
+        self.assertEqual(1, len(data["results"]))
+        log = data["results"][0]
+        self.assertEqual(raw_line, log["content"])
+        self.assertEqual("INFO\tserving initial configuration", log["content_text"])
 
     def test_ingest_does_not_store_access_logs_as_application_logs(self):
         self.loginUser()
@@ -779,9 +817,44 @@ class ProxyApplicationLogViewTests(ProxyLogTestBase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(0, len(response.json()["results"]))
 
+    def test_paginate_proxy_logs(self):
+        self.setup_logs()
+        self.ingest(
+            [
+                fluentd_proxy_entry(
+                    {
+                        "level": "info",
+                        "ts": datetime.datetime.now().timestamp(),
+                        "logger": "admin.api",
+                        "msg": "config reloaded",
+                    },
+                    source="stderr",
+                )
+            ]
+        )
+
+        response = self.client.get(reverse("console:proxy.logs", query={"per_page": 2}))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        data = response.json()
+        self.assertEqual(2, len(data["results"]))
+        self.assertIsNotNone(data["next"])
+
+        response = self.client.get(
+            reverse("console:proxy.logs", query={"per_page": 2, "cursor": data["next"]})
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(1, len(response.json()["results"]))
+
     def test_non_instance_owner_cannot_view_proxy_logs(self):
         self.setup_logs()
         self.loginAsSimpleUser()
 
         response = self.client.get(reverse("console:proxy.logs"))
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+    def test_anonymous_user_cannot_view_proxy_logs(self):
+        self.setup_logs()
+        self.client.logout()
+
+        response = self.client.get(reverse("console:proxy.logs"))
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
