@@ -3313,6 +3313,8 @@ export interface components {
       name: string;
       variables: (readonly components["schemas"]["SharedEnvVariable"][]) | null;
       preview_metadata: components["schemas"]["SimplePreviewMetadata"];
+      /** Format: date-time */
+      created_at: string;
     };
     EnvironmentRequest: {
       id?: string;
@@ -3343,6 +3345,8 @@ export interface components {
       name: string;
       variables: (readonly components["schemas"]["SharedEnvVariable"][]) | null;
       preview_metadata: components["schemas"]["PreviewMetadata"] | null;
+      /** Format: date-time */
+      created_at: string;
     };
     Error401: {
       code: components["schemas"]["ErrorCode401Enum"];

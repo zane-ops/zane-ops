@@ -22440,7 +22440,12 @@ components:
           allOf:
           - $ref: '#/components/schemas/SimplePreviewMetadata'
           readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
       required:
+      - created_at
       - id
       - is_preview
       - name
@@ -22517,7 +22522,12 @@ components:
           - $ref: '#/components/schemas/PreviewMetadata'
           readOnly: true
           nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
       required:
+      - created_at
       - id
       - is_preview
       - name

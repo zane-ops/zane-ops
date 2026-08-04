@@ -324,7 +324,14 @@ class EnvironmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Environment
-        fields = ["id", "is_preview", "name", "variables", "preview_metadata"]
+        fields = [
+            "id",
+            "is_preview",
+            "name",
+            "variables",
+            "preview_metadata",
+            "created_at",
+        ]
 
 
 class ArchivedProjectSerializer(serializers.ModelSerializer):
