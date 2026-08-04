@@ -32,11 +32,7 @@ export function useCommandBarState() {
 
   const [search, setSearch] = React.useState("");
 
-  const selectedRouteInContext = useCurrentSelectedResourceInRouteContext();
-
-  logger.info({
-    selectedRouteInContext
-  });
+  const selectedResourceInContext = useCurrentSelectedResourceInRouteContext();
 
   const [selectedResource, setSelectedResource] =
     React.useState<SearchResource | null>(null);
@@ -59,7 +55,7 @@ export function useCommandBarState() {
       return { type: "action" };
     }
     return { type: "home" };
-  }, [selectedResource, storedView, search /*currentRouteContext*/]);
+  }, [selectedResource, storedView, search]);
 
   const searchState = useCommandBarSearch({
     search,
@@ -186,12 +182,19 @@ export function useCommandBarState() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, toggle, exitView]);
 
+  /**
+   * The selected in context should only run when the `open` state change
+   */
+  const wasOpen = React.useRef(open);
   React.useEffect(() => {
-    if (storedView === "home" && selectedRouteInContext) {
-      setSelectedResource(selectedRouteInContext);
+    const justOpened = open && !wasOpen.current;
+    wasOpen.current = open;
+
+    if (justOpened && storedView === "home" && selectedResourceInContext) {
+      setSelectedResource(selectedResourceInContext);
     }
-    return;
-  }, [storedView, selectedRouteInContext]);
+    setSelectedResource(selectedResourceInContext);
+  }, [open, storedView, selectedResourceInContext]);
 
   return {
     open,

@@ -18,6 +18,7 @@ import * as React from "react";
 import { href, useFetcher, useParams } from "react-router";
 import { toast } from "sonner";
 import type { AuthedUserResponse, SearchResource } from "~/api/types";
+import { useCommandBarStore } from "~/components/commandbar/commandbar-store";
 import type {
   CommandBarActionGroup,
   RouteParams
@@ -532,6 +533,7 @@ export function useResourceActionGroups(
 
 export function useCurrentSelectedResourceInRouteContext(): SearchResource | null {
   const workspaceId = useWorkspaceStore((s) => s.workspace?.id);
+  const isOpen = useCommandBarStore((s) => s.open);
   const params = useParams() as RouteParams;
 
   const inProjectRoutes = Boolean(workspaceId && params.projectSlug);
@@ -550,7 +552,7 @@ export function useCurrentSelectedResourceInRouteContext(): SearchResource | nul
 
   const { data: project } = useQuery({
     ...projectQueries.single(workspaceId ?? "", params.projectSlug ?? ""),
-    enabled: inProjectRoutes
+    enabled: isOpen && inProjectRoutes
   });
 
   const { data: environment } = useQuery({
@@ -559,7 +561,7 @@ export function useCurrentSelectedResourceInRouteContext(): SearchResource | nul
       params.projectSlug ?? "",
       params.envSlug ?? ""
     ),
-    enabled: inEnvRoutes
+    enabled: isOpen && inEnvRoutes
   });
 
   const { data: service } = useQuery({
@@ -569,7 +571,7 @@ export function useCurrentSelectedResourceInRouteContext(): SearchResource | nul
       env_slug: params.envSlug ?? "",
       service_slug: params.serviceSlug ?? ""
     }),
-    enabled: inServiceRoutes
+    enabled: isOpen && inServiceRoutes
   });
 
   const { data: composeStack } = useQuery({
@@ -579,55 +581,72 @@ export function useCurrentSelectedResourceInRouteContext(): SearchResource | nul
       env_slug: params.envSlug ?? "",
       stack_slug: params.composeStackSlug ?? ""
     }),
-    enabled: inComposeStackRoutes
+    enabled: isOpen && inComposeStackRoutes
   });
 
-  if (composeStack && inComposeStackRoutes) {
-    return {
-      type: "compose_stack",
-      id: composeStack.id,
-      project_slug: params.projectSlug ?? "",
-      environment: params.envSlug ?? "",
-      slug: params.composeStackSlug ?? "",
-      created_at: composeStack.created_at
-    };
-  }
+  // a new object on every render would re-trigger every effect depending on
+  // this resource, the command bar seeds its context from it
+  return React.useMemo(() => {
+    if (composeStack && inComposeStackRoutes) {
+      return {
+        type: "compose_stack",
+        id: composeStack.id,
+        project_slug: params.projectSlug ?? "",
+        environment: params.envSlug ?? "",
+        slug: params.composeStackSlug ?? "",
+        created_at: composeStack.created_at
+      };
+    }
 
-  if (service && inServiceRoutes) {
-    return {
-      type: "service",
-      id: service.id,
-      project_slug: params.projectSlug ?? "",
-      environment: params.envSlug ?? "",
-      slug: params.serviceSlug ?? "",
-      created_at: service.created_at,
-      kind: service.type,
-      git_provider: service.git_app?.github
-        ? "github"
-        : service.git_app?.gitlab
-          ? "gitlab"
-          : null
-    };
-  }
+    if (service && inServiceRoutes) {
+      return {
+        type: "service",
+        id: service.id,
+        project_slug: params.projectSlug ?? "",
+        environment: params.envSlug ?? "",
+        slug: params.serviceSlug ?? "",
+        created_at: service.created_at,
+        kind: service.type,
+        git_provider: service.git_app?.github
+          ? "github"
+          : service.git_app?.gitlab
+            ? "gitlab"
+            : null
+      };
+    }
 
-  if (environment && inEnvRoutes) {
-    return {
-      type: "environment",
-      id: environment.id,
-      project_slug: params.projectSlug ?? "",
-      name: params.envSlug ?? "",
-      created_at: environment.created_at
-    };
-  }
+    if (environment && inEnvRoutes) {
+      return {
+        type: "environment",
+        id: environment.id,
+        project_slug: params.projectSlug ?? "",
+        name: params.envSlug ?? "",
+        created_at: environment.created_at
+      };
+    }
 
-  if (project && inProjectRoutes) {
-    return {
-      type: "project",
-      id: project.id,
-      slug: params.projectSlug ?? "",
-      created_at: project.created_at
-    };
-  }
+    if (project && inProjectRoutes) {
+      return {
+        type: "project",
+        id: project.id,
+        slug: params.projectSlug ?? "",
+        created_at: project.created_at
+      };
+    }
 
-  return null;
+    return null;
+  }, [
+    composeStack,
+    service,
+    environment,
+    project,
+    inComposeStackRoutes,
+    inServiceRoutes,
+    inEnvRoutes,
+    inProjectRoutes,
+    params.projectSlug,
+    params.envSlug,
+    params.serviceSlug,
+    params.composeStackSlug
+  ]);
 }
