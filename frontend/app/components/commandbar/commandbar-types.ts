@@ -57,3 +57,10 @@ export type CommandBarActionGroup = {
   items: CommandBarAction[];
   minRole?: UserRole;
 };
+
+export type RouteParams = {
+  projectSlug?: string;
+  envSlug?: string;
+  serviceSlug?: string;
+  composeStackSlug?: string;
+};

@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { SearchResource } from "~/api/types";
+import { useCurrentSelectedResourceInRouteContext } from "~/components/commandbar/commandbar-resource-actions";
 import { useCommandBarSearch } from "~/components/commandbar/commandbar-search";
 import { useCommandBarStore } from "~/components/commandbar/commandbar-store";
 import type { CommandBarView } from "~/components/commandbar/commandbar-types";
@@ -31,6 +32,12 @@ export function useCommandBarState() {
 
   const [search, setSearch] = React.useState("");
 
+  const selectedRouteInContext = useCurrentSelectedResourceInRouteContext();
+
+  logger.info({
+    selectedRouteInContext
+  });
+
   const [selectedResource, setSelectedResource] =
     React.useState<SearchResource | null>(null);
 
@@ -41,13 +48,18 @@ export function useCommandBarState() {
 
   // only `home` & `workspace` are stored, the other two are implied by the
   // state that puts the bar in them
-  const view: CommandBarView = selectedResource
-    ? { type: "resource", resource: selectedResource }
-    : storedView !== "home"
-      ? { type: storedView }
-      : search.startsWith(">")
-        ? { type: "action" }
-        : { type: "home" };
+  const view: CommandBarView = React.useMemo(() => {
+    if (selectedResource) {
+      return { type: "resource", resource: selectedResource };
+    }
+    if (storedView !== "home") {
+      return { type: storedView };
+    }
+    if (search.startsWith(">")) {
+      return { type: "action" };
+    }
+    return { type: "home" };
+  }, [selectedResource, storedView, search /*currentRouteContext*/]);
 
   const searchState = useCommandBarSearch({
     search,
@@ -173,6 +185,13 @@ export function useCommandBarState() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, toggle, exitView]);
+
+  React.useEffect(() => {
+    if (storedView === "home" && selectedRouteInContext) {
+      setSelectedResource(selectedRouteInContext);
+    }
+    return;
+  }, [storedView, selectedRouteInContext]);
 
   return {
     open,

@@ -1,7 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import {
   BookDashedIcon,
   BoxIcon,
-  BoxesIcon,
   ChartNoAxesColumn,
   ContainerIcon,
   GlobeIcon,
@@ -15,11 +15,20 @@ import {
   SettingsIcon
 } from "lucide-react";
 import * as React from "react";
-import { href, useFetcher } from "react-router";
+import { href, useFetcher, useParams } from "react-router";
 import { toast } from "sonner";
 import type { AuthedUserResponse, SearchResource } from "~/api/types";
-import type { CommandBarActionGroup } from "~/components/commandbar/commandbar-types";
+import type {
+  CommandBarActionGroup,
+  RouteParams
+} from "~/components/commandbar/commandbar-types";
 import { filterGroupsByRole } from "~/components/commandbar/commandbar-utils";
+import {
+  composeStackQueries,
+  environmentQueries,
+  projectQueries,
+  serviceQueries
+} from "~/lib/queries";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import { useWorkspaceStore } from "~/lib/workspace-store";
 import { toggleStackStateToast } from "~/routes/compose/components/compose-stack-actions-popover";
@@ -519,4 +528,106 @@ export function useResourceActionGroups(
       ),
     [resource, user, submit, toggleServiceState, toggleStackState]
   );
+}
+
+export function useCurrentSelectedResourceInRouteContext(): SearchResource | null {
+  const workspaceId = useWorkspaceStore((s) => s.workspace?.id);
+  const params = useParams() as RouteParams;
+
+  const inProjectRoutes = Boolean(workspaceId && params.projectSlug);
+  const inEnvRoutes = Boolean(
+    workspaceId && params.projectSlug && params.envSlug
+  );
+  const inServiceRoutes = Boolean(
+    workspaceId && params.projectSlug && params.envSlug && params.serviceSlug
+  );
+  const inComposeStackRoutes = Boolean(
+    workspaceId &&
+      params.projectSlug &&
+      params.envSlug &&
+      params.composeStackSlug
+  );
+
+  const { data: project } = useQuery({
+    ...projectQueries.single(workspaceId ?? "", params.projectSlug ?? ""),
+    enabled: inProjectRoutes
+  });
+
+  const { data: environment } = useQuery({
+    ...environmentQueries.single(
+      workspaceId ?? "",
+      params.projectSlug ?? "",
+      params.envSlug ?? ""
+    ),
+    enabled: inEnvRoutes
+  });
+
+  const { data: service } = useQuery({
+    ...serviceQueries.single({
+      workspaceId: workspaceId ?? "",
+      project_slug: params.projectSlug ?? "",
+      env_slug: params.envSlug ?? "",
+      service_slug: params.serviceSlug ?? ""
+    }),
+    enabled: inServiceRoutes
+  });
+
+  const { data: composeStack } = useQuery({
+    ...composeStackQueries.single({
+      workspaceId: workspaceId ?? "",
+      project_slug: params.projectSlug ?? "",
+      env_slug: params.envSlug ?? "",
+      stack_slug: params.composeStackSlug ?? ""
+    }),
+    enabled: inComposeStackRoutes
+  });
+
+  if (composeStack && inComposeStackRoutes) {
+    return {
+      type: "compose_stack",
+      id: composeStack.id,
+      project_slug: params.projectSlug ?? "",
+      environment: params.envSlug ?? "",
+      slug: params.composeStackSlug ?? "",
+      created_at: composeStack.created_at
+    };
+  }
+
+  if (service && inServiceRoutes) {
+    return {
+      type: "service",
+      id: service.id,
+      project_slug: params.projectSlug ?? "",
+      environment: params.envSlug ?? "",
+      slug: params.serviceSlug ?? "",
+      created_at: service.created_at,
+      kind: service.type,
+      git_provider: service.git_app?.github
+        ? "github"
+        : service.git_app?.gitlab
+          ? "gitlab"
+          : null
+    };
+  }
+
+  if (environment && inEnvRoutes) {
+    return {
+      type: "environment",
+      id: environment.id,
+      project_slug: params.projectSlug ?? "",
+      name: params.envSlug ?? "",
+      created_at: environment.created_at
+    };
+  }
+
+  if (project && inProjectRoutes) {
+    return {
+      type: "project",
+      id: project.id,
+      slug: params.projectSlug ?? "",
+      created_at: project.created_at
+    };
+  }
+
+  return null;
 }
