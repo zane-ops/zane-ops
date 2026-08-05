@@ -25,6 +25,8 @@ class RuntimeLogSerializer(serializers.Serializer):
         choices=[
             ("SYSTEM", "System Logs"),
             ("SERVICE", "Service Logs"),
+            ("BUILD", "Build Logs"),
+            ("PROXY", "Proxy Logs"),
         ]
     )
 

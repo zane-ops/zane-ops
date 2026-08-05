@@ -65,4 +65,9 @@ urlpatterns = [
         views.SingleProxyHttpLogAPIView.as_view(),
         name="proxy.http_logs.single",
     ),
+    re_path(
+        r"^proxy/logs/?$",
+        views.ProxyLogsAPIView.as_view(),
+        name="proxy.logs",
+    ),
 ]

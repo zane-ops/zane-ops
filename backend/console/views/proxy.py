@@ -1,5 +1,6 @@
 from typing import cast
 
+from django.conf import settings
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
@@ -9,6 +10,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from search.dtos import RuntimeLogSource
+from search.loki_client import LokiSearchClient
+from search.serializers import RuntimeLogsSearchSerializer
 from zane_api.models import HttpLog
 from zane_api.permissions import IsInstanceOwner
 from zane_api.serializers import HttpLogSerializer
@@ -16,6 +20,7 @@ from zane_api.utils import Colors
 from zane_api.views.base import EMPTY_CURSOR_RESPONSE
 from zane_api.views.serializers import (
     DeploymentHttpLogsPagination,
+    DeploymentRuntimeLogsQuerySerializer,
     HttpLogFieldsResponseSerializer,
 )
 
@@ -84,3 +89,30 @@ class ProxyHttpLogsFieldsAPIView(APIView):
 
         serializer = HttpLogFieldsResponseSerializer([item for item in values])
         return Response(serializer.data)
+
+
+class ProxyLogsAPIView(APIView):
+    serializer_class = RuntimeLogsSearchSerializer
+    permission_classes = [IsInstanceOwner]
+
+    @extend_schema(
+        operation_id="getProxyLogs",
+        summary="Get proxy application logs",
+        description=(
+            "The logs of the proxy itself: certificate issuance,"
+            " configuration reloads, errors..."
+        ),
+        parameters=[DeploymentRuntimeLogsQuerySerializer],
+    )
+    def get(self, request: Request):
+        form = DeploymentRuntimeLogsQuerySerializer(data=request.query_params)
+        form.is_valid(raise_exception=True)
+
+        search_client = LokiSearchClient(host=settings.LOKI_HOST)
+        data = search_client.search(
+            query=dict(
+                **cast(dict, form.validated_data),
+                source=[RuntimeLogSource.PROXY],
+            )
+        )
+        return Response(data)
