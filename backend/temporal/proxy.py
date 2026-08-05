@@ -24,10 +24,16 @@ class ZaneProxyClient:
         MANAGED_SERVICE = "managed_service"
         COMPOSE_STACK_SERVICE = "compose_stack_service"
         BUILD_REGISTRY = "build_registry"
+        ZANE_OPS = settings.ZANE_OPS_PROXY_APP_NAME
 
         @classmethod
         def choices(cls) -> List[str]:
-            return [cls.MANAGED_SERVICE, cls.COMPOSE_STACK_SERVICE, cls.BUILD_REGISTRY]
+            return [
+                cls.MANAGED_SERVICE,
+                cls.COMPOSE_STACK_SERVICE,
+                cls.BUILD_REGISTRY,
+                cls.ZANE_OPS,
+            ]
 
     @classmethod
     def _get_id_for_deployment(cls, deployment_hash: str, domain: str):

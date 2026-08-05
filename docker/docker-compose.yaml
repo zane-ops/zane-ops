@@ -7,6 +7,10 @@ x-backend-vars: &env-vars
   TEMPORALIO_SERVER_URL: zane.temporal:7233
   LOKI_HOST: http://zane.loki:3100
   ZANE_APP_DOMAIN: ${ZANE_APP_DOMAIN:-127-0-0-1.sslip.io}
+  # the operator sets `MAXMIND_DB_HOST_PATH` (path of the DB on the host), we mount it at
+  # a fixed path in the container and tell django about it, empty = GeoIP disabled
+  # Notation: `+` means `MAXMIND_DB_PATH` is set to the hardcoded path if HOST path is provided
+  MAXMIND_DB_PATH: ${MAXMIND_DB_HOST_PATH:+/code/GeoLite2-Country.mmdb}
 
 services:
   zane-loki:
@@ -120,6 +124,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - docker-buildx-store:/root/.docker/buildx
       - docker-data:/root/.docker
+      # GeoLite IP DB, optional : `/dev/null` when unset, so the mount is always valid
+      - ${MAXMIND_DB_HOST_PATH:-/dev/null}:/code/GeoLite2-Country.mmdb
     depends_on:
       - zane-db
       - zane-redis

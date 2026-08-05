@@ -1742,6 +1742,9 @@ export const httpLogSearchSchema = zfd.formData({
   request_path: zfd
     .repeatable(z.array(z.string()).optional().catch(undefined))
     .transform((val) => (val?.length === 0 ? undefined : val)),
+  request_country_code: zfd
+    .repeatable(z.array(z.string()).optional().catch(undefined))
+    .transform((val) => (val?.length === 0 ? undefined : val)),
   request_host: zfd
     .repeatable(z.array(z.string()).optional().catch(undefined))
     .transform((val) => (val?.length === 0 ? undefined : val)),
@@ -2505,12 +2508,17 @@ type DeploymentLogQueryData = Pick<
   cursor?: string | null;
 };
 
-type HttpLogQueryData = Pick<
+export type HttpLogQueryData = Pick<
   NonNullable<ApiResponse<"get", "/api/http-logs/">>,
   "next" | "previous" | "results"
 > & {
   cursor?: string | null;
 };
+
+export type HttpLogFilterField = RequestParams<
+  "get",
+  "/api/http-logs/fields/"
+>["field"];
 
 export type DeploymentLog = Awaited<
   ReturnType<
@@ -2523,16 +2531,7 @@ export type DeploymentLog = Awaited<
   >
 >["results"][number];
 
-export type HttpLog = Awaited<
-  ReturnType<
-    NonNullable<
-      Exclude<
-        ReturnType<typeof deploymentQueries.httpLogs>["queryFn"],
-        typeof skipToken
-      >
-    >
-  >
->["results"][number];
+export type HttpLog = ApiResponse<"get", "/api/http-logs/{request_uuid}/">;
 
 export const resourceQueries = {
   search: (workspaceId: string, query?: string) =>

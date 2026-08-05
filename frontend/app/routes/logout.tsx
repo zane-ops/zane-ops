@@ -4,6 +4,12 @@ import { apiClient } from "~/api/client";
 import { deleteCookie, getCsrfTokenHeader } from "~/lib/utils";
 
 export async function clientAction() {
+  toast.loading("Pending...", {
+    description: "You are being logged out",
+    dismissible: false,
+    closeButton: false
+  });
+
   const { error } = await apiClient.DELETE("/api/auth/logout/", {
     headers: {
       ...(await getCsrfTokenHeader())

@@ -15,6 +15,7 @@ class RuntimeLogSource:
     SYSTEM = "SYSTEM"
     SERVICE = "SERVICE"
     BUILD = "BUILD"
+    PROXY = "PROXY"
 
 
 @dataclass
@@ -28,7 +29,7 @@ class LiveRuntimeLogQueryDto:
 class RuntimeLogDto:
     time: str | datetime.datetime
     level: Literal["ERROR", "INFO"]
-    source: Literal["SYSTEM", "SERVICE", "BUILD"]
+    source: Literal["SYSTEM", "SERVICE", "BUILD", "PROXY"]
     id: Optional[str] = None
     created_at: Optional[str | datetime.datetime] = None
     service_id: Optional[str] = None

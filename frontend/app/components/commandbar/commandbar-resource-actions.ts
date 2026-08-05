@@ -1,7 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import {
   BookDashedIcon,
   BoxIcon,
-  BoxesIcon,
   ChartNoAxesColumn,
   ContainerIcon,
   GlobeIcon,
@@ -15,11 +15,21 @@ import {
   SettingsIcon
 } from "lucide-react";
 import * as React from "react";
-import { href, useFetcher } from "react-router";
+import { href, useFetcher, useParams } from "react-router";
 import { toast } from "sonner";
 import type { AuthedUserResponse, SearchResource } from "~/api/types";
-import type { CommandBarActionGroup } from "~/components/commandbar/commandbar-types";
+import { useCommandBarStore } from "~/components/commandbar/commandbar-store";
+import type {
+  CommandBarActionGroup,
+  RouteParams
+} from "~/components/commandbar/commandbar-types";
 import { filterGroupsByRole } from "~/components/commandbar/commandbar-utils";
+import {
+  composeStackQueries,
+  environmentQueries,
+  projectQueries,
+  serviceQueries
+} from "~/lib/queries";
 import { useToggleStateQueueStore } from "~/lib/toggle-state-store";
 import { useWorkspaceStore } from "~/lib/workspace-store";
 import { toggleStackStateToast } from "~/routes/compose/components/compose-stack-actions-popover";
@@ -274,7 +284,7 @@ export function getResourceActionGroups(
           items: [
             {
               id: "service-deploy",
-              title: "Deploy",
+              title: "Deploy Service",
               icon: RocketIcon,
               href: home,
               // every field of the deploy form is optional
@@ -300,14 +310,12 @@ export function getResourceActionGroups(
               id: "service-start",
               title: "Start Service",
               icon: PlayIcon,
-              href: home,
               onSelect: () => toggleServiceState(resource, "start")
             },
             {
               id: "service-stop",
               title: "Stop Service",
               icon: PauseIcon,
-              href: home,
               onSelect: () => toggleServiceState(resource, "stop")
             }
           ]
@@ -383,7 +391,7 @@ export function getResourceActionGroups(
           items: [
             {
               id: "stack-deploy",
-              title: "Deploy",
+              title: "Deploy Stack",
               icon: RocketIcon,
               href: home,
               // `commit_message` is the only field & it is optional
@@ -403,14 +411,12 @@ export function getResourceActionGroups(
               id: "stack-start",
               title: "Start Stack",
               icon: PlayIcon,
-              href: home,
               onSelect: () => toggleStackState(resource, "start")
             },
             {
               id: "stack-stop",
               title: "Stop Stack",
               icon: PauseIcon,
-              href: home,
               onSelect: () => toggleStackState(resource, "stop")
             }
           ]
@@ -523,4 +529,124 @@ export function useResourceActionGroups(
       ),
     [resource, user, submit, toggleServiceState, toggleStackState]
   );
+}
+
+export function useCurrentSelectedResourceInRouteContext(): SearchResource | null {
+  const workspaceId = useWorkspaceStore((s) => s.workspace?.id);
+  const isOpen = useCommandBarStore((s) => s.open);
+  const params = useParams() as RouteParams;
+
+  const inProjectRoutes = Boolean(workspaceId && params.projectSlug);
+  const inEnvRoutes = Boolean(
+    workspaceId && params.projectSlug && params.envSlug
+  );
+  const inServiceRoutes = Boolean(
+    workspaceId && params.projectSlug && params.envSlug && params.serviceSlug
+  );
+  const inComposeStackRoutes = Boolean(
+    workspaceId &&
+      params.projectSlug &&
+      params.envSlug &&
+      params.composeStackSlug
+  );
+
+  const { data: project } = useQuery({
+    ...projectQueries.single(workspaceId ?? "", params.projectSlug ?? ""),
+    enabled: isOpen && inProjectRoutes
+  });
+
+  const { data: environment } = useQuery({
+    ...environmentQueries.single(
+      workspaceId ?? "",
+      params.projectSlug ?? "",
+      params.envSlug ?? ""
+    ),
+    enabled: isOpen && inEnvRoutes
+  });
+
+  const { data: service } = useQuery({
+    ...serviceQueries.single({
+      workspaceId: workspaceId ?? "",
+      project_slug: params.projectSlug ?? "",
+      env_slug: params.envSlug ?? "",
+      service_slug: params.serviceSlug ?? ""
+    }),
+    enabled: isOpen && inServiceRoutes
+  });
+
+  const { data: composeStack } = useQuery({
+    ...composeStackQueries.single({
+      workspaceId: workspaceId ?? "",
+      project_slug: params.projectSlug ?? "",
+      env_slug: params.envSlug ?? "",
+      stack_slug: params.composeStackSlug ?? ""
+    }),
+    enabled: isOpen && inComposeStackRoutes
+  });
+
+  // a new object on every render would re-trigger every effect depending on
+  // this resource, the command bar seeds its context from it
+  return React.useMemo(() => {
+    if (composeStack && inComposeStackRoutes) {
+      return {
+        type: "compose_stack",
+        id: composeStack.id,
+        project_slug: params.projectSlug ?? "",
+        environment: params.envSlug ?? "",
+        slug: params.composeStackSlug ?? "",
+        created_at: composeStack.created_at
+      };
+    }
+
+    if (service && inServiceRoutes) {
+      return {
+        type: "service",
+        id: service.id,
+        project_slug: params.projectSlug ?? "",
+        environment: params.envSlug ?? "",
+        slug: params.serviceSlug ?? "",
+        created_at: service.created_at,
+        kind: service.type,
+        git_provider: service.git_app?.github
+          ? "github"
+          : service.git_app?.gitlab
+            ? "gitlab"
+            : null
+      };
+    }
+
+    if (environment && inEnvRoutes) {
+      return {
+        type: "environment",
+        id: environment.id,
+        project_slug: params.projectSlug ?? "",
+        name: params.envSlug ?? "",
+        created_at: environment.created_at
+      };
+    }
+
+    if (project && inProjectRoutes) {
+      return {
+        type: "project",
+        id: project.id,
+        slug: params.projectSlug ?? "",
+        created_at: project.created_at
+      };
+    }
+
+    return null;
+  }, [
+    composeStack,
+    service,
+    environment,
+    project,
+    inComposeStackRoutes,
+    inServiceRoutes,
+    inEnvRoutes,
+    inProjectRoutes,
+    params.projectSlug,
+    params.envSlug,
+    params.serviceSlug,
+    params.composeStackSlug
+  ]);
 }

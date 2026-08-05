@@ -106,6 +106,18 @@ class HTTPServiceLogSerializer(serializers.Serializer):
     uuid = serializers.CharField(allow_null=True, required=False, allow_blank=True)
 
 
+class ProxyServiceLogSerializer(serializers.Serializer):
+    LOG_LEVELS = (
+        ("debug", _("debug")),
+        ("info", _("info")),
+        ("warn", _("warn")),
+        ("error", _("error")),
+        ("panic", _("panic")),
+        ("fatal", _("fatal")),
+    )
+    level = serializers.ChoiceField(choices=LOG_LEVELS, required=True)
+
+
 class DockerContainerLogsRequestSerializer(serializers.ListSerializer):
     child = DockerContainerLogSerializer()
 
@@ -220,6 +232,7 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
     )
     request_path = django_filters.BaseInFilter(method="filter_multiple_values")
     stack_service_name = django_filters.BaseInFilter(method="filter_multiple_values")
+    request_country_code = django_filters.BaseInFilter(method="filter_multiple_values")
 
     def filter_multiple_values(self, queryset: QuerySet, name: str, value: str):
         params = self.request.GET.getlist(name)  # type: ignore
@@ -259,6 +272,7 @@ class DeploymentHttpLogsFilterSet(django_filters.FilterSet):
             "stack_service_name",
             "service_id",
             "deployment_id",
+            "request_country_code",
         ]
 
 

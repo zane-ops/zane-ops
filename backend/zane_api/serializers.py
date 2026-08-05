@@ -324,7 +324,14 @@ class EnvironmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Environment
-        fields = ["id", "is_preview", "name", "variables", "preview_metadata"]
+        fields = [
+            "id",
+            "is_preview",
+            "name",
+            "variables",
+            "preview_metadata",
+            "created_at",
+        ]
 
 
 class ArchivedProjectSerializer(serializers.ModelSerializer):
@@ -751,6 +758,7 @@ class HttpLogSerializer(serializers.ModelSerializer):
         model = models.HttpLog
         fields = [
             "id",
+            "source",
             "status",
             "time",
             "deployment_id",
@@ -768,6 +776,7 @@ class HttpLogSerializer(serializers.ModelSerializer):
             "request_user_agent",
             "stack_id",
             "stack_service_name",
+            "request_country_code",
         ]
 
 

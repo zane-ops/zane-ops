@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { Form, useSearchParams } from "react-router";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { MultiSelect } from "~/components/multi-select";
+import { MultiSelect, type MultiSelectOption } from "~/components/multi-select";
 import {
   Card,
   CardContent,
@@ -235,6 +235,25 @@ export default function ComposeStackMetricsPage({
     `--chart-7`,
     `--chart-8`
   ];
+
+  const serviceNamesOptions: MultiSelectOption[] = allServiceNames.map(
+    (svc, idx) => ({
+      value: svc,
+      label: (
+        <div className="inline-flex items-center gap-1.5">
+          <span
+            className="inline-block size-2.5 rounded-xs bg-(--color)"
+            style={{
+              // @ts-expect-error CSS variable
+              "--color": `var(${colors[idx % 8]})`
+            }}
+          />
+          <span>{svc}</span>
+        </div>
+      )
+    })
+  );
+
   for (let i = 0; i < allServiceNames.length; i++) {
     const service = allServiceNames[i];
     chartConfig[service] = {
@@ -300,7 +319,7 @@ export default function ComposeStackMetricsPage({
         <MultiSelect
           label="services"
           className="inline-flex w-auto border-border border-solid"
-          options={allServiceNames}
+          options={serviceNamesOptions}
           align="start"
           value={filters.service_names}
           onValueChange={(newServices) => {
