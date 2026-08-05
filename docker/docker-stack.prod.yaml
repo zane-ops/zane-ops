@@ -23,6 +23,7 @@ x-backend-vars: &env-vars
   MAX_CONCURRENT_DEPLOYS: ${MAX_CONCURRENT_DEPLOYS:-5}
   ZANE_HTTP_MODE: ${MODE:-https}
   CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+  MAXMIND_DB_PATH: ${MAXMIND_DB_PATH:-}
 
 services:
   zane-proxy:
@@ -114,6 +115,8 @@ services:
       - docker-buildx-store:/root/.docker/buildx
       - docker-data:/root/.docker
       - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
+      # Add GeoLite Ip 
+      # - ${MAXMIND_DB_PATH}:/app/GeoLite2-Country.mmdb
     depends_on:
       - zane-db
       - zane-valkey
