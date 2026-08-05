@@ -24224,9 +24224,6 @@ components:
         first_name:
           type: string
           readOnly: true
-        last_name:
-          type: string
-          readOnly: true
         is_superuser:
           type: boolean
           readOnly: true
@@ -24248,7 +24245,6 @@ components:
       - id
       - is_active
       - is_superuser
-      - last_name
       - username
     InviteUserAccessibleProjectIdsErrorComponent:
       type: object

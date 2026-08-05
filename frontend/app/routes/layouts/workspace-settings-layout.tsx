@@ -82,7 +82,6 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
                         "aria-disabled:opacity-60 aria-disabled:pointer-events-none"
                       )}
                       aria-disabled={item.disabled}
-                      // if we don't do this, the default route "/settings" would always be active
                       end={item.href === href("/workspace/settings")}
                     >
                       <item.icon size={15} className="text-grey flex-none" />

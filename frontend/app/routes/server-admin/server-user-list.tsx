@@ -1,9 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
-import { CrownIcon, LoaderIcon, SearchIcon, XIcon } from "lucide-react";
+import {
+  BanIcon,
+  CrownIcon,
+  LoaderIcon,
+  PowerIcon,
+  PowerOffIcon,
+  SearchIcon,
+  Trash2Icon,
+  UserXIcon,
+  XIcon
+} from "lucide-react";
 import React from "react";
 import {
   Form,
   Link,
+  href,
   useFetcher,
   useMatches,
   useSearchParams
@@ -12,15 +23,20 @@ import {
 import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
 import type { User } from "~/api/types";
+import {
+  DeleteConfirmationDialog,
+  SimpleConfirmationDialog
+} from "~/components/delete-confirmation-dialog";
 import { Pagination } from "~/components/pagination";
+import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
+import { DialogTrigger } from "~/components/ui/dialog";
 import {
   FieldSet,
   FieldSetInput,
   FieldSetLabel
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
-import { Switch } from "~/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -38,7 +54,12 @@ import {
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { serverUserListFilters, serverUserQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, formatLogTime, metaTitle } from "~/lib/utils";
+import {
+  cn,
+  formatLogTime,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import type { Route } from "./+types/server-user-list";
 
 export function meta() {
@@ -179,7 +200,7 @@ function InstanceUserTable({ users }: InstanceUserTableProps) {
   const {
     "1": {
       loaderData: {
-        user: { user }
+        user: { user: currentUser }
       }
     }
   } = useMatches() as Route.ComponentProps["matches"];
@@ -193,7 +214,6 @@ function InstanceUserTable({ users }: InstanceUserTableProps) {
             Display Name
           </TableHead>
           <TableHead className="sticky top-0 z-20">Joined at</TableHead>
-          <TableHead className="sticky top-0 z-20">Active</TableHead>
           <TableHead className="sticky top-0 z-20 px-4">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -205,19 +225,17 @@ function InstanceUserTable({ users }: InstanceUserTableProps) {
             </TableCell>
           </TableRow>
         ) : (
-          users.map((u) => {
-            const joinedAt = formatLogTime(u.date_joined);
-
-            const isSelf = user?.username === u.username;
-
-            const showActions = !isSelf;
+          users.map((user) => {
+            const joinedAt = formatLogTime(user.date_joined);
+            const isSelf = currentUser?.username === user.username;
+            const showActions = !isSelf && !user.is_superuser;
 
             return (
-              <TableRow className="px-2" key={u.id}>
+              <TableRow className="px-2" key={user.id}>
                 <TableCell className="p-2">
-                  <div className="flex items-center gap-1 justify-start">
+                  <div className="flex items-center gap-1 justify-star">
                     <span>
-                      {u.username}
+                      {user.username}
                       {isSelf && (
                         <>
                           &nbsp;
@@ -227,7 +245,18 @@ function InstanceUserTable({ users }: InstanceUserTableProps) {
                       )}
                     </span>
 
-                    {u.is_superuser && (
+                    {!user.is_active && (
+                      <StatusBadge
+                        color="red"
+                        pingState="hidden"
+                        className="text-xs py-0.5 px-1.5 gap-1 mx-1 dark:text-red-100"
+                      >
+                        <span>Disabled</span>
+                        <BanIcon className="size-3 flex-none" />
+                      </StatusBadge>
+                    )}
+
+                    {user.is_superuser && (
                       <TooltipProvider>
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger asChild>
@@ -252,14 +281,14 @@ function InstanceUserTable({ users }: InstanceUserTableProps) {
                   </div>
                 </TableCell>
                 <TableCell className="p-2 whitespace-nowrap">
-                  {u.first_name || (
+                  {user.first_name || (
                     <span className="text-grey font-mono">N/A</span>
                   )}
                 </TableCell>
                 <TableCell className="p-2">
                   <time
                     className="text-grey whitespace-nowrap"
-                    dateTime={new Date(u.date_joined).toISOString()}
+                    dateTime={new Date(user.date_joined).toISOString()}
                   >
                     <span>
                       {joinedAt.dateFormat},&nbsp;
@@ -267,13 +296,9 @@ function InstanceUserTable({ users }: InstanceUserTableProps) {
                     </span>
                   </time>
                 </TableCell>
-                <TableCell className="p-2 py-3">
-                  <ToggleUserStateForm user={u} />
-                </TableCell>
-                <TableCell className="p-2"></TableCell>
 
                 <TableCell className="p-2">
-                  {/* {showActions && <WorkspaceMemberActions member={u} />} */}
+                  {showActions && <ServerUserActions user={user} />}
                 </TableCell>
               </TableRow>
             );
@@ -284,15 +309,133 @@ function InstanceUserTable({ users }: InstanceUserTableProps) {
   );
 }
 
-type ToggleUserStateFormProps = {
+type ServerUserActionsProps = {
   user: User;
 };
-function ToggleUserStateForm({ user }: ToggleUserStateFormProps) {
+
+export function ServerUserActions({ user }: ServerUserActionsProps) {
+  return (
+    <div className="flex items-center gap-1">
+      <ToggleUserConfirmationFormDialog user={user} />
+      <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+      <RemoveConfirmationFormDialog user={user} />
+    </div>
+  );
+}
+
+function ToggleUserConfirmationFormDialog({ user }: ServerUserActionsProps) {
   const fetcher = useFetcher();
 
   return (
-    <fetcher.Form action={`./${user.id}`} method="POST">
-      <Switch defaultChecked={user.is_active} />
-    </fetcher.Form>
+    <SimpleConfirmationDialog
+      fetcher={fetcher}
+      title={
+        <>
+          {user.is_active ? "Disable" : "Enable"}&nbsp;
+          <span className="text-grey ">&ldquo;{user.username}&rdquo;</span>
+          &nbsp;?
+        </>
+      }
+      variant="warning"
+      message={
+        <span>
+          They will immediately loose any ability to login to this instance,
+          until you re-enable them again.
+        </span>
+      }
+      form={
+        <fetcher.Form
+          method="post"
+          action={href("/admin/users/:userId", {
+            userId: user.id.toString()
+          })}
+        >
+          <input
+            type="hidden"
+            name="is_active"
+            value={user.is_active ? "off" : "on"}
+          />
+          <input type="hidden" name="intent" value="delete_user" />
+        </fetcher.Form>
+      }
+      trigger={
+        <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  {user.is_active ? (
+                    <PowerOffIcon className="flex-none size-4" />
+                  ) : (
+                    <PowerIcon className="flex-none size-4" />
+                  )}
+                  <span className="sr-only">
+                    {user.is_active ? "Disable User" : "Enable User"}
+                  </span>
+                </Button>
+              </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              {user.is_active ? "Disable User" : "Enable User"}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      }
+    />
+  );
+}
+
+function RemoveConfirmationFormDialog({ user }: ServerUserActionsProps) {
+  const fetcher = useFetcher();
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+
+  return (
+    <DeleteConfirmationDialog
+      title={
+        <>
+          Delete&nbsp;
+          <span className="text-grey ">&ldquo;{user.username}&rdquo;</span>
+          &nbsp;from this ZaneOps instance ?
+        </>
+      }
+      fetcher={fetcher}
+      message={
+        <span>
+          They will immediately lose access to this server and all of its
+          projects. This action is irreversible.
+        </span>
+      }
+      confirmationValue={user.username}
+      confirmationFieldName="username"
+      form={
+        <fetcher.Form
+          method="post"
+          action={href("/admin/users/:userId", {
+            userId: user.id.toString()
+          })}
+        >
+          <FieldSet name="username" errors={errors.username}>
+            <FieldSetInput />
+          </FieldSet>
+          <input type="hidden" name="intent" value="delete_user" />
+        </fetcher.Form>
+      }
+      trigger={
+        <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Trash2Icon className="size-4 flex-none text-red-400" />
+                  <span className="sr-only">Delete user</span>
+                </Button>
+              </DialogTrigger>
+            </TooltipTrigger>
+
+            <TooltipContent>Delete user from instance</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      }
+    />
   );
 }

@@ -4008,7 +4008,6 @@ export interface components {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
       username: string;
       first_name: string;
-      last_name: string;
       /**
        * Superuser status
        * @description Designates that this user has all permissions without explicitly assigning them.

@@ -68,7 +68,10 @@ export default [
 
     layout("./routes/layouts/server-admin-layout.tsx", [
       ...prefix("admin", [
-        index("./routes/server-admin/server-user-list.tsx"),
+        index("./routes/server-admin/server-admin-index.tsx"),
+        route("users", "./routes/server-admin/server-user-list.tsx"),
+        route("users/:userId", "./routes/server-admin/server-user-details.tsx"),
+
         route("ssh-keys", "./routes/server-admin/ssh-keys-list.tsx"),
         route("ssh-keys/new", "./routes/server-admin/create-ssh-key.tsx"),
         route("server-console", "./routes/server-admin/server-terminal.tsx"),

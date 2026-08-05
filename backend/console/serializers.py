@@ -16,7 +16,6 @@ class InstanceUserSerializer(serializers.ModelSerializer):
             "id",
             "username",
             "first_name",
-            "last_name",
             "is_superuser",
             "is_active",
             "date_joined",
@@ -25,7 +24,6 @@ class InstanceUserSerializer(serializers.ModelSerializer):
             "id": {"read_only": True},
             "username": {"read_only": True},
             "first_name": {"read_only": True},
-            "last_name": {"read_only": True},
             "is_superuser": {"read_only": True},
             "date_joined": {"read_only": True},
         }

@@ -6,12 +6,13 @@ import {
   TerminalIcon,
   UsersIcon
 } from "lucide-react";
-import { Link, NavLink, Outlet, href } from "react-router";
+import { NavLink, Outlet, href } from "react-router";
 import { CommandBarTrigger } from "~/components/commandbar/commandbar-trigger";
 import { Header } from "~/components/header/header";
 import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
 import type { NavItem } from "~/components/horizontal-nav-link";
 import { Button } from "~/components/ui/button";
+import { createDevLogger } from "~/lib/logger";
 import { ensureMinRole, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, metaTitle } from "~/lib/utils";
@@ -20,6 +21,8 @@ import type { Route } from "./+types/server-admin-layout";
 export function meta() {
   return [metaTitle("Server Admin")] satisfies ReturnType<Route.MetaFunction>;
 }
+
+const logger = createDevLogger(import.meta.url);
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
@@ -62,29 +65,31 @@ export default function ServerAdminLayout({
 type SettingsLayoutProps = {
   children: React.ReactNode;
 };
+
+const sidebarNavItems: NavItem[] = [
+  {
+    title: "Users",
+    href: href("/admin/users"),
+    icon: UsersIcon
+  },
+  {
+    title: "SSH Keys",
+    href: href("/admin/ssh-keys"),
+    icon: KeyRoundIcon
+  },
+  {
+    title: "Console",
+    href: href("/admin/server-console"),
+    icon: TerminalIcon
+  },
+  {
+    title: "Build Registries",
+    href: href("/admin/build-registries"),
+    icon: ContainerIcon
+  }
+];
+
 function SettingsLayout({ children }: SettingsLayoutProps) {
-  const sidebarNavItems: NavItem[] = [
-    {
-      title: "Users",
-      href: href("/admin"),
-      icon: UsersIcon
-    },
-    {
-      title: "SSH Keys",
-      href: href("/admin/ssh-keys"),
-      icon: KeyRoundIcon
-    },
-    {
-      title: "Console",
-      href: href("/admin/server-console"),
-      icon: TerminalIcon
-    },
-    {
-      title: "Build Registries",
-      href: href("/admin/build-registries"),
-      icon: ContainerIcon
-    }
-  ];
   return (
     <div className="grid md:grid-cols-12 gap-6 md:gap-4 relative max-w-full">
       <div className="md:col-span-full">
@@ -108,7 +113,6 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
                       "aria-disabled:opacity-60 aria-disabled:pointer-events-none"
                     )}
                     aria-disabled={item.disabled}
-                    // if we don't do this, the default route "/settings" would always be active
                     end={item.href === href("/admin")}
                   >
                     <item.icon size={15} className="text-grey flex-none" />
