@@ -15,10 +15,10 @@ import {
   DEPLOYMENT_STATUSES,
   METRICS_TIME_RANGES
 } from "~/lib/constants";
-import type { HTTPLogFilters, HttpLogQueryData } from "~/lib/queries/logs";
-import { projectQueries } from "~/lib/queries/projects";
 import type { Writeable } from "~/lib/types";
 import { notFound } from "~/lib/utils";
+import { projectQueries } from "./projects";
+import type { HTTPLogFilters, HttpLogQueryData } from "./shared";
 
 export const projectServiceListSearchSchema = z.object({
   query: z.string().optional().catch("")
