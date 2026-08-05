@@ -28,26 +28,27 @@ import {
   STANDARD_HTTP_STATUS_CODES,
   ZANE_DEPLOYMENT_HASH_HEADER
 } from "~/lib/constants";
+import { COUNTRY_CODE_LIST } from "~/lib/countryCodeList";
 import type { HttpLog } from "~/lib/queries";
 import { cn, formatDuration, formattedTime } from "~/lib/utils";
 
 type HttpLogRequestDetailsProps = {
-  log?: HttpLog;
-  open?: boolean;
-  onClose?: () => void;
+  /**
+   * The log matching the `request_id` search param, the panel is closed when there is none.
+   */
+  log?: HttpLog | null;
 };
 
-export function HttpLogRequestDetails({
-  log,
-  onClose,
-  open = false
-}: HttpLogRequestDetailsProps) {
+export function HttpLogRequestDetails({ log }: HttpLogRequestDetailsProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   return (
     <Sheet
-      open={open}
+      open={Boolean(log)}
       onOpenChange={(open) => {
         if (!open) {
-          onClose?.();
+          searchParams.delete("request_id");
+          setSearchParams(searchParams, { replace: true });
         }
       }}
     >
@@ -81,6 +82,13 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
     envSlug: string;
     serviceSlug: string;
   };
+
+  const country = log.request_country_code
+    ? {
+        ...COUNTRY_CODE_LIST[log.request_country_code],
+        alpha2: log.request_country_code
+      }
+    : null;
 
   return (
     <>
@@ -226,6 +234,47 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
             </TooltipProvider>
           </dt>
           <dd className="text-sm break-all text-grey">{log.request_ip}</dd>
+        </div>
+
+        <div className="grid grid-cols-2 items-center gap-x-4 w-full group">
+          <dt className="text-grey inline-flex items-center">
+            <span>Client IP Country</span>
+            {country && (
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+                      onClick={() => {
+                        searchParams.set(
+                          "request_country_code",
+                          country.alpha2
+                        );
+                        searchParams.delete("request_id");
+                        setSearchParams(searchParams, { replace: true });
+                      }}
+                    >
+                      <FilterIcon size={15} />
+                      <span className="sr-only">Add Filter</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Add Filter</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </dt>
+          <dd className="text-sm break-all text-grey">
+            {country ? (
+              <>
+                <span className="text-base">{country.flag}</span>
+                &nbsp;
+                <span>{country.name}</span>
+              </>
+            ) : (
+              <span className="font-mono">N/A</span>
+            )}
+          </dd>
         </div>
 
         <div className="grid grid-cols-2 items-start gap-x-4 w-full group">

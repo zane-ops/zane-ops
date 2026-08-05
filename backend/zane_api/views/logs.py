@@ -29,7 +29,7 @@ from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
 from search.loki_client import LokiSearchClient
 from django.conf import settings
 from django.utils import timezone
-from typing import cast
+from typing import Literal, cast
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListAPIView, RetrieveAPIView
@@ -50,6 +50,7 @@ from .serializers import (
     HttpLogFieldsResponseSerializer,
     DeploymentHttpLogsPagination,
     DeploymentHttpLogsFilterSet,
+    ProxyServiceLogSerializer,
 )
 
 from ..models import (
@@ -65,16 +66,50 @@ from compose.models import ComposeStack
 from temporal.proxy import ZaneProxyClient
 
 from django.db.models import Q
+from zane_api.geoip import lookup_country_code
 
 
-def _build_http_log(log_time: str, log_content: dict, **extra_fields) -> HttpLog:
+def _build_http_log(
+    log_time: str, log_content: dict, source: str | None, **extra_fields
+) -> HttpLog | None:
     """Build an HttpLog from proxy log content with common fields extracted."""
     req = log_content["request"]
     duration_in_seconds = log_content["duration"]
     full_url = urlparse(f"https://{req['host']}{req['uri']}")
 
     client_ip = req["headers"].get("X-Forwarded-For", req["remote_ip"])
+    request_ip = (
+        client_ip[0].split(",")[0] if isinstance(client_ip, list) else client_ip
+    )
+
     user_agent = req["headers"].get("User-Agent")
+
+    log_source = HttpLog.LogSource.UNKNOWN
+
+    # Static files should be ignored
+    is_zaneops_ignored_path = any(
+        [
+            full_url.path.startswith(path)
+            for path in settings.ZANE_OPS_STATIC_PATH_PREFIXES
+        ],
+    )
+    match source:
+        case ZaneProxyClient.ServiceType.MANAGED_SERVICE:
+            log_source = HttpLog.LogSource.SERVICE
+        case ZaneProxyClient.ServiceType.COMPOSE_STACK_SERVICE:
+            log_source = HttpLog.LogSource.COMPOSE_STACK
+        case ZaneProxyClient.ServiceType.BUILD_REGISTRY:
+            log_source = HttpLog.LogSource.BUILD_REGISTRY
+        case ZaneProxyClient.ServiceType.ZANE_OPS:
+            if is_zaneops_ignored_path:
+                return
+            log_source = (
+                HttpLog.LogSource.ZANE_OPS_API
+                if full_url.path.startswith("/api")
+                else HttpLog.LogSource.ZANE_OPS_FRONTEND
+            )
+        case None:
+            log_source = HttpLog.LogSource.UNKNOWN
 
     return HttpLog(
         time=log_time,
@@ -87,11 +122,11 @@ def _build_http_log(log_time: str, log_content: dict, **extra_fields) -> HttpLog
         request_headers=req["headers"],
         response_headers=log_content["resp_headers"],
         request_user_agent=user_agent[0] if isinstance(user_agent, list) else None,
-        request_ip=client_ip[0].split(",")[0]
-        if isinstance(client_ip, list)
-        else client_ip,
+        request_ip=request_ip,
         request_uuid=log_content.get("uuid"),
         request_method=req["method"],
+        source=log_source,
+        request_country_code=lookup_country_code(request_ip),
         **extra_fields,
     )
 
@@ -127,43 +162,67 @@ class LogIngestAPIView(APIView):
                             try:
                                 content = json.loads(log["log"])
                             except json.JSONDecodeError:
-                                pass
-                            else:
-                                service_id = content.get("zane_service_id")
-                                stack_id = content.get("zane_stack_id")
-                                registry_id = content.get("zane_registry_id")
-                                if service_id or stack_id or registry_id:
-                                    log_serializer = HTTPServiceLogSerializer(
-                                        data=content
+                                # Store non JSON log
+                                simple_logs.append(
+                                    RuntimeLogDto(
+                                        time=log["time"],
+                                        created_at=timezone.now(),
+                                        # Caddy put all logs into stderr, including info logs
+                                        # So we just assume info logs
+                                        level=RuntimeLogLevel.INFO,
+                                        source=RuntimeLogSource.PROXY,
+                                        container_id=log["container_id"],
+                                        content=log["log"],
+                                        content_text=escape_ansi(log["log"]),
                                     )
-                                    if log_serializer.is_valid():
-                                        log_content: dict = log_serializer.data  # type: ignore
+                                )
+                            else:
+                                log_serializer = HTTPServiceLogSerializer(data=content)
+                                if log_serializer.is_valid():
+                                    log_content = cast(dict, log_serializer.data)
 
-                                        service_type = log_content.get(
-                                            "zane_service_type"
-                                        )
+                                    service_type = log_content.get("zane_service_type")
+                                    service_id = log_content.get("zane_service_id")
+                                    stack_id = log_content.get("zane_stack_id")
+                                    registry_id = log_content.get("zane_registry_id")
+
+                                    http_log: HttpLog | None = None
+
+                                    if (
+                                        service_id
+                                        or stack_id
+                                        or registry_id
+                                        or service_type
+                                        == ZaneProxyClient.ServiceType.ZANE_OPS
+                                    ):
                                         match service_type:
+                                            case ZaneProxyClient.ServiceType.ZANE_OPS:
+                                                http_log = _build_http_log(
+                                                    log["time"],
+                                                    log_content,
+                                                    source=ZaneProxyClient.ServiceType.ZANE_OPS,
+                                                )
+
                                             case ZaneProxyClient.ServiceType.BUILD_REGISTRY:
                                                 if registry_id:
-                                                    http_logs.append(
-                                                        _build_http_log(
-                                                            log["time"],
-                                                            log_content,
-                                                            registry_id=registry_id,
-                                                        )
+                                                    http_log = _build_http_log(
+                                                        log["time"],
+                                                        log_content,
+                                                        registry_id=registry_id,
+                                                        source=ZaneProxyClient.ServiceType.BUILD_REGISTRY,
                                                     )
+
                                             case ZaneProxyClient.ServiceType.COMPOSE_STACK_SERVICE:
                                                 stack_service_name = content.get(
                                                     "zane_stack_service_name"
                                                 )
                                                 if stack_service_name:
-                                                    http_logs.append(
-                                                        _build_http_log(
-                                                            log["time"],
-                                                            log_content,
-                                                            stack_id=stack_id,
-                                                            stack_service_name=stack_service_name,
-                                                        )
+                                                    http_log = _build_http_log(
+                                                        log["time"],
+                                                        log_content,
+                                                        stack_id=stack_id,
+                                                        stack_service_name=stack_service_name,
+                                                        source=ZaneProxyClient.ServiceType.COMPOSE_STACK_SERVICE,
                                                     )
                                             case ZaneProxyClient.ServiceType.MANAGED_SERVICE:
                                                 upstream: str = log_content.get(
@@ -190,18 +249,54 @@ class LogIngestAPIView(APIView):
                                                         )
 
                                                 if deployment_id:
-                                                    http_logs.append(
-                                                        _build_http_log(
-                                                            log["time"],
-                                                            log_content,
-                                                            service_id=log_content.get(
-                                                                "zane_service_id"
-                                                            ),
-                                                            deployment_id=deployment_id,
-                                                        )
+                                                    http_log = _build_http_log(
+                                                        log["time"],
+                                                        log_content,
+                                                        service_id=log_content.get(
+                                                            "zane_service_id"
+                                                        ),
+                                                        deployment_id=deployment_id,
+                                                        source=ZaneProxyClient.ServiceType.MANAGED_SERVICE,
                                                     )
 
-                                        continue
+                                    else:
+                                        http_log = _build_http_log(
+                                            log["time"],
+                                            log_content,
+                                            source=None,
+                                        )
+
+                                    if http_log:
+                                        http_logs.append(http_log)
+                                    continue
+
+                                proxy_app_log_serializer = ProxyServiceLogSerializer(
+                                    data=content
+                                )
+                                if proxy_app_log_serializer.is_valid():
+                                    data = cast(dict, proxy_app_log_serializer.data)
+                                    log_level_map: dict[
+                                        str, Literal["INFO", "ERROR"]
+                                    ] = {
+                                        "debug": RuntimeLogLevel.INFO,
+                                        "info": RuntimeLogLevel.INFO,
+                                        "warn": RuntimeLogLevel.INFO,
+                                        "error": RuntimeLogLevel.ERROR,
+                                        "panic": RuntimeLogLevel.ERROR,
+                                        "fatal": RuntimeLogLevel.ERROR,
+                                    }
+                                    simple_logs.append(
+                                        RuntimeLogDto(
+                                            time=log["time"],
+                                            created_at=timezone.now(),
+                                            level=log_level_map[data["level"]],
+                                            source=RuntimeLogSource.PROXY,
+                                            container_id=log["container_id"],
+                                            content=log["log"],
+                                            content_text=escape_ansi(log["log"]),
+                                        )
+                                    )
+
                         case ZaneServices.API | ZaneServices.WORKER:
                             # do nothing for now...
                             pass

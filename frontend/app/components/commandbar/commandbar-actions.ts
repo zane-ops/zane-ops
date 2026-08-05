@@ -1,4 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
 import {
+  ArrowLeftRightIcon,
   ContainerIcon,
   FolderPlusIcon,
   KeyRoundIcon,
@@ -11,8 +13,10 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { href, useFetcher } from "react-router";
+import { useCommandBarStore } from "~/components/commandbar/commandbar-store";
 import type { CommandBarActionGroup } from "~/components/commandbar/commandbar-types";
 import { type Theme, useThemeStore } from "~/components/theme-store";
+import { userQueries } from "~/lib/queries";
 
 const THEME_ACTIONS = [
   { theme: "LIGHT", title: "Switch To Light Theme", icon: SunIcon },
@@ -31,6 +35,11 @@ const THEME_ACTIONS = [
 export function useCommandBarActionGroups(): CommandBarActionGroup[] {
   const fetcher = useFetcher();
   const { theme: currentTheme, setTheme } = useThemeStore();
+  const setView = useCommandBarStore((state) => state.setView);
+
+  const { data: memberships } = useQuery(userQueries.memberships);
+  // with a single workspace there is nothing to switch to
+  const canSwitchWorkspace = (memberships ?? []).length > 1;
 
   return React.useMemo(() => {
     // the theme already in use is not worth offering
@@ -44,6 +53,23 @@ export function useCommandBarActionGroups(): CommandBarActionGroup[] {
     }));
 
     return [
+      ...(canSwitchWorkspace
+        ? [
+            {
+              heading: "Workspaces",
+              items: [
+                {
+                  id: "switch-workspace",
+                  title: "Switch Workspace",
+                  icon: ArrowLeftRightIcon,
+                  // the list becomes the workspace picker, the bar stays open
+                  keepOpen: true,
+                  onSelect: () => setView("workspace")
+                }
+              ]
+            } satisfies CommandBarActionGroup
+          ]
+        : []),
       {
         heading: "Workspace",
         minRole: "Admin",
@@ -95,5 +121,5 @@ export function useCommandBarActionGroups(): CommandBarActionGroup[] {
         ]
       }
     ];
-  }, [currentTheme, setTheme, fetcher]);
+  }, [currentTheme, setTheme, fetcher, canSwitchWorkspace, setView]);
 }

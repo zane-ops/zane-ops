@@ -4,6 +4,7 @@ import {
   ArrowRightIcon,
   CheckIcon,
   ClockArrowUpIcon,
+  ExternalLinkIcon,
   LoaderIcon
 } from "lucide-react";
 import * as React from "react";
@@ -329,9 +330,19 @@ function FormStep({ actionData, onSuccess }: FormStepProps) {
           errors={errors.user_content}
           className="flex flex-col gap-1.5 flex-1"
         >
-          <FieldSetLabel className="dark:text-card-foreground">
+          <FieldSetLabel className="dark:text-card-foreground ">
             Contents
           </FieldSetLabel>
+          <small>
+            <a
+              href="https://zaneops.dev/knowledge-base/docker-compose/02-compose-file-reference/"
+              target="_blank"
+              className="text-link underline inline-flex gap-1 items-center"
+            >
+              Syntax reference
+              <ExternalLinkIcon className="size-4 flex-none" />
+            </a>
+          </small>
           <FieldSetTextarea className="sr-only" value={userContents} readOnly />
 
           <CodeEditor

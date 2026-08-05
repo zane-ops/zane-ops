@@ -130,6 +130,14 @@ export function ComposeStackUserContentForm({
           <p className="text-grey">
             Your docker compose file, ZaneOps will process it and add the
             necessary configurations for deployment.
+            <a
+              href="https://zaneops.dev/knowledge-base/docker-compose/02-compose-file-reference/"
+              target="_blank"
+              className="text-link underline inline-flex gap-1 items-center"
+            >
+              Go to syntax reference
+              <ExternalLinkIcon className="size-4 flex-none" />
+            </a>
           </p>
 
           <CodeEditor

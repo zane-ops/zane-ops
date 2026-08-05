@@ -23,6 +23,9 @@ x-backend-vars: &env-vars
   MAX_CONCURRENT_DEPLOYS: ${MAX_CONCURRENT_DEPLOYS:-5}
   ZANE_HTTP_MODE: ${MODE:-https}
   CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+  # the operator sets `MAXMIND_DB_HOST_PATH` (path of the DB on the host), we mount it at
+  # a fixed path in the container and tell django about it, empty = GeoIP disabled
+  MAXMIND_DB_PATH: ${MAXMIND_DB_HOST_PATH:+/app/GeoLite2-Country.mmdb}
 
 services:
   zane-proxy:
@@ -114,6 +117,8 @@ services:
       - docker-buildx-store:/root/.docker/buildx
       - docker-data:/root/.docker
       - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
+      # GeoLite IP DB, optional : `/dev/null` when unset, so the mount is always valid
+      - ${MAXMIND_DB_HOST_PATH:-/dev/null}:/app/GeoLite2-Country.mmdb
     depends_on:
       - zane-db
       - zane-valkey

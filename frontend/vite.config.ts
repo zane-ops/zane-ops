@@ -15,7 +15,12 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    allowedHosts: ["zn.fkiss.me", "mini.fkiss.me", "zn.tunneled.to"],
+    allowedHosts: [
+      "zn.fkiss.me",
+      "mini.fkiss.me",
+      "zn.tunneled.to",
+      "127-0-0-1.sslip.io"
+    ],
     proxy: {
       "/api": {
         target: "http://127.0.0.1:8000",

@@ -291,6 +291,7 @@ def register_zaneops_app_on_proxy(
     zane_app_domain: str,
     zane_api_internal_domain: str,
     zane_front_internal_domain: str,
+    app_name: str,
     internal_tls: bool = False,
     cloudflare_api_token: str | None = None,
 ):
@@ -304,6 +305,11 @@ def register_zaneops_app_on_proxy(
                     "routes": [
                         {
                             "handle": [
+                                {
+                                    "handler": "log_append",
+                                    "key": "zane_service_type",
+                                    "value": app_name,
+                                },
                                 {
                                     "handler": "encode",
                                     "encodings": {"gzip": {}},
@@ -329,6 +335,11 @@ def register_zaneops_app_on_proxy(
                     "routes": [
                         {
                             "handle": [
+                                {
+                                    "handler": "log_append",
+                                    "key": "zane_service_type",
+                                    "value": app_name,
+                                },
                                 {
                                     "handler": "encode",
                                     "encodings": {"gzip": {}},

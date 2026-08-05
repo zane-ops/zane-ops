@@ -35,3 +35,4 @@ dist-ssr/
 ./backend/.venv/
 ./backend/venv/
 __pycache__/
+GeoLite2-Country.mmdb
