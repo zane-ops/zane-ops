@@ -9,3 +9,4 @@ frontend/src/routeTree.gen.ts
 /test/*
 _docs/
 .nixpacks/
+GeoLite2-Country.mmdb
