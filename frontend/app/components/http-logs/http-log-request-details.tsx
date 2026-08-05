@@ -33,22 +33,22 @@ import type { HttpLog } from "~/lib/queries";
 import { cn, formatDuration, formattedTime } from "~/lib/utils";
 
 type HttpLogRequestDetailsProps = {
-  log?: HttpLog;
-  open?: boolean;
-  onClose?: () => void;
+  /**
+   * The log matching the `request_id` search param, the panel is closed when there is none.
+   */
+  log?: HttpLog | null;
 };
 
-export function HttpLogRequestDetails({
-  log,
-  onClose,
-  open = false
-}: HttpLogRequestDetailsProps) {
+export function HttpLogRequestDetails({ log }: HttpLogRequestDetailsProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   return (
     <Sheet
-      open={open}
+      open={Boolean(log)}
       onOpenChange={(open) => {
         if (!open) {
-          onClose?.();
+          searchParams.delete("request_id");
+          setSearchParams(searchParams, { replace: true });
         }
       }}
     >

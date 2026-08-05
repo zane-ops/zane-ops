@@ -1,8 +1,8 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { useSearchParams } from "react-router";
-import { HttpLogDetails } from "~/components/http-logs/http-log-details";
 import { HttpLogFilterBar } from "~/components/http-logs/http-log-filter-bar";
+import { HttpLogRequestDetails } from "~/components/http-logs/http-log-request-details";
 import { HttpLogTable } from "~/components/http-logs/http-log-table";
 import { HttpLogsLayout } from "~/components/http-logs/http-logs-layout";
 import {
@@ -119,7 +119,7 @@ export default function DeploymentHttpLogsPage({
 
   return (
     <HttpLogsLayout>
-      <HttpLogDetails log={loaderData.httpLog} />
+      <HttpLogRequestDetails log={loaderData.httpLog} />
 
       <HttpLogFilterBar
         fieldValuesQuery={({ field, value }) =>
