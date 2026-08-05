@@ -4,7 +4,6 @@ from django.conf import settings
 from typing import Self
 from django.core.validators import MinValueValidator
 
-# from shortuuid.django_fields import ShortUUIDField
 from zane_api.utils import convert_value_to_bytes
 
 
