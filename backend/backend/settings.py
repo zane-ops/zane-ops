@@ -509,4 +509,4 @@ OLD_DOCKER_SYSTEM_PRUNE_SCHEDULE_ID = "hourly-system-cleanup"
 DOCKER_SYSTEM_PRUNE_SCHEDULE_ID = "docker-system-prune"
 
 # GeoIP Blocking
-MAXMIND_DB_PATH = os.environ.get("MAXMIND_DB_PATH", BASE_DIR / "GeoLite2-Country.mmdb")
+MAXMIND_DB_PATH = os.environ.get("MAXMIND_DB_PATH")

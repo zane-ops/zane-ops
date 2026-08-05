@@ -2,6 +2,7 @@ import geoip2.database
 import functools
 from django.conf import settings
 import geoip2.errors
+import maxminddb
 import traceback
 
 
@@ -20,10 +21,11 @@ def lookup_country_code(ip: str):
     if settings.MAXMIND_DB_PATH:
         try:
             reader = get_geoip_reader(settings.MAXMIND_DB_PATH)
-        except FileNotFoundError:
+        except (OSError, maxminddb.InvalidDatabaseError):
+            # the DB is optional : missing, unreadable or invalid file (ex: `/dev/null`)
+            # should never make the ingest fail
             traceback.print_exc()
         else:
-            print(f"[lookup_country_code] {reader=}")
             try:
                 response = reader.country(ip)
             except geoip2.errors.AddressNotFoundError:
