@@ -1,4 +1,4 @@
-import type { ApiResponse } from "./client";
+import type { ApiResponse, RequestParams } from "./client";
 
 export type SSHKey = NonNullable<
   ApiResponse<"get", "/api/shell/ssh-keys/">
@@ -94,6 +94,18 @@ export type SearchResource = ApiResponse<
   "get",
   "/api/search-resources/"
 >[number];
+
+export type DeploymentLog = ApiResponse<
+  "get",
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/"
+>["results"][number];
+
+export type HttpLog = ApiResponse<"get", "/api/http-logs/{request_uuid}/">;
+
+export type HttpLogFilterField = RequestParams<
+  "get",
+  "/api/http-logs/fields/"
+>["field"];
 
 export type TemplateDocument = {
   id: string;

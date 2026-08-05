@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { useSearchParams } from "react-router";
+import type { HttpLog } from "~/api/types";
 import { Code } from "~/components/code";
 import { Ping } from "~/components/ping";
 import { Button } from "~/components/ui/button";
@@ -23,11 +24,7 @@ import {
   TableRow
 } from "~/components/ui/table";
 import { COUNTRY_CODE_LIST } from "~/lib/countryCodeList";
-import {
-  type HttpLog,
-  type HttpLogQueryData,
-  httpLogSearchSchema
-} from "~/lib/queries";
+import { type HttpLogQueryData, httpLogSearchSchema } from "~/lib/queries";
 import type { SortDirection } from "~/lib/types";
 import { cn, formatDuration, formatLogTime } from "~/lib/utils";
 

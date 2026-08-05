@@ -4,6 +4,7 @@ import {
   SquareArrowOutUpRightIcon
 } from "lucide-react";
 import { Link, href, useParams, useSearchParams } from "react-router";
+import type { HttpLog } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
 import {
   Accordion,
@@ -29,7 +30,6 @@ import {
   ZANE_DEPLOYMENT_HASH_HEADER
 } from "~/lib/constants";
 import { COUNTRY_CODE_LIST } from "~/lib/countryCodeList";
-import type { HttpLog } from "~/lib/queries";
 import { cn, formatDuration, formattedTime } from "~/lib/utils";
 
 type HttpLogRequestDetailsProps = {

@@ -5,6 +5,7 @@ import type { DateRange } from "react-day-picker";
 import { flushSync } from "react-dom";
 import { useSearchParams } from "react-router";
 import { useDebouncedCallback } from "use-debounce";
+import type { HttpLogFilterField } from "~/api/types";
 import { DateRangeWithShortcuts } from "~/components/date-range-with-shortcuts";
 import {
   MultiSelect,
@@ -22,7 +23,6 @@ import {
 import { COUNTRY_CODE_LIST } from "~/lib/countryCodeList";
 import {
   type HTTPLogFilters,
-  type HttpLogFilterField,
   REQUEST_METHODS,
   httpLogSearchSchema
 } from "~/lib/queries";
