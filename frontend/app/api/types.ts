@@ -102,6 +102,8 @@ export type DeploymentLog = ApiResponse<
 
 export type HttpLog = ApiResponse<"get", "/api/http-logs/{request_uuid}/">;
 
+export type User = ApiResponse<"get", "/api/console/users/{id}/">;
+
 export type HttpLogFilterField = RequestParams<
   "get",
   "/api/http-logs/fields/"

@@ -19,6 +19,7 @@ class InstanceUserSerializer(serializers.ModelSerializer):
             "last_name",
             "is_superuser",
             "is_active",
+            "date_joined",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
@@ -26,6 +27,7 @@ class InstanceUserSerializer(serializers.ModelSerializer):
             "first_name": {"read_only": True},
             "last_name": {"read_only": True},
             "is_superuser": {"read_only": True},
+            "date_joined": {"read_only": True},
         }
 
 

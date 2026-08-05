@@ -2,7 +2,10 @@ import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { zfd } from "zod-form-data";
 import { apiClient } from "~/api/client";
-import { DEFAULT_QUERY_REFETCH_INTERVAL } from "~/lib/constants";
+import {
+  DEFAULT_QUERY_REFETCH_INTERVAL,
+  WORKSPACE_ROLE_MAPPING
+} from "~/lib/constants";
 import { durationToMs, notFound } from "~/lib/utils";
 import { workspaceKey } from "./shared";
 
@@ -185,16 +188,6 @@ export const sshKeysQueries = {
   })
 };
 
-// export const workspaceMemberListFilters = zfd.formData({
-//   page: zfd.numeric().optional().catch(1).optional(),
-//   per_page: zfd.numeric().optional().catch(10).optional(),
-//   username: z.string().optional()
-// });
-
-// export const serverUserQueries = {
-//   list: () => {}
-// };
-
 export const gitAppsQueries = {
   list: (workspaceId: string) =>
     queryOptions({
@@ -350,6 +343,36 @@ export const gitAppsQueries = {
         }
 
         return data;
+      },
+      placeholderData: keepPreviousData
+    })
+};
+
+export const serverUserListFilters = zfd.formData({
+  page: zfd.numeric().optional().catch(1).optional(),
+  per_page: zfd.numeric().optional().catch(10).optional(),
+  query: z.string().optional()
+});
+
+export const serverUserQueries = {
+  list: (filters: z.infer<typeof serverUserListFilters> = {}) =>
+    queryOptions({
+      queryKey: ["SERVER_USERS", filters] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/console/users/", {
+          signal,
+          params: {
+            query: filters
+          }
+        });
+        if (!data) throw notFound("Not found");
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (!query.state.data) {
+          return false;
+        }
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
       },
       placeholderData: keepPreviousData
     })

@@ -2055,14 +2055,14 @@ export interface components {
       errors: components["schemas"]["ConsoleTransferWorkspaceOwnershipError"][];
     };
     ConsoleUsersDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ConsoleUsersListError: components["schemas"]["ConsoleUsersListUsernameErrorComponent"];
+    ConsoleUsersListError: components["schemas"]["ConsoleUsersListQueryErrorComponent"];
     ConsoleUsersListErrorResponse400: components["schemas"]["ConsoleUsersListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ConsoleUsersListUsernameErrorComponent: {
+    ConsoleUsersListQueryErrorComponent: {
       /**
-       * @description * `username` - username
+       * @description * `query` - query
        * @enum {string}
        */
-      attr: "username";
+      attr: "query";
       /**
        * @description * `null_characters_not_allowed` - null_characters_not_allowed
        * @enum {string}
@@ -4019,6 +4019,8 @@ export interface components {
        * @description Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
        */
       is_active: boolean;
+      /** Format: date-time */
+      date_joined: string;
     };
     InviteUserAccessibleProjectIdsErrorComponent: {
       /**
@@ -11647,7 +11649,7 @@ export interface operations {
         page?: number;
         /** @description Number of results to return per page. */
         per_page?: number;
-        username?: string;
+        query?: string;
       };
     };
     responses: {

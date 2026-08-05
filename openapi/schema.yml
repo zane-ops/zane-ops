@@ -5603,7 +5603,7 @@ paths:
         schema:
           type: integer
       - in: query
-        name: username
+        name: query
         schema:
           type: string
       tags:
@@ -19878,11 +19878,11 @@ components:
           client_error: '#/components/schemas/ParseErrorResponse'
     ConsoleUsersListError:
       oneOf:
-      - $ref: '#/components/schemas/ConsoleUsersListUsernameErrorComponent'
+      - $ref: '#/components/schemas/ConsoleUsersListQueryErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          username: '#/components/schemas/ConsoleUsersListUsernameErrorComponent'
+          query: '#/components/schemas/ConsoleUsersListQueryErrorComponent'
     ConsoleUsersListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ConsoleUsersListValidationError'
@@ -19892,14 +19892,14 @@ components:
         mapping:
           validation_error: '#/components/schemas/ConsoleUsersListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ConsoleUsersListUsernameErrorComponent:
+    ConsoleUsersListQueryErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - username
+          - query
           type: string
-          description: '* `username` - username'
+          description: '* `query` - query'
         code:
           enum:
           - null_characters_not_allowed
@@ -24238,7 +24238,12 @@ components:
           title: Active
           description: Designates whether this user should be treated as active. Unselect
             this instead of deleting accounts.
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
       required:
+      - date_joined
       - first_name
       - id
       - is_active
