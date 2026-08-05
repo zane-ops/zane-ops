@@ -12,5 +12,5 @@ export * from "./services";
 export * from "./shared";
 export * from "./ssh-keys";
 export * from "./templates";
-export * from "./user";
+export * from "./users";
 export * from "./workspaces";
