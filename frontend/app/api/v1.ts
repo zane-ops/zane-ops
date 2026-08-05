@@ -229,6 +229,17 @@ export interface paths {
     /** Get http logs fields values */
     get: operations["getProxyHttpLogsFields"];
   };
+  "/api/console/proxy/logs/": {
+    /**
+     * Get proxy application logs
+     * @description The logs of the proxy itself: certificate issuance, configuration reloads, errors...
+     */
+    get: operations["getProxyLogs"];
+  };
+  "/api/console/proxy/logs/with-context/{time}/": {
+    /** Get proxy application logs with context */
+    get: operations["getProxyLogsWithContext"];
+  };
   "/api/console/system-settings/": {
     get: operations["console_system_settings_retrieve"];
     put: operations["console_system_settings_update"];
@@ -3564,6 +3575,8 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["GetProxyHttpLogsError"][];
     };
+    GetProxyLogsErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetProxyLogsWithContextErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetRegistryCredentialsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSSHKeyListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -7605,9 +7618,11 @@ export interface components {
     /**
      * @description * `SYSTEM` - System Logs
      * * `SERVICE` - Service Logs
+     * * `BUILD` - Build Logs
+     * * `PROXY` - Proxy Logs
      * @enum {string}
      */
-    RuntimeLogSourceEnum: "SYSTEM" | "SERVICE";
+    RuntimeLogSourceEnum: "SYSTEM" | "SERVICE" | "BUILD" | "PROXY";
     RuntimeLogsContext: {
       results: components["schemas"]["RuntimeLog"][];
       before_count: number;
@@ -11454,6 +11469,92 @@ export interface operations {
       403: {
         content: {
           "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Get proxy application logs
+   * @description The logs of the proxy itself: certificate issuance, configuration reloads, errors...
+   */
+  getProxyLogs: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        level?: ("INFO" | "ERROR")[];
+        per_page?: number;
+        query?: string;
+        time_after?: string;
+        time_before?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RuntimeLogsSearch"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetProxyLogsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get proxy application logs with context */
+  getProxyLogsWithContext: {
+    parameters: {
+      query?: {
+        lines?: number;
+      };
+      path: {
+        time: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RuntimeLogsContext"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetProxyLogsWithContextErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {
