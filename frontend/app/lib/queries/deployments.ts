@@ -13,16 +13,16 @@ import {
   DEFAULT_QUERY_REFETCH_INTERVAL,
   LOGS_QUERY_REFETCH_INTERVAL
 } from "~/lib/constants";
-import type {
-  DeploymentLogFilters,
-  DeploymentLogQueryData,
-  HTTPLogFilters,
-  HttpLogQueryData
-} from "~/lib/queries/logs";
-import { projectQueries } from "~/lib/queries/projects";
-import type { MetricsFilters } from "~/lib/queries/services";
-import { workspaceKey } from "~/lib/queries/shared";
 import { notFound } from "~/lib/utils";
+import { projectQueries } from "./projects";
+import type { MetricsFilters } from "./services";
+import {
+  type DeploymentLogFilters,
+  type DeploymentLogQueryData,
+  type HTTPLogFilters,
+  type HttpLogQueryData,
+  workspaceKey
+} from "./shared";
 
 export const deploymentQueries = {
   recent: (workspaceId: string) =>

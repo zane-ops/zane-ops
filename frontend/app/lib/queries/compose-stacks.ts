@@ -15,15 +15,15 @@ import {
   LOGS_QUERY_REFETCH_INTERVAL,
   METRICS_TIME_RANGES
 } from "~/lib/constants";
+import type { Writeable } from "~/lib/types";
+import { notFound } from "~/lib/utils";
+import { projectQueries } from "./projects";
 import {
   type DeploymentLogQueryData,
   type HTTPLogFilters,
   type HttpLogQueryData,
   LOG_LEVELS
-} from "~/lib/queries/logs";
-import { projectQueries } from "~/lib/queries/projects";
-import type { Writeable } from "~/lib/types";
-import { notFound } from "~/lib/utils";
+} from "./shared";
 
 /************************************
  *       Compose Stack Queries      *

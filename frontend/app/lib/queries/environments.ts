@@ -1,9 +1,9 @@
 import { queryOptions } from "@tanstack/react-query";
 import { apiClient } from "~/api/client";
 import { DEFAULT_QUERY_REFETCH_INTERVAL } from "~/lib/constants";
-import { type ProjectSearch, projectQueries } from "~/lib/queries/projects";
-import type { ProjectServiceListSearch } from "~/lib/queries/services";
 import { notFound } from "~/lib/utils";
+import { type ProjectSearch, projectQueries } from "./projects";
+import type { ProjectServiceListSearch } from "./services";
 
 export const environmentQueries = {
   single: (workspaceId: string, project_slug: string, env_slug: string) =>

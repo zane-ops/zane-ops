@@ -2,8 +2,8 @@ import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiClient } from "~/api/client";
 import { DEFAULT_QUERY_REFETCH_INTERVAL } from "~/lib/constants";
-import { workspaceKey } from "~/lib/queries/shared";
 import { durationToMs, notFound } from "~/lib/utils";
+import { workspaceKey } from "./shared";
 
 export const gitAppsQueries = {
   list: (workspaceId: string) =>

@@ -3,8 +3,8 @@ import { z } from "zod";
 import { zfd } from "zod-form-data";
 import { apiClient } from "~/api/client";
 import { DEFAULT_QUERY_REFETCH_INTERVAL } from "~/lib/constants";
-import { workspaceKey } from "~/lib/queries/shared";
 import { notFound } from "~/lib/utils";
+import { workspaceKey } from "./shared";
 
 export const sharedRegistryCredentialsQueries = {
   list: (workspaceId: string) =>

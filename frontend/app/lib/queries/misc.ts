@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { apiClient } from "~/api/client";
-import { workspaceKey } from "~/lib/queries/shared";
+import { workspaceKey } from "./shared";
 
 export const dockerHubQueries = {
   images: (query: string) =>

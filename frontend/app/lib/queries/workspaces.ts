@@ -6,8 +6,8 @@ import {
   DEFAULT_QUERY_REFETCH_INTERVAL,
   WORKSPACE_ROLE_MAPPING
 } from "~/lib/constants";
-import { workspaceKey } from "~/lib/queries/shared";
 import { notFound } from "~/lib/utils";
+import { workspaceKey } from "./shared";
 
 /************************************
  *         Workspace Queries        *
