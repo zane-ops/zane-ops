@@ -2,17 +2,19 @@
 
 Branch: `feat/caddy-master-logs`. Issue: *[✨ feature] Caddy proxy logs & custom configuration*.
 
-**What we want:** an instance-wide view of everything the ZaneOps proxy does — every HTTP request (services, ZaneOps itself, unmatched domains), Caddy's own application logs, the country each request came from, and a way to feed custom Caddyfile snippets to the proxy.
+**What we want:** an instance-wide view of everything the ZaneOps proxy does — every HTTP request (services, ZaneOps itself, unmatched domains), Caddy's own application logs, and the country each request came from.
 
 **Where it lives:** the `console` app (`/api/console/…`), the instance-owner surface, next to `SystemSettings`. Permission is `IsInstanceOwner`, like [system.py](../console/views/system.py).
 
 **Not in scope:** GeoIP blocking, Frontend changes. Endpoints only.
 
+**Status:** phases 1–3 are done. Phase 4 (custom Caddy config) is dropped — see the reasoning at the end.
+
 ---
 
 ## Ground rules
 
-1. **Strict order.** Four phases, one finished before the next starts: master HTTP logs → GeoIP country → proxy app logs → custom Caddy config.
+1. **Strict order.** One phase finished before the next starts: master HTTP logs → GeoIP country → proxy app logs → ~~custom Caddy config~~.
 2. **Inside a phase: tests → models → endpoints.** Tests are written first and validated by hand before anything else is touched.
 3. Nothing from a later phase gets written early, even when it is a two-line change.
 
@@ -158,40 +160,31 @@ For `tag.service_id == zane.proxy`, anything that is **not** an access log becom
 
 ---
 
-## Phase 4 — Custom Caddy config
+## Phase 4 — Custom Caddy config — ❌ dropped
 
-Let the instance owner add Caddyfile snippets to the proxy.
+Letting the instance owner add Caddyfile snippets to the proxy. **Postponed indefinitely** — not worth its cost until someone actually asks for it. The model and its tests were already removed (commits `faf4d9d4`, and `console/tests/proxy_configs.py` is gone).
 
-> Deliberately deferred until phases 1–3 are done — see commit `faf4d9d4`, which removed the model again.
+Kept here so the reasoning is not re-derived from scratch later.
 
-### 4.1 Tests
+### What it would have been
 
-[console/tests/proxy_configs.py](../console/tests/proxy_configs.py) — already written.
+Named Caddyfile snippets in the console, validated by `POST`ing them to `{CADDY_PROXY_ADMIN_HOST}/adapt` (`Content-Type: text/caddyfile`), then installed as one route `@id = zane-custom-config-<id>` inside `zane-url-root` through the admin API. Postgres as the source of truth, re-applied on boot from [bootstrap.py](../backend/bootstrap.py). Enable/disable toggle as the escape hatch for a config that is valid but wrong.
 
-⚠️ **Blocker to handle first:** that file is imported by [console/tests/\_\_init\_\_.py](../console/tests/__init__.py) and imports `CustomProxyConfig`, which no longer exists — the whole suite fails to import. Comment the import out until this phase starts.
+### Why people would want it
 
-### 4.2 Models
+Redirects with no service behind them, `trusted_proxies` when the instance is behind Cloudflare (**this one also fixes `request_ip` and the GeoIP country, which are wrong in that setup**), IP allow/deny and rate limiting, mTLS or a custom ACME issuer, global HSTS/CSP headers, proxying to a machine ZaneOps does not manage, a maintenance page.
 
-`CustomProxyConfig` in [console/models.py](../console/models.py): `id` (`prx_cfg_`), unique `slug`, `contents` (the Caddyfile), `enabled`, timestamps, and `caddy_route_id` → `zane-custom-config-<id>`.
+### Why it was dropped
 
-### 4.3 Validation & applying
+1. **Global options do not merge as a route.** A Caddyfile with a `{ … }` global block (`debug`, `servers { trusted_proxies … }`) adapts to root-level JSON that has to patch `apps.http.servers.zane` and the root `apps.tls`. That is where much of the value sits, and also where a bad merge takes the proxy down.
+2. **On-demand TLS would reject the new domains.** [`CheckCertificatesAPIView`](../zane_api/views/proxy.py) only validates domains it finds in `URL`, `BuildRegistry` and compose stack URLs. A domain living only in a custom config gets a 403 and never receives a certificate, so the feature needs host matchers extracted from the adapted JSON and stored.
+3. **Route ordering is a lock-out risk.** Before the ZaneOps routes, a custom `*` catch-all hides the console; after them, custom configs cannot override anything ZaneOps manages.
 
-- validate by `POST`ing the snippet to `{CADDY_PROXY_ADMIN_HOST}/adapt` with `Content-Type: text/caddyfile`; a non-2xx answer becomes a 400 on the `contents` field, carrying Caddy's own message
-- take the adapted `apps.http.servers.*.routes` and install them as **one** route `@id = zane-custom-config-<id>`, wrapping them in a `subroute` handler, inserted into `zane-url-root` **before** the ZaneOps and service routes
-- disable/delete → `DELETE /id/<route id>` on the admin API
-
-### 4.4 Endpoints
-
-| Name                            | Route | Methods                           |
-| ------------------------------- | ----- | --------------------------------- |
-| `console:proxy.configs.list`    | `GET  | POST /api/console/proxy/configs/` | list (unpaginated), create |
-| `console:proxy.configs.details` | `GET  | PATCH                             | DELETE …/configs/<slug>/`  | read, update, toggle `enabled`, delete |
-
-Duplicate slug → 409 (`ResourceConflict`). Invalid Caddyfile → 400, and the stored config is left untouched.
+If it comes back: site blocks only for v1, routes placed after `api.zaneops.internal` / `front.zaneops.internal`, extracted domains fed into the certificate check, and global options as a separate feature.
 
 ---
 
-## Cross-cutting, once the four phases are green
+## Cross-cutting, now that phases 1–3 are green
 
 - regenerate the OpenAPI schema + frontend client (`pnpm gen:api`)
 - `HttpLog` retention already exists (`SystemSettings.http_log_retention_days`) — check the cleanup workflow still makes sense now that ZaneOps' own traffic is stored, since it is a much higher volume
