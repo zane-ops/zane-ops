@@ -274,7 +274,7 @@ class LogIngestAPIView(APIView):
                                     data=content
                                 )
                                 if proxy_app_log_serializer.is_valid():
-                                    data = cast(dict, log_serializer.data)
+                                    data = cast(dict, proxy_app_log_serializer.data)
                                     log_level_map: dict[
                                         str, Literal["INFO", "ERROR"]
                                     ] = {
