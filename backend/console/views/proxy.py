@@ -1,3 +1,4 @@
+import math
 from typing import cast
 
 from django.conf import settings
@@ -12,7 +13,11 @@ from rest_framework.views import APIView
 
 from search.dtos import RuntimeLogSource
 from search.loki_client import LokiSearchClient
-from search.serializers import RuntimeLogsSearchSerializer
+from search.serializers import (
+    RuntimeLogsContextParamsSerializer,
+    RuntimeLogsContextSerializer,
+    RuntimeLogsSearchSerializer,
+)
 from zane_api.models import HttpLog
 from zane_api.permissions import IsInstanceOwner
 from zane_api.serializers import HttpLogSerializer
@@ -114,5 +119,29 @@ class ProxyLogsAPIView(APIView):
                 **cast(dict, form.validated_data),
                 source=[RuntimeLogSource.PROXY],
             )
+        )
+        return Response(data)
+
+
+class ProxyLogsWithContextAPIView(APIView):
+    serializer_class = RuntimeLogsContextSerializer
+    permission_classes = [IsInstanceOwner]
+
+    @extend_schema(
+        operation_id="getProxyLogsWithContext",
+        summary="Get proxy application logs with context",
+        parameters=[RuntimeLogsContextParamsSerializer],
+    )
+    def get(self, request: Request, time: str):
+        form = RuntimeLogsContextParamsSerializer(data=request.query_params)
+        form.is_valid(raise_exception=True)
+
+        lines = cast(dict, form.validated_data).get("lines", 20)
+
+        search_client = LokiSearchClient(host=settings.LOKI_HOST)
+        data = search_client.get_context(
+            lines=math.ceil(lines / 2),
+            timestamp_ns=int(time),
+            source=RuntimeLogSource.PROXY,
         )
         return Response(data)

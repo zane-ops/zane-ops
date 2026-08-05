@@ -70,4 +70,9 @@ urlpatterns = [
         views.ProxyLogsAPIView.as_view(),
         name="proxy.logs",
     ),
+    re_path(
+        r"^proxy/logs/with-context/(?P<time>\d+)/?$",
+        views.ProxyLogsWithContextAPIView.as_view(),
+        name="proxy.logs.with_context",
+    ),
 ]

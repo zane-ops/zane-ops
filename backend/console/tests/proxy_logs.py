@@ -777,6 +777,104 @@ class ProxyApplicationLogViewTests(ProxyLogTestBase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, len(response.json()["results"]))
 
+    def test_view_proxy_logs_with_context(self):
+        self.loginUser()
+        self.ingest(
+            [
+                fluentd_proxy_entry(
+                    {
+                        "level": "info",
+                        "ts": datetime.datetime.now().timestamp(),
+                        "logger": "admin.api",
+                        "msg": f"log #{i}",
+                    },
+                    source="stderr",
+                )
+                for i in range(5)
+            ]
+        )
+
+        logs = self.client.get(reverse("console:proxy.logs")).json()["results"]
+        self.assertEqual(5, len(logs))
+        target = logs[2]
+
+        response = self.client.get(
+            reverse(
+                "console:proxy.logs.with_context",
+                kwargs={"time": target["timestamp"]},
+                query={"lines": 5},
+            )
+        )
+        data = response.json()
+        jprint(data)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(5, len(data["results"]))
+        self.assertIn(target["id"], [log["id"] for log in data["results"]])
+        self.assertEqual(2, data["before_count"])
+        # `after_count` includes the targeted log itself
+        self.assertEqual(3, data["after_count"])
+
+    def test_proxy_logs_with_context_do_not_include_service_logs(self):
+        _, service = self.create_and_deploy_redis_docker_service()
+        deployment: Deployment = service.deployments.first()
+
+        self.ingest(
+            [
+                fluentd_proxy_entry(
+                    {
+                        "level": "info",
+                        "ts": datetime.datetime.now().timestamp(),
+                        "logger": "admin.api",
+                        "msg": "load complete",
+                    },
+                    source="stderr",
+                ),
+                {
+                    "log": "1:M 30 Jun 2024 03:17:14.376 * Ready to accept connections tcp",
+                    "container_id": "78dfe81bb4b3994eeb38f65f5a586084a2b4a649c0ab08b614d0f4c2cb499761",
+                    "container_name": "/srv-redis.1.zm0uncmx8w4wvnokdl6qxt55e",
+                    "time": datetime.datetime.now().isoformat(),
+                    "tag": json.dumps(
+                        {
+                            "deployment_id": deployment.hash,
+                            "service_id": service.id,
+                        }
+                    ),
+                    "source": "stdout",
+                },
+            ]
+        )
+
+        target = self.client.get(reverse("console:proxy.logs")).json()["results"][0]
+
+        response = self.client.get(
+            reverse(
+                "console:proxy.logs.with_context",
+                kwargs={"time": target["timestamp"]},
+            )
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        data = response.json()
+        self.assertEqual(1, len(data["results"]))
+        self.assertEqual(RuntimeLogSource.PROXY, data["results"][0]["source"])
+        self.assertEqual(0, data["before_count"])
+        # only the targeted log itself
+        self.assertEqual(1, data["after_count"])
+
+    def test_non_instance_owner_cannot_view_proxy_logs_with_context(self):
+        self.setup_logs()
+        self.loginAsSimpleUser()
+
+        response = self.client.get(
+            reverse(
+                "console:proxy.logs.with_context",
+                kwargs={"time": "1767225600000000000"},
+            )
+        )
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
     def test_proxy_logs_do_not_include_service_logs(self):
         _, service = self.create_and_deploy_redis_docker_service()
         deployment: Deployment = service.deployments.first()
