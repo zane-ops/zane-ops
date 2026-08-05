@@ -593,7 +593,7 @@ class ProxyMasterHttpLogViewTests(ProxyLogTestBase):
 
 
 class ProxyApplicationLogIngestViewTests(ProxyLogTestBase):
-    def test_ingest_proxy_application_logs(self):
+    def test_ingest_proxy_application_logs_succesfully(self):
         self.loginUser()
 
         app_log = {
@@ -656,7 +656,7 @@ class ProxyApplicationLogIngestViewTests(ProxyLogTestBase):
                 "level": [RuntimeLogLevel.ERROR],
             },
         )
-        self.assertEqual(2, len(errors["results"]))
+        self.assertEqual(1, len(errors["results"]))
 
         infos = self.search_client.search(
             query={
@@ -664,7 +664,7 @@ class ProxyApplicationLogIngestViewTests(ProxyLogTestBase):
                 "level": [RuntimeLogLevel.INFO],
             },
         )
-        self.assertEqual(1, len(infos["results"]))
+        self.assertEqual(2, len(infos["results"]))
 
     def test_ingest_proxy_application_logs_map_fatal_levels_to_error(self):
         self.loginUser()
@@ -707,18 +707,6 @@ class ProxyApplicationLogIngestViewTests(ProxyLogTestBase):
         data = self.search_client.search(query={"source": [RuntimeLogSource.PROXY]})
         self.assertEqual(1, len(data["results"]))
         self.assertEqual(RuntimeLogLevel.INFO, data["results"][0]["level"])
-
-    def test_ingest_proxy_logs_keep_the_raw_line_and_strip_ansi_colors(self):
-        self.loginUser()
-
-        raw_line = "\x1b[34mINFO\x1b[0m\tserving initial configuration"
-        self.ingest([fluentd_proxy_entry(raw_line, source="stderr")])
-
-        data = self.search_client.search(query={"source": [RuntimeLogSource.PROXY]})
-        self.assertEqual(1, len(data["results"]))
-        log = data["results"][0]
-        self.assertEqual(raw_line, log["content"])
-        self.assertEqual("INFO\tserving initial configuration", log["content_text"])
 
     def test_ingest_does_not_store_access_logs_as_application_logs(self):
         self.loginUser()

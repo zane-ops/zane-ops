@@ -29,7 +29,7 @@ from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
 from search.loki_client import LokiSearchClient
 from django.conf import settings
 from django.utils import timezone
-from typing import cast
+from typing import Literal, cast
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListAPIView, RetrieveAPIView
@@ -50,6 +50,7 @@ from .serializers import (
     HttpLogFieldsResponseSerializer,
     DeploymentHttpLogsPagination,
     DeploymentHttpLogsFilterSet,
+    ProxyServiceLogSerializer,
 )
 
 from ..models import (
@@ -161,7 +162,20 @@ class LogIngestAPIView(APIView):
                             try:
                                 content = json.loads(log["log"])
                             except json.JSONDecodeError:
-                                pass
+                                # Store non JSON log
+                                simple_logs.append(
+                                    RuntimeLogDto(
+                                        time=log["time"],
+                                        created_at=timezone.now(),
+                                        # Caddy put all logs into stderr, including info logs
+                                        # So we just assume info logs
+                                        level=RuntimeLogLevel.INFO,
+                                        source=RuntimeLogSource.PROXY,
+                                        container_id=log["container_id"],
+                                        content=log["log"],
+                                        content_text=escape_ansi(log["log"]),
+                                    )
+                                )
                             else:
                                 log_serializer = HTTPServiceLogSerializer(data=content)
                                 if log_serializer.is_valid():
@@ -255,6 +269,34 @@ class LogIngestAPIView(APIView):
                                     if http_log:
                                         http_logs.append(http_log)
                                     continue
+
+                                proxy_app_log_serializer = ProxyServiceLogSerializer(
+                                    data=content
+                                )
+                                if proxy_app_log_serializer.is_valid():
+                                    data = cast(dict, log_serializer.data)
+                                    log_level_map: dict[
+                                        str, Literal["INFO", "ERROR"]
+                                    ] = {
+                                        "debug": RuntimeLogLevel.INFO,
+                                        "info": RuntimeLogLevel.INFO,
+                                        "warn": RuntimeLogLevel.INFO,
+                                        "error": RuntimeLogLevel.ERROR,
+                                        "panic": RuntimeLogLevel.ERROR,
+                                        "fatal": RuntimeLogLevel.ERROR,
+                                    }
+                                    simple_logs.append(
+                                        RuntimeLogDto(
+                                            time=log["time"],
+                                            created_at=timezone.now(),
+                                            level=log_level_map[data["level"]],
+                                            source=RuntimeLogSource.PROXY,
+                                            container_id=log["container_id"],
+                                            content=log["log"],
+                                            content_text=escape_ansi(log["log"]),
+                                        )
+                                    )
+
                         case ZaneServices.API | ZaneServices.WORKER:
                             # do nothing for now...
                             pass

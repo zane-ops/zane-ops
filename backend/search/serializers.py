@@ -64,6 +64,7 @@ class RuntimeLogsQuerySerializer(serializers.Serializer):
                 RuntimeLogSource.SERVICE,
                 RuntimeLogSource.SYSTEM,
                 RuntimeLogSource.BUILD,
+                RuntimeLogSource.PROXY,
             ]
         ),
         default=[RuntimeLogSource.SERVICE],
