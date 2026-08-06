@@ -1,15 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircleIcon,
   BanIcon,
   CrownIcon,
   LoaderIcon,
   LockIcon,
   LockOpenIcon,
+  RotateCcwKeyIcon,
   SearchIcon,
   Trash2Icon,
   XIcon
 } from "lucide-react";
-import React from "react";
+import * as React from "react";
 import {
   Form,
   Link,
@@ -22,14 +24,23 @@ import {
 import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
 import type { User } from "~/api/types";
+import { CopyButton } from "~/components/copy-button";
 import {
   DeleteConfirmationDialog,
   SimpleConfirmationDialog
 } from "~/components/delete-confirmation-dialog";
 import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
-import { Button } from "~/components/ui/button";
-import { DialogTrigger } from "~/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Button, SubmitButton } from "~/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "~/components/ui/dialog";
 import {
   FieldSet,
   FieldSetInput,
@@ -56,6 +67,7 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
   formatLogTime,
+  formattedTime,
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
@@ -317,10 +329,158 @@ type ServerUserActionsProps = {
 export function ServerUserActions({ user }: ServerUserActionsProps) {
   return (
     <div className="flex items-center gap-1">
+      <PasswordTokenGenerateFormDialog user={user} />
+      <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
       <ToggleUserConfirmationFormDialog user={user} />
       <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
       <RemoveConfirmationFormDialog user={user} />
     </div>
+  );
+}
+
+export type PasswordTokenGenerateFormDialogProps = {
+  user: User;
+};
+
+export function PasswordTokenGenerateFormDialog({
+  user
+}: PasswordTokenGenerateFormDialogProps) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const [open, setOpen] = React.useState(false);
+  const isPending = fetcher.state !== "idle";
+
+  const token =
+    fetcher.data && "token" in fetcher.data ? fetcher.data.token : null;
+  const resetLink = token
+    ? new URL(
+        `/reset-password/${token.value}`,
+        window.location.origin
+      ).toString()
+    : null;
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(open) => {
+        if (isPending) return;
+        setOpen(open);
+      }}
+    >
+      <TooltipProvider>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <RotateCcwKeyIcon className="flex-none size-4" />
+                <span className="sr-only">
+                  Create a password reset link for {user.username}
+                </span>
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>Reset password</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <DialogContent className="gap-0">
+        <DialogHeader className="pb-4">
+          <DialogTitle>
+            Reset the password of&nbsp;
+            <span className="text-grey ">&ldquo;{user.username}&rdquo;</span>?
+          </DialogTitle>
+
+          <Alert variant="warning" className="mt-5">
+            <AlertCircleIcon className="size-4" />
+            <AlertTitle>ZaneOps does not send emails</AlertTitle>
+            <AlertDescription>
+              This creates a single-use link that you will need to share with
+              them yourself. Their current password keeps working until they use
+              it.
+            </AlertDescription>
+          </Alert>
+        </DialogHeader>
+
+        {resetLink !== null ? (
+          <div className="flex flex-col gap-2 mb-5">
+            <div className="flex items-center gap-2 rounded-md border border-border bg-muted p-2">
+              <code className="text-sm truncate flex-1">{resetLink}</code>
+              <CopyButton
+                variant="outline"
+                size="sm"
+                showLabel
+                className="flex-none"
+                value={resetLink}
+                label={(hasCopied?: boolean) =>
+                  hasCopied ? "Copied" : "Copy link"
+                }
+              />
+            </div>
+            <p className="text-grey text-sm">
+              Valid until {formattedTime(token!.expires_at)}, and only once.
+              Generating a new link invalidates this one.
+            </p>
+          </div>
+        ) : (
+          <fetcher.Form
+            method="post"
+            action={href("/admin/users/:userId", {
+              userId: user.id.toString()
+            })}
+            id="confirm-form"
+          >
+            <input
+              type="hidden"
+              name="intent"
+              value="generate_password_token"
+            />
+          </fetcher.Form>
+        )}
+
+        <DialogFooter className="-mx-6 px-6">
+          <div className="flex items-center gap-4 w-full">
+            {resetLink !== null ? (
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setOpen(false)}
+              >
+                Close
+              </Button>
+            ) : (
+              <>
+                <SubmitButton
+                  isPending={isPending}
+                  variant="warning"
+                  form="confirm-form"
+                  className={cn("inline-flex gap-1 items-center")}
+                >
+                  {isPending ? (
+                    <>
+                      <LoaderIcon
+                        className="animate-spin flex-none"
+                        size={15}
+                      />
+                      <span>Generating link...</span>
+                    </>
+                  ) : (
+                    <span>Generate reset link</span>
+                  )}
+                </SubmitButton>
+
+                <Button
+                  variant="outline"
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => setOpen(false)}
+                >
+                  Cancel
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

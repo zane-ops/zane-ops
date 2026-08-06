@@ -24,6 +24,9 @@ export async function clientAction({
     case "delete_user": {
       return deleteUser(params.userId, formData);
     }
+    case "generate_password_token": {
+      return generatePasswordToken(params.userId);
+    }
     default: {
       throw new Error("Unexpected intent");
     }
@@ -76,6 +79,34 @@ async function toggleUserActive(userId: string, formData: FormData) {
   });
 
   return { data };
+}
+
+async function generatePasswordToken(userId: string) {
+  const { data: token, error: errors } = await apiClient.POST(
+    "/api/console/users/{id}/generate-password-token/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: { id: userId }
+      }
+    }
+  );
+
+  if (errors) {
+    const fullErrorMessage = errors.errors
+      .map((err) => (err.attr ? `${err.attr}: ` : "") + err.detail)
+      .join(" ");
+
+    toast.error("Could not create a password reset link", {
+      description: fullErrorMessage,
+      closeButton: true
+    });
+    return { errors };
+  }
+
+  return { token };
 }
 
 async function deleteUser(userId: string, formData: FormData) {
