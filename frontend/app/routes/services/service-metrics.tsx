@@ -33,7 +33,7 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   convertValueToBytes,
   formatStorageValue,
-  timeAgoFormatter
+  relativeTimeFormatter
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
@@ -189,7 +189,7 @@ export default function ServiceMetricsPage({
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(value) =>
-                      timeAgoFormatter(value, true).replace("ago", "")
+                      relativeTimeFormatter(value, true).replace("ago", "")
                     }
                     type="category"
                     allowDuplicatedCategory={false}
@@ -308,7 +308,7 @@ export default function ServiceMetricsPage({
                     axisLine={false}
                     tickCount={10}
                     tickFormatter={(value) =>
-                      timeAgoFormatter(value, true).replace("ago", "")
+                      relativeTimeFormatter(value, true).replace("ago", "")
                     }
                   />
 
@@ -426,7 +426,7 @@ export default function ServiceMetricsPage({
                     axisLine={false}
                     tickCount={10}
                     tickFormatter={(value) =>
-                      timeAgoFormatter(value, true).replace("ago", "")
+                      relativeTimeFormatter(value, true).replace("ago", "")
                     }
                   />
 
@@ -569,7 +569,7 @@ export default function ServiceMetricsPage({
                     axisLine={false}
                     tickCount={10}
                     tickFormatter={(value) =>
-                      timeAgoFormatter(value, true).replace("ago", "")
+                      relativeTimeFormatter(value, true).replace("ago", "")
                     }
                   />
 
