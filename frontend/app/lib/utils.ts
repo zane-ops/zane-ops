@@ -370,7 +370,7 @@ export function formatURL({
  * ex: `getAbsoluteURL(href("/invite/:token", { token }))`
  *      -> `https://zaneops.dev/invite/gh1234`
  */
-export function getAbsoluteURL(path: string) {
+export function getLocalAbsoluteURL(path: string) {
   return new URL(path, window.location.origin).toString();
 }
 

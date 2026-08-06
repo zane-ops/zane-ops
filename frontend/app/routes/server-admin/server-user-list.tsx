@@ -3,9 +3,11 @@ import {
   AlertCircleIcon,
   BanIcon,
   CrownIcon,
+  InfoIcon,
   LoaderIcon,
   LockIcon,
   LockOpenIcon,
+  RotateCcwIcon,
   RotateCcwKeyIcon,
   SearchIcon,
   Trash2Icon,
@@ -21,6 +23,7 @@ import {
   useSearchParams
 } from "react-router";
 
+import type { close } from "fs";
 import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
 import type { User } from "~/api/types";
@@ -68,8 +71,8 @@ import {
   cn,
   formatLogTime,
   formattedTime,
-  getAbsoluteURL,
   getFormErrorsFromResponseData,
+  getLocalAbsoluteURL,
   metaTitle
 } from "~/lib/utils";
 import type { clientAction } from "~/routes/server-admin/server-user-details";
@@ -286,8 +289,11 @@ function InstanceUserTable({ users }: InstanceUserTableProps) {
                             side="top"
                             className="max-w-60 text-pretty"
                           >
-                            Server admin, has full access to this instance and
-                            cannot be blocked or deleted
+                            <strong className="font-medium underline">
+                              Server admin
+                            </strong>
+                            , has full access to this instance and cannot be
+                            blocked or deleted
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -349,12 +355,22 @@ export function PasswordTokenGenerateFormDialog({
   const fetcher = useFetcher<typeof clientAction>();
   const [open, setOpen] = React.useState(false);
   const isPending = fetcher.state !== "idle";
+  const [data, setData] = React.useState(fetcher.data);
 
-  const token =
-    fetcher.data && "token" in fetcher.data ? fetcher.data.token : null;
+  const token = data && "token" in data ? data.token : null;
   const resetLink = token
-    ? getAbsoluteURL(`/reset-password/${token.value}`)
+    ? getLocalAbsoluteURL(`/reset-password/${token.value}`)
     : null;
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetcher.state, fetcher.data]);
+
+  const close = React.useCallback(() => {
+    setOpen(false);
+    setData(undefined);
+  }, []);
 
   return (
     <Dialog
@@ -362,6 +378,7 @@ export function PasswordTokenGenerateFormDialog({
       onOpenChange={(open) => {
         if (isPending) return;
         setOpen(open);
+        if (!open) close();
       }}
     >
       <TooltipProvider>
@@ -369,7 +386,7 @@ export function PasswordTokenGenerateFormDialog({
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
               <Button variant="ghost" size="icon">
-                <RotateCcwKeyIcon className="flex-none size-4" />
+                <RotateCcwIcon className="flex-none size-4" />
                 <span className="sr-only">
                   Create a password reset link for {user.username}
                 </span>
@@ -387,35 +404,62 @@ export function PasswordTokenGenerateFormDialog({
             <span className="text-grey ">&ldquo;{user.username}&rdquo;</span>?
           </DialogTitle>
 
-          <Alert variant="warning" className="mt-5">
-            <AlertCircleIcon className="size-4" />
-            <AlertTitle>ZaneOps does not send emails</AlertTitle>
-            <AlertDescription>
-              This creates a single-use link that you will need to share with
-              them yourself. Their current password keeps working until they use
-              it.
-            </AlertDescription>
-          </Alert>
+          {resetLink ? (
+            <Alert variant="info" className="mt-5">
+              <InfoIcon className="size-4" />
+              <AlertTitle>Password Link generated</AlertTitle>
+              <AlertDescription>
+                Send this link to{" "}
+                <span className="font-medium ">{user.username}</span>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert variant="warning" className="mt-5">
+              <AlertCircleIcon className="size-4" />
+              <AlertTitle>ZaneOps does not send emails</AlertTitle>
+              <AlertDescription>
+                This creates a single-use link that you will need to share with
+                them yourself. Their current password keeps working until they
+                use it.
+              </AlertDescription>
+            </Alert>
+          )}
         </DialogHeader>
 
         {resetLink !== null ? (
-          <div className="flex flex-col gap-2 mb-5">
-            <div className="flex items-center gap-2 rounded-md border border-border bg-muted p-2">
-              <code className="text-sm truncate flex-1">{resetLink}</code>
-              <CopyButton
-                variant="outline"
-                size="sm"
-                showLabel
-                className="flex-none"
-                value={resetLink}
-                label={(hasCopied?: boolean) =>
-                  hasCopied ? "Copied" : "Copy link"
-                }
-              />
+          <div className="flex flex-col gap-2 mb-5 min-w-0">
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-md border border-border bg-muted p-2",
+                "max-w-full group relative h-14 px-4"
+              )}
+            >
+              <code className="text-sm flex-1 whitespace-nowrap overflow-scroll">
+                {resetLink}
+              </code>
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <CopyButton
+                      variant="outline"
+                      size="sm"
+                      className="flex-none absolute right-2"
+                      value={resetLink}
+                      label={(hasCopied?: boolean) =>
+                        hasCopied ? "Copied" : "Copy link"
+                      }
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>Copy link</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             <p className="text-grey text-sm">
-              Valid until {formattedTime(token!.expires_at)}, and only once.
-              Generating a new link invalidates this one.
+              Valid until{" "}
+              <span className="text-card-foreground">
+                {formattedTime(token!.expires_at)}
+              </span>
+              , and only once. Generating a new link invalidates this one.
             </p>
           </div>
         ) : (
@@ -437,11 +481,7 @@ export function PasswordTokenGenerateFormDialog({
         <DialogFooter className="-mx-6 px-6">
           <div className="flex items-center gap-4 w-full">
             {resetLink !== null ? (
-              <Button
-                variant="outline"
-                type="button"
-                onClick={() => setOpen(false)}
-              >
+              <Button variant="outline" type="button" onClick={close}>
                 Close
               </Button>
             ) : (
