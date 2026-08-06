@@ -47,6 +47,7 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
   formattedTime,
+  getAbsoluteURL,
   getCsrfTokenHeader,
   getFormErrorsFromResponseData,
   metaTitle,
@@ -108,8 +109,9 @@ type UserInvitationLinkCardProps = {
 };
 
 function UserInvitationLinkCard({ data }: UserInvitationLinkCardProps) {
-  const registerLink =
-    window.location.origin + href("/invite/:token", { token: data.token });
+  const registerLink = getAbsoluteURL(
+    href("/invite/:token", { token: data.token })
+  );
 
   return (
     <Card className="px-0">

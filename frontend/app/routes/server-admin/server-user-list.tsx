@@ -68,6 +68,7 @@ import {
   cn,
   formatLogTime,
   formattedTime,
+  getAbsoluteURL,
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
@@ -352,10 +353,7 @@ export function PasswordTokenGenerateFormDialog({
   const token =
     fetcher.data && "token" in fetcher.data ? fetcher.data.token : null;
   const resetLink = token
-    ? new URL(
-        `/reset-password/${token.value}`,
-        window.location.origin
-      ).toString()
+    ? getAbsoluteURL(`/reset-password/${token.value}`)
     : null;
 
   return (

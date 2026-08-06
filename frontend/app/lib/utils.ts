@@ -364,6 +364,16 @@ export function formatURL({
   return `${currentUrl.protocol}//${domain}${base_path}`;
 }
 
+/**
+ * Turn an app-relative path into a shareable absolute URL on the current origin.
+ *
+ * ex: `getAbsoluteURL(href("/invite/:token", { token }))`
+ *      -> `https://zaneops.dev/invite/gh1234`
+ */
+export function getAbsoluteURL(path: string) {
+  return new URL(path, window.location.origin).toString();
+}
+
 export function pluralize(word: string, item_count: number) {
   return word + (item_count > 1 ? "s" : "");
 }

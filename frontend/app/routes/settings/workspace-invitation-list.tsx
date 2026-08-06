@@ -69,6 +69,7 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
   formattedTime,
+  getAbsoluteURL,
   getFormErrorsFromResponseData,
   hasMinRole,
   metaTitle,
@@ -339,10 +340,7 @@ export type WorkspaceInvitationActionsProps = {
 };
 
 function getInvitationLink(invitation: Pick<WorkspaceInvitation, "token">) {
-  const registerLink =
-    window.location.origin +
-    href("/invite/:token", { token: invitation.token });
-  return registerLink;
+  return getAbsoluteURL(href("/invite/:token", { token: invitation.token }));
 }
 
 export function WorkspaceInvitationActions({
