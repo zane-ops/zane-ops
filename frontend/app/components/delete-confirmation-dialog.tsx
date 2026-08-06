@@ -138,7 +138,7 @@ export function DeleteConfirmationDialog({
         </DialogHeader>
 
         {errors.non_field_errors && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="mb-4">
             <AlertCircleIcon className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{errors.non_field_errors}</AlertDescription>
