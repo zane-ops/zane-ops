@@ -156,7 +156,9 @@ function PasswordLinkTable({ tokens }: PasswordLinkTableProps) {
           <TableHead className="sticky top-0 z-20 whitespace-nowrap">
             Valid until
           </TableHead>
-          <TableHead className="sticky top-0 z-20 px-4">Actions</TableHead>
+          <TableHead className="sticky top-0 z-20 px-4 text-end">
+            Actions
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -202,8 +204,8 @@ function PasswordLinkTable({ tokens }: PasswordLinkTableProps) {
                   </div>
                 </TableCell>
 
-                <TableCell className={cn("p-2 h-14")}>
-                  <div className="flex items-center gap-1">
+                <TableCell className="p-2 h-14">
+                  <div className="flex items-center gap-1 justify-end">
                     <RegenerateLinkFormDialog token={token} />
                     <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
                     <DeleteConfirmationFormDialog token={token} />
