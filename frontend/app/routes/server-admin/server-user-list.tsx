@@ -2,13 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
   BanIcon,
+  CheckIcon,
   CrownIcon,
-  InfoIcon,
   LoaderIcon,
   LockIcon,
   LockOpenIcon,
   RotateCcwIcon,
-  RotateCcwKeyIcon,
   SearchIcon,
   Trash2Icon,
   XIcon
@@ -23,7 +22,6 @@ import {
   useSearchParams
 } from "react-router";
 
-import type { close } from "fs";
 import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
 import type { User } from "~/api/types";
@@ -400,17 +398,33 @@ export function PasswordTokenGenerateFormDialog({
       <DialogContent className="gap-0">
         <DialogHeader className="pb-4">
           <DialogTitle>
-            Reset the password of&nbsp;
-            <span className="text-grey ">&ldquo;{user.username}&rdquo;</span>?
+            {resetLink ? (
+              <>
+                Password Reset link for&nbsp;
+                <span className="text-grey ">
+                  &ldquo;{user.username}&rdquo;
+                </span>
+              </>
+            ) : (
+              <>
+                Reset the password of&nbsp;
+                <span className="text-grey ">
+                  &ldquo;{user.username}&rdquo;
+                </span>
+                ?
+              </>
+            )}
           </DialogTitle>
 
           {resetLink ? (
-            <Alert variant="info" className="mt-5">
-              <InfoIcon className="size-4" />
-              <AlertTitle>Password Link generated</AlertTitle>
+            <Alert variant="success" className="mt-5">
+              <CheckIcon className="size-4" />
+              <AlertTitle>Link ready</AlertTitle>
               <AlertDescription>
-                Send this link to{" "}
-                <span className="font-medium ">{user.username}</span>
+                Share it with{" "}
+                <span className="font-medium ">{user.username}</span> over a
+                channel you trust. Anyone holding this link can set their
+                password.
               </AlertDescription>
             </Alert>
           ) : (
@@ -455,11 +469,11 @@ export function PasswordTokenGenerateFormDialog({
               </TooltipProvider>
             </div>
             <p className="text-grey text-sm">
-              Valid until{" "}
+              Usable once, until{" "}
               <span className="text-card-foreground">
                 {formattedTime(token!.expires_at)}
               </span>
-              , and only once. Generating a new link invalidates this one.
+              . Generating another link invalidates this one.
             </p>
           </div>
         ) : (
