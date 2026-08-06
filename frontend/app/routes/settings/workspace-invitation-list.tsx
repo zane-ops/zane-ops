@@ -74,6 +74,7 @@ import {
   hasMinRole,
   metaTitle,
   pluralize,
+  relativeTimeFormatter,
   stringToColor
 } from "~/lib/utils";
 import {
@@ -208,7 +209,7 @@ function WorkspaceInvitationsTable({
       <TableBody>
         {invitations.length === 0 ? (
           <TableRow className="px-2">
-            <TableCell colSpan={5} className="p-2 text-muted-foreground italic">
+            <TableCell colSpan={6} className="p-2 text-muted-foreground italic">
               -- No invitations found --
             </TableCell>
           </TableRow>
@@ -441,7 +442,16 @@ function RegenerateInvitationLinkFormDialog({
                 <dt className="text-grey">Valid until:</dt>
                 <dd>
                   <time dateTime={data.data.expires_at}>
-                    {formattedTime(data.data.expires_at)}
+                    {formattedTime(data.data.expires_at)}&nbsp;
+                    <span className="text-grey">
+                      (
+                      {relativeTimeFormatter(
+                        data.data.expires_at,
+                        false,
+                        "future"
+                      )}
+                      )
+                    </span>
                   </time>
                 </dd>
               </div>

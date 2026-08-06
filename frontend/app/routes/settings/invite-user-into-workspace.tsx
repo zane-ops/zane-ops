@@ -51,7 +51,8 @@ import {
   getFormErrorsFromResponseData,
   getLocalAbsoluteURL,
   metaTitle,
-  pluralize
+  pluralize,
+  relativeTimeFormatter
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
@@ -161,7 +162,10 @@ function UserInvitationLinkCard({ data }: UserInvitationLinkCardProps) {
             <dt className="text-grey">Valid until:</dt>
             <dd>
               <time dateTime={data.expires_at}>
-                {formattedTime(data.expires_at)}
+                {formattedTime(data.expires_at)}&nbsp;
+                <span className="text-grey">
+                  ({relativeTimeFormatter(data.expires_at, false, "future")})
+                </span>
               </time>
             </dd>
           </div>
