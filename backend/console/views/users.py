@@ -40,7 +40,7 @@ User = get_user_model()
 class ListInstanceUsersAPIView(ListAPIView):
     permission_classes = [IsInstanceOwner]
     serializer_class = InstanceUserSerializer
-    queryset = User.objects.all()
+    queryset = User.objects.all().order_by("id")
     pagination_class = DefaultPageNumberPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = InstanceUserFilterSet

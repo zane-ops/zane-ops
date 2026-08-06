@@ -338,10 +338,14 @@ function ToggleUserConfirmationFormDialog({ user }: ServerUserActionsProps) {
       }
       variant="warning"
       message={
-        <span>
-          They will immediately loose any ability to login to this instance,
-          until you re-enable them again.
-        </span>
+        user.is_active ? (
+          <span>
+            They will immediately loose any ability to login to this instance,
+            until you re-enable them again.
+          </span>
+        ) : (
+          <span>Activate user</span>
+        )
       }
       form={
         <fetcher.Form
@@ -355,7 +359,7 @@ function ToggleUserConfirmationFormDialog({ user }: ServerUserActionsProps) {
             name="is_active"
             value={user.is_active ? "off" : "on"}
           />
-          <input type="hidden" name="intent" value="delete_user" />
+          <input type="hidden" name="intent" value="toggle_user_active" />
         </fetcher.Form>
       }
       trigger={
