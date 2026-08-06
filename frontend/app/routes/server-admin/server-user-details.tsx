@@ -52,7 +52,7 @@ async function toggleUserActive(userId: string, formData: FormData) {
       .map((err) => (err.attr ? `${err.attr}: ` : "") + err.detail)
       .join(" ");
 
-    toast.error("Error", {
+    toast.error(`Could not ${is_active ? "unblock" : "block"} user`, {
       description: fullErrorMessage,
       closeButton: true
     });
@@ -63,12 +63,14 @@ async function toggleUserActive(userId: string, formData: FormData) {
     queryKey: serverUserQueries.list().queryKey.slice(0, 1)
   });
 
-  toast.success("Success", {
+  toast.success(`User ${is_active ? "unblocked" : "blocked"}`, {
     closeButton: true,
     description: (
       <span>
-        User <strong>{data.username}</strong> has been{" "}
-        {is_active ? "enabled" : "disabled"}.
+        <strong>{data.username}</strong>{" "}
+        {is_active
+          ? "can now log in to this instance again."
+          : "can no longer log in to this instance."}
       </span>
     )
   });
@@ -124,11 +126,11 @@ async function deleteUser(userId: string, formData: FormData) {
     queryKey: serverUserQueries.list().queryKey.slice(0, 1)
   });
 
-  toast.success("Success", {
+  toast.success("User deleted", {
     closeButton: true,
     description: (
       <span>
-        User <strong>{user.username}</strong> has been deleted.
+        <strong>{user.username}</strong> no longer has access to this instance.
       </span>
     )
   });

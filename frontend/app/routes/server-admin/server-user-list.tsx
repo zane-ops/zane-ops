@@ -3,11 +3,10 @@ import {
   BanIcon,
   CrownIcon,
   LoaderIcon,
-  PowerIcon,
-  PowerOffIcon,
+  LockIcon,
+  LockOpenIcon,
   SearchIcon,
   Trash2Icon,
-  UserXIcon,
   XIcon
 } from "lucide-react";
 import React from "react";
@@ -60,6 +59,7 @@ import {
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
+import type { clientAction } from "~/routes/server-admin/server-user-details";
 import type { Route } from "./+types/server-user-list";
 
 export function meta() {
@@ -126,11 +126,11 @@ export default function ServerUserListPage({
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
-        <h2 className="text-2xl">Users in the server</h2>
+        <h2 className="text-2xl">Users</h2>
       </div>
       <Separator />
       <h3 className="text-grey">
-        Manage all the users in this ZaneOps instance
+        Manage everyone who has access to this ZaneOps instance
       </h3>
 
       <Form className="flex flex-wrap items-center md:gap-3 gap-1">
@@ -149,8 +149,8 @@ export default function ServerUserListPage({
             }}
             ref={inputRef}
             defaultValue={filters.query}
-            className="px-14 -mx-5 w-full my-1 text-sm focus-visible:right-0"
-            placeholder="Search users"
+            className="pl-14 -mx-5 w-full my-1 text-sm focus-visible:right-0"
+            placeholder="Search by name"
           />
         </FieldSet>
 
@@ -221,7 +221,7 @@ function InstanceUserTable({ users }: InstanceUserTableProps) {
         {users.length === 0 ? (
           <TableRow className="px-2">
             <TableCell colSpan={5} className="p-2 text-muted-foreground italic">
-              -- No users found --
+              -- No users match your search --
             </TableCell>
           </TableRow>
         ) : (
@@ -251,7 +251,7 @@ function InstanceUserTable({ users }: InstanceUserTableProps) {
                         pingState="hidden"
                         className="text-xs py-0.5 px-1.5 gap-1 mx-1 dark:text-red-100"
                       >
-                        <span>Disabled</span>
+                        <span>Blocked</span>
                         <BanIcon className="size-3 flex-none" />
                       </StatusBadge>
                     )}
@@ -273,7 +273,8 @@ function InstanceUserTable({ users }: InstanceUserTableProps) {
                             side="top"
                             className="max-w-60 text-pretty"
                           >
-                            Server admin
+                            Server admin, has full access to this instance and
+                            cannot be blocked or deleted
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -297,7 +298,7 @@ function InstanceUserTable({ users }: InstanceUserTableProps) {
                   </time>
                 </TableCell>
 
-                <TableCell className="p-2">
+                <TableCell className={cn("p-2 h-14")}>
                   {showActions && <ServerUserActions user={user} />}
                 </TableCell>
               </TableRow>
@@ -331,20 +332,22 @@ function ToggleUserConfirmationFormDialog({ user }: ServerUserActionsProps) {
       fetcher={fetcher}
       title={
         <>
-          {user.is_active ? "Disable" : "Enable"}&nbsp;
-          <span className="text-grey ">&ldquo;{user.username}&rdquo;</span>
-          &nbsp;?
+          {user.is_active ? "Block" : "Unblock"}&nbsp;
+          <span className="text-grey ">&ldquo;{user.username}&rdquo;</span>?
         </>
       }
       variant="warning"
       message={
         user.is_active ? (
           <span>
-            They will immediately loose any ability to login to this instance,
-            until you re-enable them again.
+            They won&apos;t be able to log in to this instance until you unblock
+            them. Their projects and services will keep running.
           </span>
         ) : (
-          <span>Activate user</span>
+          <span>
+            They will be able to log back in to this instance and regain access
+            to their projects and services.
+          </span>
         )
       }
       form={
@@ -369,18 +372,20 @@ function ToggleUserConfirmationFormDialog({ user }: ServerUserActionsProps) {
               <DialogTrigger asChild>
                 <Button variant="ghost" size="icon">
                   {user.is_active ? (
-                    <PowerOffIcon className="flex-none size-4" />
+                    <LockIcon className="flex-none size-4" />
                   ) : (
-                    <PowerIcon className="flex-none size-4" />
+                    <LockOpenIcon className="flex-none size-4" />
                   )}
                   <span className="sr-only">
-                    {user.is_active ? "Disable User" : "Enable User"}
+                    {user.is_active
+                      ? `Block ${user.username}`
+                      : `Unblock ${user.username}`}
                   </span>
                 </Button>
               </DialogTrigger>
             </TooltipTrigger>
             <TooltipContent>
-              {user.is_active ? "Disable User" : "Enable User"}
+              {user.is_active ? "Block user" : "Unblock user"}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -390,7 +395,7 @@ function ToggleUserConfirmationFormDialog({ user }: ServerUserActionsProps) {
 }
 
 function RemoveConfirmationFormDialog({ user }: ServerUserActionsProps) {
-  const fetcher = useFetcher();
+  const fetcher = useFetcher<typeof clientAction>();
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
 
   return (
@@ -399,15 +404,17 @@ function RemoveConfirmationFormDialog({ user }: ServerUserActionsProps) {
         <>
           Delete&nbsp;
           <span className="text-grey ">&ldquo;{user.username}&rdquo;</span>
-          &nbsp;from this ZaneOps instance ?
+          &nbsp;from this ZaneOps instance?
         </>
       }
       fetcher={fetcher}
       message={
-        <span>
-          They will immediately lose access to this server and all of its
-          projects. This action is irreversible.
-        </span>
+        <p>
+          They will immediately lose access to this instance and everything in
+          it. Projects and services they created will keep running, but nobody
+          will be able to log in as them again. <br />
+          <strong>This action cannot be undone.</strong>
+        </p>
       }
       confirmationValue={user.username}
       confirmationFieldName="username"
@@ -431,12 +438,12 @@ function RemoveConfirmationFormDialog({ user }: ServerUserActionsProps) {
               <DialogTrigger asChild>
                 <Button variant="ghost" size="icon">
                   <Trash2Icon className="size-4 flex-none text-red-400" />
-                  <span className="sr-only">Delete user</span>
+                  <span className="sr-only">Delete {user.username}</span>
                 </Button>
               </DialogTrigger>
             </TooltipTrigger>
 
-            <TooltipContent>Delete user from instance</TooltipContent>
+            <TooltipContent>Delete user</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       }
