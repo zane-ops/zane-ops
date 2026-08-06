@@ -47,7 +47,8 @@ import {
   formatLogTime,
   formattedTime,
   getLocalAbsoluteURL,
-  metaTitle
+  metaTitle,
+  relativeTimeFormatter
 } from "~/lib/utils";
 import type { clientAction as userClientAction } from "~/routes/server-admin/server-user-details";
 import type { Route } from "./+types/password-link-list";
@@ -311,7 +312,7 @@ function RegenerateLinkFormDialog({ token }: RegenerateLinkFormDialogProps) {
           )}
         </DialogHeader>
 
-        {resetLink !== null ? (
+        {newToken && resetLink !== null ? (
           <div className="flex flex-col gap-2 mb-5 min-w-0">
             <div
               className={cn(
@@ -342,9 +343,10 @@ function RegenerateLinkFormDialog({ token }: RegenerateLinkFormDialogProps) {
             <p className="text-grey text-sm">
               Usable once, until{" "}
               <span className="text-card-foreground">
-                {formattedTime(newToken!.expires_at)}
+                {formattedTime(newToken.expires_at)} (
+                {relativeTimeFormatter(newToken.expires_at, false, "future")})
               </span>
-              . Generating another link invalidates this one.
+              <br /> Generating another link invalidates this one.
             </p>
           </div>
         ) : (

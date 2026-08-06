@@ -71,7 +71,8 @@ import {
   formattedTime,
   getFormErrorsFromResponseData,
   getLocalAbsoluteURL,
-  metaTitle
+  metaTitle,
+  relativeTimeFormatter
 } from "~/lib/utils";
 import type { clientAction } from "~/routes/server-admin/server-user-details";
 import type { Route } from "./+types/server-user-list";
@@ -440,7 +441,7 @@ export function PasswordTokenGenerateFormDialog({
           )}
         </DialogHeader>
 
-        {resetLink !== null ? (
+        {token && resetLink !== null ? (
           <div className="flex flex-col gap-2 mb-5 min-w-0">
             <div
               className={cn(
@@ -471,9 +472,10 @@ export function PasswordTokenGenerateFormDialog({
             <p className="text-grey text-sm">
               Usable once, until{" "}
               <span className="text-card-foreground">
-                {formattedTime(token!.expires_at)}
+                {formattedTime(token.expires_at)} (
+                {relativeTimeFormatter(token.expires_at, false, "future")})
               </span>
-              . Generating another link invalidates this one.
+              <br /> Generating another link invalidates this one.
             </p>
           </div>
         ) : (

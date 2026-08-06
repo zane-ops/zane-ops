@@ -250,13 +250,16 @@ export async function getCsrfTokenHeader() {
   return { "X-CSRFToken": getCookie("csrftoken") };
 }
 
-export function timeAgoFormatter(
+export function relativeTimeFormatter(
   dateInput: string | Date,
-  short = false
+  short = false,
+  direction: "past" | "future" = "past"
 ): string {
   const date = new Date(dateInput);
   const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const diffInSeconds = Math.abs(
+    Math.floor((now.getTime() - date.getTime()) / 1000)
+  );
 
   const secondsInMinute = 60;
   const secondsInHour = 60 * secondsInMinute;
@@ -295,7 +298,10 @@ export function timeAgoFormatter(
     numeric: "auto",
     style: short ? "narrow" : "long"
   });
-  const formatedValue = rtf.format(-value, unit);
+  const formatedValue = rtf.format(
+    direction === "past" ? -value : +value,
+    unit
+  );
   return formatedValue === "now" ? "Just now" : formatedValue;
 }
 
@@ -312,7 +318,7 @@ export function mergeTimeAgoFormatterAndFormattedDate(
     return formattedDate(date);
   }
 
-  return timeAgoFormatter(date);
+  return relativeTimeFormatter(date);
 }
 
 export function formatElapsedTime(
