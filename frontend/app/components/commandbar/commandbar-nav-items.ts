@@ -5,6 +5,7 @@ import {
   FolderIcon,
   GitBranchIcon,
   KeyRoundIcon,
+  Link2Icon,
   LockIcon,
   MailIcon,
   TerminalIcon,
@@ -84,8 +85,13 @@ export const SERVER_ADMIN_NAV_GROUP: CommandBarNavGroup = {
   items: [
     {
       title: "Users",
-      href: href("/admin"),
+      href: href("/admin/users"),
       icon: UsersIcon
+    },
+    {
+      title: "Password Reset Links",
+      href: href("/admin/password-links"),
+      icon: Link2Icon
     },
     {
       title: "SSH Keys",
