@@ -45,6 +45,8 @@ export interface paths {
     get: operations["getAuthedUser"];
   };
   "/api/auth/reset-password/{token}/": {
+    /** Get password reset link for user */
+    get: operations["getPasswordResetToken"];
     /** Reset user password */
     post: operations["resetPassword"];
   };
@@ -3443,6 +3445,7 @@ export interface components {
     GetComposeStackDeploymentDetailsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetComposeStackDetailsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetPasswordResetTokenErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetPreviewEnvToReviewErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetProjectListError: components["schemas"]["GetProjectListSlugErrorComponent"] | components["schemas"]["GetProjectListSortByErrorComponent"];
     GetProjectListErrorResponse400: components["schemas"]["GetProjectListValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -4523,6 +4526,10 @@ export interface components {
     ParseErrorResponse: {
       type: components["schemas"]["ClientErrorEnum"];
       errors: components["schemas"]["ParseError"][];
+    };
+    PasswordResetLink: {
+      id: number;
+      value: string;
     };
     PasswordResetToken: {
       id: number;
@@ -9425,6 +9432,41 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get password reset link for user */
+  getPasswordResetToken: {
+    parameters: {
+      path: {
+        token: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PasswordResetLink"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetPasswordResetTokenErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

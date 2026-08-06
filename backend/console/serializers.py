@@ -59,6 +59,12 @@ class WorkspaceTransferOwnershipSerializer(serializers.Serializer):
         return owner_id
 
 
+class PasswordResetLinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PasswordResetToken
+        fields = ["id", "value"]
+
+
 class PasswordResetTokenSerializer(serializers.ModelSerializer):
     user = InstanceUserSerializer(read_only=True)
 
