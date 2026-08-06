@@ -69,8 +69,8 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
   formattedTime,
-  getAbsoluteURL,
   getFormErrorsFromResponseData,
+  getLocalAbsoluteURL,
   hasMinRole,
   metaTitle,
   pluralize,
@@ -340,7 +340,9 @@ export type WorkspaceInvitationActionsProps = {
 };
 
 function getInvitationLink(invitation: Pick<WorkspaceInvitation, "token">) {
-  return getAbsoluteURL(href("/invite/:token", { token: invitation.token }));
+  return getLocalAbsoluteURL(
+    href("/invite/:token", { token: invitation.token })
+  );
 }
 
 export function WorkspaceInvitationActions({

@@ -16,7 +16,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn, hasMinRole, wait } from "~/lib/utils";
+import { cn, getLocalAbsoluteURL, hasMinRole, wait } from "~/lib/utils";
 import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import {
   type clientAction,
@@ -44,9 +44,10 @@ export function ServiceDeployURLForm({
     env_slug
   });
   const membership = useCurrentWorkspaceMembership();
-  const currentURL = new URL(window.location.href);
   const deployURL = service.deploy_token
-    ? `${currentURL.protocol}//${currentURL.host}/api/deploy-service/${service.type === "DOCKER_REGISTRY" ? "docker" : "git"}/${service.deploy_token}`
+    ? getLocalAbsoluteURL(
+        `/api/deploy-service/${service.type === "DOCKER_REGISTRY" ? "docker" : "git"}/${service.deploy_token}`
+      )
     : null;
 
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
@@ -184,9 +185,8 @@ export function ServicePreviewDeployURLForm({
     env_slug
   });
   const membership = useCurrentWorkspaceMembership();
-  const currentURL = new URL(window.location.href);
   const deployURL = service.deploy_token
-    ? `${currentURL.protocol}//${currentURL.host}/api/trigger-preview/${service.deploy_token}`
+    ? getLocalAbsoluteURL(`/api/trigger-preview/${service.deploy_token}`)
     : null;
 
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);

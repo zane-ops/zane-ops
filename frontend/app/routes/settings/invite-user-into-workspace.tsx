@@ -47,9 +47,9 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
   formattedTime,
-  getAbsoluteURL,
   getCsrfTokenHeader,
   getFormErrorsFromResponseData,
+  getLocalAbsoluteURL,
   metaTitle,
   pluralize
 } from "~/lib/utils";
@@ -109,7 +109,7 @@ type UserInvitationLinkCardProps = {
 };
 
 function UserInvitationLinkCard({ data }: UserInvitationLinkCardProps) {
-  const registerLink = getAbsoluteURL(
+  const registerLink = getLocalAbsoluteURL(
     href("/invite/:token", { token: data.token })
   );
 
