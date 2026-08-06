@@ -30,6 +30,7 @@ import {
   CommandList,
   CommandSeparator
 } from "~/components/ui/command";
+import { createDevLogger } from "~/lib/logger";
 import { userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
@@ -38,6 +39,8 @@ export type CommandBarProps = {
   actionGroups?: CommandBarActionGroup[];
   authedUser?: AuthedUserResponse | null;
 };
+
+const logger = createDevLogger(import.meta.url);
 
 export function CommandBar({
   navGroups = [],
@@ -219,7 +222,7 @@ export function CommandBar({
 
       <CommandList
         className={cn(
-          "max-h-124 min-h-0 h-[calc(var(--cmdk-list-height)+var(--spacing)*3)] scroll-pb-4 scroll-pt-2",
+          "max-h-124 min-h-0 h-[calc(var(--cmdk-list-height)+var(--spacing)*3)] scroll-pb-16 scroll-pt-10",
           "transition-[height] duration-200 ease-in-out",
           "rounded-t-none border-x-0 border-b-0 px-0"
         )}
