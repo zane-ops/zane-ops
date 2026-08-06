@@ -98,7 +98,7 @@ class InstanceUserDetailAPIView(RetrieveUpdateDestroyAPIView):
 
 class PasswordTokenListAPIView(ListAPIView):
     permission_classes = [IsInstanceOwner]
-    queryset = PasswordResetToken.objects.all()
+    queryset = PasswordResetToken.objects.all().order_by("id")
     serializer_class = PasswordResetTokenSerializer
     pagination_class = DefaultPageNumberPagination
 
