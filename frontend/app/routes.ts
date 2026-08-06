@@ -71,6 +71,7 @@ export default [
         index("./routes/server-admin/server-admin-index.tsx"),
         route("users", "./routes/server-admin/server-user-list.tsx"),
         route("users/:userId", "./routes/server-admin/server-user-details.tsx"),
+        route("password-links", "./routes/server-admin/password-link-list.tsx"),
 
         route("ssh-keys", "./routes/server-admin/ssh-keys-list.tsx"),
         route("ssh-keys/new", "./routes/server-admin/create-ssh-key.tsx"),
