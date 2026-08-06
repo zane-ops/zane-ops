@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  Building2Icon,
   ContainerIcon,
   KeyRoundIcon,
   Link2Icon,
@@ -77,6 +78,11 @@ const sidebarNavItems: NavItem[] = [
     title: "Password Reset Links",
     href: href("/admin/password-links"),
     icon: Link2Icon
+  },
+  {
+    title: "Workspaces",
+    href: href("/admin/workspaces"),
+    icon: Building2Icon
   },
   {
     title: "SSH Keys",

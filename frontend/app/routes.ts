@@ -76,6 +76,7 @@ export default [
           "password-links/:tokenId",
           "./routes/server-admin/password-link-details.tsx"
         ),
+        route("workspaces", "./routes/server-admin/workspace-list.tsx"),
 
         route("ssh-keys", "./routes/server-admin/ssh-keys-list.tsx"),
         route("ssh-keys/new", "./routes/server-admin/create-ssh-key.tsx"),
