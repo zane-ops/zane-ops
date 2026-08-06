@@ -104,6 +104,11 @@ export type HttpLog = ApiResponse<"get", "/api/http-logs/{request_uuid}/">;
 
 export type User = ApiResponse<"get", "/api/console/users/{id}/">;
 
+export type PasswordResetToken = ApiResponse<
+  "get",
+  "/api/console/password-tokens/{id}"
+>;
+
 export type HttpLogFilterField = RequestParams<
   "get",
   "/api/http-logs/fields/"

@@ -1,7 +1,7 @@
 import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { serverUserQueries } from "~/lib/queries";
+import { passwordTokenQueries, serverUserQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { type ErrorResponseFromAPI, getCsrfTokenHeader } from "~/lib/utils";
 import type { Route } from "./+types/server-user-details";
@@ -82,6 +82,8 @@ async function toggleUserActive(userId: string, formData: FormData) {
 }
 
 async function generatePasswordToken(userId: string) {
+  const queryClient = getQueryClient();
+
   const { data: token, error: errors } = await apiClient.POST(
     "/api/console/users/{id}/generate-password-token/",
     {
@@ -105,6 +107,10 @@ async function generatePasswordToken(userId: string) {
     });
     return { errors };
   }
+
+  await queryClient.invalidateQueries({
+    queryKey: passwordTokenQueries.list().queryKey.slice(0, 1)
+  });
 
   return { token };
 }
