@@ -206,3 +206,13 @@ export const adminWorkspaceQueries = {
       }
     })
 };
+
+export const licenseQueries = {
+  get: queryOptions({
+    queryKey: ["LICENSE"],
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.GET("/api/license/details/", { signal });
+      return data ?? null;
+    }
+  })
+};

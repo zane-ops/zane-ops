@@ -109,6 +109,11 @@ export type PasswordResetToken = ApiResponse<
   "/api/console/password-tokens/{id}"
 >;
 
+export type WorkspaceWithOwner = ApiResponse<
+  "get",
+  "/api/console/workspaces/"
+>["results"][number];
+
 export type HttpLogFilterField = RequestParams<
   "get",
   "/api/http-logs/fields/"

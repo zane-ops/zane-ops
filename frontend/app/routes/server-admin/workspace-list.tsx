@@ -1,7 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
+import type { WorkspaceWithOwner } from "~/api/types";
+import { Pagination } from "~/components/pagination";
 import { Separator } from "~/components/ui/separator";
-import { adminWorkspaceQueries, paginationListFilters } from "~/lib/queries";
+import { Table } from "~/components/ui/table";
+import {
+  adminWorkspaceQueries,
+  licenseQueries,
+  paginationListFilters
+} from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import type { Route } from "./+types/workspace-list";
 
@@ -15,10 +22,11 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     per_page: search.per_page ?? 10
   };
 
-  const workspaces = await queryClient.ensureQueryData(
-    adminWorkspaceQueries.list(filters)
-  );
-  return { workspaces };
+  const [workspaces, license] = await Promise.all([
+    queryClient.ensureQueryData(adminWorkspaceQueries.list(filters)),
+    queryClient.ensureQueryData(licenseQueries.get)
+  ]);
+  return { workspaces, license };
 }
 
 export default function WorkspaceListPage({
@@ -37,7 +45,7 @@ export default function WorkspaceListPage({
     initialData: loaderData.workspaces
   });
 
-  const tokens = data.results;
+  const workspaces = data.results;
   const totalPages = Math.ceil(data.count / filters.per_page);
 
   return (
@@ -47,6 +55,38 @@ export default function WorkspaceListPage({
       </div>
       <Separator />
       <h3 className="text-grey">Manage the workspaces in this instance</h3>
+      <WorkspaceListTable workspaces={workspaces} />
+
+      <div className="my-4 block">
+        {workspaces.length > 0 && data.count > 10 && (
+          <Pagination
+            totalPages={totalPages}
+            currentPage={filters.page}
+            perPage={filters.per_page}
+            onChangePage={(newPage) => {
+              searchParams.set("page", newPage.toString());
+              setSearchParams(searchParams, {
+                replace: true
+              });
+            }}
+            onChangePerPage={(newPerPage) => {
+              searchParams.set("page", "1");
+              searchParams.set("per_page", newPerPage.toString());
+              setSearchParams(searchParams, {
+                replace: true
+              });
+            }}
+          />
+        )}
+      </div>
     </section>
   );
+}
+
+type WorkspaceListTableProps = {
+  workspaces: WorkspaceWithOwner[];
+};
+
+function WorkspaceListTable({ workspaces }: WorkspaceListTableProps) {
+  return <Table></Table>;
 }
