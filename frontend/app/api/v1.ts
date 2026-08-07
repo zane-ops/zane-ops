@@ -7995,9 +7995,6 @@ export interface components {
     SimpleWorkspace: {
       name: string;
     };
-    SimpleWorkspaceMember: {
-      user: components["schemas"]["WorkspaceUser"];
-    };
     SimpleWorkspaceUser: {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
       username: string;
@@ -9224,16 +9221,16 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["WorkspaceUpdateError"][];
     };
-    WorkspaceUser: {
-      id: number;
-      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
-      username: string;
-      first_name: string;
-    };
     WorkspaceWithOwner: {
       id: string;
       name: string;
-      owner: components["schemas"]["SimpleWorkspaceMember"];
+      owner: {
+        readonly user: {
+          id: string;
+          username: string;
+          first_name: string;
+        };
+      };
     };
     WorkspacesListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WriteableContainerRegistryCredentials: {

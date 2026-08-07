@@ -32728,15 +32728,6 @@ components:
           maxLength: 255
       required:
       - name
-    SimpleWorkspaceMember:
-      type: object
-      properties:
-        user:
-          allOf:
-          - $ref: '#/components/schemas/WorkspaceUser'
-          readOnly: true
-      required:
-      - user
     SimpleWorkspaceUser:
       type: object
       properties:
@@ -35459,25 +35450,6 @@ components:
       required:
       - errors
       - type
-    WorkspaceUser:
-      type: object
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        username:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-          pattern: ^[\w.@+-]+$
-          maxLength: 150
-        first_name:
-          type: string
-          maxLength: 150
-      required:
-      - first_name
-      - id
-      - username
     WorkspaceWithOwner:
       type: object
       properties:
@@ -35488,8 +35460,23 @@ components:
           type: string
           readOnly: true
         owner:
-          allOf:
-          - $ref: '#/components/schemas/SimpleWorkspaceMember'
+          type: object
+          properties:
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                username:
+                  type: string
+                first_name:
+                  type: string
+              required:
+              - id
+              - username
+              - first_name
+          required:
+          - user
           readOnly: true
       required:
       - id
