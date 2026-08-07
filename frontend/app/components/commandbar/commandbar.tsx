@@ -130,6 +130,9 @@ export function CommandBar({
       <span>to exit workspace switch</span>
     </div>
   );
+  logger.info({
+    highlightedValue
+  });
 
   return (
     <CommandDialog
@@ -222,7 +225,7 @@ export function CommandBar({
 
       <CommandList
         className={cn(
-          "max-h-124 min-h-0 h-[calc(var(--cmdk-list-height)+var(--spacing)*3)] scroll-pb-16 scroll-pt-10",
+          "max-h-124 min-h-0 h-[calc(var(--cmdk-list-height)+var(--spacing)*3)] scroll-pb-10 scroll-pt-10",
           "transition-[height] duration-200 ease-in-out",
           "rounded-t-none border-x-0 border-b-0 px-0"
         )}
@@ -279,8 +282,8 @@ export function CommandBar({
               heading={group.heading}
               className={cn(
                 "[&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs",
-                groupIndex > 0 && "[&_[cmdk-group-heading]]:pt-3",
-                "pb-2 !px-2"
+                "pb-3 !px-2",
+                groupIndex > 0 && "[&_[cmdk-group-heading]]:pt-3"
               )}
             >
               {group.items.map((action) => (
