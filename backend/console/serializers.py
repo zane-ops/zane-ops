@@ -5,6 +5,8 @@ from zane_api.serializers import WorkspaceMemberSerializer
 from zane_api.validators import validate_cron_schedule
 from .models import PasswordResetToken, SystemSettings
 from django.contrib.auth import get_user_model
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 
 User = get_user_model()
 
@@ -96,26 +98,60 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
         ]
 
 
-class WorkspaceUserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = [
-            "id",
-            "username",
-            "first_name",
-        ]
+class WorkspaceUserSerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
+    username = serializers.CharField(read_only=True)
+    first_name = serializers.CharField(read_only=True)
+
+    # class Meta:
+    #     # model = User
+    #     fields = [
+    #         "id",
+    #         "username",
+    #         "first_name",
+    #     ]
 
 
-class SimpleWorkspaceMemberSerializer(serializers.ModelSerializer):
+class SimpleWorkspaceMemberSerializer(serializers.Serializer):
     user = WorkspaceUserSerializer(read_only=True)
 
-    class Meta:
-        model = WorkspaceMembership
-        fields = ["user"]
+    # class Meta:
+    #     # model = WorkspaceMembership
+    #     fields = ["user"]
 
 
 class WorkspaceWithOwnerSerializer(serializers.ModelSerializer):
-    owner = SimpleWorkspaceMemberSerializer(read_only=True)
+    owner = serializers.SerializerMethodField()
+
+    @extend_schema_field(
+        {
+            "type": "object",
+            "properties": {
+                "user": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "username": {"type": "string"},
+                        "first_name": {"type": "string"},
+                    },
+                    "required": ["id", "username", "first_name"],
+                },
+            },
+            "required": ["user"],
+        }
+    )
+    def get_owner(self, obj: dict | Workspace):
+        # Get the service that owns this volume (via FK)
+        if isinstance(obj, dict):
+            return obj["owner"]
+        else:
+            return {
+                "user": dict(
+                    id=obj.owner[0].user.id,
+                    username=obj.owner[0].user.username,
+                    first_name=obj.owner[0].user.first_name,
+                )
+            }
 
     class Meta:
         model = Workspace

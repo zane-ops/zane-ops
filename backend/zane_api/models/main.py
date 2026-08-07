@@ -65,6 +65,7 @@ class Workspace(TimestampedModel):
         projects: RelatedManager["Project"]
         invitations: RelatedManager["WorkspaceInvitation"]
         memberships: RelatedManager["WorkspaceMembership"]
+        owner: list["WorkspaceMembership"]
 
     id = ShortUUIDField(
         length=11,
@@ -74,6 +75,14 @@ class Workspace(TimestampedModel):
     )
 
     name = models.CharField(max_length=255)
+
+    # @property
+    # def owner(self):
+    #     return (
+    #         self.memberships.filter(role=WorkspaceRole.OWNER)
+    #         .select_related("user")
+    #         .first()
+    #     )
 
 
 class WorkspaceRole(models.IntegerChoices):

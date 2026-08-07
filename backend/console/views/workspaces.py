@@ -46,7 +46,7 @@ from zane_api.views.base import (
 )
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Q, QuerySet, OuterRef, Prefetch
+from django.db.models import Q, QuerySet, Prefetch, Value
 
 User = get_user_model()
 
@@ -60,13 +60,15 @@ class ListWorkspacesAPIView(ListAPIView):
     filterset_class = WorkspaceListFilterSet
 
     def get_queryset(self) -> QuerySet[Workspace]:  # type: ignore
-        owner_queryset = WorkspaceMembership.objects.filter(
-            workspace_id=OuterRef("pk")
-        ).filter(role=WorkspaceRole.OWNER)
+        owner_queryset = (
+            WorkspaceMembership.objects.filter()
+            .filter(role=WorkspaceRole.OWNER)
+            .select_related("user")
+        )
         return (
             Workspace.objects.all()
             .prefetch_related(
-                Prefetch("memberships", to_attr="owner", queryset=owner_queryset)
+                Prefetch("memberships", queryset=owner_queryset, to_attr="owner")
             )
             .order_by("id")
         )
