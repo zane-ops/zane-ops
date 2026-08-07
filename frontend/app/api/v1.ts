@@ -4483,21 +4483,6 @@ export interface components {
       previous: string | null;
       results: components["schemas"]["WorkspaceInvitation"][];
     };
-    PaginatedWorkspaceList: {
-      /** @example 123 */
-      count: number;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=4
-       */
-      next: string | null;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=2
-       */
-      previous: string | null;
-      results: components["schemas"]["Workspace"][];
-    };
     PaginatedWorkspaceMemberList: {
       /** @example 123 */
       count: number;
@@ -4512,6 +4497,21 @@ export interface components {
        */
       previous: string | null;
       results: components["schemas"]["WorkspaceMember"][];
+    };
+    PaginatedWorkspaceWithOwnerList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["WorkspaceWithOwner"][];
     };
     ParseError: {
       code: components["schemas"]["ParseErrorCodeEnum"];
@@ -7995,6 +7995,9 @@ export interface components {
     SimpleWorkspace: {
       name: string;
     };
+    SimpleWorkspaceMember: {
+      user: components["schemas"]["WorkspaceUser"];
+    };
     SimpleWorkspaceUser: {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
       username: string;
@@ -9220,6 +9223,17 @@ export interface components {
     WorkspaceUpdateValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["WorkspaceUpdateError"][];
+    };
+    WorkspaceUser: {
+      id: number;
+      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+      username: string;
+      first_name: string;
+    };
+    WorkspaceWithOwner: {
+      id: string;
+      name: string;
+      owner: components["schemas"]["SimpleWorkspaceMember"];
     };
     WorkspacesListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WriteableContainerRegistryCredentials: {
@@ -11903,7 +11917,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["PaginatedWorkspaceList"];
+          "application/json": components["schemas"]["PaginatedWorkspaceWithOwnerList"];
         };
       };
       400: {

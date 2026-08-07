@@ -32,12 +32,12 @@ from zane_api.models import (
 )
 from zane_api.constants import WORKSPACE_SESSION_KEY
 from zane_api.permissions import IsInstanceOwner
-from zane_api.serializers import WorkspaceSerializer
 
 from .serializers import WorkspaceListFilterSet
 from ..serializers import (
     WorkspaceDetailSerializer,
     WorkspaceTransferOwnershipSerializer,
+    WorkspaceWithOwnerSerializer,
 )
 from zane_api.views.base import (
     DefaultPageNumberPagination,
@@ -46,18 +46,30 @@ from zane_api.views.base import (
 )
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, QuerySet, OuterRef, Prefetch
 
 User = get_user_model()
 
 
 class ListWorkspacesAPIView(ListAPIView):
     permission_classes = [IsInstanceOwner]
-    serializer_class = WorkspaceSerializer
+    serializer_class = WorkspaceWithOwnerSerializer
     queryset = Workspace.objects.all()
     pagination_class = DefaultPageNumberPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = WorkspaceListFilterSet
+
+    def get_queryset(self) -> QuerySet[Workspace]:  # type: ignore
+        owner_queryset = WorkspaceMembership.objects.filter(
+            workspace_id=OuterRef("pk")
+        ).filter(role=WorkspaceRole.OWNER)
+        return (
+            Workspace.objects.all()
+            .prefetch_related(
+                Prefetch("memberships", to_attr="owner", queryset=owner_queryset)
+            )
+            .order_by("id")
+        )
 
     @extend_schema(
         summary="List all workspaces in ZaneOps installation",

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from zane_api.models import Workspace
+from zane_api.models import Workspace, WorkspaceMembership
 from zane_api.serializers import WorkspaceMemberSerializer
 from zane_api.validators import validate_cron_schedule
 from .models import PasswordResetToken, SystemSettings
@@ -94,3 +94,37 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
             "prune_volumes",
             "prune_networks",
         ]
+
+
+class WorkspaceUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "first_name",
+        ]
+
+
+class SimpleWorkspaceMemberSerializer(serializers.ModelSerializer):
+    user = WorkspaceUserSerializer(read_only=True)
+
+    class Meta:
+        model = WorkspaceMembership
+        fields = ["user"]
+
+
+class WorkspaceWithOwnerSerializer(serializers.ModelSerializer):
+    owner = SimpleWorkspaceMemberSerializer(read_only=True)
+
+    class Meta:
+        model = Workspace
+        fields = [
+            "id",
+            "name",
+            "owner",
+        ]
+        extra_kwargs = {
+            "id": {"read_only": True},
+            "name": {"read_only": True},
+        }
