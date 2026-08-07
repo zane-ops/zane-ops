@@ -3,19 +3,15 @@ import { z } from "zod";
 import { zfd } from "zod-form-data";
 import { apiClient } from "~/api/client";
 import { DEFAULT_QUERY_REFETCH_INTERVAL } from "~/lib/constants";
+import type { paginationListFilters } from "~/lib/queries/shared";
 import { notFound } from "~/lib/utils";
-
-export const buildRegistryListFilters = zfd.formData({
-  page: zfd.numeric().optional().catch(1).optional(),
-  per_page: zfd.numeric().optional().catch(10).optional()
-});
 
 export const buildRegistryImageListFilters = zfd.formData({
   cursor: z.string().optional().catch(undefined)
 });
 
 export const buildRegistryQueries = {
-  list: (filters: z.infer<typeof buildRegistryListFilters>) =>
+  list: (filters: z.infer<typeof paginationListFilters>) =>
     queryOptions({
       queryKey: ["BUILD_REGISTRY_CREDENTIALS", filters] as const,
       queryFn: async ({ signal }) => {
@@ -183,5 +179,30 @@ export const serverUserQueries = {
         return DEFAULT_QUERY_REFETCH_INTERVAL;
       },
       placeholderData: keepPreviousData
+    })
+};
+
+export const adminWorkspaceQueries = {
+  list: (filters: z.infer<typeof paginationListFilters>) =>
+    queryOptions({
+      queryKey: ["SERVER_WORKSPACES", filters] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/console/workspaces/", {
+          signal,
+          params: {
+            query: filters
+          }
+        });
+        if (!data) {
+          throw notFound("Oops !");
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
     })
 };

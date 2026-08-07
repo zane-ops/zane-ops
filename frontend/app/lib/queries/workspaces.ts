@@ -7,7 +7,7 @@ import {
   WORKSPACE_ROLE_MAPPING
 } from "~/lib/constants";
 import { durationToMs, notFound } from "~/lib/utils";
-import { workspaceKey } from "./shared";
+import { paginationListFilters, workspaceKey } from "./shared";
 
 /************************************
  *         Workspace Queries        *
@@ -21,11 +21,6 @@ export const workspaceMemberListFilters = zfd.formData({
     .enum(["Viewer", "Member", "Admin", "Owner"])
     .optional()
     .catch(undefined)
-});
-
-export const paginationListFilters = zfd.formData({
-  page: zfd.numeric().optional().catch(1).optional(),
-  per_page: zfd.numeric().optional().catch(10).optional()
 });
 
 export const workspaceQueries = {

@@ -115,3 +115,8 @@ export type HttpLogQueryData = Pick<
 > & {
   cursor?: string | null;
 };
+
+export const paginationListFilters = zfd.formData({
+  page: zfd.numeric().optional().catch(1).optional(),
+  per_page: zfd.numeric().optional().catch(10).optional()
+});
