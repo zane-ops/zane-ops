@@ -119,6 +119,8 @@ export type HttpLogFilterField = RequestParams<
   "/api/http-logs/fields/"
 >["field"];
 
+export type License = ApiResponse<"get", "/api/license/details/">;
+
 export type TemplateDocument = {
   id: string;
   name: string;

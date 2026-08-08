@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRightIcon } from "lucide-react";
-import { env } from "process";
+import { ChevronRightIcon, PlusIcon } from "lucide-react";
 import { Link, href, useMatches, useSearchParams } from "react-router";
 import type { WorkspaceWithOwner } from "~/api/types";
 import { Pagination } from "~/components/pagination";
+import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import {
   Table,
@@ -13,11 +13,8 @@ import {
   TableHeader,
   TableRow
 } from "~/components/ui/table";
-import {
-  adminWorkspaceQueries,
-  licenseQueries,
-  paginationListFilters
-} from "~/lib/queries";
+import { useFeatureGate } from "~/lib/feature-gate";
+import { adminWorkspaceQueries, paginationListFilters } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
@@ -42,11 +39,11 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     per_page: search.per_page ?? 10
   };
 
-  const [workspaces, license] = await Promise.all([
-    queryClient.ensureQueryData(adminWorkspaceQueries.list(filters)),
-    queryClient.ensureQueryData(licenseQueries.get)
-  ]);
-  return { workspaces, license };
+  const workspaces = await queryClient.ensureQueryData(
+    adminWorkspaceQueries.list(filters)
+  );
+
+  return { workspaces };
 }
 
 export default function WorkspaceListPage({
@@ -54,6 +51,7 @@ export default function WorkspaceListPage({
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = paginationListFilters.parse(searchParams);
+  const hasFeature = useFeatureGate();
 
   const filters = {
     page: search.page ?? 1,
@@ -72,6 +70,18 @@ export default function WorkspaceListPage({
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
         <h2 className="text-2xl">Workspaces</h2>
+        {hasFeature("CAN_CREATE_WORKSPACE") && (
+          <Button
+            variant="secondary"
+            className="inline-flex gap-1 items-center self-start"
+            asChild
+          >
+            <Link to="./create">
+              Create workspace
+              <PlusIcon className="size-4 flex-none" />
+            </Link>
+          </Button>
+        )}
       </div>
       <Separator />
       <h3 className="text-grey">Manage the workspaces in this instance</h3>

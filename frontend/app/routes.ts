@@ -79,7 +79,7 @@ export default [
         route("workspaces", "./routes/server-admin/workspace-list.tsx"),
         route(
           "workspaces/:workspaceId",
-          "./routes/server-admin/workpace-details.tsx"
+          "./routes/server-admin/workspace-details.tsx"
         ),
 
         route("ssh-keys", "./routes/server-admin/ssh-keys-list.tsx"),

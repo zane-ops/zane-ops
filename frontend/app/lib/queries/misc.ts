@@ -15,8 +15,7 @@ export const serverQueries = {
     queryKey: ["APP_SETTINGS"],
     queryFn: async () => {
       const { data } = await apiClient.GET("/api/settings/");
-      // we throw the error because we want ZaneOps to retry this for multiple times at least
-      return data;
+      return data ?? null;
     },
     staleTime: Number.MAX_SAFE_INTEGER
   }),

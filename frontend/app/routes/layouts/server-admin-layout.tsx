@@ -14,8 +14,14 @@ import { Header } from "~/components/header/header";
 import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
 import type { NavItem } from "~/components/horizontal-nav-link";
 import { Button } from "~/components/ui/button";
+import { syncLicenseStore } from "~/lib/license-store";
 import { createDevLogger } from "~/lib/logger";
-import { ensureMinRole, userQueries } from "~/lib/queries";
+import {
+  ensureMinRole,
+  licenseQueries,
+  serverQueries,
+  userQueries
+} from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/server-admin-layout";
@@ -29,6 +35,14 @@ const logger = createDevLogger(import.meta.url);
 export async function clientLoader({}: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
   await ensureMinRole(queryClient, "ServerAdmin");
+
+  const settings = await queryClient.ensureQueryData(serverQueries.settings);
+
+  if (settings?.build === "ee") {
+    const license = await queryClient.ensureQueryData(licenseQueries.get);
+    syncLicenseStore(license);
+  }
+
   return;
 }
 
