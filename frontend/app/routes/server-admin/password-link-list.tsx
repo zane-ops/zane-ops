@@ -346,7 +346,7 @@ function RegenerateLinkFormDialog({ token }: RegenerateLinkFormDialogProps) {
               Usable once, until{" "}
               <span className="text-card-foreground">
                 {formattedTime(newToken.expires_at)} (
-                {relativeTimeFormatter(newToken.expires_at, false, "future")})
+                {relativeTimeFormatter(newToken.expires_at)})
               </span>
               <br /> Generating another link invalidates this one.
             </p>

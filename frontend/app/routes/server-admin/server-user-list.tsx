@@ -473,7 +473,7 @@ export function PasswordTokenGenerateFormDialog({
               Usable once, until{" "}
               <span className="text-card-foreground">
                 {formattedTime(token.expires_at)} (
-                {relativeTimeFormatter(token.expires_at, false, "future")})
+                {relativeTimeFormatter(token.expires_at)})
               </span>
               <br /> Generating another link invalidates this one.
             </p>

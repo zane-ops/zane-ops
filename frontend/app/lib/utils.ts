@@ -252,14 +252,12 @@ export async function getCsrfTokenHeader() {
 
 export function relativeTimeFormatter(
   dateInput: string | Date,
-  short = false,
-  direction: "past" | "future" = "past"
+  short = false
 ): string {
   const date = new Date(dateInput);
   const now = new Date();
-  const diffInSeconds = Math.abs(
-    Math.floor((now.getTime() - date.getTime()) / 1000)
-  );
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const diffInSeconds = Math.abs(diff);
 
   const secondsInMinute = 60;
   const secondsInHour = 60 * secondsInMinute;
@@ -298,10 +296,7 @@ export function relativeTimeFormatter(
     numeric: "auto",
     style: short ? "narrow" : "long"
   });
-  const formatedValue = rtf.format(
-    direction === "past" ? -value : +value,
-    unit
-  );
+  const formatedValue = rtf.format(diff > 0 ? -value : +value, unit);
   return formatedValue === "now" ? "Just now" : formatedValue;
 }
 

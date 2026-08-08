@@ -164,7 +164,7 @@ function UserInvitationLinkCard({ data }: UserInvitationLinkCardProps) {
               <time dateTime={data.expires_at}>
                 {formattedTime(data.expires_at)}&nbsp;
                 <span className="text-grey">
-                  ({relativeTimeFormatter(data.expires_at, false, "future")})
+                  ({relativeTimeFormatter(data.expires_at)})
                 </span>
               </time>
             </dd>

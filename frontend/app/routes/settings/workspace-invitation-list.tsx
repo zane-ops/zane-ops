@@ -444,13 +444,7 @@ function RegenerateInvitationLinkFormDialog({
                   <time dateTime={data.data.expires_at}>
                     {formattedTime(data.data.expires_at)}&nbsp;
                     <span className="text-grey">
-                      (
-                      {relativeTimeFormatter(
-                        data.data.expires_at,
-                        false,
-                        "future"
-                      )}
-                      )
+                      ({relativeTimeFormatter(data.data.expires_at)})
                     </span>
                   </time>
                 </dd>
