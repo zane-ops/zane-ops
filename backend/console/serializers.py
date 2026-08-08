@@ -98,28 +98,6 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
         ]
 
 
-class WorkspaceUserSerializer(serializers.Serializer):
-    id = serializers.CharField(read_only=True)
-    username = serializers.CharField(read_only=True)
-    first_name = serializers.CharField(read_only=True)
-
-    # class Meta:
-    #     # model = User
-    #     fields = [
-    #         "id",
-    #         "username",
-    #         "first_name",
-    #     ]
-
-
-class SimpleWorkspaceMemberSerializer(serializers.Serializer):
-    user = WorkspaceUserSerializer(read_only=True)
-
-    # class Meta:
-    #     # model = WorkspaceMembership
-    #     fields = ["user"]
-
-
 class WorkspaceWithOwnerSerializer(serializers.ModelSerializer):
     owner = serializers.SerializerMethodField()
 
@@ -158,9 +136,11 @@ class WorkspaceWithOwnerSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "created_at",
             "owner",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
             "name": {"read_only": True},
+            "created_at": {"read_only": True},
         }

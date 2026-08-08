@@ -35459,6 +35459,10 @@ components:
         name:
           type: string
           readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
         owner:
           type: object
           properties:
@@ -35479,6 +35483,7 @@ components:
           - user
           readOnly: true
       required:
+      - created_at
       - id
       - name
       - owner

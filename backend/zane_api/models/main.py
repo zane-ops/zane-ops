@@ -76,14 +76,6 @@ class Workspace(TimestampedModel):
 
     name = models.CharField(max_length=255)
 
-    # @property
-    # def owner(self):
-    #     return (
-    #         self.memberships.filter(role=WorkspaceRole.OWNER)
-    #         .select_related("user")
-    #         .first()
-    #     )
-
 
 class WorkspaceRole(models.IntegerChoices):
     # Read-only user with no access to sensitive fields

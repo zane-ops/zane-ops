@@ -228,7 +228,7 @@ function InstanceUserTable({ users }: InstanceUserTableProps) {
           <TableHead className="sticky top-0 z-20 whitespace-nowrap">
             Display Name
           </TableHead>
-          <TableHead className="sticky top-0 z-20">Joined at</TableHead>
+          <TableHead className="sticky top-0 z-20">Joined At</TableHead>
           <TableHead className="sticky top-0 z-20 px-4">Actions</TableHead>
         </TableRow>
       </TableHeader>

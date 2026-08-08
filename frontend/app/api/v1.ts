@@ -9224,6 +9224,8 @@ export interface components {
     WorkspaceWithOwner: {
       id: string;
       name: string;
+      /** Format: date-time */
+      created_at: string;
       owner: {
         readonly user: {
           id: string;
