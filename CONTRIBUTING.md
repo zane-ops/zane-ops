@@ -137,8 +137,7 @@ another terminal while you run them.
 To run only a subset of the backend tests :
 
 ```shell
-cd backend && . .venv/bin/activate
-python manage.py test --settings=backend.settings_test --parallel -k <pattern>
+cd backend && pnpm test -- <app_name> -k <pattern>
 ```
 
 The Temporal UI is available at http://localhost:8082, it is the place to look at when a deployment is stuck.
@@ -245,7 +244,7 @@ To ensure consistency throughout the source code, please keep these rules in min
    spend time on it.
 2. **Fork the repo and branch off `main`**. We use prefixed branch names : `feat/…`, `fix/…`, `refactor/…`, `docs/…`
    (ex: `feat/server-admin-ui`).
-3. **Write your commits in the style of the repo** : an emoji followed by a short, imperative description, we follow
+3. **We suggest you write your commits in the style of the repo** : an emoji followed by a short, imperative description, we follow
    [gitmoji](https://gitmoji.dev/) :
 
    ```
@@ -268,12 +267,12 @@ To ensure consistency throughout the source code, please keep these rules in min
 5. **Open the PR against `main` and fill in the template**. It is pre-filled when you open a pull request, and it
    contains the sections we need :
 
-   - **Community Contribution License Agreement** — by opening the PR you grant the maintainers the right to
+   - **Community Contribution License Agreement**: by opening the PR you grant the maintainers the right to
      redistribute your contribution under **both** the MIT and the ZaneOps Commercial license terms. **Do not delete
      this section**, leaving it in the PR body is how you sign the CLA, PRs without it will not be merged.
-   - **Summary** — what the change does, and the issue it fixes (`fixes #123`), with screenshots or a screen recording
+   - **Summary**: what the change does, and the issue it fixes (`fixes #123`), with screenshots or a screen recording
      for UI changes.
-   - **Type of Change** — tick the relevant checkbox, and the reminders about the commands to run.
+   - **Type of Change**: tick the relevant checkbox, and the reminders about the commands to run.
 
 6. **Keep the PR focused**, one topic per pull request, it makes the review much faster. If you need to change something
    unrelated on the way, please do it in a separate PR.
@@ -288,7 +287,7 @@ for such cases.
 
 ## Ways to contribute
 
-- Try Zaneops on your local machine or VM and give feedback
+- Try ZaneOps on your local machine or VM and give feedback
 - Help with open [issues](https://github.com/zane-ops/zane-ops/issues)
   or [create your own](https://github.com/zane-ops/zane-ops/issues/new/choose)
 - Share your thoughts and suggestions with us
