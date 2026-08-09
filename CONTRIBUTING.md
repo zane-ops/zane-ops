@@ -150,7 +150,6 @@ this section.
 
 1. make sure you ran `make dev` and it didn't exit unexpectedly
 2. make sure that all the containers are up, you can check it in your docker tool of choice, [orbstack](https://orbstack.dev/) or [docker desktop](https://www.docker.com/products/docker-desktop/)
-   <img src="./images/illustration.webp" />
 3. make sure that the API is launched, and that no error is in thrown in the terminal where `make dev` is running
 4. make sure to setup the project and install the packages with `make setup`
 5. If the app is still unresponsive, run `make reset-db` However, it's crucial to note that this action will completely
