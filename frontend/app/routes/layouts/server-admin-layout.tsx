@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   Building2Icon,
+  CalendarSyncIcon,
   ContainerIcon,
+  GlobeIcon,
   KeyRoundIcon,
   Link2Icon,
   ScaleIcon,
@@ -119,6 +121,19 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
     });
   }
 
+  sidebarNavItems.push(
+    {
+      href: "/admin/automation",
+      title: "Jobs & Schedules",
+      icon: CalendarSyncIcon
+    },
+    {
+      href: "/admin/http-logs",
+      title: "Global HTTP Logs",
+      icon: GlobeIcon
+    }
+  );
+
   return (
     <div className="grid md:grid-cols-12 gap-6 md:gap-4 relative max-w-full">
       <div className="md:col-span-full">
@@ -145,7 +160,9 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
                     end={item.href === href("/admin")}
                   >
                     <item.icon size={15} className="text-grey flex-none" />
-                    {item.title}
+                    <span className="whitespace-break-spaces">
+                      {item.title}
+                    </span>
                   </NavLink>
                 </Button>
               </li>
