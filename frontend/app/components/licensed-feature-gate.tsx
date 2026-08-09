@@ -1,9 +1,4 @@
-import {
-  CircleFadingArrowUpIcon,
-  ClockFadingIcon,
-  LandmarkIcon,
-  ScaleIcon
-} from "lucide-react";
+import { ClockFadingIcon, LandmarkIcon, ScaleIcon } from "lucide-react";
 import type * as React from "react";
 import { Link, href } from "react-router";
 import {
