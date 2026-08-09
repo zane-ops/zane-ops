@@ -113,14 +113,6 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
     }
   ];
 
-  if (BUILD_EDITION === "ee") {
-    sidebarNavItems.push({
-      href: href("/admin/license"),
-      title: "License",
-      icon: ScaleIcon
-    });
-  }
-
   sidebarNavItems.push(
     {
       href: "/admin/automation",
@@ -133,6 +125,14 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
       icon: GlobeIcon
     }
   );
+
+  if (BUILD_EDITION === "ee") {
+    sidebarNavItems.push({
+      href: href("/admin/license"),
+      title: "License",
+      icon: ScaleIcon
+    });
+  }
 
   return (
     <div className="grid md:grid-cols-12 gap-6 md:gap-4 relative max-w-full">

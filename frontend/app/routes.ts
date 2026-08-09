@@ -79,6 +79,10 @@ export default [
         route("license", "./routes/server-admin/license-details.tsx"),
         route("workspaces", "./routes/server-admin/workspace-list.tsx"),
         route(
+          "workspaces/create",
+          "./routes/server-admin/create-workspace.tsx"
+        ),
+        route(
           "workspaces/:workspaceId",
           "./routes/server-admin/workspace-details.tsx"
         ),
