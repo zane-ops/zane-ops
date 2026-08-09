@@ -244,15 +244,28 @@ To ensure consistency throughout the source code, please keep these rules in min
    spend time on it.
 2. **Fork the repo and branch off `main`**. We use prefixed branch names : `feat/…`, `fix/…`, `refactor/…`, `docs/…`
    (ex: `feat/server-admin-ui`).
-3. **We suggest you write your commits in the style of the repo** : an emoji followed by a short, imperative description, we follow
-   [gitmoji](https://gitmoji.dev/) :
+3. **Title your pull request following [conventional commits](https://www.conventionalcommits.org/)** :
+   `<type>: <short description>`, in lowercase and in the imperative. Write your commits however you want, only the
+   title of the PR matters :
 
    ```
-   ✨ add support for compose stacks
-   🐛 fix wrong redirect after login
-   ♻️ extract the deployment status badge into its own component
-   📝 update the contributing guide
+   feat: add support for compose stacks
+   fix: wrong redirect after login
+   refactor: extract the deployment status badge into its own component
+   docs: update the contributing guide
    ```
+
+   The types we use :
+
+   | Type       | When to use it                                        |
+   | ---------- | ----------------------------------------------------- |
+   | `feat`     | A new feature.                                        |
+   | `fix`      | A bug fix.                                            |
+   | `refactor` | A change that neither fixes a bug nor adds a feature. |
+   | `perf`     | A change that improves performance.                   |
+   | `chore`    | Anything else (maintenance, cleanup…).                |
+
+   You can add a scope when it helps (ex: `fix(compose): …`), and a `!` for a breaking change (ex: `feat!: …`).
 
 4. **Before pushing, run the checks that CI runs**, so that your PR is green :
 
