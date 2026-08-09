@@ -447,9 +447,7 @@ function TransferOwnershipForm({
     })
   );
 
-  const userList = (usersResponse?.results ?? []).filter(
-    (user) => user.username !== currentOwnerUsername
-  );
+  const userList = usersResponse?.results ?? [];
 
   const [selectedOwner, setSelectedOwner] = React.useState<
     (typeof userList)[number] | null
@@ -525,10 +523,10 @@ function TransferOwnershipForm({
         >
           <fieldset className="flex flex-col gap-2 flex-1">
             <label htmlFor="owner_id">New owner</label>
-            <small className="text-grey">
+            <p className="text-grey text-sm">
               Any active user of this server can be selected, they will be added
               to the workspace if they are not already a member
-            </small>
+            </p>
 
             {selectedOwner && (
               <input type="hidden" name="owner_id" value={selectedOwner.id} />
@@ -584,6 +582,8 @@ function TransferOwnershipForm({
 
                     {userList.map((user) => {
                       const isSelected = user.id === selectedOwner?.id;
+                      const isCurrentOwner =
+                        user.username === currentOwnerUsername;
 
                       return (
                         <CommandItem
@@ -594,6 +594,7 @@ function TransferOwnershipForm({
                             setQuery("");
                             setPopoverOpen(false);
                           }}
+                          disabled={isCurrentOwner}
                           className="cursor-pointer flex gap-1.5"
                         >
                           <div className="flex items-center justify-between w-full gap-4">
@@ -605,6 +606,15 @@ function TransferOwnershipForm({
                               <span className="text-grey text-xs">
                                 {user.username}
                               </span>
+                              {isCurrentOwner && (
+                                <>
+                                  &nbsp;
+                                  <span>&middot;</span>&nbsp;
+                                  <span className="text-link text-sm">
+                                    current owner
+                                  </span>
+                                </>
+                              )}
                             </span>
 
                             <span className="flex size-4 items-center justify-center flex-none py-2.5">

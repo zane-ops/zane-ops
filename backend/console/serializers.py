@@ -31,8 +31,24 @@ class InstanceUserSerializer(serializers.ModelSerializer):
         }
 
 
+class ConsoleWorkspaceUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "is_active",
+        ]
+
+
+class ConsoleWorkspaceMemberSerializer(WorkspaceMemberSerializer):
+    user = ConsoleWorkspaceUserSerializer(read_only=True)
+
+
 class WorkspaceDetailSerializer(serializers.ModelSerializer):
-    members = WorkspaceMemberSerializer(
+    members = ConsoleWorkspaceMemberSerializer(
         source="memberships",
         many=True,
         read_only=True,

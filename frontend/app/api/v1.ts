@@ -2115,6 +2115,45 @@ export interface components {
       errors: components["schemas"]["ConsoleUsersPartialUpdateError"][];
     };
     ConsoleUsersRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsoleWorkspaceMember: {
+      id: number;
+      role_name: components["schemas"]["RoleNameEnum"];
+      role: components["schemas"]["RoleEnum"];
+      accessible_projects: readonly components["schemas"]["AccessibleWorkspaceProject"][];
+      user: components["schemas"]["ConsoleWorkspaceUser"];
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    ConsoleWorkspaceMemberRequest: {
+      role?: components["schemas"]["RoleEnum"];
+      /** Format: date-time */
+      created_at?: string;
+    };
+    ConsoleWorkspaceUser: {
+      id: number;
+      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+      username: string;
+      first_name: string;
+      last_name: string;
+      /**
+       * Active
+       * @description Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
+       */
+      is_active: boolean;
+    };
+    ConsoleWorkspaceUserRequest: {
+      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+      username: string;
+      first_name?: string;
+      last_name?: string;
+      /**
+       * Active
+       * @description Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
+       */
+      is_active?: boolean;
+    };
     ConsoleWorkspacesDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsoleWorkspacesListError: components["schemas"]["ConsoleWorkspacesListNameErrorComponent"];
     ConsoleWorkspacesListErrorResponse400: components["schemas"]["ConsoleWorkspacesListValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -8044,12 +8083,6 @@ export interface components {
       first_name: string;
       last_name: string;
     };
-    SimpleWorkspaceUserRequest: {
-      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
-      username: string;
-      first_name?: string;
-      last_name?: string;
-    };
     /**
      * @description * `BLUE` - Blue
      * * `GREEN` - Green
@@ -9118,7 +9151,7 @@ export interface components {
     WorkspaceDetail: {
       id: string;
       name: string;
-      members: readonly components["schemas"]["WorkspaceMember"][];
+      members: readonly components["schemas"]["ConsoleWorkspaceMember"][];
     };
     WorkspaceDetailRequest: {
       name: string;
@@ -9165,11 +9198,6 @@ export interface components {
       created_at: string;
       /** Format: date-time */
       updated_at: string;
-    };
-    WorkspaceMemberRequest: {
-      role?: components["schemas"]["RoleEnum"];
-      /** Format: date-time */
-      created_at?: string;
     };
     WorkspaceMembersDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceMembersListError: components["schemas"]["WorkspaceMembersListRoleErrorComponent"] | components["schemas"]["WorkspaceMembersListQueryErrorComponent"];

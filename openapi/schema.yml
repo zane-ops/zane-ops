@@ -20197,6 +20197,108 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleWorkspaceMember:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        role_name:
+          allOf:
+          - $ref: '#/components/schemas/RoleNameEnum'
+          readOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          minimum: 0
+          maximum: 32767
+        accessible_projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccessibleWorkspaceProject'
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/ConsoleWorkspaceUser'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - accessible_projects
+      - created_at
+      - id
+      - role
+      - role_name
+      - updated_at
+      - user
+    ConsoleWorkspaceMemberRequest:
+      type: object
+      properties:
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          minimum: 0
+          maximum: 32767
+        created_at:
+          type: string
+          format: date-time
+    ConsoleWorkspaceUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        is_active:
+          type: boolean
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+      required:
+      - first_name
+      - id
+      - is_active
+      - last_name
+      - username
+    ConsoleWorkspaceUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        is_active:
+          type: boolean
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+      required:
+      - username
     ConsoleWorkspacesDestroyErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -32947,24 +33049,6 @@ components:
       - first_name
       - last_name
       - username
-    SimpleWorkspaceUserRequest:
-      type: object
-      properties:
-        username:
-          type: string
-          minLength: 1
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-          pattern: ^[\w.@+-]+$
-          maxLength: 150
-        first_name:
-          type: string
-          maxLength: 150
-        last_name:
-          type: string
-          maxLength: 150
-      required:
-      - username
     SlotEnum:
       enum:
       - BLUE
@@ -35243,7 +35327,7 @@ components:
         members:
           type: array
           items:
-            $ref: '#/components/schemas/WorkspaceMember'
+            $ref: '#/components/schemas/ConsoleWorkspaceMember'
           readOnly: true
       required:
       - id
@@ -35418,17 +35502,6 @@ components:
       - role_name
       - updated_at
       - user
-    WorkspaceMemberRequest:
-      type: object
-      properties:
-        role:
-          allOf:
-          - $ref: '#/components/schemas/RoleEnum'
-          minimum: 0
-          maximum: 32767
-        created_at:
-          type: string
-          format: date-time
     WorkspaceMembersDestroyErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'

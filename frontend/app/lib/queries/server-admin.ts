@@ -156,10 +156,12 @@ export const serverUserListFilters = zfd.formData({
   page: zfd.numeric().optional().catch(1).optional(),
   per_page: zfd.numeric().optional().catch(10).optional(),
   query: z.string().optional(),
-  is_active: z.preprocess(
-    (arg) => arg === "true",
-    z.coerce.boolean().optional().catch(false)
-  )
+  is_active: z
+    .preprocess(
+      (arg) => arg === "true",
+      z.coerce.boolean().optional().catch(undefined)
+    )
+    .optional()
 });
 
 export const serverUserQueries = {
@@ -167,6 +169,7 @@ export const serverUserQueries = {
     queryOptions({
       queryKey: ["SERVER_USERS", "LIST", filters] as const,
       queryFn: async ({ signal }) => {
+        console.log({ filters });
         const { data } = await apiClient.GET("/api/console/users/", {
           signal,
           params: {

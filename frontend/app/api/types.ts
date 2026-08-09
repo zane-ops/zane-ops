@@ -114,6 +114,11 @@ export type WorkspaceWithOwner = ApiResponse<
   "/api/console/workspaces/"
 >["results"][number];
 
+export type AdminWorkspaceMember = ApiResponse<
+  "get",
+  "/api/console/workspaces/{id}/"
+>["members"][number];
+
 export type HttpLogFilterField = RequestParams<
   "get",
   "/api/http-logs/fields/"
