@@ -265,6 +265,7 @@ export interface paths {
   };
   "/api/console/workspaces/{id}/": {
     get: operations["console_workspaces_retrieve"];
+    put: operations["console_workspaces_update"];
     /** Delete a workspace (admin) */
     delete: operations["console_workspaces_destroy"];
   };
@@ -712,6 +713,10 @@ export interface components {
   schemas: {
     AccessibleWorkspaceProject: {
       id: string;
+      slug: string;
+    };
+    AccessibleWorkspaceProjectRequest: {
+      id?: string;
       slug: string;
     };
     ArchiveComposeStackErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -2131,6 +2136,44 @@ export interface components {
       errors: components["schemas"]["ConsoleWorkspacesListError"][];
     };
     ConsoleWorkspacesRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsoleWorkspacesUpdateError: components["schemas"]["ConsoleWorkspacesUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConsoleWorkspacesUpdateNameErrorComponent"];
+    ConsoleWorkspacesUpdateErrorResponse400: components["schemas"]["ConsoleWorkspacesUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ConsoleWorkspacesUpdateNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ConsoleWorkspacesUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ConsoleWorkspacesUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ConsoleWorkspacesUpdateError"][];
+    };
     CreateComposeStackFromDokployTemplateObjectRequestRequest: {
       compose: string;
       config: string;
@@ -8001,6 +8044,12 @@ export interface components {
       first_name: string;
       last_name: string;
     };
+    SimpleWorkspaceUserRequest: {
+      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+      username: string;
+      first_name?: string;
+      last_name?: string;
+    };
     /**
      * @description * `BLUE` - Blue
      * * `GREEN` - Green
@@ -9071,6 +9120,9 @@ export interface components {
       name: string;
       members: readonly components["schemas"]["WorkspaceMember"][];
     };
+    WorkspaceDetailRequest: {
+      name: string;
+    };
     WorkspaceEditPermissionsRequestRequest: {
       role: components["schemas"]["RoleEnum"];
       /** @default [] */
@@ -9113,6 +9165,11 @@ export interface components {
       created_at: string;
       /** Format: date-time */
       updated_at: string;
+    };
+    WorkspaceMemberRequest: {
+      role?: components["schemas"]["RoleEnum"];
+      /** Format: date-time */
+      created_at?: string;
     };
     WorkspaceMembersDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceMembersListError: components["schemas"]["WorkspaceMembersListRoleErrorComponent"] | components["schemas"]["WorkspaceMembersListQueryErrorComponent"];
@@ -11699,6 +11756,7 @@ export interface operations {
   console_users_list: {
     parameters: {
       query?: {
+        is_active?: boolean;
         /** @description A page number within the paginated result set. */
         page?: number;
         /** @description Number of results to return per page. */
@@ -11961,6 +12019,52 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ConsoleWorkspacesRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  console_workspaces_update: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WorkspaceDetailRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["WorkspaceDetailRequest"];
+        "multipart/form-data": components["schemas"]["WorkspaceDetailRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceDetail"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsoleWorkspacesUpdateErrorResponse400"];
         };
       };
       401: {

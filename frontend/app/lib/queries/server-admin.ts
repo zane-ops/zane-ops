@@ -155,13 +155,17 @@ export const passwordTokenQueries = {
 export const serverUserListFilters = zfd.formData({
   page: zfd.numeric().optional().catch(1).optional(),
   per_page: zfd.numeric().optional().catch(10).optional(),
-  query: z.string().optional()
+  query: z.string().optional(),
+  is_active: z.preprocess(
+    (arg) => arg === "true",
+    z.coerce.boolean().optional().catch(false)
+  )
 });
 
 export const serverUserQueries = {
   list: (filters: z.infer<typeof serverUserListFilters> = {}) =>
     queryOptions({
-      queryKey: ["SERVER_USERS", filters] as const,
+      queryKey: ["SERVER_USERS", "LIST", filters] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET("/api/console/users/", {
           signal,
@@ -185,7 +189,7 @@ export const serverUserQueries = {
 export const adminWorkspaceQueries = {
   list: (filters: z.infer<typeof paginationListFilters>) =>
     queryOptions({
-      queryKey: ["SERVER_WORKSPACES", filters] as const,
+      queryKey: ["SERVER_WORKSPACES", "LIST", filters] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET("/api/console/workspaces/", {
           signal,
@@ -195,6 +199,28 @@ export const adminWorkspaceQueries = {
         });
         if (!data) {
           throw notFound("Oops !");
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
+  single: (id: string) =>
+    queryOptions({
+      queryKey: ["SERVER_WORKSPACES", "SINGLE", id] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/console/workspaces/{id}/", {
+          signal,
+          params: {
+            path: { id }
+          }
+        });
+        if (!data) {
+          throw notFound(`Workspace with id \`${id}\` not found !`);
         }
         return data;
       },

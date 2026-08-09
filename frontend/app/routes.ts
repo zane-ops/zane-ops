@@ -82,10 +82,16 @@ export default [
           "workspaces/create",
           "./routes/server-admin/create-workspace.tsx"
         ),
-        route(
-          "workspaces/:workspaceId",
-          "./routes/server-admin/workspace-details.tsx"
-        ),
+        layout("./routes/layouts/workspace-details-layout.tsx", [
+          route(
+            "workspaces/:workspaceId",
+            "./routes/server-admin/workspace-details.tsx"
+          ),
+          route(
+            "workspaces/:workspaceId/members",
+            "./routes/server-admin/workspace-members.tsx"
+          )
+        ]),
 
         route("ssh-keys", "./routes/server-admin/ssh-keys-list.tsx"),
         route("ssh-keys/new", "./routes/server-admin/create-ssh-key.tsx"),

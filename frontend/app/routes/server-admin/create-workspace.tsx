@@ -104,12 +104,15 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     name: formData.get("name")?.toString() ?? ""
   } satisfies RequestInput<"post", "/api/workspaces/create/">;
 
-  const { error: errors } = await apiClient.POST("/api/workspaces/create/", {
-    headers: {
-      ...(await getCsrfTokenHeader())
-    },
-    body: userData
-  });
+  const { error: errors, data } = await apiClient.POST(
+    "/api/workspaces/create/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      body: userData
+    }
+  );
 
   if (errors) {
     return {
@@ -121,7 +124,12 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   toast.success("Success", {
     dismissible: true,
     closeButton: true,
-    description: "Workspace created succesfully"
+    description: (
+      <>
+        Workspace <strong className="font-medium">{data.name}</strong> created
+        succesfully
+      </>
+    )
   });
   await queryClient.invalidateQueries({
     queryKey: adminWorkspaceQueries.list({}).queryKey.slice(0, 1)
