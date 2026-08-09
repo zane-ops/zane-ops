@@ -9,20 +9,16 @@ import {
   TerminalIcon,
   UsersIcon
 } from "lucide-react";
-import { NavLink, Outlet, href, useLoaderData } from "react-router";
+import { NavLink, Outlet, href } from "react-router";
 import { CommandBarTrigger } from "~/components/commandbar/commandbar-trigger";
 import { Header } from "~/components/header/header";
 import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
 import type { NavItem } from "~/components/horizontal-nav-link";
 import { Button } from "~/components/ui/button";
+import { BUILD_EDITION } from "~/lib/constants";
 import { syncLicenseStore } from "~/lib/license-store";
 import { createDevLogger } from "~/lib/logger";
-import {
-  ensureMinRole,
-  licenseQueries,
-  serverQueries,
-  userQueries
-} from "~/lib/queries";
+import { ensureMinRole, licenseQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/server-admin-layout";
@@ -37,14 +33,10 @@ export async function clientLoader({}: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
   await ensureMinRole(queryClient, "ServerAdmin");
 
-  const settings = await queryClient.ensureQueryData(serverQueries.settings);
-
-  if (settings?.build === "ee") {
+  if (BUILD_EDITION === "ee") {
     const license = await queryClient.ensureQueryData(licenseQueries.get);
     syncLicenseStore(license);
   }
-
-  return { settings };
 }
 
 export default function ServerAdminLayout({
@@ -86,8 +78,6 @@ type SettingsLayoutProps = {
 };
 
 function SettingsLayout({ children }: SettingsLayoutProps) {
-  const { settings } = useLoaderData<Route.ComponentProps["loaderData"]>();
-
   const sidebarNavItems: NavItem[] = [
     {
       title: "Users",
@@ -121,7 +111,7 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
     }
   ];
 
-  if (settings?.build === "ee") {
+  if (BUILD_EDITION === "ee") {
     sidebarNavItems.push({
       href: href("/admin/license"),
       title: "License",

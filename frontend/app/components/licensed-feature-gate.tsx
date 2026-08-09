@@ -1,4 +1,9 @@
-import { CircleFadingArrowUpIcon, ClockFadingIcon } from "lucide-react";
+import {
+  CircleFadingArrowUpIcon,
+  ClockFadingIcon,
+  LandmarkIcon,
+  ScaleIcon
+} from "lucide-react";
 import type * as React from "react";
 import { Link, href } from "react-router";
 import {
@@ -49,14 +54,16 @@ export function LicensedFeatureGate({
           </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-64 flex items-start gap-2">
-          {access.reason === "expired" ? (
+          {access.reason === "expired" && (
             <>
               <ClockFadingIcon className="size-3.5 flex-none relative top-1 text-red-400" />
               <p className="text-red-400">Your license has expired</p>
             </>
-          ) : (
+          )}
+
+          {access.reason === "tier" && (
             <>
-              <CircleFadingArrowUpIcon className="size-3.5 flex-none relative top-1" />
+              <ScaleIcon className="size-3.5 flex-none relative top-1" />
               <p className="">
                 Purchase a License with the{" "}
                 <Link
@@ -66,6 +73,22 @@ export function LicensedFeatureGate({
                   {access.requiredTiersLabel}
                 </Link>{" "}
                 plan to use this feature.
+              </p>
+            </>
+          )}
+
+          {access.reason === "edition" && (
+            <>
+              <LandmarkIcon className="size-3.5 flex-none relative top-1" />
+              <p className="">
+                Upgrade your instance to{" "}
+                <Link
+                  to={href("/admin/license")}
+                  className="text-link underline"
+                >
+                  Enterprise
+                </Link>{" "}
+                edition to access this feature.
               </p>
             </>
           )}

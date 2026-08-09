@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import type { License } from "~/api/types";
+import { BUILD_EDITION } from "~/lib/constants";
 import { syncLicenseStore, useLicenseStore } from "~/lib/license-store";
 import { licenseQueries, serverQueries } from "~/lib/queries";
 import { notFound } from "~/lib/utils";
@@ -27,7 +28,7 @@ export type FeatureAccess = {
   requiredTiersLabel: string;
   currentTier: Tier;
   /** `null` when `allowed` is `true` */
-  reason: "tier" | "expired" | null;
+  reason: "edition" | "tier" | "expired" | null;
 };
 
 // conjunction: `"Starter and Free"`
@@ -56,10 +57,12 @@ function computeAccess(
     currentTier,
     reason: allowed
       ? null
-      : // the license *would* have covered this feature, it just isn't valid anymore
-        licensedTier && requiredTiers.includes(licensedTier)
-        ? "expired"
-        : "tier"
+      : BUILD_EDITION !== "ee"
+        ? "edition"
+        : // the license *would* have covered this feature, it just isn't valid anymore
+          licensedTier && requiredTiers.includes(licensedTier)
+          ? "expired"
+          : "tier"
   };
 }
 
@@ -107,10 +110,8 @@ export async function ensureLicensedFeatureAvailability(
   queryClient: QueryClient,
   feature: Feature
 ) {
-  const settings = await queryClient.ensureQueryData(serverQueries.settings);
-
   const license =
-    settings?.build === "ee"
+    BUILD_EDITION === "ee"
       ? await queryClient.ensureQueryData(licenseQueries.get)
       : null;
   syncLicenseStore(license);

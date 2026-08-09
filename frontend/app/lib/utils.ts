@@ -9,7 +9,7 @@ import type {
   WorkspaceMember,
   WorkspaceMembership
 } from "~/api/types";
-import { WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
+import { BUILD_EDITION, WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
 import { createDevLogger } from "~/lib/logger";
 import type {
   DotNotationToObject,
@@ -665,4 +665,8 @@ export function isEditableTarget(target: EventTarget | null) {
   if (target.isContentEditable) return true;
   const tagName = target.tagName;
   return ["input", "textarea", "select"].includes(tagName.toLowerCase());
+}
+
+export function getBuildName() {
+  return BUILD_EDITION === "ee" ? "Enterprise" : "Open Source";
 }
