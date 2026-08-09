@@ -22,7 +22,7 @@ class InstanceUserFilterSet(django_filters.FilterSet):
 
     class Meta:
         model = User
-        fields = ["query"]
+        fields = ["query", "is_active"]
 
 
 class ProxyHttpLogsFilterSet(DeploymentHttpLogsFilterSet):

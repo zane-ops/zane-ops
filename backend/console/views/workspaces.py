@@ -5,7 +5,7 @@ from drf_spectacular.utils import extend_schema
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.generics import ListAPIView, RetrieveDestroyAPIView
+from rest_framework.generics import ListAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.views import APIView
 
 from rest_framework import exceptions
@@ -85,11 +85,12 @@ class ListWorkspacesAPIView(ListAPIView):
             raise e
 
 
-class WorkspaceDetailAPIView(RetrieveDestroyAPIView):
+class WorkspaceDetailAPIView(RetrieveUpdateDestroyAPIView):
     permission_classes = [IsInstanceOwner]
     serializer_class = WorkspaceDetailSerializer
     lookup_field = "pk"
     lookup_url_kwarg = "id"
+    http_method_names = ["get", "put", "delete"]
 
     def get_queryset(self):  # type: ignore
         return Workspace.objects.prefetch_related(
