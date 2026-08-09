@@ -1,4 +1,4 @@
-# Contributing to Zane
+# Contributing to ZaneOps
 
 Thank you for showing an interest in contributing to ZaneOps! All kinds of contributions are valuable to us. In this guide,
 we will cover how you can quickly onboard and make your first contribution.
@@ -91,10 +91,10 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
    | `VITE_BUILD`              | no       | `oss`   | Edition of the frontend : `oss` or `ee`. It is **inlined at build time**, so the value must be set when building. |
    | `VITE_WEBHOOK_SITE_TOKEN` | no       | —       | Same webhook.site token as `WH_TOKEN`, used by the frontend for webhook examples.                                 |
 
-   > [!IMPORTANT]
-   > `BUILD` (backend) and `VITE_BUILD` (frontend) must **always match**, otherwise the UI will show/hide features
-   > that the API does not agree with. In CI, both are driven by the same `oss`/`ee` matrix.
- 
+> [!IMPORTANT]
+> `BUILD` (backend) and `VITE_BUILD` (frontend) must **always match**, otherwise the UI will show/hide features
+> that the API does not agree with. In CI, both are driven by the same `oss`/`ee` matrix.
+
 4. Start the project :
 
    Start the DEV server :
