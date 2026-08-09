@@ -4,7 +4,7 @@ import { zfd } from "zod-form-data";
 import { apiClient } from "~/api/client";
 import { DEFAULT_QUERY_REFETCH_INTERVAL } from "~/lib/constants";
 import type { paginationListFilters } from "~/lib/queries/shared";
-import { notFound } from "~/lib/utils";
+import { durationToMs, notFound } from "~/lib/utils";
 
 export const buildRegistryImageListFilters = zfd.formData({
   cursor: z.string().optional().catch(undefined)
@@ -213,6 +213,12 @@ export const licenseQueries = {
     queryFn: async ({ signal }) => {
       const { data } = await apiClient.GET("/api/license/details/", { signal });
       return data ?? null;
+    },
+    refetchInterval: (query) => {
+      if (query.state.data) {
+        return durationToMs(30, "minutes");
+      }
+      return false;
     }
   })
 };

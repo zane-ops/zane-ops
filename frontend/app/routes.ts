@@ -76,6 +76,7 @@ export default [
           "password-links/:tokenId",
           "./routes/server-admin/password-link-details.tsx"
         ),
+        route("license", "./routes/server-admin/license-details.tsx"),
         route("workspaces", "./routes/server-admin/workspace-list.tsx"),
         route(
           "workspaces/:workspaceId",

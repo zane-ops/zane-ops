@@ -4,11 +4,12 @@ import {
   ContainerIcon,
   KeyRoundIcon,
   Link2Icon,
+  ScaleIcon,
   ServerIcon,
   TerminalIcon,
   UsersIcon
 } from "lucide-react";
-import { NavLink, Outlet, href } from "react-router";
+import { NavLink, Outlet, href, useLoaderData } from "react-router";
 import { CommandBarTrigger } from "~/components/commandbar/commandbar-trigger";
 import { Header } from "~/components/header/header";
 import { UserHeaderDropdown } from "~/components/header/user-header-dropdown";
@@ -43,17 +44,19 @@ export async function clientLoader({}: Route.ClientLoaderArgs) {
     syncLicenseStore(license);
   }
 
-  return;
+  return { settings };
 }
 
 export default function ServerAdminLayout({
   matches: {
-    "1": { loaderData }
+    "1": {
+      loaderData: { user: authedUser }
+    }
   }
 }: Route.ComponentProps) {
   const { data: user } = useQuery({
     ...userQueries.authedUser,
-    initialData: loaderData.user
+    initialData: authedUser
   });
 
   if (!user) return null;
@@ -82,40 +85,50 @@ type SettingsLayoutProps = {
   children: React.ReactNode;
 };
 
-const sidebarNavItems: NavItem[] = [
-  {
-    title: "Users",
-    href: href("/admin/users"),
-    icon: UsersIcon
-  },
-  {
-    title: "Password Reset Links",
-    href: href("/admin/password-links"),
-    icon: Link2Icon
-  },
-  {
-    title: "Workspaces",
-    href: href("/admin/workspaces"),
-    icon: Building2Icon
-  },
-  {
-    title: "SSH Keys",
-    href: href("/admin/ssh-keys"),
-    icon: KeyRoundIcon
-  },
-  {
-    title: "Console",
-    href: href("/admin/server-console"),
-    icon: TerminalIcon
-  },
-  {
-    title: "Build Registries",
-    href: href("/admin/build-registries"),
-    icon: ContainerIcon
-  }
-];
-
 function SettingsLayout({ children }: SettingsLayoutProps) {
+  const { settings } = useLoaderData<Route.ComponentProps["loaderData"]>();
+
+  const sidebarNavItems: NavItem[] = [
+    {
+      title: "Users",
+      href: href("/admin/users"),
+      icon: UsersIcon
+    },
+    {
+      title: "Password Reset Links",
+      href: href("/admin/password-links"),
+      icon: Link2Icon
+    },
+    {
+      title: "Workspaces",
+      href: href("/admin/workspaces"),
+      icon: Building2Icon
+    },
+    {
+      title: "SSH Keys",
+      href: href("/admin/ssh-keys"),
+      icon: KeyRoundIcon
+    },
+    {
+      title: "Console",
+      href: href("/admin/server-console"),
+      icon: TerminalIcon
+    },
+    {
+      title: "Build Registries",
+      href: href("/admin/build-registries"),
+      icon: ContainerIcon
+    }
+  ];
+
+  if (settings?.build === "ee") {
+    sidebarNavItems.push({
+      href: href("/admin/license"),
+      title: "License",
+      icon: ScaleIcon
+    });
+  }
+
   return (
     <div className="grid md:grid-cols-12 gap-6 md:gap-4 relative max-w-full">
       <div className="md:col-span-full">

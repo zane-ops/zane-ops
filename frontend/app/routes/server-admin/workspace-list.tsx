@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronRightIcon, PlusIcon } from "lucide-react";
 import { Link, href, useMatches, useSearchParams } from "react-router";
 import type { WorkspaceWithOwner } from "~/api/types";
+import { LicensedFeatureGate } from "~/components/licensed-feature-gate";
 import { Pagination } from "~/components/pagination";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
@@ -13,7 +14,6 @@ import {
   TableHeader,
   TableRow
 } from "~/components/ui/table";
-import { useFeatureGate } from "~/lib/feature-gate";
 import { adminWorkspaceQueries, paginationListFilters } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
@@ -51,7 +51,6 @@ export default function WorkspaceListPage({
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = paginationListFilters.parse(searchParams);
-  const hasFeature = useFeatureGate();
 
   const filters = {
     page: search.page ?? 1,
@@ -70,7 +69,7 @@ export default function WorkspaceListPage({
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
         <h2 className="text-2xl">Workspaces</h2>
-        {hasFeature("CAN_CREATE_WORKSPACE") && (
+        <LicensedFeatureGate feature="workspace:create">
           <Button
             variant="secondary"
             className="inline-flex gap-1 items-center self-start"
@@ -81,7 +80,7 @@ export default function WorkspaceListPage({
               <PlusIcon className="size-4 flex-none" />
             </Link>
           </Button>
-        )}
+        </LicensedFeatureGate>
       </div>
       <Separator />
       <h3 className="text-grey">Manage the workspaces in this instance</h3>
