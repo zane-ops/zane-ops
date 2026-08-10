@@ -89,6 +89,11 @@ export const SERVER_ADMIN_NAV_GROUP: CommandBarNavGroup = {
       icon: UsersIcon
     },
     {
+      title: "Workspaces",
+      href: href("/admin/workspaces"),
+      icon: Building2Icon
+    },
+    {
       title: "Password Reset Links",
       href: href("/admin/password-links"),
       icon: Link2Icon
