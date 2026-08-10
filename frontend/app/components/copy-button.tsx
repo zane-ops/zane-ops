@@ -40,7 +40,7 @@ export function CopyButton({
         });
       }}
     >
-      <span className={cn(!showLabel && "sr-only")}>
+      <span className={cn(!showLabel && "sr-only")} data-slot="label">
         {typeof label === "string" ? label : label(hasCopied)}
       </span>
 
