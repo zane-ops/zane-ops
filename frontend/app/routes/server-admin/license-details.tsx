@@ -70,11 +70,10 @@ export default function LicenseDetailsPage({
         )}
       </div>
       <Separator />
-      {/* <h3 className="text-grey">Manage your ZaneOps License</h3> */}
       {license ? (
         <LicenseCard license={license} />
       ) : (
-        <div className="border border-dashed border-border h-64 flex flex-col gap-2 items-center justify-center rounded-lg">
+        <div className="border border-dashed border-border h-80 flex flex-col gap-2 items-center justify-center rounded-lg">
           <h3 className="text-grey text-lg">
             No license installed on this instance
           </h3>
@@ -107,7 +106,7 @@ export function LicenseCard({ license }: LicenseCardProps) {
           <ScaleIcon className="size-7 flex-none" />
           <div className="flex flex-col gap-0">
             <span className="text-xs text-grey">
-              Your host is licensed under the
+              Your instance is licensed under the
             </span>
             <div className="flex items-center gap-2">
               <h3 className="font-medium text-xl">
