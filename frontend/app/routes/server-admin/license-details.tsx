@@ -24,7 +24,13 @@ import { BUILD_EDITION } from "~/lib/constants";
 import { syncLicenseStore } from "~/lib/license-store";
 import { licenseQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, formattedTime, metaTitle, notFound } from "~/lib/utils";
+import {
+  cn,
+  formattedTime,
+  metaTitle,
+  notFound,
+  relativeTimeFormatter
+} from "~/lib/utils";
 import type { Route } from "./+types/license-details";
 
 export function meta() {
@@ -104,12 +110,12 @@ export function LicenseCard({ license }: LicenseCardProps) {
               Your host is licensed under the
             </span>
             <div className="flex items-center gap-2">
-              <h3 className="capitalize font-medium text-xl">
+              <h3 className="font-medium text-xl">
                 ZaneOps{" "}
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>
                     <TooltipTrigger asChild>
-                      <span className="cursor-help inline-flex items-center gap-1 underline decoration-wavy decoration-1">
+                      <span className="capitalize cursor-help inline-flex items-center gap-1 underline decoration-wavy decoration-1">
                         {license.tier}
                       </span>
                     </TooltipTrigger>
@@ -140,6 +146,28 @@ export function LicenseCard({ license }: LicenseCardProps) {
         <CardContent className="px-0 pb-4 text-sm">
           <dl className="flex flex-col gap-2">
             <div>
+              <dt>License Key:</dt>
+              <dd className="text-grey flex items-center gap-2">
+                <p className="truncate uppercase">{license.uuid}</p>
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <CopyButton
+                        value={license.uuid}
+                        label="Copy license key"
+                        size="icon"
+                        className="hover:bg-transparent !opacity-100 size-4"
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent className="capitalize">
+                      Copy license key
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </dd>
+            </div>
+
+            <div>
               <dt>Instance Fingerprint:</dt>
               <dd className="text-grey w-full flex items-center gap-2">
                 <p className="truncate">{license.instance_fingerprint}</p>
@@ -160,33 +188,23 @@ export function LicenseCard({ license }: LicenseCardProps) {
                 </TooltipProvider>
               </dd>
             </div>
+
+            <div>
+              <dt>Installed At:</dt>
+              <dd className="text-grey">
+                <time dateTime={new Date(license.expires_at).toISOString()}>
+                  {formattedTime(license.installed_at)}
+                </time>
+              </dd>
+            </div>
+
             <div>
               <dt>Expires At:</dt>
               <dd className="text-grey">
                 <time dateTime={new Date(license.expires_at).toISOString()}>
-                  {formattedTime(license.expires_at)}
+                  {formattedTime(license.expires_at)} (
+                  {relativeTimeFormatter(license.expires_at)})
                 </time>
-              </dd>
-            </div>
-            <div>
-              <dt>License Key:</dt>
-              <dd className="text-grey flex items-center gap-2">
-                <p className="truncate uppercase">{license.uuid}</p>
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <CopyButton
-                        value={license.uuid}
-                        label="Copy license key"
-                        size="icon"
-                        className="hover:bg-transparent !opacity-100 size-4"
-                      />
-                    </TooltipTrigger>
-                    <TooltipContent className="capitalize">
-                      Copy license key
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
               </dd>
             </div>
           </dl>
