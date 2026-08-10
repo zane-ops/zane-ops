@@ -172,6 +172,7 @@ function PasswordLinkTable({ tokens }: PasswordLinkTableProps) {
           tokens.map((token) => {
             const expiresAt = formatLogTime(token.expires_at);
             const isExpired = new Date(token.expires_at) <= new Date();
+            const link = getLocalAbsoluteURL(`/reset-password/${token.value}`);
 
             return (
               <TableRow className="px-2" key={token.id}>
@@ -206,6 +207,21 @@ function PasswordLinkTable({ tokens }: PasswordLinkTableProps) {
 
                 <TableCell className="p-2 h-14">
                   <div className="flex items-center gap-1 justify-end">
+                    <TooltipProvider>
+                      <Tooltip delayDuration={0}>
+                        <TooltipTrigger asChild>
+                          <CopyButton
+                            variant="ghost"
+                            size="sm"
+                            className="!opacity-100"
+                            value={link}
+                            label="Copy password reset link"
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent>Copy link</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
                     <RegenerateLinkFormDialog token={token} />
                     <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
                     <DeleteConfirmationFormDialog token={token} />
