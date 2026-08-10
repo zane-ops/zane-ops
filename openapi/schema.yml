@@ -24867,10 +24867,14 @@ components:
         uuid:
           type: string
           readOnly: true
+        instance_fingerprint:
+          type: string
+          readOnly: true
       required:
       - expires_at
       - installed_at
       - installed_by
+      - instance_fingerprint
       - is_valid
       - tier
       - uuid

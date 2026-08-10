@@ -4221,6 +4221,7 @@ export interface components {
       expires_at: string;
       tier: components["schemas"]["TierEnum"];
       uuid: string;
+      instance_fingerprint: string;
     };
     LicenseDetailsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     LicenseInstallError: components["schemas"]["LicenseInstallNonFieldErrorsErrorComponent"] | components["schemas"]["LicenseInstallUuidErrorComponent"];
