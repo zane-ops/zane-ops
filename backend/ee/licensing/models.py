@@ -173,7 +173,9 @@ class License(models.Model):
             return None
 
     def __str__(self):
-        return f"License(installed_at={self.installed_at}, expires_at=installed_at={self.expires_at})"
+        return (
+            f"License(installed_at={self.installed_at}, expires_at={self.expires_at})"
+        )
 
     @classmethod
     def get(cls):
