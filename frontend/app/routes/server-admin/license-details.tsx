@@ -3,6 +3,8 @@ import {
   CheckIcon,
   InfoIcon,
   KeyRoundIcon,
+  PencilIcon,
+  PencilLineIcon,
   RefreshCwIcon,
   ScaleIcon,
   XIcon
@@ -64,7 +66,7 @@ export default function LicenseDetailsPage({
           <ActivateLicenseDialog type="reinstall">
             <Button className="gap-2" variant="secondary">
               <span>Install new license</span>
-              <RefreshCwIcon className="size-4" />
+              <PencilLineIcon className="size-4" />
             </Button>
           </ActivateLicenseDialog>
         )}
