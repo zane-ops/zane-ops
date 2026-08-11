@@ -19,7 +19,8 @@ export function HttpLogsLayout({ children }: HttpLogsLayoutProps) {
     <div
       className={cn(
         search.isMaximized &&
-          "fixed inset-0 top-28 bg-background z-50 p-5 w-full"
+          "fixed inset-0 top-28 bg-background z-50 p-5 w-full",
+        search.isMaximized && !import.meta.env.DEV && "top-20"
       )}
     >
       <div
