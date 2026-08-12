@@ -120,7 +120,7 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
       icon: CalendarSyncIcon
     },
     {
-      href: "/admin/http-logs",
+      href: href("/admin/http-logs"),
       title: "Global HTTP Logs",
       icon: GlobeIcon
     }

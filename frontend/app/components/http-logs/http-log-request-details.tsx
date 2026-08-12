@@ -78,9 +78,9 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
   );
 
   const routeParams = useParams() as {
-    projectSlug: string;
-    envSlug: string;
-    serviceSlug: string;
+    projectSlug?: string;
+    envSlug?: string;
+    serviceSlug?: string;
   };
 
   const country = log.request_country_code
@@ -113,18 +113,26 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
           <div className="grid grid-cols-2 items-center gap-x-4 w-full">
             <dt className="text-grey  inline-flex items-center">Deployment</dt>
             <dd className="text-sm">
-              <Link
-                className="text-link underline"
-                to={href(
-                  "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
-                  {
-                    ...routeParams,
-                    deploymentHash: deploymentHashHeader[1][0]
-                  }
-                )}
-              >
-                #{deploymentHashHeader[1][0]}
-              </Link>
+              {routeParams.projectSlug &&
+              routeParams.envSlug &&
+              routeParams.serviceSlug ? (
+                <Link
+                  className="text-link underline"
+                  to={href(
+                    "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
+                    {
+                      projectSlug: routeParams.projectSlug,
+                      envSlug: routeParams.envSlug,
+                      serviceSlug: routeParams.serviceSlug,
+                      deploymentHash: deploymentHashHeader[1][0]
+                    }
+                  )}
+                >
+                  #{deploymentHashHeader[1][0]}
+                </Link>
+              ) : (
+                <span>#{deploymentHashHeader[1][0]}</span>
+              )}
             </dd>
           </div>
         )}

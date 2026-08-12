@@ -14,6 +14,28 @@ export const workspaceKey = (workspaceId: string) =>
 
 export const LOG_LEVELS = ["INFO", "ERROR"] as const;
 export const LOG_SOURCES = ["SYSTEM", "SERVICE"] as const;
+
+export const HTTP_LOG_SOURCES = [
+  "SERVICE",
+  "COMPOSE_STACK",
+  "BUILD_REGISTRY",
+  "ZANE_OPS_API",
+  "ZANE_OPS_FRONTEND",
+  "UNKNOWN"
+] as const;
+
+export const HTTP_LOG_SOURCE_LABELS: Record<
+  (typeof HTTP_LOG_SOURCES)[number],
+  string
+> = {
+  SERVICE: "Service",
+  COMPOSE_STACK: "Compose stack",
+  BUILD_REGISTRY: "Build registry",
+  ZANE_OPS_API: "ZaneOps API",
+  ZANE_OPS_FRONTEND: "ZaneOps Frontend",
+  UNKNOWN: "Unknown"
+};
+
 export const REQUEST_METHODS = [
   "DELETE",
   "GET",
