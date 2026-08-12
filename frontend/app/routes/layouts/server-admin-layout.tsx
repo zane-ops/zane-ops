@@ -141,7 +141,7 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
           <ServerIcon className="size-8 flex-none text-grey" />
           <span>Server Admin</span>
         </h1>
-        <h4 className="text-sm mt-2 opacity-60">Manage your server settings</h4>
+        <h4 className="text-sm mt-2 text-grey">Manage your server settings</h4>
       </div>
       <aside className="md:col-span-3">
         <nav className="w-full sticky top-24">

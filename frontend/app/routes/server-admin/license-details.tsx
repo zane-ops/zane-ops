@@ -3,18 +3,38 @@ import {
   CheckIcon,
   InfoIcon,
   KeyRoundIcon,
+  LoaderIcon,
   PencilIcon,
   PencilLineIcon,
   RefreshCwIcon,
   ScaleIcon,
+  TriangleAlertIcon,
   XIcon
 } from "lucide-react";
-import type * as React from "react";
+import * as React from "react";
+import { useFetcher } from "react-router";
+import { toast } from "sonner";
+import { apiClient } from "~/api/client";
 import type { License } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
+import { SimpleConfirmationDialog } from "~/components/delete-confirmation-dialog";
 import { StatusBadge } from "~/components/status-badge";
-import { Button } from "~/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Button, SubmitButton } from "~/components/ui/button";
 import { Card, CardContent, CardFooter, CardTitle } from "~/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "~/components/ui/dialog";
+import {
+  FieldSet,
+  FieldSetInput,
+  FieldSetLabel
+} from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
 import {
   Tooltip,
@@ -29,6 +49,8 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
   formattedTime,
+  getCsrfTokenHeader,
+  getFormErrorsFromResponseData,
   metaTitle,
   notFound,
   relativeTimeFormatter
@@ -211,8 +233,8 @@ export function LicenseCard({ license }: LicenseCardProps) {
           </dl>
         </CardContent>
       </div>
-      <CardFooter className="py-2 px-3 bg-gray-600/10 flex rounded-b-md">
-        <Button variant="outline">Recheck license</Button>
+      <CardFooter className="py-3 px-3 bg-gray-600/10 flex rounded-b-md">
+        <UninstallLicenseConfirmDialog />
       </CardFooter>
     </Card>
   );
@@ -227,5 +249,195 @@ export function ActivateLicenseDialog({
   children,
   type = "install"
 }: ActivateLicenseDialogProps) {
-  return <>{children}</>;
+  const fetcher = useFetcher<typeof clientAction>();
+  const [isOpen, setOpen] = React.useState(false);
+  const isPending = fetcher.state !== "idle";
+  const [data, setData] = React.useState(fetcher.data);
+
+  const errors = getFormErrorsFromResponseData(data?.errors);
+
+  const close = React.useCallback(() => {
+    setOpen(false);
+    setData(undefined);
+  }, []);
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (fetcher.data?.data) {
+      close();
+    }
+  }, [fetcher.state, fetcher.data, close]);
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (isPending) return;
+        setOpen(open);
+        if (!open) close();
+      }}
+    >
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent>
+        <DialogHeader className="pb-4">
+          <DialogTitle>
+            {type === "install" ? (
+              <>Activate a new license</>
+            ) : (
+              <>Install new license</>
+            )}
+          </DialogTitle>
+
+          {type === "install" ? (
+            <Alert variant="info" className="mt-5">
+              <InfoIcon className="size-4" />
+              <AlertTitle>License key required</AlertTitle>
+              <AlertDescription>
+                Enter your license key below to activate it on this instance and
+                unlock the features included in your plan.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert variant="warning" className="mt-5">
+              <TriangleAlertIcon className="size-4" />
+              <AlertTitle>This will replace your current license</AlertTitle>
+              <AlertDescription>
+                Installing a new license key will immediately deactivate your
+                current license and switch this instance to the new license's
+                plan and features.
+              </AlertDescription>
+            </Alert>
+          )}
+        </DialogHeader>
+
+        <fetcher.Form method="post" id="install-form">
+          <input type="hidden" name="intent" value="install" />
+          <FieldSet name="uuid" errors={errors.uuid} required>
+            <FieldSetLabel>License Key</FieldSetLabel>
+            <FieldSetInput placeholder="format: 00000000-0000-0000-0000-000000000000" />
+          </FieldSet>
+        </fetcher.Form>
+
+        <DialogFooter className="-mx-6 px-6">
+          <SubmitButton
+            isPending={isPending}
+            form="install-form"
+            className={cn("inline-flex gap-1 items-center")}
+          >
+            {isPending ? (
+              <>
+                <LoaderIcon className="animate-spin flex-none" size={15} />
+                <span>Installing...</span>
+              </>
+            ) : (
+              <span>Install license</span>
+            )}
+          </SubmitButton>
+
+          <Button
+            variant="outline"
+            type="button"
+            disabled={isPending}
+            onClick={() => setOpen(false)}
+          >
+            Cancel
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export type UninstallLicenseConfirmDialogProps = {};
+
+export function UninstallLicenseConfirmDialog({}: UninstallLicenseConfirmDialogProps) {
+  const fetcher = useFetcher<typeof clientAction>();
+
+  return (
+    <SimpleConfirmationDialog
+      fetcher={fetcher}
+      title="Uninstall this license?"
+      message={
+        <>
+          This action <strong>CANNOT</strong> be undone. This will immediately
+          deactivate your license and disable all the features included in your
+          plan.
+        </>
+      }
+      form={
+        <fetcher.Form method="post">
+          <input type="hidden" name="intent" value="uninstall" />
+        </fetcher.Form>
+      }
+      trigger={
+        <DialogTrigger asChild>
+          <Button variant="destructive">Uninstall license</Button>
+        </DialogTrigger>
+      }
+      confirmText="Uninstall license"
+      pendingText="Uninstalling..."
+    />
+  );
+}
+
+export async function clientAction({ request }: Route.ClientActionArgs) {
+  const formData = await request.formData();
+  const intent = formData.get("intent")?.toString();
+
+  switch (intent) {
+    case "install":
+      return installLicense(formData);
+    case "uninstall":
+      return uninstallLicense();
+    default:
+      throw new Error(`Invalid intent '${intent}'`);
+  }
+}
+
+async function installLicense(formData: FormData) {
+  const queryClient = getQueryClient();
+  const { error: errors, data: license } = await apiClient.POST(
+    "/api/license/install/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      body: {
+        uuid: formData.get("uuid")?.toString() ?? ""
+      }
+    }
+  );
+
+  if (errors) {
+    return { errors };
+  }
+
+  await queryClient.invalidateQueries(licenseQueries.get);
+  toast.success("Success", {
+    description:
+      "License installed successfully, you can now benefit from all the features included in your plan.",
+    closeButton: true
+  });
+  return { data: license, errors: undefined };
+}
+
+async function uninstallLicense() {
+  const queryClient = getQueryClient();
+  const { error: errors } = await apiClient.DELETE("/api/license/uninstall/", {
+    headers: {
+      ...(await getCsrfTokenHeader())
+    }
+  });
+
+  if (errors) {
+    return { errors };
+  }
+
+  await queryClient.invalidateQueries(licenseQueries.get);
+  toast.success("Success", {
+    description: "License uninstalled successfully",
+    closeButton: true
+  });
+  return { data: { success: true }, errors: undefined };
 }

@@ -26,7 +26,7 @@ ZaneOps is a self-hosted, open-source PaaS (Platform as a Service) for deploying
 
 ## Tech Stack
 
-- **Backend**: Django 5.2, Django REST Framework, Python 3.12+
+- **Backend**: Django 5.2, Django REST Framework, Python 3.13+
 - **Frontend**: React 19, React Router 7, Vite, TypeScript, TailwindCSS 4
 - **Infrastructure**: Docker Swarm, Caddy (reverse proxy)
 - **Async Processing**: Temporal.io for workflows and long-running tasks
