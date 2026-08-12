@@ -77,6 +77,7 @@ export default [
           "./routes/server-admin/password-link-details.tsx"
         ),
         route("license", "./routes/server-admin/license-details.tsx"),
+        route("automation", "./routes/server-admin/jobs-and-schedules.tsx"),
         route("workspaces", "./routes/server-admin/workspace-list.tsx"),
         route(
           "workspaces/create",

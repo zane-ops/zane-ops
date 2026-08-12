@@ -431,3 +431,24 @@ export const licenseQueries = {
     }
   })
 };
+
+export const systemQueries = {
+  settings: queryOptions({
+    queryKey: ["SYSTEM_SETTINGS"],
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.GET("/api/console/system-settings/", {
+        signal
+      });
+      if (!data) {
+        throw notFound(`Oops`);
+      }
+      return data;
+    },
+    refetchInterval: (query) => {
+      if (query.state.data) {
+        return durationToMs(30, "minutes");
+      }
+      return false;
+    }
+  })
+};

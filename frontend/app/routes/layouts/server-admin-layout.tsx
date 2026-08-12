@@ -115,7 +115,7 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
 
   sidebarNavItems.push(
     {
-      href: "/admin/automation",
+      href: href("/admin/automation"),
       title: "Jobs & Schedules",
       icon: CalendarSyncIcon
     },
