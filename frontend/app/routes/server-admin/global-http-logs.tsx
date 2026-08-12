@@ -96,6 +96,7 @@ export default function GlobalHttpLogsPage({
             label="source"
             options={SOURCE_OPTIONS}
             align="start"
+            keepValuesCase
             value={selectedSources}
             onValueChange={(newSources) => {
               searchParams.delete("source");
