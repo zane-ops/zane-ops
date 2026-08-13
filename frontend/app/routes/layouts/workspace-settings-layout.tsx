@@ -63,7 +63,10 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
     <>
       <div className="my-6 grid md:grid-cols-12 gap-6 md:gap-4 relative max-w-full">
         <div className="md:col-span-full">
-          <h1 className="text-3xl font-medium">Settings</h1>
+          <h1 className="text-3xl font-medium flex items-center gap-2">
+            <Building2Icon className="size-8 flex-none text-grey" />
+            Workspace Settings
+          </h1>
           <h4 className="text-sm mt-2 opacity-60">
             Manage your workspace settings
           </h4>
