@@ -6,6 +6,7 @@ import { HttpLogRequestDetails } from "~/components/http-logs/http-log-request-d
 import { HttpLogTable } from "~/components/http-logs/http-log-table";
 import { HttpLogsLayout } from "~/components/http-logs/http-logs-layout";
 import { MultiSelect, type MultiSelectOption } from "~/components/multi-select";
+import { Separator } from "~/components/ui/separator";
 import {
   type HTTPLogFilters,
   HTTP_LOG_SOURCES,
@@ -86,39 +87,45 @@ export default function GlobalHttpLogsPage({
   });
 
   return (
-    <HttpLogsLayout>
-      <HttpLogRequestDetails log={loaderData.httpLog} />
+    <section className="flex flex-col gap-4">
+      <h2 className="text-2xl">Global HTTP logs</h2>
+      <Separator />
+      <h3 className="text-grey">See all http requests made to this server</h3>
 
-      <HttpLogFilterBar
-        extraFilterParamKeys={["source"]}
-        extraFilters={
-          <MultiSelect
-            label="source"
-            options={SOURCE_OPTIONS}
-            align="start"
-            keepValuesCase
-            value={selectedSources}
-            onValueChange={(newSources) => {
-              searchParams.delete("source");
-              for (const source of newSources) {
-                searchParams.append("source", source);
-              }
-              setSearchParams(searchParams, { replace: true });
-            }}
-            className="w-auto"
-          />
-        }
-        fieldValuesQuery={({ field, value }) =>
-          proxyHttpLogQueries.filterHttpLogFields({ field, value })
-        }
-      />
+      <HttpLogsLayout className="[&>#log-content]:mt-0">
+        <HttpLogRequestDetails log={loaderData.httpLog} />
 
-      <HttpLogTable
-        logsQuery={logsQuery}
-        isAutoRefetchEnabled={isAutoRefetchEnabled}
-        onAutoRefetchEnabledChange={setIsAutoRefetchEnabled}
-        showSourceColumn
-      />
-    </HttpLogsLayout>
+        <HttpLogFilterBar
+          extraFilterParamKeys={["source"]}
+          extraFilters={
+            <MultiSelect
+              label="source"
+              options={SOURCE_OPTIONS}
+              align="start"
+              keepValuesCase
+              value={selectedSources}
+              onValueChange={(newSources) => {
+                searchParams.delete("source");
+                for (const source of newSources) {
+                  searchParams.append("source", source);
+                }
+                setSearchParams(searchParams, { replace: true });
+              }}
+              className="w-auto"
+            />
+          }
+          fieldValuesQuery={({ field, value }) =>
+            proxyHttpLogQueries.filterHttpLogFields({ field, value })
+          }
+        />
+
+        <HttpLogTable
+          logsQuery={logsQuery}
+          isAutoRefetchEnabled={isAutoRefetchEnabled}
+          onAutoRefetchEnabledChange={setIsAutoRefetchEnabled}
+          showSourceColumn
+        />
+      </HttpLogsLayout>
+    </section>
   );
 }
