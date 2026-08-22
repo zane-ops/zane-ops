@@ -16,6 +16,7 @@ from ..permissions import (
     IsWorkspaceMember,
     get_accessible_projects,
 )
+import uuid
 from ..utils import Colors, escape_ansi
 from datetime import datetime
 
@@ -123,7 +124,7 @@ def _build_http_log(
         response_headers=log_content["resp_headers"],
         request_user_agent=user_agent[0] if isinstance(user_agent, list) else None,
         request_ip=request_ip,
-        request_uuid=log_content.get("uuid"),
+        request_uuid=log_content.get("uuid", str(uuid.uuid4())),
         request_method=req["method"],
         source=log_source,
         request_country_code=lookup_country_code(request_ip),

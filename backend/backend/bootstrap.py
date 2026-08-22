@@ -311,6 +311,26 @@ def register_zaneops_app_on_proxy(
                                     "value": app_name,
                                 },
                                 {
+                                    "handler": "log_append",
+                                    "key": "zane_request_id",
+                                    "value": "{http.request.uuid}",
+                                },
+                                {
+                                    "handler": "headers",
+                                    "response": {
+                                        "add": {
+                                            "x-zane-request-id": [
+                                                "{http.request.uuid}"
+                                            ],
+                                        },
+                                    },
+                                    "request": {
+                                        "add": {
+                                            "x-request-id": ["{http.request.uuid}"],
+                                        },
+                                    },
+                                },
+                                {
                                     "handler": "encode",
                                     "encodings": {"gzip": {}},
                                     "prefer": ["gzip"],
@@ -339,6 +359,26 @@ def register_zaneops_app_on_proxy(
                                     "handler": "log_append",
                                     "key": "zane_service_type",
                                     "value": app_name,
+                                },
+                                {
+                                    "handler": "log_append",
+                                    "key": "zane_request_id",
+                                    "value": "{http.request.uuid}",
+                                },
+                                {
+                                    "handler": "headers",
+                                    "response": {
+                                        "add": {
+                                            "x-zane-request-id": [
+                                                "{http.request.uuid}"
+                                            ],
+                                        },
+                                    },
+                                    "request": {
+                                        "add": {
+                                            "x-request-id": ["{http.request.uuid}"],
+                                        },
+                                    },
                                 },
                                 {
                                     "handler": "encode",
