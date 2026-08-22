@@ -1,19 +1,23 @@
 import {
   Building2Icon,
+  CalendarSyncIcon,
   ContainerIcon,
   CreditCardIcon,
   FolderIcon,
   GitBranchIcon,
+  GlobeIcon,
   KeyRoundIcon,
   Link2Icon,
   LockIcon,
   MailIcon,
+  ScaleIcon,
   TerminalIcon,
   UserIcon,
   UsersIcon
 } from "lucide-react";
 import { href } from "react-router";
 import type { CommandBarNavGroup } from "~/components/commandbar/commandbar-types";
+import { BUILD_EDITION } from "~/lib/constants";
 
 export const WORKSPACE_NAV_GROUP: CommandBarNavGroup = {
   heading: "Workspace",
@@ -79,7 +83,7 @@ export const ACCOUNT_NAV_GROUP: CommandBarNavGroup = {
  * Only shown within the server admin layout (`/admin/*`), these routes live
  * outside of the workspace layout entirely.
  */
-export const SERVER_ADMIN_NAV_GROUP: CommandBarNavGroup = {
+const SERVER_ADMIN_NAV_GROUP: CommandBarNavGroup = {
   heading: "Server Admin",
   minRole: "ServerAdmin",
   items: [
@@ -112,12 +116,32 @@ export const SERVER_ADMIN_NAV_GROUP: CommandBarNavGroup = {
       title: "Server Console",
       href: href("/admin/server-console"),
       icon: TerminalIcon
+    },
+    {
+      href: href("/admin/automation"),
+      title: "Jobs & Schedules",
+      icon: CalendarSyncIcon
+    },
+    {
+      href: href("/admin/http-logs"),
+      title: "Global HTTP Logs",
+      icon: GlobeIcon
     }
   ]
 };
 
-export const MAIN_NAV_GROUPS: CommandBarNavGroup[] = [
+if (BUILD_EDITION === "ee") {
+  SERVER_ADMIN_NAV_GROUP.items.push({
+    href: href("/admin/license"),
+    title: "License",
+    icon: ScaleIcon
+  });
+}
+
+const MAIN_NAV_GROUPS: CommandBarNavGroup[] = [
   WORKSPACE_NAV_GROUP,
   ACCOUNT_NAV_GROUP,
   SERVER_ADMIN_NAV_GROUP
 ];
+
+export { MAIN_NAV_GROUPS, SERVER_ADMIN_NAV_GROUP };
