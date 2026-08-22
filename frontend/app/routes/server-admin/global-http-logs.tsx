@@ -15,7 +15,14 @@ import {
   proxyHttpLogQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
+import { metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/global-http-logs";
+
+export function meta() {
+  return [
+    metaTitle("Global HTTP Logs")
+  ] satisfies ReturnType<Route.MetaFunction>;
+}
 
 const SOURCE_OPTIONS: MultiSelectOption[] = HTTP_LOG_SOURCES.map((source) => ({
   value: source,

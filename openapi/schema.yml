@@ -5662,6 +5662,99 @@ paths:
               schema:
                 $ref: '#/components/schemas/SystemSettings'
           description: ''
+    patch:
+      operationId: console_system_settings_partial_update
+      tags:
+      - console
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSystemSettingsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSystemSettingsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSystemSettingsRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettings'
+          description: ''
   /api/console/users/:
     get:
       operationId: console_users_list
@@ -19692,6 +19785,297 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleSystemSettingsPartialUpdateAppDataCleanupCronScheduleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - app_data_cleanup_cron_schedule
+          type: string
+          description: '* `app_data_cleanup_cron_schedule` - app_data_cleanup_cron_schedule'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdateBuildCacheMaxAgeDaysErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - build_cache_max_age_days
+          type: string
+          description: '* `build_cache_max_age_days` - build_cache_max_age_days'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdateBuildCacheMaxUseSpaceBytesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - build_cache_max_use_space_bytes
+          type: string
+          description: '* `build_cache_max_use_space_bytes` - build_cache_max_use_space_bytes'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdateDockerSystemPruneCronScheduleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - docker_system_prune_cron_schedule
+          type: string
+          description: '* `docker_system_prune_cron_schedule` - docker_system_prune_cron_schedule'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateDockerSystemPruneCronScheduleErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateAppDataCleanupCronScheduleErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateHttpLogRetentionDaysErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateBuildCacheMaxAgeDaysErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateBuildCacheMaxUseSpaceBytesErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneImagesErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneContainersErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneVolumesErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneNetworksErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ConsoleSystemSettingsPartialUpdateNonFieldErrorsErrorComponent'
+          docker_system_prune_cron_schedule: '#/components/schemas/ConsoleSystemSettingsPartialUpdateDockerSystemPruneCronScheduleErrorComponent'
+          app_data_cleanup_cron_schedule: '#/components/schemas/ConsoleSystemSettingsPartialUpdateAppDataCleanupCronScheduleErrorComponent'
+          http_log_retention_days: '#/components/schemas/ConsoleSystemSettingsPartialUpdateHttpLogRetentionDaysErrorComponent'
+          build_cache_max_age_days: '#/components/schemas/ConsoleSystemSettingsPartialUpdateBuildCacheMaxAgeDaysErrorComponent'
+          build_cache_max_use_space_bytes: '#/components/schemas/ConsoleSystemSettingsPartialUpdateBuildCacheMaxUseSpaceBytesErrorComponent'
+          prune_images: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneImagesErrorComponent'
+          prune_containers: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneContainersErrorComponent'
+          prune_volumes: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneVolumesErrorComponent'
+          prune_networks: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneNetworksErrorComponent'
+    ConsoleSystemSettingsPartialUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ConsoleSystemSettingsPartialUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleSystemSettingsPartialUpdateHttpLogRetentionDaysErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - http_log_retention_days
+          type: string
+          description: '* `http_log_retention_days` - http_log_retention_days'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdatePruneContainersErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - prune_containers
+          type: string
+          description: '* `prune_containers` - prune_containers'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdatePruneImagesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - prune_images
+          type: string
+          description: '* `prune_images` - prune_images'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdatePruneNetworksErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - prune_networks
+          type: string
+          description: '* `prune_networks` - prune_networks'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdatePruneVolumesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - prune_volumes
+          type: string
+          description: '* `prune_volumes` - prune_volumes'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateError'
+      required:
+      - errors
+      - type
     ConsoleSystemSettingsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -24320,8 +24704,7 @@ components:
           nullable: true
         request_uuid:
           type: string
-          nullable: true
-          maxLength: 255
+          format: uuid
         request_ip:
           type: string
         request_path:
@@ -25906,6 +26289,39 @@ components:
           minLength: 1
           maxLength: 50
           pattern: ^[-a-zA-Z0-9_]+$
+    PatchedSystemSettingsRequest:
+      type: object
+      properties:
+        docker_system_prune_cron_schedule:
+          type: string
+          minLength: 1
+        app_data_cleanup_cron_schedule:
+          type: string
+          minLength: 1
+        http_log_retention_days:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
+        build_cache_max_age_days:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
+        build_cache_max_use_space_bytes:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 1
+          format: int64
+          nullable: true
+        prune_images:
+          type: boolean
+        prune_containers:
+          type: boolean
+        prune_volumes:
+          type: boolean
+        prune_networks:
+          type: boolean
     PatchedUpdateEnvironmentRequestRequest:
       type: object
       properties:

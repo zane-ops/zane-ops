@@ -245,6 +245,7 @@ export interface paths {
   "/api/console/system-settings/": {
     get: operations["console_system_settings_retrieve"];
     put: operations["console_system_settings_update"];
+    patch: operations["console_system_settings_partial_update"];
   };
   "/api/console/users/": {
     /** List all users in ZaneOps installation */
@@ -1866,6 +1867,165 @@ export interface components {
     ConsolePasswordTokensListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsolePasswordTokensRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsoleProxyHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsoleSystemSettingsPartialUpdateAppDataCleanupCronScheduleErrorComponent: {
+      /**
+       * @description * `app_data_cleanup_cron_schedule` - app_data_cleanup_cron_schedule
+       * @enum {string}
+       */
+      attr: "app_data_cleanup_cron_schedule";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdateBuildCacheMaxAgeDaysErrorComponent: {
+      /**
+       * @description * `build_cache_max_age_days` - build_cache_max_age_days
+       * @enum {string}
+       */
+      attr: "build_cache_max_age_days";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdateBuildCacheMaxUseSpaceBytesErrorComponent: {
+      /**
+       * @description * `build_cache_max_use_space_bytes` - build_cache_max_use_space_bytes
+       * @enum {string}
+       */
+      attr: "build_cache_max_use_space_bytes";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdateDockerSystemPruneCronScheduleErrorComponent: {
+      /**
+       * @description * `docker_system_prune_cron_schedule` - docker_system_prune_cron_schedule
+       * @enum {string}
+       */
+      attr: "docker_system_prune_cron_schedule";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdateError: components["schemas"]["ConsoleSystemSettingsPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdateDockerSystemPruneCronScheduleErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdateAppDataCleanupCronScheduleErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdateHttpLogRetentionDaysErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdateBuildCacheMaxAgeDaysErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdateBuildCacheMaxUseSpaceBytesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdatePruneImagesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdatePruneContainersErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdatePruneVolumesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdatePruneNetworksErrorComponent"];
+    ConsoleSystemSettingsPartialUpdateErrorResponse400: components["schemas"]["ConsoleSystemSettingsPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ConsoleSystemSettingsPartialUpdateHttpLogRetentionDaysErrorComponent: {
+      /**
+       * @description * `http_log_retention_days` - http_log_retention_days
+       * @enum {string}
+       */
+      attr: "http_log_retention_days";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdatePruneContainersErrorComponent: {
+      /**
+       * @description * `prune_containers` - prune_containers
+       * @enum {string}
+       */
+      attr: "prune_containers";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdatePruneImagesErrorComponent: {
+      /**
+       * @description * `prune_images` - prune_images
+       * @enum {string}
+       */
+      attr: "prune_images";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdatePruneNetworksErrorComponent: {
+      /**
+       * @description * `prune_networks` - prune_networks
+       * @enum {string}
+       */
+      attr: "prune_networks";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdatePruneVolumesErrorComponent: {
+      /**
+       * @description * `prune_volumes` - prune_volumes
+       * @enum {string}
+       */
+      attr: "prune_volumes";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ConsoleSystemSettingsPartialUpdateError"][];
+    };
     ConsoleSystemSettingsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsoleSystemSettingsUpdateAppDataCleanupCronScheduleErrorComponent: {
       /**
@@ -3957,7 +4117,8 @@ export interface components {
       time: string;
       deployment_id: string | null;
       service_id: string | null;
-      request_uuid: string | null;
+      /** Format: uuid */
+      request_uuid: string;
       request_ip: string;
       request_path: string;
       request_query: string | null;
@@ -4676,6 +4837,18 @@ export interface components {
       url?: string;
       password?: string;
       slug?: string;
+    };
+    PatchedSystemSettingsRequest: {
+      docker_system_prune_cron_schedule?: string;
+      app_data_cleanup_cron_schedule?: string;
+      http_log_retention_days?: number | null;
+      build_cache_max_age_days?: number | null;
+      /** Format: int64 */
+      build_cache_max_use_space_bytes?: number | null;
+      prune_images?: boolean;
+      prune_containers?: boolean;
+      prune_volumes?: boolean;
+      prune_networks?: boolean;
     };
     PatchedUpdateEnvironmentRequestRequest: {
       name?: string;
@@ -11757,6 +11930,47 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ConsoleSystemSettingsUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  console_system_settings_partial_update: {
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedSystemSettingsRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedSystemSettingsRequest"];
+        "multipart/form-data": components["schemas"]["PatchedSystemSettingsRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SystemSettings"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsoleSystemSettingsPartialUpdateErrorResponse400"];
         };
       };
       401: {
