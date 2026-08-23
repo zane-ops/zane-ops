@@ -277,7 +277,9 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
               <>
                 <span className="text-base">{country.flag}</span>
                 &nbsp;
-                <span>{country.name}</span>
+                <span>
+                  {country.name} ({country.alpha2})
+                </span>
               </>
             ) : (
               <span className="font-mono">N/A</span>
