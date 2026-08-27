@@ -62,7 +62,7 @@ export default function JobsAndSchedulesPage({
               <div className="h-full border border-grey/50"></div>
             </div>
 
-            <div className="w-full flex flex-col gap-5 pt-1 pb-8">
+            <div className="w-full flex flex-col gap-5 pt-1 pb-16">
               <h2 className="text-lg text-grey">Http logs</h2>
 
               <HttplogSectionForm
@@ -84,7 +84,7 @@ export default function JobsAndSchedulesPage({
               <div className="h-full border border-grey/50"></div>
             </div>
 
-            <div className="w-full flex flex-col gap-5 pt-1 pb-8">
+            <div className="w-full flex flex-col gap-5 pt-1 pb-16">
               <h2 className="text-lg text-grey">Build Cache</h2>
 
               <BuildCacheSectionForm
@@ -144,7 +144,9 @@ function HttplogSectionForm({
         name="http_log_retention_days"
         className="flex flex-col gap-1.5 flex-1"
       >
-        <FieldSetLabel>Http Log Retention Days</FieldSetLabel>
+        <FieldSetLabel className="!text-card-foreground">
+          Http Log Retention Days
+        </FieldSetLabel>
         <p className="text-grey text-sm">
           An empty value means store http logs indefinitely
         </p>
@@ -161,7 +163,9 @@ function HttplogSectionForm({
         className="flex flex-col gap-1.5 flex-1"
         required
       >
-        <FieldSetLabel>Cleanup CRON schedule</FieldSetLabel>
+        <FieldSetLabel className="!text-card-foreground">
+          Cleanup CRON schedule
+        </FieldSetLabel>
         <p className="text-grey text-sm">
           This schedule is also used to cleanup service metrics. <br /> Default
           value is <Code className="text-xs">0 0 * * *</Code> which is every day
@@ -222,7 +226,7 @@ function BuildCacheSectionForm({
         name="build_cache_max_age_days"
         className="flex flex-col gap-1.5 flex-1"
       >
-        <FieldSetLabel>Max Age</FieldSetLabel>
+        <FieldSetLabel className="!text-card-foreground">Max Age</FieldSetLabel>
         <p className="text-grey text-sm">
           An empty value means store the build cache indefinitely
         </p>
@@ -238,7 +242,9 @@ function BuildCacheSectionForm({
         name="build_cache_max_use_space_bytes"
         className="flex flex-col gap-1.5 flex-1"
       >
-        <FieldSetLabel>Max Used Space (In Bytes)</FieldSetLabel>
+        <FieldSetLabel className="!text-card-foreground">
+          Max Used Space (In Bytes)
+        </FieldSetLabel>
         <p className="text-grey text-sm">
           Max space used by the build before cleaning up old caches.
         </p>
@@ -299,18 +305,18 @@ function DockerSystemPruneSection(props: DockerSystemPruneSectionProps) {
         className="flex flex-col gap-1.5 flex-1"
         required
       >
-        <FieldSetLabel>Docker System Prune CRON schedule</FieldSetLabel>
+        <FieldSetLabel className="!text-card-foreground">
+          Docker System Prune CRON schedule
+        </FieldSetLabel>
         <p className="text-grey text-sm">
-          The schedule used to cleanup images. <br /> Default
-          value is <Code className="text-xs">0 4 * * *</Code> which is every 4h.
+          The schedule used to cleanup images. <br /> Default value is{" "}
+          <Code className="text-xs">0 4 * * *</Code> which is every 4h.
         </p>
         <FieldSetInput
           placeholder="ex: 0 0 * * *"
           defaultValue={props.docker_system_prune_cron_schedule}
         />
       </FieldSet>
-
-      
 
       <SubmitButton
         isPending={isPending}
