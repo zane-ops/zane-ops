@@ -1,6 +1,6 @@
 import {
+  BrushCleaningIcon,
   Building2Icon,
-  CalendarSyncIcon,
   ContainerIcon,
   CreditCardIcon,
   FolderIcon,
@@ -119,8 +119,8 @@ const SERVER_ADMIN_NAV_GROUP: CommandBarNavGroup = {
     },
     {
       href: href("/admin/automation"),
-      title: "Jobs & Schedules",
-      icon: CalendarSyncIcon
+      title: "Maintenance & Cleanup",
+      icon: BrushCleaningIcon
     },
     {
       href: href("/admin/http-logs"),

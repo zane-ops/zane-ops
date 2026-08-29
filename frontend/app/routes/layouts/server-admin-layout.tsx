@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  BrushCleaningIcon,
   Building2Icon,
-  CalendarSyncIcon,
   ContainerIcon,
   GlobeIcon,
   KeyRoundIcon,
@@ -116,8 +116,8 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
   sidebarNavItems.push(
     {
       href: href("/admin/automation"),
-      title: "Jobs & Schedules",
-      icon: CalendarSyncIcon
+      title: "Maintenance & Cleanup",
+      icon: BrushCleaningIcon
     },
     {
       href: href("/admin/http-logs"),

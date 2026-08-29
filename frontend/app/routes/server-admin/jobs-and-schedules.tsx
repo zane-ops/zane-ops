@@ -32,7 +32,7 @@ import type { Route } from "./+types/jobs-and-schedules";
 
 export function meta() {
   return [
-    metaTitle("Jobs & Schedules")
+    metaTitle("Maintenance & Cleanup")
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
@@ -118,10 +118,10 @@ export default function JobsAndSchedulesPage({
 
   return (
     <section className="flex flex-col gap-4">
-      <h2 className="text-2xl">Jobs and Schedules</h2>
+      <h2 className="text-2xl">Maintenance & Cleanup</h2>
       <Separator />
       <h3 className="text-grey">
-        Manage automated jobs settings running on this server.
+        Configure data retention limits and the scheduled cleanup jobs settings.
       </h3>
 
       <div className="grid lg:grid-cols-12  relative">
