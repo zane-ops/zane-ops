@@ -6,6 +6,11 @@ import { type RequestInput, apiClient } from "~/api/client";
 import { ThemedLogo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
+import {
+  FieldSet,
+  FieldSetLabel,
+  FieldSetPasswordToggleInput
+} from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { userQueries } from "~/lib/queries";
@@ -225,42 +230,27 @@ export default function InitialRegistration({
               </ul>
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label htmlFor="password">Password</label>
-              <Input
-                type="password"
-                name="password"
-                id="password"
+            <FieldSet
+              name="password"
+              errors={errors.password}
+              className="flex flex-col gap-1"
+            >
+              <FieldSetLabel>Password</FieldSetLabel>
+              <FieldSetPasswordToggleInput
                 defaultValue={actionData?.userData?.password}
-                aria-invalid={!!errors.password}
-                aria-describedby="password-error"
               />
-              {errors.password && (
-                <span id="password-error" className="text-red-500 text-sm">
-                  {errors.password}
-                </span>
-              )}
-            </div>
+            </FieldSet>
 
-            <div className="flex flex-col gap-1">
-              <label htmlFor="password">Confirm your password</label>
-              <Input
-                type="password"
-                name="password_confirmation"
-                id="password_confirmation"
-                defaultValue={actionData?.userData?.password_confirmation}
-                aria-invalid={!!errors.password_confirmation}
-                aria-describedby="password_confirmation-error"
+            <FieldSet
+              name="password_confirmation"
+              errors={errors.password_confirmation}
+              className="flex flex-col gap-1"
+            >
+              <FieldSetLabel>Confirm your password</FieldSetLabel>
+              <FieldSetPasswordToggleInput
+                defaultValue={actionData?.userData?.password}
               />
-              {errors.password_confirmation && (
-                <span
-                  id="password_confirmation-error"
-                  className="text-red-500 text-sm"
-                >
-                  {errors.password_confirmation}
-                </span>
-              )}
-            </div>
+            </FieldSet>
 
             <SubmitButton
               className="lg:w-fit w-full lg:ml-auto p-3 rounded-lg gap-2"
