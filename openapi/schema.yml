@@ -47,6 +47,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -104,6 +105,7 @@ paths:
       - auth
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       - {}
       responses:
         '400':
@@ -174,6 +176,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       - {}
       responses:
         '400':
@@ -245,6 +248,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       - {}
       responses:
         '400':
@@ -304,6 +308,7 @@ paths:
       - auth
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -357,6 +362,7 @@ paths:
       - auth
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -420,6 +426,7 @@ paths:
       - auth
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       - {}
       responses:
         '400':
@@ -509,6 +516,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       - {}
       responses:
         '400':
@@ -593,6 +601,7 @@ paths:
               $ref: '#/components/schemas/PatchedUpdateProfileRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -664,6 +673,7 @@ paths:
       - check-ongoing-update-status
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -753,6 +763,7 @@ paths:
               $ref: '#/components/schemas/ComposeStackWebhookDeployRequestRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       - {}
       responses:
         '400':
@@ -856,6 +867,7 @@ paths:
       - compose
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -961,6 +973,7 @@ paths:
       - compose
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -1073,6 +1086,7 @@ paths:
               $ref: '#/components/schemas/ComposeStackUpdateRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -1176,6 +1190,7 @@ paths:
       - compose
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -1281,6 +1296,7 @@ paths:
       - compose
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -1397,6 +1413,7 @@ paths:
               $ref: '#/components/schemas/ComposeStackDeployRequestRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -1506,6 +1523,7 @@ paths:
       - compose
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -1651,6 +1669,7 @@ paths:
       - compose
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -1760,6 +1779,7 @@ paths:
       - compose
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -1881,6 +1901,7 @@ paths:
       - compose
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -1991,6 +2012,7 @@ paths:
       - compose
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -2125,6 +2147,7 @@ paths:
       - compose
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -2230,6 +2253,7 @@ paths:
       - compose
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -2344,6 +2368,7 @@ paths:
               $ref: '#/components/schemas/ComposeStackDeploymentChangeRequestRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -2495,6 +2520,7 @@ paths:
       - compose
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -2621,6 +2647,7 @@ paths:
       - compose
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -2738,6 +2765,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -2848,6 +2876,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -2959,6 +2988,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -3070,6 +3100,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -3160,6 +3191,7 @@ paths:
       - connectors
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -3249,6 +3281,7 @@ paths:
       - connectors
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -3352,6 +3385,7 @@ paths:
       - connectors
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -3447,6 +3481,7 @@ paths:
       - connectors
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -3539,6 +3574,7 @@ paths:
       - connectors
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -3639,6 +3675,7 @@ paths:
               $ref: '#/components/schemas/PatchedGithubAppRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -3729,6 +3766,7 @@ paths:
       - connectors
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -3831,6 +3869,7 @@ paths:
       - connectors
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -3903,6 +3942,7 @@ paths:
       - connectors
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -3994,6 +4034,7 @@ paths:
       - connectors
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -4084,6 +4125,7 @@ paths:
       - connectors
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -4186,6 +4228,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -4282,6 +4325,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -4366,6 +4410,7 @@ paths:
       - connectors
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -4432,6 +4477,7 @@ paths:
       - connectors
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -4517,6 +4563,7 @@ paths:
       - connectors
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -4601,6 +4648,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -4691,6 +4739,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -4780,6 +4829,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -5017,6 +5067,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -5107,6 +5158,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -5213,6 +5265,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -5326,6 +5379,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -5409,6 +5463,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -5492,6 +5547,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -5586,6 +5642,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -5679,6 +5736,7 @@ paths:
               $ref: '#/components/schemas/PatchedSystemSettingsRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -5784,6 +5842,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -5874,6 +5933,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -5974,6 +6034,7 @@ paths:
               $ref: '#/components/schemas/PatchedInstanceUserRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -6063,6 +6124,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -6150,6 +6212,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -6251,6 +6314,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -6341,6 +6405,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -6442,6 +6507,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -6532,6 +6598,7 @@ paths:
       - console
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -6631,6 +6698,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -6719,6 +6787,7 @@ paths:
       - csrf
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       - {}
       responses:
         '400':
@@ -6769,8 +6838,7 @@ paths:
             schema:
               $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
       security:
-      - cookieAuth: []
-      - {}
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -6797,6 +6865,20 @@ paths:
                     errors:
                     - code: not_authenticated
                       detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
                       attr: null
           description: ''
         '404':
@@ -6855,8 +6937,7 @@ paths:
             schema:
               $ref: '#/components/schemas/GitServiceWebhookDeployRequestRequest'
       security:
-      - cookieAuth: []
-      - {}
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -6883,6 +6964,20 @@ paths:
                     errors:
                     - code: not_authenticated
                       detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
                       attr: null
           description: ''
         '404':
@@ -6931,6 +7026,7 @@ paths:
       - docker
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -7147,6 +7243,7 @@ paths:
       - http-logs
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -7238,6 +7335,7 @@ paths:
       - http-logs
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -7359,6 +7457,7 @@ paths:
       - http-logs
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -7430,6 +7529,7 @@ paths:
       - license
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -7525,6 +7625,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -7595,6 +7696,7 @@ paths:
       - license
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -7676,6 +7778,7 @@ paths:
       - ping
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       - {}
       responses:
         '400':
@@ -7758,6 +7861,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -7840,6 +7944,7 @@ paths:
               $ref: '#/components/schemas/ProjectCreateRequestRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -7937,6 +8042,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -8043,6 +8149,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -8143,6 +8250,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -8249,6 +8357,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -8355,6 +8464,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -8461,6 +8571,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -8577,6 +8688,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -8689,6 +8801,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -8804,6 +8917,7 @@ paths:
               $ref: '#/components/schemas/CreateGitServiceRequestRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -8925,6 +9039,7 @@ paths:
               $ref: '#/components/schemas/DockerServiceDeployRequestRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -9040,6 +9155,7 @@ paths:
               $ref: '#/components/schemas/GitServiceDeployRequestRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -9150,6 +9266,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -9271,6 +9388,7 @@ paths:
               $ref: '#/components/schemas/GitServiceReDeployRequestRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -9387,6 +9505,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -9502,6 +9621,7 @@ paths:
               $ref: '#/components/schemas/DeploymentChangeRequestRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -9617,6 +9737,7 @@ paths:
               $ref: '#/components/schemas/DeploymentCleanupQueueRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -9774,6 +9895,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -9883,6 +10005,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -10004,6 +10127,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -10131,6 +10255,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -10280,6 +10405,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -10401,6 +10527,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -10504,6 +10631,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -10627,6 +10755,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -10743,6 +10872,7 @@ paths:
               $ref: '#/components/schemas/PatchedServiceRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -10847,6 +10977,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -10960,6 +11091,7 @@ paths:
               $ref: '#/components/schemas/PatchedServiceRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -11076,6 +11208,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -11174,6 +11307,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -11283,6 +11417,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -11385,6 +11520,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -11498,6 +11634,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -11610,6 +11747,7 @@ paths:
               $ref: '#/components/schemas/PatchedSharedEnvVariableRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -11711,6 +11849,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -11803,6 +11942,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -11909,6 +12049,7 @@ paths:
               $ref: '#/components/schemas/PatchedPreviewEnvTemplateRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -12004,6 +12145,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -12091,6 +12233,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -12192,6 +12335,7 @@ paths:
               $ref: '#/components/schemas/ProjectUpdateRequestRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -12282,6 +12426,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -12381,6 +12526,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -12493,6 +12639,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -12603,6 +12750,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -12706,6 +12854,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -12813,6 +12962,7 @@ paths:
               $ref: '#/components/schemas/PatchedUpdateEnvironmentRequestRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -12910,6 +13060,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -13003,6 +13154,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -13111,6 +13263,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -13197,6 +13350,7 @@ paths:
       - projects
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -13300,6 +13454,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -13385,6 +13540,7 @@ paths:
       - recent-deployments
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -13470,6 +13626,7 @@ paths:
       - registries
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -13564,6 +13721,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -13654,6 +13812,7 @@ paths:
       - registries
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -13754,6 +13913,7 @@ paths:
               $ref: '#/components/schemas/PatchedBuildRegistryUpdateDetailsRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -13844,6 +14004,7 @@ paths:
       - registries
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -13947,6 +14108,7 @@ paths:
       - registries
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -14031,6 +14193,7 @@ paths:
       - registries
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -14113,6 +14276,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -14189,6 +14353,7 @@ paths:
       - registries
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -14289,6 +14454,7 @@ paths:
               $ref: '#/components/schemas/PatchedSharedRegistryCredentialsUpdateDetailsRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -14379,6 +14545,7 @@ paths:
       - registries
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -14472,6 +14639,7 @@ paths:
       - registries
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -14562,6 +14730,7 @@ paths:
       - search-resources
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -14635,6 +14804,7 @@ paths:
       - server
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -14706,6 +14876,7 @@ paths:
       - settings
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -14776,6 +14947,7 @@ paths:
       - shell
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -14859,6 +15031,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -14941,6 +15114,7 @@ paths:
       - shell
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -15030,6 +15204,7 @@ paths:
       - shell
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -15127,8 +15302,7 @@ paths:
             schema:
               $ref: '#/components/schemas/TriggerPreviewEnvRequestRequest'
       security:
-      - cookieAuth: []
-      - {}
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -15155,6 +15329,20 @@ paths:
                     errors:
                     - code: not_authenticated
                       detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
                       attr: null
           description: ''
         '404':
@@ -15212,6 +15400,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -15287,6 +15476,7 @@ paths:
       - workspace
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -15381,6 +15571,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -15463,6 +15654,7 @@ paths:
       - workspace
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -15555,6 +15747,7 @@ paths:
       - workspace
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -15645,6 +15838,7 @@ paths:
       - workspace
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -15743,6 +15937,7 @@ paths:
               $ref: '#/components/schemas/RegenerateWorkspaceInvitationRequestRequest'
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -15833,6 +16028,7 @@ paths:
       - workspace
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       - {}
       responses:
         '400':
@@ -15923,6 +16119,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -16005,6 +16202,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -16075,6 +16273,7 @@ paths:
       - workspace
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -16176,6 +16375,7 @@ paths:
       - workspace
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -16266,6 +16466,7 @@ paths:
       - workspace
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -16355,6 +16556,7 @@ paths:
       - workspace
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -16454,6 +16656,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -16557,6 +16760,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       - {}
       responses:
         '400':
@@ -16620,6 +16824,447 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkspaceReviewInvitationResponse'
           description: ''
+  /api/workspace/tokens/:
+    get:
+      operationId: listWorkspaceApiTokens
+      summary: List API tokens
+      tags:
+      - workspace
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListWorkspaceApiTokensErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkspaceApiToken'
+          description: ''
+    post:
+      operationId: createWorkspaceApiToken
+      summary: Create an API token (returns the secret once)
+      tags:
+      - workspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceApiTokenRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceApiTokenRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceApiTokenRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateWorkspaceApiTokenErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceApiTokenWithSecret'
+          description: ''
+  /api/workspace/tokens/{token_id}/:
+    get:
+      operationId: getWorkspaceApiToken
+      summary: Get an API token
+      parameters:
+      - in: path
+        name: token_id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - workspace
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkspaceApiTokenErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceApiToken'
+          description: ''
+    patch:
+      operationId: updateWorkspaceApiToken
+      summary: Update an API token
+      parameters:
+      - in: path
+        name: token_id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - workspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWorkspaceApiTokenRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWorkspaceApiTokenRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWorkspaceApiTokenRequestRequest'
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateWorkspaceApiTokenErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceApiToken'
+          description: ''
+  /api/workspace/tokens/{token_id}/revoke/:
+    post:
+      operationId: revokeWorkspaceApiToken
+      summary: Revoke an API token
+      parameters:
+      - in: path
+        name: token_id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - workspace
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeWorkspaceApiTokenErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceApiToken'
+          description: ''
   /api/workspace/transfer-ownership/:
     post:
       operationId: transferWorkspaceOwnership
@@ -16640,6 +17285,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -16722,6 +17368,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -16805,6 +17452,7 @@ paths:
       - workspaces
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -16875,6 +17523,7 @@ paths:
         required: true
       security:
       - cookieAuth: []
+      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -22273,6 +22922,254 @@ components:
       required:
       - errors
       - type
+    CreateWorkspaceApiTokenAccessibleProjectIdsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - accessible_project_ids
+          type: string
+          description: '* `accessible_project_ids` - accessible_project_ids'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateWorkspaceApiTokenError:
+      oneOf:
+      - $ref: '#/components/schemas/CreateWorkspaceApiTokenNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateWorkspaceApiTokenNameErrorComponent'
+      - $ref: '#/components/schemas/CreateWorkspaceApiTokenRoleErrorComponent'
+      - $ref: '#/components/schemas/CreateWorkspaceApiTokenScopesErrorComponent'
+      - $ref: '#/components/schemas/CreateWorkspaceApiTokenScopesINDEXErrorComponent'
+      - $ref: '#/components/schemas/CreateWorkspaceApiTokenAccessibleProjectIdsErrorComponent'
+      - $ref: '#/components/schemas/CreateWorkspaceApiTokenExpiresAtErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CreateWorkspaceApiTokenNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/CreateWorkspaceApiTokenNameErrorComponent'
+          role: '#/components/schemas/CreateWorkspaceApiTokenRoleErrorComponent'
+          scopes: '#/components/schemas/CreateWorkspaceApiTokenScopesErrorComponent'
+          scopes.INDEX: '#/components/schemas/CreateWorkspaceApiTokenScopesINDEXErrorComponent'
+          accessible_project_ids: '#/components/schemas/CreateWorkspaceApiTokenAccessibleProjectIdsErrorComponent'
+          expires_at: '#/components/schemas/CreateWorkspaceApiTokenExpiresAtErrorComponent'
+    CreateWorkspaceApiTokenErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CreateWorkspaceApiTokenValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CreateWorkspaceApiTokenValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CreateWorkspaceApiTokenExpiresAtErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - expires_at
+          type: string
+          description: '* `expires_at` - expires_at'
+        code:
+          enum:
+          - date
+          - invalid
+          - make_aware
+          - overflow
+          type: string
+          description: |-
+            * `date` - date
+            * `invalid` - invalid
+            * `make_aware` - make_aware
+            * `overflow` - overflow
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateWorkspaceApiTokenNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - min_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `min_length` - min_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateWorkspaceApiTokenNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateWorkspaceApiTokenRequestRequest:
+      type: object
+      description: |-
+        `POST /api/workspace/tokens` — plan §9.
+
+        The `role` and `scopes` a requester may ask for are capped by their own
+        role; the same cap is re-checked on every request (plan §4) since the
+        creator can be demoted later.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        scopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScopesEnum'
+        accessible_project_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            default: []
+          default: []
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - name
+      - role
+    CreateWorkspaceApiTokenRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - role
+          type: string
+          description: '* `role` - role'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateWorkspaceApiTokenScopesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - scopes
+          type: string
+          description: '* `scopes` - scopes'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateWorkspaceApiTokenScopesINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - scopes.INDEX
+          type: string
+          description: '* `scopes.INDEX` - scopes.INDEX'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateWorkspaceApiTokenValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateWorkspaceApiTokenError'
+      required:
+      - errors
+      - type
     CreateWorkspaceError:
       oneOf:
       - $ref: '#/components/schemas/CreateWorkspaceNonFieldErrorsErrorComponent'
@@ -24037,6 +24934,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    GetWorkspaceApiTokenErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     GitApp:
       type: object
       properties:
@@ -25542,6 +26446,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ListWorkspaceApiTokensErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     LoginError:
       oneOf:
       - $ref: '#/components/schemas/LoginNonFieldErrorsErrorComponent'
@@ -26344,6 +27255,13 @@ components:
         last_name:
           type: string
           maxLength: 150
+    PatchedUpdateWorkspaceApiTokenRequestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
     PingEnum:
       enum:
       - pong
@@ -32240,6 +33158,13 @@ components:
       required:
       - errors
       - type
+    RevokeWorkspaceApiTokenErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     RoleEnum:
       enum:
       - 10
@@ -32444,6 +33369,26 @@ components:
       - slug
       - updated_at
       - user
+    ScopesEnum:
+      enum:
+      - deploy:write
+      - service:read
+      - service:write
+      - env:read
+      - env:write
+      - logs:read
+      - project:read
+      - project:write
+      type: string
+      description: |-
+        * `deploy:write` - Trigger / cancel / redeploy deployments and previews
+        * `service:read` - Read service and compose-stack configuration
+        * `service:write` - Change services and compose stacks
+        * `env:read` - Read environment variables (sensitive)
+        * `env:write` - Change environment variables
+        * `logs:read` - Read runtime logs, build logs and metrics
+        * `project:read` - List and read projects and environments
+        * `project:write` - Change projects and environments
     SearchDockerRegistryErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -34842,6 +35787,87 @@ components:
       - attr
       - code
       - detail
+    UpdateWorkspaceApiTokenError:
+      oneOf:
+      - $ref: '#/components/schemas/UpdateWorkspaceApiTokenNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateWorkspaceApiTokenNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/UpdateWorkspaceApiTokenNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/UpdateWorkspaceApiTokenNameErrorComponent'
+    UpdateWorkspaceApiTokenErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/UpdateWorkspaceApiTokenValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/UpdateWorkspaceApiTokenValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    UpdateWorkspaceApiTokenNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - min_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `min_length` - min_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateWorkspaceApiTokenNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateWorkspaceApiTokenValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpdateWorkspaceApiTokenError'
+      required:
+      - errors
+      - type
     User:
       type: object
       properties:
@@ -35728,6 +36754,163 @@ components:
       required:
       - id
       - name
+    WorkspaceApiToken:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        name:
+          type: string
+          maxLength: 255
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          minimum: 0
+          maximum: 32767
+        role_name:
+          type: string
+          readOnly: true
+        scopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScopesEnum'
+        accessible_projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccessibleWorkspaceProject'
+          readOnly: true
+        created_by:
+          allOf:
+          - $ref: '#/components/schemas/SimpleUser'
+          readOnly: true
+        last_four:
+          type: string
+          maxLength: 4
+        masked_token:
+          type: string
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+        is_active:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - accessible_projects
+      - created_at
+      - created_by
+      - expires_at
+      - id
+      - is_active
+      - last_four
+      - last_used_at
+      - masked_token
+      - name
+      - revoked_at
+      - role
+      - role_name
+      - scopes
+      - updated_at
+    WorkspaceApiTokenWithSecret:
+      type: object
+      description: |-
+        Only used for the response to `POST /api/workspace/tokens`: the one time the
+        full token string is ever returned.
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        name:
+          type: string
+          maxLength: 255
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          minimum: 0
+          maximum: 32767
+        role_name:
+          type: string
+          readOnly: true
+        scopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScopesEnum'
+        accessible_projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccessibleWorkspaceProject'
+          readOnly: true
+        created_by:
+          allOf:
+          - $ref: '#/components/schemas/SimpleUser'
+          readOnly: true
+        last_four:
+          type: string
+          maxLength: 4
+        masked_token:
+          type: string
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+        is_active:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        token:
+          type: string
+          readOnly: true
+      required:
+      - accessible_projects
+      - created_at
+      - created_by
+      - expires_at
+      - id
+      - is_active
+      - last_four
+      - last_used_at
+      - masked_token
+      - name
+      - revoked_at
+      - role
+      - role_name
+      - scopes
+      - token
+      - updated_at
     WorkspaceDestroyErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -36275,5 +37458,11 @@ components:
       type: apiKey
       in: cookie
       name: sessionid
+    workspaceApiToken:
+      type: http
+      scheme: bearer
+      bearerFormat: zn_tok_<id>_<secret>
+      description: 'Workspace API token (plan §8). Send as `Authorization: Bearer
+        zn_tok_...`.'
 servers:
 - url: 127-0-0-1.sslip.io

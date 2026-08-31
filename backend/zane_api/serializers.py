@@ -173,6 +173,49 @@ class WorkspaceMemberSerializer(serializers.ModelSerializer):
         ]
 
 
+class WorkspaceApiTokenSerializer(serializers.ModelSerializer):
+    accessible_projects = AccessibleWorkspaceProjectSerializer(
+        many=True,
+        read_only=True,
+    )
+    created_by = SimpleUserSerializer(read_only=True)
+    role_name = serializers.CharField(source="get_role_display", read_only=True)
+    masked_token = serializers.CharField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = models.WorkspaceApiToken
+        fields = [
+            "id",
+            "name",
+            "role",
+            "role_name",
+            "scopes",
+            "accessible_projects",
+            "created_by",
+            "last_four",
+            "masked_token",
+            "expires_at",
+            "last_used_at",
+            "revoked_at",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class WorkspaceApiTokenWithSecretSerializer(WorkspaceApiTokenSerializer):
+    """
+    Only used for the response to `POST /api/workspace/tokens`: the one time the
+    full token string is ever returned.
+    """
+
+    token = serializers.CharField(read_only=True)
+
+    class Meta(WorkspaceApiTokenSerializer.Meta):
+        fields = WorkspaceApiTokenSerializer.Meta.fields + ["token"]
+
+
 class SharedEnvVariableSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
     key = serializers.CharField(required=True, validators=[validate_env_name])

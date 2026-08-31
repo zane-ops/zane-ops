@@ -691,6 +691,22 @@ export interface paths {
     /** Create user account and register them into workspace */
     post: operations["registerUserIntoWorkspace"];
   };
+  "/api/workspace/tokens/": {
+    /** List API tokens */
+    get: operations["listWorkspaceApiTokens"];
+    /** Create an API token (returns the secret once) */
+    post: operations["createWorkspaceApiToken"];
+  };
+  "/api/workspace/tokens/{token_id}/": {
+    /** Get an API token */
+    get: operations["getWorkspaceApiToken"];
+    /** Update an API token */
+    patch: operations["updateWorkspaceApiToken"];
+  };
+  "/api/workspace/tokens/{token_id}/revoke/": {
+    /** Revoke an API token */
+    post: operations["revokeWorkspaceApiToken"];
+  };
   "/api/workspace/transfer-ownership/": {
     /** Transfer workspace ownership */
     post: operations["transferWorkspaceOwnership"];
@@ -3109,6 +3125,137 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateSSHKeyError"][];
     };
+    CreateWorkspaceApiTokenAccessibleProjectIdsErrorComponent: {
+      /**
+       * @description * `accessible_project_ids` - accessible_project_ids
+       * @enum {string}
+       */
+      attr: "accessible_project_ids";
+      /**
+       * @description * `does_not_exist` - does_not_exist
+       * * `incorrect_type` - incorrect_type
+       * * `not_a_list` - not_a_list
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "does_not_exist" | "incorrect_type" | "not_a_list" | "null";
+      detail: string;
+    };
+    CreateWorkspaceApiTokenError: components["schemas"]["CreateWorkspaceApiTokenNonFieldErrorsErrorComponent"] | components["schemas"]["CreateWorkspaceApiTokenNameErrorComponent"] | components["schemas"]["CreateWorkspaceApiTokenRoleErrorComponent"] | components["schemas"]["CreateWorkspaceApiTokenScopesErrorComponent"] | components["schemas"]["CreateWorkspaceApiTokenScopesINDEXErrorComponent"] | components["schemas"]["CreateWorkspaceApiTokenAccessibleProjectIdsErrorComponent"] | components["schemas"]["CreateWorkspaceApiTokenExpiresAtErrorComponent"];
+    CreateWorkspaceApiTokenErrorResponse400: components["schemas"]["CreateWorkspaceApiTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CreateWorkspaceApiTokenExpiresAtErrorComponent: {
+      /**
+       * @description * `expires_at` - expires_at
+       * @enum {string}
+       */
+      attr: "expires_at";
+      /**
+       * @description * `date` - date
+       * * `invalid` - invalid
+       * * `make_aware` - make_aware
+       * * `overflow` - overflow
+       * @enum {string}
+       */
+      code: "date" | "invalid" | "make_aware" | "overflow";
+      detail: string;
+    };
+    CreateWorkspaceApiTokenNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `min_length` - min_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateWorkspaceApiTokenNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    /**
+     * @description `POST /api/workspace/tokens` — plan §9.
+     *
+     * The `role` and `scopes` a requester may ask for are capped by their own
+     * role; the same cap is re-checked on every request (plan §4) since the
+     * creator can be demoted later.
+     */
+    CreateWorkspaceApiTokenRequestRequest: {
+      name: string;
+      role: components["schemas"]["RoleEnum"];
+      scopes?: components["schemas"]["ScopesEnum"][];
+      /** @default [] */
+      accessible_project_ids?: string[];
+      /** Format: date-time */
+      expires_at?: string | null;
+    };
+    CreateWorkspaceApiTokenRoleErrorComponent: {
+      /**
+       * @description * `role` - role
+       * @enum {string}
+       */
+      attr: "role";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    CreateWorkspaceApiTokenScopesErrorComponent: {
+      /**
+       * @description * `scopes` - scopes
+       * @enum {string}
+       */
+      attr: "scopes";
+      /**
+       * @description * `not_a_list` - not_a_list
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "not_a_list" | "null";
+      detail: string;
+    };
+    CreateWorkspaceApiTokenScopesINDEXErrorComponent: {
+      /**
+       * @description * `scopes.INDEX` - scopes.INDEX
+       * @enum {string}
+       */
+      attr: "scopes.INDEX";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    CreateWorkspaceApiTokenValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["CreateWorkspaceApiTokenError"][];
+    };
     CreateWorkspaceError: components["schemas"]["CreateWorkspaceNonFieldErrorsErrorComponent"] | components["schemas"]["CreateWorkspaceNameErrorComponent"];
     CreateWorkspaceErrorResponse400: components["schemas"]["CreateWorkspaceValidationError"] | components["schemas"]["ParseErrorResponse"];
     CreateWorkspaceNameErrorComponent: {
@@ -3827,6 +3974,7 @@ export interface components {
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetWorkspaceApiTokenErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GitApp: {
       id: string;
       github: components["schemas"]["GithubApp"] | null;
@@ -4498,6 +4646,7 @@ export interface components {
     ListGitAppsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ListGitRepoBranchesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ListRegistryImagesErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ListWorkspaceApiTokensErrorResponse400: components["schemas"]["ParseErrorResponse"];
     LoginError: components["schemas"]["LoginNonFieldErrorsErrorComponent"] | components["schemas"]["LoginUsernameErrorComponent"] | components["schemas"]["LoginPasswordErrorComponent"];
     LoginErrorResponse400: components["schemas"]["LoginValidationError"] | components["schemas"]["ParseErrorResponse"];
     LoginNonFieldErrorsErrorComponent: {
@@ -4857,6 +5006,9 @@ export interface components {
       username?: string;
       first_name?: string;
       last_name?: string;
+    };
+    PatchedUpdateWorkspaceApiTokenRequestRequest: {
+      name?: string;
     };
     /**
      * @description * `pong` - pong
@@ -7854,6 +8006,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ReviewWorkspaceInvitationError"][];
     };
+    RevokeWorkspaceApiTokenErrorResponse400: components["schemas"]["ParseErrorResponse"];
     /**
      * @description * `10` - Viewer
      * * `30` - Member
@@ -7933,6 +8086,18 @@ export interface components {
       /** Format: date-time */
       created_at: string;
     };
+    /**
+     * @description * `deploy:write` - Trigger / cancel / redeploy deployments and previews
+     * * `service:read` - Read service and compose-stack configuration
+     * * `service:write` - Change services and compose stacks
+     * * `env:read` - Read environment variables (sensitive)
+     * * `env:write` - Change environment variables
+     * * `logs:read` - Read runtime logs, build logs and metrics
+     * * `project:read` - List and read projects and environments
+     * * `project:write` - Change projects and environments
+     * @enum {string}
+     */
+    ScopesEnum: "deploy:write" | "service:read" | "service:write" | "env:read" | "env:write" | "logs:read" | "project:read" | "project:write";
     SearchDockerRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SearchResourcesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     Service: {
@@ -8888,6 +9053,44 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
+    UpdateWorkspaceApiTokenError: components["schemas"]["UpdateWorkspaceApiTokenNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateWorkspaceApiTokenNameErrorComponent"];
+    UpdateWorkspaceApiTokenErrorResponse400: components["schemas"]["UpdateWorkspaceApiTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
+    UpdateWorkspaceApiTokenNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `min_length` - min_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    UpdateWorkspaceApiTokenNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    UpdateWorkspaceApiTokenValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["UpdateWorkspaceApiTokenError"][];
+    };
     User: {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
       username: string;
@@ -9320,6 +9523,55 @@ export interface components {
     Workspace: {
       id: string;
       name: string;
+    };
+    WorkspaceApiToken: {
+      id: string;
+      name: string;
+      role: components["schemas"]["RoleEnum"];
+      role_name: string;
+      scopes: components["schemas"]["ScopesEnum"][];
+      accessible_projects: readonly components["schemas"]["AccessibleWorkspaceProject"][];
+      created_by: components["schemas"]["SimpleUser"];
+      last_four: string;
+      masked_token: string;
+      /** Format: date-time */
+      expires_at: string | null;
+      /** Format: date-time */
+      last_used_at: string | null;
+      /** Format: date-time */
+      revoked_at: string | null;
+      is_active: boolean;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    /**
+     * @description Only used for the response to `POST /api/workspace/tokens`: the one time the
+     * full token string is ever returned.
+     */
+    WorkspaceApiTokenWithSecret: {
+      id: string;
+      name: string;
+      role: components["schemas"]["RoleEnum"];
+      role_name: string;
+      scopes: components["schemas"]["ScopesEnum"][];
+      accessible_projects: readonly components["schemas"]["AccessibleWorkspaceProject"][];
+      created_by: components["schemas"]["SimpleUser"];
+      last_four: string;
+      masked_token: string;
+      /** Format: date-time */
+      expires_at: string | null;
+      /** Format: date-time */
+      last_used_at: string | null;
+      /** Format: date-time */
+      revoked_at: string | null;
+      is_active: boolean;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+      token: string;
     };
     WorkspaceDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceDetail: {
@@ -12472,6 +12724,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -12514,6 +12771,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
@@ -16145,6 +16407,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
@@ -16783,6 +17050,200 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** List API tokens */
+  listWorkspaceApiTokens: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceApiToken"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ListWorkspaceApiTokensErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Create an API token (returns the secret once) */
+  createWorkspaceApiToken: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateWorkspaceApiTokenRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["CreateWorkspaceApiTokenRequestRequest"];
+        "multipart/form-data": components["schemas"]["CreateWorkspaceApiTokenRequestRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceApiTokenWithSecret"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CreateWorkspaceApiTokenErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get an API token */
+  getWorkspaceApiToken: {
+    parameters: {
+      path: {
+        token_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceApiToken"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetWorkspaceApiTokenErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Update an API token */
+  updateWorkspaceApiToken: {
+    parameters: {
+      path: {
+        token_id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedUpdateWorkspaceApiTokenRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedUpdateWorkspaceApiTokenRequestRequest"];
+        "multipart/form-data": components["schemas"]["PatchedUpdateWorkspaceApiTokenRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceApiToken"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["UpdateWorkspaceApiTokenErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Revoke an API token */
+  revokeWorkspaceApiToken: {
+    parameters: {
+      path: {
+        token_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceApiToken"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["RevokeWorkspaceApiTokenErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {

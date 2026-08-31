@@ -1,12 +1,14 @@
 from rest_framework import serializers
 from ...models import (
     Project,
+    TokenScope,
     WorkspaceRole,
     Workspace,
     WorkspaceMembership,
 )
 from typing import Sequence
 from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.utils import timezone
 from ...validators import validate_new_password
 import django_filters
 
@@ -169,6 +171,66 @@ class InviteUserIntoWorkspaceRequestSerializer(serializers.Serializer):
             attrs["accessible_project_ids"] = []
 
         return attrs
+
+
+class CreateWorkspaceApiTokenRequestSerializer(serializers.Serializer):
+    """
+    `POST /api/workspace/tokens` — plan §9.
+
+    The `role` and `scopes` a requester may ask for are capped by their own
+    role; the same cap is re-checked on every request (plan §4) since the
+    creator can be demoted later.
+    """
+
+    name = serializers.CharField(min_length=1, max_length=255)
+    role = serializers.ChoiceField(choices=WorkspaceRole.choices)
+    scopes = serializers.ListField(
+        child=serializers.ChoiceField(choices=TokenScope.choices),
+        allow_empty=True,
+        default=list,
+    )
+    accessible_project_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Project.objects.all(),
+        default=[],
+    )
+    expires_at = serializers.DateTimeField(
+        required=False, allow_null=True, default=None
+    )
+
+    def _get_workspace(self) -> Workspace:
+        workspace: Workspace | None = self.context.get("workspace")
+        assert workspace is not None
+        return workspace
+
+    def _get_actor_role(self) -> int:
+        actor_role = self.context.get("actor_role")
+        assert actor_role is not None
+        return actor_role
+
+    def validate_role(self, role: int):
+        if role > self._get_actor_role():
+            raise serializers.ValidationError(
+                "You cannot create a token with a role higher than your own."
+            )
+        return role
+
+    def validate_accessible_project_ids(self, projects: Sequence[Project]):
+        for project in projects:
+            if project.workspace_id != self._get_workspace().id:
+                raise serializers.ValidationError(
+                    f"Project with id `{project.id}` does not exist in this workspace."
+                )
+        return projects
+
+    def validate_expires_at(self, value):
+        if value is not None and value <= timezone.now():
+            raise serializers.ValidationError("The expiry date must be in the future.")
+        return value
+
+
+class UpdateWorkspaceApiTokenRequestSerializer(serializers.Serializer):
+    name = serializers.CharField(min_length=1, max_length=255, required=False)
 
 
 class WorkspaceTransferOwnershipResponseSerializer(serializers.Serializer):

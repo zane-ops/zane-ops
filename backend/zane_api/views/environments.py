@@ -54,15 +54,16 @@ from temporal.shared import (
     ComposeStackDeploymentDetails,
 )
 from rest_framework import viewsets
-from rest_framework import permissions
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.utils.serializer_helpers import ReturnDict
 from django.utils.text import slugify
 from faker import Faker
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework import serializers
+from ..authentication import WorkspaceTokenAuthentication
 from ..permissions import (
     HasWorkspace,
+    HasDeployWebhookAccess,
     IsWorkspaceMember,
     IsWorkspaceViewer,
     IsWorkspaceAdmin,
@@ -676,7 +677,11 @@ class SharedEnvVariablesViewSet(viewsets.ModelViewSet):
 
 
 class TriggerPreviewEnvironmentAPIView(APIView):
-    permission_classes = [permissions.AllowAny]
+    # `deploy_token` in the URL is now only a service identifier — the request
+    # must carry an API token with `deploy:write`; the session is never
+    # consulted for a deploy webhook (plan §7).
+    authentication_classes = [WorkspaceTokenAuthentication]
+    permission_classes = [HasWorkspace, HasDeployWebhookAccess]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
 
@@ -694,6 +699,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                     deploy_token=deploy_token,
                     type=Service.ServiceType.GIT_REPOSITORY,
                     git_app__isnull=False,
+                    project__workspace=request.workspace,  # type: ignore
                 )
                 .select_related(
                     "project",
@@ -710,6 +716,11 @@ class TriggerPreviewEnvironmentAPIView(APIView):
         except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with a deploy_token `{deploy_token}` does not exists in this ZaneOps instance."
+            )
+
+        if not request.access.can_access_project(current_service.project_id):  # type: ignore
+            raise exceptions.PermissionDenied(
+                "This API token does not have access to this service's project."
             )
 
         git_source_change = current_service.unapplied_changes.filter(

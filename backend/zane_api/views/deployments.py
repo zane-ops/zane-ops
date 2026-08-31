@@ -2,7 +2,7 @@ import secrets
 from typing import Any, Callable, List, Tuple, cast
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
-from rest_framework import exceptions, permissions
+from rest_framework import exceptions
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.response import Response
 from rest_framework.request import Request
@@ -60,8 +60,10 @@ from temporal.shared import (
     DeploymentDetails,
     CancelDeploymentSignalInput,
 )
+from ..authentication import WorkspaceTokenAuthentication
 from ..permissions import (
     HasWorkspace,
+    HasDeployWebhookAccess,
     IsWorkspaceMember,
     IsWorkspaceViewer,
     get_accessible_projects,
@@ -125,11 +127,13 @@ class RegenerateServiceDeployTokenAPIView(APIView):
 
 
 class WebhookDeployDockerServiceAPIView(APIView):
-    permission_classes = [permissions.AllowAny]
+    # `deploy_token` in the URL is now only a service identifier — the request
+    # must carry an API token with `deploy:write`; the session is never
+    # consulted for a deploy webhook (plan §7).
+    authentication_classes = [WorkspaceTokenAuthentication]
+    permission_classes = [HasWorkspace, HasDeployWebhookAccess]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
-    # TODO: use a an access token and filter by permission
-    # permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @transaction.atomic()
     @extend_schema(
@@ -145,6 +149,7 @@ class WebhookDeployDockerServiceAPIView(APIView):
                 Service.objects.filter(
                     deploy_token=deploy_token,
                     type=Service.ServiceType.DOCKER_REGISTRY,
+                    project__workspace=request.workspace,  # type: ignore
                 )
                 .select_related("project", "healthcheck", "environment")
                 .prefetch_related(
@@ -154,6 +159,11 @@ class WebhookDeployDockerServiceAPIView(APIView):
         except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with a deploy_token `{deploy_token}` doesn't exist."
+            )
+
+        if not request.access.can_access_project(service.project_id):  # type: ignore
+            raise exceptions.PermissionDenied(
+                "This API token does not have access to this service's project."
             )
 
         form = DockerServiceWebhookDeployRequestSerializer(
@@ -227,11 +237,11 @@ class WebhookDeployDockerServiceAPIView(APIView):
 
 
 class WebhookDeployGitServiceAPIView(APIView):
-    permission_classes = [permissions.AllowAny]
+    # token-only: the session is never consulted for a deploy webhook (plan §7)
+    authentication_classes = [WorkspaceTokenAuthentication]
+    permission_classes = [HasWorkspace, HasDeployWebhookAccess]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
-    # TODO: use a an access token and filter by permission
-    # permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @transaction.atomic()
     @extend_schema(
@@ -247,6 +257,7 @@ class WebhookDeployGitServiceAPIView(APIView):
                 Service.objects.filter(
                     deploy_token=deploy_token,
                     type=Service.ServiceType.GIT_REPOSITORY,
+                    project__workspace=request.workspace,  # type: ignore
                 )
                 .select_related("project", "healthcheck", "environment")
                 .prefetch_related(
@@ -256,6 +267,11 @@ class WebhookDeployGitServiceAPIView(APIView):
         except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with a deploy_token `{deploy_token}` doesn't exist."
+            )
+
+        if not request.access.can_access_project(service.project_id):  # type: ignore
+            raise exceptions.PermissionDenied(
+                "This API token does not have access to this service's project."
             )
 
         form = GitServiceWebhookDeployRequestSerializer(
