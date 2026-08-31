@@ -50,7 +50,42 @@ export const userQueries = {
 
       return result;
     }
-  })
+  }),
+
+  passwordResetToken: (token: string) =>
+    queryOptions({
+      queryKey: ["PASSWORD_RESET_TOKEN", token] as const,
+      queryFn: async ({ signal }) => {
+        const result = await apiClient.GET(
+          "/api/auth/reset-password/{token}/",
+          {
+            signal,
+            params: {
+              path: { token }
+            }
+          }
+        );
+
+        // if rate limited, throw error
+        if (result.response.status === 429) {
+          const fullErrorMessage = result.error?.errors
+            .map((err) => err.detail)
+            .join(" ");
+
+          throw new Error(fullErrorMessage);
+        }
+
+        if (!result.data) {
+          const fullErrorMessage = result.error?.errors
+            .map((err) => err.detail)
+            .join(" ");
+
+          throw notFound(fullErrorMessage);
+        }
+
+        return result.data;
+      }
+    })
 };
 
 /**

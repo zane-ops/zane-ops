@@ -70,7 +70,7 @@ class ResetPasswordAPIView(APIView):
                 expires_at__gt=timezone.now(),
             ).get()
         except PasswordResetToken.DoesNotExist:
-            raise exceptions.NotFound("Invalid or expired token.")
+            raise exceptions.NotFound("Invalid or expired password reset link.")
 
         serializer = PasswordResetLinkSerializer(password_token)
         return Response(serializer.data)
