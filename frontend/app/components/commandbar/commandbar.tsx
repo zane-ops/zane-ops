@@ -242,7 +242,7 @@ export function CommandBar({
         className={cn(
           "bg-popover rounded-md border border-border overflow-y-auto overflow-x-hidden",
           "max-h-124 min-h-0 h-[calc(var(--cmdk-list-height)+var(--spacing)*3)] ",
-          "scroll-pt-2 scroll-pb-2",
+          "scroll-py-2",
           "transition-[height] duration-200 ease-in-out",
           "rounded-t-none border-x-0 border-b-0 px-0 py-1"
         )}
@@ -340,9 +340,7 @@ export function CommandBar({
                 heading={group.heading}
                 className={cn(
                   "[&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs",
-                  groupIndex === 0
-                    ? "scroll - pt - 10"
-                    : "[&_[cmdk-group-heading]]:pt-3",
+                  groupIndex !== 0 && "[&_[cmdk-group-heading]]:pt-3",
                   "pb-2 !px-2"
                 )}
               >
