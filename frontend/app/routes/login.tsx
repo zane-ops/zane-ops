@@ -182,11 +182,11 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
             >
               {isPending ? (
                 <>
-                  <span>Submitting...</span>
+                  <span>Logging in...</span>
                   <LoaderIcon className="animate-spin" size={15} />
                 </>
               ) : (
-                "Submit"
+                "Login to ZaneOps"
               )}
             </SubmitButton>
           </div>
