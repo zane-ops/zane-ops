@@ -21,6 +21,7 @@ export type CommandBarNavGroup = {
 export type CommandBarNavItem = {
   href: string;
   title: string;
+  id: string;
   icon: LucideIcon;
   showInEE?: boolean;
   minRole?: UserRole;
