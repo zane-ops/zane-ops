@@ -13,13 +13,16 @@ def create_default_workspace_membership(apps, schema_editor):
     # Uses `app.get_model` to get the real auth user model
     app_label, model_name = settings.AUTH_USER_MODEL.split(".")
     User = apps.get_model(app_label, model_name)
-    initial_user = User.objects.filter(is_superuser=True).earliest("date_joined")
-
-    WorkspaceMembership.objects.create(
-        user=initial_user,
-        workspace=default_workspace,
-        role=5,  # OWNER
+    initial_user = (
+        User.objects.filter(is_superuser=True).order_by("date_joined").first()
     )
+
+    if initial_user is not None and default_workspace is not None:
+        WorkspaceMembership.objects.create(
+            user=initial_user,
+            workspace=default_workspace,
+            role=5,  # OWNER
+        )
 
 
 def delete_all_workspace_memberships(apps, schema_editor):
