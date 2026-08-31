@@ -4,6 +4,7 @@ import {
   SquareArrowOutUpRightIcon
 } from "lucide-react";
 import { Link, href, useParams, useSearchParams } from "react-router";
+import type { HttpLog } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
 import {
   Accordion,
@@ -29,7 +30,6 @@ import {
   ZANE_DEPLOYMENT_HASH_HEADER
 } from "~/lib/constants";
 import { COUNTRY_CODE_LIST } from "~/lib/countryCodeList";
-import type { HttpLog } from "~/lib/queries";
 import { cn, formatDuration, formattedTime } from "~/lib/utils";
 
 type HttpLogRequestDetailsProps = {
@@ -78,9 +78,9 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
   );
 
   const routeParams = useParams() as {
-    projectSlug: string;
-    envSlug: string;
-    serviceSlug: string;
+    projectSlug?: string;
+    envSlug?: string;
+    serviceSlug?: string;
   };
 
   const country = log.request_country_code
@@ -113,18 +113,26 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
           <div className="grid grid-cols-2 items-center gap-x-4 w-full">
             <dt className="text-grey  inline-flex items-center">Deployment</dt>
             <dd className="text-sm">
-              <Link
-                className="text-link underline"
-                to={href(
-                  "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
-                  {
-                    ...routeParams,
-                    deploymentHash: deploymentHashHeader[1][0]
-                  }
-                )}
-              >
-                #{deploymentHashHeader[1][0]}
-              </Link>
+              {routeParams.projectSlug &&
+              routeParams.envSlug &&
+              routeParams.serviceSlug ? (
+                <Link
+                  className="text-link underline"
+                  to={href(
+                    "/workspace/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
+                    {
+                      projectSlug: routeParams.projectSlug,
+                      envSlug: routeParams.envSlug,
+                      serviceSlug: routeParams.serviceSlug,
+                      deploymentHash: deploymentHashHeader[1][0]
+                    }
+                  )}
+                >
+                  #{deploymentHashHeader[1][0]}
+                </Link>
+              ) : (
+                <span>#{deploymentHashHeader[1][0]}</span>
+              )}
             </dd>
           </div>
         )}
@@ -269,7 +277,9 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
               <>
                 <span className="text-base">{country.flag}</span>
                 &nbsp;
-                <span>{country.name}</span>
+                <span>
+                  {country.name} ({country.alpha2})
+                </span>
               </>
             ) : (
               <span className="font-mono">N/A</span>

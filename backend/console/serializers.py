@@ -1,10 +1,12 @@
 from rest_framework import serializers
 
-from zane_api.models import Workspace
+from zane_api.models import Workspace, WorkspaceMembership
 from zane_api.serializers import WorkspaceMemberSerializer
 from zane_api.validators import validate_cron_schedule
 from .models import PasswordResetToken, SystemSettings
 from django.contrib.auth import get_user_model
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 
 User = get_user_model()
 
@@ -16,21 +18,37 @@ class InstanceUserSerializer(serializers.ModelSerializer):
             "id",
             "username",
             "first_name",
-            "last_name",
             "is_superuser",
             "is_active",
+            "date_joined",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
             "username": {"read_only": True},
             "first_name": {"read_only": True},
-            "last_name": {"read_only": True},
             "is_superuser": {"read_only": True},
+            "date_joined": {"read_only": True},
         }
 
 
+class ConsoleWorkspaceUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "is_active",
+        ]
+
+
+class ConsoleWorkspaceMemberSerializer(WorkspaceMemberSerializer):
+    user = ConsoleWorkspaceUserSerializer(read_only=True)
+
+
 class WorkspaceDetailSerializer(serializers.ModelSerializer):
-    members = WorkspaceMemberSerializer(
+    members = ConsoleWorkspaceMemberSerializer(
         source="memberships",
         many=True,
         read_only=True,
@@ -39,6 +57,7 @@ class WorkspaceDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Workspace
         fields = ["id", "name", "members"]
+        extra_kwargs = {"id": {"read_only": True}}
 
 
 class WorkspaceTransferOwnershipSerializer(serializers.Serializer):
@@ -57,6 +76,12 @@ class WorkspaceTransferOwnershipSerializer(serializers.Serializer):
             )
 
         return owner_id
+
+
+class PasswordResetLinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PasswordResetToken
+        fields = ["id", "value"]
 
 
 class PasswordResetTokenSerializer(serializers.ModelSerializer):
@@ -88,3 +113,51 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
             "prune_volumes",
             "prune_networks",
         ]
+
+
+class WorkspaceWithOwnerSerializer(serializers.ModelSerializer):
+    owner = serializers.SerializerMethodField()
+
+    @extend_schema_field(
+        {
+            "type": "object",
+            "properties": {
+                "user": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "username": {"type": "string"},
+                        "first_name": {"type": "string"},
+                    },
+                    "required": ["id", "username", "first_name"],
+                },
+            },
+            "required": ["user"],
+        }
+    )
+    def get_owner(self, obj: dict | Workspace):
+        # Get the service that owns this volume (via FK)
+        if isinstance(obj, dict):
+            return obj["owner"]
+        else:
+            return {
+                "user": dict(
+                    id=obj.owner[0].user.id,
+                    username=obj.owner[0].user.username,
+                    first_name=obj.owner[0].user.first_name,
+                )
+            }
+
+    class Meta:
+        model = Workspace
+        fields = [
+            "id",
+            "name",
+            "created_at",
+            "owner",
+        ]
+        extra_kwargs = {
+            "id": {"read_only": True},
+            "name": {"read_only": True},
+            "created_at": {"read_only": True},
+        }

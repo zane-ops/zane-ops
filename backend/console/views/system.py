@@ -12,7 +12,7 @@ from django.conf import settings
 class SystemSettingsAPIView(RetrieveUpdateAPIView):
     permission_classes = [IsInstanceOwner]
     serializer_class = SystemSettingsSerializer
-    http_method_names = ["get", "put"]
+    http_method_names = ["get", "put", "patch"]
 
     def get_object(self) -> SystemSettings:  # type: ignore
         return SystemSettings.get_or_create()

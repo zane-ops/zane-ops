@@ -63,7 +63,7 @@ export function useCommandBarState() {
     // or when the list shows something else than resources
     shouldSearch: open && view.type === "home"
   });
-  const { searchItemsByValue } = searchState;
+  const { searchItemsById } = searchState;
 
   /**
    * Back to a blank `home` view: the search holds the `action` view &
@@ -98,13 +98,14 @@ export function useCommandBarState() {
 
   const handleCmdInputKeyDown = React.useCallback(
     (ev: React.KeyboardEvent<HTMLDivElement>) => {
-      // `Tab` selects whatever is highlighted if found
+      // `Tab` selects whatever is highlighted if found. `highlightedValue`
+      // is the item's `id`, set as its `value` in the list
       if (ev.key === "Tab") {
-        const item = searchItemsByValue.get(highlightedValue);
+        const item = searchItemsById.get(highlightedValue);
 
         logger
           .scope("useCommandBarState", "handleCmdInputKeyDown")
-          .info({ highlightedValue, item, searchItemsByValue });
+          .info({ highlightedValue, item, searchItemsById });
 
         ev.preventDefault();
         ev.stopPropagation();
@@ -115,7 +116,7 @@ export function useCommandBarState() {
         setSelectedResource(item.resource);
       }
     },
-    [searchItemsByValue, highlightedValue]
+    [searchItemsById, highlightedValue]
   );
 
   const handleCmdBarKeyDown = React.useCallback(

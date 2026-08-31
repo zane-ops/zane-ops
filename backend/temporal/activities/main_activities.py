@@ -1622,7 +1622,9 @@ class DockerSwarmActivities:
                                     deployment_status = (
                                         Deployment.DeploymentStatus.UNHEALTHY
                                     )
-                                deployment_status_reason = output.decode("utf-8")
+                                deployment_status_reason = cast(bytes, output).decode(
+                                    "utf-8"
+                                )
                             else:
                                 container_networks = container.attrs["NetworkSettings"][
                                     "Networks"

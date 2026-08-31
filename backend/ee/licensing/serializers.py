@@ -15,6 +15,7 @@ class LicenseSerializer(serializers.ModelSerializer):
             "expires_at",
             "tier",
             "uuid",
+            "instance_fingerprint",
         ]
 
 

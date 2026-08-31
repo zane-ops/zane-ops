@@ -5,7 +5,7 @@ from drf_spectacular.utils import extend_schema
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.generics import ListAPIView, RetrieveDestroyAPIView
+from rest_framework.generics import ListAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.views import APIView
 
 from rest_framework import exceptions
@@ -32,12 +32,12 @@ from zane_api.models import (
 )
 from zane_api.constants import WORKSPACE_SESSION_KEY
 from zane_api.permissions import IsInstanceOwner
-from zane_api.serializers import WorkspaceSerializer
 
 from .serializers import WorkspaceListFilterSet
 from ..serializers import (
     WorkspaceDetailSerializer,
     WorkspaceTransferOwnershipSerializer,
+    WorkspaceWithOwnerSerializer,
 )
 from zane_api.views.base import (
     DefaultPageNumberPagination,
@@ -46,18 +46,32 @@ from zane_api.views.base import (
 )
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, QuerySet, Prefetch, Value
 
 User = get_user_model()
 
 
 class ListWorkspacesAPIView(ListAPIView):
     permission_classes = [IsInstanceOwner]
-    serializer_class = WorkspaceSerializer
+    serializer_class = WorkspaceWithOwnerSerializer
     queryset = Workspace.objects.all()
     pagination_class = DefaultPageNumberPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = WorkspaceListFilterSet
+
+    def get_queryset(self) -> QuerySet[Workspace]:  # type: ignore
+        owner_queryset = (
+            WorkspaceMembership.objects.filter()
+            .filter(role=WorkspaceRole.OWNER)
+            .select_related("user")
+        )
+        return (
+            Workspace.objects.all()
+            .prefetch_related(
+                Prefetch("memberships", queryset=owner_queryset, to_attr="owner")
+            )
+            .order_by("id")
+        )
 
     @extend_schema(
         summary="List all workspaces in ZaneOps installation",
@@ -71,11 +85,12 @@ class ListWorkspacesAPIView(ListAPIView):
             raise e
 
 
-class WorkspaceDetailAPIView(RetrieveDestroyAPIView):
+class WorkspaceDetailAPIView(RetrieveUpdateDestroyAPIView):
     permission_classes = [IsInstanceOwner]
     serializer_class = WorkspaceDetailSerializer
     lookup_field = "pk"
     lookup_url_kwarg = "id"
+    http_method_names = ["get", "put", "delete"]
 
     def get_queryset(self):  # type: ignore
         return Workspace.objects.prefetch_related(

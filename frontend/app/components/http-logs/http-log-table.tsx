@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { useSearchParams } from "react-router";
+import type { HttpLog } from "~/api/types";
 import { Code } from "~/components/code";
 import { Ping } from "~/components/ping";
 import { Button } from "~/components/ui/button";
@@ -24,7 +25,7 @@ import {
 } from "~/components/ui/table";
 import { COUNTRY_CODE_LIST } from "~/lib/countryCodeList";
 import {
-  type HttpLog,
+  HTTP_LOG_SOURCE_LABELS,
   type HttpLogQueryData,
   httpLogSearchSchema
 } from "~/lib/queries";
@@ -44,20 +45,27 @@ export type HttpLogTableProps = {
    * Show the compose stack service each request was routed to.
    */
   showStackServiceColumn?: boolean;
+  /**
+   * Show where the request originated from (service, compose stack, ZaneOps itself, ...),
+   * used on the global (server admin) HTTP logs page where logs are not scoped to one service.
+   */
+  showSourceColumn?: boolean;
 };
 
 export function HttpLogTable({
   logsQuery,
   onAutoRefetchEnabledChange,
   isAutoRefetchEnabled,
-  showStackServiceColumn = false
+  showStackServiceColumn = false,
+  showSourceColumn = false
 }: HttpLogTableProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
   const { sort_by } = search;
 
   const logs = (logsQuery.data?.pages ?? []).flatMap((item) => item.results);
-  const columnCount = showStackServiceColumn ? 9 : 8;
+  const columnCount =
+    8 + (showStackServiceColumn ? 1 : 0) + (showSourceColumn ? 1 : 0);
 
   const containerRef = React.useRef<React.ComponentRef<"div">>(null);
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLTableRowElement>({
@@ -282,6 +290,11 @@ export function HttpLogTable({
                   Service
                 </TableHead>
               )}
+              {showSourceColumn && (
+                <TableHead className="sticky top-0 z-20 bg-toggle">
+                  Source
+                </TableHead>
+              )}
               <TableHead className="sticky top-0 z-20 bg-toggle">
                 Client IP
               </TableHead>
@@ -340,6 +353,7 @@ export function HttpLogTable({
                   <LogTableRowContent
                     log={log}
                     showStackServiceColumn={showStackServiceColumn}
+                    showSourceColumn={showSourceColumn}
                   />
                 </TableRow>
               );
@@ -385,9 +399,14 @@ export function HttpLogTable({
 type LogTableRowProps = {
   log: HttpLog;
   showStackServiceColumn: boolean;
+  showSourceColumn: boolean;
 };
 
-function LogTableRowContent({ log, showStackServiceColumn }: LogTableRowProps) {
+function LogTableRowContent({
+  log,
+  showStackServiceColumn,
+  showSourceColumn
+}: LogTableRowProps) {
   const logTime = formatLogTime(log.time);
   const { value: duration, unit } = formatDuration(
     log.request_duration_ns / 1_000_000 /*from ns to ms*/
@@ -443,6 +462,21 @@ function LogTableRowContent({ log, showStackServiceColumn }: LogTableRowProps) {
           <Code className="whitespace-nowrap max-w-[150px] text-ellipsis overflow-x-hidden flex-shrink">
             {log.stack_service_name}
           </Code>
+        </TableCell>
+      )}
+
+      {showSourceColumn && (
+        <TableCell>
+          <div className="flex flex-col gap-0.5">
+            <span className="whitespace-nowrap">
+              {HTTP_LOG_SOURCE_LABELS[log.source]}
+            </span>
+            {log.stack_service_name && (
+              <Code className="whitespace-nowrap max-w-[150px] text-ellipsis overflow-x-hidden flex-shrink">
+                {log.stack_service_name}
+              </Code>
+            )}
+          </div>
         </TableCell>
       )}
 

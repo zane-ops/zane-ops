@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ExternalLinkIcon,
   LayoutListIcon,
-  LoaderIcon,
   PencilLineIcon,
   PlusIcon,
   Trash2Icon
@@ -10,7 +9,7 @@ import {
 import { Link, useFetcher, useSearchParams } from "react-router";
 import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
-import { Button, SubmitButton } from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import {
   Table,
@@ -26,7 +25,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { buildRegistryListFilters, buildRegistryQueries } from "~/lib/queries";
+import { buildRegistryQueries, paginationListFilters } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/build-registry-list";
@@ -45,7 +44,7 @@ export function meta() {
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
   const searchParams = new URL(request.url).searchParams;
-  const search = buildRegistryListFilters.parse(searchParams);
+  const search = paginationListFilters.parse(searchParams);
 
   const filters = {
     page: search.page ?? 1,
@@ -64,7 +63,7 @@ export default function BuildRegistryListPage({
   loaderData
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const search = buildRegistryListFilters.parse(searchParams);
+  const search = paginationListFilters.parse(searchParams);
 
   const filters = {
     page: search.page ?? 1,

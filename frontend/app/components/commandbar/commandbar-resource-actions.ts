@@ -615,7 +615,7 @@ export function useCurrentSelectedResourceInRouteContext(): SearchResource | nul
       };
     }
 
-    if (environment && inEnvRoutes) {
+    if (environment && inEnvRoutes && environment.name !== "production") {
       return {
         type: "environment",
         id: environment.id,

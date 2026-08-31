@@ -101,11 +101,6 @@ export default function ComposeStackLayoutPage({
       title: "Services",
       href: ".",
       icon: BoxIcon
-    },
-    {
-      title: "Deployments",
-      href: "./deployments/",
-      icon: RocketIcon
     }
   ];
 
@@ -124,11 +119,18 @@ export default function ComposeStackLayoutPage({
     );
   }
 
-  navItems.push({
-    title: "Metrics",
-    href: "./metrics",
-    icon: ChartNoAxesColumn
-  });
+  navItems.push(
+    {
+      title: "Metrics",
+      href: "./metrics",
+      icon: ChartNoAxesColumn
+    },
+    {
+      title: "Deployments",
+      href: "./deployments/",
+      icon: RocketIcon
+    }
+  );
 
   return (
     <>

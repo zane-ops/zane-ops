@@ -32,7 +32,7 @@ import {
 import { Popover, PopoverTrigger } from "~/components/ui/popover";
 import { environmentQueries, userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
-import { cn, timeAgoFormatter } from "~/lib/utils";
+import { cn, relativeTimeFormatter } from "~/lib/utils";
 import {
   getCurrentWorkspace,
   useCurrentWorkspace
@@ -368,7 +368,7 @@ export default function EnvironmentServiceListPage({
                 volumeNumber={service.volume_number}
                 status={service.status}
                 selected={selectedServiceIds.includes(service.id)}
-                updatedAt={timeAgoFormatter(service.updated_at)}
+                updatedAt={relativeTimeFormatter(service.updated_at)}
                 url={service.url}
                 id={service.id}
                 onToggleSelect={(id) => {
@@ -394,7 +394,7 @@ export default function EnvironmentServiceListPage({
               status={service.status}
               key={service.id}
               id={service.id}
-              updatedAt={timeAgoFormatter(service.updated_at)}
+              updatedAt={relativeTimeFormatter(service.updated_at)}
               selected={selectedServiceIds.includes(service.id)}
               lastCommitMessage={service.last_commit_message}
               url={service.url}

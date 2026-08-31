@@ -9,7 +9,7 @@ import type {
   WorkspaceMember,
   WorkspaceMembership
 } from "~/api/types";
-import { WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
+import { BUILD_EDITION, WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
 import { createDevLogger } from "~/lib/logger";
 import type {
   DotNotationToObject,
@@ -250,13 +250,14 @@ export async function getCsrfTokenHeader() {
   return { "X-CSRFToken": getCookie("csrftoken") };
 }
 
-export function timeAgoFormatter(
+export function relativeTimeFormatter(
   dateInput: string | Date,
   short = false
 ): string {
   const date = new Date(dateInput);
   const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const diffInSeconds = Math.abs(diff);
 
   const secondsInMinute = 60;
   const secondsInHour = 60 * secondsInMinute;
@@ -295,7 +296,7 @@ export function timeAgoFormatter(
     numeric: "auto",
     style: short ? "narrow" : "long"
   });
-  const formatedValue = rtf.format(-value, unit);
+  const formatedValue = rtf.format(diff > 0 ? -value : +value, unit);
   return formatedValue === "now" ? "Just now" : formatedValue;
 }
 
@@ -312,7 +313,7 @@ export function mergeTimeAgoFormatterAndFormattedDate(
     return formattedDate(date);
   }
 
-  return timeAgoFormatter(date);
+  return relativeTimeFormatter(date);
 }
 
 export function formatElapsedTime(
@@ -362,6 +363,16 @@ export function formatURL({
 }: { domain: string; base_path?: string }) {
   const currentUrl = new URL(window.location.href);
   return `${currentUrl.protocol}//${domain}${base_path}`;
+}
+
+/**
+ * Turn an app-relative path into a shareable absolute URL on the current origin.
+ *
+ * ex: `getAbsoluteURL(href("/invite/:token", { token }))`
+ *      -> `https://zaneops.dev/invite/gh1234`
+ */
+export function getLocalAbsoluteURL(path: string) {
+  return new URL(path, window.location.origin).toString();
 }
 
 export function pluralize(word: string, item_count: number) {
@@ -654,4 +665,8 @@ export function isEditableTarget(target: EventTarget | null) {
   if (target.isContentEditable) return true;
   const tagName = target.tagName;
   return ["input", "textarea", "select"].includes(tagName.toLowerCase());
+}
+
+export function getBuildName() {
+  return BUILD_EDITION === "ee" ? "Enterprise" : "Open Source";
 }

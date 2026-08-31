@@ -52,6 +52,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PWD=password
       - POSTGRES_SEEDS=zane.db
+      - POSTGRES_SEEDS_CREATE=zane.db
       - SKIP_SCHEMA_SETUP=false
       - SKIP_DB_SETUP=false
       - SERVICES=history,matching,frontend,worker

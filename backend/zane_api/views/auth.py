@@ -45,6 +45,8 @@ from ..models import Workspace, WorkspaceMembership, WorkspaceRole
 from ..constants import WORKSPACE_SESSION_KEY
 from console.models import PasswordResetToken
 
+from console.serializers import PasswordResetLinkSerializer
+
 
 User = get_user_model()
 
@@ -55,6 +57,23 @@ class LoginSuccessResponseSerializer(serializers.Serializer):
 
 class ResetPasswordAPIView(APIView):
     permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        operation_id="getPasswordResetToken",
+        summary="Get password reset link for user",
+        responses=PasswordResetLinkSerializer,
+    )
+    def get(self, request: Request, token: str):
+        try:
+            password_token = PasswordResetToken.objects.filter(
+                value=token,
+                expires_at__gt=timezone.now(),
+            ).get()
+        except PasswordResetToken.DoesNotExist:
+            raise exceptions.NotFound("Invalid or expired password reset link.")
+
+        serializer = PasswordResetLinkSerializer(password_token)
+        return Response(serializer.data)
 
     @extend_schema(
         operation_id="resetPassword",

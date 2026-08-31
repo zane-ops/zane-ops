@@ -2,9 +2,9 @@ import { AnsiHtml } from "fancy-ansi/react";
 import { ChevronRightIcon, ChevronsUpDownIcon, FilterIcon } from "lucide-react";
 import * as React from "react";
 import { useSearchParams } from "react-router";
+import type { DeploymentLog } from "~/api/types";
 import { buttonVariants } from "~/components/ui/button";
 import { MAX_VISIBLE_LOG_CHARS_LIMIT } from "~/lib/constants";
-import type { DeploymentLog } from "~/lib/queries";
 import { cn, excerpt, formatLogTime, stringToColor } from "~/lib/utils";
 
 type LogProps = Pick<DeploymentLog, "id" | "level" | "time" | "timestamp"> & {

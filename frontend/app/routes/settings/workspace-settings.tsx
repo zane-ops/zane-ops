@@ -561,9 +561,9 @@ function TransferOwnershipForm({ workspaceId }: TransferOwnershipFormProps) {
         >
           <fieldset className="flex flex-col gap-2 flex-1">
             <label htmlFor="new_owner_id">New owner</label>
-            <small className="text-grey">
+            <p className="text-grey text-sm">
               Only admins of this workspace can be selected
-            </small>
+            </p>
 
             {selectedOwner && (
               <input

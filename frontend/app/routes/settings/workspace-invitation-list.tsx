@@ -70,9 +70,11 @@ import {
   cn,
   formattedTime,
   getFormErrorsFromResponseData,
+  getLocalAbsoluteURL,
   hasMinRole,
   metaTitle,
   pluralize,
+  relativeTimeFormatter,
   stringToColor
 } from "~/lib/utils";
 import {
@@ -207,7 +209,7 @@ function WorkspaceInvitationsTable({
       <TableBody>
         {invitations.length === 0 ? (
           <TableRow className="px-2">
-            <TableCell colSpan={5} className="p-2 text-muted-foreground italic">
+            <TableCell colSpan={6} className="p-2 text-muted-foreground italic">
               -- No invitations found --
             </TableCell>
           </TableRow>
@@ -339,10 +341,9 @@ export type WorkspaceInvitationActionsProps = {
 };
 
 function getInvitationLink(invitation: Pick<WorkspaceInvitation, "token">) {
-  const registerLink =
-    window.location.origin +
-    href("/invite/:token", { token: invitation.token });
-  return registerLink;
+  return getLocalAbsoluteURL(
+    href("/invite/:token", { token: invitation.token })
+  );
 }
 
 export function WorkspaceInvitationActions({
@@ -441,7 +442,10 @@ function RegenerateInvitationLinkFormDialog({
                 <dt className="text-grey">Valid until:</dt>
                 <dd>
                   <time dateTime={data.data.expires_at}>
-                    {formattedTime(data.data.expires_at)}
+                    {formattedTime(data.data.expires_at)}&nbsp;
+                    <span className="text-grey">
+                      ({relativeTimeFormatter(data.data.expires_at)})
+                    </span>
                   </time>
                 </dd>
               </div>

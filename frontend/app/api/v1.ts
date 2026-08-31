@@ -45,6 +45,8 @@ export interface paths {
     get: operations["getAuthedUser"];
   };
   "/api/auth/reset-password/{token}/": {
+    /** Get password reset link for user */
+    get: operations["getPasswordResetToken"];
     /** Reset user password */
     post: operations["resetPassword"];
   };
@@ -243,6 +245,7 @@ export interface paths {
   "/api/console/system-settings/": {
     get: operations["console_system_settings_retrieve"];
     put: operations["console_system_settings_update"];
+    patch: operations["console_system_settings_partial_update"];
   };
   "/api/console/users/": {
     /** List all users in ZaneOps installation */
@@ -263,6 +266,7 @@ export interface paths {
   };
   "/api/console/workspaces/{id}/": {
     get: operations["console_workspaces_retrieve"];
+    put: operations["console_workspaces_update"];
     /** Delete a workspace (admin) */
     delete: operations["console_workspaces_destroy"];
   };
@@ -710,6 +714,10 @@ export interface components {
   schemas: {
     AccessibleWorkspaceProject: {
       id: string;
+      slug: string;
+    };
+    AccessibleWorkspaceProjectRequest: {
+      id?: string;
       slug: string;
     };
     ArchiveComposeStackErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -1859,6 +1867,165 @@ export interface components {
     ConsolePasswordTokensListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsolePasswordTokensRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsoleProxyHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsoleSystemSettingsPartialUpdateAppDataCleanupCronScheduleErrorComponent: {
+      /**
+       * @description * `app_data_cleanup_cron_schedule` - app_data_cleanup_cron_schedule
+       * @enum {string}
+       */
+      attr: "app_data_cleanup_cron_schedule";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdateBuildCacheMaxAgeDaysErrorComponent: {
+      /**
+       * @description * `build_cache_max_age_days` - build_cache_max_age_days
+       * @enum {string}
+       */
+      attr: "build_cache_max_age_days";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdateBuildCacheMaxUseSpaceBytesErrorComponent: {
+      /**
+       * @description * `build_cache_max_use_space_bytes` - build_cache_max_use_space_bytes
+       * @enum {string}
+       */
+      attr: "build_cache_max_use_space_bytes";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdateDockerSystemPruneCronScheduleErrorComponent: {
+      /**
+       * @description * `docker_system_prune_cron_schedule` - docker_system_prune_cron_schedule
+       * @enum {string}
+       */
+      attr: "docker_system_prune_cron_schedule";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdateError: components["schemas"]["ConsoleSystemSettingsPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdateDockerSystemPruneCronScheduleErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdateAppDataCleanupCronScheduleErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdateHttpLogRetentionDaysErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdateBuildCacheMaxAgeDaysErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdateBuildCacheMaxUseSpaceBytesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdatePruneImagesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdatePruneContainersErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdatePruneVolumesErrorComponent"] | components["schemas"]["ConsoleSystemSettingsPartialUpdatePruneNetworksErrorComponent"];
+    ConsoleSystemSettingsPartialUpdateErrorResponse400: components["schemas"]["ConsoleSystemSettingsPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ConsoleSystemSettingsPartialUpdateHttpLogRetentionDaysErrorComponent: {
+      /**
+       * @description * `http_log_retention_days` - http_log_retention_days
+       * @enum {string}
+       */
+      attr: "http_log_retention_days";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdatePruneContainersErrorComponent: {
+      /**
+       * @description * `prune_containers` - prune_containers
+       * @enum {string}
+       */
+      attr: "prune_containers";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdatePruneImagesErrorComponent: {
+      /**
+       * @description * `prune_images` - prune_images
+       * @enum {string}
+       */
+      attr: "prune_images";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdatePruneNetworksErrorComponent: {
+      /**
+       * @description * `prune_networks` - prune_networks
+       * @enum {string}
+       */
+      attr: "prune_networks";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdatePruneVolumesErrorComponent: {
+      /**
+       * @description * `prune_volumes` - prune_volumes
+       * @enum {string}
+       */
+      attr: "prune_volumes";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ConsoleSystemSettingsPartialUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ConsoleSystemSettingsPartialUpdateError"][];
+    };
     ConsoleSystemSettingsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsoleSystemSettingsUpdateAppDataCleanupCronScheduleErrorComponent: {
       /**
@@ -2055,14 +2222,14 @@ export interface components {
       errors: components["schemas"]["ConsoleTransferWorkspaceOwnershipError"][];
     };
     ConsoleUsersDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ConsoleUsersListError: components["schemas"]["ConsoleUsersListUsernameErrorComponent"];
+    ConsoleUsersListError: components["schemas"]["ConsoleUsersListQueryErrorComponent"];
     ConsoleUsersListErrorResponse400: components["schemas"]["ConsoleUsersListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ConsoleUsersListUsernameErrorComponent: {
+    ConsoleUsersListQueryErrorComponent: {
       /**
-       * @description * `username` - username
+       * @description * `query` - query
        * @enum {string}
        */
-      attr: "username";
+      attr: "query";
       /**
        * @description * `null_characters_not_allowed` - null_characters_not_allowed
        * @enum {string}
@@ -2108,6 +2275,45 @@ export interface components {
       errors: components["schemas"]["ConsoleUsersPartialUpdateError"][];
     };
     ConsoleUsersRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsoleWorkspaceMember: {
+      id: number;
+      role_name: components["schemas"]["RoleNameEnum"];
+      role: components["schemas"]["RoleEnum"];
+      accessible_projects: readonly components["schemas"]["AccessibleWorkspaceProject"][];
+      user: components["schemas"]["ConsoleWorkspaceUser"];
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    ConsoleWorkspaceMemberRequest: {
+      role?: components["schemas"]["RoleEnum"];
+      /** Format: date-time */
+      created_at?: string;
+    };
+    ConsoleWorkspaceUser: {
+      id: number;
+      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+      username: string;
+      first_name: string;
+      last_name: string;
+      /**
+       * Active
+       * @description Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
+       */
+      is_active: boolean;
+    };
+    ConsoleWorkspaceUserRequest: {
+      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+      username: string;
+      first_name?: string;
+      last_name?: string;
+      /**
+       * Active
+       * @description Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
+       */
+      is_active?: boolean;
+    };
     ConsoleWorkspacesDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConsoleWorkspacesListError: components["schemas"]["ConsoleWorkspacesListNameErrorComponent"];
     ConsoleWorkspacesListErrorResponse400: components["schemas"]["ConsoleWorkspacesListValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -2129,6 +2335,44 @@ export interface components {
       errors: components["schemas"]["ConsoleWorkspacesListError"][];
     };
     ConsoleWorkspacesRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConsoleWorkspacesUpdateError: components["schemas"]["ConsoleWorkspacesUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConsoleWorkspacesUpdateNameErrorComponent"];
+    ConsoleWorkspacesUpdateErrorResponse400: components["schemas"]["ConsoleWorkspacesUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ConsoleWorkspacesUpdateNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ConsoleWorkspacesUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ConsoleWorkspacesUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ConsoleWorkspacesUpdateError"][];
+    };
     CreateComposeStackFromDokployTemplateObjectRequestRequest: {
       compose: string;
       config: string;
@@ -3443,6 +3687,7 @@ export interface components {
     GetComposeStackDeploymentDetailsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetComposeStackDetailsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetPasswordResetTokenErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetPreviewEnvToReviewErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetProjectListError: components["schemas"]["GetProjectListSlugErrorComponent"] | components["schemas"]["GetProjectListSortByErrorComponent"];
     GetProjectListErrorResponse400: components["schemas"]["GetProjectListValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -3872,7 +4117,8 @@ export interface components {
       time: string;
       deployment_id: string | null;
       service_id: string | null;
-      request_uuid: string | null;
+      /** Format: uuid */
+      request_uuid: string;
       request_ip: string;
       request_path: string;
       request_query: string | null;
@@ -4008,7 +4254,6 @@ export interface components {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
       username: string;
       first_name: string;
-      last_name: string;
       /**
        * Superuser status
        * @description Designates that this user has all permissions without explicitly assigning them.
@@ -4019,6 +4264,8 @@ export interface components {
        * @description Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
        */
       is_active: boolean;
+      /** Format: date-time */
+      date_joined: string;
     };
     InviteUserAccessibleProjectIdsErrorComponent: {
       /**
@@ -4135,6 +4382,7 @@ export interface components {
       expires_at: string;
       tier: components["schemas"]["TierEnum"];
       uuid: string;
+      instance_fingerprint: string;
     };
     LicenseDetailsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     LicenseInstallError: components["schemas"]["LicenseInstallNonFieldErrorsErrorComponent"] | components["schemas"]["LicenseInstallUuidErrorComponent"];
@@ -4479,21 +4727,6 @@ export interface components {
       previous: string | null;
       results: components["schemas"]["WorkspaceInvitation"][];
     };
-    PaginatedWorkspaceList: {
-      /** @example 123 */
-      count: number;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=4
-       */
-      next: string | null;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=2
-       */
-      previous: string | null;
-      results: components["schemas"]["Workspace"][];
-    };
     PaginatedWorkspaceMemberList: {
       /** @example 123 */
       count: number;
@@ -4509,6 +4742,21 @@ export interface components {
       previous: string | null;
       results: components["schemas"]["WorkspaceMember"][];
     };
+    PaginatedWorkspaceWithOwnerList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["WorkspaceWithOwner"][];
+    };
     ParseError: {
       code: components["schemas"]["ParseErrorCodeEnum"];
       detail: string;
@@ -4522,6 +4770,10 @@ export interface components {
     ParseErrorResponse: {
       type: components["schemas"]["ClientErrorEnum"];
       errors: components["schemas"]["ParseError"][];
+    };
+    PasswordResetLink: {
+      id: number;
+      value: string;
     };
     PasswordResetToken: {
       id: number;
@@ -4585,6 +4837,18 @@ export interface components {
       url?: string;
       password?: string;
       slug?: string;
+    };
+    PatchedSystemSettingsRequest: {
+      docker_system_prune_cron_schedule?: string;
+      app_data_cleanup_cron_schedule?: string;
+      http_log_retention_days?: number | null;
+      build_cache_max_age_days?: number | null;
+      /** Format: int64 */
+      build_cache_max_use_space_bytes?: number | null;
+      prune_images?: boolean;
+      prune_containers?: boolean;
+      prune_volumes?: boolean;
+      prune_networks?: boolean;
     };
     PatchedUpdateEnvironmentRequestRequest: {
       name?: string;
@@ -9061,7 +9325,10 @@ export interface components {
     WorkspaceDetail: {
       id: string;
       name: string;
-      members: readonly components["schemas"]["WorkspaceMember"][];
+      members: readonly components["schemas"]["ConsoleWorkspaceMember"][];
+    };
+    WorkspaceDetailRequest: {
+      name: string;
     };
     WorkspaceEditPermissionsRequestRequest: {
       role: components["schemas"]["RoleEnum"];
@@ -9212,6 +9479,19 @@ export interface components {
     WorkspaceUpdateValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["WorkspaceUpdateError"][];
+    };
+    WorkspaceWithOwner: {
+      id: string;
+      name: string;
+      /** Format: date-time */
+      created_at: string;
+      owner: {
+        readonly user: {
+          id: string;
+          username: string;
+          first_name: string;
+        };
+      };
     };
     WorkspacesListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WriteableContainerRegistryCredentials: {
@@ -9424,6 +9704,41 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get password reset link for user */
+  getPasswordResetToken: {
+    parameters: {
+      path: {
+        token: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PasswordResetLink"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetPasswordResetTokenErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {
@@ -11639,15 +11954,57 @@ export interface operations {
       };
     };
   };
+  console_system_settings_partial_update: {
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedSystemSettingsRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedSystemSettingsRequest"];
+        "multipart/form-data": components["schemas"]["PatchedSystemSettingsRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SystemSettings"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsoleSystemSettingsPartialUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /** List all users in ZaneOps installation */
   console_users_list: {
     parameters: {
       query?: {
+        is_active?: boolean;
         /** @description A page number within the paginated result set. */
         page?: number;
         /** @description Number of results to return per page. */
         per_page?: number;
-        username?: string;
+        query?: string;
       };
     };
     responses: {
@@ -11860,7 +12217,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["PaginatedWorkspaceList"];
+          "application/json": components["schemas"]["PaginatedWorkspaceWithOwnerList"];
         };
       };
       400: {
@@ -11905,6 +12262,52 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ConsoleWorkspacesRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  console_workspaces_update: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WorkspaceDetailRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["WorkspaceDetailRequest"];
+        "multipart/form-data": components["schemas"]["WorkspaceDetailRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceDetail"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConsoleWorkspacesUpdateErrorResponse400"];
         };
       };
       401: {

@@ -8,6 +8,7 @@ import {
 
 export default [
   route("login", "./routes/login.tsx"),
+  route("reset-password/:token", "./routes/reset-password.tsx"),
   route("invite/:token", "./routes/workspace-invitation.tsx"),
   route("logout", "./routes/logout.tsx"),
   route("onboarding", "./routes/onboarding.tsx"),
@@ -68,6 +69,32 @@ export default [
 
     layout("./routes/layouts/server-admin-layout.tsx", [
       ...prefix("admin", [
+        index("./routes/server-admin/server-admin-index.tsx"),
+        route("users", "./routes/server-admin/server-user-list.tsx"),
+        route("users/:userId", "./routes/server-admin/server-user-details.tsx"),
+        route("password-links", "./routes/server-admin/password-link-list.tsx"),
+        route(
+          "password-links/:tokenId",
+          "./routes/server-admin/password-link-details.tsx"
+        ),
+        route("license", "./routes/server-admin/license-details.tsx"),
+        route("automation", "./routes/server-admin/jobs-and-schedules.tsx"),
+        route("workspaces", "./routes/server-admin/workspace-list.tsx"),
+        route(
+          "workspaces/create",
+          "./routes/server-admin/create-workspace.tsx"
+        ),
+        layout("./routes/layouts/workspace-details-layout.tsx", [
+          route(
+            "workspaces/:workspaceId",
+            "./routes/server-admin/workspace-details.tsx"
+          ),
+          route(
+            "workspaces/:workspaceId/members",
+            "./routes/server-admin/workspace-members.tsx"
+          )
+        ]),
+
         route("ssh-keys", "./routes/server-admin/ssh-keys-list.tsx"),
         route("ssh-keys/new", "./routes/server-admin/create-ssh-key.tsx"),
         route("server-console", "./routes/server-admin/server-terminal.tsx"),
@@ -86,7 +113,8 @@ export default [
         route(
           "build-registries/:id",
           "./routes/server-admin/build-registry-details.tsx"
-        )
+        ),
+        route("http-logs", "./routes/server-admin/global-http-logs.tsx")
       ])
     ]),
 

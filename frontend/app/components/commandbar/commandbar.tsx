@@ -12,7 +12,7 @@ import type { AuthedUserResponse } from "~/api/types";
 import { useResourceActionGroups } from "~/components/commandbar/commandbar-resource-actions";
 import {
   getNavItemFromSearchResource,
-  getSearchItemValue
+  getSearchItemKeywords
 } from "~/components/commandbar/commandbar-search";
 import { useCommandBarState } from "~/components/commandbar/commandbar-state";
 import type {
@@ -30,6 +30,7 @@ import {
   CommandList,
   CommandSeparator
 } from "~/components/ui/command";
+import { createDevLogger } from "~/lib/logger";
 import { userQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
@@ -38,6 +39,8 @@ export type CommandBarProps = {
   actionGroups?: CommandBarActionGroup[];
   authedUser?: AuthedUserResponse | null;
 };
+
+const logger = createDevLogger(import.meta.url);
 
 export function CommandBar({
   navGroups = [],
@@ -128,6 +131,13 @@ export function CommandBar({
     </div>
   );
 
+  logger.scope("CommandBar").info({
+    highlightedValue
+  });
+
+  const commandListRef =
+    React.useRef<React.ComponentRef<typeof CommandPrimitive.List>>(null);
+
   return (
     <CommandDialog
       open={open}
@@ -142,16 +152,18 @@ export function CommandBar({
         value: highlightedValue,
         onValueChange: setHighlightedValue,
         onKeyDown: handleCmdBarKeyDown,
-        filter(value, query) {
+        filter(value, query, keywords) {
           let search = query;
           if (query.startsWith(">")) {
             search = query.substring(1);
           }
+          search = search.trim().toLowerCase();
+          if (!search) return 1;
 
-          if (value.toLowerCase().includes(search.trim().toLowerCase())) {
-            return 1;
-          }
-          return 0;
+          // `value` is the item's `id`, so match against its `keywords`
+          // (title, group, parents...) instead
+          const haystack = [value, ...(keywords ?? [])].join(" ").toLowerCase();
+          return haystack.includes(search) ? 1 : 0;
         }
       }}
     >
@@ -212,16 +224,27 @@ export function CommandBar({
             className="text-base bg-inherit focus-visible:outline-hidden px-2 w-full grow"
             value={search}
             ref={inputRef}
-            onValueChange={setSearch}
+            onValueChange={(value) => {
+              setSearch(value);
+              setTimeout(() => {
+                commandListRef.current?.scrollTo({
+                  top: 0,
+                  behavior: "instant"
+                });
+              });
+            }}
           />
         </div>
       </div>
 
-      <CommandList
+      <CommandPrimitive.List
+        ref={commandListRef}
         className={cn(
-          "max-h-124 min-h-0 h-[calc(var(--cmdk-list-height)+var(--spacing)*3)] scroll-pb-4 scroll-pt-2",
+          "bg-popover rounded-md border border-border overflow-y-auto overflow-x-hidden",
+          "max-h-124 min-h-0 h-[calc(var(--cmdk-list-height)+var(--spacing)*3)] ",
+          "scroll-py-2",
           "transition-[height] duration-200 ease-in-out",
-          "rounded-t-none border-x-0 border-b-0 px-0"
+          "rounded-t-none border-x-0 border-b-0 px-0 py-1"
         )}
       >
         <CommandEmpty>
@@ -276,14 +299,15 @@ export function CommandBar({
               heading={group.heading}
               className={cn(
                 "[&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs",
-                groupIndex > 0 && "[&_[cmdk-group-heading]]:pt-3",
-                "pb-2 !px-2"
+                "pb-3 !px-2",
+                groupIndex > 0 && "[&_[cmdk-group-heading]]:pt-3"
               )}
             >
               {group.items.map((action) => (
                 <CommandItem
                   key={action.id}
-                  value={`${action.title} ${group.heading}`}
+                  value={action.id}
+                  keywords={[action.title, group.heading]}
                   onSelect={() =>
                     runCmd(
                       () => {
@@ -316,16 +340,15 @@ export function CommandBar({
                 heading={group.heading}
                 className={cn(
                   "[&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs",
-                  groupIndex === 0
-                    ? "scroll-pt-10"
-                    : "[&_[cmdk-group-heading]]:pt-3",
+                  groupIndex !== 0 && "[&_[cmdk-group-heading]]:pt-3",
                   "pb-2 !px-2"
                 )}
               >
                 {group.items.map((item) => (
                   <CommandItem
-                    key={item.href}
-                    value={`${item.title} ${group.heading}`}
+                    key={item.id}
+                    value={item.id}
+                    keywords={[item.title, group.heading]}
                     onSelect={() => runCmd(() => navigate(item.href))}
                     className="h-9 flex items-center gap-2 px-0 font-medium"
                   >
@@ -356,8 +379,9 @@ export function CommandBar({
                 >
                   {group.items.map((item) => (
                     <CommandItem
-                      key={item.resource.id}
-                      value={getSearchItemValue(item)}
+                      key={item.id}
+                      value={item.id}
+                      keywords={getSearchItemKeywords(item)}
                       onSelect={() => runCmd(() => navigate(item.href))}
                       className={cn(
                         "h-9 flex items-center gap-2 px-0",
@@ -406,7 +430,7 @@ export function CommandBar({
               </React.Fragment>
             );
           })}
-      </CommandList>
+      </CommandPrimitive.List>
     </CommandDialog>
   );
 }

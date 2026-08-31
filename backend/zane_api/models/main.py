@@ -64,7 +64,8 @@ class Workspace(TimestampedModel):
     if TYPE_CHECKING:
         projects: RelatedManager["Project"]
         invitations: RelatedManager["WorkspaceInvitation"]
-        members: RelatedManager["WorkspaceMembership"]
+        memberships: RelatedManager["WorkspaceMembership"]
+        owner: list["WorkspaceMembership"]
 
     id = ShortUUIDField(
         length=11,
@@ -2020,8 +2021,7 @@ class HttpLog(models.Model):
     request_path = models.CharField(max_length=2000)
     request_query = models.CharField(max_length=2000, null=True, blank=True)
     request_ip = models.GenericIPAddressField()
-    request_uuid = models.CharField(
-        null=True,
+    request_uuid = models.UUIDField(
         max_length=255,
         unique=True,
     )

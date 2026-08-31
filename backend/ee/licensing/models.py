@@ -93,17 +93,6 @@ class License(models.Model):
         self.pk = SINGLETON_ID
         super().save(*args, **kwargs)
 
-    @property
-    def is_valid(self) -> bool:
-        return self._data is not None
-
-    @property
-    def expires_at(self) -> datetime:
-        data = self._data
-        if not data:
-            return datetime.fromtimestamp(0)
-        return data.expires_at
-
     @classmethod
     def validate_payload(cls, key: str, uuid: str | UUID) -> Self:
         """
@@ -176,10 +165,6 @@ class License(models.Model):
         Memoized per instance: ``raw_data`` is fixed once loaded, so all
         accessors share one RS256 verify. The cache lives only for the
         instance's lifetime, so a fresh request always re-checks ``exp``.
-
-        **Warning**:
-            Do not make this a process-wide/TTL cache! That would bypass
-            PyJWT's ``exp`` check and serve expired licenses as valid.
         """
         try:
             return self._decode_token(self.raw_data)
@@ -188,7 +173,9 @@ class License(models.Model):
             return None
 
     def __str__(self):
-        return f"License(installed_at={self.installed_at}, expires_at=installed_at={self.expires_at})"
+        return (
+            f"License(installed_at={self.installed_at}, expires_at={self.expires_at})"
+        )
 
     @classmethod
     def get(cls):
@@ -203,6 +190,22 @@ class License(models.Model):
             .select_related("installed_by")
             .afirst()
         )
+
+    @property
+    def is_valid(self) -> bool:
+        return self._data is not None
+
+    @property
+    def instance_fingerprint(self) -> str:
+        data = self._data
+        return data.fingerprint if data is not None else "sha256:<no-valid-license>"
+
+    @property
+    def expires_at(self) -> datetime:
+        data = self._data
+        if not data:
+            return datetime.fromtimestamp(0)
+        return data.expires_at
 
     @property
     def tier(self) -> LicenseTiers:

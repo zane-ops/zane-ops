@@ -1,4 +1,4 @@
-import type { ApiResponse } from "./client";
+import type { ApiResponse, RequestParams } from "./client";
 
 export type SSHKey = NonNullable<
   ApiResponse<"get", "/api/shell/ssh-keys/">
@@ -94,6 +94,37 @@ export type SearchResource = ApiResponse<
   "get",
   "/api/search-resources/"
 >[number];
+
+export type DeploymentLog = ApiResponse<
+  "get",
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/"
+>["results"][number];
+
+export type HttpLog = ApiResponse<"get", "/api/http-logs/{request_uuid}/">;
+
+export type User = ApiResponse<"get", "/api/console/users/{id}/">;
+
+export type PasswordResetToken = ApiResponse<
+  "get",
+  "/api/console/password-tokens/{id}"
+>;
+
+export type WorkspaceWithOwner = ApiResponse<
+  "get",
+  "/api/console/workspaces/"
+>["results"][number];
+
+export type AdminWorkspaceMember = ApiResponse<
+  "get",
+  "/api/console/workspaces/{id}/"
+>["members"][number];
+
+export type HttpLogFilterField = RequestParams<
+  "get",
+  "/api/http-logs/fields/"
+>["field"];
+
+export type License = ApiResponse<"get", "/api/license/details/">;
 
 export type TemplateDocument = {
   id: string;

@@ -37,7 +37,7 @@ import { getQueryClient } from "~/lib/query-client";
 import {
   formatStorageValue,
   getMaxDomainForStorageValue,
-  timeAgoFormatter
+  relativeTimeFormatter
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
@@ -347,7 +347,7 @@ export default function ComposeStackServiceMetricsPage({
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(value) =>
-                      timeAgoFormatter(value, true).replace("ago", "")
+                      relativeTimeFormatter(value, true).replace("ago", "")
                     }
                     type="category"
                     allowDuplicatedCategory={false}
@@ -469,7 +469,7 @@ export default function ComposeStackServiceMetricsPage({
                     axisLine={false}
                     tickCount={10}
                     tickFormatter={(value) =>
-                      timeAgoFormatter(value, true).replace("ago", "")
+                      relativeTimeFormatter(value, true).replace("ago", "")
                     }
                   />
 
@@ -579,7 +579,7 @@ export default function ComposeStackServiceMetricsPage({
                     axisLine={false}
                     tickCount={10}
                     tickFormatter={(value) =>
-                      timeAgoFormatter(value, true).replace("ago", "")
+                      relativeTimeFormatter(value, true).replace("ago", "")
                     }
                   />
 
@@ -688,7 +688,7 @@ export default function ComposeStackServiceMetricsPage({
                     axisLine={false}
                     tickCount={10}
                     tickFormatter={(value) =>
-                      timeAgoFormatter(value, true).replace("ago", "")
+                      relativeTimeFormatter(value, true).replace("ago", "")
                     }
                   />
 
@@ -797,7 +797,7 @@ export default function ComposeStackServiceMetricsPage({
                     axisLine={false}
                     tickCount={10}
                     tickFormatter={(value) =>
-                      timeAgoFormatter(value, true).replace("ago", "")
+                      relativeTimeFormatter(value, true).replace("ago", "")
                     }
                   />
 
@@ -906,7 +906,7 @@ export default function ComposeStackServiceMetricsPage({
                     axisLine={false}
                     tickCount={10}
                     tickFormatter={(value) =>
-                      timeAgoFormatter(value, true).replace("ago", "")
+                      relativeTimeFormatter(value, true).replace("ago", "")
                     }
                   />
 

@@ -17,7 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { cn, hasMinRole, wait } from "~/lib/utils";
+import { cn, getLocalAbsoluteURL, hasMinRole, wait } from "~/lib/utils";
 import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import type { clientAction } from "~/routes/compose/compose-stack-settings";
 
@@ -33,9 +33,8 @@ export function ComposeStackDeployURLForm({
   const [hasCopied, startTransition] = React.useTransition();
   const isPending = fetcher.state !== "idle";
 
-  const currentURL = new URL(window.location.href);
   const deployURL = stack.deploy_token
-    ? `${currentURL.protocol}//${currentURL.host}/api/compose/deploy-stack/${stack.deploy_token}`
+    ? getLocalAbsoluteURL(`/api/compose/deploy-stack/${stack.deploy_token}`)
     : null;
 
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);

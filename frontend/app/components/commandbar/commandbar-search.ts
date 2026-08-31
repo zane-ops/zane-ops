@@ -27,7 +27,7 @@ const SEARCH_GROUP_HEADINGS: Record<SearchResource["type"], string> = {
 
 export function getNavItemFromSearchResource(
   resource: SearchResource
-): Omit<CommandBarSearchItem, "resource"> {
+): Omit<CommandBarSearchItem, "resource" | "id"> {
   switch (resource.type) {
     case "project":
       return {
@@ -86,11 +86,18 @@ export function getNavItemFromSearchResource(
 }
 
 /**
- * Unique per resource, the id is included because two services in different
- * projects can share the same slug.
+ * Unique per resource & stable across renders: the command bar uses it as the
+ * `value` of the item so the highlighted entry can be resolved back to its
+ * resource. The type is part of it because two resources of different kinds
+ * can share the same id.
  */
-export function getSearchItemValue(item: CommandBarSearchItem) {
-  return `${item.parents.join(" ")} ${item.title} ${item.resource.type} ${item.resource.id}`.trim();
+export function getSearchItemId(resource: SearchResource) {
+  return `search-${resource.type}-${resource.id}`;
+}
+
+/** the words the fuzzy filter matches the query against */
+export function getSearchItemKeywords(item: CommandBarSearchItem) {
+  return [...item.parents, item.title, item.resource.type];
 }
 
 function getNavItemsFromSearchResources(
@@ -99,6 +106,7 @@ function getNavItemsFromSearchResources(
   // the API already returns them sorted by relevance, keep that order
   return resources.map((resource) => ({
     ...getNavItemFromSearchResource(resource),
+    id: getSearchItemId(resource),
     resource
   }));
 }
@@ -157,21 +165,21 @@ export function useCommandBarSearch({
   );
 
   // `Tab` selects whatever is highlighted, so we need to map it back to its item
-  const searchItemsByValue = React.useMemo(() => {
-    const itemsByValue = new Map<string, CommandBarSearchItem>();
+  const searchItemsById = React.useMemo(() => {
+    const itemsById = new Map<string, CommandBarSearchItem>();
 
     for (const group of searchGroups) {
       for (const item of group.items) {
-        itemsByValue.set(getSearchItemValue(item), item);
+        itemsById.set(item.id, item);
       }
     }
 
-    return itemsByValue;
+    return itemsById;
   }, [searchGroups]);
 
   return {
     searchGroups,
-    searchItemsByValue,
+    searchItemsById,
     isSearchingResources: isLoading || isFetching
   };
 }

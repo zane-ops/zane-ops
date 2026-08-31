@@ -5,13 +5,14 @@ import { cn } from "~/lib/utils";
 
 export type HttpLogsLayoutProps = {
   children: React.ReactNode;
+  className?: string;
 };
 
 /**
  * Wraps the HTTP logs page content, it handles the maximized state and
  * provides the `#log-content` scroll root that the table observers rely on.
  */
-export function HttpLogsLayout({ children }: HttpLogsLayoutProps) {
+export function HttpLogsLayout({ children, className }: HttpLogsLayoutProps) {
   const [searchParams] = useSearchParams();
   const search = httpLogSearchSchema.parse(searchParams);
 
@@ -19,7 +20,9 @@ export function HttpLogsLayout({ children }: HttpLogsLayoutProps) {
     <div
       className={cn(
         search.isMaximized &&
-          "fixed inset-0 top-28 bg-background z-50 p-5 w-full"
+          "fixed inset-0 top-28 bg-background z-50 p-5 w-full",
+        search.isMaximized && !import.meta.env.DEV && "top-20",
+        className
       )}
     >
       <div

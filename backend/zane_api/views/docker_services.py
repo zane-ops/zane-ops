@@ -1,6 +1,6 @@
 import secrets
 import time
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Optional, cast
 
 import django.db.transaction as transaction
 from django.db import IntegrityError
@@ -494,7 +494,7 @@ class RequestServiceChangesAPIView(APIView):
                                             f"This builder `{service.builder}` is not supported yet"
                                         )
 
-                            new_value = cast(Dict[str, Any], new_value)
+                            new_value = cast(dict[str, Any], new_value)
                             new_builder = new_value["builder"]
                             match new_builder:
                                 case Service.Builder.DOCKERFILE:
@@ -1019,10 +1019,13 @@ class RedeployDockerServiceAPIView(APIView):
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
 
-        latest_deployment = cast(Deployment, service.latest_production_deployment)
+        latest_deployment = service.latest_production_deployment
 
         # Backfill missing data
-        if latest_deployment.service_snapshot.get("environment") is None:  # type: ignore
+        if (
+            latest_deployment is not None
+            and latest_deployment.service_snapshot.get("environment") is None  # type: ignore
+        ):
             latest_deployment.service_snapshot["environment"] = dict(  # type: ignore
                 EnvironmentSerializer(environment).data
             )
@@ -1031,7 +1034,10 @@ class RedeployDockerServiceAPIView(APIView):
                 EnvironmentSerializer(environment).data
             )
 
-        if latest_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
+        if (
+            latest_deployment is not None
+            and latest_deployment.service_snapshot.get("global_network_alias") is None  # type: ignore
+        ):
             latest_deployment.service_snapshot["global_network_alias"] = (  # type: ignore
                 service.global_network_alias
             )
@@ -1041,7 +1047,8 @@ class RedeployDockerServiceAPIView(APIView):
             )
 
         if (
-            latest_deployment.service_snapshot.get("container_registry_credentials")  # type: ignore
+            latest_deployment is not None
+            and latest_deployment.service_snapshot.get("container_registry_credentials")  # type: ignore
             is None
         ):
             latest_deployment.service_snapshot["container_registry_credentials"] = (  # type: ignore
@@ -1054,7 +1061,8 @@ class RedeployDockerServiceAPIView(APIView):
 
         current_snapshot = (
             latest_deployment.service_snapshot
-            if latest_deployment.status != Deployment.DeploymentStatus.FAILED
+            if latest_deployment is not None
+            and latest_deployment.status != Deployment.DeploymentStatus.FAILED
             else cast(ReturnDict, ServiceSerializer(service).data)
         )
 
@@ -1513,7 +1521,7 @@ class BulkToggleServicesAPIView(APIView):
             & Q(id__in=data["service_ids"])
         ).select_related("project")
 
-        payloads: List[ToggleServiceDetails] = []
+        payloads: list[ToggleServiceDetails] = []
         for service in services:
             production_deployment = service.latest_production_deployment
             if production_deployment is None:

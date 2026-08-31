@@ -1,5 +1,6 @@
 import { type LucideProps, PackageIcon } from "lucide-react";
 import type { useSpinDelay } from "spin-delay";
+import z from "zod";
 import type {
   ContainerRegistryType,
   WorkspaceRoleName,
@@ -225,3 +226,11 @@ export const WORKSPACE_ROLE_MAPPING = {
   WorkspaceRoleName,
   { value: WorkspaceRoleValue; summary: string; description: React.ReactNode }
 >;
+
+const buildSchema = z
+  .enum(["oss", "ee"])
+  .catch("oss")
+  .optional()
+  .default("oss");
+
+export const BUILD_EDITION = buildSchema.parse(import.meta.env.VITE_BUILD);

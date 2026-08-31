@@ -406,6 +406,83 @@ paths:
                 $ref: '#/components/schemas/AuthedSuccessResponse'
           description: ''
   /api/auth/reset-password/{token}/:
+    get:
+      operationId: getPasswordResetToken
+      summary: Get password reset link for user
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPasswordResetTokenErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetLink'
+          description: ''
     post:
       operationId: resetPassword
       summary: Reset user password
@@ -5585,11 +5662,108 @@ paths:
               schema:
                 $ref: '#/components/schemas/SystemSettings'
           description: ''
+    patch:
+      operationId: console_system_settings_partial_update
+      tags:
+      - console
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSystemSettingsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSystemSettingsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSystemSettingsRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettings'
+          description: ''
   /api/console/users/:
     get:
       operationId: console_users_list
       summary: List all users in ZaneOps installation
       parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
       - name: page
         required: false
         in: query
@@ -5603,7 +5777,7 @@ paths:
         schema:
           type: integer
       - in: query
-        name: username
+        name: query
         schema:
           type: string
       tags:
@@ -6151,7 +6325,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedWorkspaceList'
+                $ref: '#/components/schemas/PaginatedWorkspaceWithOwnerList'
           description: ''
   /api/console/workspaces/{id}/:
     get:
@@ -6173,6 +6347,107 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConsoleWorkspacesRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceDetail'
+          description: ''
+    put:
+      operationId: console_workspaces_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - console
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceDetailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceDetailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceDetailRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleWorkspacesUpdateErrorResponse400'
           description: ''
         '401':
           content:
@@ -16673,6 +16948,20 @@ components:
       required:
       - id
       - slug
+    AccessibleWorkspaceProjectRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - slug
     ArchiveComposeStackErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -19496,6 +19785,297 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleSystemSettingsPartialUpdateAppDataCleanupCronScheduleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - app_data_cleanup_cron_schedule
+          type: string
+          description: '* `app_data_cleanup_cron_schedule` - app_data_cleanup_cron_schedule'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdateBuildCacheMaxAgeDaysErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - build_cache_max_age_days
+          type: string
+          description: '* `build_cache_max_age_days` - build_cache_max_age_days'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdateBuildCacheMaxUseSpaceBytesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - build_cache_max_use_space_bytes
+          type: string
+          description: '* `build_cache_max_use_space_bytes` - build_cache_max_use_space_bytes'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdateDockerSystemPruneCronScheduleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - docker_system_prune_cron_schedule
+          type: string
+          description: '* `docker_system_prune_cron_schedule` - docker_system_prune_cron_schedule'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateDockerSystemPruneCronScheduleErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateAppDataCleanupCronScheduleErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateHttpLogRetentionDaysErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateBuildCacheMaxAgeDaysErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateBuildCacheMaxUseSpaceBytesErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneImagesErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneContainersErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneVolumesErrorComponent'
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneNetworksErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ConsoleSystemSettingsPartialUpdateNonFieldErrorsErrorComponent'
+          docker_system_prune_cron_schedule: '#/components/schemas/ConsoleSystemSettingsPartialUpdateDockerSystemPruneCronScheduleErrorComponent'
+          app_data_cleanup_cron_schedule: '#/components/schemas/ConsoleSystemSettingsPartialUpdateAppDataCleanupCronScheduleErrorComponent'
+          http_log_retention_days: '#/components/schemas/ConsoleSystemSettingsPartialUpdateHttpLogRetentionDaysErrorComponent'
+          build_cache_max_age_days: '#/components/schemas/ConsoleSystemSettingsPartialUpdateBuildCacheMaxAgeDaysErrorComponent'
+          build_cache_max_use_space_bytes: '#/components/schemas/ConsoleSystemSettingsPartialUpdateBuildCacheMaxUseSpaceBytesErrorComponent'
+          prune_images: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneImagesErrorComponent'
+          prune_containers: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneContainersErrorComponent'
+          prune_volumes: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneVolumesErrorComponent'
+          prune_networks: '#/components/schemas/ConsoleSystemSettingsPartialUpdatePruneNetworksErrorComponent'
+    ConsoleSystemSettingsPartialUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ConsoleSystemSettingsPartialUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleSystemSettingsPartialUpdateHttpLogRetentionDaysErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - http_log_retention_days
+          type: string
+          description: '* `http_log_retention_days` - http_log_retention_days'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdatePruneContainersErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - prune_containers
+          type: string
+          description: '* `prune_containers` - prune_containers'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdatePruneImagesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - prune_images
+          type: string
+          description: '* `prune_images` - prune_images'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdatePruneNetworksErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - prune_networks
+          type: string
+          description: '* `prune_networks` - prune_networks'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdatePruneVolumesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - prune_volumes
+          type: string
+          description: '* `prune_volumes` - prune_volumes'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleSystemSettingsPartialUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsoleSystemSettingsPartialUpdateError'
+      required:
+      - errors
+      - type
     ConsoleSystemSettingsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -19878,11 +20458,11 @@ components:
           client_error: '#/components/schemas/ParseErrorResponse'
     ConsoleUsersListError:
       oneOf:
-      - $ref: '#/components/schemas/ConsoleUsersListUsernameErrorComponent'
+      - $ref: '#/components/schemas/ConsoleUsersListQueryErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          username: '#/components/schemas/ConsoleUsersListUsernameErrorComponent'
+          query: '#/components/schemas/ConsoleUsersListQueryErrorComponent'
     ConsoleUsersListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ConsoleUsersListValidationError'
@@ -19892,14 +20472,14 @@ components:
         mapping:
           validation_error: '#/components/schemas/ConsoleUsersListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ConsoleUsersListUsernameErrorComponent:
+    ConsoleUsersListQueryErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - username
+          - query
           type: string
-          description: '* `username` - username'
+          description: '* `query` - query'
         code:
           enum:
           - null_characters_not_allowed
@@ -20001,6 +20581,108 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleWorkspaceMember:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        role_name:
+          allOf:
+          - $ref: '#/components/schemas/RoleNameEnum'
+          readOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          minimum: 0
+          maximum: 32767
+        accessible_projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccessibleWorkspaceProject'
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/ConsoleWorkspaceUser'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - accessible_projects
+      - created_at
+      - id
+      - role
+      - role_name
+      - updated_at
+      - user
+    ConsoleWorkspaceMemberRequest:
+      type: object
+      properties:
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          minimum: 0
+          maximum: 32767
+        created_at:
+          type: string
+          format: date-time
+    ConsoleWorkspaceUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        is_active:
+          type: boolean
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+      required:
+      - first_name
+      - id
+      - is_active
+      - last_name
+      - username
+    ConsoleWorkspaceUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        is_active:
+          type: boolean
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+      required:
+      - username
     ConsoleWorkspacesDestroyErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -20062,6 +20744,87 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleWorkspacesUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ConsoleWorkspacesUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ConsoleWorkspacesUpdateNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ConsoleWorkspacesUpdateNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/ConsoleWorkspacesUpdateNameErrorComponent'
+    ConsoleWorkspacesUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ConsoleWorkspacesUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ConsoleWorkspacesUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ConsoleWorkspacesUpdateNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleWorkspacesUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConsoleWorkspacesUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsoleWorkspacesUpdateError'
+      required:
+      - errors
+      - type
     CreateComposeStackFromDokployTemplateObjectRequestRequest:
       type: object
       properties:
@@ -22960,6 +23723,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    GetPasswordResetTokenErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     GetPreviewEnvToReviewErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -23934,8 +24704,7 @@ components:
           nullable: true
         request_uuid:
           type: string
-          nullable: true
-          maxLength: 255
+          format: uuid
         request_ip:
           type: string
         request_path:
@@ -24224,9 +24993,6 @@ components:
         first_name:
           type: string
           readOnly: true
-        last_name:
-          type: string
-          readOnly: true
         is_superuser:
           type: boolean
           readOnly: true
@@ -24238,12 +25004,16 @@ components:
           title: Active
           description: Designates whether this user should be treated as active. Unselect
             this instead of deleting accounts.
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
       required:
+      - date_joined
       - first_name
       - id
       - is_active
       - is_superuser
-      - last_name
       - username
     InviteUserAccessibleProjectIdsErrorComponent:
       type: object
@@ -24480,10 +25250,14 @@ components:
         uuid:
           type: string
           readOnly: true
+        instance_fingerprint:
+          type: string
+          readOnly: true
       required:
       - expires_at
       - installed_at
       - installed_by
+      - instance_fingerprint
       - is_valid
       - tier
       - uuid
@@ -25246,31 +26020,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkspaceInvitation'
-    PaginatedWorkspaceList:
-      type: object
-      required:
-      - count
-      - next
-      - previous
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/Workspace'
     PaginatedWorkspaceMemberList:
       type: object
       required:
@@ -25296,6 +26045,31 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkspaceMember'
+    PaginatedWorkspaceWithOwnerList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceWithOwner'
     ParseError:
       type: object
       properties:
@@ -25327,6 +26101,18 @@ components:
       required:
       - errors
       - type
+    PasswordResetLink:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        value:
+          type: string
+          maxLength: 255
+      required:
+      - id
+      - value
     PasswordResetToken:
       type: object
       properties:
@@ -25503,6 +26289,39 @@ components:
           minLength: 1
           maxLength: 50
           pattern: ^[-a-zA-Z0-9_]+$
+    PatchedSystemSettingsRequest:
+      type: object
+      properties:
+        docker_system_prune_cron_schedule:
+          type: string
+          minLength: 1
+        app_data_cleanup_cron_schedule:
+          type: string
+          minLength: 1
+        http_log_retention_days:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
+        build_cache_max_age_days:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
+        build_cache_max_use_space_bytes:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 1
+          format: int64
+          nullable: true
+        prune_images:
+          type: boolean
+        prune_containers:
+          type: boolean
+        prune_volumes:
+          type: boolean
+        prune_networks:
+          type: boolean
     PatchedUpdateEnvironmentRequestRequest:
       type: object
       properties:
@@ -34921,18 +35740,27 @@ components:
       properties:
         id:
           type: string
-          maxLength: 255
+          readOnly: true
         name:
           type: string
           maxLength: 255
         members:
           type: array
           items:
-            $ref: '#/components/schemas/WorkspaceMember'
+            $ref: '#/components/schemas/ConsoleWorkspaceMember'
           readOnly: true
       required:
       - id
       - members
+      - name
+    WorkspaceDetailRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+      required:
       - name
     WorkspaceEditPermissionsRequestRequest:
       type: object
@@ -35353,6 +36181,43 @@ components:
       required:
       - errors
       - type
+    WorkspaceWithOwner:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        owner:
+          type: object
+          properties:
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                username:
+                  type: string
+                first_name:
+                  type: string
+              required:
+              - id
+              - username
+              - first_name
+          required:
+          - user
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+      - owner
     WorkspacesListListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'

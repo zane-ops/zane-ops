@@ -149,7 +149,7 @@ function EnvironmentList({ environments, projectSlug }: EnvironmentListProps) {
             <TableRow>
               <TableHead className="sticky top-0 z-20">Name</TableHead>
               <TableHead className="sticky top-0 z-20">Status</TableHead>
-              <TableHead className="sticky top-0 z-20">Created at </TableHead>
+              <TableHead className="sticky top-0 z-20">Created At </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

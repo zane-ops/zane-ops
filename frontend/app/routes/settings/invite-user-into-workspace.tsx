@@ -49,8 +49,10 @@ import {
   formattedTime,
   getCsrfTokenHeader,
   getFormErrorsFromResponseData,
+  getLocalAbsoluteURL,
   metaTitle,
-  pluralize
+  pluralize,
+  relativeTimeFormatter
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
@@ -108,8 +110,9 @@ type UserInvitationLinkCardProps = {
 };
 
 function UserInvitationLinkCard({ data }: UserInvitationLinkCardProps) {
-  const registerLink =
-    window.location.origin + href("/invite/:token", { token: data.token });
+  const registerLink = getLocalAbsoluteURL(
+    href("/invite/:token", { token: data.token })
+  );
 
   return (
     <Card className="px-0">
@@ -159,7 +162,10 @@ function UserInvitationLinkCard({ data }: UserInvitationLinkCardProps) {
             <dt className="text-grey">Valid until:</dt>
             <dd>
               <time dateTime={data.expires_at}>
-                {formattedTime(data.expires_at)}
+                {formattedTime(data.expires_at)}&nbsp;
+                <span className="text-grey">
+                  ({relativeTimeFormatter(data.expires_at)})
+                </span>
               </time>
             </dd>
           </div>

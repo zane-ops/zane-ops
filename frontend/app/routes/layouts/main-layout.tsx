@@ -17,13 +17,13 @@ import { type Theme, useThemeStore } from "~/components/theme-store";
 import { Button } from "~/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { serverQueries, userQueries } from "~/lib/queries";
-import { cn, hasMinRole } from "~/lib/utils";
+import { cn, getBuildName, hasMinRole } from "~/lib/utils";
 
-import type { ServerSettings } from "~/api/types";
 import { CommandBar } from "~/components/commandbar/commandbar";
 import { useCommandBarActionGroups } from "~/components/commandbar/commandbar-actions";
 import { MAIN_NAV_GROUPS } from "~/components/commandbar/commandbar-nav-items";
 import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
+import { BUILD_EDITION } from "~/lib/constants";
 import { createDevLogger } from "~/lib/logger";
 import { getQueryClient } from "~/lib/query-client";
 import { syncWorkspaceStore } from "~/lib/workspace-store";
@@ -143,10 +143,6 @@ const socialLinks = [
   }
 ];
 
-function getBuildName(build: ServerSettings["build"]) {
-  return build === "ee" ? "Enterprise" : "Open Source";
-}
-
 function Footer() {
   const { data } = useQuery(serverQueries.settings);
 
@@ -240,14 +236,14 @@ function Footer() {
 
         {data?.build && (
           <span className="flex items-center gap-1">
-            {data.build === "ee" ? (
+            {BUILD_EDITION === "ee" ? (
               <LandmarkIcon size={15} />
             ) : (
               <GlobeIcon size={15} />
             )}
             <span>
               <span className="sr-only">Build: </span> &nbsp;
-              <span>{getBuildName(data.build)} Edition</span>
+              <span>{getBuildName()} Edition</span>
             </span>
           </span>
         )}
