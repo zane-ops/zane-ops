@@ -1024,8 +1024,8 @@ class RedeployDockerServiceAPIView(APIView):
         # Backfill missing data
         if (
             latest_deployment is not None
-            and latest_deployment.service_snapshot.get("environment") is None
-        ):  # type: ignore
+            and latest_deployment.service_snapshot.get("environment") is None  # type: ignore
+        ):
             latest_deployment.service_snapshot["environment"] = dict(  # type: ignore
                 EnvironmentSerializer(environment).data
             )
@@ -1036,8 +1036,8 @@ class RedeployDockerServiceAPIView(APIView):
 
         if (
             latest_deployment is not None
-            and latest_deployment.service_snapshot.get("global_network_alias") is None
-        ):  # type: ignore
+            and latest_deployment.service_snapshot.get("global_network_alias") is None  # type: ignore
+        ):
             latest_deployment.service_snapshot["global_network_alias"] = (  # type: ignore
                 service.global_network_alias
             )
