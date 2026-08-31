@@ -8,10 +8,10 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
+  FieldSetInput,
   FieldSetLabel,
   FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
-import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { userQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
@@ -154,70 +154,51 @@ export default function InitialRegistration({
             Let's setup your first workspace
           </h3>
 
-          <div className="my-2 flex flex-col gap-1">
-            <label htmlFor="workspace_name" className="">
-              Workspace Name
-            </label>
-            <Input
-              id="workspace_name"
-              name="workspace_name"
+          <FieldSet
+            name="workspace_name"
+            errors={errors.workspace_name}
+            className="my-2 flex flex-col gap-1"
+          >
+            <FieldSetLabel>Workspace Name</FieldSetLabel>
+            <FieldSetInput
               placeholder="ex: Default workspace"
               defaultValue={actionData?.userData?.workspace_name}
               type="text"
-              aria-describedby="workspace-name-error"
-              aria-invalid={!!errors.workspace_name}
               autoFocus
             />
-            {errors.workspace_name && (
-              <span id="workspace-name-error" className="text-red-500 text-sm">
-                {errors.workspace_name}
-              </span>
-            )}
-          </div>
+          </FieldSet>
 
           <Separator className="mt-4" />
 
           <p className="my-2 text-lg text-grey">Create your first user</p>
           <div className="card flex flex-col gap-3">
-            <div className="my-2 flex flex-col gap-1">
-              <label htmlFor="username" className="">
-                Username
-              </label>
-              <Input
-                id="username"
-                name="username"
+            <FieldSet
+              name="username"
+              errors={errors.username}
+              className="my-2 flex flex-col gap-1"
+            >
+              <FieldSetLabel>Username</FieldSetLabel>
+              <FieldSetInput
                 placeholder="ex: JohnDoe"
                 defaultValue={actionData?.userData?.username}
                 type="text"
-                aria-describedby="username-error"
-                aria-invalid={!!errors.username}
               />
-              {errors.username && (
-                <span id="username-error" className="text-red-500 text-sm">
-                  {errors.username}
-                </span>
-              )}
-            </div>
+            </FieldSet>
 
-            <div className="my-2 flex flex-col gap-1">
-              <label htmlFor="first_name" className="">
+            <FieldSet
+              name="first_name"
+              errors={errors.first_name}
+              className="my-2 flex flex-col gap-1"
+            >
+              <FieldSetLabel>
                 Display Name <span className="text-grey">(optional)</span>
-              </label>
-              <Input
-                id="first_name"
-                name="first_name"
+              </FieldSetLabel>
+              <FieldSetInput
                 placeholder="ex: John Doe"
                 defaultValue={actionData?.userData?.first_name}
                 type="text"
-                aria-describedby="first-name-error"
-                aria-invalid={!!errors.first_name}
               />
-              {errors.first_name && (
-                <span id="first-name-error" className="text-red-500 text-sm">
-                  {errors.first_name}
-                </span>
-              )}
-            </div>
+            </FieldSet>
 
             <div className="flex flex-col gap-1 text-muted-foreground">
               <h3 className="font-medium text-sm">Hints for a good password</h3>

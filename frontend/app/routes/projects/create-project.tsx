@@ -2,18 +2,16 @@ import { AlertCircleIcon, ArrowLeftIcon, LoaderIcon } from "lucide-react";
 import { Form, Link, href, redirect, useNavigation } from "react-router";
 import { apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
 import { SubmitButton } from "~/components/ui/button";
+import {
+  FieldSet,
+  FieldSetInput,
+  FieldSetLabel,
+  FieldSetTextarea
+} from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { ensureMinRole, projectQueries, userQueries } from "~/lib/queries";
+import { ensureMinRole, projectQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
@@ -84,7 +82,7 @@ export default function CreateProjectPage({
       method="post"
       className="flex h-[60vh] grow justify-center items-center"
     >
-      <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
+      <FieldSet className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
         <Link
           to={href("/workspace")}
           className={cn(
@@ -104,42 +102,33 @@ export default function CreateProjectPage({
             <AlertDescription>{errors.non_field_errors}</AlertDescription>
           </Alert>
         )}
-        <div className="my-2 flex flex-col gap-1">
-          <label htmlFor="slug">Slug</label>
-          <Input
+        <FieldSet
+          errors={errors.slug}
+          name="slug"
+          className="my-2 flex flex-col gap-1"
+        >
+          <FieldSetLabel>Slug</FieldSetLabel>
+          <FieldSetInput
             className="p-1.5"
             placeholder="Ex: Zaneops"
-            name="slug"
-            id="slug"
-            type="text"
+            autoFocus
             defaultValue={actionData?.userData?.slug}
-            aria-describedby="slug-error"
-            aria-invalid={!!errors.slug}
           />
-          {errors.slug && (
-            <span id="slug-error" className="text-red-500 text-sm">
-              {errors.slug}
-            </span>
-          )}
-        </div>
+        </FieldSet>
 
-        <div className="my-2 flex flex-col gap-1">
-          <label htmlFor="description">Description</label>
-          <Textarea
+        <FieldSet
+          name="description"
+          errors={errors.description}
+          className="my-2 flex flex-col gap-1"
+        >
+          <FieldSetLabel>Description</FieldSetLabel>
+          <FieldSetTextarea
             className="placeholder:text-gray-400"
             name="description"
-            id="description"
             placeholder="Ex: A self hosted PaaS"
             defaultValue={actionData?.userData?.description}
-            aria-describedby="description-error"
-            aria-invalid={!!errors.description}
           />
-          {errors.description && (
-            <span id="description-error" className="text-red-500 text-sm">
-              {errors.description}
-            </span>
-          )}
-        </div>
+        </FieldSet>
 
         <SubmitButton
           className="lg:w-fit w-full lg:ml-auto p-3 rounded-lg gap-2"
@@ -154,7 +143,7 @@ export default function CreateProjectPage({
             "Create a new project"
           )}
         </SubmitButton>
-      </div>
+      </FieldSet>
     </Form>
   );
 }
