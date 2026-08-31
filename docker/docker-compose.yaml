@@ -240,7 +240,7 @@ services:
     image: fluentd:v1.16.2-1.1
     volumes:
       - "./fluentd/fluent.conf:/fluentd/etc/fluent.conf"
-      - "$HOME/.fluentd/:/var/fluentd/"
+      - "$HOME/.local/share/.fluentd/:/var/fluentd/"
     networks:
       zane:
         aliases:
