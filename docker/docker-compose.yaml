@@ -3,6 +3,7 @@ x-backend-vars: &env-vars
   DB_HOST: zane.db
   DB_PORT: 5432
   CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
+  ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
   TEMPORALIO_SERVER_URL: zane.temporal:7233
   LOKI_HOST: http://zane.loki:3100
   ZANE_APP_DOMAIN: ${ZANE_APP_DOMAIN:-127-0-0-1.sslip.io}
@@ -10,7 +11,6 @@ x-backend-vars: &env-vars
   # a fixed path in the container and tell django about it, empty = GeoIP disabled
   # Notation: `+` means `MAXMIND_DB_PATH` is set to the hardcoded path if HOST path is provided
   MAXMIND_DB_PATH: ${MAXMIND_DB_HOST_PATH:+/code/GeoLite2-Country.mmdb}
-  ZANE_FLUENTD_HOST: ${ZANE_FLUENTD_VOLUME_LOCATION:-unix://${HOME}/.fluentd}/fluentd.sock
 
 services:
   zane-loki:
@@ -240,7 +240,7 @@ services:
     image: fluentd:v1.16.2-1.1
     volumes:
       - "./fluentd/fluent.conf:/fluentd/etc/fluent.conf"
-      - "${ZANE_FLUENTD_VOLUME_LOCATION:-unix://${HOME}/.fluentd}/:/var/fluentd/"
+      - "$HOME/.fluentd/:/var/fluentd/"
     networks:
       zane:
         aliases:
