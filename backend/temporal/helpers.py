@@ -47,7 +47,7 @@ from temporalio import activity
 docker_client: docker.DockerClient | None = None
 
 
-def get_docker_client():
+def get_docker_client() -> docker.DockerClient:
     global docker_client
     if docker_client is None:
         docker_client = docker.from_env()
