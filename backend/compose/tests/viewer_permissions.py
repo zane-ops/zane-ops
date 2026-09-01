@@ -3,6 +3,7 @@ from rest_framework import status
 from zane_api.models import (
     Environment,
     Project,
+    TokenScope,
     WorkspaceMembership,
     WorkspaceRole,
 )
@@ -452,9 +453,9 @@ class ViewerComposeStackSecretFieldsViewTests(ViewerComposeStackTestBase):
 
 class ComposeStackWebhookDeployResponseViewTests(ComposeStackAPITestBase):
     """
-    The webhook deploy route is `AllowAny` — anyone holding the deploy token can
-    call it, with no workspace and no role. Its response must not carry the
-    compose file, env overrides, configs or the token itself.
+    The webhook deploy route needs an API token with the `deploy:write` scope
+    (plan §7). Its response must not carry the compose file, env overrides,
+    configs or the token itself.
     """
 
     def test_webhook_deploy_returns_no_body(self):
@@ -467,10 +468,57 @@ class ComposeStackWebhookDeployResponseViewTests(ComposeStackAPITestBase):
                 "compose:stacks.webhook_deploy",
                 kwargs={"deploy_token": stack.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
         )
         self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
         self.assertFalse(response.content)
         self.assertEqual(1, stack.deployments.count())
+
+    def test_webhook_deploy_without_a_token_is_rejected(self):
+        _, stack = self.create_compose_stack(
+            content=DOCKER_COMPOSE_WEB_SERVICE, slug="my-stack"
+        )
+        self.client.logout()
+
+        response = self.client.put(
+            reverse(
+                "compose:stacks.webhook_deploy",
+                kwargs={"deploy_token": stack.deploy_token},
+            )
+        )
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
+        self.assertEqual(0, stack.deployments.count())
+
+    def test_webhook_deploy_without_deploy_scope_is_403(self):
+        _, stack = self.create_compose_stack(
+            content=DOCKER_COMPOSE_WEB_SERVICE, slug="my-stack"
+        )
+
+        response = self.client.put(
+            reverse(
+                "compose:stacks.webhook_deploy",
+                kwargs={"deploy_token": stack.deploy_token},
+            ),
+            **self.deploy_token_kwargs(scopes=[TokenScope.SERVICE_READ]),
+        )
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        self.assertEqual(0, stack.deployments.count())
+
+    def test_webhook_deploy_token_scoped_to_another_project_is_403(self):
+        _, stack = self.create_compose_stack(
+            content=DOCKER_COMPOSE_WEB_SERVICE, slug="my-stack"
+        )
+        other = Project.objects.create(slug="other", workspace=stack.project.workspace)
+
+        response = self.client.put(
+            reverse(
+                "compose:stacks.webhook_deploy",
+                kwargs={"deploy_token": stack.deploy_token},
+            ),
+            **self.deploy_token_kwargs(accessible_projects=[other]),
+        )
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        self.assertEqual(0, stack.deployments.count())
 
 
 class ViewerComposeStackServiceStatusViewTests(ViewerComposeStackTestBase):

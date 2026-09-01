@@ -988,6 +988,7 @@ class TestDeployTokenComposeStackViewTests(ComposeStackAPITestBase):
                 "compose:stacks.webhook_deploy",
                 kwargs={"deploy_token": stack.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
         )
         self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
 
@@ -1023,6 +1024,7 @@ class TestDeployTokenComposeStackViewTests(ComposeStackAPITestBase):
                 "compose:stacks.webhook_deploy",
                 kwargs={"deploy_token": stack.deploy_token},
             ),
+            **(await self.adeploy_token_kwargs()),
         )
         self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
 
@@ -1053,6 +1055,7 @@ class TestDeployTokenComposeStackViewTests(ComposeStackAPITestBase):
                     "deploy_token": stack.deploy_token,
                 },
             ),
+            **self.deploy_token_kwargs(),
             data=deploy_payload,
         )
         self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
@@ -1109,6 +1112,7 @@ class TestDeployTokenComposeStackViewTests(ComposeStackAPITestBase):
                     "deploy_token": stack.deploy_token,
                 },
             ),
+            **self.deploy_token_kwargs(),
             data=deploy_payload,
         )
         jprint(response.json())

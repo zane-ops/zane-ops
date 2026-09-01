@@ -1,72 +1,70 @@
 import secrets
 from typing import Any, cast
+
+from django.db import transaction
+from django.db.models import QuerySet
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import PolymorphicProxySerializer, extend_schema
+from drf_standardized_errors.formatter import ExceptionFormatter
+from rest_framework import exceptions, serializers, status
 from rest_framework.generics import (
     CreateAPIView,
-    RetrieveUpdateAPIView,
     ListAPIView,
     RetrieveAPIView,
+    RetrieveUpdateAPIView,
 )
-
-from .serializers import (
-    ComposeStackSerializer,
-    ComposeStackUpdateSerializer,
-    ComposeStackDeployRequestSerializer,
-    ComposeStackDeploymentSerializer,
-    ComposeStackSnapshotSerializer,
-    ComposeContentFieldChangeSerializer,
-    ComposeEnvOverrideItemChangeSerializer,
-    ComposeStackFieldChangeRequestSerializer,
-    ComposeStackChangeSerializer,
-    ComposeStackEnvOverrideSerializer,
-    CreateComposeStackFromDokployTemplateRequestSerializer,
-    CreateComposeStackFromDokployTemplateObjectRequestSerializer,
-    ComposeStackToggleRequestSerializer,
-    ComposeStackWebhookDeployRequestSerializer,
-    ComposeStacksListFilterSet,
-    ComposeStackDeploymentListFilterSet,
-    ComposeStackDeploymentListPagination,
-)
-from ..models import ComposeStack, ComposeStackDeployment, ComposeStackChange
-from django.db.models import QuerySet
-from rest_framework.views import APIView
-from django.db import transaction
-
-from zane_api.models import Project, Environment
-from rest_framework import exceptions
-
 from rest_framework.request import Request
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, PolymorphicProxySerializer
-from rest_framework import status
-from temporal.workflows import (
-    DeployComposeStackWorkflow,
-    ArchiveComposeStackWorkflow,
-    ToggleComposeStackWorkflow,
-)
+from rest_framework.serializers import Serializer
+from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.views import APIView
+from temporal.client import TemporalClient
 from temporal.shared import (
-    ComposeStackDeploymentDetails,
-    ComposeStackArchiveDetails,
     CancelDeploymentSignalInput,
+    ComposeStackArchiveDetails,
+    ComposeStackDeploymentDetails,
     ToggleComposeStackDetails,
 )
-from temporal.client import TemporalClient
-from zane_api.views.base import ResourceConflict
-from zane_api.serializers import ErrorResponse409Serializer
-from ..dtos import ComposeStackSnapshot, DokployTemplate, ComposeStackEnvOverrideDto
-from rest_framework.serializers import Serializer
-from ..adapters import DokployComposeAdapter
-from ..processor import ComposeSpecProcessor
-from rest_framework import permissions
-from rest_framework.throttling import ScopedRateThrottle
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import serializers
-from drf_standardized_errors.formatter import ExceptionFormatter
+from temporal.workflows import (
+    ArchiveComposeStackWorkflow,
+    DeployComposeStackWorkflow,
+    ToggleComposeStackWorkflow,
+)
+from zane_api.authentication import WorkspaceTokenAuthentication
+from zane_api.models import Environment, Project
 from zane_api.permissions import (
+    HasDeployWebhookAccess,
     HasWorkspace,
+    IsWorkspaceAdmin,
     IsWorkspaceMember,
     IsWorkspaceViewer,
-    IsWorkspaceAdmin,
     request_access,
+)
+from zane_api.serializers import ErrorResponse409Serializer
+from zane_api.views.base import ResourceConflict
+
+from ..adapters import DokployComposeAdapter
+from ..dtos import ComposeStackEnvOverrideDto, ComposeStackSnapshot, DokployTemplate
+from ..models import ComposeStack, ComposeStackChange, ComposeStackDeployment
+from ..processor import ComposeSpecProcessor
+from .serializers import (
+    ComposeContentFieldChangeSerializer,
+    ComposeEnvOverrideItemChangeSerializer,
+    ComposeStackChangeSerializer,
+    ComposeStackDeploymentListFilterSet,
+    ComposeStackDeploymentListPagination,
+    ComposeStackDeploymentSerializer,
+    ComposeStackDeployRequestSerializer,
+    ComposeStackEnvOverrideSerializer,
+    ComposeStackFieldChangeRequestSerializer,
+    ComposeStackSerializer,
+    ComposeStacksListFilterSet,
+    ComposeStackSnapshotSerializer,
+    ComposeStackToggleRequestSerializer,
+    ComposeStackUpdateSerializer,
+    ComposeStackWebhookDeployRequestSerializer,
+    CreateComposeStackFromDokployTemplateObjectRequestSerializer,
+    CreateComposeStackFromDokployTemplateRequestSerializer,
 )
 
 
@@ -737,11 +735,13 @@ class ComposeStackReDeployAPIView(APIView):
 
 
 class ComposeStackWebhookDeployAPIView(APIView):
-    permission_classes = [permissions.AllowAny]
+    # `deploy_token` in the URL is now only a stack identifier — the request
+    # must carry an API token with `deploy:write`; the session is never
+    # consulted for a deploy webhook (plan §7).
+    authentication_classes = [WorkspaceTokenAuthentication]
+    permission_classes = [HasWorkspace, HasDeployWebhookAccess]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
-    # TODO: uses token auth and use permissions
-    # permission_classes = [HasWorkspace, IsWorkspaceMember]
 
     @transaction.atomic()
     @extend_schema(
@@ -756,15 +756,17 @@ class ComposeStackWebhookDeployAPIView(APIView):
             stack = (
                 ComposeStack.objects.filter(
                     deploy_token=deploy_token,
-                    # project__id__in=get_accessible_projects(
-                    #     self.request.user,  # type: ignore
-                    #     self.request.workspace,  # type: ignore
-                    # ),
+                    project__workspace=request.workspace,  # type: ignore
                 ).prefetch_related("changes", "env_overrides")
             ).get()
         except ComposeStack.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A compose stack with a deploy_token `{deploy_token}` doesn't exist."
+            )
+
+        if not request_access(request).can_access_project(stack.project_id):
+            raise exceptions.PermissionDenied(
+                "This API token does not have access to this stack's project."
             )
 
         form = ComposeStackWebhookDeployRequestSerializer(

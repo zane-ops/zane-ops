@@ -715,7 +715,7 @@ class ArchiveGitServiceAPIView(APIView):
                 original_id=archived_service.original_id,
                 urls=[
                     URLDto(
-                        domain=url.domain,
+                        domain=url.domain,  # type: ignore
                         base_path=url.base_path,
                         strip_prefix=url.strip_prefix,
                         id=url.original_id,
@@ -725,7 +725,7 @@ class ArchiveGitServiceAPIView(APIView):
                 volumes=[
                     VolumeDto(
                         container_path=volume.container_path,
-                        mode=volume.mode,
+                        mode=volume.mode,  # type: ignore
                         name=volume.name,
                         host_path=volume.host_path,
                         id=volume.original_id,
@@ -737,7 +737,7 @@ class ArchiveGitServiceAPIView(APIView):
                         mount_path=config.mount_path,
                         name=config.name,
                         id=config.original_id,
-                        language=config.language,
+                        language=config.language,  # type: ignore
                         contents=config.contents,
                     )
                     for config in archived_service.configs.all()

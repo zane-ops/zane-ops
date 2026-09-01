@@ -334,6 +334,7 @@ class CloneEnvironmentViaPreviewTrigger(BasePreviewEnvTests, ComposeStackAPITest
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-1"},
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -387,6 +388,7 @@ class CloneEnvironmentViaPreviewTrigger(BasePreviewEnvTests, ComposeStackAPITest
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-1"},
         )
         jprint(response.json())
