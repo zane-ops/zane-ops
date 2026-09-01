@@ -199,7 +199,10 @@ class TokenScope(models.TextChoices):
     `backend/notes/api-tokens-plan.md` §6.
     """
 
-    DEPLOY_WRITE = "deploy:write", "Trigger / cancel / redeploy deployments and previews"
+    DEPLOY_WRITE = (
+        "deploy:write",
+        "Trigger / cancel / redeploy deployments and previews",
+    )
     SERVICE_READ = "service:read", "Read service and compose-stack configuration"
     SERVICE_WRITE = "service:write", "Change services and compose stacks"
     ENV_READ = "env:read", "Read environment variables (sensitive)"
@@ -207,6 +210,11 @@ class TokenScope(models.TextChoices):
     LOGS_READ = "logs:read", "Read runtime logs, build logs and metrics"
     PROJECT_READ = "project:read", "List and read projects and environments"
     PROJECT_WRITE = "project:write", "Change projects and environments"
+
+
+# named (not a lambda) so migrations can serialize it as the `expires_at` default
+def default_api_token_expiry():
+    return timezone.now() + timedelta(days=30)
 
 
 class WorkspaceApiToken(TimestampedModel):
@@ -264,8 +272,8 @@ class WorkspaceApiToken(TimestampedModel):
     # display only, so the UI can tell tokens apart: zn_••••a1b2
     last_four = models.CharField(max_length=4)
 
-    # None => never expires
-    expires_at = models.DateTimeField(null=True, blank=True)
+    # every token expires; defaults to 30 days out (plan §5)
+    expires_at = models.DateTimeField(default=default_api_token_expiry)
     last_used_at = models.DateTimeField(null=True, blank=True)
     # revoking sets this instead of deleting the row, so the record survives for
     # a later audit feature.
@@ -327,9 +335,7 @@ class WorkspaceApiToken(TimestampedModel):
     def verify_secret(self, secret: str) -> bool:
         # constant-time: the secret is 32 random bytes so there is nothing to
         # brute-force, but the comparison should still not leak via timing.
-        return secrets.compare_digest(
-            self.token_hash, self.hash_secret(secret)
-        )
+        return secrets.compare_digest(self.token_hash, self.hash_secret(secret))
 
     @classmethod
     def authenticate(cls, raw: str) -> Optional["WorkspaceApiToken"]:

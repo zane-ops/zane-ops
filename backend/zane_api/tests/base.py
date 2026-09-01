@@ -485,13 +485,14 @@ class AuthAPITestCase(APITestCase):
     ) -> tuple[WorkspaceApiToken, str]:
         workspace = workspace or cast(Workspace, Workspace.objects.first())
         created_by = created_by or User.objects.get(username="Fredkiss3")
+        extra = {} if expires_at is None else {"expires_at": expires_at}
         token, full = WorkspaceApiToken.generate(
             workspace=workspace,
             created_by=created_by,
             name=name,
             role=role,
             scopes=list(scopes) if scopes is not None else [],
-            expires_at=expires_at,
+            **extra,
         )
         if accessible_projects:
             token.accessible_projects.set(accessible_projects)

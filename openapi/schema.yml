@@ -36793,7 +36793,6 @@ components:
         expires_at:
           type: string
           format: date-time
-          nullable: true
         last_used_at:
           type: string
           format: date-time
@@ -36871,7 +36870,6 @@ components:
         expires_at:
           type: string
           format: date-time
-          nullable: true
         last_used_at:
           type: string
           format: date-time

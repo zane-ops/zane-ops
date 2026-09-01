@@ -6,6 +6,7 @@ from ...models import (
     Workspace,
     WorkspaceMembership,
 )
+from datetime import timedelta
 from typing import Sequence
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.utils import timezone
@@ -194,8 +195,10 @@ class CreateWorkspaceApiTokenRequestSerializer(serializers.Serializer):
         queryset=Project.objects.all(),
         default=[],
     )
+    # omitted => expires in 30 days; explicit `null` => never expires.
     expires_at = serializers.DateTimeField(
-        required=False, allow_null=True, default=None
+        required=False,
+        allow_null=True,
     )
 
     def _get_workspace(self) -> Workspace:
@@ -227,6 +230,11 @@ class CreateWorkspaceApiTokenRequestSerializer(serializers.Serializer):
         if value is not None and value <= timezone.now():
             raise serializers.ValidationError("The expiry date must be in the future.")
         return value
+
+    def validate(self, attrs: dict):
+        if attrs.get("expires_at") is None:
+            attrs["expires_at"] = timezone.now() + timedelta(days=30)
+        return super().validate(attrs)
 
 
 class UpdateWorkspaceApiTokenRequestSerializer(serializers.Serializer):

@@ -243,9 +243,7 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
     # -- helpers ------------------------------------------------------
 
     def set_my_role(self, role: WorkspaceRole):
-        m = WorkspaceMembership.objects.get(
-            user=self.owner, workspace=self.workspace
-        )
+        m = WorkspaceMembership.objects.get(user=self.owner, workspace=self.workspace)
         m.role = role
         m.save()
 
@@ -293,10 +291,10 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
             "scopes": [TokenScope.DEPLOY_WRITE],
         }
         response = self.client.post(reverse("zane_api:workspace.tokens"), data=data)
-        jprint(response.json())
+        body = response.json()
+        jprint(body)
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        body = response.json()
         self.assertTrue(body["token"].startswith("zn_tok_"))
 
         token = WorkspaceApiToken.objects.get(id=body["id"])
@@ -414,19 +412,48 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
             list(token.accessible_projects.values_list("id", flat=True)),
         )
 
-    def test_create_defaults_to_never_expiring(self):
+    def test_create_defaults_to_a_30_day_expiry(self):
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:workspace.tokens"),
             data={
-                "name": "forever",
+                "name": "default-ttl",
                 "role": WorkspaceRole.MEMBER,
                 "scopes": [TokenScope.DEPLOY_WRITE],
             },
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        self.assertIsNone(WorkspaceApiToken.objects.get().expires_at)
+        expires_at = WorkspaceApiToken.objects.get().expires_at
+        self.assertIsNotNone(expires_at)
+        self.assertAlmostEqual(
+            expires_at,
+            timezone.now() + timedelta(days=30),
+            delta=timedelta(minutes=1),
+        )
+
+    def test_explicit_null_expiry_still_gets_the_30_day_default(self):
+        # every token expires — `null` is not a way around that (see plan §3
+        # note; product decision to always set an expiry).
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:workspace.tokens"),
+            data={
+                "name": "still-expires",
+                "role": WorkspaceRole.MEMBER,
+                "scopes": [TokenScope.DEPLOY_WRITE],
+                "expires_at": None,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        expires_at = WorkspaceApiToken.objects.get().expires_at
+        self.assertIsNotNone(expires_at)
+        self.assertAlmostEqual(
+            expires_at,
+            timezone.now() + timedelta(days=30),
+            delta=timedelta(minutes=1),
+        )
 
     def test_create_with_explicit_expiry(self):
         self.loginUser()
@@ -692,7 +719,9 @@ class WorkspaceTokenAuthenticationTests(AuthAPITestCase):
     def call(self, full: str | None, service=None):
         kw = self.bearer(full) if full is not None else {}
         return self.client.put(
-            self.webhook_url(service), data={"new_image": "valkey/valkey:8-alpine"}, **kw
+            self.webhook_url(service),
+            data={"new_image": "valkey/valkey:8-alpine"},
+            **kw,
         )
 
     def make_token(self, **kwargs):
@@ -735,9 +764,7 @@ class WorkspaceTokenAuthenticationTests(AuthAPITestCase):
                 response = self.client.put(
                     self.webhook_url(), data={}, headers={"Authorization": value}
                 )
-                self.assertEqual(
-                    status.HTTP_401_UNAUTHORIZED, response.status_code
-                )
+                self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
     def test_unknown_token_id_is_401(self):
         _, full = self.make_token()
@@ -752,9 +779,7 @@ class WorkspaceTokenAuthenticationTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
     def test_expired_token_is_401(self):
-        _, full = self.make_token(
-            expires_at=timezone.now() - timedelta(minutes=1)
-        )
+        _, full = self.make_token(expires_at=timezone.now() - timedelta(minutes=1))
         response = self.call(full)
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
@@ -764,9 +789,7 @@ class WorkspaceTokenAuthenticationTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
 
     def test_token_scoped_to_another_project_is_403(self):
-        other_project = Project.objects.create(
-            slug="other", workspace=self.workspace
-        )
+        other_project = Project.objects.create(slug="other", workspace=self.workspace)
         _, full = self.make_token(accessible_projects=[other_project])
         response = self.call(full)
         self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)

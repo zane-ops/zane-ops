@@ -65,12 +65,6 @@ class EffectiveAccess:
         return self.project_ids.filter(id=project_id).exists()
 
 
-def _session_project_ids(membership: WorkspaceMembership) -> Optional[QuerySet]:
-    if membership.role >= WorkspaceRole.MEMBER:
-        return None
-    return membership.accessible_projects.values_list("id")
-
-
 def build_session_access(
     user: AbstractUser, workspace: Workspace
 ) -> Optional[EffectiveAccess]:
@@ -84,7 +78,12 @@ def build_session_access(
     return EffectiveAccess(
         workspace=workspace,
         role=membership.role,
-        project_ids=_session_project_ids(membership),
+        # a Member+ reaches every project; a Viewer only their granted ones
+        project_ids=(
+            None
+            if membership.role >= WorkspaceRole.MEMBER
+            else membership.accessible_projects.values_list("id")
+        ),
         scopes=None,
         token=None,
     )
@@ -135,10 +134,6 @@ def build_token_access(token: WorkspaceApiToken) -> Optional[EffectiveAccess]:
     )
 
 
-def _request_access(request: Request) -> Optional[EffectiveAccess]:
-    return getattr(request, "access", None)
-
-
 def _resolve_role(request: Request) -> Optional[int]:
     """
     The requester's effective role in `request.workspace`.
@@ -146,7 +141,7 @@ def _resolve_role(request: Request) -> Optional[int]:
     Reads `request.access` when `HasWorkspace` has run; otherwise falls back to
     a direct membership query so permission classes stay usable in isolation.
     """
-    access = _request_access(request)
+    access: Optional[EffectiveAccess] = getattr(request, "access", None)
     if access is not None:
         return access.role
 
@@ -296,7 +291,7 @@ class HasRequiredScopes(BasePermission):
     """
 
     def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
-        access = _request_access(request)
+        access = getattr(request, "access", None)
         if access is None or access.scopes is None:
             return True
 
@@ -318,7 +313,7 @@ class HasDeployWebhookAccess(BasePermission):
     message = "This endpoint requires an API token with the `deploy:write` scope."
 
     def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
-        access = _request_access(request)
+        access = getattr(request, "access", None)
         if access is None or access.token is None:
             return False
         return access.has_scope(TokenScope.DEPLOY_WRITE)

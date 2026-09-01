@@ -27,26 +27,17 @@ from .serializers import (
 
 def _actor_role(request: Request) -> int:
     membership = WorkspaceMembership.objects.get(
-        user=request.user, workspace=request.workspace  # type: ignore
+        user=request.user,
+        workspace=request.workspace,  # type: ignore
     )
     return membership.role
-
-
-def _visible_tokens(request: Request):
-    """Tokens the requester is allowed to see (plan §9)."""
-    qs = WorkspaceApiToken.objects.filter(
-        workspace=request.workspace  # type: ignore
-    ).select_related("created_by", "workspace")
-
-    if _actor_role(request) < WorkspaceRole.ADMIN:
-        qs = qs.filter(created_by=request.user)
-    return qs.prefetch_related("accessible_projects")
 
 
 def _get_token_or_404(request: Request, token_id: str) -> WorkspaceApiToken:
     token = (
         WorkspaceApiToken.objects.filter(
-            pk=token_id, workspace=request.workspace  # type: ignore
+            pk=token_id,
+            workspace=request.workspace,  # type: ignore
         )
         .select_related("created_by", "workspace")
         .prefetch_related("accessible_projects")
@@ -54,9 +45,7 @@ def _get_token_or_404(request: Request, token_id: str) -> WorkspaceApiToken:
     )
 
     is_creator = token is not None and token.created_by_id == request.user.id  # type: ignore
-    if token is None or (
-        not is_creator and _actor_role(request) < WorkspaceRole.ADMIN
-    ):
+    if token is None or (not is_creator and _actor_role(request) < WorkspaceRole.ADMIN):
         raise exceptions.NotFound(
             f"An API token with an id of `{token_id}` does not exist in this workspace."
         )
@@ -80,7 +69,18 @@ class WorkspaceApiTokenListCreateAPIView(APIView):
         summary="List API tokens",
     )
     def get(self, request: Request):
-        serializer = WorkspaceApiTokenSerializer(_visible_tokens(request), many=True)
+        # your own tokens; Admin and above see every token in the workspace (§9)
+        tokens = (
+            WorkspaceApiToken.objects.filter(
+                workspace=request.workspace  # type: ignore
+            )
+            .select_related("created_by", "workspace")
+            .prefetch_related("accessible_projects")
+        )
+        if _actor_role(request) < WorkspaceRole.ADMIN:
+            tokens = tokens.filter(created_by=request.user)
+
+        serializer = WorkspaceApiTokenSerializer(tokens, many=True)
         return Response(serializer.data)
 
     @transaction.atomic()
