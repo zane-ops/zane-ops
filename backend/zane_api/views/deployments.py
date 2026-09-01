@@ -66,7 +66,7 @@ from ..permissions import (
     HasDeployWebhookAccess,
     IsWorkspaceMember,
     IsWorkspaceViewer,
-    get_accessible_projects,
+    request_access,
 )
 
 
@@ -88,10 +88,7 @@ class RegenerateServiceDeployTokenAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -161,7 +158,9 @@ class WebhookDeployDockerServiceAPIView(APIView):
                 detail=f"A service with a deploy_token `{deploy_token}` doesn't exist."
             )
 
-        if not request.access.can_access_project(service.project_id):  # type: ignore
+        if not request_access(request).can_access_project(
+            service.project_id
+        ):
             raise exceptions.PermissionDenied(
                 "This API token does not have access to this service's project."
             )
@@ -269,7 +268,9 @@ class WebhookDeployGitServiceAPIView(APIView):
                 detail=f"A service with a deploy_token `{deploy_token}` doesn't exist."
             )
 
-        if not request.access.can_access_project(service.project_id):  # type: ignore
+        if not request_access(request).can_access_project(
+            service.project_id
+        ):
             raise exceptions.PermissionDenied(
                 "This API token does not have access to this service's project."
             )
@@ -356,10 +357,7 @@ class BulkDeployServicesAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = project.environments.get(name=env_slug.lower())
         except Project.DoesNotExist:
@@ -451,10 +449,7 @@ class CleanupDeploymentQueueAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
 
             environment = Environment.objects.get(
@@ -538,10 +533,7 @@ class CancelServiceDeploymentAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
 
             environment = Environment.objects.get(
@@ -645,10 +637,7 @@ class ServiceDeploymentsAPIView(ListAPIView):
         try:
             project = Project.objects.get(
                 slug=project_slug,
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -699,10 +688,7 @@ class ServiceDeploymentSingleAPIView(RetrieveAPIView):
         try:
             project = Project.objects.get(
                 slug=project_slug,
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -755,10 +741,7 @@ class RecentDeploymentsAPIView(ListAPIView):
         latest_per_service = (
             Deployment.objects.filter(
                 Q(
-                    service__project__id__in=get_accessible_projects(
-                        self.request.user,  # type: ignore
-                        self.request.workspace,  # type: ignore
-                    )
+                    service__project__id__in=request_access(self.request).accessible_project_ids()
                 )
                 & (
                     Q(is_current_production=True)

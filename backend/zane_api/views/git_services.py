@@ -78,7 +78,7 @@ from ..permissions import (
     HasWorkspace,
     IsWorkspaceMember,
     IsWorkspaceAdmin,
-    get_accessible_projects,
+    request_access,
 )
 
 
@@ -115,10 +115,7 @@ class CreateGitServiceAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug,
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
 
             environment = Environment.objects.get(
@@ -355,10 +352,7 @@ class DeployGitServiceAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -453,10 +447,7 @@ class ReDeployGitServiceAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -659,10 +650,7 @@ class ArchiveGitServiceAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project

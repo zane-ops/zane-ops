@@ -1,5 +1,3 @@
-from typing import Optional
-
 from drf_spectacular.extensions import OpenApiAuthenticationExtension
 from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication, get_authorization_header
@@ -50,7 +48,7 @@ class WorkspaceTokenAuthentication(BaseAuthentication):
         return self.authenticate_credentials(raw)
 
     def authenticate_credentials(self, raw: str):
-        token: Optional[WorkspaceApiToken] = WorkspaceApiToken.authenticate(raw)
+        token: WorkspaceApiToken | None = WorkspaceApiToken.authenticate(raw)
 
         if token is None:
             raise exceptions.AuthenticationFailed("Invalid or unknown API token.")
@@ -67,7 +65,7 @@ class WorkspaceTokenAuthentication(BaseAuthentication):
         # `request.workspace` / `request.access` from it, ignoring the session.
         return (token.created_by, token)
 
-    def authenticate_header(self, request):
+    def authenticate_header(self, request):  # type: ignore
         return 'Bearer realm="api"'
 
 

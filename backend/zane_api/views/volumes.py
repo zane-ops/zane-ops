@@ -8,7 +8,7 @@ from ..serializers import VolumeWithServiceSerializer
 from ..permissions import (
     HasWorkspace,
     IsWorkspaceMember,
-    get_accessible_projects,
+    request_access,
 )
 
 
@@ -40,10 +40,7 @@ class AvailableVolumesListAPIView(ListAPIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(),

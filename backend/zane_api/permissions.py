@@ -1,5 +1,15 @@
-from .constants import WORKSPACE_SESSION_KEY
+import base64
+from dataclasses import dataclass
+from typing import Any, cast
 
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractUser, AnonymousUser
+from django.db.models import QuerySet
+from rest_framework.permissions import BasePermission
+from rest_framework.request import Request
+
+from .constants import WORKSPACE_SESSION_KEY
 from .models import (
     Project,
     TokenScope,
@@ -8,17 +18,6 @@ from .models import (
     WorkspaceMembership,
     WorkspaceRole,
 )
-import base64
-from dataclasses import dataclass
-from rest_framework.permissions import BasePermission
-from rest_framework.request import Request
-from django.conf import settings
-from typing import Any, Optional, cast
-from django.contrib.auth.models import AnonymousUser, AbstractUser
-
-from django.contrib.auth import get_user_model
-from django.db.models import QuerySet
-
 
 User = get_user_model()
 
@@ -39,10 +38,10 @@ class EffectiveAccess:
     workspace: Workspace
     role: int
     # None => every project in the workspace
-    project_ids: Optional[QuerySet]
+    project_ids: QuerySet | None
     # None => no scope limit (logged-in user)
-    scopes: Optional[frozenset]
-    token: Optional[WorkspaceApiToken] = None
+    scopes: frozenset | None
+    token: WorkspaceApiToken | None = None
 
     def has_min_role(self, role: int) -> bool:
         return self.role >= role
@@ -57,39 +56,54 @@ class EffectiveAccess:
 
     def can_access_project(self, project_id: str) -> bool:
         if self.project_ids is None:
-            return (
-                Project.objects.filter(
-                    id=project_id, workspace=self.workspace
-                ).exists()
-            )
+            return Project.objects.filter(
+                id=project_id, workspace=self.workspace
+            ).exists()
         return self.project_ids.filter(id=project_id).exists()
+
+    @classmethod
+    def from_membership(cls, membership: WorkspaceMembership) -> "EffectiveAccess":
+        """Session access for a plain workspace member (no token, no scopes)."""
+        return cls(
+            workspace=membership.workspace,
+            role=membership.role,
+            # a Member+ reaches every project; a Viewer only their granted ones
+            project_ids=(
+                None
+                if membership.role >= WorkspaceRole.MEMBER
+                else membership.accessible_projects.values_list("id")
+            ),
+            scopes=None,
+            token=None,
+        )
+
+
+def request_access(request: Any) -> EffectiveAccess:
+    """
+    The `EffectiveAccess` that `HasWorkspace` attached to the request.
+
+    Every workspace-scoped view lists `HasWorkspace` in its `permission_classes`,
+    so by the time a handler runs `request.access` is always set — the one place
+    the missing `Request.access` attribute is papered over.
+    """
+    return cast(EffectiveAccess, request.access)  # type: ignore[attr-defined]
 
 
 def build_session_access(
     user: AbstractUser, workspace: Workspace
-) -> Optional[EffectiveAccess]:
+) -> EffectiveAccess | None:
     membership = (
         WorkspaceMembership.objects.filter(user=user, workspace=workspace)
+        .select_related("workspace")
         .prefetch_related("accessible_projects")
         .first()
     )
     if membership is None:
         return None
-    return EffectiveAccess(
-        workspace=workspace,
-        role=membership.role,
-        # a Member+ reaches every project; a Viewer only their granted ones
-        project_ids=(
-            None
-            if membership.role >= WorkspaceRole.MEMBER
-            else membership.accessible_projects.values_list("id")
-        ),
-        scopes=None,
-        token=None,
-    )
+    return EffectiveAccess.from_membership(membership)
 
 
-def build_token_access(token: WorkspaceApiToken) -> Optional[EffectiveAccess]:
+def build_token_access(token: WorkspaceApiToken) -> EffectiveAccess | None:
     """
     Build the access for an API-token request, applying the "a token can never
     do more than the person who made it" rule on *every* request (plan §4).
@@ -110,20 +124,31 @@ def build_token_access(token: WorkspaceApiToken) -> Optional[EffectiveAccess]:
     role = min(token.role, membership.role)
 
     # None => the creator can reach every project in the workspace
-    creator_ids = (
+    accessible_projects_ids_from_creator = (
         None
         if membership.role >= WorkspaceRole.MEMBER
         else set(membership.accessible_projects.values_list("id", flat=True))
     )
-    token_ids = set(token.accessible_projects.values_list("id", flat=True))
+    accessible_project_ids_from_token = set(
+        token.accessible_projects.values_list("id", flat=True)
+    )
 
-    if token_ids:
-        allowed = token_ids if creator_ids is None else creator_ids & token_ids
+    if accessible_project_ids_from_token:
+        allowed = (
+            accessible_project_ids_from_token
+            if accessible_projects_ids_from_creator is None
+            # Only projects in common
+            else accessible_project_ids_from_token.intersection(
+                accessible_projects_ids_from_creator
+            )
+        )
         project_ids = Project.objects.filter(id__in=allowed).values_list("id")
-    elif creator_ids is None:
+    elif accessible_projects_ids_from_creator is None:
         project_ids = None
     else:
-        project_ids = Project.objects.filter(id__in=creator_ids).values_list("id")
+        project_ids = Project.objects.filter(
+            id__in=accessible_projects_ids_from_creator
+        ).values_list("id")
 
     return EffectiveAccess(
         workspace=token.workspace,
@@ -132,23 +157,6 @@ def build_token_access(token: WorkspaceApiToken) -> Optional[EffectiveAccess]:
         scopes=frozenset(token.scopes),
         token=token,
     )
-
-
-def _resolve_role(request: Request) -> Optional[int]:
-    """
-    The requester's effective role in `request.workspace`.
-
-    Reads `request.access` when `HasWorkspace` has run; otherwise falls back to
-    a direct membership query so permission classes stay usable in isolation.
-    """
-    access: Optional[EffectiveAccess] = getattr(request, "access", None)
-    if access is not None:
-        return access.role
-
-    membership = WorkspaceMembership.objects.filter(
-        user=request.user, workspace=getattr(request, "workspace", None)
-    ).first()
-    return membership.role if membership is not None else None
 
 
 class InternalZaneAppPermission(BasePermission):
@@ -205,78 +213,41 @@ class HasWorkspace(BasePermission):
 
 
 def has_min_role(request: Request, role: WorkspaceRole):
-    resolved = _resolve_role(request)
+    access: EffectiveAccess | None = getattr(request, "access", None)
+    if access is not None:
+        resolved = access.role
+    else:
+        membership = WorkspaceMembership.objects.filter(
+            user=request.user, workspace=getattr(request, "workspace", None)
+        ).first()
+        resolved = membership.role if membership is not None else None
+
     return resolved is not None and resolved >= role
 
 
-def get_accessible_projects(user: AbstractUser, workspace: Workspace):
-    membership = (
-        WorkspaceMembership.objects.filter(user=user, workspace=workspace)
-        .prefetch_related("accessible_projects")
-        .first()
-    )
-
-    queryset: QuerySet[Project, tuple[str]]
-
-    if membership is None:
-        queryset = Project.objects.filter(id__in=[]).values_list(
-            "id"
-        )  # No membership => no accessible projects
-    else:
-        if membership.role >= WorkspaceRole.MEMBER:
-            queryset = Project.objects.filter(workspace=workspace).values_list("id")
-        else:
-            queryset = membership.accessible_projects.values_list("id")
-
-    return queryset
-
-
-async def aget_accessible_projects(user: AbstractUser, workspace: Workspace):
-    membership = await (
-        WorkspaceMembership.objects.filter(user=user, workspace=workspace)
-        .prefetch_related("accessible_projects")
-        .afirst()
-    )
-
-    queryset: QuerySet[Project, tuple[str]]
-
-    if membership is None:
-        queryset = Project.objects.filter(id__in=[]).values_list(
-            "id"
-        )  # No membership => no accessible projects
-    else:
-        if membership.role >= WorkspaceRole.MEMBER:
-            queryset = Project.objects.filter(workspace=workspace).values_list("id")
-        else:
-            queryset = membership.accessible_projects.values_list("id")
-
-    return queryset
-
-
-class _MinRolePermission(BasePermission):
+class MinRolePermission(BasePermission):
     min_role: WorkspaceRole
 
     def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
         if not request.user or isinstance(request.user, AnonymousUser):
             return False
 
-        resolved = _resolve_role(request)
-        return resolved is not None and resolved >= self.min_role
+        return has_min_role(request, self.min_role)
 
 
-class IsWorkspaceViewer(_MinRolePermission):
+class IsWorkspaceViewer(MinRolePermission):
     min_role = WorkspaceRole.VIEWER
 
 
-class IsWorkspaceMember(_MinRolePermission):
+class IsWorkspaceMember(MinRolePermission):
     min_role = WorkspaceRole.MEMBER
 
 
-class IsWorkspaceAdmin(_MinRolePermission):
+class IsWorkspaceAdmin(MinRolePermission):
     min_role = WorkspaceRole.ADMIN
 
 
-class IsWorkspaceOwner(_MinRolePermission):
+class IsWorkspaceOwner(MinRolePermission):
     min_role = WorkspaceRole.OWNER
 
 
@@ -291,7 +262,7 @@ class HasRequiredScopes(BasePermission):
     """
 
     def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
-        access = getattr(request, "access", None)
+        access: EffectiveAccess | None = getattr(request, "access", None)
         if access is None or access.scopes is None:
             return True
 
@@ -313,7 +284,7 @@ class HasDeployWebhookAccess(BasePermission):
     message = "This endpoint requires an API token with the `deploy:write` scope."
 
     def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
-        access = getattr(request, "access", None)
+        access: EffectiveAccess | None = getattr(request, "access", None)
         if access is None or access.token is None:
             return False
         return access.has_scope(TokenScope.DEPLOY_WRITE)
