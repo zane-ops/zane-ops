@@ -24,8 +24,9 @@ x-backend-vars: &env-vars
   ZANE_HTTP_MODE: ${MODE:-https}
   CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
   # the operator sets `MAXMIND_DB_HOST_PATH` (path of the DB on the host), we mount it at
-  # a fixed path in the container and tell django about it, empty = GeoIP disabled
-  MAXMIND_DB_PATH: ${MAXMIND_DB_HOST_PATH:+/app/GeoLite2-Country.mmdb}
+  # a fixed path in the container and tell django about it.
+  # When unset, `/dev/null` is mounted instead and django disables GeoIP,
+  MAXMIND_DB_PATH: /app/GeoLite2-Country.mmdb
 
 services:
   zane-proxy:

@@ -508,5 +508,10 @@ APP_DATA_CLEANUP_SCHEDULE_ID = "daily-app-data-cleanup"
 OLD_DOCKER_SYSTEM_PRUNE_SCHEDULE_ID = "hourly-system-cleanup"
 DOCKER_SYSTEM_PRUNE_SCHEDULE_ID = "docker-system-prune"
 
-# GeoIP
-MAXMIND_DB_PATH = os.environ.get("MAXMIND_DB_PATH")
+# GeoIP, the DB is optional : when the operator doesn't provide one,
+# `/dev/null` is bind-mounted at that path, so we only consider GeoIP
+# configured when the path points to a real file
+_maxmind_db_path = os.environ.get("MAXMIND_DB_PATH")
+MAXMIND_DB_PATH = (
+    _maxmind_db_path if _maxmind_db_path and os.path.isfile(_maxmind_db_path) else None
+)
