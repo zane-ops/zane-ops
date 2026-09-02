@@ -1,0 +1,115 @@
+---
+title: Licensing & paid features
+description: Free tier limits and what a license unlocks
+---
+
+import { ASSETS_SERVER_DOMAIN } from "astro:env/client"
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+> Introduced in [**v1.14.0**](/changelog/v114)
+
+The self-hosted ZaneOps core is **free and MIT-licensed**, and always will be. A small set of team-oriented features are **additive**, shipped in the **Enterprise Edition (EE) build**, and unlocked by an optional paid license.
+
+---
+
+## Free tier
+
+Without any license, your instance runs on the **free tier**:
+
+| Limit | Value |
+|-------|-------|
+| Workspaces | **1** |
+| Users | **3** (workspace members + pending invitations) |
+
+Everything else (unlimited projects, services, environments, deployments, preview environments, Docker Compose stacks, Git apps) is unaffected by licensing.
+
+---
+
+## What a license unlocks
+
+Licenses come in tiers. The **Starter** tier unlocks:
+
+| Feature | Description |
+|---------|-------------|
+| **Extra workspaces** | Create more than one [workspace](/knowledge-base/workspaces) on the same instance |
+| **Extra user seats** | Add more than 3 users across your workspaces |
+
+And more features will be available for licensed instances.
+
+<img src={`${ASSETS_SERVER_DOMAIN}/images/PLACEHOLDER-license-gate.png`} alt="Licensed feature gate message" />
+
+---
+
+## Enterprise Edition build
+
+Licensing and every paid feature live in the **Enterprise Edition** image, published as `ghcr.io/zane-ops/app:ee-<version>`. The default `ghcr.io/zane-ops/app:<version>` image is pure MIT and contains no licensing code at all: the **Server admin > License** page and the paid features are simply absent.
+
+To switch an existing instance to the EE image, edit `docker-stack.prod.yaml` and add the `ee-` prefix to the image tag on the `zane-app`, `zane-temporal-main-worker` and `zane-temporal-schedule-worker` services:
+
+```yaml title="docker-stack.prod.yaml"
+  zane-app:
+    image: ghcr.io/zane-ops/app:ee-${IMAGE_VERSION}
+  # ...
+  zane-temporal-main-worker:
+    image: ghcr.io/zane-ops/app:ee-${IMAGE_VERSION}
+  # ...
+  zane-temporal-schedule-worker:
+    image: ghcr.io/zane-ops/app:ee-${IMAGE_VERSION}
+```
+
+The `zane-proxy` image is unchanged. Then redeploy:
+
+```shell
+make deploy
+```
+
+<Aside type="note" title="Same ZaneOps, plus ee/">
+The EE image is the same codebase with the `ee/` directory included. The core stays free and MIT-licensed; only the extra `ee/` features need a license to unlock.
+</Aside>
+
+---
+
+## How licensing works
+
+- A license is a **signed key** issued by the ZaneOps license server (`api.zaneops.dev`).
+- It is **bound to your instance**: an instance fingerprint (a hash of an ID generated on first boot) is registered with the license server when you install the key. The same key cannot be used on another instance at the same time.
+- Your instance **re-validates** the license with the license server periodically (roughly every 12 hours). If the license has **expired**, been **unbound**, or been **rebound to another instance**, it is removed automatically and the instance falls back to the free tier.
+- There is **one license per instance** (a singleton). Installing a new key replaces the previous one.
+
+<Aside type="note" title="Offline instances">
+Installing, removing and re-validating a license all require your instance to reach `api.zaneops.dev` over HTTPS. Fully air-gapped instances stay on the free tier.
+</Aside>
+
+---
+
+## Installing a license
+
+<Aside type="caution" title="Requires the EE build">
+The **Server admin > License** page only exists on the [Enterprise Edition build](#enterprise-edition-build). Switch your instance to the `ee-` image first.
+</Aside>
+
+<Steps>
+1. Buy a license from [zaneops.dev](https://zaneops.dev). You receive a **License ID**.
+
+2. In ZaneOps, go to **Server admin > License**. This area is only available to the **instance owner** (the first user of the instance).
+   <img src={`${ASSETS_SERVER_DOMAIN}/images/PLACEHOLDER-license-page.png`} alt="Server admin license page" />
+
+3. Enter your **License ID**, then submit. ZaneOps contacts the license server, binds the license to this instance, and installs it.
+   <video src={`${ASSETS_SERVER_DOMAIN}/videos/PLACEHOLDER-install-license.mp4`} alt="Install a license" muted controls />
+
+4. Once installed, the page shows the **tier**, **expiry date**, who installed it, and the instance fingerprint the license is bound to.
+</Steps>
+
+### Removing a license
+
+From the same page, choose **Uninstall**. ZaneOps unbinds the license from this instance on the license server, so you can re-use it elsewhere, and stops the periodic re-validation. The instance returns to the free tier.
+
+<Aside type="caution" title="Going back over the limits">
+If you remove a license (or it expires) while you have more than one workspace or more than 3 users, existing resources keep working, but you won't be able to create new workspaces or invite new users until you are back under the free-tier limits or install a valid license again.
+</Aside>
+
+---
+
+## Privacy
+
+Installing a license shares your instance fingerprint and license ID with the ZaneOps license server so the key can be issued and bound. See the [Privacy Policy](/privacy-policy) for what is collected and retained.

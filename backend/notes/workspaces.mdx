@@ -1,0 +1,119 @@
+---
+title: Workspaces & team management
+description: Invite people and control access with roles
+---
+
+import { ASSETS_SERVER_DOMAIN } from "astro:env/client"
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+> Introduced in [**v1.14.0**](/changelog/v114)
+
+A **workspace** is the container for everything you deploy on ZaneOps: projects, services, environments, Git apps and registry credentials all belong to a workspace.
+
+Every ZaneOps instance starts with a single workspace, created during onboarding and owned by the first user. From v1.14 you can **invite other people** into a workspace and give each of them a **role** that decides what they can see and do.
+
+<Aside type="note" title="One workspace on the free tier">
+The free, self-hosted tier allows **one workspace** and **up to 3 users** (members + pending invitations). Creating extra workspaces or adding more users requires a [license](/knowledge-base/licensing).
+</Aside>
+
+---
+
+## Roles
+
+Each member of a workspace has exactly one role. Roles are cumulative: every role can do everything the role below it can.
+
+| Role | What they can do |
+|------|------------------|
+| **Viewer** | Read-only access. Sensitive fields (environment variables, secrets, tokens) are hidden. Access can be **restricted to specific projects**. |
+| **Member** | Everything a Viewer can do, plus: edit service configuration, create/update/delete environment variables, trigger deployments. Sees **all projects** in the workspace. |
+| **Admin** | Everything a Member can do, plus: delete services, invite and remove members, change roles, manage API tokens. **Cannot delete the workspace.** |
+| **Owner** | Everything an Admin can do, plus: delete the workspace and transfer ownership. Each workspace has **exactly one Owner**. |
+
+<Aside type="caution" title="Per-project access">
+Restricting access to a subset of projects only applies to the **Viewer** role. Members, Admins and the Owner always see every project in the workspace.
+</Aside>
+
+<img className="block dark:hidden" src={`${ASSETS_SERVER_DOMAIN}/images/PLACEHOLDER-workspace-roles-light.png`} alt="Workspace roles" />
+<img className="!hidden dark:!block" src={`${ASSETS_SERVER_DOMAIN}/images/PLACEHOLDER-workspace-roles-dark.png`} alt="Workspace roles" />
+
+---
+
+## Inviting people
+
+Admins and the Owner can invite users from **Settings > Team**.
+
+<Steps>
+1. Go to **Settings > Team** and choose **Invite user**:
+   <img src={`${ASSETS_SERVER_DOMAIN}/images/PLACEHOLDER-team-settings.png`} alt="Team settings page" />
+
+2. Enter the person's **username**, pick a **role**, and (for a Viewer) select which **projects** they may access:
+   <img src={`${ASSETS_SERVER_DOMAIN}/images/PLACEHOLDER-invite-user-form.png`} alt="Invite user form" />
+
+3. ZaneOps generates an **invitation link**. Send it to the invitee.
+   - If they **already have an account** on this instance, opening the link adds them to the workspace immediately.
+   - If they **don't**, the link lets them create an account and join in one step.
+   <video src={`${ASSETS_SERVER_DOMAIN}/videos/PLACEHOLDER-invite-user.mp4`} alt="Invite a user into a workspace" muted controls />
+</Steps>
+
+### Managing invitations
+
+From **Settings > Team > Invitations** you can:
+
+- **Regenerate** an invitation link (invalidates the previous one)
+- **Revoke** a pending invitation
+- See which invitations have **expired** (invitations have a limited lifetime)
+
+<img src={`${ASSETS_SERVER_DOMAIN}/images/PLACEHOLDER-invitations-list.png`} alt="Pending invitations list" />
+
+---
+
+## Managing members
+
+The **Team** page lists everyone in the workspace with their role. Admins and the Owner can:
+
+- **Change a member's role**
+- **Edit a Viewer's project access**
+- **Remove a member** from the workspace
+
+<img src={`${ASSETS_SERVER_DOMAIN}/images/PLACEHOLDER-members-list.png`} alt="Workspace members list" />
+
+### Leaving a workspace
+
+Any member can leave a workspace from their account menu. The **Owner cannot leave**; they must first [transfer ownership](#transferring-ownership) to another member.
+
+### Transferring ownership
+
+The Owner can hand the workspace over to another member from **Settings > Team**. After the transfer, the previous Owner becomes an **Admin**.
+
+<Aside type="caution" title="Irreversible">
+Ownership transfer takes effect immediately. Make sure you trust the new Owner: they can delete the workspace.
+</Aside>
+
+---
+
+## Switching workspaces
+
+If you belong to more than one workspace, a **workspace switcher** appears in the top navigation. Switching changes the projects, services and settings you see; it does not log you out.
+
+<video src={`${ASSETS_SERVER_DOMAIN}/videos/PLACEHOLDER-switch-workspace.mp4`} alt="Switch between workspaces" muted controls />
+
+---
+
+## Server administration
+
+Some actions live **outside** any workspace, in the **Server admin** area, and are reserved for the **instance owner** (the first user of the instance):
+
+- **Users**: every account on the instance, password-reset links
+- **Workspaces**: create, inspect and manage all workspaces and their members
+- **Jobs & schedules**: cron schedules and retention policies for Docker pruning and log/build-cache cleanup
+- **Global HTTP logs**: every request that went through the ZaneOps proxy, across all workspaces, with the country it came from
+- **License**: install, view or remove the instance [license](/knowledge-base/licensing)
+- **SSH keys** and the **server terminal**
+
+<img src={`${ASSETS_SERVER_DOMAIN}/images/PLACEHOLDER-server-admin.png`} alt="Server admin area" />
+
+---
+
+{/* ## API tokens
+
+Workspace API tokens let scripts and CI authenticate against the ZaneOps API without a user session. A token is always **capped by the role and project access of the member who created it**. See the [API tokens guide](/knowledge-base/api-tokens) for details. */}
