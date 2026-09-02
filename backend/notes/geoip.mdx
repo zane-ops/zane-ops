@@ -1,0 +1,111 @@
+---
+title: GeoIP & GeoLite
+description: Resolve the country of each HTTP request
+---
+
+import { ASSETS_SERVER_DOMAIN } from "astro:env/client"
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+> Introduced in [**v1.14.0**](/changelog/v114)
+
+ZaneOps can resolve the **country** each HTTP request comes from, and show it next to every request in the HTTP logs. The lookup is done **locally**, against a [MaxMind](https://www.maxmind.com) `.mmdb` database that **you** provide.
+
+<Aside type="note" title="Disabled by default">
+ZaneOps does **not** ship or download any GeoIP database: MaxMind's license does not allow us to redistribute GeoLite2, and we don't want to phone home on every request. Until you mount a database, requests simply have no country attached, and everything else works exactly the same.
+</Aside>
+
+---
+
+## Getting a database
+
+The free **GeoLite2 Country** database is enough, ZaneOps only reads the country of an IP.
+
+<Steps>
+1. Create a free account on [maxmind.com](https://www.maxmind.com/en/geolite2/signup) and accept the GeoLite2 license.
+
+2. From **Download Databases**, download **GeoLite2 Country** in the **MaxMind DB binary (`.mmdb`)** format (*not* the CSV one), and extract the archive.
+
+3. Copy `GeoLite2-Country.mmdb` onto your server, next to your ZaneOps installation:
+
+   ```shell
+   scp GeoLite2-Country.mmdb root@<SERVER_IP>:/var/www/zaneops/GeoLite2-Country.mmdb
+   ```
+</Steps>
+
+<Aside type="tip" title="Other databases">
+Any country database in the **MaxMind DB (`.mmdb`)** format works, not only MaxMind's own. [DB-IP Lite Country](https://db-ip.com/db/download/ip-to-country-lite) and [ipinfo](https://ipinfo.io/products/free-ip-database) both publish free `.mmdb` files under friendlier licenses.
+</Aside>
+
+---
+
+## Enabling it
+
+Set `MAXMIND_DB_HOST_PATH` in your `.env` file to the **absolute path of the database on the host**, then redeploy:
+
+```shell title="/var/www/zaneops/.env"
+MAXMIND_DB_HOST_PATH="/var/www/zaneops/GeoLite2-Country.mmdb"
+```
+
+```shell
+# from your installation directory, e.g. /var/www/zaneops
+make deploy
+```
+
+ZaneOps mounts that file into the app container and enables the lookup. Leaving the variable **empty or commented out** disables GeoIP again.
+
+<Aside type="caution" title="Multi-node clusters">
+The path is read on the **node running `zane-app`**, not on the machine you run `make deploy` from. On a multi-node Swarm, make sure the file exists at the same path on that node.
+</Aside>
+
+---
+
+## What you get
+
+Once enabled, every **new** HTTP log gets a `request_country_code` ([ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2), e.g. `FR`, `US`). The country and its flag show up:
+
+- as a **Country** column, and in the request details, on every HTTP logs page: services, deployments and [Docker Compose stacks](/knowledge-base/docker-compose)
+- in **Server admin > Global HTTP Logs**, the instance-wide view of everything that went through the proxy
+
+<img src={`${ASSETS_SERVER_DOMAIN}/images/PLACEHOLDER-http-log-country.png`} alt="Country of a request in the HTTP log details" />
+
+You can also **filter by country** from the filter bar of any HTTP logs page:
+
+<img src={`${ASSETS_SERVER_DOMAIN}/images/PLACEHOLDER-http-log-country-filter.png`} alt="Filtering HTTP logs by country" />
+
+<Aside type="note" title="No backfill">
+The country is resolved **when the log is ingested** and stored with it. Requests logged before you enabled GeoIP keep no country, and changing the database does not rewrite existing logs.
+</Aside>
+
+---
+
+## How the IP is resolved
+
+- The IP used for the lookup is the one ZaneOps stores as the request IP: the first entry of the **`X-Forwarded-For`** header when present, otherwise the remote address seen by the proxy.
+- If you sit behind another proxy or a CDN (Cloudflare, a load balancer…), make sure it forwards the real client IP, or every request will resolve to your CDN's country.
+- The lookup is entirely **offline**: no request leaves your server, and nothing is sent to MaxMind.
+- It is **best-effort by design**: a missing, unreadable or invalid database file, a private/loopback IP, or an address that is simply absent from the database all result in **no country**. Log ingestion never fails because of GeoIP.
+
+---
+
+## Updating the database
+
+GeoLite2 is refreshed weekly. To update it, replace the file on the host, then **restart the app** so it picks up the new data:
+
+```shell
+docker service update --force zane_zane-app
+```
+
+<Aside type="caution" title="A restart is required">
+ZaneOps opens the database **once** and keeps the reader in memory for performance. Overwriting the file in place has no effect until the app restarts, and `make deploy` alone may not restart it, since nothing changed in the stack definition.
+</Aside>
+
+---
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---------|--------------|
+| No country on any request | `MAXMIND_DB_HOST_PATH` empty, or not an **absolute** path, or the file does not exist on the node running `zane-app` |
+| No country on *some* requests | Private/loopback IPs (`127.0.0.1`, `10.x`, `192.168.x`) and addresses missing from the database have no country |
+| Every request shows the same country | Your upstream proxy/CDN is not forwarding the client IP through `X-Forwarded-For` |
+| Countries stopped at a given date | The database file was moved or replaced with an invalid one. Check the `zane-app` logs, the failure is logged and then ignored |

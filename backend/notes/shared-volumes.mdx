@@ -1,0 +1,87 @@
+---
+title: Shared volumes
+description: Share a volume between services
+---
+
+import { ASSETS_SERVER_DOMAIN } from "astro:env/client"
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+> Introduced in [**v1.13.0**](/changelog/v113)
+
+A regular volume belongs to exactly one service. A **shared volume** lets *other* services mount that same volume, **read-only**, at a path of their choosing.
+
+The typical use case is a producer/consumer pair: a backend writes uploads, media or generated assets to its volume, and a frontend, a web server or a worker needs to read them without going through HTTP.
+
+<video src={`${ASSETS_SERVER_DOMAIN}/videos/shared_volumes.mp4`} alt="Shared volumes across reader & writer" muted controls />
+
+There are two sides to a shared volume:
+
+| Role | What it does |
+|------|--------------|
+| **Owner** (writer) | The service the volume belongs to. It keeps full **read/write** access and is the only one that can rename, resize or delete the volume. |
+| **Reader** | Any other service that mounts the volume. It gets **read-only** access, at its own container path. |
+
+The reader mounts the **very same Docker volume**, not a copy: what the owner writes is immediately visible to every reader.
+
+---
+
+## Rules
+
+Before adding one, keep in mind:
+
+- Both services must be in the **same project** *and* the **same environment**.
+- Only **Docker volumes** can be shared. Volumes bound to a **host path** cannot: mount the host path directly in the other service instead.
+- A service **cannot share its own volume** with itself.
+- A volume can be shared with **as many services as you want**, but only **once per service**.
+- The **container path must be unique** inside the reader service: it cannot collide with one of its own volumes, or with another shared volume.
+- Readers always mount it **read-only**. There is no read/write sharing, on purpose: two services writing to the same volume at the same time is a good way to corrupt data.
+
+<Aside type="note" title="Docker Compose stacks">
+This feature is for standalone services. Inside a [Docker Compose stack](/knowledge-base/docker-compose), services already share named volumes the usual way, by declaring the same volume in several services.
+</Aside>
+
+---
+
+## Adding a shared volume
+
+Shared volumes are configured on the **reader**, not on the owner: you go to the service that *needs* the data.
+
+<Steps>
+1. Open the reader service, go to **Settings > Shared volumes**, and fill the **Add new shared volume** form:
+   <img src={`${ASSETS_SERVER_DOMAIN}/images/PLACEHOLDER-shared-volumes-form.png`} alt="Shared volumes section in the service settings" />
+
+2. Pick a **volume** in the dropdown. It lists every Docker volume owned by the *other* services of the current environment, with the service it belongs to.
+
+   If it says *No volume available for sharing*, no other service in this environment has a Docker volume yet.
+
+3. Enter the **container path** where the volume should be mounted **in this service**, for example `/app/media`. It does not have to match the path used by the owner service.
+
+4. Like every other service change, this is added as a **pending change**. Click **Deploy now** to apply it.
+   <img src={`${ASSETS_SERVER_DOMAIN}/images/PLACEHOLDER-shared-volumes-pending-change.png`} alt="Pending shared volume change" />
+</Steps>
+
+You can change the container path of an existing shared volume, or detach it, from the same page. Both are pending changes too, and take effect on the next deployment.
+
+---
+
+## Zero-downtime deployments
+
+Shared volumes are always mounted read-only, so several containers can hold them at the same time. Adding one to a service **does not disable [zero-downtime deployments](/knowledge-base/zero-downtime-deploys)**: the new deployment starts while the old one is still serving traffic, both reading the same data.
+
+The **owner** service is unaffected by this: its own read/write volume still disables zero-downtime deployments for itself, as it always did.
+
+---
+
+## Deleting a shared volume, or its owner
+
+A volume that is shared is *in use* by other services, so ZaneOps refuses any operation that would pull it from under them:
+
+- **Deleting the volume** in the owner service fails while at least one other service references it.
+- **Deleting the owner service** fails while any of its volumes are shared.
+- **Rolling back or redeploying** an old deployment fails if it would delete a volume that is now shared, or if it references a shared volume that no longer exists.
+
+Pending (not yet deployed) shared-volume changes count too: a service that has *queued* a reference to the volume also blocks the deletion.
+
+<Aside type="caution" title="Detach first">
+To delete a shared volume or its owner service, go to **every reader service**, remove the shared volume from **Settings > Shared volumes**, and **deploy** them. Only then can the owner side be deleted.
+</Aside>
