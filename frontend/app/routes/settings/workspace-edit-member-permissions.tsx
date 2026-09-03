@@ -36,10 +36,12 @@ import { WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
 import { ensureMinRole, projectQueries, workspaceQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
+  cn,
   getCsrfTokenHeader,
   getFormErrorsFromResponseData,
   hasMinRole,
-  metaTitle
+  metaTitle,
+  stringToColor
 } from "~/lib/utils";
 import {
   getCurrentWorkspace,
@@ -229,11 +231,40 @@ function EditWorkspaceMemberForm({ member }: EditWorkspaceMemberFormProps) {
           <MultiSelect
             value={selectedProjects.map((project) => project.slug)}
             className="w-full border-input"
-            options={projects.map((project) => project.slug)}
+            options={projects.map((project) => {
+              const projectColor = stringToColor(project.slug);
+              return {
+                label: (
+                  <li
+                    style={
+                      {
+                        "--color-light": projectColor.light,
+                        "--color-dark": projectColor.dark
+                      } as React.CSSProperties
+                    }
+                    key={project.id}
+                    className="inline-flex gap-2 items-center text-sm"
+                  >
+                    <div
+                      className={cn(
+                        "size-6 flex-none rounded-md flex items-center justify-center",
+                        "text-(--color-light) dark:text-(--color-dark)",
+                        "bg-(--color-light)/10 dark:bg-(--color-dark)/10",
+                        "border  border-(--color-light)/10 dark:border-(--color-dark)/10"
+                      )}
+                    >
+                      <span>{project.slug.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <span>{project.slug}</span>
+                  </li>
+                ),
+                value: project.slug
+              };
+            })}
+            popoverClassName="[&_[cmdk-list]]:max-w-(--radix-popover-content-available-width) !w-(--radix-popover-trigger-width)"
             Icon={ChevronsUpDownIcon}
             id="accessible_projects"
             sideOffset={4}
-            popoverClassName="!w-(--radix-popover-trigger-width)"
             align="center"
             label="Accessible projects"
             order="label-icon"
