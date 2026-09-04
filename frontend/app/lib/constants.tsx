@@ -234,3 +234,6 @@ const buildSchema = z
   .default("oss");
 
 export const BUILD_EDITION = buildSchema.parse(import.meta.env.VITE_BUILD);
+
+export const BUY_LICENSE_LINK =
+  "https://buy.stripe.com/6oU8wO1ABb3W3hubwF4gg02";

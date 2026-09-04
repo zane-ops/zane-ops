@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   CheckIcon,
+  DollarSignIcon,
+  ExternalLinkIcon,
   InfoIcon,
   KeyRoundIcon,
   LoaderIcon,
-  PencilIcon,
   PencilLineIcon,
-  RefreshCwIcon,
   ScaleIcon,
   TriangleAlertIcon,
   XIcon
@@ -21,7 +21,7 @@ import { SimpleConfirmationDialog } from "~/components/delete-confirmation-dialo
 import { StatusBadge } from "~/components/status-badge";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
-import { Card, CardContent, CardFooter, CardTitle } from "~/components/ui/card";
+import { Card, CardContent, CardFooter } from "~/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -42,7 +42,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { BUILD_EDITION } from "~/lib/constants";
+import { BUILD_EDITION, BUY_LICENSE_LINK } from "~/lib/constants";
 import { syncLicenseStore } from "~/lib/license-store";
 import { licenseQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
@@ -97,16 +97,34 @@ export default function LicenseDetailsPage({
       {license ? (
         <LicenseCard license={license} />
       ) : (
-        <div className="border border-dashed border-border h-80 flex flex-col gap-2 items-center justify-center rounded-lg">
-          <h3 className="text-grey text-lg">
-            No license installed on this instance
-          </h3>
+        <div className="text-grey border border-dashed border-border h-80 flex flex-col gap-2 items-center justify-center rounded-lg">
+          <h3 className="text-lg">No license installed on this instance</h3>
           <ActivateLicenseDialog>
             <Button className="gap-2">
               <span>Activate license</span>
               <KeyRoundIcon className="size-4" />
             </Button>
           </ActivateLicenseDialog>
+
+          <div className="flex gap-2 items-center">
+            <Separator className="w-10 " />
+            <small className="">or</small>
+            <Separator className="w-10 " />
+          </div>
+
+          <div className="flex flex-col gap-1 items-center">
+            <a
+              href={BUY_LICENSE_LINK}
+              target="_blank"
+              className="text-link underline inline-flex gap-2 items-center"
+            >
+              Buy new license
+              <ExternalLinkIcon className="size-4" />
+            </a>
+            <p className="text-sm w-40 text-center">
+              Your license key will be emailed to you
+            </p>
+          </div>
         </div>
       )}
     </section>
@@ -280,7 +298,7 @@ export function ActivateLicenseDialog({
     >
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
-        <DialogHeader className="pb-4">
+        <DialogHeader className="pb-0">
           <DialogTitle>
             {type === "install" ? (
               <>Activate a new license</>
@@ -310,6 +328,20 @@ export function ActivateLicenseDialog({
             </Alert>
           )}
         </DialogHeader>
+
+        <p>
+          You can also{" "}
+          <a
+            href={BUY_LICENSE_LINK}
+            target="_blank"
+            className="text-link underline inline-flex gap-2 items-center"
+          >
+            buy a new license
+            <ExternalLinkIcon className="size-4" />
+          </a>{" "}
+          if you don&apos;t have one yet, your license key will be emailed to
+          you.
+        </p>
 
         <fetcher.Form method="post" id="install-form">
           <input type="hidden" name="intent" value="install" />
