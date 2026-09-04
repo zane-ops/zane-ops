@@ -2036,13 +2036,13 @@ class Deployment(BaseDeployment):
             replacements=dict(
                 dpl=dict(
                     service_fqdn=f"{project.slug}/{service.slug}",
-                    service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
+                    service_url=f"//{settings.ZANE_APP_DOMAIN}/workspace/project/{project.slug}/{environment.name}/services/{service.slug}",
                     status=(
                         "Ready"
                         if self.status == Deployment.DeploymentStatus.HEALTHY
                         else self.status.capitalize()
                     ),
-                    url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}/deployments/{self.hash}/build-logs",
+                    url=f"//{settings.ZANE_APP_DOMAIN}/workspace/project/{project.slug}/{environment.name}/services/{service.slug}/deployments/{self.hash}/build-logs",
                     updated_at=formated_datetime,
                     preview_url=preview_url,
                     status_icon=status_emoji_map[self.status],
@@ -2092,13 +2092,13 @@ class Deployment(BaseDeployment):
             replacements=dict(
                 dpl=dict(
                     service_fqdn=f"{project.slug}/{service.slug}",
-                    service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
+                    service_url=f"//{settings.ZANE_APP_DOMAIN}/workspace/project/{project.slug}/{environment.name}/services/{service.slug}",
                     status=(
                         "Ready"
                         if self.status == Deployment.DeploymentStatus.HEALTHY
                         else self.status.capitalize()
                     ),
-                    url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}/deployments/{self.hash}/build-logs",
+                    url=f"//{settings.ZANE_APP_DOMAIN}/workspace/project/{project.slug}/{environment.name}/services/{service.slug}/deployments/{self.hash}/build-logs",
                     updated_at=formated_datetime,
                     preview_url=preview_url,
                     status_icon=status_emoji_map[self.status],
