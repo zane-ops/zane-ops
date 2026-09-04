@@ -203,6 +203,14 @@ class WorkspaceApiTokenSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
+    def get_fields(self):
+        fields = super().get_fields()
+        writable = {"name"}
+
+        for field_name, field in fields.items():
+            field.read_only = field_name not in writable
+        return fields
+
 
 class WorkspaceApiTokenWithSecretSerializer(WorkspaceApiTokenSerializer):
     """

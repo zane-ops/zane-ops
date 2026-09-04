@@ -378,6 +378,22 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
         token = WorkspaceApiToken.objects.get()
         self.assertEqual(WorkspaceRole.VIEWER, token.role)
 
+    def test_admin_cannot_create_an_owner_level_token(self):
+        self.set_my_role(WorkspaceRole.ADMIN)
+        self.loginUser()
+
+        response = self.client.post(
+            reverse("zane_api:workspace.tokens"),
+            data={
+                "name": "owner-token",
+                "role": WorkspaceRole.OWNER,
+                "scopes": [TokenScope.SERVICE_WRITE],
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertEqual(0, WorkspaceApiToken.objects.count())
+
     def test_create_rejects_unknown_scopes(self):
         self.loginUser()
         response = self.client.post(
@@ -487,7 +503,7 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
         ids = {row["id"] for row in response.json()}
         self.assertEqual({mine.id}, ids)
 
-    def test_admin_sees_all_tokens_in_the_workspace(self):
+    def test_admin_sees_their_own_and_lower_role_tokens(self):
         self.set_my_role(WorkspaceRole.ADMIN)
         other = self.add_user("mohai", WorkspaceRole.MEMBER)
         a = self.make_token(created_by=self.owner, name="mine")
@@ -500,6 +516,25 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
 
         ids = {row["id"] for row in response.json()}
         self.assertEqual({a.id, b.id}, ids)
+
+    def test_admin_does_not_see_other_admins_tokens(self):
+        self.set_my_role(WorkspaceRole.ADMIN)
+        peer = self.add_user("other-admin", WorkspaceRole.ADMIN)
+        member = self.add_user("mohai", WorkspaceRole.MEMBER)
+        mine = self.make_token(created_by=self.owner, name="mine")
+        theirs = self.make_token(created_by=member, name="theirs")
+        peers = self.make_token(
+            created_by=peer, role=WorkspaceRole.ADMIN, name="peer-admin"
+        )
+
+        self.loginUser()
+        response = self.client.get(reverse("zane_api:workspace.tokens"))
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        ids = {row["id"] for row in response.json()}
+        self.assertEqual({mine.id, theirs.id}, ids)
+        self.assertNotIn(peers.id, ids)
 
     def test_list_never_leaks_tokens_from_another_workspace(self):
         self.loginUser()
@@ -563,7 +598,7 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
             (status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND),
         )
 
-    def test_admin_can_read_any_token(self):
+    def test_admin_can_read_a_member_token(self):
         self.set_my_role(WorkspaceRole.ADMIN)
         other = self.add_user("mohai", WorkspaceRole.MEMBER)
         token = self.make_token(created_by=other)
@@ -577,6 +612,24 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+    def test_admin_cannot_read_another_admins_token(self):
+        self.set_my_role(WorkspaceRole.ADMIN)
+        peer = self.add_user("other-admin", WorkspaceRole.ADMIN)
+        token = self.make_token(created_by=peer, role=WorkspaceRole.ADMIN)
+
+        self.loginUser()
+        response = self.client.get(
+            reverse(
+                "zane_api:workspace.token_detail",
+                kwargs={"token_id": token.id},
+            )
+        )
+        jprint(response.json())
+        self.assertIn(
+            response.status_code,
+            (status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND),
+        )
 
     def test_creator_can_rename_their_token(self):
         self.set_my_role(WorkspaceRole.MEMBER)
@@ -616,6 +669,45 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
         token.refresh_from_db()
         self.assertEqual("old", token.name)
 
+    def test_admin_cannot_patch_another_admins_token(self):
+        self.set_my_role(WorkspaceRole.ADMIN)
+        peer = self.add_user("other-admin", WorkspaceRole.ADMIN)
+        token = self.make_token(created_by=peer, role=WorkspaceRole.ADMIN, name="old")
+
+        self.loginUser()
+        response = self.client.patch(
+            reverse(
+                "zane_api:workspace.token_detail",
+                kwargs={"token_id": token.id},
+            ),
+            data={"name": "hijacked"},
+        )
+        jprint(response.json())
+        self.assertIn(
+            response.status_code,
+            (status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND),
+        )
+        token.refresh_from_db()
+        self.assertEqual("old", token.name)
+
+    def test_admin_cannot_patch_an_owner_token(self):
+        self.set_my_role(WorkspaceRole.ADMIN)
+        boss = self.add_user("boss", WorkspaceRole.OWNER)
+        token = self.make_token(created_by=boss, role=WorkspaceRole.OWNER, name="old")
+
+        self.loginUser()
+        response = self.client.patch(
+            reverse(
+                "zane_api:workspace.token_detail",
+                kwargs={"token_id": token.id},
+            ),
+            data={"name": "hijacked"},
+        )
+        jprint(response.json())
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        token.refresh_from_db()
+        self.assertEqual("old", token.name)
+
     # -- revoke ---------------------------------------------
 
     def test_creator_can_revoke_their_token(self):
@@ -652,7 +744,7 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
         token.refresh_from_db()
         self.assertEqual(revoked_at, token.revoked_at)
 
-    def test_admin_can_revoke_any_token(self):
+    def test_admin_can_revoke_a_member_token(self):
         self.set_my_role(WorkspaceRole.ADMIN)
         other = self.add_user("mohai", WorkspaceRole.MEMBER)
         token = self.make_token(created_by=other)
@@ -668,6 +760,23 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         token.refresh_from_db()
         self.assertIsNotNone(token.revoked_at)
+
+    def test_admin_cannot_revoke_an_owner_token(self):
+        self.set_my_role(WorkspaceRole.ADMIN)
+        boss = self.add_user("boss", WorkspaceRole.OWNER)
+        token = self.make_token(created_by=boss, role=WorkspaceRole.OWNER)
+
+        self.loginUser()
+        response = self.client.post(
+            reverse(
+                "zane_api:workspace.token_revoke",
+                kwargs={"token_id": token.id},
+            )
+        )
+        jprint(response.json())
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        token.refresh_from_db()
+        self.assertIsNone(token.revoked_at)
 
     def test_other_member_cannot_revoke_someone_elses_token(self):
         self.set_my_role(WorkspaceRole.MEMBER)

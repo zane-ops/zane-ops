@@ -237,10 +237,6 @@ class CreateWorkspaceApiTokenRequestSerializer(serializers.Serializer):
         return super().validate(attrs)
 
 
-class UpdateWorkspaceApiTokenRequestSerializer(serializers.Serializer):
-    name = serializers.CharField(min_length=1, max_length=255, required=False)
-
-
 class WorkspaceTransferOwnershipResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
 
