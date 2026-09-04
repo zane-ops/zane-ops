@@ -9535,7 +9535,7 @@ export interface components {
       last_four: string;
       masked_token: string;
       /** Format: date-time */
-      expires_at: string | null;
+      expires_at: string;
       /** Format: date-time */
       last_used_at: string | null;
       /** Format: date-time */
@@ -9561,7 +9561,7 @@ export interface components {
       last_four: string;
       masked_token: string;
       /** Format: date-time */
-      expires_at: string | null;
+      expires_at: string;
       /** Format: date-time */
       last_used_at: string | null;
       /** Format: date-time */
@@ -10145,6 +10145,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       404: {
