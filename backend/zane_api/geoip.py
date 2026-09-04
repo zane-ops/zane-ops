@@ -1,9 +1,9 @@
-import geoip2.database
 import functools
-from django.conf import settings
-import geoip2.errors
-import maxminddb
 import traceback
+
+import geoip2.database
+import maxminddb
+from django.conf import settings
 
 
 # We cache the geoip Reader as creating a Reader
@@ -28,7 +28,8 @@ def lookup_country_code(ip: str):
         else:
             try:
                 response = reader.country(ip)
-            except geoip2.errors.AddressNotFoundError:
+            except Exception:
+                # Any exception in reading the country should never make the ingest fail
                 traceback.print_exc()
             else:
                 iso_code = response.country.iso_code
