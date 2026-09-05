@@ -16993,8 +16993,7 @@ paths:
           description: ''
   /api/workspace/tokens/{token_id}/:
     get:
-      operationId: getWorkspaceApiToken
-      summary: Get an API token
+      operationId: workspace_tokens_retrieve
       parameters:
       - in: path
         name: token_id
@@ -17012,7 +17011,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetWorkspaceApiTokenErrorResponse400'
+                $ref: '#/components/schemas/WorkspaceTokensRetrieveErrorResponse400'
           description: ''
         '401':
           content:
@@ -17084,8 +17083,7 @@ paths:
                 $ref: '#/components/schemas/WorkspaceApiToken'
           description: ''
     patch:
-      operationId: updateWorkspaceApiToken
-      summary: Update an API token
+      operationId: workspace_tokens_partial_update
       parameters:
       - in: path
         name: token_id
@@ -17099,13 +17097,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedUpdateWorkspaceApiTokenRequestRequest'
+              $ref: '#/components/schemas/PatchedWorkspaceApiTokenRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedUpdateWorkspaceApiTokenRequestRequest'
+              $ref: '#/components/schemas/PatchedWorkspaceApiTokenRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedUpdateWorkspaceApiTokenRequestRequest'
+              $ref: '#/components/schemas/PatchedWorkspaceApiTokenRequest'
       security:
       - cookieAuth: []
       - workspaceApiToken: []
@@ -17114,7 +17112,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpdateWorkspaceApiTokenErrorResponse400'
+                $ref: '#/components/schemas/WorkspaceTokensPartialUpdateErrorResponse400'
           description: ''
         '401':
           content:
@@ -24946,13 +24944,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    GetWorkspaceApiTokenErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     GitApp:
       type: object
       properties:
@@ -27267,7 +27258,7 @@ components:
         last_name:
           type: string
           maxLength: 150
-    PatchedUpdateWorkspaceApiTokenRequestRequest:
+    PatchedWorkspaceApiTokenRequest:
       type: object
       properties:
         name:
@@ -34399,6 +34390,21 @@ components:
       required:
       - first_name
       - username
+    SimpleUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          maxLength: 150
+      required:
+      - username
     SimpleWorkspace:
       type: object
       properties:
@@ -35799,87 +35805,6 @@ components:
       - attr
       - code
       - detail
-    UpdateWorkspaceApiTokenError:
-      oneOf:
-      - $ref: '#/components/schemas/UpdateWorkspaceApiTokenNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateWorkspaceApiTokenNameErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          non_field_errors: '#/components/schemas/UpdateWorkspaceApiTokenNonFieldErrorsErrorComponent'
-          name: '#/components/schemas/UpdateWorkspaceApiTokenNameErrorComponent'
-    UpdateWorkspaceApiTokenErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/UpdateWorkspaceApiTokenValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/UpdateWorkspaceApiTokenValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    UpdateWorkspaceApiTokenNameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - name
-          type: string
-          description: '* `name` - name'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - min_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `min_length` - min_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    UpdateWorkspaceApiTokenNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - non_field_errors
-          type: string
-          description: '* `non_field_errors` - non_field_errors'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    UpdateWorkspaceApiTokenValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/UpdateWorkspaceApiTokenError'
-      required:
-      - errors
-      - type
     User:
       type: object
       properties:
@@ -36771,6 +36696,7 @@ components:
       properties:
         id:
           type: string
+          readOnly: true
           maxLength: 255
         name:
           type: string
@@ -36778,6 +36704,7 @@ components:
         role:
           allOf:
           - $ref: '#/components/schemas/RoleEnum'
+          readOnly: true
           minimum: 0
           maximum: 32767
         role_name:
@@ -36787,6 +36714,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ScopesEnum'
+          readOnly: true
         accessible_projects:
           type: array
           items:
@@ -36798,6 +36726,7 @@ components:
           readOnly: true
         last_four:
           type: string
+          readOnly: true
           maxLength: 4
         masked_token:
           type: string
@@ -36805,13 +36734,16 @@ components:
         expires_at:
           type: string
           format: date-time
+          readOnly: true
         last_used_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         revoked_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         is_active:
           type: boolean
@@ -36848,6 +36780,7 @@ components:
       properties:
         id:
           type: string
+          readOnly: true
           maxLength: 255
         name:
           type: string
@@ -36855,6 +36788,7 @@ components:
         role:
           allOf:
           - $ref: '#/components/schemas/RoleEnum'
+          readOnly: true
           minimum: 0
           maximum: 32767
         role_name:
@@ -36864,6 +36798,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ScopesEnum'
+          readOnly: true
         accessible_projects:
           type: array
           items:
@@ -36875,6 +36810,7 @@ components:
           readOnly: true
         last_four:
           type: string
+          readOnly: true
           maxLength: 4
         masked_token:
           type: string
@@ -36882,13 +36818,16 @@ components:
         expires_at:
           type: string
           format: date-time
+          readOnly: true
         last_used_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         revoked_at:
           type: string
           format: date-time
+          readOnly: true
           nullable: true
         is_active:
           type: boolean
@@ -37271,6 +37210,94 @@ components:
           type: boolean
       required:
       - success
+    WorkspaceTokensPartialUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/WorkspaceTokensPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WorkspaceTokensPartialUpdateNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/WorkspaceTokensPartialUpdateNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/WorkspaceTokensPartialUpdateNameErrorComponent'
+    WorkspaceTokensPartialUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/WorkspaceTokensPartialUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/WorkspaceTokensPartialUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    WorkspaceTokensPartialUpdateNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WorkspaceTokensPartialUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WorkspaceTokensPartialUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceTokensPartialUpdateError'
+      required:
+      - errors
+      - type
+    WorkspaceTokensRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     WorkspaceTransferOwnershipRequest:
       type: object
       properties:

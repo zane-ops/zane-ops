@@ -698,10 +698,8 @@ export interface paths {
     post: operations["createWorkspaceApiToken"];
   };
   "/api/workspace/tokens/{token_id}/": {
-    /** Get an API token */
-    get: operations["getWorkspaceApiToken"];
-    /** Update an API token */
-    patch: operations["updateWorkspaceApiToken"];
+    get: operations["workspace_tokens_retrieve"];
+    patch: operations["workspace_tokens_partial_update"];
   };
   "/api/workspace/tokens/{token_id}/revoke/": {
     /** Revoke an API token */
@@ -3974,7 +3972,6 @@ export interface components {
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    GetWorkspaceApiTokenErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GitApp: {
       id: string;
       github: components["schemas"]["GithubApp"] | null;
@@ -5007,7 +5004,7 @@ export interface components {
       first_name?: string;
       last_name?: string;
     };
-    PatchedUpdateWorkspaceApiTokenRequestRequest: {
+    PatchedWorkspaceApiTokenRequest: {
       name?: string;
     };
     /**
@@ -8413,6 +8410,11 @@ export interface components {
       username: string;
       first_name: string;
     };
+    SimpleUserRequest: {
+      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+      username: string;
+      first_name?: string;
+    };
     SimpleWorkspace: {
       name: string;
     };
@@ -9053,44 +9055,6 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    UpdateWorkspaceApiTokenError: components["schemas"]["UpdateWorkspaceApiTokenNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateWorkspaceApiTokenNameErrorComponent"];
-    UpdateWorkspaceApiTokenErrorResponse400: components["schemas"]["UpdateWorkspaceApiTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
-    UpdateWorkspaceApiTokenNameErrorComponent: {
-      /**
-       * @description * `name` - name
-       * @enum {string}
-       */
-      attr: "name";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `min_length` - min_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    UpdateWorkspaceApiTokenNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    UpdateWorkspaceApiTokenValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["UpdateWorkspaceApiTokenError"][];
-    };
     User: {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
       username: string;
@@ -9529,7 +9493,7 @@ export interface components {
       name: string;
       role: components["schemas"]["RoleEnum"];
       role_name: string;
-      scopes: components["schemas"]["ScopesEnum"][];
+      scopes: readonly components["schemas"]["ScopesEnum"][];
       accessible_projects: readonly components["schemas"]["AccessibleWorkspaceProject"][];
       created_by: components["schemas"]["SimpleUser"];
       last_four: string;
@@ -9555,7 +9519,7 @@ export interface components {
       name: string;
       role: components["schemas"]["RoleEnum"];
       role_name: string;
-      scopes: components["schemas"]["ScopesEnum"][];
+      scopes: readonly components["schemas"]["ScopesEnum"][];
       accessible_projects: readonly components["schemas"]["AccessibleWorkspaceProject"][];
       created_by: components["schemas"]["SimpleUser"];
       last_four: string;
@@ -9685,6 +9649,45 @@ export interface components {
     WorkspaceReviewInvitationResponse: {
       success: boolean;
     };
+    WorkspaceTokensPartialUpdateError: components["schemas"]["WorkspaceTokensPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["WorkspaceTokensPartialUpdateNameErrorComponent"];
+    WorkspaceTokensPartialUpdateErrorResponse400: components["schemas"]["WorkspaceTokensPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    WorkspaceTokensPartialUpdateNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WorkspaceTokensPartialUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    WorkspaceTokensPartialUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["WorkspaceTokensPartialUpdateError"][];
+    };
+    WorkspaceTokensRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     WorkspaceTransferOwnershipRequest: {
       owner_id: number;
     };
@@ -17136,8 +17139,7 @@ export interface operations {
       };
     };
   };
-  /** Get an API token */
-  getWorkspaceApiToken: {
+  workspace_tokens_retrieve: {
     parameters: {
       path: {
         token_id: string;
@@ -17151,7 +17153,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["GetWorkspaceApiTokenErrorResponse400"];
+          "application/json": components["schemas"]["WorkspaceTokensRetrieveErrorResponse400"];
         };
       };
       401: {
@@ -17176,8 +17178,7 @@ export interface operations {
       };
     };
   };
-  /** Update an API token */
-  updateWorkspaceApiToken: {
+  workspace_tokens_partial_update: {
     parameters: {
       path: {
         token_id: string;
@@ -17185,9 +17186,9 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        "application/json": components["schemas"]["PatchedUpdateWorkspaceApiTokenRequestRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["PatchedUpdateWorkspaceApiTokenRequestRequest"];
-        "multipart/form-data": components["schemas"]["PatchedUpdateWorkspaceApiTokenRequestRequest"];
+        "application/json": components["schemas"]["PatchedWorkspaceApiTokenRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedWorkspaceApiTokenRequest"];
+        "multipart/form-data": components["schemas"]["PatchedWorkspaceApiTokenRequest"];
       };
     };
     responses: {
@@ -17198,7 +17199,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["UpdateWorkspaceApiTokenErrorResponse400"];
+          "application/json": components["schemas"]["WorkspaceTokensPartialUpdateErrorResponse400"];
         };
       };
       401: {
