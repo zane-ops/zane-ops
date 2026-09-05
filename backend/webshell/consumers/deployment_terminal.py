@@ -11,7 +11,7 @@ from ..serializers import ContainerTerminalQuerySerializer
 from ..exceptions import log_consumer_exceptions
 from .container_terminal_consumer import GenericContainerTerminalConsumer
 from zane_api.models import WorkspaceRole
-from zane_api.permissions import aget_accessible_projects
+from zane_api.permissions import EffectiveAccess
 
 
 @log_consumer_exceptions
@@ -32,10 +32,9 @@ class DeploymentTerminalConsumer(GenericContainerTerminalConsumer):
         try:
             project = await Project.objects.aget(
                 slug=project_slug,
-                id__in=await aget_accessible_projects(
-                    self.user,
-                    membership.workspace,
-                ),
+                id__in=EffectiveAccess.from_membership(
+                    membership
+                ).accessible_project_ids(),
             )
             environment = await Environment.objects.aget(
                 name=env_slug.lower(), project=project

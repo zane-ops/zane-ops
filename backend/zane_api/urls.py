@@ -71,6 +71,21 @@ urlpatterns = [
         name="workspace.regenerate_invitation",
     ),
     re_path(
+        r"^workspace/tokens/?$",
+        views.WorkspaceApiTokenListCreateAPIView.as_view(),
+        name="workspace.tokens",
+    ),
+    re_path(
+        r"^workspace/tokens/(?P<token_id>[a-zA-Z0-9_]+)/revoke/?$",
+        views.WorkspaceApiTokenRevokeAPIView.as_view(),
+        name="workspace.token_revoke",
+    ),
+    re_path(
+        r"^workspace/tokens/(?P<token_id>[a-zA-Z0-9_]+)/?$",
+        views.WorkspaceApiTokenDetailAPIView.as_view(),
+        name="workspace.token_detail",
+    ),
+    re_path(
         r"^workspace/members/?$",
         views.ListWorkspaceMembersAPIView.as_view(),
         name="workspace.list_members",

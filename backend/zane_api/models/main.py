@@ -4,6 +4,7 @@ import uuid
 from typing import Optional
 
 from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MinLengthValidator, MinValueValidator
 from django.db import models
 from django.db.models import (
@@ -36,6 +37,7 @@ from pathlib import PurePath
 from git_connectors.dtos import GitCommitInfo
 from typing import cast
 from ..git_client import GitClient
+import hashlib
 import secrets
 from ..constants import HEAD_COMMIT
 from dataclasses import dataclass
@@ -47,7 +49,7 @@ from git_connectors.constants import (
     PREVIEW_DEPLOYMENT_BLOCKED_COMMENT_MARKDOWN_TEMPLATE,
     PREVIEW_DEPLOYMENT_DECLINED_COMMENT_MARKDOWN_TEMPLATE,
 )
-from datetime import timezone as tz
+from datetime import timedelta, timezone as tz
 from typing import TYPE_CHECKING
 from asgiref.sync import sync_to_async
 from django.contrib.auth.validators import UnicodeUsernameValidator
@@ -183,6 +185,216 @@ class WorkspaceMembership(models.Model):
                 name="unique_owner_per_workspace",
             )
         ]
+
+
+class TokenScope(models.TextChoices):
+    """
+    Areas of the API an API token may touch, named `resource:action`.
+
+    A scope never *grants* anything, it only takes away: it says which area a
+    token may reach, while the token's role still decides how far into that area
+    it gets. A `write` scope implies `read` on the same resource.
+
+    This list is provisional and only covers part of the API, see
+    `backend/notes/api-tokens-plan.md` §6.
+    """
+
+    DEPLOY_WRITE = (
+        "deploy:write",
+        "Trigger / cancel / redeploy deployments and previews",
+    )
+    SERVICE_READ = "service:read", "Read service and compose-stack configuration"
+    SERVICE_WRITE = "service:write", "Change services and compose stacks"
+    ENV_READ = "env:read", "Read environment variables (sensitive)"
+    ENV_WRITE = "env:write", "Change environment variables"
+    LOGS_READ = "logs:read", "Read runtime logs, build logs and metrics"
+    PROJECT_READ = "project:read", "List and read projects and environments"
+    PROJECT_WRITE = "project:write", "Change projects and environments"
+
+
+# named (not a lambda) so migrations can serialize it as the `expires_at` default
+def default_api_token_expiry():
+    return timezone.now() + timedelta(days=30)
+
+
+class WorkspaceApiToken(TimestampedModel):
+    """
+    A bearer credential that lets CI pipelines and scripts call the API without a
+    browser session. See `backend/notes/api-tokens-plan.md`.
+
+    The full token is only ever available right after creation (from
+    `WorkspaceApiToken.generate`); we only persist the sha256 hash of its secret.
+    """
+
+    if TYPE_CHECKING:
+        accessible_projects: RelatedManager["Project"]
+
+    # `zn_` so secret scanners (GitHub push protection & co) can spot a leak.
+    TOKEN_PREFIX = "zn_"
+    ID_PREFIX = "tok_"
+    ID_LENGTH = 11
+    # secret is 32 random bytes, url-safe base64 => 43 chars
+    SECRET_NBYTES = 32
+    # only bump `last_used_at` when the stored value is older than this, so a
+    # burst of API calls doesn't turn into a burst of writes.
+    LAST_USED_THROTTLE = timedelta(minutes=5)
+
+    id = ShortUUIDField(
+        length=ID_LENGTH,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="api_tokens",
+    )
+    # delete the user => their tokens go too (see plan §4): removing someone from
+    # the workspace should weaken or kill every token they made.
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="api_tokens",
+    )
+
+    name = models.CharField(max_length=255)
+    role = models.PositiveSmallIntegerField(choices=WorkspaceRole.choices)
+    scopes = ArrayField(
+        base_field=models.CharField(max_length=255, choices=TokenScope.choices),
+        default=list,
+        blank=True,
+    )
+    # empty => the whole workspace (still capped by the creator's own projects).
+    accessible_projects = models.ManyToManyField("Project", blank=True)
+
+    token_hash = models.CharField(max_length=64, unique=True, db_index=True)
+    # display only, so the UI can tell tokens apart: zn_••••a1b2
+    last_four = models.CharField(max_length=4)
+
+    # every token expires; defaults to 30 days out (plan §5)
+    expires_at = models.DateTimeField(default=default_api_token_expiry)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    # revoking sets this instead of deleting the row, so the record survives for
+    # a later audit feature.
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"WorkspaceApiToken({self.name!r})"
+
+    # --- token generation & verification -------------------------------------
+
+    @staticmethod
+    def hash_secret(secret: str) -> str:
+        return hashlib.sha256(secret.encode()).hexdigest()
+
+    @classmethod
+    def generate_secret(cls) -> str:
+        return secrets.token_urlsafe(cls.SECRET_NBYTES)
+
+    @classmethod
+    def generate(cls, **kwargs) -> tuple["WorkspaceApiToken", str]:
+        """
+        Create and save a token, returning `(token, full_token_string)`.
+
+        `full_token_string` is the only time the caller can ever see the secret,
+        it is not stored. `accessible_projects` (m2m) must be set by the caller
+        after this returns.
+        """
+        secret = cls.generate_secret()
+        token = cls(
+            token_hash=cls.hash_secret(secret),
+            last_four=secret[-4:],
+            **kwargs,
+        )
+        token.save()
+        return token, token.build_token_string(secret)
+
+    def build_token_string(self, secret: str) -> str:
+        return f"{self.TOKEN_PREFIX}{self.id}_{secret}"
+
+    @classmethod
+    def parse_token_string(cls, raw: str) -> Optional[tuple[str, str]]:
+        """
+        Split `zn_tok_<id>_<secret>` into `(token_id, secret)`.
+
+        Returns `None` on anything malformed, never raises, so a bad header can
+        only ever produce a clean 401.
+        """
+        prefix = cls.TOKEN_PREFIX + cls.ID_PREFIX  # "zn_tok_"
+        if not isinstance(raw, str) or not raw.startswith(prefix):
+            return None
+        id_suffix, sep, secret = raw[len(prefix) :].partition("_")
+        if sep != "_" or len(id_suffix) != cls.ID_LENGTH or not secret:
+            return None
+        return cls.ID_PREFIX + id_suffix, secret
+
+    def verify_secret(self, secret: str) -> bool:
+        # constant-time: the secret is 32 random bytes so there is nothing to
+        # brute-force, but the comparison should still not leak via timing.
+        return secrets.compare_digest(self.token_hash, self.hash_secret(secret))
+
+    @classmethod
+    def authenticate(cls, raw: str) -> Optional["WorkspaceApiToken"]:
+        """
+        Look up the token for a raw `zn_...` string and check its secret.
+
+        Returns the token on a hash match (regardless of revoked/expired state,
+        the caller decides what to do with those), `None` otherwise.
+        """
+        parsed = cls.parse_token_string(raw)
+        if parsed is None:
+            return None
+        token_id, secret = parsed
+        token = (
+            cls.objects.filter(pk=token_id)
+            .select_related("workspace", "created_by")
+            .first()
+        )
+        if token is None or not token.verify_secret(secret):
+            return None
+        return token
+
+    # --- state -------------------------------------------------------------
+
+    @property
+    def is_revoked(self) -> bool:
+        return self.revoked_at is not None
+
+    @property
+    def is_expired(self) -> bool:
+        return self.expires_at is not None and self.expires_at <= timezone.now()
+
+    @property
+    def is_active(self) -> bool:
+        return not self.is_revoked and not self.is_expired
+
+    @property
+    def masked_token(self) -> str:
+        return f"{self.TOKEN_PREFIX}••••{self.last_four}"
+
+    def revoke(self):
+        if self.revoked_at is None:
+            self.revoked_at = timezone.now()
+            self.save(update_fields=["revoked_at", "updated_at"])
+
+    def touch_last_used(self, *, now=None) -> bool:
+        """
+        Bump `last_used_at`, but only if it is stale (see `LAST_USED_THROTTLE`).
+        Returns whether a write happened.
+        """
+        now = now or timezone.now()
+        if (
+            self.last_used_at is not None
+            and now - self.last_used_at < self.LAST_USED_THROTTLE
+        ):
+            return False
+        self.last_used_at = now
+        self.save(update_fields=["last_used_at", "updated_at"])
+        return True
 
 
 class Project(TimestampedModel):
