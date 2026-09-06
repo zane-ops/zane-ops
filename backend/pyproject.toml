@@ -267,3 +267,6 @@ dev-dependencies = [
     "croniter>=6.2.2",
     "geoip2>=5.3.0",
 ]
+
+[tool.ruff.lint]
+exclude = ["*"]
