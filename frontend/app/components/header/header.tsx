@@ -15,7 +15,7 @@ export function Header({ leftSlot, rigthSlot }: HeaderProps) {
       {!import.meta.env.PROD && (
         <div
           className={cn(
-            "py-0.5 bg-red-500 text-white text-center fixed top-0 left-0 right-0  z-49",
+            "py-0.5 bg-red-500 text-white text-center fixed top-0 left-0 right-0 z-60",
             "w-full"
           )}
         >
