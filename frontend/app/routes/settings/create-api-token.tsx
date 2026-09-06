@@ -223,6 +223,8 @@ function CreateApiTokenForm() {
         <FieldSetInput autoFocus placeholder="ex: CI pipeline" />
       </FieldSet>
 
+      <Separator className="my-2" />
+
       <input type="hidden" value={selectedRoleValue} name="role" />
 
       <Alert variant="info" className="bg-link/10 my-1 w-full">
