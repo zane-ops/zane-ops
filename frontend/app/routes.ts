@@ -141,6 +141,7 @@ export default [
           ]),
 
           route("api-tokens", "./routes/settings/workspace-api-tokens.tsx"),
+          route("api-tokens/new", "./routes/settings/create-api-token.tsx"),
           route(
             "invitations",
             "./routes/settings/workspace-invitation-list.tsx"
