@@ -140,6 +140,7 @@ export default [
             route(":id/remove", "./routes/settings/workspace-remove-member.tsx")
           ]),
 
+          route("api-tokens", "./routes/settings/workspace-api-tokens.tsx"),
           route(
             "invitations",
             "./routes/settings/workspace-invitation-list.tsx"
