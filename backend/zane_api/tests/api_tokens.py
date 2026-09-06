@@ -563,6 +563,49 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
         self.assertNotIn("token", row)
         self.assertNotIn("token_hash", row)
 
+    def test_list_hides_revoked_tokens_by_default(self):
+        self.loginUser()
+        active = self.make_token(name="active")
+        revoked = self.make_token(name="revoked")
+        revoked.revoke()
+
+        response = self.client.get(reverse("zane_api:workspace.tokens"))
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        ids = {row["id"] for row in response.json()}
+        self.assertEqual({active.id}, ids)
+
+    def test_list_shows_revoked_tokens_when_asked(self):
+        self.loginUser()
+        active = self.make_token(name="active")
+        revoked = self.make_token(name="revoked")
+        revoked.revoke()
+
+        response = self.client.get(
+            reverse("zane_api:workspace.tokens"), data={"revoked": "true"}
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        ids = {row["id"] for row in response.json()}
+        self.assertEqual({active.id, revoked.id}, ids)
+
+    def test_list_revoked_false_is_the_same_as_the_default(self):
+        self.loginUser()
+        active = self.make_token(name="active")
+        revoked = self.make_token(name="revoked")
+        revoked.revoke()
+
+        response = self.client.get(
+            reverse("zane_api:workspace.tokens"), data={"revoked": "false"}
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        ids = {row["id"] for row in response.json()}
+        self.assertEqual({active.id}, ids)
+
     # -- detail / patch --------------------------------------
 
     def test_creator_can_read_their_token(self):
