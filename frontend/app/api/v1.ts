@@ -4643,7 +4643,12 @@ export interface components {
     ListGitAppsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ListGitRepoBranchesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ListRegistryImagesErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ListWorkspaceApiTokensErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ListWorkspaceApiTokensError: unknown;
+    ListWorkspaceApiTokensErrorResponse400: components["schemas"]["ListWorkspaceApiTokensValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ListWorkspaceApiTokensValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ListWorkspaceApiTokensError"][];
+    };
     LoginError: components["schemas"]["LoginNonFieldErrorsErrorComponent"] | components["schemas"]["LoginUsernameErrorComponent"] | components["schemas"]["LoginPasswordErrorComponent"];
     LoginErrorResponse400: components["schemas"]["LoginValidationError"] | components["schemas"]["ParseErrorResponse"];
     LoginNonFieldErrorsErrorComponent: {
@@ -17074,6 +17079,11 @@ export interface operations {
   };
   /** List API tokens */
   listWorkspaceApiTokens: {
+    parameters: {
+      query?: {
+        revoked?: boolean;
+      };
+    };
     responses: {
       200: {
         content: {

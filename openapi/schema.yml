@@ -16840,6 +16840,11 @@ paths:
     get:
       operationId: listWorkspaceApiTokens
       summary: List API tokens
+      parameters:
+      - in: query
+        name: revoked
+        schema:
+          type: boolean
       tags:
       - workspace
       security:
@@ -26449,13 +26454,32 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ListWorkspaceApiTokensError:
+      oneOf: []
+      discriminator:
+        propertyName: attr
+        mapping: {}
     ListWorkspaceApiTokensErrorResponse400:
       oneOf:
+      - $ref: '#/components/schemas/ListWorkspaceApiTokensValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
+          validation_error: '#/components/schemas/ListWorkspaceApiTokensValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    ListWorkspaceApiTokensValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ListWorkspaceApiTokensError'
+      required:
+      - errors
+      - type
     LoginError:
       oneOf:
       - $ref: '#/components/schemas/LoginNonFieldErrorsErrorComponent'
