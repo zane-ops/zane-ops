@@ -142,9 +142,13 @@ export default function WorkspaceAPITokensPage({
             <TableHead className="sticky top-0 z-20">Scopes</TableHead>
             <TableHead className="sticky top-0 z-20">Projects</TableHead>
             <TableHead className="sticky top-0 z-20">Status</TableHead>
-            <TableHead className="sticky top-0 z-20">Created At</TableHead>
+            <TableHead className="sticky top-0 z-20 whitespace-nowrap">
+              Created At
+            </TableHead>
             <TableHead className="sticky top-0 z-20">Expires</TableHead>
-            <TableHead className="sticky top-0 z-20">Created by</TableHead>
+            <TableHead className="sticky top-0 z-20 whitespace-nowrap">
+              Created by
+            </TableHead>
             <TableHead className="sticky top-0 z-20 px-4">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -187,7 +191,7 @@ function TokenRow({ token }: { token: WorkspaceApiToken }) {
 
   return (
     <TableRow className="px-2">
-      <TableCell className="p-2">{token.name}</TableCell>
+      <TableCell className="p-2 whitespace-nowrap">{token.name}</TableCell>
       <TableCell className="p-2">
         <Code>{token.masked_token}</Code>
       </TableCell>
