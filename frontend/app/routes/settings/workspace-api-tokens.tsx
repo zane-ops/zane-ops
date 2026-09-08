@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  BadgeCheckIcon,
   BanIcon,
   ChevronDownIcon,
   CircleCheckIcon,
   ClockAlertIcon,
+  ClockFadingIcon,
   type LucideIcon,
   PlusIcon,
   Trash2Icon
@@ -140,6 +142,7 @@ export default function WorkspaceAPITokensPage({
             <TableHead className="sticky top-0 z-20">Scopes</TableHead>
             <TableHead className="sticky top-0 z-20">Projects</TableHead>
             <TableHead className="sticky top-0 z-20">Status</TableHead>
+            <TableHead className="sticky top-0 z-20">Created At</TableHead>
             <TableHead className="sticky top-0 z-20">Expires</TableHead>
             <TableHead className="sticky top-0 z-20">Created by</TableHead>
             <TableHead className="sticky top-0 z-20 px-4">Actions</TableHead>
@@ -172,14 +175,15 @@ function getTokenStatus(token: WorkspaceApiToken): {
   if (token.revoked_at)
     return { label: "Revoked", color: "red", Icon: BanIcon };
   if (!token.is_active)
-    return { label: "Expired", color: "yellow", Icon: ClockAlertIcon };
-  return { label: "Active", color: "green", Icon: CircleCheckIcon };
+    return { label: "Expired", color: "yellow", Icon: ClockFadingIcon };
+  return { label: "Active", color: "green", Icon: BadgeCheckIcon };
 }
 
 function TokenRow({ token }: { token: WorkspaceApiToken }) {
   const status = getTokenStatus(token);
   const roleName = token.role_name as WorkspaceRoleName;
   const expiresAt = formatLogTime(token.expires_at);
+  const createdAt = formatLogTime(token.created_at);
 
   return (
     <TableRow className="px-2">
@@ -310,6 +314,15 @@ function TokenRow({ token }: { token: WorkspaceApiToken }) {
       <TableCell className="p-2">
         <time
           className="text-grey whitespace-nowrap"
+          dateTime={new Date(token.created_at).toISOString()}
+        >
+          {createdAt.dateFormat},&nbsp;
+          <span>{createdAt.hourFormat}</span>
+        </time>
+      </TableCell>
+      <TableCell className="p-2">
+        <time
+          className="text-grey whitespace-nowrap"
           dateTime={new Date(token.expires_at).toISOString()}
         >
           {expiresAt.dateFormat},&nbsp;
@@ -335,7 +348,10 @@ function RevokeTokenFormDialog({ token }: { token: WorkspaceApiToken }) {
         <>
           This action <strong>CANNOT</strong> be undone. Any script or CI
           pipeline using&nbsp;
-          <Code>{token.masked_token}</Code>&nbsp;will immediately stop working.
+          <Code className="bg-gray-700 text-white dark:bg-gray-300 dark:text-black">
+            {token.masked_token}
+          </Code>
+          &nbsp;will immediately stop working.
         </>
       }
       form={

@@ -37,6 +37,12 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import { TOKEN_SCOPE_MAPPING, WORKSPACE_ROLE_MAPPING } from "~/lib/constants";
 import { apiTokenQueries, ensureMinRole, projectQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
@@ -114,10 +120,37 @@ function TokenCreatedCard({ data }: TokenCreatedCardProps) {
           again.
         </p>
       </CardHeader>
-      <CardContent className="flex flex-col gap-2">
-        <Separator className="mb-5" />
+      <CardContent className="flex flex-col gap-4 pb-8">
+        <div
+          className={cn(
+            "flex items-center gap-2 rounded-md border border-border bg-muted py-2.5",
+            "group relative pl-3 pr-2 h-12 justify-between"
+          )}
+        >
+          <code className="text-sm flex-1 whitespace-nowrap truncate max-w-full">
+            {data.token}
+          </code>
+          <TooltipProvider>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <CopyButton
+                  variant="outline"
+                  size="sm"
+                  className="flex-none !opacity-100"
+                  value={data.token}
+                  label={(hasCopied?: boolean) =>
+                    hasCopied ? "Copied" : "Copy link"
+                  }
+                />
+              </TooltipTrigger>
+              <TooltipContent>Copy token</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
 
-        <dl className="mt-4">
+        <Separator />
+
+        <dl>
           <div className="flex items-center gap-2">
             <dt className="text-grey">Name:</dt>
             <dd>{data.name}</dd>
@@ -138,29 +171,6 @@ function TokenCreatedCard({ data }: TokenCreatedCardProps) {
             </dd>
           </div>
         </dl>
-
-        <div className="flex items-center gap-2 w-full">
-          <Code className="grow px-3 py-2 overflow-x-auto whitespace-nowrap">
-            {data.token}
-          </Code>
-          <CopyButton
-            value={data.token}
-            label="Copy token"
-            variant="outline"
-            className="!opacity-100 flex-none"
-          />
-        </div>
-
-        <p className="text-grey text-sm mt-4">
-          Use it in the <Code>Authorization</Code> header of your requests:
-        </p>
-        <Code className="px-3 py-2 overflow-x-auto whitespace-nowrap">
-          Authorization: Bearer {data.token}
-        </Code>
-
-        <Button asChild className="mt-6 w-fit">
-          <Link to={href("/workspace/settings/api-tokens")}>Done</Link>
-        </Button>
       </CardContent>
     </Card>
   );
