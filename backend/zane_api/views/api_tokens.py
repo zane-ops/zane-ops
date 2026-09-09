@@ -1,7 +1,6 @@
 from typing import cast
 
 from django.db import transaction
-from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
 from rest_framework import exceptions, status, serializers
 from rest_framework.generics import RetrieveUpdateAPIView, ListCreateAPIView
@@ -22,10 +21,7 @@ from ..serializers import (
     WorkspaceApiTokenSerializer,
     WorkspaceApiTokenWithSecretSerializer,
 )
-from .serializers import (
-    CreateWorkspaceApiTokenRequestSerializer,
-    WorkspaceApiTokenFilterSet,
-)
+from .serializers import CreateWorkspaceApiTokenRequestSerializer
 
 
 def _get_token_or_404(request: Request, token_id: str) -> WorkspaceApiToken:
@@ -68,8 +64,6 @@ class WorkspaceApiTokenListCreateAPIView(ListCreateAPIView):
     # no `required_scopes` => `HasRequiredScopes` denies API tokens outright:
     # a token can never create or list tokens (plan §10).
     permission_classes = [HasWorkspace, HasRequiredScopes, IsWorkspaceMember]
-    filter_backends = [DjangoFilterBackend]
-    filterset_class = WorkspaceApiTokenFilterSet
     pagination_class = None
 
     queryset = WorkspaceApiToken.objects.all()  # just used for the openAPI docs
@@ -178,11 +172,11 @@ class WorkspaceApiTokenRevokeAPIView(APIView):
 
     @extend_schema(
         request=None,
-        responses=WorkspaceApiTokenSerializer,
+        responses={204: None},
         operation_id="revokeWorkspaceApiToken",
         summary="Revoke an API token",
     )
     def post(self, request: Request, token_id: str):
         token = _get_token_or_404(request, token_id)
-        token.revoke()
-        return Response(WorkspaceApiTokenSerializer(token).data)
+        token.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

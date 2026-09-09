@@ -197,7 +197,6 @@ class WorkspaceApiTokenSerializer(serializers.ModelSerializer):
             "masked_token",
             "expires_at",
             "last_used_at",
-            "revoked_at",
             "is_active",
             "created_at",
             "updated_at",

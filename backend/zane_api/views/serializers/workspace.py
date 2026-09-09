@@ -5,7 +5,6 @@ from ...models import (
     WorkspaceRole,
     Workspace,
     WorkspaceMembership,
-    WorkspaceApiToken,
 )
 from datetime import timedelta
 from typing import Sequence
@@ -236,26 +235,6 @@ class CreateWorkspaceApiTokenRequestSerializer(serializers.Serializer):
         if attrs.get("expires_at") is None:
             attrs["expires_at"] = timezone.now() + timedelta(days=30)
         return super().validate(attrs)
-
-
-class WorkspaceApiTokenFilterSet(django_filters.FilterSet):
-    # hidden by default: pass `?revoked=true` to bring revoked tokens back
-    # into the listing (see `filter_revoked`).
-    revoked = django_filters.BooleanFilter(method="filter_revoked")
-
-    def __init__(self, data=None, *args, **kwargs):
-        data = data.copy() if data is not None else {}
-        data.setdefault("revoked", "false")
-        super().__init__(data, *args, **kwargs)
-
-    def filter_revoked(self, queryset: QuerySet, name: str, value: bool):
-        if value:
-            return queryset
-        return queryset.filter(revoked_at__isnull=True)
-
-    class Meta:
-        model = WorkspaceApiToken
-        fields = ["revoked"]
 
 
 class WorkspaceTransferOwnershipResponseSerializer(serializers.Serializer):

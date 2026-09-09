@@ -147,15 +147,12 @@ export const workspaceQueries = {
 };
 
 export const apiTokenQueries = {
-  list: (workspaceId: string, filters: { revoked?: boolean } = {}) =>
+  list: (workspaceId: string) =>
     queryOptions({
-      queryKey: [...workspaceKey(workspaceId), "API_TOKENS", filters] as const,
+      queryKey: [...workspaceKey(workspaceId), "API_TOKENS"] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET("/api/workspace/tokens/", {
-          signal,
-          params: {
-            query: filters
-          }
+          signal
         });
         if (!data) throw notFound("Not found");
         return data;
