@@ -297,12 +297,14 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
+        "zane_api.authentication.WorkspaceTokenAuthentication",
     ],
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
         "anon": "60/minute" if DEBUG and ENVIRONMENT != PRODUCTION_ENV else "5/minute",
+        "token": "120/minute",
         "tls_certificates": "60/minute",
         "deploy_webhook": "60/minute",
         "gitapp_webhook": "120/minute",

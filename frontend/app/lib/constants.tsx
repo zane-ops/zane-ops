@@ -3,6 +3,7 @@ import type { useSpinDelay } from "spin-delay";
 import z from "zod";
 import type {
   ContainerRegistryType,
+  TokenScope,
   WorkspaceRoleName,
   WorkspaceRoleValue
 } from "~/api/types";
@@ -226,6 +227,33 @@ export const WORKSPACE_ROLE_MAPPING = {
   WorkspaceRoleName,
   { value: WorkspaceRoleValue; summary: string; description: React.ReactNode }
 >;
+
+export const TOKEN_SCOPE_MAPPING = {
+  "deploy:write": {
+    description: "Trigger / cancel / redeploy deployments and previews"
+  },
+  "service:read": {
+    description: "Read service and compose-stack configuration"
+  },
+  "service:write": {
+    description: "Change services and compose stacks"
+  },
+  "env:read": {
+    description: "Read environment variables (sensitive)"
+  },
+  "env:write": {
+    description: "Change environment variables"
+  },
+  "logs:read": {
+    description: "Read runtime logs, build logs and metrics"
+  },
+  "project:read": {
+    description: "List and read projects and environments"
+  },
+  "project:write": {
+    description: "Change projects and environments"
+  }
+} satisfies Record<TokenScope, { description: string }>;
 
 const buildSchema = z
   .enum(["oss", "ee"])

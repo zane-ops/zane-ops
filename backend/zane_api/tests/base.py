@@ -55,7 +55,9 @@ from ..models import (
     Config,
     URL,
     Environment,
+    TokenScope,
     Workspace,
+    WorkspaceApiToken,
     WorkspaceMembership,
     WorkspaceRole,
 )
@@ -469,6 +471,45 @@ class AuthAPITestCase(APITestCase):
         user = await User.objects.aget(username="Fredkiss3")
         await Token.objects.aget_or_create(user=user)
         return user
+
+    def create_api_token(
+        self,
+        *,
+        scopes=None,
+        role=WorkspaceRole.MEMBER,
+        workspace=None,
+        created_by=None,
+        name="test-token",
+        accessible_projects=None,
+        expires_at=None,
+    ) -> tuple[WorkspaceApiToken, str]:
+        workspace = workspace or cast(Workspace, Workspace.objects.first())
+        created_by = created_by or User.objects.get(username="Fredkiss3")
+        extra = {} if expires_at is None else {"expires_at": expires_at}
+        token, full = WorkspaceApiToken.generate(
+            workspace=workspace,
+            created_by=created_by,
+            name=name,
+            role=role,
+            scopes=list(scopes) if scopes is not None else [],
+            **extra,
+        )
+        if accessible_projects:
+            token.accessible_projects.set(accessible_projects)
+        return token, full
+
+    def deploy_token_kwargs(self, **kwargs) -> dict:
+        """
+        Request kwargs adding a Bearer header for an API token with the
+        `deploy:write` scope — the deploy webhook routes now require a token
+        (plan §7). Spread into a client call: `self.client.put(url, **kw)`.
+        """
+        kwargs.setdefault("scopes", [TokenScope.DEPLOY_WRITE])
+        _, full = self.create_api_token(**kwargs)
+        return {"headers": {"Authorization": f"Bearer {full}"}}
+
+    async def adeploy_token_kwargs(self, **kwargs) -> dict:
+        return await sync_to_async(self.deploy_token_kwargs)(**kwargs)
 
     @asynccontextmanager
     async def workflowEnvironment(

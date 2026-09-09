@@ -309,6 +309,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-1"},
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -364,6 +365,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-1"},
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -408,6 +410,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-1"},
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -462,6 +465,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": git_service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-1"},
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -523,6 +527,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **(await self.adeploy_token_kwargs()),
             data={"branch_name": "test-1"},
         )
         jprint(response.json())
@@ -589,6 +594,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **(await self.adeploy_token_kwargs()),
             data={"branch_name": "feat/test-preview"},
         )
         jprint(response.json())
@@ -639,6 +645,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **(await self.adeploy_token_kwargs()),
             data={"branch_name": "feat/test-preview"},
         )
         jprint(response.json())
@@ -690,6 +697,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **(await self.adeploy_token_kwargs()),
             data={"branch_name": "feat/test-preview", "commit_sha": "abcdef1"},
         )
         jprint(response.json())
@@ -754,6 +762,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **(await self.adeploy_token_kwargs()),
             data={"branch_name": "feat/test-preview"},
         )
         jprint(response.json())
@@ -834,6 +843,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-1"},
         )
         jprint(response.json())
@@ -873,6 +883,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": git_service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-1", "template": template.slug},
         )
         jprint(response.json())
@@ -918,6 +929,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": git_service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-1"},
         )
         jprint(response.json())
@@ -959,6 +971,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": git_service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-1"},
         )
         jprint(response.json())
@@ -969,6 +982,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": git_service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-1"},
         )
         jprint(response.json())
@@ -991,6 +1005,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-1"},
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -1032,6 +1047,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **(await self.adeploy_token_kwargs()),
             data={"branch_name": "test-1", "template": "invalid"},
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
@@ -1053,6 +1069,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **(await self.adeploy_token_kwargs()),
             data={
                 "branch_name": self.fake_git.NON_EXISTENT_BRANCH,
             },
@@ -1083,6 +1100,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **(await self.adeploy_token_kwargs()),
             data={"branch_name": "feat/test-preview"},
         )
         jprint(response.json())
@@ -1117,6 +1135,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-preview"},
         )
         jprint(response.json())
@@ -1152,6 +1171,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-preview"},
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -1194,6 +1214,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": git_service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-1"},
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -1263,6 +1284,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": git_service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-1"},
         )
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
@@ -1287,6 +1309,7 @@ class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={
                 "branch_name": "feat/test-1",
                 "env_variables": [
@@ -1340,6 +1363,7 @@ class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={
                 "branch_name": "feat/test-1",
                 "env_variables": [
@@ -1382,6 +1406,7 @@ class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"pr_number": 4},
         )
         jprint(response.json())
@@ -1405,6 +1430,7 @@ class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"branch_name": "feat/test-1", "pr_number": pr_data["number"]},
         )
         jprint(response.json())
@@ -1426,6 +1452,7 @@ class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={},
         )
         jprint(response.json())
@@ -1449,6 +1476,7 @@ class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={"pr_number": pr_data["number"]},
         )
         jprint(response.json())

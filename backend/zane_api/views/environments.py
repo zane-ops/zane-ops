@@ -54,19 +54,20 @@ from temporal.shared import (
     ComposeStackDeploymentDetails,
 )
 from rest_framework import viewsets
-from rest_framework import permissions
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.utils.serializer_helpers import ReturnDict
 from django.utils.text import slugify
 from faker import Faker
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework import serializers
+from ..authentication import WorkspaceTokenAuthentication
 from ..permissions import (
     HasWorkspace,
+    HasDeployWebhookAccess,
     IsWorkspaceMember,
     IsWorkspaceViewer,
     IsWorkspaceAdmin,
-    get_accessible_projects,
+    request_access,
 )
 
 
@@ -89,10 +90,7 @@ class CreateEnviromentAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
@@ -143,10 +141,7 @@ class CloneEnviromentAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             current_environment = project.environments.get(name=env_slug.lower())
         except Project.DoesNotExist:
@@ -290,10 +285,7 @@ class ReviewPreviewEnvDeployAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = (
                 Environment.objects.filter(
@@ -465,10 +457,7 @@ class EnvironmentDetailsAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = (
                 Environment.objects.filter(name=env_slug.lower(), project=project)
@@ -498,10 +487,7 @@ class EnvironmentDetailsAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = (
                 Environment.objects.filter(name=env_slug.lower(), project=project)
@@ -549,10 +535,7 @@ class EnvironmentDetailsAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = (
                 Environment.objects.filter(name=env_slug.lower(), project=project)
@@ -612,10 +595,7 @@ class SharedEnvVariablesViewSet(viewsets.ModelViewSet):
         try:
             project = Project.objects.get(
                 slug=project_slug,
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -653,10 +633,7 @@ class SharedEnvVariablesViewSet(viewsets.ModelViewSet):
             environment = Environment.objects.get(
                 name=env_slug.lower(),
                 project__slug=project_slug,
-                project__id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                project__id__in=request_access(self.request).accessible_project_ids(),
             )
         except Environment.DoesNotExist:
             raise exceptions.NotFound(
@@ -676,7 +653,11 @@ class SharedEnvVariablesViewSet(viewsets.ModelViewSet):
 
 
 class TriggerPreviewEnvironmentAPIView(APIView):
-    permission_classes = [permissions.AllowAny]
+    # `deploy_token` in the URL is now only a service identifier — the request
+    # must carry an API token with `deploy:write`; the session is never
+    # consulted for a deploy webhook (plan §7).
+    authentication_classes = [WorkspaceTokenAuthentication]
+    permission_classes = [HasWorkspace, HasDeployWebhookAccess]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
 
@@ -694,6 +675,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                     deploy_token=deploy_token,
                     type=Service.ServiceType.GIT_REPOSITORY,
                     git_app__isnull=False,
+                    project__workspace=request.workspace,  # type: ignore
                 )
                 .select_related(
                     "project",
@@ -710,6 +692,13 @@ class TriggerPreviewEnvironmentAPIView(APIView):
         except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with a deploy_token `{deploy_token}` does not exists in this ZaneOps instance."
+            )
+
+        if not request_access(request).can_access_project(
+            current_service.project_id
+        ):
+            raise exceptions.PermissionDenied(
+                "This API token does not have access to this service's project."
             )
 
         git_source_change = current_service.unapplied_changes.filter(
@@ -1024,10 +1013,7 @@ class PreviewEnvTemplateListAPIView(ListCreateAPIView):
         try:
             project = Project.objects.get(
                 slug=project_slug,
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
         except Project.DoesNotExist:
             raise exceptions.NotFound("This project does not exist")
@@ -1046,10 +1032,7 @@ class PreviewEnvTemplateListAPIView(ListCreateAPIView):
         try:
             project = Project.objects.get(
                 slug=project_slug,
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
         except Project.DoesNotExist:
             raise exceptions.NotFound("This project does not exist")
@@ -1085,10 +1068,7 @@ class PreviewEnvTemplateDetailsAPIView(RetrieveUpdateDestroyAPIView):
         try:
             project = Project.objects.get(
                 slug=project_slug,
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             template = (
                 project.preview_templates.filter(slug=template_slug)

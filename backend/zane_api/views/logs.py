@@ -14,7 +14,7 @@ from ..permissions import (
     InternalZaneAppPermission,
     HasWorkspace,
     IsWorkspaceMember,
-    get_accessible_projects,
+    request_access,
 )
 import uuid
 from ..utils import Colors, escape_ansi
@@ -385,10 +385,7 @@ class HttpLogsFieldsAPIView(APIView):
         stack_id = data.get("stack_id")
         deployment_id = data.get("deployment_hash")
 
-        accessible_projects = get_accessible_projects(
-            request.user,
-            request.workspace,  # type: ignore
-        )
+        accessible_projects = request_access(request).accessible_project_ids()
 
         has_access = False
 
@@ -444,10 +441,7 @@ class HttpLogsAPIView(ListAPIView):
         stack_id: str = self.request.query_params.get("stack_id")  # type: ignore
         deployment_id: str = self.request.query_params.get("deployment_id")  # type: ignore
 
-        accessible_projects = get_accessible_projects(
-            self.request.user,  # type: ignore
-            self.request.workspace,  # type: ignore
-        )
+        accessible_projects = request_access(self.request).accessible_project_ids()
 
         has_access = False
 
@@ -495,10 +489,7 @@ class SingleHttpLogAPIView(RetrieveAPIView):
     def get_object(self):
         log: HttpLog = super().get_object()
 
-        accessible_projects = get_accessible_projects(
-            self.request.user,  # type: ignore
-            self.request.workspace,  # type: ignore
-        )
+        accessible_projects = request_access(self.request).accessible_project_ids()
 
         has_access = False
 
@@ -541,10 +532,7 @@ class ServiceDeploymentRuntimeLogsAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug,
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
 
             environment = Environment.objects.get(
@@ -603,10 +591,7 @@ class ServiceDeploymentRuntimeLogsWithContextAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug,
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
 
             environment = Environment.objects.get(
@@ -667,10 +652,7 @@ class ServiceDeploymentBuildLogsAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug,
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
 
             environment = Environment.objects.get(

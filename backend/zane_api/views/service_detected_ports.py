@@ -22,7 +22,7 @@ from temporal.helpers import (
 import docker
 import docker.errors
 from zane_api.utils import DockerSwarmTask
-from ..permissions import get_accessible_projects, HasWorkspace, IsWorkspaceMember
+from ..permissions import request_access, HasWorkspace, IsWorkspaceMember
 
 
 class ServiceDetectedPortsAPIView(APIView):
@@ -42,10 +42,7 @@ class ServiceDetectedPortsAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug,
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project

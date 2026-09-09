@@ -1,4 +1,5 @@
 import {
+  BracesIcon,
   Building2Icon,
   CreditCardIcon,
   GitBranchIcon,
@@ -52,11 +53,18 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
 
   // members pick a shared credential when creating a service, they just can't edit them
   if (hasMinRole(membership, "Member")) {
-    sidebarNavItems.push({
-      title: "Shared Credentials",
-      href: href("/workspace/settings/shared-credentials"),
-      icon: CreditCardIcon
-    });
+    sidebarNavItems.push(
+      {
+        title: "Shared Credentials",
+        href: href("/workspace/settings/shared-credentials"),
+        icon: CreditCardIcon
+      },
+      {
+        title: "API Tokens",
+        href: href("/workspace/settings/api-tokens"),
+        icon: BracesIcon
+      }
+    );
   }
 
   return (

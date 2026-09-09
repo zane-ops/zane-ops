@@ -103,7 +103,7 @@ from ..permissions import (
     IsWorkspaceMember,
     IsWorkspaceAdmin,
     IsWorkspaceViewer,
-    get_accessible_projects,
+    request_access,
 )
 
 
@@ -131,10 +131,7 @@ class CreateDockerServiceAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug,
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
 
             environment = Environment.objects.get(
@@ -256,10 +253,7 @@ class RequestServiceChangesAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -667,10 +661,7 @@ class RequestServiceEnvChangesAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -753,10 +744,7 @@ class CancelServiceChangesAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -854,10 +842,7 @@ class DeployDockerServiceAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -965,10 +950,7 @@ class RedeployDockerServiceAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -1209,10 +1191,7 @@ class ServiceDetailsAPIView(RetrieveUpdateAPIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -1265,10 +1244,7 @@ class ArchiveDockerServiceAPIView(APIView):
             project = (
                 Project.objects.filter(
                     slug=project_slug.lower(),
-                    id__in=get_accessible_projects(
-                        self.request.user,  # type: ignore
-                        self.request.workspace,  # type: ignore
-                    ),
+                    id__in=request_access(self.request).accessible_project_ids(),
                 ).select_related("archived_version")
             ).get()
             environment = Environment.objects.filter(
@@ -1403,10 +1379,7 @@ class ToggleServiceAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(),
@@ -1494,10 +1467,7 @@ class BulkToggleServicesAPIView(APIView):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
-                id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                id__in=request_access(self.request).accessible_project_ids(),
             )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project

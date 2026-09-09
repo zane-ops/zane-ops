@@ -27,7 +27,7 @@ from .serializers import (
 )
 from compose.models import ComposeStack
 from ..permissions import (
-    get_accessible_projects,
+    request_access,
     HasWorkspace,
     IsWorkspaceViewer,
 )
@@ -58,10 +58,7 @@ class ResourceSearchAPIView(APIView):
         query = request.query_params.get("query", "").strip()
         projects: QuerySet[Project] = Project.objects.filter(
             slug__istartswith=query,
-            id__in=get_accessible_projects(
-                self.request.user,  # type: ignore
-                self.request.workspace,  # type: ignore
-            ),
+            id__in=request_access(self.request).accessible_project_ids(),
         )[:5]
         projects_list = [
             {
@@ -75,10 +72,7 @@ class ResourceSearchAPIView(APIView):
         services = (
             Service.objects.filter(
                 slug__istartswith=query,
-                project__id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                project__id__in=request_access(self.request).accessible_project_ids(),
             )
             .select_related("project", "environment", "git_app")
             .annotate(
@@ -121,10 +115,7 @@ class ResourceSearchAPIView(APIView):
         compose_stacks = (
             ComposeStack.objects.filter(
                 slug__istartswith=query,
-                project__id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                project__id__in=request_access(self.request).accessible_project_ids(),
             )
             .select_related("project", "environment")
             .annotate(
@@ -154,10 +145,7 @@ class ResourceSearchAPIView(APIView):
         environments = (
             Environment.objects.filter(
                 name__istartswith=query,
-                project__id__in=get_accessible_projects(
-                    self.request.user,  # type: ignore
-                    self.request.workspace,  # type: ignore
-                ),
+                project__id__in=request_access(self.request).accessible_project_ids(),
             )
             .exclude(name=Environment.PRODUCTION_ENV_NAME)
             .select_related("project")[:5]

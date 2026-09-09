@@ -146,6 +146,29 @@ export const workspaceQueries = {
     })
 };
 
+export const apiTokenQueries = {
+  list: (workspaceId: string, filters: { revoked?: boolean } = {}) =>
+    queryOptions({
+      queryKey: [...workspaceKey(workspaceId), "API_TOKENS", filters] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/workspace/tokens/", {
+          signal,
+          params: {
+            query: filters
+          }
+        });
+        if (!data) throw notFound("Not found");
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (!query.state.data) {
+          return false;
+        }
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      }
+    })
+};
+
 export const sharedRegistryCredentialsQueries = {
   list: (workspaceId: string) =>
     queryOptions({

@@ -52,6 +52,14 @@ export type WorkspaceInvitationLink = ApiResponse<
   "/api/workspace/invitations/{token}/"
 >;
 
+export type WorkspaceApiToken = NonNullable<
+  ApiResponse<"get", "/api/workspace/tokens/">
+>[number];
+export type WorkspaceApiTokenWithSecret = NonNullable<
+  ApiResponse<"post", "/api/workspace/tokens/", 201>
+>;
+export type TokenScope = WorkspaceApiToken["scopes"][number];
+
 export type WorkspaceRoleName = WorkspaceMember["role_name"];
 export type UserRole = WorkspaceRoleName | "ServerAdmin";
 export type WorkspaceRoleValue = WorkspaceMember["role"];

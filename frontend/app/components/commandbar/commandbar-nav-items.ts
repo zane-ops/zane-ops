@@ -1,4 +1,5 @@
 import {
+  BracesIcon,
   BrushCleaningIcon,
   Building2Icon,
   ContainerIcon,
@@ -64,6 +65,13 @@ export const WORKSPACE_NAV_GROUP: CommandBarNavGroup = {
       title: "Shared Credentials",
       href: href("/workspace/settings/shared-credentials"),
       icon: CreditCardIcon,
+      minRole: "Member"
+    },
+    {
+      id: "nav-workspace-api-tokens",
+      title: "API Tokens",
+      href: href("/workspace/settings/api-tokens"),
+      icon: BracesIcon,
       minRole: "Member"
     }
   ]

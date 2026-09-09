@@ -419,7 +419,7 @@ function LogTableRowContent({
           className="text-grey whitespace-nowrap"
           dateTime={new Date(log.time).toISOString()}
         >
-          <span className="sr-only sm:not-sr-only">
+          <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
             {logTime.dateFormat},&nbsp;
           </span>
           <span>{logTime.hourFormat}</span>

@@ -74,6 +74,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
                 "zane_api:services.docker.webhook_deploy",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **(await self.adeploy_token_kwargs()),
         )
         self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
         deployment_count = await service.deployments.acount()
@@ -96,6 +97,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
                 "zane_api:services.docker.webhook_deploy",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={
                 "new_image": "valkey/valkey:7.3-alpine",
             },
@@ -111,7 +113,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
         self.assertIsNone(source_change.old_value)
         self.assertEqual({"image": "valkey/valkey:7.3-alpine"}, source_change.new_value)
 
-    async def test_webhook_deploy_service_unauthenticated(self):
+    async def test_webhook_deploy_service_without_a_token_is_rejected(self):
         _, service = await self.acreate_and_deploy_caddy_docker_service()
         await self.async_client.alogout()
 
@@ -121,12 +123,9 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
                 kwargs={"deploy_token": service.deploy_token},
             ),
         )
-        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
         deployment_count = await service.deployments.acount()
-        self.assertEqual(2, deployment_count)
-        new_deployment: Deployment = await service.alatest_production_deployment
-        docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
-        self.assertIsNotNone(docker_service)
+        self.assertEqual(1, deployment_count)
 
     async def test_webhook_deploy_service_with_image_and_commit_message(self):
         _, service = await self.acreate_and_deploy_redis_docker_service()
@@ -136,6 +135,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
                 "zane_api:services.docker.webhook_deploy",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **(await self.adeploy_token_kwargs()),
             data={
                 "new_image": "valkey/valkey:7.3-alpine",
                 "commit_message": "Upgrade valkey image",
@@ -162,6 +162,7 @@ class GitServiceWebhookDeployViewTests(AuthAPITestCase):
                 "zane_api:services.git.webhook_deploy",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **(await self.adeploy_token_kwargs()),
         )
         self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
         deployment_count = await service.deployments.acount()
@@ -189,6 +190,7 @@ class GitServiceWebhookDeployViewTests(AuthAPITestCase):
                 "zane_api:services.git.webhook_deploy",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **self.deploy_token_kwargs(),
             data={
                 "commit_sha": "abcd1236",
             },
@@ -219,6 +221,7 @@ class GitServiceWebhookDeployViewTests(AuthAPITestCase):
                 "zane_api:services.git.webhook_deploy",
                 kwargs={"deploy_token": service.deploy_token},
             ),
+            **(await self.adeploy_token_kwargs()),
             data={
                 "commit_sha": "abcd1236",
                 "ignore_build_cache": True,

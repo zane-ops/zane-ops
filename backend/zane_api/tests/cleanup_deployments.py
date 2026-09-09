@@ -269,6 +269,7 @@ class CleanupDeploymentPreserveLatestViewTests(AuthAPITestCase):
                             "deploy_token": service.deploy_token,
                         },
                     ),
+                    **(await self.adeploy_token_kwargs()),
                     data={"cleanup_queue": True},
                 )
                 # run active deployment
@@ -322,6 +323,7 @@ class CleanupDeploymentPreserveLatestViewTests(AuthAPITestCase):
                             "deploy_token": service.deploy_token,
                         },
                     ),
+                    **(await self.adeploy_token_kwargs()),
                     data={"cleanup_queue": True},
                 )
                 # run active deployment
