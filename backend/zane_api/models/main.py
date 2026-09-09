@@ -275,9 +275,6 @@ class WorkspaceApiToken(TimestampedModel):
     # every token expires; defaults to 30 days out (plan §5)
     expires_at = models.DateTimeField(default=default_api_token_expiry)
     last_used_at = models.DateTimeField(null=True, blank=True)
-    # revoking sets this instead of deleting the row, so the record survives for
-    # a later audit feature.
-    revoked_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -342,8 +339,9 @@ class WorkspaceApiToken(TimestampedModel):
         """
         Look up the token for a raw `zn_...` string and check its secret.
 
-        Returns the token on a hash match (regardless of revoked/expired state,
-        the caller decides what to do with those), `None` otherwise.
+        Returns the token on a hash match (regardless of expired state, the
+        caller decides what to do with that; a revoked token is deleted so it
+        can never match), `None` otherwise.
         """
         parsed = cls.parse_token_string(raw)
         if parsed is None:
@@ -361,25 +359,16 @@ class WorkspaceApiToken(TimestampedModel):
     # --- state -------------------------------------------------------------
 
     @property
-    def is_revoked(self) -> bool:
-        return self.revoked_at is not None
-
-    @property
     def is_expired(self) -> bool:
         return self.expires_at is not None and self.expires_at <= timezone.now()
 
     @property
     def is_active(self) -> bool:
-        return not self.is_revoked and not self.is_expired
+        return not self.is_expired
 
     @property
     def masked_token(self) -> str:
         return f"{self.TOKEN_PREFIX}••••{self.last_four}"
-
-    def revoke(self):
-        if self.revoked_at is None:
-            self.revoked_at = timezone.now()
-            self.save(update_fields=["revoked_at", "updated_at"])
 
     def touch_last_used(self, *, now=None) -> bool:
         """

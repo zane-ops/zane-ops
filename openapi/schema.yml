@@ -16840,11 +16840,6 @@ paths:
     get:
       operationId: listWorkspaceApiTokens
       summary: List API tokens
-      parameters:
-      - in: query
-        name: revoked
-        schema:
-          type: boolean
       tags:
       - workspace
       security:
@@ -17274,12 +17269,8 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkspaceApiToken'
-          description: ''
+        '204':
+          description: No response body
   /api/workspace/transfer-ownership/:
     post:
       operationId: transferWorkspaceOwnership
@@ -26454,32 +26445,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ListWorkspaceApiTokensError:
-      oneOf: []
-      discriminator:
-        propertyName: attr
-        mapping: {}
     ListWorkspaceApiTokensErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/ListWorkspaceApiTokensValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/ListWorkspaceApiTokensValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ListWorkspaceApiTokensValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ListWorkspaceApiTokensError'
-      required:
-      - errors
-      - type
     LoginError:
       oneOf:
       - $ref: '#/components/schemas/LoginNonFieldErrorsErrorComponent'
@@ -36764,11 +36736,6 @@ components:
           format: date-time
           readOnly: true
           nullable: true
-        revoked_at:
-          type: string
-          format: date-time
-          readOnly: true
-          nullable: true
         is_active:
           type: boolean
           readOnly: true
@@ -36791,7 +36758,6 @@ components:
       - last_used_at
       - masked_token
       - name
-      - revoked_at
       - role
       - role_name
       - scopes
@@ -36848,11 +36814,6 @@ components:
           format: date-time
           readOnly: true
           nullable: true
-        revoked_at:
-          type: string
-          format: date-time
-          readOnly: true
-          nullable: true
         is_active:
           type: boolean
           readOnly: true
@@ -36878,7 +36839,6 @@ components:
       - last_used_at
       - masked_token
       - name
-      - revoked_at
       - role
       - role_name
       - scopes

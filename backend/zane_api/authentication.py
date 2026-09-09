@@ -53,9 +53,6 @@ class WorkspaceTokenAuthentication(BaseAuthentication):
         if token is None:
             raise exceptions.AuthenticationFailed("Invalid or unknown API token.")
 
-        if token.is_revoked:
-            raise exceptions.AuthenticationFailed("This API token has been revoked.")
-
         if token.is_expired:
             raise exceptions.AuthenticationFailed("This API token has expired.")
 

@@ -143,20 +143,24 @@ class WorkspaceApiTokenModelTests(AuthAPITestCase):
         self.assertIsNone(WorkspaceApiToken.authenticate("garbage"))
         self.assertIsNone(WorkspaceApiToken.authenticate(""))
 
-    def test_authenticate_returns_revoked_and_expired_tokens(self):
+    def test_authenticate_returns_expired_tokens(self):
         # authenticate() only checks the hash; the caller decides what to do
-        # with revoked/expired tokens.
-        token, full = self.create_token(expires_at=timezone.now() - timedelta(days=1))
-        token.revoke()
+        # with an expired token.
+        _, full = self.create_token(expires_at=timezone.now() - timedelta(days=1))
         found = WorkspaceApiToken.authenticate(full)
         self.assertIsNotNone(found)
+
+    def test_authenticate_never_finds_a_revoked_token(self):
+        # revoking deletes the row, so there is nothing left to match.
+        token, full = self.create_token()
+        token.delete()
+        self.assertIsNone(WorkspaceApiToken.authenticate(full))
 
     # --- state --------------------------------------------------------
 
     def test_is_active_by_default(self):
         token, _ = self.create_token()
         self.assertTrue(token.is_active)
-        self.assertFalse(token.is_revoked)
         self.assertFalse(token.is_expired)
 
     def test_expired_token_is_not_active(self):
@@ -168,19 +172,6 @@ class WorkspaceApiTokenModelTests(AuthAPITestCase):
         token, _ = self.create_token(expires_at=timezone.now() + timedelta(days=90))
         self.assertFalse(token.is_expired)
         self.assertTrue(token.is_active)
-
-    def test_revoke_sets_revoked_at_once_and_is_idempotent(self):
-        token, _ = self.create_token()
-        token.revoke()
-        self.assertIsNotNone(token.revoked_at)
-        first = token.revoked_at
-
-        token.revoke()
-        self.assertEqual(first, token.revoked_at)
-
-        token.refresh_from_db()
-        self.assertIsNotNone(token.revoked_at)
-        self.assertFalse(token.is_active)
 
     def test_masked_token(self):
         token, full = self.create_token()
@@ -563,43 +554,13 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
         self.assertNotIn("token", row)
         self.assertNotIn("token_hash", row)
 
-    def test_list_hides_revoked_tokens_by_default(self):
+    def test_list_never_includes_revoked_tokens(self):
         self.loginUser()
         active = self.make_token(name="active")
         revoked = self.make_token(name="revoked")
-        revoked.revoke()
+        revoked.delete()
 
         response = self.client.get(reverse("zane_api:workspace.tokens"))
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        ids = {row["id"] for row in response.json()}
-        self.assertEqual({active.id}, ids)
-
-    def test_list_shows_revoked_tokens_when_asked(self):
-        self.loginUser()
-        active = self.make_token(name="active")
-        revoked = self.make_token(name="revoked")
-        revoked.revoke()
-
-        response = self.client.get(
-            reverse("zane_api:workspace.tokens"), data={"revoked": "true"}
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        ids = {row["id"] for row in response.json()}
-        self.assertEqual({active.id, revoked.id}, ids)
-
-    def test_list_revoked_false_is_the_same_as_the_default(self):
-        self.loginUser()
-        active = self.make_token(name="active")
-        revoked = self.make_token(name="revoked")
-        revoked.revoke()
-
-        response = self.client.get(
-            reverse("zane_api:workspace.tokens"), data={"revoked": "false"}
-        )
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
@@ -764,28 +725,20 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
                 kwargs={"token_id": token.id},
             )
         )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        token.refresh_from_db()
-        self.assertIsNotNone(token.revoked_at)
-        self.assertFalse(token.is_active)
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        self.assertFalse(WorkspaceApiToken.objects.filter(id=token.id).exists())
 
-    def test_revoke_is_idempotent(self):
+    def test_revoking_twice_returns_404_the_second_time(self):
         token = self.make_token(created_by=self.owner)
         self.loginUser()
         url = reverse("zane_api:workspace.token_revoke", kwargs={"token_id": token.id})
 
         first = self.client.post(url)
-        jprint(first.json())
-        self.assertEqual(status.HTTP_200_OK, first.status_code)
-        token.refresh_from_db()
-        revoked_at = token.revoked_at
+        self.assertEqual(status.HTTP_204_NO_CONTENT, first.status_code)
 
         second = self.client.post(url)
         jprint(second.json())
-        self.assertEqual(status.HTTP_200_OK, second.status_code)
-        token.refresh_from_db()
-        self.assertEqual(revoked_at, token.revoked_at)
+        self.assertEqual(status.HTTP_404_NOT_FOUND, second.status_code)
 
     def test_admin_can_revoke_a_member_token(self):
         self.set_my_role(WorkspaceRole.ADMIN)
@@ -799,10 +752,8 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
                 kwargs={"token_id": token.id},
             )
         )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        token.refresh_from_db()
-        self.assertIsNotNone(token.revoked_at)
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        self.assertFalse(WorkspaceApiToken.objects.filter(id=token.id).exists())
 
     def test_admin_cannot_revoke_an_owner_token(self):
         self.set_my_role(WorkspaceRole.ADMIN)
@@ -818,8 +769,7 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        token.refresh_from_db()
-        self.assertIsNone(token.revoked_at)
+        self.assertTrue(WorkspaceApiToken.objects.filter(id=token.id).exists())
 
     def test_other_member_cannot_revoke_someone_elses_token(self):
         self.set_my_role(WorkspaceRole.MEMBER)
@@ -838,8 +788,7 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
             response.status_code,
             (status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND),
         )
-        token.refresh_from_db()
-        self.assertIsNone(token.revoked_at)
+        self.assertTrue(WorkspaceApiToken.objects.filter(id=token.id).exists())
 
 
 class WorkspaceTokenAuthenticationTests(AuthAPITestCase):
@@ -926,7 +875,7 @@ class WorkspaceTokenAuthenticationTests(AuthAPITestCase):
 
     def test_revoked_token_is_401(self):
         token, full = self.make_token()
-        token.revoke()
+        token.delete()
         response = self.call(full)
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 

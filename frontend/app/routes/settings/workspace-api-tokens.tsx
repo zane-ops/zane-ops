@@ -1,17 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   BadgeCheckIcon,
-  BanIcon,
   ChevronDownIcon,
-  CircleCheckIcon,
-  ClockAlertIcon,
   ClockFadingIcon,
   type LucideIcon,
   PlusIcon,
   Trash2Icon
 } from "lucide-react";
 import type * as React from "react";
-import { Link, useFetcher, useSearchParams } from "react-router";
+import { Link, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import type { WorkspaceApiToken, WorkspaceRoleName } from "~/api/types";
@@ -25,13 +22,6 @@ import {
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import {
   Table,
@@ -69,16 +59,14 @@ export function meta() {
   return [metaTitle("API Tokens")] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+export async function clientLoader() {
   const queryClient = getQueryClient();
   await ensureMinRole(queryClient, "Member");
 
   const { id: workspaceId } = await getCurrentWorkspace(queryClient);
-  const searchParams = new URL(request.url).searchParams;
-  const revoked = searchParams.get("revoked") === "true";
 
   const tokens = await queryClient.ensureQueryData(
-    apiTokenQueries.list(workspaceId, { revoked })
+    apiTokenQueries.list(workspaceId)
   );
   return { tokens };
 }
@@ -87,11 +75,9 @@ export default function WorkspaceAPITokensPage({
   loaderData
 }: Route.ComponentProps) {
   const workspaceId = useCurrentWorkspace().id;
-  const [searchParams, setSearchParams] = useSearchParams();
-  const showRevoked = searchParams.get("revoked") === "true";
 
   const { data: tokens } = useQuery({
-    ...apiTokenQueries.list(workspaceId, { revoked: showRevoked }),
+    ...apiTokenQueries.list(workspaceId),
     initialData: loaderData.tokens
   });
 
@@ -111,26 +97,6 @@ export default function WorkspaceAPITokensPage({
           Tokens let scripts and CI pipelines call the ZaneOps API without a
           browser session.
         </h3>
-
-        <Select
-          value={showRevoked ? "all" : "active"}
-          onValueChange={(value) => {
-            if (value === "all") {
-              searchParams.set("revoked", "true");
-            } else {
-              searchParams.delete("revoked");
-            }
-            setSearchParams(searchParams, { replace: true });
-          }}
-        >
-          <SelectTrigger className="w-36 flex-none">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       <Table>
@@ -176,8 +142,6 @@ function getTokenStatus(token: WorkspaceApiToken): {
   color: StatusBadgeColor;
   Icon: LucideIcon;
 } {
-  if (token.revoked_at)
-    return { label: "Revoked", color: "red", Icon: BanIcon };
   if (!token.is_active)
     return { label: "Expired", color: "yellow", Icon: ClockFadingIcon };
   return { label: "Active", color: "green", Icon: BadgeCheckIcon };
@@ -347,7 +311,7 @@ function RevokeTokenFormDialog({ token }: { token: WorkspaceApiToken }) {
   return (
     <SimpleConfirmationDialog
       fetcher={fetcher}
-      title="Revoke this token ?"
+      title="Delete this token ?"
       message={
         <>
           This action <strong>CANNOT</strong> be undone. Any script or CI
@@ -373,12 +337,12 @@ function RevokeTokenFormDialog({ token }: { token: WorkspaceApiToken }) {
                   variant="ghost"
                   className="gap-1 text-red-400"
                 >
-                  <span className="sr-only">Revoke token</span>
+                  <span className="sr-only">Delete token</span>
                   <Trash2Icon className="flex-none size-4" />
                 </Button>
               </DialogTrigger>
             </TooltipTrigger>
-            <TooltipContent>Revoke token</TooltipContent>
+            <TooltipContent>Delete token</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       }
@@ -414,7 +378,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   }
 
   toast.success("Success", {
-    description: "Token revoked successfully",
+    description: "Token deleted successfully",
     closeButton: true
   });
 
