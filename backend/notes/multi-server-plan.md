@@ -2,9 +2,9 @@
 
 Status: **in design**. Branch `feat/multi-server`. Tracking issue: [#446](https://github.com/zane-ops/zane-ops/issues/446).
 
-**What we want:** run ZaneOps across more than one machine — extra nodes that run user services, extra nodes that run builds — while keeping the single-node install working exactly as it does today.
+**What we want:** run ZaneOps across more than one machine — extra machines ("nodes") that run user services, extra machines that build images — while keeping the single-machine install working exactly as it does today.
 
-**Hard requirement (from the issue thread):** 1 node, 2 nodes, 3 nodes must all work. No 3-node minimum, no forced shared storage. Replicated storage is an *addon*, never a prerequisite.
+**Hard requirement (from the issue thread):** 1 node, 2 nodes, 3 nodes must all work. No 3-node minimum, no forced shared storage. Replicated storage (data copied across multiple machines) is an *addon*, never a requirement.
 
 ---
 
@@ -14,15 +14,15 @@ Some of the hardest prerequisites are already in the tree. Worth knowing before 
 
 | Piece | Where | Status for multi-node |
 | --- | --- | --- |
-| Build registry (local disk or S3) | [container_registry/models.py:60](../container_registry/models.py#L60) | ✅ **done** — built images are already pushed to a registry reachable over the `zane` overlay, so any node can pull them. This was the biggest blocker and it is solved. |
-| Per-worker task queue via env | [settings.py:456](../backend/settings.py#L456), [worker.py:67](../temporal/worker.py#L67) | ✅ the plumbing for per-node queues is there; only the routing is missing |
+| Build registry (local disk or S3) | [container_registry/models.py:60](../container_registry/models.py#L60) | ✅ **done** — built images are already pushed to a registry reachable over the `zane` overlay network, so any node can pull them. This was the biggest blocker and it is solved. |
+| Per-worker task queue via env | [settings.py:456](../backend/settings.py#L456), [worker.py:67](../temporal/worker.py#L67) | ✅ the plumbing for per-node queues (a way to tell Temporal "run this job on that specific machine") is there; only the routing logic is missing |
 | `swarm` app + `ServerNode` model | [swarm/models.py](../swarm/models.py) | 🚧 scaffolded, needs rework (see §3) |
-| SSH keys + SSH-into-server terminal | [webshell/models.py:8](../webshell/models.py#L8), [server_terminal.py](../webshell/consumers/server_terminal.py) | ✅ reusable for node provisioning and remote `docker exec` |
+| SSH keys + SSH-into-server terminal | [webshell/models.py:8](../webshell/models.py#L8), [server_terminal.py](../webshell/consumers/server_terminal.py) | ✅ reusable for setting up new nodes and running remote `docker exec` commands |
 | `zane.role: proxy` label | [docker-stack.prod.yaml:53](../../docker/docker-stack.prod.yaml) | ✅ already labelled |
-| Buildx builders | [git_activities.py:606](../temporal/activities/git_activities.py#L606) | ✅ they are **local `docker buildx` containers**, not swarm services — see §4, this changes who can build |
-| Swarm service metrics | [helpers.py:754](../temporal/helpers.py#L754) | ⚠️ runs against the *local* socket, so it only sees containers on the manager |
+| Buildx builders (the thing that actually builds Docker images) | [git_activities.py:606](../temporal/activities/git_activities.py#L606) | ✅ they are **local `docker buildx` containers**, not Swarm services — see §4, this matters for who is allowed to build |
+| Swarm service metrics | [helpers.py:754](../temporal/helpers.py#L754) | ⚠️ only checks the *local* machine, so it only sees containers running on the manager |
 
-Everything in `docker-stack.prod.yaml` is pinned `node.role==manager` today. That stays true for the control plane.
+Everything in `docker-stack.prod.yaml` is currently pinned to `node.role==manager` (i.e. it only ever runs on the manager machine). That stays true for the control-plane pieces (API, DB, Temporal, etc).
 
 ---
 
@@ -30,51 +30,51 @@ Everything in `docker-stack.prod.yaml` is pinned `node.role==manager` today. Tha
 
 ### 2.1 Do NOT expose the manager's Docker socket to other nodes
 
-The notes propose connecting each remote worker to the manager's Docker socket over TLS. I'd argue against it:
+A "Docker socket" is basically the API that lets you control Docker on a machine — if you have access to it, you can do almost anything on that machine. The original notes proposed connecting each remote build machine to the manager's Docker socket over a secure connection (TLS). I'd argue against it:
 
-- it puts full root-equivalent cluster control on the wire, on every build node
-- it needs a CA, cert rotation, and a firewall story, all of which we'd have to build and maintain
-- it makes a compromised build node a compromised cluster
+- it hands out full, root-level control of the whole cluster to every build machine
+- it needs certificates, certificate rotation, and firewall rules — all things we'd have to build and maintain ourselves
+- if one build machine gets compromised, the whole cluster is compromised
 
-**Instead: split the activities by what they need.** Temporal lets you pick a task queue *per activity*, which is exactly the tool for this.
+**Instead: split the work by what it actually needs.** Temporal lets you assign each individual job ("activity") to a specific queue, which is exactly the tool for this.
 
-| Activity kind | Needs | Runs on queue |
+| Kind of job | Needs | Runs on queue |
 | --- | --- | --- |
-| Swarm mutations — `services.create/update/remove`, networks, configs, volume creation | manager API | `main-task-queue` (manager worker, local socket) |
-| DB / proxy / registry / Caddy config | nothing node-local | `main-task-queue` |
-| Clone, buildpack detect, `docker buildx build`, push | a local Docker socket + local disk | `build-<node>` (that node's worker, local socket) |
-| Node-local reads — container metrics, `docker exec`, disk usage | a local Docker socket | `node-<node>` |
+| Swarm changes — creating/updating/removing services, networks, configs, volumes | access to the manager's Docker API | `main-task-queue` (the manager's own worker, using its own local Docker) |
+| Database / proxy / registry / Caddy config changes | nothing machine-specific | `main-task-queue` |
+| Cloning code, detecting the build method, running `docker buildx build`, pushing the image | a local Docker socket + local disk on *that* machine | `build-<node>` (that node's own worker) |
+| Reading local info — container metrics, `docker exec`, disk usage | a local Docker socket | `node-<node>` |
 
-No remote sockets anywhere. Each worker only ever talks to `/var/run/docker.sock` on its own host.
+No machine ever needs remote access to another machine's Docker. Each worker only ever talks to its *own* local Docker socket.
 
-**Task:** audit `git_activities.py` end-to-end and confirm no build-path activity touches a swarm API. The buildx builders are `docker-container` driver, so they should be clean — but `main_activities.py` build helpers need checking too.
+**Task:** go through `git_activities.py` and double check that nothing in the build path secretly calls the Swarm API (which would need manager access). The buildx builders should already be fine since they're just local containers, but `main_activities.py`'s build helpers need checking too.
 
-### 2.2 One "node worker" per node, not a separate agent
+### 2.2 One "node worker" per node, not a whole separate program
 
-The notes propose a Portainer-style agent container for health and metrics. We don't need a second thing to build, ship, upgrade and secure.
+The original notes proposed running a separate small monitoring program (like Portainer's "agent") on every node just to check health/metrics. That means building, shipping, upgrading, and securing a second piece of software — extra work for little benefit.
 
-**Run the existing app image as a global swarm service on every node**, one Temporal worker each, listening on `node-<hostname>`. It already has the Docker socket mounted, it already knows how to talk to the DB and Temporal over the overlay, and `make upgrade` already updates it. "Is this node a build server?" becomes a swarm node label, not a different binary.
+**Instead: run the existing ZaneOps app image as a service on every node**, each running its own Temporal worker listening on a queue named `node-<hostname>`. It already knows how to talk to the database and Temporal, it already has the Docker socket, and `make upgrade` already updates it. So "is this node allowed to build?" just becomes a label on the node, not a different program to install.
 
-For node *liveness* we don't need an agent at all — `docker node ls` from the manager already reports `Status`, `Availability` and `ManagerStatus`. Poll it on the schedule queue.
+For checking whether a node is alive, we don't even need a special worker — `docker node ls` (a normal Swarm command) already tells the manager a node's `Status`, `Availability`, and `ManagerStatus`. We can just poll that on a schedule.
 
-### 2.3 Worker nodes CAN build
+### 2.3 Worker nodes CAN build images
 
-The issue says "worker nodes will not be able to run builds". Given 2.1, that restriction doesn't hold: building needs a local socket and local disk, not manager membership. Buildx builders are plain containers.
+The GitHub issue originally said "worker nodes will not be able to run builds." But since building only needs a local Docker socket + local disk (not manager-level cluster control, per §2.1), that restriction isn't actually necessary — a plain worker node can build images just fine.
 
-**Recommendation:** decouple the two axes.
-- `node.role` (manager/worker) — swarm's own concept, about quorum
-- `zane.build=true` node label — whether ZaneOps schedules builds here
-- `zane.apps=true` node label — whether ZaneOps schedules user services here
+**Recommendation: keep two separate concepts apart.**
+- `node.role` (manager/worker) — Swarm's own concept, about who has voting/cluster-control power
+- `zane.build=true` — a label meaning "ZaneOps is allowed to schedule builds here"
+- `zane.apps=true` — a label meaning "ZaneOps is allowed to run user services here"
 
-A 2-node setup then works as "1 manager running everything + 1 worker doing builds only", which is the most common thing people will actually want, and doesn't force a second manager.
+That way, a 2-machine setup can be "1 manager doing everything + 1 worker that only does builds" — probably the most common real-world setup — without forcing anyone to add a second manager.
 
-Still document the quorum guidance (odd number of managers, 3 for real HA).
+Still, we should document the general guidance around Swarm quorum (why you'd want an odd number of managers, and why 3 managers is the real "high availability" setup).
 
 ---
 
 ## 3. Data model
 
-Rework [swarm/models.py](../swarm/models.py). Current draft has `ID_PREFIX = "tok_"` (copy-paste from tokens), no `TimestampedModel`, and no way to express capabilities.
+Rework [swarm/models.py](../swarm/models.py). The current draft has some leftover copy-paste issues (`ID_PREFIX = "tok_"` copied from the tokens feature, missing the shared `TimestampedModel` base, and no way to describe what a node is capable of).
 
 ```python
 class ServerNode(TimestampedModel):
@@ -100,7 +100,7 @@ class ServerNode(TimestampedModel):
     status         = ...
     is_build_node  = models.BooleanField(default=False)
     is_app_node    = models.BooleanField(default=True)
-    is_self        = models.BooleanField(default=False)   # the bootstrap manager
+    is_self        = models.BooleanField(default=False)   # the original manager, from the initial install
     ssh_key        = models.ForeignKey(SSHKey, on_delete=models.SET_NULL, null=True)
     ssh_user       = models.CharField(default="root")
     ssh_port       = models.PositiveIntegerField(default=22)
@@ -114,26 +114,26 @@ class ServerNode(TimestampedModel):
     def node_task_queue(self)  -> str: return f"node-{self.hostname}"
 ```
 
-**Migration for existing installs:** a data migration creates one `ServerNode` with `is_self=True`, reading hostname/id from `docker.info()`. Every existing install becomes a valid 1-node cluster with no user action.
+**Migration for existing installs:** a data migration will automatically create one `ServerNode` row with `is_self=True`, reading the hostname/id straight from `docker.info()`. So every existing install instantly becomes a valid "1-node cluster" with no action needed from the user.
 
-### Placement targeting
+### Placement targeting (i.e. "which machine should this run on?")
 
-Three levels, most specific wins:
+Three levels, checked from most specific to least specific:
 
 ```
 Service.node_placement  →  Environment.default_node_placement  →  Project.default_node_placement  →  ANY
 ```
 
-Stored as a small embedded choice + optional FK, on each of the three models:
+Each of Service/Environment/Project stores a small choice field plus an optional link to a specific node:
 
 | `placement_strategy` | Meaning |
 | --- | --- |
-| `ANY` | no constraint, swarm decides |
-| `ANY_APP_NODE` | `node.labels.zane.apps==true` |
-| `SPECIFIC` | `node.hostname==<placement_node.hostname>` |
-| `PINNED_BY_VOLUME` | implicit — see §6 |
+| `ANY` | no constraint, Swarm decides |
+| `ANY_APP_NODE` | any node labeled `zane.apps==true` |
+| `SPECIFIC` | must run on `node.hostname==<placement_node.hostname>` |
+| `PINNED_BY_VOLUME` | not chosen by the user — see §6, happens automatically when a service has saved data on a specific machine |
 
-Resolved into `Placement(constraints=[...])` at the one place that builds the service spec, [main_activities.py:1400](../temporal/activities/main_activities.py#L1400).
+All of this gets resolved into an actual Swarm placement constraint in one place: [main_activities.py:1400](../temporal/activities/main_activities.py#L1400).
 
 ---
 
@@ -141,126 +141,126 @@ Resolved into `Placement(constraints=[...])` at the one place that builds the se
 
 Two modes, both needed.
 
-**Explicit (primary).** The deployment already knows its target node, from the placement chain above or a `build_node` override. The workflow just uses `task_queue=node.build_task_queue` for every build activity. Deterministic, and it's what the "deploy this project on that server" feature needs anyway.
+**Explicit (the main case).** The deployment already knows which machine it should build on (from the placement rules above, or a manual override). The workflow just sends every build-related job to `task_queue=node.build_task_queue`. Simple and predictable — and it's exactly what "deploy this project on that specific server" needs anyway.
 
-**Auto (fallback), for `ANY`.** Use Temporal's [worker_specific_task_queues](https://github.com/temporalio/samples-python/tree/main/worker_specific_task_queues) trick: all build workers also listen on a shared `build-router` queue; a tiny `get_my_build_queue()` activity on that queue returns the answering worker's own unique queue name; the workflow pins every subsequent build activity to it. Whoever is free picks it up, and the rest of the build stays on that machine.
+**Auto (fallback), used when placement is `ANY`.** We can use a known Temporal pattern called [worker_specific_task_queues](https://github.com/temporalio/samples-python/tree/main/worker_specific_task_queues): every build-capable worker also listens on one shared queue called `build-router`. A tiny first job goes out on that shared queue, and whichever worker happens to pick it up replies with its own personal queue name. The workflow then sends every following job in that same build to that specific worker's queue. So whichever machine is free grabs the job, and the rest of that build stays on that same machine.
 
-Either way the result is the same invariant: **all filesystem-dependent steps of one deployment run on one node**, so `tmp_dir` from [git_activities.py:370](../temporal/activities/git_activities.py#L370) stays valid across steps. No S3 tmp dir, no re-clone per step.
+Either way, the important rule stays the same: **every step of one build/deployment that touches the filesystem runs on the same machine.** That matters because the temporary folder used during a build ([`tmp_dir`, git_activities.py:370](../temporal/activities/git_activities.py#L370)) only exists on whichever machine created it — if a later step ran on a different machine, that folder wouldn't be there. This way we avoid needing shared storage (like S3) just for temp files, or re-cloning the repo at every step.
 
-**On failure:** no cross-node retry. The deployment fails, the user retries. Matches today's behaviour and keeps the change small (explicitly agreed in the issue).
+**On failure:** if a build fails, we do **not** try to retry it on a different machine — it just fails, and the user retries manually. This matches how it works today, keeps the change smaller, and was explicitly agreed on in the GitHub issue.
 
-**Worker deployment:** the build worker becomes a global swarm service constrained to `node.labels.zane.build==true`, with `TEMPORALIO_WORKER_TASK_QUEUE` set per-task. Swarm can't template an env var from the hostname directly in a useful way for our queue naming — set it from `{{.Node.Hostname}}`, which swarm *does* support in `env`. Worth verifying early; the fallback is `run_worker.sh` computing the queue from `$(hostname)` at startup.
-
----
-
-## 5. Fluentd — global service, same path everywhere
-
-Today: one replica on the manager, unix socket at `${ZANE_APP_DIRECTORY}/.fluentd/fluentd.sock`, and every container is created with `fluentd-address: unix://<that path>` ([main_activities.py:1444](../temporal/activities/main_activities.py#L1444)). A container on node B would point at a socket that doesn't exist there.
-
-**Fix: make `zane-fluentd` `mode: global`** and mount the same host path on every node. The log driver options are evaluated by the daemon on whichever node runs the task, so the *existing* address string keeps working unchanged, on every node, with zero code change.
-
-This is why "ZaneOps must be installed at the same path on every node" is a real constraint, not a convenience — the provisioning flow must enforce it.
-
-This makes the Caddy-reverse-proxy-to-fluentd idea from the notes unnecessary. Drop it. Each node's fluentd still ships over the overlay to `zane.api.zaneops.internal`, so there's still exactly one ingestion endpoint and Loki is unchanged.
+**Worker deployment:** the build worker will be a global Swarm service (meaning: one copy runs automatically on every eligible machine) restricted to nodes labeled `zane.build==true`. Its queue name needs to be based on the machine's own hostname — Swarm can fill in `{{.Node.Hostname}}` in an environment variable for us, which should work for this. Worth testing early; if it doesn't work, the fallback is to have `run_worker.sh` figure out the hostname itself at startup with `$(hostname)`.
 
 ---
 
-## 6. Proxy — the under-estimated part
+## 5. Fluentd (log collection) — one setup, running identically everywhere
 
-Making Caddy `mode: global` is easy. Two things behind it are not.
+**Today:** there's one Fluentd (log collector) running on the manager, and every container is told to send its logs to a specific file path on disk (a "unix socket") at `${ZANE_APP_DIRECTORY}/.fluentd/fluentd.sock` ([main_activities.py:1444](../temporal/activities/main_activities.py#L1444)). If a container ran on a different machine, it would be pointing at a socket file that doesn't exist there — logging would break.
 
-**(a) Certificate storage.** Each Caddy instance needs to see the others' certs, or they'll each solicit their own and hit ACME rate limits. Use [caddy-storage-redis](https://github.com/pberkel/caddy-storage-redis) pointed at the **existing single `zane.valkey`** over the overlay.
+**Fix:** make `zane-fluentd` a **global service** (one copy automatically on every machine) and make sure every machine has that same file path set up. Since each machine evaluates that address locally, the *exact same* config keeps working with **zero code changes** — it just now works correctly everywhere because there really is a matching Fluentd on every machine.
 
-I'd push back on the notes' "redis cluster, one per server". A cert store that is only as available as the manager is fine for v1, because the DB, Temporal and the API are all on the manager too — if it's gone, you have bigger problems than cert renewal. Add Valkey replication in the HA phase, not now. Requires rebuilding `docker/proxy/Dockerfile` with the plugin.
+This is why "ZaneOps must be installed at the exact same folder path on every machine" is a real, enforced requirement — not just a nice-to-have — and the setup process for adding a new node needs to guarantee it.
 
-**(b) Config fan-out — this is the real work.** The API pushes routes to a single admin endpoint, `http://zane.proxy:2019` ([settings.py:426](../backend/settings.py#L426)), and `ZaneProxyClient` uses etag-based optimistic concurrency ([proxy.py:16](../temporal/proxy.py#L16)). With a global service behind a VIP, each `PATCH` lands on one arbitrary instance and the others silently drift.
+This also means we don't need the more complicated idea (from the original notes) of routing logs through Caddy to reach Fluentd — drop that. Each machine's Fluentd still sends logs the same way it does today, over the internal network to the central API, so there's still just one place logs get collected, and Loki (log storage/search) doesn't need to change at all.
 
-Options:
-1. **Fan out.** Switch `zane-proxy` to `endpoint_mode: dnsrr`, resolve `tasks.zane-proxy` to every task IP, and apply each mutation to all of them. [`get_swarm_service_aliases_ips_on_network`](../temporal/helpers.py#L414) already does most of the resolution. Downside: N× requests, partial-failure handling, and the etag retry loop has to be per-instance.
-2. **Single writer + replicated read.** Keep one "config leader" Caddy on the manager, have the others load config from a shared source. Caddy has no first-class config replication, so this means a sync loop we write ourselves.
+---
 
-**Recommendation: option 1**, plus a reconciliation pass on the schedule queue that periodically diffs each instance's `/config/` against the intended state and repairs drift. That covers the case of a node joining after a config change.
+## 6. Proxy (Caddy) — the part most likely to be underestimated
 
-Budget real time for this; it is the piece most likely to be underestimated.
+Making Caddy (the reverse proxy that routes web traffic to services) run on every machine is the easy part. Two things behind that are not.
+
+**(a) Certificates.** Each Caddy instance needs to see the TLS certificates the others have already gotten — otherwise, each one will try to request its own certificate for the same domain and we'll hit Let's Encrypt's rate limits. Fix: use a plugin called [caddy-storage-redis](https://github.com/pberkel/caddy-storage-redis), pointed at the **Redis-compatible cache we already run** (`zane.valkey`) over the internal network.
+
+I'd push back on the original notes' idea of "one Redis per server, clustered together" — for now, having a single shared cache (matching the manager) is fine, because the database, Temporal, and the API already only exist on the manager anyway — if the manager goes down, cert renewal is the least of our problems. We can add real Redis replication later, as part of a dedicated "high availability" phase. This does require rebuilding `docker/proxy/Dockerfile` to include the plugin.
+
+**(b) Keeping every Caddy instance's config in sync — this is the actual hard part.** Right now, the API pushes routing changes to a single Caddy admin address, `http://zane.proxy:2019` ([settings.py:426](../backend/settings.py#L426)), using a "only apply if nothing else changed since I last read it" safety check (etag-based concurrency, see [proxy.py:16](../temporal/proxy.py#L16)). Once there are multiple Caddy instances behind one shared address, each update would only land on *one* of them at random, and the rest would silently fall out of sync.
+
+Two ways to solve this:
+1. **Send every change to every instance.** Switch `zane-proxy` to a mode (`endpoint_mode: dnsrr`) that lets us look up the IP of every single instance, then apply each config change to all of them individually. We already have most of the code needed to find those IPs: [`get_swarm_service_aliases_ips_on_network`](../temporal/helpers.py#L414). Downside: more requests per change, and we need to handle partial failures (what if it succeeds on 2 out of 3 machines?) and repeat that "safety check" retry logic per machine.
+2. **One "leader" instance, others just copy it.** Keep a single Caddy on the manager as the source of truth, and have the rest load config from it. Caddy doesn't have a built-in way to do this, so we'd have to write our own syncing logic from scratch.
+
+**Recommendation: option 1**, plus a periodic background job that checks each instance's actual config against what it *should* be, and fixes any mismatch. That also handles the case where a brand new machine joins after a config change already happened.
+
+We should budget real time for this — it's the piece most likely to take longer than expected.
 
 ---
 
 ## 7. Volumes and storage
 
-**v1: stickiness, not replication.** Any service with a `Volume` ([main.py:1662](../zane_api/models/main.py#L1662)) gets an implicit `node.hostname==<node>` constraint, and we record which node the data landed on.
+**For v1: stickiness, not real replication.** Meaning: if a service saves data to disk (a `Volume`, see [main.py:1662](../zane_api/models/main.py#L1662)), it will always be forced to run on the *same* machine it first ran on — not copied across machines.
 
-- add `Volume.node = FK(ServerNode, null=True)`, set on first deploy
-- placement resolution treats a service with any node-bound volume as `PINNED_BY_VOLUME`, overriding `ANY`
-- surface it in the UI: "this service is pinned to node X because it has volumes"
-- moving it later = an explicit, user-initiated migration (stop, rsync over SSH, repoint, redeploy)
+- add a new field, `Volume.node`, linking to the `ServerNode` it landed on when it first deployed
+- during placement resolution, a service with a volume tied to a node is automatically treated as `PINNED_BY_VOLUME`, which overrides any `ANY` setting
+- show this clearly in the UI: "this service is pinned to node X because it has volumes"
+- if someone wants to move that data to a different machine later, that has to be an explicit, manual action (stop the service, copy files over SSH, point it at the new machine, redeploy) — not something automatic
 
-Note `SharedVolume` ([main.py:1702](../zane_api/models/main.py#L1702)) is a *different* concept — one service reading another's volume. Multi-node makes that constraint transitive: a reader must be pinned to the same node as the writer. Handle that in placement resolution.
+Note that `SharedVolume` ([main.py:1702](../zane_api/models/main.py#L1702)) is a *different* feature — it lets one service read another service's volume. With multiple machines, this means: if service A shares its volume with service B, then B must also be pinned to the same machine as A. We need to handle that when resolving placement.
 
-**Later: replicated storage as an addon.** Both commenters on the issue converge on **Linstor/DRBD over Ceph**, for one reason that matters to us a lot: Linstor works on a single node and expands to N, while Ceph needs 3 nodes from day one. That fits the "must work on 1 node" requirement.
+**Later (not in v1): real replicated storage as an optional addon.** People discussing the GitHub issue converged on **Linstor/DRBD** rather than **Ceph** for this, for a good reason: Linstor works fine on a single machine and can expand to more, while Ceph needs at least 3 machines from day one — which breaks our "must work with 1 node" requirement.
 
-The commenters make a fair point that pre-creating the mount path on *every* install (even single-node) avoids a painful migration later. I'd still not do it in v1 — it means shipping a kernel module (`drbd-dkms`) to every existing single-node install for a feature most of them will never use. Instead: reserve the path convention now (`/var/lib/zaneops/volumes/<volume_id>`), switch new volumes to bind mounts at that path, and make "enable replicated storage" a later migration that only touches the storage layer beneath an already-stable path. Same end state, no kernel module for people who don't want one.
+Some commenters suggested we should prepare the folder structure for this on *every* install now (even single-node ones) to avoid a painful migration later. I'd hold off on that for v1 — it would mean installing extra kernel-level software (`drbd-dkms`) on every existing single-node install, for a feature most people won't ever use. Instead: just reserve the naming convention now (`/var/lib/zaneops/volumes/<volume_id>`), and start putting new volumes there. Turning on "replicated storage" later then only touches the storage layer underneath an already-stable path — same end result, without forcing extra software onto people who don't want it.
 
-**Out of scope, document only:** offloading app state to S3, DB replication topologies. Those are template/user concerns, per the issue thread.
+**Not covered by this plan, just documented:** moving app data to S3, or database replication setups. Those are considered the user's/template's own concern, per the discussion in the issue.
 
 ---
 
-## 8. Shells and metrics on remote nodes
+## 8. Shells and metrics on remote machines
 
-Both currently assume everything is local.
+Both of these currently assume everything is running locally, on the same machine as the API.
 
-| Feature | Today | Multi-node |
+| Feature | Today | With multiple machines |
 | --- | --- | --- |
-| Deployment shell | `docker.from_env()` + `exec` ([container_terminal_consumer.py:29](../webshell/consumers/container_terminal_consumer.py#L29)) | find the task's node from the swarm API, then SSH to it and `docker exec` — reuse the pattern already in [server_terminal.py](../webshell/consumers/server_terminal.py) |
-| Server shell | SSH with an `SSHKey` | same, but pick the node in the UI |
-| Container metrics | local socket ([helpers.py:826](../temporal/helpers.py#L826)) | run the collector activity on each `node-<hostname>` queue, fan in |
-| Replica picker | n/a | new UI: list tasks with their node, pick one to attach to |
+| Opening a shell into a deployed container | `docker.from_env()` + `exec`, run locally ([container_terminal_consumer.py:29](../webshell/consumers/container_terminal_consumer.py#L29)) | look up which machine the container is actually running on (via the Swarm API), then SSH into that machine and run `docker exec` there — reusing the pattern already built in [server_terminal.py](../webshell/consumers/server_terminal.py) |
+| Opening a shell into the server itself | SSH using a stored `SSHKey` | same as today, just let the user pick which machine in the UI |
+| Container metrics (CPU/memory usage etc.) | read from the local socket ([helpers.py:826](../temporal/helpers.py#L826)) | run the same metrics-collecting job on each machine's own `node-<hostname>` queue, then combine the results |
+| Picking which replica to connect to | doesn't exist yet | new UI: list all running copies of a service along with which machine each is on, let the user pick one |
 
-SSH-for-exec is worth calling out as a deliberate choice: it reuses machinery we already have and needs no new inbound port beyond 22, at the cost of depending on SSH keys staying valid.
-
----
-
-## 9. Provisioning a node from the UI
-
-A Temporal workflow, driven by SSH creds the user supplies once.
-
-1. probe: SSH in, read OS/arch/cpus/memory, check the private IP is reachable from the manager
-2. install Docker if absent, verify version
-3. create `${ZANE_APP_DIRECTORY}` **at the same path as the manager**, drop `.env`, `fluent.conf`, the fluentd socket dir
-4. `docker swarm join` with a token fetched from the manager, as manager or worker
-5. apply node labels (`zane.build`, `zane.apps`)
-6. `docker service update --force` the global services so they schedule onto the new node
-7. wait for fluentd + node worker + proxy to report healthy there
-8. mark the `ServerNode` `READY`
-
-Each step is an idempotent activity so a partial failure can be resumed. Removal is the reverse, with a `docker node update --availability drain` and a wait for tasks to reschedule first.
-
-**Firewall:** swarm needs `2377/tcp` (managers), `7946/tcp+udp`, `4789/udp` between nodes. I'd **not** have ZaneOps configure `ufw` automatically in v1 — a wrong rule locks the user out of their own box, over SSH, with no recovery path from our UI. Document the rules, add a *preflight check* that tells the user exactly which ports are unreachable, and consider an opt-in "configure firewall for me" later.
+Using SSH for remote shell access is a deliberate choice — it reuses infrastructure we already have, and doesn't require opening any new network port beyond the standard SSH port (22). The tradeoff is that it depends on SSH keys staying valid and reachable.
 
 ---
 
-## 10. Phases
+## 9. Setting up a new machine from the UI
 
-Each phase ends with a working cluster, so this can ship incrementally.
+This becomes a Temporal workflow, using SSH login details the user provides once.
 
-| # | Phase | Contents | Ships |
+1. connect via SSH, check the OS/CPU architecture/CPU count/memory, and confirm the manager can actually reach this machine's internal IP
+2. install Docker if it's missing, and verify the version
+3. create the ZaneOps folder **at the exact same path used on the manager**, and set up its config files (`.env`, `fluent.conf`, the Fluentd socket folder)
+4. run `docker swarm join`, using a join token fetched from the manager, joining either as a manager or a worker
+5. apply the right labels to the node (`zane.build`, `zane.apps`)
+6. force-update the global services so Swarm notices the new machine and schedules things onto it
+7. wait until Fluentd, the node worker, and the proxy are all reporting healthy on that machine
+8. mark the `ServerNode` as `READY`
+
+Each of these steps is written so it can safely be retried on its own — so if something fails partway through, we can resume instead of starting over. Removing a machine is basically the reverse: first do `docker node update --availability drain` (tell Swarm to stop scheduling new things there and move existing ones off), wait for that to finish, then remove it.
+
+**Firewall:** Swarm itself needs certain ports open between machines: `2377/tcp` (for managers), `7946/tcp+udp`, and `4789/udp`. I'd recommend **not** having ZaneOps automatically configure the firewall (`ufw`) for the user in v1 — one wrong rule could lock the user out of their own machine over SSH, with no way for us to fix it remotely. Instead: clearly document the required ports, add a check that tells the user exactly which ports aren't reachable before they try to join a machine, and maybe add an opt-in "configure the firewall for me" button later.
+
+---
+
+## 10. Rollout phases
+
+Each phase ends with a fully working cluster, so this can ship gradually instead of all at once.
+
+| # | Phase | What's included | What becomes possible |
 | --- | --- | --- | --- |
-| 0 | Model + backfill | `ServerNode` rework, data migration making every existing install a 1-node cluster, read-only nodes list in the UI | no behaviour change |
-| 1 | Node lifecycle | SSH provisioning workflow, join/leave/drain, labels, preflight port check, node status polling | can add nodes; nothing schedules on them yet |
-| 2 | Data-plane multi-node | fluentd global, proxy global + redis cert storage + **config fan-out**, verify registry pull from a second node | user services can run on any node |
-| 3 | Placement | placement chain on Project/Env/Service, volume pinning, `SharedVolume` transitivity, UI selectors | users choose where things run |
-| 4 | Distributed builds | activity split (§2.1), per-node build queues, explicit + auto routing, global build worker service | builds run off the manager |
-| 5 | Node-local ops | node worker global service, remote metrics fan-in, SSH-based deployment shell, replica picker | full observability across nodes |
-| 6 | Docs | scaling guide: quorum, 1/2/3-node topologies, firewall, what is and isn't HA | |
-| 7 | HA (separate) | Valkey replication, Linstor addon, multi-manager control plane | |
+| 0 | Model + backfill | Rework `ServerNode`, auto-migrate every existing install into a valid 1-node cluster, add a read-only "list of nodes" screen in the UI | no visible behavior change yet |
+| 1 | Node lifecycle | SSH-based setup workflow, joining/leaving/draining a machine, labels, port-reachability check, checking if a node is alive | you can add machines to the cluster; nothing runs on them yet |
+| 2 | Multi-node data plane | Fluentd everywhere, Caddy everywhere + shared cert storage + **keeping every Caddy instance's config in sync** (§6), confirm image pulling works from a second machine | user services can actually run on any machine |
+| 3 | Placement | Let Projects/Environments/Services choose where they run, volume pinning, `SharedVolume` handling, UI for picking a machine | users can choose where things run |
+| 4 | Distributed builds | Split build jobs from cluster-control jobs (§2.1), per-machine build queues, both routing modes, global build worker service | builds no longer have to happen on the manager |
+| 5 | Per-node operations | Node worker as a global service, combining metrics from all machines, SSH-based container shell, "pick a replica" UI | full visibility across all machines |
+| 6 | Docs | Write a scaling guide: quorum, 1/2/3-machine setups, firewall rules, what counts as "high availability" and what doesn't | |
+| 7 | High availability (separate effort) | Redis replication, Linstor as an optional addon, multiple managers | |
 
-Phase 2 is the risky one. Start the proxy config fan-out spike early — before phase 1 is finished — because if option 1 in §6 doesn't hold up, phases 2–5 all move.
+Phase 2 is the riskiest one. We should start testing the Caddy config-syncing approach (§6) early — even before phase 1 is fully done — because if option 1 doesn't work out, it affects phases 2 through 5.
 
 ---
 
 ## 11. Open questions
 
-1. Can swarm's `{{.Node.Hostname}}` template be used in the worker's `env` to derive its task queue, or do we compute it in `run_worker.sh`? (cheap to test, blocks §4)
-2. Does any build-path activity call a swarm API? If yes, §2.1 needs a fourth activity class. (blocks §2.1)
-3. Where does the deployment *record* store its chosen build node — a field on `Deployment`, or only in workflow state? A field makes retries and the UI simpler; leaning field.
-4. When a pinned node goes down, do we fail deployments to it fast, or queue them? Leaning fail fast with a clear error.
-5. `MAX_CONCURRENT_DEPLOYS` ([settings.py:459](../backend/settings.py#L459)) is currently global. Should it become per-build-node?
+1. Can we get Swarm's `{{.Node.Hostname}}` template to fill in a worker's queue name automatically, or do we need `run_worker.sh` to compute it itself at startup? (cheap to test, blocks §4)
+2. Does any existing build-related job secretly call the Swarm API (which would need manager access)? If so, §2.1 needs a fourth category of job. (blocks §2.1)
+3. Where should we record which machine a deployment was built on — a field directly on the `Deployment` model, or only inside the workflow's internal state? A dedicated field would make retries and the UI simpler — leaning toward that.
+4. If the machine a service is pinned to goes down, should new deployments to it fail right away, or wait until it comes back? Leaning toward failing fast with a clear error message.
+5. `MAX_CONCURRENT_DEPLOYS` ([settings.py:459](../backend/settings.py#L459)) currently limits the whole cluster at once. Should each build machine have its own limit instead?
