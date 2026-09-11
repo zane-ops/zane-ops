@@ -530,3 +530,59 @@ Given user-service HA is the actual goal, [§7](#sec-7)'s "replicated storage as
 ### Net effect on phase 7
 
 Concretely, phase 7 is: (1) default placement to `ANY_APP_NODE` + support `replicas > 1` for stateless services, (2) ship replicated storage for stateful ones, (3) document + surface the DNS-based entry-point pattern. Nothing about API/DB/Temporal.
+
+### Example: a 3-node HA setup
+
+The smallest setup where a user service actually survives losing a node. Manager A is control plane only; B and C both host apps.
+
+| Node | Role | `zane.build` | `zane.apps` | Linstor/DRBD | Public IP in DNS? |
+| --- | --- | --- | --- | --- | --- |
+| A | manager | true | false | no | ❌ no — nothing user-facing runs here |
+| B | worker | false | true | yes | ✅ `app.example.com → B` (health-checked) |
+| C | worker | false | true | yes | ✅ `app.example.com → C` (health-checked) |
+
+```mermaid
+flowchart TB
+    dns["DNS: app.example.com → B, C (health-checked records)"]
+    dns --> caddyB
+    dns --> caddyC
+    subgraph A["Node A — manager · build=true · apps=false"]
+        api["API + DB + Temporal"]
+        mainq["Temporal worker (task queue: main-task-queue)"]
+        buildq["Temporal worker (task queue: build-A)"]
+        nodeqA["Temporal worker (task queue: node-A)"]
+        fluentdA["Fluentd"]
+        caddyA["Caddy (in sync, but not in DNS)"]
+    end
+    subgraph B["Node B — worker · build=false · apps=true · DRBD"]
+        nodeqB["Temporal worker (task queue: node-B)"]
+        fluentdB["Fluentd"]
+        caddyB["Caddy"]
+        web1["web (replica 1/2)"]
+        db1["postgres (active) · volume on DRBD"]
+    end
+    subgraph C["Node C — worker · build=false · apps=true · DRBD"]
+        nodeqC["Temporal worker (task queue: node-C)"]
+        fluentdC["Fluentd"]
+        caddyC["Caddy"]
+        web2["web (replica 2/2)"]
+        db2["postgres (standby) · DRBD mirror"]
+    end
+    db1 -. "DRBD replication" .- db2
+```
+
+Two user services, one of each kind:
+- **`web` — stateless.** `placement=ANY_APP_NODE`, `replicas=2`. Swarm spreads one replica on B and one on C. Both Caddys route to both via the routing mesh.
+- **`postgres` — stateful.** One replica, volume on a Linstor/DRBD resource mirrored between B and C. Placement is `ANY_APP_NODE` (not `PINNED_BY_VOLUME`, since the volume is no longer tied to one machine).
+
+What happens when **node C dies**:
+1. The DNS provider's health check fails for C; clients stop being sent there within the check interval + TTL. B's Caddy keeps serving — its config was already in sync ([§6(b)](#sec-6)) and its certs come from shared storage ([§6(a)](#sec-6)).
+2. `web` keeps serving from replica 1 on B with no interruption. Swarm reschedules replica 2 onto B as well, so it's back at 2 replicas (both on one node until C returns).
+3. `postgres` was on B, so nothing happens; DRBD keeps running degraded (no peer) and resyncs when C comes back. Had it been on C instead, Swarm would reschedule it onto B and DRBD would promote B's mirror — a short outage (container restart), not data loss.
+4. Node A is untouched: deploys, the UI and the API all keep working.
+
+What happens when **node A dies** (the manager):
+- `web` and `postgres` keep running exactly as they were; both Caddys keep routing. Users notice nothing.
+- Nobody can deploy, edit a service, or open the dashboard until A is back. Builds fail (they'd run on A). Cert renewals are blocked too, since the shared cert storage (Valkey) lives on A — already-issued certs keep serving, only a cert expiring *inside* the outage window is at risk ([§6(a)](#sec-6)). This is the explicit right-column tradeoff from the table above.
+
+What this setup does **not** give you: surviving A *and* another node at once, or any control-plane availability. Adding a second manager for quorum would need a third manager (see the [§2.3](#sec-2-3) warning about geographically spread managers) and is a separate effort.
