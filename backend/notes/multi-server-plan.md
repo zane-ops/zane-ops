@@ -94,6 +94,26 @@ The original notes proposed running a separate small monitoring program (like Po
 
 For checking whether a node is alive, we don't even need a special worker — `docker node ls` (a normal Swarm command) already tells the manager a node's `Status`, `Availability`, and `ManagerStatus`. We can just poll that on a schedule.
 
+#### The existing `schedule-task-queue` worker goes away <a id="sec-2-2-1"></a>
+
+Today the manager runs a second worker on `schedule-task-queue` ([docker-stack.prod.yaml:249](../../docker/docker-stack.prod.yaml#L249)) that all Temporal schedules are created against ([client.py:167](../temporal/client.py#L167)). Everything it runs is node-local work — exactly what `node-<hostname>` is for — so it's replaced by the node worker rather than kept as a fourth container:
+
+| Scheduled workflow | Needs | Moves to |
+| --- | --- | --- |
+| `monitor-docker-deployment` (healthchecks), `get-docker-deployment-stats` (metrics) | the socket where the container runs | `node-<hostname>` of the deployment's node |
+| `monitor-compose-stack`, `collect-compose-stack-metrics` | same, per stack | `node-<hostname>` (fan-out if a stack spans nodes) |
+| `monitor-registry-deployment` | manager socket | `node-<manager>` |
+| `docker-system-prune` | every socket | one schedule per node, each on its own `node-<hostname>` |
+| `cleanup-app-data`, `check-license` (ee) | nothing machine-specific | `node-<manager>` |
+
+What that changes in code:
+- `TEMPORALIO_SCHEDULE_TASK_QUEUE` is removed; `create_schedule` / `create_or_update_schedule` take an explicit `task_queue` instead of defaulting to it.
+- Per-deployment schedules ([main_activities.py:1949](../temporal/activities/main_activities.py#L1949)) are already recreated on every deploy, so they naturally follow the service if it lands on a different node.
+- Global schedules ([setup_automated_schedules.py](../temporal/management/commands/setup_automated_schedules.py), [console/views/system.py](../console/views/system.py)) resolve the manager's queue via `ServerNode.objects.get(is_self=True).node_task_queue`.
+- Upgrade path: schedules still pointing at `schedule-task-queue` must be recreated — `setup_automated_schedules` already deletes obsolete schedules, so that's the hook.
+
+Net: a 1-node manager runs `main-task-queue`, `build-<A>`, `node-<A>` — three workers, not four.
+
 ### 2.3 Worker nodes CAN build images <a id="sec-2-3"></a>
 
 The GitHub issue originally said "worker nodes will not be able to run builds." But since building only needs a local Docker socket + local disk (not manager-level cluster control, per [§2.1](#sec-2-1)), that restriction isn't actually necessary — a plain worker node can build images just fine.
@@ -290,7 +310,7 @@ Each phase ends with a fully working cluster, so this can ship gradually instead
 | 2 | Multi-node data plane | Fluentd everywhere, Caddy everywhere + shared cert storage + **keeping every Caddy instance's config in sync** ([§6](#sec-6)), confirm image pulling works from a second machine | user services can actually run on any machine |
 | 3 | Placement | Let Projects/Environments/Services choose where they run, volume pinning, `SharedVolume` handling, UI for picking a machine | users can choose where things run |
 | 4 | Distributed builds | Split build jobs from cluster-control jobs ([§2.1](#sec-2-1)), per-machine build queues, both routing modes, global build worker service | builds no longer have to happen on the manager |
-| 5 | Per-node operations | Node worker as a global service, combining metrics from all machines, SSH-based container shell, "pick a replica" UI, **move `pull_image_for_deployment`, `run_deployment_healthcheck`'s container calls, and `DockerSystemPruneActivities` off `main-task-queue`** (found during the [§2.1](#sec-2-1) audit — see below) | full visibility across all machines |
+| 5 | Per-node operations | Node worker as a global service, combining metrics from all machines, SSH-based container shell, "pick a replica" UI, **move `pull_image_for_deployment`, `run_deployment_healthcheck`'s container calls, and `DockerSystemPruneActivities` off `main-task-queue`** (found during the [§2.1](#sec-2-1) audit — see below), **retire `schedule-task-queue` — all schedules target a `node-<hostname>` queue** ([§2.2](#sec-2-2-1)) | full visibility across all machines |
 | 6 | Docs | Write a scaling guide: quorum (incl. the manager-spacing warning in [§2.3](#sec-2-3)), 1/2/3-machine setups, firewall rules, what counts as "high availability" and what doesn't | |
 | 7 | User-service & proxy HA (see [§14](#sec-14)) | Multi-replica placement so Swarm can spread/reschedule stateless services, Linstor/DRBD for stateful ones, DNS-based external entry point for Caddy (surface node IPs in the UI + docs) | a user service (and the proxy in front of it) survives losing one node — without needing the API/DB/Temporal to be HA, which is explicitly out of scope |
 
@@ -320,7 +340,7 @@ Which ZaneOps pieces are global vs. manager-only, regardless of cluster size:
 | --- | --- | --- |
 | API + DB + Temporal server | manager only | control plane, never moves |
 | Temporal worker on `main-task-queue` | manager only | the only thing allowed to call the Swarm API ([§2.1](#sec-2-1)) |
-| Temporal worker on `node-<hostname>` | **every** node, always | health polling, metrics, exec — added in phase 5, not label-gated |
+| Temporal worker on `node-<hostname>` | **every** node, always | health polling, metrics, exec, and all Temporal schedules — added in phase 5, not label-gated. Replaces today's `schedule-task-queue` worker ([§2.2](#sec-2-2-1)) |
 | Fluentd | **every** node, always | global service, no label — see [§5](#sec-5) |
 | Caddy (proxy) | **every** node, always | global service, no label — routing mesh means it doesn't need to be co-located with the app it routes to |
 | Temporal worker on `build-<hostname>` | only nodes labeled `zane.build=true` | this is the one thing that's label-gated |
@@ -376,6 +396,24 @@ flowchart TB
 | --- | --- | --- | --- | --- |
 | A | manager | true | false | ❌ no |
 | B | worker | false | true | ✅ yes |
+
+```mermaid
+flowchart TB
+    subgraph A["Node A — manager · build=true · apps=false"]
+        api["API + DB + Temporal"]
+        mainq["Temporal worker (task queue: main-task-queue)"]
+        buildq["Temporal worker (task queue: build-A)"]
+        nodeqA["Temporal worker (task queue: node-A)"]
+        fluentdA["Fluentd"]
+        caddyA["Caddy"]
+    end
+    subgraph B["Node B — worker · build=false · apps=true"]
+        nodeqB["Temporal worker (task queue: node-B)"]
+        fluentdB["Fluentd"]
+        caddyB["Caddy"]
+        apps["user service containers"]
+    end
+```
 
 ### 3 nodes — full separation of concerns
 
