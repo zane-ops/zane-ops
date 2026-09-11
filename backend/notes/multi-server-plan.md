@@ -52,7 +52,7 @@ Some of the hardest prerequisites are already in the tree. Worth knowing before 
 | Buildx builders (the thing that actually builds Docker images) | [git_activities.py:606](../temporal/activities/git_activities.py#L606) | ✅ they are **local `docker buildx` containers**, not Swarm services — see [§4](#sec-4), this matters for who is allowed to build |
 | Swarm service metrics | [helpers.py:754](../temporal/helpers.py#L754) | ⚠️ only checks the *local* machine, so it only sees containers running on the manager |
 
-Everything in `docker-stack.prod.yaml` is currently pinned to `node.role==manager` (i.e. it only ever runs on the manager machine). That stays true for the control-plane pieces (API, DB, Temporal, etc).
+Everything in `docker-stack.prod.yaml` is currently pinned to `node.role==manager` (i.e. it only ever runs on the manager machine). That stays true for the control-plane pieces (API, DB, Temporal, etc) — but once more than one manager exists, `node.role==manager` isn't specific enough (Swarm could move the DB and its volume between managers); it needs to become a pin to the `is_self` node, see the 3-manager example in [§14](#sec-14).
 
 ---
 
@@ -507,7 +507,7 @@ What to notice:
 | | Temporal |
 | | Builds (a failed build just gets retried by the user — [§4](#sec-4)) |
 
-That right column is a deliberate choice, not an oversight: if the node running the API/DB/Temporal goes down, already-running user services keep serving traffic untouched (Caddy and Swarm don't need the API to keep routing/rescheduling) — you just can't deploy or edit anything until it's back. No Postgres replication, no Temporal HA, no multi-replica API is in scope for this plan. That's what keeps this tractable — real control-plane HA would be a much bigger, separate effort, and it's explicitly not one we're taking on.
+That right column is a deliberate choice, not an oversight: if the node running the API/DB/Temporal goes down, already-running user services keep serving traffic untouched (Caddy doesn't need the API to keep routing) — you just can't deploy or edit anything until it's back. One caveat: with a *single* manager, Swarm itself is down too, so it can't reschedule a lost replica onto another node until the manager returns — only the containers that were already running survive. Rescheduling during a manager outage needs manager quorum, see the 3-manager example below. No Postgres replication, no Temporal HA, no multi-replica API is in scope for this plan. That's what keeps this tractable — real control-plane HA would be a much bigger, separate effort, and it's explicitly not one we're taking on.
 
 ### Stateless user services — mostly free, two things have to be true
 
@@ -585,7 +585,101 @@ What happens when **node C dies**:
 4. Node A is untouched: deploys, the UI and the API all keep working.
 
 What happens when **node A dies** (the manager):
-- The web API and the DB keep running exactly as they were; both Caddys keep routing. Users notice nothing.
+- The web API and the DB keep running exactly as they were; both Caddys keep routing. Users notice nothing. But Swarm has no manager, so if B or C *also* failed during this window, nothing would be rescheduled.
 - Nobody can deploy, edit a service, or open the dashboard until A is back (`zaneops.example.com` points only at A, so it's simply unreachable — which is correct, since the API behind it is down anyway). Builds fail (they'd run on A). Cert renewals are blocked too, since the shared cert storage (Valkey) lives on A — already-issued certs keep serving, only a cert expiring *inside* the outage window is at risk ([§6(a)](#sec-6)). This is the explicit right-column tradeoff from the table above.
 
 What this setup does **not** give you: surviving A *and* another node at once, or any control-plane availability. Adding a second manager for quorum would need a third manager (see the [§2.3](#sec-2-3) warning about geographically spread managers) and is a separate effort.
+
+### Example: a real Swarm HA cluster — 3 managers + workers
+
+The setup above still has one manager, which is the actual single point of failure: lose it and Swarm stops scheduling. The standard Swarm answer is **3 managers** (quorum survives losing one — see glossary) plus as many workers as needed. This is what a Swarm cluster outside ZaneOps normally looks like, and nothing in this plan prevents it — the managers just carry the extra rule that ZaneOps' own control plane runs on exactly one of them.
+
+8 nodes: 3 managers (M1, M2, M3), 2 build nodes (B1, B2), 3 app nodes (C1, C2, C3). Managers run *only* Swarm bookkeeping and (on M1) the ZaneOps control plane — no builds, no user apps.
+
+| Node | Role | `zane.build` | `zane.apps` | Runs ZaneOps control plane? | Public IP in DNS? |
+| --- | --- | --- | --- | --- | --- |
+| M1 | manager (`is_self`) | false | false | ✅ API + DB + Temporal + `main-task-queue` | ✅ `zaneops.example.com → M1` |
+| M2 | manager | false | false | ❌ | ❌ |
+| M3 | manager | false | false | ❌ | ❌ |
+| B1 | worker | true | false | ❌ | ❌ |
+| B2 | worker | true | false | ❌ | ❌ |
+| C1 | worker | false | true | ❌ | ✅ `app.example.com → C1` (health-checked) |
+| C2 | worker | false | true | ❌ | ✅ `app.example.com → C2` (health-checked) |
+| C3 | worker | false | true | ❌ | ✅ `app.example.com → C3` (health-checked) |
+
+```mermaid
+flowchart TB
+    dns["DNS: app.example.com → C1, C2, C3 (health-checked records)"]
+    dnsA["DNS: zaneops.example.com → M1"]
+    dns --> caddyC1
+    dns --> caddyC2
+    dns --> caddyC3
+    dnsA --> caddyM1
+    subgraph managers["Swarm managers — quorum of 3, same region / low latency"]
+        subgraph M1["M1 — is_self"]
+            api["API + DB + Temporal"]
+            mainq["Temporal worker (task queue: main-task-queue)"]
+            nodeqM1["Temporal worker (task queue: node-M1)"]
+            caddyM1["Caddy (dashboard)"]
+            fluentdM1["Fluentd"]
+        end
+        subgraph M2["M2"]
+            nodeqM2["Temporal worker (task queue: node-M2)"]
+            caddyM2["Caddy"]
+            fluentdM2["Fluentd"]
+        end
+        subgraph M3["M3"]
+            nodeqM3["Temporal worker (task queue: node-M3)"]
+            caddyM3["Caddy"]
+            fluentdM3["Fluentd"]
+        end
+    end
+    subgraph builders["Build workers — zane.build=true"]
+        subgraph B1["B1"]
+            buildq1["Temporal worker (task queues: build-B1, build-router)"]
+            nodeqB1["Temporal worker (task queue: node-B1)"]
+        end
+        subgraph B2["B2"]
+            buildq2["Temporal worker (task queues: build-B2, build-router)"]
+            nodeqB2["Temporal worker (task queue: node-B2)"]
+        end
+    end
+    subgraph apps["App workers — zane.apps=true · replicated storage"]
+        subgraph C1["C1"]
+            caddyC1["Caddy"]
+            svc1["user service (ex: web API) · replica 1/3"]
+            vol1["user volume (ex: pg DB) · running"]
+        end
+        subgraph C2["C2"]
+            caddyC2["Caddy"]
+            svc2["user service (ex: web API) · replica 2/3"]
+            vol2["user volume (ex: pg DB) · replica"]
+        end
+        subgraph C3["C3"]
+            caddyC3["Caddy"]
+            svc3["user service (ex: web API) · replica 3/3"]
+        end
+    end
+    vol1 -. "volume replication" .- vol2
+```
+
+(Fluentd and `node-<hostname>` workers also run on B1/B2/C1/C2/C3 — omitted from the diagram for space.)
+
+What each failure looks like:
+
+| Dies | User apps | Rescheduling | Dashboard / deploys |
+| --- | --- | --- | --- |
+| **C1** (app node) | web API keeps serving from C2/C3; DNS drops C1 | ✅ Swarm re-creates replica 3 on C2/C3; DB moves to C2 where its volume replica is | ✅ unaffected |
+| **B1** (build node) | unaffected | n/a — builds route to B2 via `build-router` | ✅ unaffected, half build capacity |
+| **M2 or M3** (a manager without the control plane) | unaffected | ✅ quorum holds (2 of 3), Swarm keeps scheduling | ✅ unaffected |
+| **M1** (the manager running the control plane) | keep serving | ✅ **quorum holds (M2+M3), so Swarm still reschedules user apps if an app node also fails** — this is what the single-manager setups can't do | ❌ down until M1 is back: API, DB, Temporal, cert renewals all live there |
+| **two managers** | keep serving | ❌ quorum lost; Swarm is read-only until a manager returns | ❌ if M1 is one of them |
+
+What this buys over the single-manager setups: losing *any one* node — including the one that runs ZaneOps — never stops Swarm from keeping user services alive. The only thing that still goes away with M1 is the ability to deploy/manage, which is the explicit right-column tradeoff.
+
+What it needs from ZaneOps:
+- **Control plane pinned to one manager**, not `node.role==manager`. Today every control-plane service in `docker-stack.prod.yaml` is constrained to `node.role==manager`, which with 3 managers means Swarm could put the DB on M1 and the API on M3 — and worse, move the DB (and its local volume) around. The constraint has to become `node.hostname==<M1>` (or a `zane.control-plane=true` label set only on the `is_self` node) so the DB volume never leaves M1.
+- **Multi-manager join** in the [§9](#sec-9) workflow: same steps, with the manager join token instead of the worker one.
+- **The [§2.3](#sec-2-3) warning, enforced in docs:** the 3 managers must be close to each other (same region, low latency). Managers scattered across providers/regions make quorum *less* stable, not more. Workers can be anywhere.
+
+**Later, out of scope:** with the storage addon also replicating M1's own volumes (DB, Temporal) across the managers, Swarm could reschedule the whole control plane onto M2/M3 when M1 dies — real control-plane HA without Postgres replication. Not in this plan, but the 3-manager layout is what makes it possible at all.
