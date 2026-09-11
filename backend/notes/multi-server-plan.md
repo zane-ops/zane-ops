@@ -29,6 +29,7 @@ Terms used throughout this doc, defined once here instead of re-explained every 
 | **Registry (container registry)** | a server that stores built container images so any machine can download (`pull`) them. |
 | **Buildx / buildkit** | Docker's image-building engine, used here inside a plain container rather than needing Swarm/manager access. |
 | **Volume** | a folder on disk that a container's data is stored in, so it survives container restarts. Tied to whichever machine it was created on unless explicitly copied elsewhere. |
+| **DRBD / Linstor** | DRBD (Distributed Replicated Block Device) is a Linux kernel module that mirrors a disk over the network to another machine in real time — RAID-1, but across servers. Linstor is the management layer on top that creates DRBD resources and exposes them as Docker volumes. Works with 1 or 2 nodes, unlike Ceph which needs 3. Optional addon for replicating user volumes ([§7](#sec-7), [§14](#sec-14)). |
 | **Quorum** | the minimum number of managers that must agree before the cluster accepts a change — the reason you'd want e.g. 3 managers instead of 1: the cluster keeps working even if it loses one. |
 | **Replica** | one running copy of a service; a service can have several replicas spread across nodes for redundancy. |
 | **Load balancing** | spreading incoming traffic across multiple servers instead of sending it all to one — both to share the load and so traffic can keep flowing if one server is down. There are many ways to do it (a dedicated load-balancer box, DNS, etc); this doc picks DNS (below) for the reasons in [§6(c)](#sec-6). |
@@ -535,7 +536,7 @@ Concretely, phase 7 is: (1) default placement to `ANY_APP_NODE` + support `repli
 
 The smallest setup where a user service actually survives losing a node. Manager A is control plane only; B and C both host apps.
 
-| Node | Role | `zane.build` | `zane.apps` | Linstor/DRBD | Public IP in DNS? |
+| Node | Role | `zane.build` | `zane.apps` | Replicated storage | Public IP in DNS? |
 | --- | --- | --- | --- | --- | --- |
 | A | manager | true | false | no | ✅ `zaneops.example.com → A` only (the dashboard/API live here) — **not** in the `app.example.com` pool |
 | B | worker | false | true | yes | ✅ `app.example.com → B` (health-checked) |
@@ -556,35 +557,35 @@ flowchart TB
         fluentdA["Fluentd"]
         caddyA["Caddy (serves the dashboard)"]
     end
-    subgraph B["Node B — worker · build=false · apps=true · DRBD"]
+    subgraph B["Node B — worker · build=false · apps=true"]
         nodeqB["Temporal worker (task queue: node-B)"]
         fluentdB["Fluentd"]
         caddyB["Caddy"]
-        web1["web (replica 1/2)"]
-        db1["postgres (active) · volume on DRBD"]
+        svc1["user service (ex: web API) · replica 1/2"]
+        vol1["user volume (ex: pg DB) · running"]
     end
-    subgraph C["Node C — worker · build=false · apps=true · DRBD"]
+    subgraph C["Node C — worker · build=false · apps=true"]
         nodeqC["Temporal worker (task queue: node-C)"]
         fluentdC["Fluentd"]
         caddyC["Caddy"]
-        web2["web (replica 2/2)"]
-        db2["postgres (standby) · DRBD mirror"]
+        svc2["user service (ex: web API) · replica 2/2"]
+        vol2["user volume (ex: pg DB) · replica"]
     end
-    db1 -. "DRBD replication" .- db2
+    vol1 -. "volume replication" .- vol2
 ```
 
 Two user services, one of each kind:
-- **`web` — stateless.** `placement=ANY_APP_NODE`, `replicas=2`. Swarm spreads one replica on B and one on C. Both Caddys route to both via the routing mesh.
-- **`postgres` — stateful.** One replica, volume on a Linstor/DRBD resource mirrored between B and C. Placement is `ANY_APP_NODE` (not `PINNED_BY_VOLUME`, since the volume is no longer tied to one machine).
+- **A stateless user service (ex: a web API).** `placement=ANY_APP_NODE`, `replicas=2`. Swarm spreads one replica on B and one on C. Both Caddys route to both via the routing mesh.
+- **A user service with a volume (ex: a Postgres DB).** One replica; its volume is replicated between B and C by the storage addon ([§7](#sec-7)). Placement is `ANY_APP_NODE` (not `PINNED_BY_VOLUME`, since the volume is no longer tied to one machine).
 
 What happens when **node C dies**:
 1. The DNS provider's health check fails for C; clients stop being sent there within the check interval + TTL. B's Caddy keeps serving — its config was already in sync ([§6(b)](#sec-6)) and its certs come from shared storage ([§6(a)](#sec-6)).
-2. `web` keeps serving from replica 1 on B with no interruption. Swarm reschedules replica 2 onto B as well, so it's back at 2 replicas (both on one node until C returns).
-3. `postgres` was on B, so nothing happens; DRBD keeps running degraded (no peer) and resyncs when C comes back. Had it been on C instead, Swarm would reschedule it onto B and DRBD would promote B's mirror — a short outage (container restart), not data loss.
+2. The web API keeps serving from replica 1 on B with no interruption. Swarm reschedules replica 2 onto B as well, so it's back at 2 replicas (both on one node until C returns).
+3. The DB was on B, so nothing happens; its volume keeps running with no replica until C comes back and resyncs. Had it been on C instead, Swarm would reschedule it onto B, where the volume's replica already is — a short outage (container restart), not data loss.
 4. Node A is untouched: deploys, the UI and the API all keep working.
 
 What happens when **node A dies** (the manager):
-- `web` and `postgres` keep running exactly as they were; both Caddys keep routing. Users notice nothing.
+- The web API and the DB keep running exactly as they were; both Caddys keep routing. Users notice nothing.
 - Nobody can deploy, edit a service, or open the dashboard until A is back (`zaneops.example.com` points only at A, so it's simply unreachable — which is correct, since the API behind it is down anyway). Builds fail (they'd run on A). Cert renewals are blocked too, since the shared cert storage (Valkey) lives on A — already-issued certs keep serving, only a cert expiring *inside* the outage window is at risk ([§6(a)](#sec-6)). This is the explicit right-column tradeoff from the table above.
 
 What this setup does **not** give you: surviving A *and* another node at once, or any control-plane availability. Adding a second manager for quorum would need a third manager (see the [§2.3](#sec-2-3) warning about geographically spread managers) and is a separate effort.
