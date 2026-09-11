@@ -44,10 +44,18 @@ A "Docker socket" is basically the API that lets you control Docker on a machine
 | Database / proxy / registry / Caddy config changes | nothing machine-specific | `main-task-queue` |
 | Cloning code, detecting the build method, running `docker buildx build`, pushing the image | a local Docker socket + local disk on *that* machine | `build-<node>` (that node's own worker) |
 | Reading local info — container metrics, `docker exec`, disk usage | a local Docker socket | `node-<node>` |
+| Local writes we missed at first pass — pulling an image, running a custom-command healthcheck, pruning images/volumes/containers/networks/build-cache | a local Docker socket, on whichever machine the service/build actually lives on | `node-<node>` or `build-<node>`, not `main-task-queue` |
 
 No machine ever needs remote access to another machine's Docker. Each worker only ever talks to its *own* local Docker socket.
 
-**Task:** go through `git_activities.py` and double check that nothing in the build path secretly calls the Swarm API (which would need manager access). The buildx builders should already be fine since they're just local containers, but `main_activities.py`'s build helpers need checking too.
+**Audit done (2026-09-11):** went through `git_activities.py` end-to-end — it never touches the Swarm API. Every Docker interaction there is local: shelling out to `docker buildx build`/`push`, `docker login` via subprocess, and a `self.docker_client` that's assigned but never actually called. So the build path is clean, confirming §2.1's core claim. Resolves open question #2 (§11) — **no**.
+
+However, `main_activities.py` isn't purely swarm-mutation code the way the table above implies — it also has local-socket-only calls bundled into the *same* classes as the manager-only ones, which the table above didn't account for:
+- [main_activities.py:1225](../temporal/activities/main_activities.py#L1225) `pull_image_for_deployment` — `docker_client.images.pull(...)`, a local pull, not a Swarm call
+- [main_activities.py:1598](../temporal/activities/main_activities.py#L1598) `run_deployment_healthcheck` — `docker_client.containers.get(...)` + `exec_run(...)` for custom command healthchecks, assumes the container is on this same machine
+- `DockerSystemPruneActivities` (main_activities.py:192-309) — `images.prune`, `volumes.prune`, `containers.prune`, `networks.prune`, plus buildx cache pruning — all local-machine housekeeping
+
+None of these need manager/cluster privileges, but they do assume "this worker == the machine the service/build actually lives on," which only holds today because everything runs on the manager. Once services/builds can live on other nodes, these three need to move to that node's queue (`node-<node>` or `build-<node>`), not stay on `main-task-queue`. Not a blocker for §2.1's security argument, but it enlarges the scope of phases 4 and 5 — add "split out `pull_image_for_deployment`, `run_deployment_healthcheck`'s container calls, and `DockerSystemPruneActivities`" as an explicit task there.
 
 ### 2.2 One "node worker" per node, not a whole separate program
 
@@ -249,7 +257,7 @@ Each phase ends with a fully working cluster, so this can ship gradually instead
 | 2 | Multi-node data plane | Fluentd everywhere, Caddy everywhere + shared cert storage + **keeping every Caddy instance's config in sync** (§6), confirm image pulling works from a second machine | user services can actually run on any machine |
 | 3 | Placement | Let Projects/Environments/Services choose where they run, volume pinning, `SharedVolume` handling, UI for picking a machine | users can choose where things run |
 | 4 | Distributed builds | Split build jobs from cluster-control jobs (§2.1), per-machine build queues, both routing modes, global build worker service | builds no longer have to happen on the manager |
-| 5 | Per-node operations | Node worker as a global service, combining metrics from all machines, SSH-based container shell, "pick a replica" UI | full visibility across all machines |
+| 5 | Per-node operations | Node worker as a global service, combining metrics from all machines, SSH-based container shell, "pick a replica" UI, **move `pull_image_for_deployment`, `run_deployment_healthcheck`'s container calls, and `DockerSystemPruneActivities` off `main-task-queue`** (found during the §2.1 audit — see below) | full visibility across all machines |
 | 6 | Docs | Write a scaling guide: quorum, 1/2/3-machine setups, firewall rules, what counts as "high availability" and what doesn't | |
 | 7 | High availability (separate effort) | Redis replication, Linstor as an optional addon, multiple managers | |
 
@@ -260,7 +268,7 @@ Phase 2 is the riskiest one. We should start testing the Caddy config-syncing ap
 ## 11. Open questions
 
 1. Can we get Swarm's `{{.Node.Hostname}}` template to fill in a worker's queue name automatically, or do we need `run_worker.sh` to compute it itself at startup? (cheap to test, blocks §4)
-2. Does any existing build-related job secretly call the Swarm API (which would need manager access)? If so, §2.1 needs a fourth category of job. (blocks §2.1)
+2. ~~Does any existing build-related job secretly call the Swarm API~~ — **resolved, no.** `git_activities.py` audited end-to-end (2026-09-11): no build activity touches `services`/`networks`/`configs`/`nodes`. See §2.1 for the write-up and for a related gap found during the same audit (node-local activities currently mislabeled as manager-only).
 3. Where should we record which machine a deployment was built on — a field directly on the `Deployment` model, or only inside the workflow's internal state? A dedicated field would make retries and the UI simpler — leaning toward that.
 4. If the machine a service is pinned to goes down, should new deployments to it fail right away, or wait until it comes back? Leaning toward failing fast with a clear error message.
 5. `MAX_CONCURRENT_DEPLOYS` ([settings.py:459](../backend/settings.py#L459)) currently limits the whole cluster at once. Should each build machine have its own limit instead?
