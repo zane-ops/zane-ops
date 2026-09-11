@@ -10,6 +10,8 @@ want you to act as all knowing, please respond simply and unless you are
 
 Be EXTREMELY concise. Short responses only. No blabbering.
 
+When you finish a task, end with a short, skimmable summary: a few bullet points max (what changed, what's next). No long recap paragraphs.
+
 ## Code style
 
 We use a **test-first approach**. When implementing features:
