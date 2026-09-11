@@ -272,3 +272,150 @@ Phase 2 is the riskiest one. We should start testing the Caddy config-syncing ap
 3. Where should we record which machine a deployment was built on — a field directly on the `Deployment` model, or only inside the workflow's internal state? A dedicated field would make retries and the UI simpler — leaning toward that.
 4. If the machine a service is pinned to goes down, should new deployments to it fail right away, or wait until it comes back? Leaning toward failing fast with a clear error message.
 5. `MAX_CONCURRENT_DEPLOYS` ([settings.py:459](../backend/settings.py#L459)) currently limits the whole cluster at once. Should each build machine have its own limit instead?
+
+---
+
+## 12. Example setups
+
+A quick reference for what actually runs where, at different cluster sizes. "Global service" below means a Swarm `mode: global` service — Swarm automatically runs one copy on every node that matches its placement constraint, and removes/adds copies as nodes join or leave.
+
+Which ZaneOps pieces are global vs. manager-only, regardless of cluster size:
+
+| Piece | Where it runs | Notes |
+| --- | --- | --- |
+| API + DB + Temporal server | manager only | control plane, never moves |
+| Temporal worker on `main-task-queue` | manager only | the only thing allowed to call the Swarm API (§2.1) |
+| Temporal worker on `node-<hostname>` | **every** node, always | health polling, metrics, exec — added in phase 5, not label-gated |
+| Fluentd | **every** node, always | global service, no label — see §5 |
+| Caddy (proxy) | **every** node, always | global service, no label — routing mesh means it doesn't need to be co-located with the app it routes to |
+| Temporal worker on `build-<hostname>` | only nodes labeled `zane.build=true` | this is the one thing that's label-gated |
+| User service containers | only nodes labeled `zane.apps=true` | via the placement chain in §3 |
+
+### 1 node (today's default, and what phase 0 backfills to)
+
+Everything on one box. `is_self=true`, `role=MANAGER`, `zane.build=true`, `zane.apps=true`.
+
+```mermaid
+flowchart TB
+    subgraph A["Node A — manager · build=true · apps=true"]
+        api["API + DB + Temporal"]
+        mainq["worker: main-task-queue"]
+        buildq["worker: build-A"]
+        nodeq["worker: node-A"]
+        fluentd["Fluentd"]
+        caddy["Caddy"]
+        apps["user service containers"]
+    end
+```
+
+### 2 nodes — recommended: manager stays lean, one dedicated build machine
+
+This is the "most common real setup" called out in §2.3: builds never touch the manager, so it can't get starved by a heavy build under load.
+
+| Node | Role | `zane.build` | `zane.apps` | Receives user apps? |
+| --- | --- | --- | --- | --- |
+| A | manager | false | true | ✅ yes |
+| B | worker | true | false | ❌ no — build-only |
+
+```mermaid
+flowchart TB
+    subgraph A["Node A — manager · build=false · apps=true"]
+        api["API + DB + Temporal"]
+        mainq["worker: main-task-queue"]
+        nodeqA["worker: node-A"]
+        fluentdA["Fluentd"]
+        caddyA["Caddy"]
+        apps["user service containers"]
+    end
+    subgraph B["Node B — worker · build=true · apps=false"]
+        buildq["worker: build-B"]
+        nodeqB["worker: node-B"]
+        fluentdB["Fluentd"]
+        caddyB["Caddy"]
+    end
+```
+
+**Alternative 2-node split**, if you'd rather keep builds on the manager and dedicate the second machine purely to hosting apps (e.g. the second machine has more RAM but a slower disk):
+
+| Node | Role | `zane.build` | `zane.apps` | Receives user apps? |
+| --- | --- | --- | --- | --- |
+| A | manager | true | false | ❌ no |
+| B | worker | false | true | ✅ yes |
+
+### 3 nodes — full separation of concerns
+
+Manager does cluster bookkeeping only; nothing user-facing runs there.
+
+| Node | Role | `zane.build` | `zane.apps` | Receives user apps? |
+| --- | --- | --- | --- | --- |
+| A | manager | false | false | ❌ no — control plane only |
+| B | worker | true | false | ❌ no — build-only |
+| C | worker | false | true | ✅ yes |
+
+```mermaid
+flowchart TB
+    subgraph A["Node A — manager · build=false · apps=false"]
+        api["API + DB + Temporal"]
+        mainq["worker: main-task-queue"]
+        nodeqA["worker: node-A"]
+        fluentdA["Fluentd"]
+        caddyA["Caddy"]
+    end
+    subgraph B["Node B — worker · build=true · apps=false"]
+        buildq["worker: build-B"]
+        nodeqB["worker: node-B"]
+        fluentdB["Fluentd"]
+        caddyB["Caddy"]
+    end
+    subgraph C["Node C — worker · build=false · apps=true"]
+        nodeqC["worker: node-C"]
+        fluentdC["Fluentd"]
+        caddyC["Caddy"]
+        apps["user service containers"]
+    end
+```
+
+Scale beyond 3 by adding more `zane.build=true` or `zane.apps=true` workers as needed — nothing about the model changes past 3 nodes. Multiple *managers* (for real HA/quorum) is a separate axis, out of scope for v1 — see phase 7.
+
+---
+
+## 13. Example: a deployment's lifecycle
+
+Walking one `git`-based deployment through the pieces above, assuming the 3-node setup from §12 (build node B, app node C).
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant API
+    participant WF as Temporal workflow
+    participant Build as Node B (build-B queue)
+    participant Registry
+    participant Main as Node A (main-task-queue)
+    participant AppNode as Node C (node-C queue)
+    participant Proxy as Caddy (every node)
+
+    User->>API: click "Deploy"
+    API->>API: create Deployment row (status=QUEUED)
+    API->>WF: start DeployServiceWorkflow
+    WF->>WF: resolve placement -> build on B, run on C (§3)
+    WF->>Build: clone repo, checkout commit
+    WF->>Build: docker buildx build
+    WF->>Build: push image
+    Build->>Registry: image pushed
+    WF->>Main: create/update swarm service (image ref, constrained to C)
+    Main->>Registry: swarm pulls image onto node C
+    Main->>AppNode: schedule + start container
+    WF->>AppNode: run healthcheck (docker exec / http request)
+    AppNode-->>WF: healthy
+    WF->>Main: compute new proxy routes
+    Main->>Proxy: push config to every Caddy instance (§6, fan-out)
+    WF->>API: mark Deployment ACTIVE, clean up previous deployment
+    API-->>User: deployment live
+```
+
+What to notice:
+- Everything under "clone / build / push" only ever touches node B's local disk and Docker socket — never node A's or node C's (§2.1).
+- Only the workflow step that actually mutates the Swarm service goes through node A (`main-task-queue`) — that's the *only* place with cluster-wide Docker access.
+- The healthcheck runs on node C specifically, because that's where the container actually landed — not on the manager (this is the gap flagged in §2.1's audit: `run_deployment_healthcheck` needs to move to `node-<node>` for this to be true).
+- The proxy update is pushed to *every* Caddy instance, not just node C's, so traffic can be accepted at any entrypoint and still reach the container via the routing mesh (§6).
+- If node B goes down mid-build, the deployment just fails — no cross-node retry (§4) — and the user retries, which may land on a different build node next time via the `build-router` fallback queue.
