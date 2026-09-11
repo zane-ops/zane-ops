@@ -8,6 +8,33 @@ Status: **in design**. Branch `feat/multi-server`. Tracking issue: [#446](https:
 
 ---
 
+## Glossary <a id="sec-glossary"></a>
+
+Terms used throughout this doc, defined once here instead of re-explained every time they come up.
+
+| Term | Meaning |
+| --- | --- |
+| **Node** | one machine (physical or virtual) in the cluster. |
+| **Docker Swarm** | Docker's built-in clustering system — turns several machines into one pool that runs containers. |
+| **Manager / worker** | the two roles a Swarm node can have. Managers make scheduling decisions and hold the cluster's state; workers just run containers. Losing a worker only affects what was running on it; losing too many managers can take the whole cluster down. |
+| **Docker socket** | the local API Docker exposes on a machine. Having access to it means you can control every container on that machine — so who gets access to which machine's socket is a real security boundary. |
+| **Temporal** | the job-queue/workflow system ZaneOps uses for anything long-running (deploying a service, provisioning a node, etc). |
+| **Workflow (Temporal)** | one multi-step process, e.g. "deploy this service." |
+| **Activity (Temporal)** | one single step inside a workflow, e.g. "clone the repo" or "create the Swarm service." |
+| **Task queue (Temporal)** | a named list of pending activities. A worker only picks up activities sent to the queue(s) it's listening on — this is how ZaneOps decides which machine a given activity runs on. |
+| **Global service (Swarm)** | a Swarm service configured to run exactly one copy on every node that matches its rules, automatically adding/removing copies as nodes join or leave. |
+| **Placement constraint** | a rule telling Swarm which node(s) a service is allowed to run on (e.g. "only nodes labeled `zane.build=true`"). |
+| **Overlay network** | the private virtual network Swarm creates so containers on different physical machines can reach each other as if they were on the same local network. |
+| **Routing mesh** | Swarm's built-in traffic forwarding: any node can accept a request on a published port and forward it to a healthy container, even if that container is actually running on a different node. |
+| **Registry (container registry)** | a server that stores built container images so any machine can download (`pull`) them. |
+| **Buildx / buildkit** | Docker's image-building engine, used here inside a plain container rather than needing Swarm/manager access. |
+| **Volume** | a folder on disk that a container's data is stored in, so it survives container restarts. Tied to whichever machine it was created on unless explicitly copied elsewhere. |
+| **Quorum** | the minimum number of managers that must agree before the cluster accepts a change — the reason you'd want e.g. 3 managers instead of 1: the cluster keeps working even if it loses one. |
+| **Replica** | one running copy of a service; a service can have several replicas spread across nodes for redundancy. |
+| **DNS record** | an entry mapping a domain name to a server's address. A domain can have several records (one per server); a *health-checked* DNS provider stops handing out a record for a server that's currently down. |
+
+---
+
 ## 1. What already exists <a id="sec-1"></a>
 
 Some of the hardest prerequisites are already in the tree. Worth knowing before planning work that duplicates them.
@@ -76,7 +103,7 @@ The GitHub issue originally said "worker nodes will not be able to run builds." 
 
 That way, a 2-machine setup can be "1 manager doing everything + 1 worker that only does builds" — probably the most common real-world setup — without forcing anyone to add a second manager.
 
-Still, we should document the general guidance around Swarm quorum (why you'd want an odd number of managers, and why 3 managers is the real "high availability" setup).
+Still, we should document the general guidance around Swarm quorum (why you'd want an odd number of managers, and why 3 managers is the real "high availability" setup) — and add a warning that's specific to us: since our nodes are expected to be scattered across different hosting providers and regions rather than one datacenter, putting multiple managers far apart geographically can make the cluster *less* stable, not more (slower to agree on changes, more likely to briefly lose quorum on a network blip).
 
 ---
 
@@ -181,6 +208,10 @@ Making Caddy (the reverse proxy that routes web traffic to services) run on ever
 
 I'd push back on the original notes' idea of "one Redis per server, clustered together" — for now, having a single shared cache (matching the manager) is fine, because the database, Temporal, and the API already only exist on the manager anyway — if the manager goes down, cert renewal is the least of our problems. We can add real Redis replication later, as part of a dedicated "high availability" phase. This does require rebuilding `docker/proxy/Dockerfile` to include the plugin.
 
+A Valkey outage doesn't take down already-running, already-certified traffic (Caddy keeps serving certs it already loaded from memory) — it only blocks issuing a brand-new cert or a renewal landing exactly during that window. Acceptable given the "rest of ZaneOps can go down sometimes" scoping.
+
+**(c) The external entry point — how traffic finds a surviving Caddy.** Even with every Caddy instance healthy and in sync, something outside the cluster decides which one a client connects to, and that has to keep working when one node is down. Since our nodes are scattered across different hosting providers and regions (no shared private network to rely on for IP failover), the approach is: **DNS with one address per app node, via a DNS provider that can check which ones are alive** (e.g. Route53 health checks, NS1, Cloudflare) and stops sending traffic to a dead one. Concretely this means surfacing each app node's public IP in the UI so users can add their own DNS records, and documenting a recommended provider/setup — ZaneOps does not manage DNS on the user's behalf.
+
 **(b) Keeping every Caddy instance's config in sync — this is the actual hard part.** Right now, the API pushes routing changes to a single Caddy admin address, `http://zane.proxy:2019` ([settings.py:426](../backend/settings.py#L426)), using a "only apply if nothing else changed since I last read it" safety check (etag-based concurrency, see [proxy.py:16](../temporal/proxy.py#L16)). Once there are multiple Caddy instances behind one shared address, each update would only land on *one* of them at random, and the rest would silently fall out of sync.
 
 Two ways to solve this:
@@ -258,10 +289,12 @@ Each phase ends with a fully working cluster, so this can ship gradually instead
 | 3 | Placement | Let Projects/Environments/Services choose where they run, volume pinning, `SharedVolume` handling, UI for picking a machine | users can choose where things run |
 | 4 | Distributed builds | Split build jobs from cluster-control jobs ([§2.1](#sec-2-1)), per-machine build queues, both routing modes, global build worker service | builds no longer have to happen on the manager |
 | 5 | Per-node operations | Node worker as a global service, combining metrics from all machines, SSH-based container shell, "pick a replica" UI, **move `pull_image_for_deployment`, `run_deployment_healthcheck`'s container calls, and `DockerSystemPruneActivities` off `main-task-queue`** (found during the [§2.1](#sec-2-1) audit — see below) | full visibility across all machines |
-| 6 | Docs | Write a scaling guide: quorum, 1/2/3-machine setups, firewall rules, what counts as "high availability" and what doesn't | |
-| 7 | High availability (separate effort) | Redis replication, Linstor as an optional addon, multiple managers | |
+| 6 | Docs | Write a scaling guide: quorum (incl. the manager-spacing warning in [§2.3](#sec-2-3)), 1/2/3-machine setups, firewall rules, what counts as "high availability" and what doesn't | |
+| 7 | User-service & proxy HA (see [§14](#sec-14)) | Multi-replica placement so Swarm can spread/reschedule stateless services, Linstor/DRBD for stateful ones, DNS-based external entry point for Caddy (surface node IPs in the UI + docs) | a user service (and the proxy in front of it) survives losing one node — without needing the API/DB/Temporal to be HA, which is explicitly out of scope |
 
 Phase 2 is the riskiest one. We should start testing the Caddy config-syncing approach ([§6](#sec-6)) early — even before phase 1 is fully done — because if option 1 doesn't work out, it affects phases 2 through 5.
+
+Phase 7 is arguably the actual point of "multi-server" (see [§14](#sec-14)) — it's listed last only because it depends on placement (phase 3) and the Caddy sync work (phase 2) already existing. Its two sub-pieces (replicated storage, DNS entry-point docs) don't depend on each other, though, and could start as soon as phase 3 lands rather than waiting for phases 4-6.
 
 ---
 
@@ -419,3 +452,41 @@ What to notice:
 - The healthcheck runs on node C specifically, because that's where the container actually landed — not on the manager (this is the gap flagged in [§2.1](#sec-2-1)'s audit: `run_deployment_healthcheck` needs to move to `node-<node>` for this to be true).
 - The proxy update is pushed to *every* Caddy instance, not just node C's, so traffic can be accepted at any entrypoint and still reach the container via the routing mesh ([§6](#sec-6)).
 - If node B goes down mid-build, the deployment just fails — no cross-node retry ([§4](#sec-4)) — and the user retries, which may land on a different build node next time via the `build-router` fallback queue.
+
+---
+
+## 14. High availability: what it actually requires <a id="sec-14"></a>
+
+"Multi-server" and "HA" keep getting conflated in this doc, so a scope check first, agreed explicitly: **what has to survive losing a node, and what doesn't.**
+
+| Must survive a node dying | Fine to be briefly unavailable |
+| --- | --- |
+| User service containers | The API |
+| Caddy — and traffic actually reaching a live instance | Postgres |
+| | Temporal |
+| | Builds (a failed build just gets retried by the user — [§4](#sec-4)) |
+
+That right column is a deliberate choice, not an oversight: if the node running the API/DB/Temporal goes down, already-running user services keep serving traffic untouched (Caddy and Swarm don't need the API to keep routing/rescheduling) — you just can't deploy or edit anything until it's back. No Postgres replication, no Temporal HA, no multi-replica API is in scope for this plan. That's what keeps this tractable — real control-plane HA would be a much bigger, separate effort, and it's explicitly not one we're taking on.
+
+### Stateless user services — mostly free, two things have to be true
+
+A service with no `Volume` already gets Swarm's built-in rescheduling if its node dies — *provided*:
+1. **Placement isn't `SPECIFIC`.** Default to `ANY_APP_NODE` ([§3](#sec-3)) so Swarm is actually free to reschedule elsewhere, not stuck waiting for one exact machine to come back.
+2. **The service can run more than one replica.** ZaneOps should let a service be configured with `replicas > 1`; Swarm already spreads replicas across nodes matching the placement constraint and reschedules a lost replica automatically. This turns "reschedule after a failure" (some downtime) into "traffic just uses the remaining replicas" (near-zero downtime) — worth calling out as an explicit, user-facing capability, not just an internal scheduling detail.
+
+### Stateful user services (have a `Volume`) — the actual gap
+
+[§7](#sec-7)'s v1 design is stickiness, not replication: a volume is pinned to one node. Two consequences worth being explicit about:
+- If that node dies, the service is down until it's back — no automatic failover, by design, in v1.
+- A service with a volume shouldn't be run with `replicas > 1` today: each replica would get its *own* local volume wherever it lands, and the copies would silently diverge. Multi-replica only becomes safe once storage is actually shared/replicated.
+
+Given user-service HA is the actual goal, [§7](#sec-7)'s "replicated storage as an optional addon, later" framing undersells this — Linstor/DRBD (or equivalent) is what makes stateful-service HA possible at all, so it belongs on this phase's critical path, not filed away as a someday-addon.
+
+### Caddy — split into two already-covered pieces
+
+- Keeping every instance's config in sync: solved, see [§6(b)](#sec-6).
+- Getting traffic to a *surviving* instance when one node is down: DNS with multiple records against a health-checked provider, documented and surfaced in the UI rather than operated by ZaneOps — see [§6(c)](#sec-6).
+
+### Net effect on phase 7
+
+Concretely, phase 7 is: (1) default placement to `ANY_APP_NODE` + support `replicas > 1` for stateless services, (2) ship replicated storage for stateful ones, (3) document + surface the DNS-based entry-point pattern. Nothing about API/DB/Temporal.
