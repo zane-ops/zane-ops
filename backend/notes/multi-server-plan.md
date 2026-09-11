@@ -537,22 +537,24 @@ The smallest setup where a user service actually survives losing a node. Manager
 
 | Node | Role | `zane.build` | `zane.apps` | Linstor/DRBD | Public IP in DNS? |
 | --- | --- | --- | --- | --- | --- |
-| A | manager | true | false | no | ❌ no — nothing user-facing runs here |
+| A | manager | true | false | no | ✅ `zaneops.example.com → A` only (the dashboard/API live here) — **not** in the `app.example.com` pool |
 | B | worker | false | true | yes | ✅ `app.example.com → B` (health-checked) |
 | C | worker | false | true | yes | ✅ `app.example.com → C` (health-checked) |
 
 ```mermaid
 flowchart TB
     dns["DNS: app.example.com → B, C (health-checked records)"]
+    dnsA["DNS: zaneops.example.com → A"]
     dns --> caddyB
     dns --> caddyC
+    dnsA --> caddyA
     subgraph A["Node A — manager · build=true · apps=false"]
         api["API + DB + Temporal"]
         mainq["Temporal worker (task queue: main-task-queue)"]
         buildq["Temporal worker (task queue: build-A)"]
         nodeqA["Temporal worker (task queue: node-A)"]
         fluentdA["Fluentd"]
-        caddyA["Caddy (in sync, but not in DNS)"]
+        caddyA["Caddy (serves the dashboard)"]
     end
     subgraph B["Node B — worker · build=false · apps=true · DRBD"]
         nodeqB["Temporal worker (task queue: node-B)"]
@@ -583,6 +585,6 @@ What happens when **node C dies**:
 
 What happens when **node A dies** (the manager):
 - `web` and `postgres` keep running exactly as they were; both Caddys keep routing. Users notice nothing.
-- Nobody can deploy, edit a service, or open the dashboard until A is back. Builds fail (they'd run on A). Cert renewals are blocked too, since the shared cert storage (Valkey) lives on A — already-issued certs keep serving, only a cert expiring *inside* the outage window is at risk ([§6(a)](#sec-6)). This is the explicit right-column tradeoff from the table above.
+- Nobody can deploy, edit a service, or open the dashboard until A is back (`zaneops.example.com` points only at A, so it's simply unreachable — which is correct, since the API behind it is down anyway). Builds fail (they'd run on A). Cert renewals are blocked too, since the shared cert storage (Valkey) lives on A — already-issued certs keep serving, only a cert expiring *inside* the outage window is at risk ([§6(a)](#sec-6)). This is the explicit right-column tradeoff from the table above.
 
 What this setup does **not** give you: surviving A *and* another node at once, or any control-plane availability. Adding a second manager for quorum would need a third manager (see the [§2.3](#sec-2-3) warning about geographically spread managers) and is a separate effort.
