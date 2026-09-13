@@ -5,7 +5,7 @@ from zane_api.models.base import TimestampedModel
 
 
 # Create your models here.
-class ServerNode(TimestampedModel):
+class SwarmNode(TimestampedModel):
     ID_PREFIX = "node_"
     ID_LENGTH = 11
 
