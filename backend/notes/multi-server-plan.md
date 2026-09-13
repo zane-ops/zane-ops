@@ -594,26 +594,22 @@ What this setup does **not** give you: surviving A *and* another node at once, o
 
 The setup above still has one manager, which is the actual single point of failure: lose it and Swarm stops scheduling. The standard Swarm answer is **3 managers** (quorum survives losing one — see glossary) plus as many workers as needed. This is what a Swarm cluster outside ZaneOps normally looks like, and nothing in this plan prevents it — the managers just carry the extra rule that ZaneOps' own control plane runs on exactly one of them.
 
-8 nodes: 3 managers (M1, M2, M3), 2 build nodes (B1, B2), 3 app nodes (C1, C2, C3). Managers run *only* Swarm bookkeeping and (on M1) the ZaneOps control plane — no builds, no user apps.
+5 nodes: 3 managers (M1, M2, M3), 2 workers (W1, W2). Managers run *only* Swarm bookkeeping and (on M1) the ZaneOps control plane — no builds, no user apps. With just 2 workers, both carry `zane.build=true` and `zane.apps=true` — there's no spare capacity to split build and app roles onto dedicated nodes.
 
 | Node | Role | `zane.build` | `zane.apps` | Runs ZaneOps control plane? | Public IP in DNS? |
 | --- | --- | --- | --- | --- | --- |
 | M1 | manager (`is_self`) | false | false | ✅ API + DB + Temporal + `main-task-queue` | ✅ `zaneops.example.com → M1` |
 | M2 | manager | false | false | ❌ | ❌ |
 | M3 | manager | false | false | ❌ | ❌ |
-| B1 | worker | true | false | ❌ | ❌ |
-| B2 | worker | true | false | ❌ | ❌ |
-| C1 | worker | false | true | ❌ | ✅ `app.example.com → C1` (health-checked) |
-| C2 | worker | false | true | ❌ | ✅ `app.example.com → C2` (health-checked) |
-| C3 | worker | false | true | ❌ | ✅ `app.example.com → C3` (health-checked) |
+| W1 | worker | true | true | ❌ | ✅ `app.example.com → W1` (health-checked) |
+| W2 | worker | true | true | ❌ | ✅ `app.example.com → W2` (health-checked) |
 
 ```mermaid
 flowchart TB
-    dns["DNS: app.example.com → C1, C2, C3 (health-checked records)"]
+    dns["DNS: app.example.com → W1, W2 (health-checked records)"]
     dnsA["DNS: zaneops.example.com → M1"]
-    dns --> caddyC1
-    dns --> caddyC2
-    dns --> caddyC3
+    dns --> caddyW1
+    dns --> caddyW2
     dnsA --> caddyM1
     subgraph managers["Swarm managers — quorum of 3, same region / low latency"]
         subgraph M1["M1 — is_self"]
@@ -634,45 +630,34 @@ flowchart TB
             fluentdM3["Fluentd"]
         end
     end
-    subgraph builders["Build workers — zane.build=true"]
-        subgraph B1["B1"]
-            buildq1["Temporal worker (task queues: build-B1, build-router)"]
-            nodeqB1["Temporal worker (task queue: node-B1)"]
-        end
-        subgraph B2["B2"]
-            buildq2["Temporal worker (task queues: build-B2, build-router)"]
-            nodeqB2["Temporal worker (task queue: node-B2)"]
-        end
-    end
-    subgraph apps["App workers — zane.apps=true · replicated storage"]
-        subgraph C1["C1"]
-            caddyC1["Caddy"]
-            svc1["user service (ex: web API) · replica 1/3"]
+    subgraph workers["Workers — zane.build=true · zane.apps=true · replicated storage"]
+        subgraph W1["W1"]
+            buildq1["Temporal worker (task queues: build-W1, build-router)"]
+            nodeqW1["Temporal worker (task queue: node-W1)"]
+            caddyW1["Caddy"]
+            fluentdW1["Fluentd"]
+            svc1["user service (ex: web API) · replica 1/2"]
             vol1["user volume (ex: pg DB) · running"]
         end
-        subgraph C2["C2"]
-            caddyC2["Caddy"]
-            svc2["user service (ex: web API) · replica 2/3"]
+        subgraph W2["W2"]
+            buildq2["Temporal worker (task queues: build-W2, build-router)"]
+            nodeqW2["Temporal worker (task queue: node-W2)"]
+            caddyW2["Caddy"]
+            fluentdW2["Fluentd"]
+            svc2["user service (ex: web API) · replica 2/2"]
             vol2["user volume (ex: pg DB) · replica"]
-        end
-        subgraph C3["C3"]
-            caddyC3["Caddy"]
-            svc3["user service (ex: web API) · replica 3/3"]
         end
     end
     vol1 -. "volume replication" .- vol2
 ```
 
-(Fluentd and `node-<hostname>` workers also run on B1/B2/C1/C2/C3 — omitted from the diagram for space.)
-
 What each failure looks like:
 
 | Dies | User apps | Rescheduling | Dashboard / deploys |
 | --- | --- | --- | --- |
-| **C1** (app node) | web API keeps serving from C2/C3; DNS drops C1 | ✅ Swarm re-creates replica 3 on C2/C3; DB moves to C2 where its volume replica is | ✅ unaffected |
-| **B1** (build node) | unaffected | n/a — builds route to B2 via `build-router` | ✅ unaffected, half build capacity |
+| **W1 or W2** (a worker) | web API keeps serving from the surviving worker; DNS drops the dead one | ✅ Swarm re-creates the lost replica on the survivor once it's back, or the moment it's back if capacity was tight; DB moves to the worker where its volume replica is | ✅ unaffected, but builds queue up until the dead worker returns — `build-router` has nowhere else to send them with only 2 workers |
 | **M2 or M3** (a manager without the control plane) | unaffected | ✅ quorum holds (2 of 3), Swarm keeps scheduling | ✅ unaffected |
-| **M1** (the manager running the control plane) | keep serving | ✅ **quorum holds (M2+M3), so Swarm still reschedules user apps if an app node also fails** — this is what the single-manager setups can't do | ❌ down until M1 is back: API, DB, Temporal, cert renewals all live there |
+| **M1** (the manager running the control plane) | keep serving | ✅ **quorum holds (M2+M3), so Swarm still reschedules user apps if a worker also fails** — this is what the single-manager setups can't do | ❌ down until M1 is back: API, DB, Temporal, cert renewals all live there |
 | **two managers** | keep serving | ❌ quorum lost; Swarm is read-only until a manager returns | ❌ if M1 is one of them |
 
 What this buys over the single-manager setups: losing *any one* node — including the one that runs ZaneOps — never stops Swarm from keeping user services alive. The only thing that still goes away with M1 is the ability to deploy/manage, which is the explicit right-column tradeoff.
