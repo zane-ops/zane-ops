@@ -71,3 +71,12 @@ class SwarmNode(TimestampedModel):
         Every node runs a worker on its own queue, always.
         """
         return f"node-{self.hostname}"
+
+    class Meta:  # type: ignore
+        constraints = [
+            models.UniqueConstraint(
+                fields=["is_initial_install_server"],
+                condition=models.Q(is_initial_install_server=True),
+                name="unique_initial_install_server",
+            ),
+        ]
