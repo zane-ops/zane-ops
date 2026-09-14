@@ -235,8 +235,8 @@ cd "$INSTALL_DIR"
 
 # Initialize Docker Swarm if not already active
 if ! docker info 2>/dev/null | grep -q 'Swarm: active'; then
-    echo "➡️ Initializing Docker Swarm on 127.0.0.1..."
-    docker swarm init --advertise-addr 127.0.0.1
+    echo "➡️ Initializing Docker Swarm"
+    docker swarm init 
 fi
 
 # Download Makefile
