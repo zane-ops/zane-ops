@@ -12,29 +12,29 @@ Status: **in design**. Branch `feat/multi-server`. Tracking issue: [#446](https:
 
 Terms used throughout this doc, defined once here instead of re-explained every time they come up.
 
-| Term | Meaning |
-| --- | --- |
-| **Node** | one machine (physical or virtual) in the cluster. |
-| **Docker Swarm** | Docker's built-in clustering system — turns several machines into one pool that runs containers. |
-| **Manager / worker** | the two roles a Swarm node can have. Managers make scheduling decisions and hold the cluster's state; workers just run containers. Losing a worker only affects what was running on it; losing too many managers can take the whole cluster down. |
-| **Docker socket** | the local API Docker exposes on a machine. Having access to it means you can control every container on that machine — so who gets access to which machine's socket is a real security boundary. |
-| **Temporal** | the job-queue/workflow system ZaneOps uses for anything long-running (deploying a service, provisioning a node, etc). |
-| **Workflow (Temporal)** | one multi-step process, e.g. "deploy this service." |
-| **Activity (Temporal)** | one single step inside a workflow, e.g. "clone the repo" or "create the Swarm service." |
-| **Task queue (Temporal)** | a named list of pending activities. A worker only picks up activities sent to the queue(s) it's listening on — this is how ZaneOps decides which machine a given activity runs on. |
-| **Global service (Swarm)** | a Swarm service configured to run exactly one copy on every node that matches its rules, automatically adding/removing copies as nodes join or leave. |
-| **Placement constraint** | a rule telling Swarm which node(s) a service is allowed to run on (e.g. "only nodes labeled `zane.build=true`"). |
-| **Overlay network** | the private virtual network Swarm creates so containers on different physical machines can reach each other as if they were on the same local network. |
-| **Routing mesh** | Swarm's built-in traffic forwarding: any node can accept a request on a published port and forward it to a healthy container, even if that container is actually running on a different node. |
-| **Registry (container registry)** | a server that stores built container images so any machine can download (`pull`) them. |
-| **Buildx / buildkit** | Docker's image-building engine, used here inside a plain container rather than needing Swarm/manager access. |
-| **Volume** | a folder on disk that a container's data is stored in, so it survives container restarts. Tied to whichever machine it was created on unless explicitly copied elsewhere. |
-| **DRBD / Linstor** | DRBD (Distributed Replicated Block Device) is a Linux kernel module that mirrors a disk over the network to another machine in real time — RAID-1, but across servers. Linstor is the management layer on top that creates DRBD resources and exposes them as Docker volumes. Works with 1 or 2 nodes, unlike Ceph which needs 3. Optional addon for replicating user volumes ([§7](#sec-7), [§14](#sec-14)). |
-| **Quorum** | the minimum number of managers that must agree before the cluster accepts a change — the reason you'd want e.g. 3 managers instead of 1: the cluster keeps working even if it loses one. |
-| **Replica** | one running copy of a service; a service can have several replicas spread across nodes for redundancy. |
-| **Load balancing** | spreading incoming traffic across multiple servers instead of sending it all to one — both to share the load and so traffic can keep flowing if one server is down. There are many ways to do it (a dedicated load-balancer box, DNS, etc); this doc picks DNS (below) for the reasons in [§6(c)](#sec-6). |
-| **Health check** | a periodic "are you still alive?" probe used to decide whether to keep sending traffic/work to a server or container. |
-| **DNS record** | an entry mapping a domain name to a server's address. A domain can have several records (one per server); a *health-checked* DNS provider uses health checks to stop handing out a record for a server that's currently down — this is the form of load balancing this plan relies on for Caddy. |
+| Term                              | Meaning                                                                                                                                                                                                                                                                                                                                                                                                       |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Node**                          | one machine (physical or virtual) in the cluster.                                                                                                                                                                                                                                                                                                                                                             |
+| **Docker Swarm**                  | Docker's built-in clustering system — turns several machines into one pool that runs containers.                                                                                                                                                                                                                                                                                                              |
+| **Manager / worker**              | the two roles a Swarm node can have. Managers make scheduling decisions and hold the cluster's state; workers just run containers. Losing a worker only affects what was running on it; losing too many managers can take the whole cluster down.                                                                                                                                                             |
+| **Docker socket**                 | the local API Docker exposes on a machine. Having access to it means you can control every container on that machine — so who gets access to which machine's socket is a real security boundary.                                                                                                                                                                                                              |
+| **Temporal**                      | the job-queue/workflow system ZaneOps uses for anything long-running (deploying a service, provisioning a node, etc).                                                                                                                                                                                                                                                                                         |
+| **Workflow (Temporal)**           | one multi-step process, e.g. "deploy this service."                                                                                                                                                                                                                                                                                                                                                           |
+| **Activity (Temporal)**           | one single step inside a workflow, e.g. "clone the repo" or "create the Swarm service."                                                                                                                                                                                                                                                                                                                       |
+| **Task queue (Temporal)**         | a named list of pending activities. A worker only picks up activities sent to the queue(s) it's listening on — this is how ZaneOps decides which machine a given activity runs on.                                                                                                                                                                                                                            |
+| **Global service (Swarm)**        | a Swarm service configured to run exactly one copy on every node that matches its rules, automatically adding/removing copies as nodes join or leave.                                                                                                                                                                                                                                                         |
+| **Placement constraint**          | a rule telling Swarm which node(s) a service is allowed to run on (e.g. "only nodes labeled `zane.build=true`").                                                                                                                                                                                                                                                                                              |
+| **Overlay network**               | the private virtual network Swarm creates so containers on different physical machines can reach each other as if they were on the same local network.                                                                                                                                                                                                                                                        |
+| **Routing mesh**                  | Swarm's built-in traffic forwarding: any node can accept a request on a published port and forward it to a healthy container, even if that container is actually running on a different node.                                                                                                                                                                                                                 |
+| **Registry (container registry)** | a server that stores built container images so any machine can download (`pull`) them.                                                                                                                                                                                                                                                                                                                        |
+| **Buildx / buildkit**             | Docker's image-building engine, used here inside a plain container rather than needing Swarm/manager access.                                                                                                                                                                                                                                                                                                  |
+| **Volume**                        | a folder on disk that a container's data is stored in, so it survives container restarts. Tied to whichever machine it was created on unless explicitly copied elsewhere.                                                                                                                                                                                                                                     |
+| **DRBD / Linstor**                | DRBD (Distributed Replicated Block Device) is a Linux kernel module that mirrors a disk over the network to another machine in real time — RAID-1, but across servers. Linstor is the management layer on top that creates DRBD resources and exposes them as Docker volumes. Works with 1 or 2 nodes, unlike Ceph which needs 3. Optional addon for replicating user volumes ([§7](#sec-7), [§14](#sec-14)). |
+| **Quorum**                        | the minimum number of managers that must agree before the cluster accepts a change — the reason you'd want e.g. 3 managers instead of 1: the cluster keeps working even if it loses one.                                                                                                                                                                                                                      |
+| **Replica**                       | one running copy of a service; a service can have several replicas spread across nodes for redundancy.                                                                                                                                                                                                                                                                                                        |
+| **Load balancing**                | spreading incoming traffic across multiple servers instead of sending it all to one — both to share the load and so traffic can keep flowing if one server is down. There are many ways to do it (a dedicated load-balancer box, DNS, etc); this doc picks DNS (below) for the reasons in [§6(c)](#sec-6).                                                                                                    |
+| **Health check**                  | a periodic "are you still alive?" probe used to decide whether to keep sending traffic/work to a server or container.                                                                                                                                                                                                                                                                                         |
+| **DNS record**                    | an entry mapping a domain name to a server's address. A domain can have several records (one per server); a *health-checked* DNS provider uses health checks to stop handing out a record for a server that's currently down — this is the form of load balancing this plan relies on for Caddy.                                                                                                              |
 
 ---
 
@@ -42,15 +42,15 @@ Terms used throughout this doc, defined once here instead of re-explained every 
 
 Some of the hardest prerequisites are already in the tree. Worth knowing before planning work that duplicates them.
 
-| Piece | Where | Status for multi-node |
-| --- | --- | --- |
-| Build registry (local disk or S3) | [container_registry/models.py:60](../container_registry/models.py#L60) | ✅ **done** — built images are already pushed to a registry reachable over the `zane` overlay network, so any node can pull them. This was the biggest blocker and it is solved. |
-| Per-worker task queue via env | [settings.py:456](../backend/settings.py#L456), [worker.py:67](../temporal/worker.py#L67) | ✅ the plumbing for per-node queues (a way to tell Temporal "run this job on that specific machine") is there; only the routing logic is missing |
-| `swarm` app + `ServerNode` model | [swarm/models.py](../swarm/models.py) | 🚧 scaffolded, needs rework (see [§3](#sec-3)) |
-| SSH keys + SSH-into-server terminal | [webshell/models.py:8](../webshell/models.py#L8), [server_terminal.py](../webshell/consumers/server_terminal.py) | ✅ reusable for setting up new nodes and running remote `docker exec` commands |
-| `zane.role: proxy` label | [docker-stack.prod.yaml:53](../../docker/docker-stack.prod.yaml) | ✅ already labelled |
-| Buildx builders (the thing that actually builds Docker images) | [git_activities.py:606](../temporal/activities/git_activities.py#L606) | ✅ they are **local `docker buildx` containers**, not Swarm services — see [§4](#sec-4), this matters for who is allowed to build |
-| Swarm service metrics | [helpers.py:754](../temporal/helpers.py#L754) | ⚠️ only checks the *local* machine, so it only sees containers running on the manager |
+| Piece                                                          | Where                                                                                                            | Status for multi-node                                                                                                                                                           |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build registry (local disk or S3)                              | [container_registry/models.py:60](../container_registry/models.py#L60)                                           | ✅ **done** — built images are already pushed to a registry reachable over the `zane` overlay network, so any node can pull them. This was the biggest blocker and it is solved. |
+| Per-worker task queue via env                                  | [settings.py:456](../backend/settings.py#L456), [worker.py:67](../temporal/worker.py#L67)                        | ✅ the plumbing for per-node queues (a way to tell Temporal "run this job on that specific machine") is there; only the routing logic is missing                                 |
+| `swarm` app + `ServerNode` model                               | [swarm/models.py](../swarm/models.py)                                                                            | 🚧 scaffolded, needs rework (see [§3](#sec-3))                                                                                                                                   |
+| SSH keys + SSH-into-server terminal                            | [webshell/models.py:8](../webshell/models.py#L8), [server_terminal.py](../webshell/consumers/server_terminal.py) | ✅ reusable for setting up new nodes and running remote `docker exec` commands                                                                                                   |
+| `zane.role: proxy` label                                       | [docker-stack.prod.yaml:53](../../docker/docker-stack.prod.yaml)                                                 | ✅ already labelled                                                                                                                                                              |
+| Buildx builders (the thing that actually builds Docker images) | [git_activities.py:606](../temporal/activities/git_activities.py#L606)                                           | ✅ they are **local `docker buildx` containers**, not Swarm services — see [§4](#sec-4), this matters for who is allowed to build                                                |
+| Swarm service metrics                                          | [helpers.py:754](../temporal/helpers.py#L754)                                                                    | ⚠️ only checks the *local* machine, so it only sees containers running on the manager                                                                                            |
 
 Everything in `docker-stack.prod.yaml` is currently pinned to `node.role==manager` (i.e. it only ever runs on the manager machine). That stays true for the control-plane pieces (API, DB, Temporal, etc) — but once more than one manager exists, `node.role==manager` isn't specific enough (Swarm could move the DB and its volume between managers); it needs to become a pin to the `is_self` node, see the 3-manager example in [§14](#sec-14).
 
@@ -68,13 +68,13 @@ A "Docker socket" is basically the API that lets you control Docker on a machine
 
 **Instead: split the work by what it actually needs.** Temporal lets you assign each individual job ("activity") to a specific queue, which is exactly the tool for this.
 
-| Kind of job | Needs | Runs on queue |
-| --- | --- | --- |
-| Swarm changes — creating/updating/removing services, networks, configs, volumes | access to the manager's Docker API | `main-task-queue` (the manager's own worker, using its own local Docker) |
-| Database / proxy / registry / Caddy config changes | nothing machine-specific | `main-task-queue` |
-| Cloning code, detecting the build method, running `docker buildx build`, pushing the image | a local Docker socket + local disk on *that* machine | `build-<node>` (that node's own worker) |
-| Reading local info — container metrics, `docker exec`, disk usage | a local Docker socket | `node-<node>` |
-| Local writes we missed at first pass — pulling an image, running a custom-command healthcheck, pruning images/volumes/containers/networks/build-cache | a local Docker socket, on whichever machine the service/build actually lives on | `node-<node>` or `build-<node>`, not `main-task-queue` |
+| Kind of job                                                                                                                                           | Needs                                                                           | Runs on queue                                                            |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Swarm changes — creating/updating/removing services, networks, configs, volumes                                                                       | access to the manager's Docker API                                              | `main-task-queue` (the manager's own worker, using its own local Docker) |
+| Database / proxy / registry / Caddy config changes                                                                                                    | nothing machine-specific                                                        | `main-task-queue`                                                        |
+| Cloning code, detecting the build method, running `docker buildx build`, pushing the image                                                            | a local Docker socket + local disk on *that* machine                            | `build-<node>` (that node's own worker)                                  |
+| Reading local info — container metrics, `docker exec`, disk usage                                                                                     | a local Docker socket                                                           | `node-<node>`                                                            |
+| Local writes we missed at first pass — pulling an image, running a custom-command healthcheck, pruning images/volumes/containers/networks/build-cache | a local Docker socket, on whichever machine the service/build actually lives on | `node-<node>` or `build-<node>`, not `main-task-queue`                   |
 
 No machine ever needs remote access to another machine's Docker. Each worker only ever talks to its *own* local Docker socket.
 
@@ -99,13 +99,13 @@ For checking whether a node is alive, we don't even need a special worker — `d
 
 Today the manager runs a second worker on `schedule-task-queue` ([docker-stack.prod.yaml:249](../../docker/docker-stack.prod.yaml#L249)) that all Temporal schedules are created against ([client.py:167](../temporal/client.py#L167)). Everything it runs is node-local work — exactly what `node-<hostname>` is for — so it's replaced by the node worker rather than kept as a fourth container:
 
-| Scheduled workflow | Needs | Moves to |
-| --- | --- | --- |
-| `monitor-docker-deployment` (healthchecks), `get-docker-deployment-stats` (metrics) | the socket where the container runs | `node-<hostname>` of the deployment's node |
-| `monitor-compose-stack`, `collect-compose-stack-metrics` | same, per stack | `node-<hostname>` (fan-out if a stack spans nodes) |
-| `monitor-registry-deployment` | manager socket | `node-<manager>` |
-| `docker-system-prune` | every socket | one schedule per node, each on its own `node-<hostname>` |
-| `cleanup-app-data`, `check-license` (ee) | nothing machine-specific | `node-<manager>` |
+| Scheduled workflow                                                                  | Needs                               | Moves to                                                 |
+| ----------------------------------------------------------------------------------- | ----------------------------------- | -------------------------------------------------------- |
+| `monitor-docker-deployment` (healthchecks), `get-docker-deployment-stats` (metrics) | the socket where the container runs | `node-<hostname>` of the deployment's node               |
+| `monitor-compose-stack`, `collect-compose-stack-metrics`                            | same, per stack                     | `node-<hostname>` (fan-out if a stack spans nodes)       |
+| `monitor-registry-deployment`                                                       | manager socket                      | `node-<manager>`                                         |
+| `docker-system-prune`                                                               | every socket                        | one schedule per node, each on its own `node-<hostname>` |
+| `cleanup-app-data`, `check-license` (ee)                                            | nothing machine-specific            | `node-<manager>`                                         |
 
 What that changes in code:
 - `TEMPORALIO_SCHEDULE_TASK_QUEUE` is removed; `create_schedule` / `create_or_update_schedule` take an explicit `task_queue` instead of defaulting to it.
@@ -184,12 +184,12 @@ Service.node_placement  →  Environment.default_node_placement  →  Project.de
 
 Each of Service/Environment/Project stores a small choice field plus an optional link to a specific node:
 
-| `placement_strategy` | Meaning |
-| --- | --- |
-| `ANY` | no constraint, Swarm decides |
-| `ANY_APP_NODE` | any node labeled `zane.apps==true` |
-| `SPECIFIC` | must run on `node.hostname==<placement_node.hostname>` |
-| `PINNED_BY_VOLUME` | not chosen by the user — see [§6](#sec-6), happens automatically when a service has saved data on a specific machine |
+| `placement_strategy` | Meaning                                                                                                              |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `ANY`                | no constraint, Swarm decides                                                                                         |
+| `ANY_APP_NODE`       | any node labeled `zane.apps==true`                                                                                   |
+| `SPECIFIC`           | must run on `node.hostname==<placement_node.hostname>`                                                               |
+| `PINNED_BY_VOLUME`   | not chosen by the user — see [§6](#sec-6), happens automatically when a service has saved data on a specific machine |
 
 All of this gets resolved into an actual Swarm placement constraint in one place: [main_activities.py:1400](../temporal/activities/main_activities.py#L1400).
 
@@ -337,7 +337,7 @@ class ProxyDesiredConfigAPIView(APIView):
         return Response(ZaneProxyClient.get_desired_config())
 ```
 
-**3. A per-node job that pulls it and loads it locally.** This has to run once per machine (on each node's own `node-<hostname>` queue, [§9](#sec-9)) rather than once globally, because each Caddy instance's admin API is only reachable from its own node. It calls `get_desired_config()` directly rather than through the HTTP endpoint above — this activity already runs inside the same ZaneOps app image, with direct DB access, since every node's Temporal worker *is* that image ([§9](#sec-9)). Going over HTTP to reach code running in the same process would just be a slower, more fragile way to call a function. The endpoint from step 2 stays, but purely as a debug/inspection surface for humans — not something this activity itself needs.
+**3. A per-node job (activity) that pulls it and loads it locally.** This has to run once per machine (on each node's own `node-<hostname>` queue, [§9](#sec-9)) rather than once globally, because each Caddy instance's admin API is only reachable from its own node. It calls `get_desired_config()` directly rather than through the HTTP endpoint above — this activity already runs inside the same ZaneOps app image, with direct DB access, since every node's Temporal worker *is* that image ([§9](#sec-9)). Going over HTTP to reach code running in the same process would just be a slower, more fragile way to call a function. The endpoint from step 2 stays, but purely as a debug/inspection surface for humans — not something this activity itself needs.
 
 A module-level lock also guards against the race from two deployments landing close together: whichever call is already mid-flight finishes its read-then-load uninterrupted, and the second one runs right after with a fresh read — instead of two overlapping calls racing to be the last `/load` and possibly clobbering each other out of order.
 
@@ -388,12 +388,12 @@ Some commenters suggested we should prepare the folder structure for this on *ev
 
 Both of these currently assume everything is running locally, on the same machine as the API.
 
-| Feature | Today | With multiple machines |
-| --- | --- | --- |
+| Feature                                   | Today                                                                                                                                     | With multiple machines                                                                                                                                                                                                                       |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Opening a shell into a deployed container | `docker.from_env()` + `exec`, run locally ([container_terminal_consumer.py:29](../webshell/consumers/container_terminal_consumer.py#L29)) | look up which machine the container is actually running on (via the Swarm API), then SSH into that machine and run `docker exec` there — reusing the pattern already built in [server_terminal.py](../webshell/consumers/server_terminal.py) |
-| Opening a shell into the server itself | SSH using a stored `SSHKey` | same as today, just let the user pick which machine in the UI |
-| Container metrics (CPU/memory usage etc.) | read from the local socket ([helpers.py:826](../temporal/helpers.py#L826)) | run the same metrics-collecting job on each machine's own `node-<hostname>` queue, then combine the results |
-| Picking which replica to connect to | doesn't exist yet | new UI: list all running copies of a service along with which machine each is on, let the user pick one |
+| Opening a shell into the server itself    | SSH using a stored `SSHKey`                                                                                                               | same as today, just let the user pick which machine in the UI                                                                                                                                                                                |
+| Container metrics (CPU/memory usage etc.) | read from the local socket ([helpers.py:826](../temporal/helpers.py#L826))                                                                | run the same metrics-collecting job on each machine's own `node-<hostname>` queue, then combine the results                                                                                                                                  |
+| Picking which replica to connect to       | doesn't exist yet                                                                                                                         | new UI: list all running copies of a service along with which machine each is on, let the user pick one                                                                                                                                      |
 
 Using SSH for remote shell access is a deliberate choice — it reuses infrastructure we already have, and doesn't require opening any new network port beyond the standard SSH port (22). The tradeoff is that it depends on SSH keys staying valid and reachable.
 
@@ -422,16 +422,16 @@ Each of these steps is written so it can safely be retried on its own — so if 
 
 Each phase ends with a fully working cluster, so this can ship gradually instead of all at once.
 
-| # | Phase | What's included | What becomes possible |
-| --- | --- | --- | --- |
-| 0 | Model + backfill | Rework `ServerNode`, auto-migrate every existing install into a valid 1-node cluster, add a read-only "list of nodes" screen in the UI | no visible behavior change yet |
-| 1 | Node lifecycle | SSH-based setup workflow, joining/leaving/draining a machine, labels, port-reachability check, checking if a node is alive | you can add machines to the cluster; nothing runs on them yet |
-| 2 | Multi-node data plane | Fluentd everywhere, Caddy everywhere + shared cert storage + **keeping every Caddy instance's config in sync** ([§6](#sec-6)), confirm image pulling works from a second machine | user services can actually run on any machine |
-| 3 | Placement | Let Projects/Environments/Services choose where they run, volume pinning, `SharedVolume` handling, UI for picking a machine | users can choose where things run |
-| 4 | Distributed builds | Split build jobs from cluster-control jobs ([§2.1](#sec-2-1)), per-machine build queues, both routing modes, global build worker service | builds no longer have to happen on the manager |
-| 5 | Per-node operations | Node worker as a global service, combining metrics from all machines, SSH-based container shell, "pick a replica" UI, **move `pull_image_for_deployment`, `run_deployment_healthcheck`'s container calls, and `DockerSystemPruneActivities` off `main-task-queue`** (found during the [§2.1](#sec-2-1) audit — see below), **retire `schedule-task-queue` — all schedules target a `node-<hostname>` queue** ([§2.2](#sec-2-2-1)) | full visibility across all machines |
-| 6 | Docs | Write a scaling guide: quorum (incl. the manager-spacing warning in [§2.3](#sec-2-3)), 1/2/3-machine setups, firewall rules, what counts as "high availability" and what doesn't | |
-| 7 | User-service & proxy HA (see [§14](#sec-14)) | Multi-replica placement so Swarm can spread/reschedule stateless services, Linstor/DRBD for stateful ones, DNS-based external entry point for Caddy (surface node IPs in the UI + docs) | a user service (and the proxy in front of it) survives losing one node — without needing the API/DB/Temporal to be HA, which is explicitly out of scope |
+| #   | Phase                                        | What's included                                                                                                                                                                                                                                                                                                                                                                                                                   | What becomes possible                                                                                                                                   |
+| --- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0   | Model + backfill                             | Rework `ServerNode`, auto-migrate every existing install into a valid 1-node cluster, add a read-only "list of nodes" screen in the UI                                                                                                                                                                                                                                                                                            | no visible behavior change yet                                                                                                                          |
+| 1   | Node lifecycle                               | SSH-based setup workflow, joining/leaving/draining a machine, labels, port-reachability check, checking if a node is alive                                                                                                                                                                                                                                                                                                        | you can add machines to the cluster; nothing runs on them yet                                                                                           |
+| 2   | Multi-node data plane                        | Fluentd everywhere, Caddy everywhere + shared cert storage + **keeping every Caddy instance's config in sync** ([§6](#sec-6)), confirm image pulling works from a second machine                                                                                                                                                                                                                                                  | user services can actually run on any machine                                                                                                           |
+| 3   | Placement                                    | Let Projects/Environments/Services choose where they run, volume pinning, `SharedVolume` handling, UI for picking a machine                                                                                                                                                                                                                                                                                                       | users can choose where things run                                                                                                                       |
+| 4   | Distributed builds                           | Split build jobs from cluster-control jobs ([§2.1](#sec-2-1)), per-machine build queues, both routing modes, global build worker service                                                                                                                                                                                                                                                                                          | builds no longer have to happen on the manager                                                                                                          |
+| 5   | Per-node operations                          | Node worker as a global service, combining metrics from all machines, SSH-based container shell, "pick a replica" UI, **move `pull_image_for_deployment`, `run_deployment_healthcheck`'s container calls, and `DockerSystemPruneActivities` off `main-task-queue`** (found during the [§2.1](#sec-2-1) audit — see below), **retire `schedule-task-queue` — all schedules target a `node-<hostname>` queue** ([§2.2](#sec-2-2-1)) | full visibility across all machines                                                                                                                     |
+| 6   | Docs                                         | Write a scaling guide: quorum (incl. the manager-spacing warning in [§2.3](#sec-2-3)), 1/2/3-machine setups, firewall rules, what counts as "high availability" and what doesn't                                                                                                                                                                                                                                                  |                                                                                                                                                         |
+| 7   | User-service & proxy HA (see [§14](#sec-14)) | Multi-replica placement so Swarm can spread/reschedule stateless services, Linstor/DRBD for stateful ones, DNS-based external entry point for Caddy (surface node IPs in the UI + docs)                                                                                                                                                                                                                                           | a user service (and the proxy in front of it) survives losing one node — without needing the API/DB/Temporal to be HA, which is explicitly out of scope |
 
 Phase 2 is the riskiest one. We should start testing the Caddy config-syncing approach ([§6](#sec-6)) early — even before phase 1 is fully done — because if option 1 doesn't work out, it affects phases 2 through 5.
 
@@ -455,15 +455,15 @@ A quick reference for what actually runs where, at different cluster sizes. "Glo
 
 Which ZaneOps pieces are global vs. manager-only, regardless of cluster size:
 
-| Piece | Where it runs | Notes |
-| --- | --- | --- |
-| API + DB + Temporal server | manager only | control plane, never moves |
-| Temporal worker on `main-task-queue` | manager only | the only thing allowed to call the Swarm API ([§2.1](#sec-2-1)) |
-| Temporal worker on `node-<hostname>` | **every** node, always | health polling, metrics, exec, and all Temporal schedules — added in phase 5, not label-gated. Replaces today's `schedule-task-queue` worker ([§2.2](#sec-2-2-1)) |
-| Fluentd | **every** node, always | global service, no label — see [§5](#sec-5) |
-| Caddy (proxy) | **every** node, always | global service, no label — routing mesh means it doesn't need to be co-located with the app it routes to |
-| Temporal worker on `build-<hostname>` | only nodes labeled `zane.build=true` | this is the one thing that's label-gated |
-| User service containers | only nodes labeled `zane.apps=true` | via the placement chain in [§3](#sec-3) |
+| Piece                                 | Where it runs                        | Notes                                                                                                                                                             |
+| ------------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API + DB + Temporal server            | manager only                         | control plane, never moves                                                                                                                                        |
+| Temporal worker on `main-task-queue`  | manager only                         | the only thing allowed to call the Swarm API ([§2.1](#sec-2-1))                                                                                                   |
+| Temporal worker on `node-<hostname>`  | **every** node, always               | health polling, metrics, exec, and all Temporal schedules — added in phase 5, not label-gated. Replaces today's `schedule-task-queue` worker ([§2.2](#sec-2-2-1)) |
+| Fluentd                               | **every** node, always               | global service, no label — see [§5](#sec-5)                                                                                                                       |
+| Caddy (proxy)                         | **every** node, always               | global service, no label — routing mesh means it doesn't need to be co-located with the app it routes to                                                          |
+| Temporal worker on `build-<hostname>` | only nodes labeled `zane.build=true` | this is the one thing that's label-gated                                                                                                                          |
+| User service containers               | only nodes labeled `zane.apps=true`  | via the placement chain in [§3](#sec-3)                                                                                                                           |
 
 ### 1 node (today's default, and what phase 0 backfills to)
 
@@ -486,10 +486,10 @@ flowchart TB
 
 This is the "most common real setup" called out in [§2.3](#sec-2-3): builds never touch the manager, so it can't get starved by a heavy build under load.
 
-| Node | Role | `zane.build` | `zane.apps` | Receives user apps? |
-| --- | --- | --- | --- | --- |
-| A | manager | false | true | ✅ yes |
-| B | worker | true | false | ❌ no — build-only |
+| Node | Role    | `zane.build` | `zane.apps` | Receives user apps? |
+| ---- | ------- | ------------ | ----------- | ------------------- |
+| A    | manager | false        | true        | ✅ yes               |
+| B    | worker  | true         | false       | ❌ no — build-only   |
 
 ```mermaid
 flowchart TB
@@ -511,10 +511,10 @@ flowchart TB
 
 **Alternative 2-node split**, if you'd rather keep builds on the manager and dedicate the second machine purely to hosting apps (e.g. the second machine has more RAM but a slower disk):
 
-| Node | Role | `zane.build` | `zane.apps` | Receives user apps? |
-| --- | --- | --- | --- | --- |
-| A | manager | true | false | ❌ no |
-| B | worker | false | true | ✅ yes |
+| Node | Role    | `zane.build` | `zane.apps` | Receives user apps? |
+| ---- | ------- | ------------ | ----------- | ------------------- |
+| A    | manager | true         | false       | ❌ no                |
+| B    | worker  | false        | true        | ✅ yes               |
 
 ```mermaid
 flowchart TB
@@ -538,11 +538,11 @@ flowchart TB
 
 Manager does cluster bookkeeping only; nothing user-facing runs there.
 
-| Node | Role | `zane.build` | `zane.apps` | Receives user apps? |
-| --- | --- | --- | --- | --- |
-| A | manager | false | false | ❌ no — control plane only |
-| B | worker | true | false | ❌ no — build-only |
-| C | worker | false | true | ✅ yes |
+| Node | Role    | `zane.build` | `zane.apps` | Receives user apps?       |
+| ---- | ------- | ------------ | ----------- | ------------------------- |
+| A    | manager | false        | false       | ❌ no — control plane only |
+| B    | worker  | true         | false       | ❌ no — build-only         |
+| C    | worker  | false        | true        | ✅ yes                     |
 
 ```mermaid
 flowchart TB
@@ -618,12 +618,12 @@ What to notice:
 
 "Multi-server" and "HA" keep getting conflated in this doc, so a scope check first, agreed explicitly: **what has to survive losing a node, and what doesn't.**
 
-| Must survive a node dying | Fine to be briefly unavailable |
-| --- | --- |
-| User service containers | The API |
-| Caddy — and traffic actually reaching a live instance | Postgres |
-| | Temporal |
-| | Builds (a failed build just gets retried by the user — [§4](#sec-4)) |
+| Must survive a node dying                             | Fine to be briefly unavailable                                       |
+| ----------------------------------------------------- | -------------------------------------------------------------------- |
+| User service containers                               | The API                                                              |
+| Caddy — and traffic actually reaching a live instance | Postgres                                                             |
+|                                                       | Temporal                                                             |
+|                                                       | Builds (a failed build just gets retried by the user — [§4](#sec-4)) |
 
 That right column is a deliberate choice, not an oversight: if the node running the API/DB/Temporal goes down, already-running user services keep serving traffic untouched (Caddy doesn't need the API to keep routing) — you just can't deploy or edit anything until it's back. One caveat: with a *single* manager, Swarm itself is down too, so it can't reschedule a lost replica onto another node until the manager returns — only the containers that were already running survive. Rescheduling during a manager outage needs manager quorum, see the 3-manager example below. No Postgres replication, no Temporal HA, no multi-replica API is in scope for this plan. That's what keeps this tractable — real control-plane HA would be a much bigger, separate effort, and it's explicitly not one we're taking on.
 
@@ -654,11 +654,11 @@ Concretely, phase 7 is: (1) default placement to `ANY_APP_NODE` + support `repli
 
 The smallest setup where a user service actually survives losing a node. Manager A is control plane only; B and C both host apps.
 
-| Node | Role | `zane.build` | `zane.apps` | Replicated storage | Public IP in DNS? |
-| --- | --- | --- | --- | --- | --- |
-| A | manager | true | false | no | ✅ `zaneops.example.com → A` only (the dashboard/API live here) — **not** in the `app.example.com` pool |
-| B | worker | false | true | yes | ✅ `app.example.com → B` (health-checked) |
-| C | worker | false | true | yes | ✅ `app.example.com → C` (health-checked) |
+| Node | Role    | `zane.build` | `zane.apps` | Replicated storage | Public IP in DNS?                                                                                      |
+| ---- | ------- | ------------ | ----------- | ------------------ | ------------------------------------------------------------------------------------------------------ |
+| A    | manager | true         | false       | no                 | ✅ `zaneops.example.com → A` only (the dashboard/API live here) — **not** in the `app.example.com` pool |
+| B    | worker  | false        | true        | yes                | ✅ `app.example.com → B` (health-checked)                                                               |
+| C    | worker  | false        | true        | yes                | ✅ `app.example.com → C` (health-checked)                                                               |
 
 ```mermaid
 flowchart TB
@@ -716,13 +716,13 @@ The setup above still has one manager, which is the actual single point of failu
 
 5 nodes: 3 managers (M1, M2, M3), 2 workers (W1, W2). Managers run *only* Swarm bookkeeping and (on M1) the ZaneOps control plane — no builds, no user apps. With just 2 workers, both carry `zane.build=true` and `zane.apps=true` — there's no spare capacity to split build and app roles onto dedicated nodes.
 
-| Node | Role | `zane.build` | `zane.apps` | Runs ZaneOps control plane? | Public IP in DNS? |
-| --- | --- | --- | --- | --- | --- |
-| M1 | manager (`is_self`) | false | false | ✅ API + DB + Temporal + `main-task-queue` | ✅ `zaneops.example.com → M1` |
-| M2 | manager | false | false | ❌ | ❌ |
-| M3 | manager | false | false | ❌ | ❌ |
-| W1 | worker | true | true | ❌ | ✅ `app.example.com → W1` (health-checked) |
-| W2 | worker | true | true | ❌ | ✅ `app.example.com → W2` (health-checked) |
+| Node | Role                | `zane.build` | `zane.apps` | Runs ZaneOps control plane?               | Public IP in DNS?                         |
+| ---- | ------------------- | ------------ | ----------- | ----------------------------------------- | ----------------------------------------- |
+| M1   | manager (`is_self`) | false        | false       | ✅ API + DB + Temporal + `main-task-queue` | ✅ `zaneops.example.com → M1`              |
+| M2   | manager             | false        | false       | ❌                                         | ❌                                         |
+| M3   | manager             | false        | false       | ❌                                         | ❌                                         |
+| W1   | worker              | true         | true        | ❌                                         | ✅ `app.example.com → W1` (health-checked) |
+| W2   | worker              | true         | true        | ❌                                         | ✅ `app.example.com → W2` (health-checked) |
 
 ```mermaid
 flowchart TB
@@ -773,12 +773,12 @@ flowchart TB
 
 What each failure looks like:
 
-| Dies | User apps | Rescheduling | Dashboard / deploys |
-| --- | --- | --- | --- |
-| **W1 or W2** (a worker) | web API keeps serving from the surviving worker; DNS drops the dead one | ✅ Swarm re-creates the lost replica on the survivor once it's back, or the moment it's back if capacity was tight; DB moves to the worker where its volume replica is | ✅ unaffected, but builds queue up until the dead worker returns — `build-router` has nowhere else to send them with only 2 workers |
-| **M2 or M3** (a manager without the control plane) | unaffected | ✅ quorum holds (2 of 3), Swarm keeps scheduling | ✅ unaffected |
-| **M1** (the manager running the control plane) | keep serving | ✅ **quorum holds (M2+M3), so Swarm still reschedules user apps if a worker also fails** — this is what the single-manager setups can't do | ❌ down until M1 is back: API, DB, Temporal, cert renewals all live there |
-| **two managers** | keep serving | ❌ quorum lost; Swarm is read-only until a manager returns | ❌ if M1 is one of them |
+| Dies                                               | User apps                                                               | Rescheduling                                                                                                                                                          | Dashboard / deploys                                                                                                                |
+| -------------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **W1 or W2** (a worker)                            | web API keeps serving from the surviving worker; DNS drops the dead one | ✅ Swarm re-creates the lost replica on the survivor once it's back, or the moment it's back if capacity was tight; DB moves to the worker where its volume replica is | ✅ unaffected, but builds queue up until the dead worker returns — `build-router` has nowhere else to send them with only 2 workers |
+| **M2 or M3** (a manager without the control plane) | unaffected                                                              | ✅ quorum holds (2 of 3), Swarm keeps scheduling                                                                                                                       | ✅ unaffected                                                                                                                       |
+| **M1** (the manager running the control plane)     | keep serving                                                            | ✅ **quorum holds (M2+M3), so Swarm still reschedules user apps if a worker also fails** — this is what the single-manager setups can't do                             | ❌ down until M1 is back: API, DB, Temporal, cert renewals all live there                                                           |
+| **two managers**                                   | keep serving                                                            | ❌ quorum lost; Swarm is read-only until a manager returns                                                                                                             | ❌ if M1 is one of them                                                                                                             |
 
 What this buys over the single-manager setups: losing *any one* node — including the one that runs ZaneOps — never stops Swarm from keeping user services alive. The only thing that still goes away with M1 is the ability to deploy/manage, which is the explicit right-column tradeoff.
 
