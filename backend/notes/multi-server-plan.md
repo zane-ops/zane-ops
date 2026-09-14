@@ -339,17 +339,22 @@ class ProxyDesiredConfigAPIView(APIView):
 
 **3. A per-node job (activity) that pulls it and loads it locally.** This has to run once per machine (on each node's own `node-<hostname>` queue, [§9](#sec-9)) rather than once globally, because each Caddy instance's admin API is only reachable from its own node. It calls `get_desired_config()` directly rather than through the HTTP endpoint above — this activity already runs inside the same ZaneOps app image, with direct DB access, since every node's Temporal worker *is* that image ([§9](#sec-9)). Going over HTTP to reach code running in the same process would just be a slower, more fragile way to call a function. The endpoint from step 2 stays, but purely as a debug/inspection surface for humans — not something this activity itself needs.
 
-A module-level lock also guards against the race from two deployments landing close together: whichever call is already mid-flight finishes its read-then-load uninterrupted, and the second one runs right after with a fresh read — instead of two overlapping calls racing to be the last `/load` and possibly clobbering each other out of order.
+A distributed lock also guards against the race from two deployments landing close together: whichever call is already mid-flight finishes its read-then-load uninterrupted, and the second one runs right after with a fresh read — instead of two overlapping calls racing to be the last `/load` and possibly clobbering each other out of order. This has to be a **Redis lock, not an in-process one** — an `asyncio.Lock()` only protects against two calls colliding inside the same worker process, but nothing here guarantees exactly one process ever handles this node's activities. Redis (`zane.valkey`) is already infra every node reaches ([§6(a)](#sec-6)), and `redis-py` is already a transitive dependency of Django's own redis cache backend ([settings.py:121](../backend/settings.py#L121)), so this doesn't add anything new:
 
 ```python
 # temporal/activities/main_activities.py
 
-_proxy_sync_lock = asyncio.Lock()
+import socket
+import redis
+from django.conf import settings
+
+_redis_client = redis.Redis.from_url(settings.REDIS_URL)
 
 
 @activity.defn
 async def sync_proxy_config(self):
-    async with _proxy_sync_lock:
+    lock = _redis_client.lock(f"proxy-sync-lock-{socket.gethostname()}", timeout=30)
+    with lock:
         desired_config = ZaneProxyClient.get_desired_config()
         requests.post(
             f"{settings.CADDY_PROXY_ADMIN_HOST}/load",
@@ -359,7 +364,13 @@ async def sync_proxy_config(self):
         )
 ```
 
-Scheduled every couple of minutes on every node — same mechanism as the other per-node Temporal schedules ([§2.2](#sec-2-2-1)). Worth noting this doesn't just replace the periodic backstop: every *normal* deployment/URL change could call `sync_proxy_config` directly instead of today's per-route etag-patch dance in `upsert_service_url` / `upsert_compose_stack_service_url` — simpler code, at the cost of recomputing and pushing the *entire* config on every single change instead of one route. Whether that trade is worth it for the common case (one deployment, thousands of routes) is worth benchmarking before ripping out the etag path entirely; keeping both — etag-patch for the common single-route change, full reload for periodic reconciliation and new-node bootstrap — is the safer incremental step.
+The lock key includes the hostname on purpose — this only needs to serialize two syncs racing for the *same* node's Caddy instance; nodes don't need to wait on each other.
+
+**When does this actually need to run?** Not on a timer. The obvious triggers are enough: call it as the last step of every deploy workflow (Docker/Git/Compose), and once when a new node joins ([§9](#sec-9)) so its Caddy — which starts from nothing — gets caught up. A periodic tick isn't pulling its weight here once you notice that `zane-proxy` already persists its live config across container recreation: `docker/docker-stack.prod.yaml` mounts `caddy-config:/config` and runs `caddy run --resume` ([docker-stack.prod.yaml:34,65-66](../../docker/docker-stack.prod.yaml#L34)), and Caddy autosaves whatever config it's running to that same volume on every change. The image only seeds `/config/caddy/autosave.json` with the baked-in default ([docker/proxy/Dockerfile](../../docker/proxy/Dockerfile)) the *first* time the volume is empty — after that, `--resume` always reloads this node's own last-known-good config, even if Swarm reschedules or restarts the container. So "a Caddy container comes back with no config" isn't actually a case that happens to an existing node; it only happens to a node that never had one, which the node-join trigger already covers.
+
+The one case nothing here catches is that per-node volume itself getting lost outright (disk replaced, node reprovisioned, someone runs `docker volume rm`) — genuinely rare, and arguably belongs with the other "cluster state got wiped" recovery paths ([`fix_swarm_networking`](../swarm/management/commands/fix_swarm_networking.py)) rather than justifying an always-on poll for a scenario that isn't self-healing anyway (a lost volume needs a human to notice the node is unreachable, not a timer).
+
+Worth noting this doesn't just replace the periodic backstop idea: every *normal* deployment/URL change could call `sync_proxy_config` directly instead of today's per-route etag-patch dance in `upsert_service_url` / `upsert_compose_stack_service_url` — simpler code, at the cost of recomputing and pushing the *entire* config on every single change instead of one route. Whether that trade is worth it for the common case (one deployment, thousands of routes) is worth benchmarking before ripping out the etag path entirely; keeping both — etag-patch for the common single-route change, full reload for deploy-triggered sync and new-node bootstrap — is the safer incremental step.
 
 We should budget real time for this — it's the piece most likely to take longer than expected.
 
