@@ -1,6 +1,15 @@
+import django_filters
 from rest_framework import serializers
 from . import models
 from .validators import validate_unix_username
+
+
+class SSHKeyFilterSet(django_filters.FilterSet):
+    user = django_filters.CharFilter(lookup_expr="icontains")
+
+    class Meta:
+        model = models.SSHKey
+        fields = ["user"]
 
 
 class CreateSSHKeyRequestSerializer(serializers.Serializer):

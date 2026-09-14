@@ -1,8 +1,10 @@
 from typing import cast
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListCreateAPIView, RetrieveDestroyAPIView
 
 from .serializers import (
     SSHKeySerializer,
+    SSHKeyFilterSet,
     CreateSSHKeyRequestSerializer,
 )
 from .models import SSHKey
@@ -31,6 +33,8 @@ class SSHKeyListAPIView(ListCreateAPIView):
     serializer_class = SSHKeySerializer
     queryset = SSHKey.objects.all()
     pagination_class = None
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = SSHKeyFilterSet
 
     @extend_schema(operation_id="getSSHKeyList", summary="List all ssh keys")
     def get(self, request, *args, **kwargs):
