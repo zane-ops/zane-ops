@@ -147,6 +147,7 @@ INSTALLED_APPS = [
     "container_registry.apps.ContainerRegistryConfig",
     "compose.apps.ComposeConfig",
     "console.apps.ConsoleConfig",
+    "swarm.apps.SwarmConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
