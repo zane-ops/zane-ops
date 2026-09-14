@@ -572,6 +572,8 @@ flowchart TB
         vol2["user volume (ex: pg DB) · replica"]
     end
     vol1 -. "volume replication" .- vol2
+    A ~~~ B
+    B ~~~ C
 ```
 
 Two user services, one of each kind:
