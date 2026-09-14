@@ -241,9 +241,11 @@ Two ways to solve this:
 1. **Send every change to every instance.** Switch `zane-proxy` to a mode (`endpoint_mode: dnsrr`) that lets us look up the IP of every single instance, then apply each config change to all of them individually. We already have most of the code needed to find those IPs: [`get_swarm_service_aliases_ips_on_network`](../temporal/helpers.py#L414). Downside: more requests per change, and we need to handle partial failures (what if it succeeds on 2 out of 3 machines?) and repeat that "safety check" retry logic per machine.
 2. **One "leader" instance, others just copy it.** Keep a single Caddy on the manager as the source of truth, and have the rest load config from it. Caddy doesn't have a built-in way to do this, so we'd have to write our own syncing logic from scratch.
 
-**Recommendation: option 1**, plus a periodic background job on every node that pulls the full desired config from one internal endpoint and loads it wholesale — no diffing. That also handles the case where a brand new machine joins after a config change already happened.
+**Recommendation: option 1**, plus having every Caddy instance pull its own config directly, on its own schedule, from one internal endpoint — no diffing, and no code in ZaneOps pushing anything. That also handles the case where a brand new machine joins after a config change already happened.
 
-We landed here instead of a diff-based reconciler because Caddy's admin API already has exactly the primitive this needs: `POST /load` replaces the *entire* running config in one call, and Caddy does its own internal graceful reload (only listeners whose config actually changed get touched). So instead of comparing "what's live" against "what should be" route by route, we just regenerate the whole desired config from the DB and push it, every time. The DB is the only source of truth; nothing is ever computed by inspecting a Caddy instance's current state.
+We landed here instead of a diff-based reconciler because Caddy has a built-in primitive for exactly this: an HTTP config loader (`caddyconfig.HTTPLoader`, [`caddy/caddyconfig/httploader.go`](https://github.com/caddyserver/caddy/blob/master/caddyconfig/httploader.go)) that fetches a full config from a URL, plus `admin.config.load_delay` ([`caddy/admin.go`](https://github.com/caddyserver/caddy/blob/master/admin.go), `ConfigSettings`), which tells Caddy to pull again after a given duration. Both live in the core `caddyconfig`/`caddy` packages — not a plugin, no custom `xcaddy build` needed, it's compiled into every standard Caddy binary including the `caddy-cloudflare` base image this repo already uses ([docker/proxy/Dockerfile](../../docker/proxy/Dockerfile)).
+
+The one real gotcha: `load_delay` is **not a repeating timer** — it's a one-shot "pull again after N seconds." Continuous polling only happens because **the config Caddy just pulled has to itself contain another `load` + `load_delay`**, re-arming the next pull. Caddy's own source comment is explicit about this: *"it is an error if a pulled config is configured to pull another config without a load_delay, as this creates a tight loop [if there's no delay] ... to load configs on a regular interval, ensure this value is set the same on all loaded configs."* Concretely: `get_desired_config()` has to bake the same `admin.config.load`/`load_delay` block into *every* response, forever — if that's ever missing (a bug, a bad edit), that one node's polling silently stops with no error, frozen on whatever it last had. Both fields are also marked **EXPERIMENTAL** in Caddy's source, so this is worth a small spike to confirm it behaves as documented before leaning on it for real, and worth a test asserting the block is always present in `get_desired_config()`'s output.
 
 **1. One function that turns the DB into a full Caddy config.** Everything it needs already exists as a per-route builder in [`ZaneProxyClient`](../temporal/proxy.py) — `_get_request_for_service_url`, `_get_request_for_compose_stack_service_url`, `_get_request_for_build_registry` — today those are only ever called one route at a time inside an etag-patch loop. This just calls all of them for every row in the DB and assembles the result into the same shape as [`docker/proxy/default-caddy-config-prod.json`](../../docker/proxy/default-caddy-config-prod.json):
 
@@ -296,6 +298,18 @@ class ZaneProxyClient:
         return {
             "@id": "root",
             "logging": DEFAULT_CADDY_LOGGING,  # unchanged from the default config
+            "admin": {
+                "config": {
+                    # Re-arms the next pull — every response this function
+                    # returns MUST include this block, or the node that
+                    # loaded it stops polling silently. See caveat below.
+                    "load": {
+                        "module": "http",
+                        "url": f"http://api.{settings.ZANE_INTERNAL_DOMAIN}/internal/proxy-config/",
+                    },
+                    "load_delay": PROXY_CONFIG_POLL_INTERVAL,  # e.g. "10s"
+                }
+            },
             "apps": {
                 "http": {
                     "servers": {
@@ -323,7 +337,7 @@ class ZaneProxyClient:
         }
 ```
 
-**2. An internal-only endpoint that exposes it.** Reachable via the same internal-domain pattern already used for `api.zaneops.internal` ([settings.py:71](../backend/settings.py#L71)) — not exposed publicly, only resolvable/reachable from inside the `zane` overlay network:
+**2. An internal-only endpoint that exposes it.** This is no longer just a debug surface — it's the actual mechanism every Caddy instance uses to stay in sync, reachable via the same internal-domain pattern already used for `api.zaneops.internal` ([settings.py:71](../backend/settings.py#L71)), not exposed publicly, only resolvable/reachable from inside the `zane` overlay network:
 
 ```python
 # zane_api/views/internal.py
@@ -337,40 +351,15 @@ class ProxyDesiredConfigAPIView(APIView):
         return Response(ZaneProxyClient.get_desired_config())
 ```
 
-**3. A per-node job (activity) that pulls it and loads it locally.** This has to run once per machine (on each node's own `node-<hostname>` queue, [§9](#sec-9)) rather than once globally, because each Caddy instance's admin API is only reachable from its own node. It calls `get_desired_config()` directly rather than through the HTTP endpoint above — this activity already runs inside the same ZaneOps app image, with direct DB access, since every node's Temporal worker *is* that image ([§9](#sec-9)). Going over HTTP to reach code running in the same process would just be a slower, more fragile way to call a function. The endpoint from step 2 stays, but purely as a debug/inspection surface for humans — not something this activity itself needs.
+Worth a short cache on the computed dict (`zane_api.utils.cache_result`, a few seconds) — every node hits this on its own `load_delay` cadence forever, so at N nodes this endpoint gets N requests every interval regardless of whether anything changed. A cheap cache absorbs that without adding meaningfully to how stale a node's view can get, since `load_delay` already bounds that.
 
-A distributed lock also guards against the race from two deployments landing close together: whichever call is already mid-flight finishes its read-then-load uninterrupted, and the second one runs right after with a fresh read — instead of two overlapping calls racing to be the last `/load` and possibly clobbering each other out of order. This has to be a **Redis lock, not an in-process one** — an `asyncio.Lock()` only protects against two calls colliding inside the same worker process, but nothing here guarantees exactly one process ever handles this node's activities. Redis (`zane.valkey`) is already infra every node reaches ([§6(a)](#sec-6)), and `redis-py` is already a transitive dependency of Django's own redis cache backend ([settings.py:121](../backend/settings.py#L121)), so this doesn't add anything new:
+**3. Every Caddy instance points at it from its very first boot — no ZaneOps code has to push anything, ever again.** Both `docker/proxy/default-caddy-config-{dev,prod}.json` (the config baked into the image, [Dockerfile:11](../../docker/proxy/Dockerfile#L11)) get the same `admin.config.load` / `load_delay` block added. From there it's self-sustaining: the bootstrap config's first pull returns `get_desired_config()`'s output, which contains the same block, which arms the next pull, forever. This works identically whether the container is booting fresh (new node, [§9](#sec-9)) or resuming its own last state (`caddy run --resume` against the `caddy-config` volume, [docker-stack.prod.yaml:34,65-66](../../docker/docker-stack.prod.yaml#L34)) — either way, the moment it's running *any* config with this block in it, it keeps itself current on its own.
 
-```python
-# temporal/activities/main_activities.py
+This removes the entire per-node Temporal activity, the Redis lock, and the "when do we trigger this" question from the previous version of this section — there's no external pusher to synchronize against, so there's nothing to race. It also quietly closes both gaps the earlier design still needed a trigger for: a brand-new node's Caddy pulls the real state on its very first poll instead of waiting for an explicit node-join hook, and a node whose `caddy-config` volume got wiped outright just re-populates itself on its next poll instead of needing the manual recovery path ([`fix_swarm_networking`](../swarm/management/commands/fix_swarm_networking.py)) — that command's proxy-network-recreation piece stays relevant, but "get Caddy's config back" no longer needs to be part of it.
 
-import socket
-import redis
-from django.conf import settings
+**We're going all in on this** — no etag path kept as a fallback. `upsert_service_url`, `upsert_compose_stack_service_url`, `upsert_registry_url`, `remove_service_url`, `cleanup_old_service_urls`, and the etag-retry machinery in [`ZaneProxyClient`](../temporal/proxy.py) all get deleted; deployments stop touching the proxy entirely. Caddy discovers new state on its own on the next `load_delay` tick (5–10s), which replaces "instant" with "unnoticeable" — an acceptable trade for not having any push path left to maintain.
 
-_redis_client = redis.Redis.from_url(settings.REDIS_URL)
-
-
-@activity.defn
-async def sync_proxy_config(self):
-    lock = _redis_client.lock(f"proxy-sync-lock-{socket.gethostname()}", timeout=30)
-    with lock:
-        desired_config = ZaneProxyClient.get_desired_config()
-        requests.post(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/load",
-            headers={"content-type": "application/json"},
-            json=desired_config,
-            timeout=10,
-        )
-```
-
-The lock key includes the hostname on purpose — this only needs to serialize two syncs racing for the *same* node's Caddy instance; nodes don't need to wait on each other.
-
-**When does this actually need to run?** Not on a timer. The obvious triggers are enough: call it as the last step of every deploy workflow (Docker/Git/Compose), and once when a new node joins ([§9](#sec-9)) so its Caddy — which starts from nothing — gets caught up. A periodic tick isn't pulling its weight here once you notice that `zane-proxy` already persists its live config across container recreation: `docker/docker-stack.prod.yaml` mounts `caddy-config:/config` and runs `caddy run --resume` ([docker-stack.prod.yaml:34,65-66](../../docker/docker-stack.prod.yaml#L34)), and Caddy autosaves whatever config it's running to that same volume on every change. The image only seeds `/config/caddy/autosave.json` with the baked-in default ([docker/proxy/Dockerfile](../../docker/proxy/Dockerfile)) the *first* time the volume is empty — after that, `--resume` always reloads this node's own last-known-good config, even if Swarm reschedules or restarts the container. So "a Caddy container comes back with no config" isn't actually a case that happens to an existing node; it only happens to a node that never had one, which the node-join trigger already covers.
-
-The one case nothing here catches is that per-node volume itself getting lost outright (disk replaced, node reprovisioned, someone runs `docker volume rm`) — genuinely rare, and arguably belongs with the other "cluster state got wiped" recovery paths ([`fix_swarm_networking`](../swarm/management/commands/fix_swarm_networking.py)) rather than justifying an always-on poll for a scenario that isn't self-healing anyway (a lost volume needs a human to notice the node is unreachable, not a timer).
-
-Worth noting this doesn't just replace the periodic backstop idea: every *normal* deployment/URL change could call `sync_proxy_config` directly instead of today's per-route etag-patch dance in `upsert_service_url` / `upsert_compose_stack_service_url` — simpler code, at the cost of recomputing and pushing the *entire* config on every single change instead of one route. Whether that trade is worth it for the common case (one deployment, thousands of routes) is worth benchmarking before ripping out the etag path entirely; keeping both — etag-patch for the common single-route change, full reload for deploy-triggered sync and new-node bootstrap — is the safer incremental step.
+**Experimental.** Both `caddyconfig.HTTPLoader` and `admin.config.load_delay` are marked EXPERIMENTAL in Caddy's own source and could change in a future Caddy upgrade. Concretely that means: pin the Caddy version in [docker/proxy/Dockerfile](../../docker/proxy/Dockerfile) and re-verify this behavior on any future bump instead of upgrading blindly, and add a test that fails loudly if `get_desired_config()` ever omits the `admin.config.load`/`load_delay` block — since that failure mode is otherwise silent (a node just stops polling, no error anywhere).
 
 We should budget real time for this — it's the piece most likely to take longer than expected.
 
