@@ -241,7 +241,125 @@ Two ways to solve this:
 1. **Send every change to every instance.** Switch `zane-proxy` to a mode (`endpoint_mode: dnsrr`) that lets us look up the IP of every single instance, then apply each config change to all of them individually. We already have most of the code needed to find those IPs: [`get_swarm_service_aliases_ips_on_network`](../temporal/helpers.py#L414). Downside: more requests per change, and we need to handle partial failures (what if it succeeds on 2 out of 3 machines?) and repeat that "safety check" retry logic per machine.
 2. **One "leader" instance, others just copy it.** Keep a single Caddy on the manager as the source of truth, and have the rest load config from it. Caddy doesn't have a built-in way to do this, so we'd have to write our own syncing logic from scratch.
 
-**Recommendation: option 1**, plus a periodic background job that checks each instance's actual config against what it *should* be, and fixes any mismatch. That also handles the case where a brand new machine joins after a config change already happened.
+**Recommendation: option 1**, plus a periodic background job on every node that pulls the full desired config from one internal endpoint and loads it wholesale — no diffing. That also handles the case where a brand new machine joins after a config change already happened.
+
+We landed here instead of a diff-based reconciler because Caddy's admin API already has exactly the primitive this needs: `POST /load` replaces the *entire* running config in one call, and Caddy does its own internal graceful reload (only listeners whose config actually changed get touched). So instead of comparing "what's live" against "what should be" route by route, we just regenerate the whole desired config from the DB and push it, every time. The DB is the only source of truth; nothing is ever computed by inspecting a Caddy instance's current state.
+
+**1. One function that turns the DB into a full Caddy config.** Everything it needs already exists as a per-route builder in [`ZaneProxyClient`](../temporal/proxy.py) — `_get_request_for_service_url`, `_get_request_for_compose_stack_service_url`, `_get_request_for_build_registry` — today those are only ever called one route at a time inside an etag-patch loop. This just calls all of them for every row in the DB and assembles the result into the same shape as [`docker/proxy/default-caddy-config-prod.json`](../../docker/proxy/default-caddy-config-prod.json):
+
+```python
+# temporal/proxy.py
+
+class ZaneProxyClient:
+    ...
+    @classmethod
+    def get_desired_config(cls) -> dict:
+        """
+        The single source of truth for what every Caddy instance's config
+        should look like right now, computed straight from the DB.
+        """
+        routes = []
+
+        for url in URL.objects.select_related("service").filter(service__isnull=False):
+            deployment = url.service.current_production_deployment
+            if deployment is None:
+                continue
+            routes.append(
+                cls._get_request_for_service_url(
+                    url=URLDto.from_url(url),
+                    current_deployment=deployment,
+                    previous_deployment=None,
+                )
+            )
+
+        for stack in ComposeStack.objects.prefetch_related("urls"):
+            for service_name, url in stack.iter_service_urls():
+                routes.append(
+                    cls._get_request_for_compose_stack_service_url(
+                        stack_id=stack.id,
+                        stack_hash_prefix=stack.hash_prefix,
+                        service_name=service_name,
+                        url=url,
+                    )
+                )
+
+        for registry in ContainerRegistry.objects.filter(is_enabled=True):
+            routes.append(
+                cls._get_request_for_build_registry(
+                    registry.id, registry.alias, registry.domain, registry.is_secure
+                )
+            )
+
+        routes.append(ZANE_DASHBOARD_ROUTE)  # api.zaneops.internal + frontend, static
+        routes.append(ZANE_CATCHALL_404_ROUTE)  # same 404 body as the default config
+
+        return {
+            "@id": "root",
+            "logging": DEFAULT_CADDY_LOGGING,  # unchanged from the default config
+            "apps": {
+                "http": {
+                    "servers": {
+                        "zane": {
+                            "@id": "zane-server",
+                            "listen": [":443", ":80"],
+                            "routes": [
+                                {
+                                    "handle": [
+                                        {
+                                            "handler": "subroute",
+                                            "@id": "zane-url-root",
+                                            "routes": cls._sort_routes(routes),
+                                        }
+                                    ],
+                                    "terminal": True,
+                                }
+                            ],
+                            "tls_connection_policies": [{}],
+                        }
+                    }
+                },
+                "tls": {},
+            },
+        }
+```
+
+**2. An internal-only endpoint that exposes it.** Reachable via the same internal-domain pattern already used for `api.zaneops.internal` ([settings.py:71](../backend/settings.py#L71)) — not exposed publicly, only resolvable/reachable from inside the `zane` overlay network:
+
+```python
+# zane_api/views/internal.py
+
+class ProxyDesiredConfigAPIView(APIView):
+    """GET http://api.zaneops.internal/internal/proxy-config/"""
+
+    permission_classes = [IsInternalNetworkRequest]  # new: reject anything not from `zane`
+
+    def get(self, request: Request):
+        return Response(ZaneProxyClient.get_desired_config())
+```
+
+**3. A per-node job that pulls it and loads it locally.** This has to run once per machine (on each node's own `node-<hostname>` queue, [§9](#sec-9)) rather than once globally, because each Caddy instance's admin API is only reachable from its own node. It calls `get_desired_config()` directly rather than through the HTTP endpoint above — this activity already runs inside the same ZaneOps app image, with direct DB access, since every node's Temporal worker *is* that image ([§9](#sec-9)). Going over HTTP to reach code running in the same process would just be a slower, more fragile way to call a function. The endpoint from step 2 stays, but purely as a debug/inspection surface for humans — not something this activity itself needs.
+
+A module-level lock also guards against the race from two deployments landing close together: whichever call is already mid-flight finishes its read-then-load uninterrupted, and the second one runs right after with a fresh read — instead of two overlapping calls racing to be the last `/load` and possibly clobbering each other out of order.
+
+```python
+# temporal/activities/main_activities.py
+
+_proxy_sync_lock = asyncio.Lock()
+
+
+@activity.defn
+async def sync_proxy_config(self):
+    async with _proxy_sync_lock:
+        desired_config = ZaneProxyClient.get_desired_config()
+        requests.post(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/load",
+            headers={"content-type": "application/json"},
+            json=desired_config,
+            timeout=10,
+        )
+```
+
+Scheduled every couple of minutes on every node — same mechanism as the other per-node Temporal schedules ([§2.2](#sec-2-2-1)). Worth noting this doesn't just replace the periodic backstop: every *normal* deployment/URL change could call `sync_proxy_config` directly instead of today's per-route etag-patch dance in `upsert_service_url` / `upsert_compose_stack_service_url` — simpler code, at the cost of recomputing and pushing the *entire* config on every single change instead of one route. Whether that trade is worth it for the common case (one deployment, thousands of routes) is worth benchmarking before ripping out the etag path entirely; keeping both — etag-patch for the common single-route change, full reload for periodic reconciliation and new-node bootstrap — is the safer incremental step.
 
 We should budget real time for this — it's the piece most likely to take longer than expected.
 
