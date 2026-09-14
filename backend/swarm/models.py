@@ -27,9 +27,9 @@ class SwarmNode(TimestampedModel):
         prefix=ID_PREFIX,
     )  # type: ignore
 
-    hostname = models.CharField(unique=True)  # == swarm node Description.Hostname
     swarm_node_id = models.CharField(unique=True)
     role = models.CharField(choices=Role.choices)
+    hostname = models.CharField(unique=True)  # == swarm node Description.Hostname
     private_ip = models.GenericIPAddressField()  # overlay / VPC address
     public_ip = models.GenericIPAddressField(null=True)
 
@@ -49,8 +49,6 @@ class SwarmNode(TimestampedModel):
     # The initial server from which ZaneOps was install
     is_initial_install_server = models.BooleanField(default=False)
     ssh_key = models.ForeignKey(SSHKey, on_delete=models.SET_NULL, null=True)
-    ssh_user = models.CharField(default="root")
-    ssh_port = models.PositiveIntegerField(default=22)
 
     # server limits
     cpus = models.PositiveIntegerField(null=True)

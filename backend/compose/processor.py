@@ -887,14 +887,8 @@ class ComposeSpecProcessor:
         # use the json format of the compose file
         json_spec = json.dumps(reconcilied, indent=2)
 
-        print("=== json_spec ===")
-        print(json_spec)
-
         x_envs = spec.to_dict()["x-zane-env"]
         expanded = expand(json_spec, environ=x_envs, surrounded_vars_only=True)
-
-        print("=== expanded ===")
-        print(expanded)
 
         # in case there is a single slash that isn't correctly formatted after var expansion:
         # ex: "echo \$date" , it should be reformatted correctly to `"echo \\$date"`
@@ -920,9 +914,6 @@ class ComposeSpecProcessor:
             return full[: match.start(1) - match.start(0)] + escaped_inner + '"'
 
         expanded = re.sub(all_quoted_strings, escape_inner_quotes, expanded)
-
-        print("=== expanded reformatted ===")
-        print(expanded)
 
         # convert <service>.deploy.replicas to integer (if set)
         expanded_spec = json.loads(expanded)

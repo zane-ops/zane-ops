@@ -42,6 +42,7 @@ urlpatterns += [
     path("api/connectors/", include("git_connectors.urls")),
     path("api/compose/", include("compose.urls")),
     path("api/console/", include("console.urls")),
+    path("api/swarm/", include("swarm.urls")),
 ]
 
 if settings.ENABLE_EE:

@@ -2358,6 +2358,7 @@ class CloneEnvPreviewPayload:
 class Environment(TimestampedModel):
     if TYPE_CHECKING:
         compose_stacks: RelatedManager["ComposeStack"]
+        project_id: str
     services: Manager[Service]
     variables: Manager["SharedEnvVariable"]
     PRODUCTION_ENV_NAME = "production"
