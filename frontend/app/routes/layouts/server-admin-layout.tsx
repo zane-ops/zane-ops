@@ -8,7 +8,6 @@ import {
   Link2Icon,
   ScaleIcon,
   ServerIcon,
-  TerminalIcon,
   UsersIcon
 } from "lucide-react";
 import { NavLink, Outlet, href } from "react-router";
@@ -97,23 +96,10 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
       icon: Building2Icon
     },
     {
-      title: "SSH Keys",
-      href: href("/admin/ssh-keys"),
-      icon: KeyRoundIcon
-    },
-    {
-      title: "Console",
-      href: href("/admin/server-console"),
-      icon: TerminalIcon
-    },
-    {
       title: "Build Registries",
       href: href("/admin/build-registries"),
       icon: ContainerIcon
-    }
-  ];
-
-  sidebarNavItems.push(
+    },
     {
       href: href("/admin/automation"),
       title: "Maintenance & Cleanup",
@@ -123,8 +109,18 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
       href: href("/admin/http-logs"),
       title: "Global HTTP Logs",
       icon: GlobeIcon
+    },
+    {
+      title: "SSH Keys",
+      href: href("/admin/ssh-keys"),
+      icon: KeyRoundIcon
+    },
+    {
+      href: href("/admin/servers"),
+      title: "Servers",
+      icon: ServerIcon
     }
-  );
+  ];
 
   if (BUILD_EDITION === "ee") {
     sidebarNavItems.push({

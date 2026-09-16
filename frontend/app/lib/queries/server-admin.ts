@@ -432,6 +432,10 @@ export const licenseQueries = {
   })
 };
 
+export const swarmQueries = {
+  // ...
+};
+
 export const systemQueries = {
   settings: queryOptions({
     queryKey: ["SYSTEM_SETTINGS"],

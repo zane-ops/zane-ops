@@ -12,6 +12,7 @@ import {
   LockIcon,
   MailIcon,
   ScaleIcon,
+  ServerIcon,
   TerminalIcon,
   UserIcon,
   UsersIcon
@@ -122,22 +123,10 @@ const SERVER_ADMIN_NAV_GROUP: CommandBarNavGroup = {
       icon: Link2Icon
     },
     {
-      id: "nav-admin-ssh-keys",
-      title: "SSH Keys",
-      href: href("/admin/ssh-keys"),
-      icon: KeyRoundIcon
-    },
-    {
       id: "nav-admin-build-registries",
       title: "Build Registries",
       href: href("/admin/build-registries"),
       icon: ContainerIcon
-    },
-    {
-      id: "nav-admin-server-console",
-      title: "Server Console",
-      href: href("/admin/server-console"),
-      icon: TerminalIcon
     },
     {
       id: "nav-admin-automation",
@@ -150,6 +139,18 @@ const SERVER_ADMIN_NAV_GROUP: CommandBarNavGroup = {
       href: href("/admin/http-logs"),
       title: "Global HTTP Logs",
       icon: GlobeIcon
+    },
+    {
+      id: "nav-admin-ssh-keys",
+      title: "SSH Keys",
+      href: href("/admin/ssh-keys"),
+      icon: KeyRoundIcon
+    },
+    {
+      id: "nav-admin-servers",
+      href: href("/admin/servers"),
+      title: "Servers",
+      icon: ServerIcon
     }
   ]
 };
