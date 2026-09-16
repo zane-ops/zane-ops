@@ -2,21 +2,18 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, href, useSearchParams } from "react-router";
 
 import {
-  AtSignIcon,
   CpuIcon,
   CrownIcon,
   GlobeIcon,
   HeartPulseIcon,
   HourglassIcon,
   LoaderIcon,
-  LogsIcon,
   type LucideIcon,
   MemoryStickIcon,
   NetworkIcon,
   PlusIcon,
   PowerOffIcon,
   ServerIcon,
-  SquareTerminalIcon,
   TerminalIcon,
   TextSearchIcon,
   TriangleAlertIcon,
@@ -26,19 +23,11 @@ import type { SwarmNode } from "~/api/types";
 import { Code } from "~/components/code";
 import { DockerHubLogo } from "~/components/docker-hub-logo";
 import { Pagination } from "~/components/pagination";
-import { StatusBadge, type StatusBadgeColor } from "~/components/status-badge";
+import type { StatusBadgeColor } from "~/components/status-badge";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardFooter } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "~/components/ui/table";
 import {
   Tooltip,
   TooltipContent,
