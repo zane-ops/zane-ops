@@ -45,7 +45,7 @@ def insert_initial_swarm_server(apps, schema_editor):
 
 def rollback_workspace_and_projects(apps, schema_editor):
     SwarmNode = apps.get_model("swarm", "SwarmNode")
-    SwarmNode.objects.delete()
+    SwarmNode.objects.filter().delete()
 
 
 class Migration(migrations.Migration):
