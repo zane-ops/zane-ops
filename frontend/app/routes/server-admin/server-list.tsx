@@ -11,6 +11,7 @@ import {
   type LucideIcon,
   MemoryStickIcon,
   NetworkIcon,
+  PenLineIcon,
   PlusIcon,
   PowerOffIcon,
   ServerIcon,
@@ -135,6 +136,7 @@ export default function ServerListPage({ loaderData }: Route.ComponentProps) {
 }
 
 export function ServerCard({
+  id,
   hostname,
   cpus,
   memory_bytes,
@@ -151,14 +153,57 @@ export function ServerCard({
   return (
     <Card>
       <CardContent className="rounded-md bg-toggle p-0">
-        <div className="flex items-center gap-4.5 p-4 ">
+        <div className="flex items-center gap-4.5 p-4">
           <div className="flex flex-col items-center p-3 rounded-md gap-3">
             <ServerIcon className="size-8 text-grey flex-none" />
             <Badge variant="outline">server</Badge>
           </div>
 
-          <div className="flex flex-col gap-1.5 items-start">
-            <h3 className="font-medium text-lg">{hostname}</h3>
+          <div className="flex flex-col gap-1.5 items-start w-full">
+            <div className="flex items-center gap-2 w-full justify-between">
+              <h3 className="font-medium text-lg">{hostname}</h3>
+
+              <div className="flex items-center gap-2">
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        asChild
+                        className="text-xs py-1.5 px-2.5 w-auto h-auto gap-2"
+                      >
+                        <Link to={`./${id}`}>
+                          <PenLineIcon className="size-4 flex-none text-grey" />
+                          <span className="">Details</span>
+                        </Link>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Server details</TooltipContent>
+                  </Tooltip>
+
+                  <span className="w-px bg-muted h-3 rounded-lg" />
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        asChild
+                        className="text-xs py-1.5 px-2.5 w-auto h-auto gap-1"
+                      >
+                        <Link to={`./${id}/console`}>
+                          <TerminalIcon className="size-4 flex-none text-grey" />
+                          <span className="">Console</span>
+                        </Link>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Access to the server's console
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </div>
 
             <div className="flex items-center gap-1">
               {is_initial_install_server && (
@@ -214,52 +259,13 @@ export function ServerCard({
               </TooltipProvider>
             </div>
           </div>
-
-          <div className="flex-grow"></div>
-
-          <div className="self-start flex items-start gap-1 h-full pt-1">
-            <TooltipProvider>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button size="sm" variant="ghost" asChild>
-                    <Link
-                      to={{
-                        pathname: href("/admin/server-console")
-                      }}
-                    >
-                      <TerminalIcon className="size-4" />
-                      <span className="sr-only">
-                        Access to the server's console
-                      </span>
-                    </Link>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Access to the server's console</TooltipContent>
-              </Tooltip>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button size="sm" variant="ghost" asChild>
-                    <Link
-                      to={{
-                        pathname: href("/admin/server-console")
-                      }}
-                    >
-                      <TextSearchIcon className="size-4" />
-                      <span className="sr-only">See deployment logs</span>
-                    </Link>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>See server provisionning logs</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
         </div>
 
         <CardFooter className="border-border border-t flex items-center gap-2 text-sm py-2 px-4">
           <TooltipProvider>
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 cursor-help hover:underline decoration-1 decoration-wavy">
                   <CpuIcon className="size-4 flex-none text-grey" />
                   <span className="sr-only">CPU count:</span>
                   {cpus !== null ? (
@@ -278,7 +284,7 @@ export function ServerCard({
 
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 cursor-help hover:underline decoration-1 decoration-wavy">
                   <MemoryStickIcon className="size-4 flex-none text-grey" />
                   <span className="sr-only">Memory:</span>
                   {memory ? `${memory.value} ${memory.unit}` : "-"}
@@ -291,7 +297,7 @@ export function ServerCard({
 
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 cursor-help hover:underline decoration-1 decoration-wavy">
                   <DockerHubLogo className="size-4 flex-none text-grey" />
                   <span className="sr-only">Docker version:</span>v
                   {docker_version}
