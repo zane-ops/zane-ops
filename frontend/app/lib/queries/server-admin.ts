@@ -432,8 +432,33 @@ export const licenseQueries = {
   })
 };
 
+export const swarmNodeListFilters = zfd.formData({
+  page: zfd.numeric().optional().catch(1).optional(),
+  per_page: zfd.numeric().optional().catch(10).optional()
+});
+
 export const swarmQueries = {
-  // ...
+  nodeList: (filters: z.infer<typeof swarmNodeListFilters> = {}) =>
+    queryOptions({
+      queryKey: ["SWARM_NODES", "LIST", filters] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/swarm/nodes/", {
+          signal,
+          params: {
+            query: filters
+          }
+        });
+        if (!data) throw notFound("Not found");
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (!query.state.data) {
+          return false;
+        }
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData
+    })
 };
 
 export const systemQueries = {

@@ -111,14 +111,14 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
       icon: GlobeIcon
     },
     {
-      title: "SSH Keys",
-      href: href("/admin/ssh-keys"),
-      icon: KeyRoundIcon
-    },
-    {
       href: href("/admin/servers"),
       title: "Servers",
       icon: ServerIcon
+    },
+    {
+      title: "SSH Keys",
+      href: href("/admin/ssh-keys"),
+      icon: KeyRoundIcon
     }
   ];
 
