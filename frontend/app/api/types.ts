@@ -117,6 +117,11 @@ export type PasswordResetToken = ApiResponse<
   "/api/console/password-tokens/{id}"
 >;
 
+export type SwarmNode = ApiResponse<
+  "get",
+  "/api/swarm/nodes/"
+>["results"][number];
+
 export type WorkspaceWithOwner = ApiResponse<
   "get",
   "/api/console/workspaces/"

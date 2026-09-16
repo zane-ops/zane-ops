@@ -634,6 +634,10 @@ export interface paths {
     get: operations["shell_ssh_keys_retrieve"];
     delete: operations["shell_ssh_keys_destroy"];
   };
+  "/api/swarm/nodes/": {
+    /** List all swarm nodes in ZaneOps installation */
+    get: operations["swarm_nodes_list"];
+  };
   "/api/trigger-preview/{deploy_token}/": {
     /** Webhook to trigger a new preview environment */
     post: operations["webhookTriggerPreviewEnv"];
@@ -2292,7 +2296,7 @@ export interface components {
     ConsoleWorkspaceMember: {
       id: number;
       role_name: components["schemas"]["RoleNameEnum"];
-      role: components["schemas"]["RoleEnum"];
+      role: components["schemas"]["Role82eEnum"];
       accessible_projects: readonly components["schemas"]["AccessibleWorkspaceProject"][];
       user: components["schemas"]["ConsoleWorkspaceUser"];
       /** Format: date-time */
@@ -2301,7 +2305,7 @@ export interface components {
       updated_at: string;
     };
     ConsoleWorkspaceMemberRequest: {
-      role?: components["schemas"]["RoleEnum"];
+      role?: components["schemas"]["Role82eEnum"];
       /** Format: date-time */
       created_at?: string;
     };
@@ -3199,7 +3203,7 @@ export interface components {
      */
     CreateWorkspaceApiTokenRequestRequest: {
       name: string;
-      role: components["schemas"]["RoleEnum"];
+      role: components["schemas"]["Role82eEnum"];
       scopes?: components["schemas"]["ScopesEnum"][];
       /** @default [] */
       accessible_project_ids?: string[];
@@ -3968,7 +3972,25 @@ export interface components {
     GetProxyLogsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetProxyLogsWithContextErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetRegistryCredentialsErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    GetSSHKeyListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetSSHKeyListError: components["schemas"]["GetSSHKeyListUserErrorComponent"];
+    GetSSHKeyListErrorResponse400: components["schemas"]["GetSSHKeyListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    GetSSHKeyListUserErrorComponent: {
+      /**
+       * @description * `user` - user
+       * @enum {string}
+       */
+      attr: "user";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    GetSSHKeyListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["GetSSHKeyListError"][];
+    };
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -4436,7 +4458,7 @@ export interface components {
       /** @default 3 */
       valid_for?: components["schemas"]["ValidForEnum"];
       /** @default 10 */
-      role?: components["schemas"]["RoleEnum"];
+      role?: components["schemas"]["Role82eEnum"];
       username: string;
     };
     InviteUserNonFieldErrorsErrorComponent: {
@@ -4857,6 +4879,21 @@ export interface components {
        */
       previous: string | null;
       results: components["schemas"]["ServiceDeployment"][];
+    };
+    PaginatedSwarmNodeList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["SwarmNode"][];
     };
     PaginatedWorkspaceInvitationList: {
       /** @example 123 */
@@ -8011,7 +8048,7 @@ export interface components {
      * * `50` - Owner
      * @enum {integer}
      */
-    RoleEnum: 10 | 30 | 40 | 50;
+    Role82eEnum: 10 | 30 | 40 | 50;
     /** @enum {string} */
     RoleNameEnum: "Owner" | "Admin" | "Member" | "Viewer";
     RuntimeLog: {
@@ -8455,6 +8492,42 @@ export interface components {
      * @enum {string}
      */
     StorageBackendEnum: "LOCAL" | "S3";
+    SwarmNode: {
+      id: string;
+      hostname: string;
+      role: components["schemas"]["SwarmNodeRoleEnum"];
+      private_ip: string;
+      status: components["schemas"]["SwarmNodeStatusEnum"];
+      /** Format: date-time */
+      last_status_update: string | null;
+      docker_version: string;
+      is_build_server: boolean;
+      is_app_server: boolean;
+      is_initial_install_server: boolean;
+      cpus: number | null;
+      /** Format: int64 */
+      memory_bytes: number | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    /**
+     * @description * `MANAGER` - Manager
+     * * `WORKER` - Worker
+     * @enum {string}
+     */
+    SwarmNodeRoleEnum: "MANAGER" | "WORKER";
+    /**
+     * @description * `PROVISIONING` - Provisioning
+     * * `READY` - Ready
+     * * `DOWN` - Down
+     * * `DRAINED` - Drained
+     * * `FAILED` - Failed
+     * @enum {string}
+     */
+    SwarmNodeStatusEnum: "PROVISIONING" | "READY" | "DOWN" | "DRAINED" | "FAILED";
+    SwarmNodesListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SwitchWorkspaceError: components["schemas"]["SwitchWorkspaceNonFieldErrorsErrorComponent"] | components["schemas"]["SwitchWorkspaceWorkspaceIdErrorComponent"];
     SwitchWorkspaceErrorResponse400: components["schemas"]["SwitchWorkspaceValidationError"] | components["schemas"]["ParseErrorResponse"];
     SwitchWorkspaceNonFieldErrorsErrorComponent: {
@@ -9491,7 +9564,7 @@ export interface components {
     WorkspaceApiToken: {
       id: string;
       name: string;
-      role: components["schemas"]["RoleEnum"];
+      role: components["schemas"]["Role82eEnum"];
       role_name: string;
       scopes: readonly components["schemas"]["ScopesEnum"][];
       accessible_projects: readonly components["schemas"]["AccessibleWorkspaceProject"][];
@@ -9515,7 +9588,7 @@ export interface components {
     WorkspaceApiTokenWithSecret: {
       id: string;
       name: string;
-      role: components["schemas"]["RoleEnum"];
+      role: components["schemas"]["Role82eEnum"];
       role_name: string;
       scopes: readonly components["schemas"]["ScopesEnum"][];
       accessible_projects: readonly components["schemas"]["AccessibleWorkspaceProject"][];
@@ -9543,7 +9616,7 @@ export interface components {
       name: string;
     };
     WorkspaceEditPermissionsRequestRequest: {
-      role: components["schemas"]["RoleEnum"];
+      role: components["schemas"]["Role82eEnum"];
       /** @default [] */
       accessible_project_ids?: string[];
     };
@@ -9553,7 +9626,7 @@ export interface components {
       created_at: string;
       /** Format: date-time */
       expires_at: string;
-      role: components["schemas"]["RoleEnum"];
+      role: components["schemas"]["Role82eEnum"];
       token: string;
       id: string;
       username: string;
@@ -9561,7 +9634,7 @@ export interface components {
     };
     WorkspaceInvitationLink: {
       role_name: components["schemas"]["RoleNameEnum"];
-      role: components["schemas"]["RoleEnum"];
+      role: components["schemas"]["Role82eEnum"];
       token: string;
       username: string;
       has_existing_account: boolean;
@@ -9577,7 +9650,7 @@ export interface components {
     WorkspaceMember: {
       id: number;
       role_name: components["schemas"]["RoleNameEnum"];
-      role: components["schemas"]["RoleEnum"];
+      role: components["schemas"]["Role82eEnum"];
       accessible_projects: readonly components["schemas"]["AccessibleWorkspaceProject"][];
       user: components["schemas"]["SimpleWorkspaceUser"];
       /** Format: date-time */
@@ -9622,7 +9695,7 @@ export interface components {
     WorkspaceMembership: {
       id: number;
       role_name: components["schemas"]["RoleNameEnum"];
-      role: components["schemas"]["RoleEnum"];
+      role: components["schemas"]["Role82eEnum"];
       workspace: components["schemas"]["Workspace"];
     };
     WorkspaceRegisterRequestRequest: {
@@ -16234,6 +16307,11 @@ export interface operations {
   };
   /** List all ssh keys */
   getSSHKeyList: {
+    parameters: {
+      query?: {
+        user?: string;
+      };
+    };
     responses: {
       200: {
         content: {
@@ -16357,6 +16435,49 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ShellSshKeysDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** List all swarm nodes in ZaneOps installation */
+  swarm_nodes_list: {
+    parameters: {
+      query?: {
+        /** @description A page number within the paginated result set. */
+        page?: number;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedSwarmNodeList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["SwarmNodesListErrorResponse400"];
         };
       };
       401: {

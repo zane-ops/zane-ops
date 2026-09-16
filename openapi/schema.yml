@@ -14955,6 +14955,11 @@ paths:
     get:
       operationId: getSSHKeyList
       summary: List all ssh keys
+      parameters:
+      - in: query
+        name: user
+        schema:
+          type: string
       tags:
       - shell
       security:
@@ -15289,6 +15294,104 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/swarm/nodes/:
+    get:
+      operationId: swarm_nodes_list
+      summary: List all swarm nodes in ZaneOps installation
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - swarm
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwarmNodesListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSwarmNodeList'
+          description: ''
   /api/trigger-preview/{deploy_token}/:
     post:
       operationId: webhookTriggerPreviewEnv
@@ -21248,7 +21351,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/Role82eEnum'
           minimum: 0
           maximum: 32767
         accessible_projects:
@@ -21280,7 +21383,7 @@ components:
       properties:
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/Role82eEnum'
           minimum: 0
           maximum: 32767
         created_at:
@@ -23075,7 +23178,7 @@ components:
           minLength: 1
           maxLength: 255
         role:
-          $ref: '#/components/schemas/RoleEnum'
+          $ref: '#/components/schemas/Role82eEnum'
         scopes:
           type: array
           items:
@@ -24912,13 +25015,53 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    GetSSHKeyListError:
+      oneOf:
+      - $ref: '#/components/schemas/GetSSHKeyListUserErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          user: '#/components/schemas/GetSSHKeyListUserErrorComponent'
     GetSSHKeyListErrorResponse400:
       oneOf:
+      - $ref: '#/components/schemas/GetSSHKeyListValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
+          validation_error: '#/components/schemas/GetSSHKeyListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    GetSSHKeyListUserErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - user
+          type: string
+          description: '* `user` - user'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    GetSSHKeyListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetSSHKeyListError'
+      required:
+      - errors
+      - type
     GetServerResouceLimitsErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -25985,7 +26128,7 @@ components:
           default: 3
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/Role82eEnum'
           default: 10
         username:
           type: string
@@ -26905,6 +27048,31 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ServiceDeployment'
+    PaginatedSwarmNodeList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SwarmNode'
     PaginatedWorkspaceInvitationList:
       type: object
       required:
@@ -33164,7 +33332,7 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    RoleEnum:
+    Role82eEnum:
       enum:
       - 10
       - 30
@@ -34494,6 +34662,95 @@ components:
       description: |-
         * `LOCAL` - Local Disk
         * `S3` - S3
+    SwarmNode:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        hostname:
+          type: string
+        role:
+          $ref: '#/components/schemas/SwarmNodeRoleEnum'
+        private_ip:
+          type: string
+        status:
+          $ref: '#/components/schemas/SwarmNodeStatusEnum'
+        last_status_update:
+          type: string
+          format: date-time
+          nullable: true
+        docker_version:
+          type: string
+        is_build_server:
+          type: boolean
+        is_app_server:
+          type: boolean
+        is_initial_install_server:
+          type: boolean
+        cpus:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        memory_bytes:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - cpus
+      - created_at
+      - docker_version
+      - hostname
+      - id
+      - is_app_server
+      - is_build_server
+      - is_initial_install_server
+      - last_status_update
+      - memory_bytes
+      - private_ip
+      - role
+      - status
+      - updated_at
+    SwarmNodeRoleEnum:
+      enum:
+      - MANAGER
+      - WORKER
+      type: string
+      description: |-
+        * `MANAGER` - Manager
+        * `WORKER` - Worker
+    SwarmNodeStatusEnum:
+      enum:
+      - PROVISIONING
+      - READY
+      - DOWN
+      - DRAINED
+      - FAILED
+      type: string
+      description: |-
+        * `PROVISIONING` - Provisioning
+        * `READY` - Ready
+        * `DOWN` - Down
+        * `DRAINED` - Drained
+        * `FAILED` - Failed
+    SwarmNodesListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     SwitchWorkspaceError:
       oneOf:
       - $ref: '#/components/schemas/SwitchWorkspaceNonFieldErrorsErrorComponent'
@@ -36699,7 +36956,7 @@ components:
           maxLength: 255
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/Role82eEnum'
           readOnly: true
           minimum: 0
           maximum: 32767
@@ -36777,7 +37034,7 @@ components:
           maxLength: 255
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/Role82eEnum'
           readOnly: true
           minimum: 0
           maximum: 32767
@@ -36882,7 +37139,7 @@ components:
       type: object
       properties:
         role:
-          $ref: '#/components/schemas/RoleEnum'
+          $ref: '#/components/schemas/Role82eEnum'
         accessible_project_ids:
           type: array
           items:
@@ -36908,7 +37165,7 @@ components:
           format: date-time
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/Role82eEnum'
           minimum: 0
           maximum: 32767
         token:
@@ -36943,7 +37200,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/Role82eEnum'
           minimum: 0
           maximum: 32767
         token:
@@ -37011,7 +37268,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/Role82eEnum'
           minimum: 0
           maximum: 32767
         accessible_projects:
@@ -37132,7 +37389,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/Role82eEnum'
           minimum: 0
           maximum: 32767
         workspace:
