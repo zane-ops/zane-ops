@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { SettingsIcon, TerminalIcon } from "lucide-react";
+import { NetworkIcon, SettingsIcon, TerminalIcon } from "lucide-react";
 import { Outlet, href } from "react-router";
 import { HorizontalNavLink } from "~/components/horizontal-nav-link";
 import { swarmQueries } from "~/lib/queries";
@@ -59,6 +59,15 @@ export default function SwarmNodeLayout({
             >
               <span>Console</span>
               <TerminalIcon size={15} className="flex-none" />
+            </HorizontalNavLink>
+          </li>
+          <li>
+            <HorizontalNavLink
+              to={href("/admin/servers/:serverId/services", params)}
+              prefetch="viewport"
+            >
+              <span>Services</span>
+              <NetworkIcon size={15} className="flex-none" />
             </HorizontalNavLink>
           </li>
         </ul>
