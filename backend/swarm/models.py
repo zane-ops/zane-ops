@@ -37,18 +37,13 @@ class SwarmNode(TimestampedModel):
     last_status_update = models.DateTimeField(null=True)
 
     docker_version = models.CharField()
-    ssh_key = models.ForeignKey(
-        to=SSHKey,
-        on_delete=models.SET_NULL,
-        null=True,
-    )
     # Can this run builds ?
     is_build_server = models.BooleanField(default=False)
     # Can this run user defined apps ?
     is_app_server = models.BooleanField(default=True)
     # The initial server from which ZaneOps was install
     is_initial_install_server = models.BooleanField(default=False)
-    ssh_key = models.ForeignKey(SSHKey, on_delete=models.SET_NULL, null=True)
+    ssh_keys = models.ManyToManyField(to=SSHKey, related_name="servers")
 
     # server limits
     cpus = models.PositiveIntegerField(null=True)

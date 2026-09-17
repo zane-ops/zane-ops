@@ -15392,6 +15392,97 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedSwarmNodeList'
           description: ''
+  /api/swarm/nodes/{id}/:
+    get:
+      operationId: swarm_nodes_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - swarm
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwarmNodesRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwarmNode'
+          description: ''
   /api/trigger-preview/{deploy_token}/:
     post:
       operationId: webhookTriggerPreviewEnv
@@ -21351,7 +21442,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/Role82eEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           minimum: 0
           maximum: 32767
         accessible_projects:
@@ -21383,7 +21474,7 @@ components:
       properties:
         role:
           allOf:
-          - $ref: '#/components/schemas/Role82eEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           minimum: 0
           maximum: 32767
         created_at:
@@ -23178,7 +23269,7 @@ components:
           minLength: 1
           maxLength: 255
         role:
-          $ref: '#/components/schemas/Role82eEnum'
+          $ref: '#/components/schemas/WorkspaceRoleEnum'
         scopes:
           type: array
           items:
@@ -26128,7 +26219,7 @@ components:
           default: 3
         role:
           allOf:
-          - $ref: '#/components/schemas/Role82eEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           default: 10
         username:
           type: string
@@ -33332,18 +33423,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    Role82eEnum:
-      enum:
-      - 10
-      - 30
-      - 40
-      - 50
-      type: integer
-      description: |-
-        * `10` - Viewer
-        * `30` - Member
-        * `40` - Admin
-        * `50` - Owner
     RoleNameEnum:
       enum:
       - Owner
@@ -34671,9 +34750,12 @@ components:
         hostname:
           type: string
         role:
-          $ref: '#/components/schemas/SwarmNodeRoleEnum'
+          $ref: '#/components/schemas/SwarmRoleEnum'
         private_ip:
           type: string
+        public_ip:
+          type: string
+          nullable: true
         status:
           $ref: '#/components/schemas/SwarmNodeStatusEnum'
         last_status_update:
@@ -34707,6 +34789,11 @@ components:
           type: string
           format: date-time
           readOnly: true
+        ssh_keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/SSHKey'
+          readOnly: true
       required:
       - cpus
       - created_at
@@ -34719,17 +34806,11 @@ components:
       - last_status_update
       - memory_bytes
       - private_ip
+      - public_ip
       - role
+      - ssh_keys
       - status
       - updated_at
-    SwarmNodeRoleEnum:
-      enum:
-      - MANAGER
-      - WORKER
-      type: string
-      description: |-
-        * `MANAGER` - Manager
-        * `WORKER` - Worker
     SwarmNodeStatusEnum:
       enum:
       - PROVISIONING
@@ -34751,6 +34832,21 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    SwarmNodesRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    SwarmRoleEnum:
+      enum:
+      - MANAGER
+      - WORKER
+      type: string
+      description: |-
+        * `MANAGER` - Manager
+        * `WORKER` - Worker
     SwitchWorkspaceError:
       oneOf:
       - $ref: '#/components/schemas/SwitchWorkspaceNonFieldErrorsErrorComponent'
@@ -36956,7 +37052,7 @@ components:
           maxLength: 255
         role:
           allOf:
-          - $ref: '#/components/schemas/Role82eEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           readOnly: true
           minimum: 0
           maximum: 32767
@@ -37034,7 +37130,7 @@ components:
           maxLength: 255
         role:
           allOf:
-          - $ref: '#/components/schemas/Role82eEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           readOnly: true
           minimum: 0
           maximum: 32767
@@ -37139,7 +37235,7 @@ components:
       type: object
       properties:
         role:
-          $ref: '#/components/schemas/Role82eEnum'
+          $ref: '#/components/schemas/WorkspaceRoleEnum'
         accessible_project_ids:
           type: array
           items:
@@ -37165,7 +37261,7 @@ components:
           format: date-time
         role:
           allOf:
-          - $ref: '#/components/schemas/Role82eEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           minimum: 0
           maximum: 32767
         token:
@@ -37200,7 +37296,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/Role82eEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           minimum: 0
           maximum: 32767
         token:
@@ -37268,7 +37364,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/Role82eEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           minimum: 0
           maximum: 32767
         accessible_projects:
@@ -37389,7 +37485,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/Role82eEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           minimum: 0
           maximum: 32767
         workspace:
@@ -37451,6 +37547,18 @@ components:
           type: boolean
       required:
       - success
+    WorkspaceRoleEnum:
+      enum:
+      - 10
+      - 30
+      - 40
+      - 50
+      type: integer
+      description: |-
+        * `10` - Viewer
+        * `30` - Member
+        * `40` - Admin
+        * `50` - Owner
     WorkspaceTokensPartialUpdateError:
       oneOf:
       - $ref: '#/components/schemas/WorkspaceTokensPartialUpdateNonFieldErrorsErrorComponent'

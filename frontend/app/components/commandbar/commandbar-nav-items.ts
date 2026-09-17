@@ -141,12 +141,6 @@ const SERVER_ADMIN_NAV_GROUP: CommandBarNavGroup = {
       icon: GlobeIcon
     },
     {
-      id: "nav-admin-ssh-keys",
-      title: "SSH Keys",
-      href: href("/admin/ssh-keys"),
-      icon: KeyRoundIcon
-    },
-    {
       id: "nav-admin-servers",
       href: href("/admin/servers"),
       title: "Servers",

@@ -4,7 +4,6 @@ import {
   Building2Icon,
   ContainerIcon,
   GlobeIcon,
-  KeyRoundIcon,
   Link2Icon,
   ScaleIcon,
   ServerIcon,
@@ -114,11 +113,6 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
       href: href("/admin/servers"),
       title: "Servers",
       icon: ServerIcon
-    },
-    {
-      title: "SSH Keys",
-      href: href("/admin/ssh-keys"),
-      icon: KeyRoundIcon
     }
   ];
 

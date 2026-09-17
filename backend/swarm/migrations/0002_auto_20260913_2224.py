@@ -9,7 +9,6 @@ import requests
 
 def insert_initial_swarm_server(apps, schema_editor):
     SwarmNode = apps.get_model("swarm", "SwarmNode")
-    SSHKey = apps.get_model("webshell", "SSHKey")
 
     client = docker.from_env()
 
@@ -18,9 +17,6 @@ def insert_initial_swarm_server(apps, schema_editor):
     swarm_node_id = info["Swarm"]["NodeID"]
 
     self_node = client.nodes.get(swarm_node_id)
-
-    # Find the first root SSH
-    found_ssh_key = SSHKey.objects.filter(user="root").first()
 
     response = requests.get("https://ipinfo.io/ip")
     response.raise_for_status()
@@ -36,7 +32,6 @@ def insert_initial_swarm_server(apps, schema_editor):
         status="READY",
         docker_version=info["ServerVersion"],
         is_build_server=True,
-        ssh_key=found_ssh_key,
         is_initial_install_server=True,
         last_status_update=timezone.now(),
     )

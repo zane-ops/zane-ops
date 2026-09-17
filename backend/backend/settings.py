@@ -410,6 +410,16 @@ SPECTACULAR_SETTINGS = {
             ("HEALTHY", "Healthy"),
             ("UNHEALTHY", "Unhealthy"),
         ),
+        "WorkspaceRoleEnum": (
+            (10, "Viewer"),
+            (30, "Member"),
+            (40, "Admin"),
+            (50, "Owner"),
+        ),
+        "SwarmRoleEnum": (
+            ("MANAGER", "Manager"),
+            ("WORKER", "Worker"),
+        ),
     },
     "POSTPROCESSING_HOOKS": [
         "drf_standardized_errors.openapi_hooks.postprocess_schema_enums",

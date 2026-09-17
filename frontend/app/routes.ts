@@ -115,7 +115,13 @@ export default [
           "./routes/server-admin/build-registry-details.tsx"
         ),
         route("http-logs", "./routes/server-admin/global-http-logs.tsx"),
-        route("servers", "./routes/server-admin/server-list.tsx")
+        route("servers", "./routes/server-admin/server-list.tsx"),
+        ...prefix("servers/:serverId", [
+          layout("./routes/layouts/swarm-node-layout.tsx", [
+            index("./routes/server-admin/swarm-node-details.tsx"),
+            route("console", "./routes/server-admin/swarm-node-console.tsx")
+          ])
+        ])
       ])
     ]),
 

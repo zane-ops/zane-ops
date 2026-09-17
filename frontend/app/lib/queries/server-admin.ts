@@ -458,6 +458,27 @@ export const swarmQueries = {
         return DEFAULT_QUERY_REFETCH_INTERVAL;
       },
       placeholderData: keepPreviousData
+    }),
+  singleNode: (id: string) =>
+    queryOptions({
+      queryKey: ["SWARM_NODES", "SINGLE", id] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/swarm/nodes/{id}/", {
+          signal,
+          params: {
+            path: { id }
+          }
+        });
+        if (!data) throw notFound("Not found");
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (!query.state.data) {
+          return false;
+        }
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData
     })
 };
 
