@@ -34749,6 +34749,7 @@ components:
           maxLength: 255
         hostname:
           type: string
+          nullable: true
         role:
           $ref: '#/components/schemas/SwarmRoleEnum'
         private_ip:
@@ -34764,6 +34765,7 @@ components:
           nullable: true
         docker_version:
           type: string
+          nullable: true
         is_build_server:
           type: boolean
         is_app_server:

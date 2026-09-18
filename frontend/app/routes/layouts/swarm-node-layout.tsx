@@ -1,12 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   CrownIcon,
+  InfoIcon,
   NetworkIcon,
+  ServerIcon,
   SettingsIcon,
   TerminalIcon
 } from "lucide-react";
 import { Outlet, href } from "react-router";
 import { HorizontalNavLink } from "~/components/horizontal-nav-link";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import { swarmQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { capitalizeText, cn, metaTitle } from "~/lib/utils";
@@ -42,7 +50,7 @@ export default function SwarmNodeLayout({
   } satisfies Record<(typeof node)["status"], string>;
 
   const { title } = metaTitle(
-    `${status_emoji_map[node.status]} ${capitalizeText(node.hostname)}`
+    `${status_emoji_map[node.status]} ${capitalizeText(node.hostname ?? node.private_ip)}`
   );
 
   return (
@@ -51,8 +59,9 @@ export default function SwarmNodeLayout({
       <div className="flex flex-col gap-4">
         <section className="flex items-center gap-3">
           <h2 className="text-2xl flex items-center gap-2">
+            <ServerIcon className="size-6 text-grey" />
             <div className="inline-flex gap-0.5 font-medium items-center group-hover:underline">
-              {capitalizeText(node.hostname)}
+              {capitalizeText(node.hostname ?? node.private_ip)}
             </div>
           </h2>
 
@@ -60,10 +69,22 @@ export default function SwarmNodeLayout({
 
           <div className="flex items-center gap-1">
             {node.is_initial_install_server && (
-              <div className="py-1 text-sm rounded-md bg-link/20 text-link px-2  inline-flex gap-1 items-center">
-                <CrownIcon className="size-4 flex-none" />
-                <p>Main server</p>
-              </div>
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger>
+                    <div className="cursor-help py-1 text-sm rounded-md bg-link/20 text-link px-2  inline-flex gap-1 items-center">
+                      <CrownIcon className="size-4 flex-none" />
+                      <p>Main server</p>
+                      <InfoIcon className="size-3 flex-none" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-64 text-pretty">
+                    This is the server where ZaneOps was initially installed. It
+                    runs the ZaneOps core services (API, proxy, database) and
+                    cannot be removed from the cluster.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             <ServerStatusBadge status={node.status} className="text-sm" />
           </div>

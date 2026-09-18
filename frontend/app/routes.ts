@@ -95,9 +95,7 @@ export default [
           )
         ]),
 
-        route("ssh-keys", "./routes/server-admin/ssh-keys-list.tsx"),
         route("ssh-keys/new", "./routes/server-admin/create-ssh-key.tsx"),
-        route("server-console", "./routes/server-admin/server-terminal.tsx"),
         route(
           "build-registries",
           "./routes/server-admin/build-registry-list.tsx"

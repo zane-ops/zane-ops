@@ -13,17 +13,21 @@ import {
   MemoryStickIcon,
   MicrochipIcon,
   PickaxeIcon,
+  PlusIcon,
   WrenchIcon
 } from "lucide-react";
 import type { SwarmNode } from "~/api/types";
 import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
 import { DockerHubLogo } from "~/components/docker-hub-logo";
+import { SSHKeyCard } from "~/components/ssh-key-card";
+import { Button } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetInput,
   FieldSetLabel
 } from "~/components/ui/fieldset";
+import { Separator } from "~/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
@@ -117,9 +121,10 @@ export default function SwarmNodeDetailsPage({
                         <TooltipProvider>
                           <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild>
-                              <Code className="inline-flex items-center gap-1 cursor-help">
+                              <Code className="inline-flex items-center gap-1 px-1.5 cursor-help">
                                 <BoxIcon className="size-4 flex-none" />
                                 <span>App Server</span>
+                                <InfoIcon className="size-3 flex-none" />
                               </Code>
                             </TooltipTrigger>
                             <TooltipContent className="max-w-64">
@@ -136,9 +141,10 @@ export default function SwarmNodeDetailsPage({
                         <TooltipProvider>
                           <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild>
-                              <Code className="inline-flex items-center gap-1 cursor-help">
+                              <Code className="inline-flex items-center gap-1 px-1.5 cursor-help">
                                 <WrenchIcon className="size-4 flex-none" />
                                 <span>Build Server</span>
+                                <InfoIcon className="size-3 flex-none" />
                               </Code>
                             </TooltipTrigger>
                             <TooltipContent className="max-w-64">
@@ -195,21 +201,30 @@ export default function SwarmNodeDetailsPage({
                           )}
                         >
                           <AtSignIcon className="text-grey size-4 flex-none mr-1" />
-                          <span className="text-card-foreground">
-                            {node.hostname}
-                          </span>
-                          <TooltipProvider>
-                            <Tooltip delayDuration={0}>
-                              <TooltipTrigger asChild>
-                                <CopyButton
-                                  value={node.hostname}
-                                  label={node.hostname}
-                                  className="!opacity-100 ml-1.5"
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent>Copy Hostname</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          {node.hostname ? (
+                            <span className="text-card-foreground">
+                              {node.hostname}
+                            </span>
+                          ) : (
+                            <code className="text-grey">
+                              {"[hostname not resolved]"}
+                            </code>
+                          )}
+
+                          {node.hostname && (
+                            <TooltipProvider>
+                              <Tooltip delayDuration={0}>
+                                <TooltipTrigger asChild>
+                                  <CopyButton
+                                    value={node.hostname}
+                                    label={node.hostname}
+                                    className="!opacity-100 ml-1.5"
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent>Copy Hostname</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                         </span>
                       </div>
                     </FieldSet>
@@ -260,9 +275,7 @@ export default function SwarmNodeDetailsPage({
                       <FieldSetLabel>Public IP</FieldSetLabel>
                       <div className="relative">
                         <FieldSetInput
-                          defaultValue={node.public_ip}
                           disabled
-                          placeholder={"<empty>"}
                           className={cn(
                             "disabled:placeholder-shown:font-mono disabled:bg-muted",
                             "disabled:border-transparent disabled:opacity-100",
@@ -421,10 +434,27 @@ export default function SwarmNodeDetailsPage({
               <div className="h-full border border-grey/50"></div>
             </div>
 
-            <div className="w-full flex flex-col gap-5 pt-1 pb-8">
+            <div className="w-full flex flex-col gap-5 pt-1 pb-8 items-start">
               <h2 className="text-lg text-grey">SSH Keys</h2>
 
-              {/* <WorkspaceDetailsForm name={workspace.name} /> */}
+              {node.ssh_keys.length > 0 && (
+                <>
+                  <ul className="w-full">
+                    {node.ssh_keys.map((ssh_key) => (
+                      <li key={ssh_key.id} className="w-full">
+                        <SSHKeyCard
+                          serverId={node.id}
+                          sshKey={ssh_key}
+                          className="w-full"
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                  <Separator />
+                </>
+              )}
+
+              <SSHKeyAddDialog />
             </div>
           </section>
 
@@ -448,7 +478,7 @@ export default function SwarmNodeDetailsPage({
                       cluster
                     </p>
                   </div>
-                  {/* <WorkspaceDeleteForm name={workspace.name} /> */}
+                  <SwarmNodeRemoveForm {...node} />
                 </div>
               </div>
             </div>
@@ -459,6 +489,41 @@ export default function SwarmNodeDetailsPage({
   );
 }
 
-function SwarmNodeDetailsForm(props: SwarmNode) {
-  return <></>;
+function SSHKeyAddDialog() {
+  return (
+    <Button variant="secondary">
+      <PlusIcon className="size-4 flex-none" />
+      Add new key
+    </Button>
+  );
+}
+
+function SwarmNodeRemoveForm(node: SwarmNode) {
+  return (
+    <TooltipProvider>
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>
+          <Button
+            variant="destructive"
+            className={cn(
+              "destructive-outline gap-2",
+              node.is_initial_install_server && "opacity-50"
+            )}
+            onClick={(e) => {
+              if (node.is_initial_install_server) {
+                e.preventDefault();
+              }
+            }}
+          >
+            Remove Server
+          </Button>
+        </TooltipTrigger>
+        {node.is_initial_install_server && (
+          <TooltipContent className="max-w-56 text-pretty">
+            You cannot remove the main ZaneOps server from the cluster.
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </TooltipProvider>
+  );
 }

@@ -8489,14 +8489,14 @@ export interface components {
     StorageBackendEnum: "LOCAL" | "S3";
     SwarmNode: {
       id: string;
-      hostname: string;
+      hostname: string | null;
       role: components["schemas"]["SwarmRoleEnum"];
       private_ip: string;
       public_ip: string | null;
       status: components["schemas"]["SwarmNodeStatusEnum"];
       /** Format: date-time */
       last_status_update: string | null;
-      docker_version: string;
+      docker_version: string | null;
       is_build_server: boolean;
       is_app_server: boolean;
       is_initial_install_server: boolean;

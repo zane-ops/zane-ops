@@ -27,16 +27,18 @@ class SwarmNode(TimestampedModel):
         prefix=ID_PREFIX,
     )  # type: ignore
 
-    swarm_node_id = models.CharField(unique=True)
+    swarm_node_id = models.CharField(unique=True, null=True)
     role = models.CharField(choices=Role.choices)
-    hostname = models.CharField(unique=True)  # == swarm node Description.Hostname
+    hostname = models.CharField(
+        unique=True, null=True
+    )  # == swarm node Description.Hostname
     private_ip = models.GenericIPAddressField()  # overlay / VPC address
     public_ip = models.GenericIPAddressField(null=True)
 
-    status = models.CharField(choices=Status.choices)
+    status = models.CharField(choices=Status.choices, default=Status.PROVISIONING)
     last_status_update = models.DateTimeField(null=True)
 
-    docker_version = models.CharField()
+    docker_version = models.CharField(null=True)
     # Can this run builds ?
     is_build_server = models.BooleanField(default=False)
     # Can this run user defined apps ?

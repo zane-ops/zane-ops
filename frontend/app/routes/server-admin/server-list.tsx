@@ -160,7 +160,7 @@ export function ServerCard({
 
           <div className="flex flex-col gap-1.5 items-start w-full">
             <div className="flex items-center gap-2 w-full justify-between">
-              <h3 className="font-medium text-lg">{hostname}</h3>
+              <h3 className="font-medium text-lg">{hostname ?? private_ip}</h3>
 
               <div className="flex items-center gap-2">
                 <TooltipProvider>
