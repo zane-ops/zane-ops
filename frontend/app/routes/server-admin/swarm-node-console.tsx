@@ -24,8 +24,12 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { swarmQueries } from "~/lib/queries";
-import { cn } from "~/lib/utils";
+import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/swarm-node-console";
+
+export function meta() {
+  return [metaTitle("Server Console")] satisfies ReturnType<Route.MetaFunction>;
+}
 
 export default function SwarmNodeConsolePage({
   params,

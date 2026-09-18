@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, href, useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 
 import {
   CpuIcon,
@@ -16,7 +16,6 @@ import {
   PowerOffIcon,
   ServerIcon,
   TerminalIcon,
-  TextSearchIcon,
   TriangleAlertIcon,
   XIcon
 } from "lucide-react";
