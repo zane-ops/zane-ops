@@ -18,7 +18,7 @@ import {
 import { swarmQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import { capitalizeText, cn, metaTitle } from "~/lib/utils";
-import { ServerStatusBadge } from "~/routes/server-admin/server-list";
+import { ServerStatusBadge } from "~/routes/server-admin/swarm-node-list";
 import type { Route } from "./+types/swarm-node-layout";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {

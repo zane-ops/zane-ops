@@ -3,15 +3,19 @@ import {
   FingerprintIcon,
   KeyRoundIcon,
   TerminalIcon,
+  Trash2Icon,
   UserIcon
 } from "lucide-react";
 
-import { Link, href } from "react-router";
+import { Link, href, useFetcher } from "react-router";
 import type { SSHKey } from "~/api/types";
+import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
+import { SimpleConfirmationDialog } from "~/components/delete-confirmation-dialog";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
+import { DialogTrigger } from "~/components/ui/dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -86,8 +90,8 @@ export function SSHKeyCard({ sshKey, className, serverId }: SSHKeyCardProps) {
                   </Link>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                Use this Key to connect to the server's console
+              <TooltipContent className="max-w-60 text-pretty">
+                Open console with this key
               </TooltipContent>
             </Tooltip>
             <Tooltip delayDuration={0}>
@@ -101,9 +105,63 @@ export function SSHKeyCard({ sshKey, className, serverId }: SSHKeyCardProps) {
               <TooltipContent>Copy Public Key</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          {/* <DeleteConfirmationFormDialog key_slug={ssh_key.slug} /> */}
+          <DeleteConfirmationFormDialog sshKey={sshKey} />
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+type DeleteConfirmationFormDialogProps = {
+  sshKey: SSHKey;
+};
+
+function DeleteConfirmationFormDialog({
+  sshKey
+}: DeleteConfirmationFormDialogProps) {
+  const fetcher = useFetcher();
+
+  return (
+    <SimpleConfirmationDialog
+      fetcher={fetcher}
+      title={
+        <>
+          Delete the SSH key&nbsp;
+          <span className="text-grey">&ldquo;{sshKey.slug}&rdquo;</span>?
+        </>
+      }
+      message={
+        <p>
+          You will no longer be able to open a console on this server with this
+          key. Remember to also remove the public key from the{" "}
+          <Code>~/.ssh/authorized_keys</Code> file on the server.
+        </p>
+      }
+      confirmText="Delete"
+      pendingText="Deleting..."
+      form={
+        <fetcher.Form
+          method="post"
+          action={href("/admin/ssh-keys/:slug", { slug: sshKey.slug })}
+        >
+          <input type="hidden" name="intent" value="delete_ssh_key" />
+        </fetcher.Form>
+      }
+      trigger={
+        <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="ghost">
+                  <Trash2Icon size={15} className="text-red-400" />
+                  <span className="sr-only">Delete SSH key {sshKey.slug}</span>
+                </Button>
+              </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Delete SSH key</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      }
+    />
   );
 }

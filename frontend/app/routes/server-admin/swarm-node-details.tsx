@@ -12,6 +12,7 @@ import {
   KeyRoundIcon,
   MemoryStickIcon,
   MicrochipIcon,
+  PackageIcon,
   PickaxeIcon,
   PlusIcon,
   WrenchIcon
@@ -83,7 +84,7 @@ export default function SwarmNodeDetailsPage({
                     name="swarm_role"
                     className="flex flex-col gap-1.5 flex-1"
                   >
-                    <FieldSetLabel>Swarm Role</FieldSetLabel>
+                    <FieldSetLabel>Docker Swarm Role</FieldSetLabel>
                     <div className="relative">
                       <FieldSetInput
                         disabled
@@ -122,7 +123,7 @@ export default function SwarmNodeDetailsPage({
                           <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild>
                               <Code className="inline-flex items-center gap-1 px-1.5 cursor-help">
-                                <BoxIcon className="size-4 flex-none" />
+                                <PackageIcon className="size-4 flex-none" />
                                 <span>App Server</span>
                                 <InfoIcon className="size-3 flex-none" />
                               </Code>
@@ -184,7 +185,7 @@ export default function SwarmNodeDetailsPage({
                       name="hostname"
                       className="flex flex-col gap-1.5 flex-1"
                     >
-                      <FieldSetLabel>Swarm Hostname</FieldSetLabel>
+                      <FieldSetLabel>Docker Swarm Hostname</FieldSetLabel>
                       <div className="relative">
                         <FieldSetInput
                           disabled
@@ -206,8 +207,8 @@ export default function SwarmNodeDetailsPage({
                               {node.hostname}
                             </span>
                           ) : (
-                            <code className="text-grey">
-                              {"[hostname not resolved]"}
+                            <code className="text-grey italic">
+                              {"<unknown>"}
                             </code>
                           )}
 
@@ -293,8 +294,8 @@ export default function SwarmNodeDetailsPage({
                           {node.public_ip ? (
                             <span>{node.public_ip}</span>
                           ) : (
-                            <code className="text-grey">
-                              {"[no public ip]"}
+                            <code className="text-grey italic">
+                              {"<unknown>"}
                             </code>
                           )}
                           {node.public_ip && (
@@ -354,9 +355,15 @@ export default function SwarmNodeDetailsPage({
                           )}
                         >
                           <CpuIcon className="text-grey size-4 flex-none mr-1" />
-                          <span className="text-card-foreground">
-                            {node.cpus}
-                          </span>
+                          {node.cpus ? (
+                            <span className="text-card-foreground">
+                              {node.cpus}
+                            </span>
+                          ) : (
+                            <code className="text-grey italic">
+                              {"<unknown>"}
+                            </code>
+                          )}
                         </span>
                       </div>
                     </FieldSet>
@@ -383,9 +390,13 @@ export default function SwarmNodeDetailsPage({
                           )}
                         >
                           <MemoryStickIcon className="text-grey size-4 flex-none mr-1" />
-                          <span>
-                            {memory ? `${memory.value} ${memory.unit}` : "-"}
-                          </span>
+                          {memory ? (
+                            <span>{`${memory.value} ${memory.unit}`}</span>
+                          ) : (
+                            <code className="text-grey italic">
+                              {"<unknown>"}
+                            </code>
+                          )}
                         </span>
                       </div>
                     </FieldSet>
@@ -415,7 +426,9 @@ export default function SwarmNodeDetailsPage({
                           {node.docker_version ? (
                             <span>v{node.docker_version}</span>
                           ) : (
-                            <code className="text-grey">{"[empty]"}</code>
+                            <code className="text-grey italic">
+                              {"<unknown>"}
+                            </code>
                           )}
                         </span>
                       </div>

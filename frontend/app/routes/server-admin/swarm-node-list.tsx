@@ -43,7 +43,7 @@ import {
   metaTitle,
   pluralize
 } from "~/lib/utils";
-import type { Route } from "./+types/server-list";
+import type { Route } from "./+types/swarm-node-list";
 
 export function meta() {
   return [
@@ -68,7 +68,9 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   return { nodes };
 }
 
-export default function ServerListPage({ loaderData }: Route.ComponentProps) {
+export default function SwarmNodeListPage({
+  loaderData
+}: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = swarmNodeListFilters.parse(searchParams);
 
@@ -163,44 +165,30 @@ export function ServerCard({
               <h3 className="font-medium text-lg">{hostname ?? private_ip}</h3>
 
               <div className="flex items-center gap-2">
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        asChild
-                        className="text-xs py-1.5 px-2.5 w-auto h-auto gap-2"
-                      >
-                        <Link to={`./${id}`}>
-                          <PenLineIcon className="size-4 flex-none text-grey" />
-                          <span className="">Details</span>
-                        </Link>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Server details</TooltipContent>
-                  </Tooltip>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  asChild
+                  className="text-xs py-1.5 px-2.5 w-auto h-auto gap-2"
+                >
+                  <Link to={`./${id}`}>
+                    <PenLineIcon className="size-4 flex-none text-grey" />
+                    <span className="">Details</span>
+                  </Link>
+                </Button>
 
-                  <span className="w-px bg-muted h-3 rounded-lg" />
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        asChild
-                        className="text-xs py-1.5 px-2.5 w-auto h-auto gap-1"
-                      >
-                        <Link to={`./${id}/console`}>
-                          <TerminalIcon className="size-4 flex-none text-grey" />
-                          <span className="">Console</span>
-                        </Link>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Access to the server's console
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <span className="w-px bg-muted h-3 rounded-lg" />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  asChild
+                  className="text-xs py-1.5 px-2.5 w-auto h-auto gap-1"
+                >
+                  <Link to={`./${id}/console`}>
+                    <TerminalIcon className="size-4 flex-none text-grey" />
+                    <span className="">Console</span>
+                  </Link>
+                </Button>
               </div>
             </div>
 
@@ -299,7 +287,7 @@ export function ServerCard({
                 <span className="flex items-center gap-1 cursor-help hover:underline decoration-1 decoration-wavy">
                   <DockerHubLogo className="size-4 flex-none text-grey" />
                   <span className="sr-only">Docker version:</span>v
-                  {docker_version}
+                  {docker_version ?? "[-]"}
                 </span>
               </TooltipTrigger>
               <TooltipContent>Docker version</TooltipContent>
