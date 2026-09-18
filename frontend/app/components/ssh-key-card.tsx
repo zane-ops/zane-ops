@@ -70,7 +70,7 @@ export function SSHKeyCard({ sshKey, className, serverId }: SSHKeyCardProps) {
           </div>
         </div>
 
-        <div className="absolute top-4 right-4 flex items-center gap-1">
+        <div className="absolute top-2 right-2 flex items-center gap-1">
           <TooltipProvider>
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>

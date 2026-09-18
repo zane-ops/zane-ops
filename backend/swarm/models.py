@@ -14,6 +14,7 @@ class SwarmNode(TimestampedModel):
         WORKER = "WORKER", "Worker"
 
     class Status(models.TextChoices):
+        CREATED = "CREATED", "Created"
         PROVISIONING = "PROVISIONING", "Provisioning"
         READY = "READY", "Ready"
         DOWN = "DOWN", "Down"
