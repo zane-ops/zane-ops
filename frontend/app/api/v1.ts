@@ -624,12 +624,6 @@ export interface paths {
      */
     get: operations["getAPISettings"];
   };
-  "/api/shell/ssh-keys/": {
-    /** List all ssh keys */
-    get: operations["getSSHKeyList"];
-    /** Create a new SSH key */
-    post: operations["createSSHKey"];
-  };
   "/api/shell/ssh-keys/{slug}/": {
     get: operations["shell_ssh_keys_retrieve"];
     delete: operations["shell_ssh_keys_destroy"];
@@ -640,6 +634,10 @@ export interface paths {
   };
   "/api/swarm/nodes/{id}/": {
     get: operations["swarm_nodes_retrieve"];
+  };
+  "/api/swarm/nodes/{id}/ssh-keys/": {
+    /** Create a new SSH key attached to this swarm node */
+    post: operations["createSwarmNodeSSHKey"];
   };
   "/api/trigger-preview/{deploy_token}/": {
     /** Webhook to trigger a new preview environment */
@@ -3071,9 +3069,13 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateProjectError"][];
     };
-    CreateSSHKeyError: components["schemas"]["CreateSSHKeyNonFieldErrorsErrorComponent"] | components["schemas"]["CreateSSHKeyUserErrorComponent"] | components["schemas"]["CreateSSHKeySlugErrorComponent"];
-    CreateSSHKeyErrorResponse400: components["schemas"]["CreateSSHKeyValidationError"] | components["schemas"]["ParseErrorResponse"];
-    CreateSSHKeyNonFieldErrorsErrorComponent: {
+    CreateSSHKeyRequestRequest: {
+      user: string;
+      slug: string;
+    };
+    CreateSwarmNodeSSHKeyError: components["schemas"]["CreateSwarmNodeSSHKeyNonFieldErrorsErrorComponent"] | components["schemas"]["CreateSwarmNodeSSHKeyUserErrorComponent"] | components["schemas"]["CreateSwarmNodeSSHKeySlugErrorComponent"];
+    CreateSwarmNodeSSHKeyErrorResponse400: components["schemas"]["CreateSwarmNodeSSHKeyValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CreateSwarmNodeSSHKeyNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
        * @enum {string}
@@ -3086,11 +3088,7 @@ export interface components {
       code: "invalid";
       detail: string;
     };
-    CreateSSHKeyRequestRequest: {
-      user: string;
-      slug: string;
-    };
-    CreateSSHKeySlugErrorComponent: {
+    CreateSwarmNodeSSHKeySlugErrorComponent: {
       /**
        * @description * `slug` - slug
        * @enum {string}
@@ -3108,7 +3106,7 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    CreateSSHKeyUserErrorComponent: {
+    CreateSwarmNodeSSHKeyUserErrorComponent: {
       /**
        * @description * `user` - user
        * @enum {string}
@@ -3126,9 +3124,9 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    CreateSSHKeyValidationError: {
+    CreateSwarmNodeSSHKeyValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["CreateSSHKeyError"][];
+      errors: components["schemas"]["CreateSwarmNodeSSHKeyError"][];
     };
     CreateWorkspaceApiTokenAccessibleProjectIdsErrorComponent: {
       /**
@@ -3975,25 +3973,6 @@ export interface components {
     GetProxyLogsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetProxyLogsWithContextErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetRegistryCredentialsErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    GetSSHKeyListError: components["schemas"]["GetSSHKeyListUserErrorComponent"];
-    GetSSHKeyListErrorResponse400: components["schemas"]["GetSSHKeyListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    GetSSHKeyListUserErrorComponent: {
-      /**
-       * @description * `user` - user
-       * @enum {string}
-       */
-      attr: "user";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    GetSSHKeyListValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["GetSSHKeyListError"][];
-    };
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -16311,83 +16290,6 @@ export interface operations {
       };
     };
   };
-  /** List all ssh keys */
-  getSSHKeyList: {
-    parameters: {
-      query?: {
-        user?: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["SSHKey"][];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["GetSSHKeyListErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      403: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse403"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /** Create a new SSH key */
-  createSSHKey: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["CreateSSHKeyRequestRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["CreateSSHKeyRequestRequest"];
-        "multipart/form-data": components["schemas"]["CreateSSHKeyRequestRequest"];
-      };
-    };
-    responses: {
-      201: {
-        content: {
-          "application/json": components["schemas"]["SSHKey"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["CreateSSHKeyErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      403: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse403"];
-        };
-      };
-      409: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse409"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
   shell_ssh_keys_retrieve: {
     parameters: {
       path: {
@@ -16538,6 +16440,58 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Create a new SSH key attached to this swarm node */
+  createSwarmNodeSSHKey: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateSSHKeyRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["CreateSSHKeyRequestRequest"];
+        "multipart/form-data": components["schemas"]["CreateSSHKeyRequestRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["SSHKey"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CreateSwarmNodeSSHKeyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
         };
       };
       429: {

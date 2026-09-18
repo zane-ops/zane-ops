@@ -15,4 +15,9 @@ urlpatterns = [
         views.SwarmNodeDetailsAPIView.as_view(),
         name="node.detail",
     ),
+    re_path(
+        r"^nodes/(?P<id>[a-zA-Z0-9_]+)/ssh-keys/?$",
+        views.SwarmNodeSSHKeysAPIView.as_view(),
+        name="node.ssh_keys",
+    ),
 ]

@@ -1,15 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircleIcon,
   AtSignIcon,
   BoxIcon,
   BrainIcon,
   CableIcon,
+  CheckIcon,
+  ChevronRightIcon,
   CpuIcon,
   FlameIcon,
   GlobeIcon,
   GlobeLockIcon,
   InfoIcon,
   KeyRoundIcon,
+  LoaderIcon,
   MemoryStickIcon,
   MicrochipIcon,
   PackageIcon,
@@ -17,12 +21,23 @@ import {
   PlusIcon,
   WrenchIcon
 } from "lucide-react";
+import * as React from "react";
+import { Link, href, useFetcher } from "react-router";
 import type { SwarmNode } from "~/api/types";
 import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
 import { DockerHubLogo } from "~/components/docker-hub-logo";
 import { SSHKeyCard } from "~/components/ssh-key-card";
-import { Button } from "~/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Button, SubmitButton } from "~/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "~/components/ui/dialog";
 import {
   FieldSet,
   FieldSetInput,
@@ -35,17 +50,22 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { createDevLogger } from "~/lib/logger";
 import { swarmQueries } from "~/lib/queries";
-import { cn, formatStorageValue, metaTitle } from "~/lib/utils";
+import {
+  cn,
+  formatStorageValue,
+  getFormErrorsFromResponseData,
+  metaTitle
+} from "~/lib/utils";
 import type { Route } from "./+types/swarm-node-details";
+import type { clientAction as createSSHKeyClientAction } from "./create-swarm-node-ssh-key";
 
 export function meta() {
   return [metaTitle("Server Details")] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader({}: Route.ClientLoaderArgs) {
-  return;
-}
+const logger = createDevLogger(import.meta.url);
 
 export default function SwarmNodeDetailsPage({
   params,
@@ -452,7 +472,7 @@ export default function SwarmNodeDetailsPage({
 
               {node.ssh_keys.length > 0 && (
                 <>
-                  <ul className="w-full">
+                  <ul className="w-full flex flex-col gap-2">
                     {node.ssh_keys.map((ssh_key) => (
                       <li key={ssh_key.id} className="w-full">
                         <SSHKeyCard
@@ -467,7 +487,7 @@ export default function SwarmNodeDetailsPage({
                 </>
               )}
 
-              <SSHKeyAddDialog />
+              <SSHKeyAddDialog serverId={node.id} />
             </div>
           </section>
 
@@ -502,12 +522,236 @@ export default function SwarmNodeDetailsPage({
   );
 }
 
-function SSHKeyAddDialog() {
+type SSHKeyAddDialogProps = {
+  serverId: string;
+};
+
+function SSHKeyAddDialog({ serverId }: SSHKeyAddDialogProps) {
+  const fetcher = useFetcher<typeof createSSHKeyClientAction>();
+  const [open, setOpen] = React.useState(false);
+  const [data, setData] = React.useState(fetcher.data);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
+  const isPending = fetcher.state !== "idle";
+
+  const errors = getFormErrorsFromResponseData(data?.errors);
+  const createdKey = data?.data ?? null;
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetcher.state, fetcher.data]);
+
+  React.useEffect(() => {
+    const key = Object.keys(errors ?? {})[0];
+    const field = formRef.current?.elements.namedItem(key) as HTMLInputElement;
+    field?.focus();
+  }, [errors]);
+
+  const close = React.useCallback(() => {
+    setOpen(false);
+    setData(undefined);
+  }, []);
+
+  const commands = createdKey
+    ? [
+        "mkdir -p $HOME/.ssh",
+        "touch $HOME/.ssh/authorized_keys",
+        "chmod 600 $HOME/.ssh/authorized_keys",
+        'echo "" >> $HOME/.ssh/authorized_keys',
+        `echo '${createdKey.public_key}' >> $HOME/.ssh/authorized_keys`
+      ]
+    : [];
+
   return (
-    <Button variant="secondary">
-      <PlusIcon className="size-4 flex-none" />
-      Add new key
-    </Button>
+    <Dialog
+      open={open}
+      onOpenChange={(open) => {
+        if (isPending) return;
+        setOpen(open);
+        if (!open) close();
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant="secondary">
+          <PlusIcon className="size-4 flex-none" />
+          Add new key
+        </Button>
+      </DialogTrigger>
+
+      <DialogContent className="gap-0 max-w-xl">
+        <DialogHeader className="pb-4">
+          <DialogTitle>
+            {createdKey ? (
+              <>
+                SSH key&nbsp;
+                <span className="text-grey">
+                  &ldquo;{createdKey.slug}&rdquo;
+                </span>
+                &nbsp;created
+              </>
+            ) : (
+              <>Add a new SSH key</>
+            )}
+          </DialogTitle>
+
+          {createdKey ? (
+            <Alert variant="success" className="mt-5">
+              <CheckIcon className="size-4" />
+              <AlertTitle>Key created</AlertTitle>
+              <AlertDescription>
+                To allow login with this key, add its public key to the{" "}
+                <Code>~/.ssh/authorized_keys</Code> file of{" "}
+                <span className="font-medium">{createdKey.user}</span> on this
+                server using these commands:
+              </AlertDescription>
+            </Alert>
+          ) : (
+            errors.non_field_errors && (
+              <Alert variant="destructive" className="mt-5">
+                <AlertCircleIcon className="size-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{errors.non_field_errors}</AlertDescription>
+              </Alert>
+            )
+          )}
+        </DialogHeader>
+
+        {createdKey ? (
+          <div className="relative mb-5 w-full min-w-0">
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <CopyButton
+                    value={commands.join("\n")}
+                    label="Copy commands"
+                    className="opacity-100! absolute top-2 right-2 font-sans"
+                  />
+                </TooltipTrigger>
+                <TooltipContent>Copy commands</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <pre
+              className={cn(
+                "text-sm font-mono",
+                "rounded-md",
+                "overflow-x-auto overflow-y-clip bg-muted/25 dark:bg-neutral-950",
+                "max-w-full p-4 w-full min-w-0"
+              )}
+            >
+              {commands.map((cmd, index) => (
+                <div key={index}>
+                  <span className="text-primary select-none">$</span>&nbsp;
+                  <span>{cmd}</span>
+                  &nbsp;&nbsp;
+                </div>
+              ))}
+            </pre>
+          </div>
+        ) : (
+          <fetcher.Form
+            ref={formRef}
+            method="post"
+            action={href("/admin/servers/:serverId/ssh-keys", { serverId })}
+            id="create-ssh-key-form"
+            className="flex flex-col gap-4 mb-5"
+          >
+            <FieldSet
+              errors={errors.user}
+              name="user"
+              required
+              className="flex flex-col gap-1"
+            >
+              <FieldSetLabel className="flex items-center gap-0.5">
+                Username
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <InfoIcon size={15} className="text-grey" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64 dark:bg-card">
+                      User to login as on this server
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </FieldSetLabel>
+              <FieldSetInput
+                autoComplete="off"
+                autoFocus
+                placeholder="ex: root"
+                defaultValue={data?.userData?.user}
+              />
+            </FieldSet>
+            <FieldSet
+              errors={errors.slug}
+              name="slug"
+              required
+              className="flex flex-col gap-1"
+            >
+              <FieldSetLabel>Slug</FieldSetLabel>
+              <FieldSetInput
+                placeholder="ex: my-ssh-key"
+                defaultValue={data?.userData?.slug}
+              />
+            </FieldSet>
+          </fetcher.Form>
+        )}
+
+        <DialogFooter className="-mx-6 px-6">
+          <div className="flex items-center gap-4 w-full">
+            {createdKey ? (
+              <>
+                <Button asChild>
+                  <Link
+                    to={{
+                      pathname: href("/admin/servers/:serverId/console", {
+                        serverId
+                      }),
+                      search: `?ssh_key_slug=${encodeURIComponent(createdKey.slug)}`
+                    }}
+                    className="items-center gap-2"
+                  >
+                    Use this key
+                    <ChevronRightIcon className="size-4 flex-none" />
+                  </Link>
+                </Button>
+                <Button variant="outline" type="button" onClick={close}>
+                  Close
+                </Button>
+              </>
+            ) : (
+              <>
+                <SubmitButton
+                  isPending={isPending}
+                  form="create-ssh-key-form"
+                  className="inline-flex gap-1 items-center"
+                >
+                  {isPending ? (
+                    <>
+                      <LoaderIcon
+                        className="animate-spin flex-none"
+                        size={15}
+                      />
+                      <span>Adding key...</span>
+                    </>
+                  ) : (
+                    <span>Add SSH key</span>
+                  )}
+                </SubmitButton>
+                <Button
+                  variant="outline"
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => setOpen(false)}
+                >
+                  Cancel
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

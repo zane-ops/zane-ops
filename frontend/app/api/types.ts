@@ -1,8 +1,8 @@
 import type { ApiResponse, RequestParams } from "./client";
 
 export type SSHKey = NonNullable<
-  ApiResponse<"get", "/api/shell/ssh-keys/">
->[number];
+  ApiResponse<"get", "/api/shell/ssh-keys/{slug}/">
+>;
 
 export type BuildRegistry = NonNullable<
   ApiResponse<"get", "/api/registries/build-registries/{id}/">

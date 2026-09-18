@@ -23,6 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { createDevLogger } from "~/lib/logger";
 import { swarmQueries } from "~/lib/queries";
 import { cn, metaTitle } from "~/lib/utils";
 import type { Route } from "./+types/swarm-node-console";
@@ -30,6 +31,8 @@ import type { Route } from "./+types/swarm-node-console";
 export function meta() {
   return [metaTitle("Server Console")] satisfies ReturnType<Route.MetaFunction>;
 }
+
+const logger = createDevLogger(import.meta.url);
 
 export default function SwarmNodeConsolePage({
   params,
@@ -45,21 +48,18 @@ export default function SwarmNodeConsolePage({
   const [searchParams, setSearchParams] = useSearchParams();
   const slugInSearch = searchParams.get("ssh_key_slug")?.toString().trim();
 
-  const [lasKeySlug, setLastKeySlug] = useLocalStorage<string | null>(
-    `server_console_last_ssh_key_slug_for_${node.hostname}`,
-    slugInSearch ?? null
-  );
+  // const [lasKeySlug, setLastKeySlug] = useLocalStorage<string | null>(
+  //   `server_console_last_ssh_key_slug_for_${node.id}`,
+  //   slugInSearch ?? null
+  // );
 
   const [counter, setCounter] = React.useState(0);
 
-  const keySlug = slugInSearch ?? lasKeySlug;
+  const keySlug = slugInSearch ?? slugInSearch;
+  const [selectedKey, setSelectedKey] = React.useState(keySlug);
   const isMaximized = searchParams.get("isMaximized") === "true";
 
-  React.useEffect(() => {
-    if (slugInSearch) {
-      setLastKeySlug(slugInSearch);
-    }
-  }, [slugInSearch]);
+  logger.scope("SwarmNodeConsolePage").info({ selectedKey });
 
   return (
     <section className="flex flex-col gap-4">
@@ -76,8 +76,14 @@ export default function SwarmNodeConsolePage({
             const keySlug = formData.get("ssh_key_slug")?.toString().trim();
             if (keySlug) {
               searchParams.set("ssh_key_slug", keySlug);
-              setLastKeySlug(keySlug);
+              // setLastKeySlug(keySlug);
             }
+            // FIXME: the `ssh_key_slug` does not get updated correctly, WHY ????
+            logger.scope("form.action").info({
+              'formData.get("ssh_key_slug")': keySlug,
+              'searchParams.get("ssh_key_slug")':
+                searchParams.get("ssh_key_slug")
+            });
             setSearchParams(searchParams);
             setCounter((c) => c + 1); // force rerender
           }}
@@ -113,13 +119,15 @@ export default function SwarmNodeConsolePage({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <FieldSet name="slug" className="flex flex-col gap-1.5">
+          <FieldSet name="ssh_key_slug" className="flex flex-col gap-1.5">
             <FieldSetLabel htmlFor="ssh_key_slug" className="sr-only">
               SSH Key
             </FieldSetLabel>
             <FieldSetSelect
               name="ssh_key_slug"
-              defaultValue={keySlug ?? undefined}
+              defaultValue={selectedKey ?? undefined}
+              value={selectedKey ?? undefined}
+              onValueChange={setSelectedKey}
             >
               <SelectTrigger id="ssh_key_slug" className="w-56">
                 <SelectValue placeholder="Select a Key" />
