@@ -859,6 +859,11 @@ class ZaneProxyClient:
                     "servers": {
                         "zane": {
                             "@id": "zane-server",
+                            "tls_connection_policies": [{}],
+                            "logs": {},
+                            "automatic_https": {
+                                "disable_redirects": not settings.ENABLE_AUTOMATIC_HTTPS_REDIRECT
+                            },
                             "errors": {"routes": [ZANE_CATCHALL_502_ROUTE]},
                             "listen": [":443", ":80"],
                             "routes": [
@@ -873,9 +878,7 @@ class ZaneProxyClient:
                                     "terminal": True,
                                 }
                             ],
-                            "tls_connection_policies": [{}],
-                            "logs": {},
-                        }
+                        },
                     }
                 },
                 "tls": tls_app_config,

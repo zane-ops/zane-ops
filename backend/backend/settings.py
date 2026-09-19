@@ -19,7 +19,6 @@ from pathlib import Path
 import uvloop
 
 from .api_description import API_DESCRIPTION
-from .bootstrap import register_zaneops_app_on_proxy
 from dotenv import load_dotenv
 
 
@@ -439,6 +438,7 @@ CADDY_PROXY_ADMIN_HOST = os.environ.get(
     "http://127.0.0.1:2019",
 )
 CLOUDFLARE_API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
+ENABLE_AUTOMATIC_HTTPS_REDIRECT = os.environ.get("ZANE_HTTP_MODE", "http") == "https"
 
 ZANE_FRONT_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:5173"

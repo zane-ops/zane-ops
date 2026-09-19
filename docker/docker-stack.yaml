@@ -17,8 +17,8 @@ services:
     deploy:
       mode: global
   proxy:
-    image: ghcr.io/zane-ops/proxy:canary
-    command: caddy run --resume
+    image: ghcr.io/fredkiss3/caddy-cloudflare:2.11.4-alpine
+    command: caddy run  --resume  --config /etc/caddy/config.json 
     logging:
       driver: "fluentd"
       options:
@@ -30,7 +30,6 @@ services:
         tag: '{"service_id":"zane.proxy"}'
     deploy:
       mode: global
-      # replicas: 1
       update_config:
         parallelism: 1
         delay: 5s
@@ -38,9 +37,9 @@ services:
         failure_action: rollback
       restart_policy:
         condition: any
-      # placement:
-      #   constraints:
-      #     - node.role==manager
+      placement:
+        constraints:
+          - node.labels.zane.app-server == true
       labels:
         zane.role: "proxy"
     ports:
@@ -54,8 +53,8 @@ services:
         mode: host
       - "2019:2019"
     volumes:
-      - caddy-data:/data
-      - caddy-config:/config
+      - ./proxy/default-caddy-config.json:/etc/caddy/config.json:ro
+      - config-storage:/config
     environment:
       <<: *internal-envs
       CADDY_ADMIN: 0.0.0.0:2019
@@ -63,54 +62,6 @@ services:
       zane:
         aliases:
           - zane.proxy
-  
-  proxy2:
-    image: ghcr.io/fredkiss3/caddy-cloudflare:2.11.4-alpine
-    command: caddy run --resume --config /etc/caddy/config.json 
-    logging:
-      driver: "fluentd"
-      options:
-        mode: "non-blocking"
-        fluentd-address: "unix://$HOME/.fluentd/fluentd.sock"
-        fluentd-async: "true"
-        fluentd-max-retries: 10
-        fluentd-sub-second-precision: "true"
-        tag: '{"service_id":"zane.proxy"}'
-    deploy:
-      mode: global
-      # replicas: 1
-      update_config:
-        parallelism: 1
-        delay: 5s
-        order: start-first
-        failure_action: rollback
-      restart_policy:
-        condition: any
-      # placement:
-      #   constraints:
-      #     - node.role==manager
-      labels:
-        zane.role: "proxy"
-    ports:
-      # - target: 80
-      #   published: 80
-      #   protocol: tcp
-      #   mode: host
-      # - target: 443
-      #   published: 443
-      #   protocol: tcp
-      #   mode: host
-      - "2021:2021"
-    volumes:
-      - ./proxy/default-caddy-config.json:/etc/caddy/config.json:ro
-      - proxy-config:/config
-    environment:
-      <<: *internal-envs
-      CADDY_ADMIN: 0.0.0.0:2021
-    networks:
-      zane:
-    #     aliases:
-    #       - zane.proxy
   
   temporal-admin-tools:
     image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-1.0.0
@@ -140,9 +91,9 @@ services:
     networks:
       - zane
 volumes:
-  caddy-data:
-  caddy-config:
-  proxy-config:
+  # caddy-data:
+  # caddy-config:
+  config-storage:
 networks:
   zane:
     external: true

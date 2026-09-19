@@ -10,6 +10,7 @@ x-backend-vars: &env-vars
   # the operator sets `MAXMIND_DB_HOST_PATH` (path of the DB on the host), we mount it at
   # a fixed path in the container and tell django about it.
   MAXMIND_DB_PATH: /code/GeoLite2-Country.mmdb
+  ZANE_HTTP_MODE: ${MODE:-http}
 
 services:
   zane-loki:
