@@ -4,9 +4,13 @@ from typing import Dict, List, TypedDict
 
 from .shared import DeploymentDetails, ProxyURLRoute
 from zane_api.models import Deployment, URL
-from zane_api.utils import strip_slash_if_exists, jprint
+from compose.models import ComposeStack
+
+from container_registry.models import BuildRegistry
+from zane_api.utils import strip_slash_if_exists
+from .shared import DeploymentDetails
 from django.conf import settings
-from zane_api.dtos import URLDto
+from zane_api.dtos import URLDto, URLRedirectToDto
 import requests
 from rest_framework import status
 
@@ -126,7 +130,6 @@ class ZaneProxyClient:
         cls,
         url: URLDto,
         current_deployment: DeploymentDetails | Deployment,
-        previous_deployment: Deployment | DeploymentDetails | None,
     ):
         AuthDict = TypedDict("AuthDict", {"username": str, "password": str})
         auth_options: AuthDict | None = None
@@ -159,19 +162,6 @@ class ZaneProxyClient:
 
         service = current_deployment.service
         http_port = url.associated_port
-        blue_hash = None
-        green_hash = None
-
-        if current_deployment.slot == "BLUE":
-            blue_hash = current_deployment.hash
-        elif current_deployment.slot == "GREEN":
-            green_hash = current_deployment.hash
-
-        if previous_deployment is not None:
-            if previous_deployment.slot == "BLUE":
-                blue_hash = previous_deployment.hash
-            elif previous_deployment.slot == "GREEN":
-                green_hash = previous_deployment.hash
 
         proxy_handlers = [
             {
@@ -183,16 +173,6 @@ class ZaneProxyClient:
                 "handler": "log_append",
                 "key": "zane_service_id",
                 "value": service.id,
-            },
-            {
-                "handler": "log_append",
-                "key": "zane_deployment_blue_hash",
-                "value": blue_hash,
-            },
-            {
-                "handler": "log_append",
-                "key": "zane_deployment_green_hash",
-                "value": green_hash,
             },
             {
                 "handler": "log_append",
@@ -319,7 +299,6 @@ class ZaneProxyClient:
         cls,
         url: URLDto,
         current_deployment: DeploymentDetails | Deployment,
-        previous_deployment: Deployment | DeploymentDetails | None,
     ) -> bool:
         attempts = 0
 
@@ -340,7 +319,6 @@ class ZaneProxyClient:
             new_url = cls._get_request_for_service_url(
                 url=url,
                 current_deployment=current_deployment,
-                previous_deployment=previous_deployment,
             )
             routes.append(new_url)
             routes = cls._sort_routes(routes)  # type: ignore
@@ -805,6 +783,63 @@ class ZaneProxyClient:
         """
         routes = []
 
+        deployments = (
+            Deployment.objects.filter(
+                is_current_production=True,
+                service_snapshot__isnull=False,
+            )
+            .select_related("service")
+            .prefetch_related(
+                "service__urls",
+                "service__environment",
+                "service__environment__preview_metadata",
+            )
+        )
+
+        for deployment in deployments:
+            service = deployment.service
+            for url in service.urls.all():
+                routes.append(
+                    cls._get_request_for_service_url(
+                        url=URLDto(
+                            domain=url.domain,
+                            base_path=url.base_path,
+                            associated_port=url.associated_port,
+                            strip_prefix=url.strip_prefix,
+                            redirect_to=URLRedirectToDto.from_dict(url.redirect_to)
+                            if url.redirect_to is not None
+                            else None,
+                        ),
+                        current_deployment=deployment,
+                    )
+                )
+
+        for stack in (
+            ComposeStack.objects.filter(urls__isnull=False, deployments__isnull=False)
+            .prefetch_related("env_overrides")
+            .distinct("id")
+        ):
+            for service_name, service_urls in stack.snapshot.urls.items():
+                for url in service_urls:
+                    routes.append(
+                        cls._get_request_for_compose_stack_service_url(
+                            stack_id=stack.id,
+                            stack_hash_prefix=stack.hash_prefix,
+                            service_name=service_name,
+                            url=url,
+                        )
+                    )
+
+        for registry in BuildRegistry.objects.filter(service_alias__isnull=False):
+            routes.append(
+                cls._get_request_for_build_registry(
+                    registry_id=registry.id,
+                    registry_alias=str(registry.service_alias),
+                    domain=registry.registry_domain,
+                    is_secure=registry.is_secure,
+                )
+            )
+
         routes.extend(cls._get_dashboard_routes())
         routes.append(ZANE_CATCHALL_404_ROUTE)
 
@@ -872,7 +907,7 @@ class ZaneProxyClient:
                                         {
                                             "handler": "subroute",
                                             "@id": "zane-url-root",
-                                            "routes": routes,
+                                            "routes": cls._sort_routes(routes),
                                         }
                                     ],
                                     "terminal": True,

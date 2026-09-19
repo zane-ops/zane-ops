@@ -226,28 +226,9 @@ class LogIngestAPIView(APIView):
                                                         source=ZaneProxyClient.ServiceType.COMPOSE_STACK_SERVICE,
                                                     )
                                             case ZaneProxyClient.ServiceType.MANAGED_SERVICE:
-                                                upstream: str = log_content.get(
-                                                    "zane_deployment_upstream"
-                                                )  # type: ignore
                                                 deployment_id = content.get(
                                                     "zane_deployment_id"
                                                 )
-                                                # For backward compatibility
-                                                if deployment_id is not None:
-                                                    if (
-                                                        "blue.zaneops.internal"
-                                                        in upstream
-                                                    ):
-                                                        deployment_id = log_content.get(
-                                                            "zane_deployment_blue_hash"
-                                                        )
-                                                    elif (
-                                                        "green.zaneops.internal"
-                                                        in upstream
-                                                    ):
-                                                        deployment_id = log_content.get(
-                                                            "zane_deployment_green_hash"
-                                                        )
 
                                                 if deployment_id:
                                                     http_log = _build_http_log(

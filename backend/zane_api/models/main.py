@@ -530,7 +530,7 @@ class BaseService(TimestampedModel):
         to=Project, on_delete=models.CASCADE, related_name="services"
     )
     ports = models.ManyToManyField(to="PortConfiguration")
-    urls = models.ManyToManyField(to=URL)
+    urls = models.ManyToManyField(to=URL, related_name="services")
     healthcheck = models.ForeignKey(
         to=HealthCheck, null=True, on_delete=models.SET_NULL
     )

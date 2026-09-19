@@ -288,13 +288,13 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
                 )
 
             if deployment_status == Deployment.DeploymentStatus.HEALTHY:
-                if len(deployment.service.urls) > 0:
-                    await workflow.execute_activity_method(
-                        DockerSwarmActivities.expose_docker_service_to_http,
-                        deployment,
-                        start_to_close_timeout=timedelta(seconds=30),
-                        retry_policy=self.retry_policy,
-                    )
+                # if len(deployment.service.urls) > 0:
+                #     await workflow.execute_activity_method(
+                #         DockerSwarmActivities.expose_docker_service_to_http,
+                #         deployment,
+                #         start_to_close_timeout=timedelta(seconds=30),
+                #         retry_policy=self.retry_policy,
+                #     )
 
                 if await self.check_for_cancellation(
                     DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP,
@@ -1028,13 +1028,13 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             deployment_status, deployment_status_reason = result
 
             if deployment_status == Deployment.DeploymentStatus.HEALTHY:
-                if len(deployment.service.urls) > 0:
-                    await workflow.execute_activity_method(
-                        DockerSwarmActivities.expose_docker_service_to_http,
-                        deployment,
-                        start_to_close_timeout=timedelta(seconds=30),
-                        retry_policy=self.retry_policy,
-                    )
+                # if len(deployment.service.urls) > 0:
+                #     await workflow.execute_activity_method(
+                #         DockerSwarmActivities.expose_docker_service_to_http,
+                #         deployment,
+                #         start_to_close_timeout=timedelta(seconds=30),
+                #         retry_policy=self.retry_policy,
+                #     )
 
                 if await self.check_for_cancellation(
                     GitDeploymentStep.SERVICE_EXPOSED_TO_HTTP,
