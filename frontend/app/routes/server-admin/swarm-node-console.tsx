@@ -48,14 +48,14 @@ export default function SwarmNodeConsolePage({
   const [searchParams, setSearchParams] = useSearchParams();
   const slugInSearch = searchParams.get("ssh_key_slug")?.toString().trim();
 
-  // const [lasKeySlug, setLastKeySlug] = useLocalStorage<string | null>(
-  //   `server_console_last_ssh_key_slug_for_${node.id}`,
-  //   slugInSearch ?? null
-  // );
+  const [lasKeySlug, setLastKeySlug] = useLocalStorage<string | null>(
+    `server_console_last_ssh_key_slug_for_${node.id}`,
+    slugInSearch ?? null
+  );
 
   const [counter, setCounter] = React.useState(0);
 
-  const keySlug = slugInSearch ?? slugInSearch;
+  const keySlug = slugInSearch ?? lasKeySlug;
   const [selectedKey, setSelectedKey] = React.useState(keySlug);
   const isMaximized = searchParams.get("isMaximized") === "true";
 
@@ -76,9 +76,9 @@ export default function SwarmNodeConsolePage({
             const keySlug = formData.get("ssh_key_slug")?.toString().trim();
             if (keySlug) {
               searchParams.set("ssh_key_slug", keySlug);
-              // setLastKeySlug(keySlug);
+              setLastKeySlug(keySlug);
             }
-            // FIXME: the `ssh_key_slug` does not get updated correctly, WHY ????
+
             logger.scope("form.action").info({
               'formData.get("ssh_key_slug")': keySlug,
               'searchParams.get("ssh_key_slug")':
@@ -119,12 +119,22 @@ export default function SwarmNodeConsolePage({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <FieldSet name="ssh_key_slug" className="flex flex-col gap-1.5">
+
+          {/*
+             This is to mitigate a behavior with React 
+             which resets the value of inputs after a succesfull `action`
+            */}
+          <input
+            type="hidden"
+            name="ssh_key_slug"
+            value={selectedKey ?? undefined}
+          />
+
+          <FieldSet name="" className="flex flex-col gap-1.5">
             <FieldSetLabel htmlFor="ssh_key_slug" className="sr-only">
               SSH Key
             </FieldSetLabel>
             <FieldSetSelect
-              name="ssh_key_slug"
               defaultValue={selectedKey ?? undefined}
               value={selectedKey ?? undefined}
               onValueChange={setSelectedKey}
