@@ -10,6 +10,7 @@ x-backend-vars: &env-vars
   # the operator sets `MAXMIND_DB_HOST_PATH` (path of the DB on the host), we mount it at
   # a fixed path in the container and tell django about it.
   MAXMIND_DB_PATH: /code/GeoLite2-Country.mmdb
+  ZANE_HTTP_MODE: ${MODE:-http}
 
 services:
   zane-loki:
@@ -235,20 +236,6 @@ services:
       - redisinsight:/data
     networks:
       - zane
-  zane-fluentd:
-    image: fluentd:v1.16.2-1.1
-    volumes:
-      - "./fluentd/fluent.conf:/fluentd/etc/fluent.conf"
-      - "$HOME/.fluentd/:/var/fluentd/"
-    networks:
-      zane:
-        aliases:
-          - zane.fluentd
-    environment:
-      API_HOST: host.docker.internal:8000
-      DJANGO_SECRET_KEY: "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx" # default value set in `settings.py`
-    deploy:
-      mode: global
   zane-temporal-ui:
     depends_on:
       - zane-temporal-server

@@ -1,0 +1,27 @@
+{
+  "@id": "root",
+  "admin": {
+    "config": {
+      "load": {
+        "header": { "Authorization": ["Internal {env.DJANGO_SECRET_KEY}"] },
+        "module": "http",
+        "url": "http://{env.API_HOST}/api/_proxy/config/"
+      },
+      "load_delay": "5s"
+    }
+  },
+  "logging": {
+    "logs": {
+      "default": {
+        "encoder": { "format": "json" },
+        "writer": { "output": "stdout" }
+      }
+    }
+  },
+  "storage": {
+    "address": ["zane.valkey:6379"],
+    "db": 1,
+    "module": "redis",
+    "timeout": "5"
+  }
+}

@@ -171,12 +171,10 @@ class InternalZaneAppPermission(BasePermission):
         if len(auth) != 2:
             return False
 
-        _type, credentials = auth
-        if _type != "Basic":
+        auth_type, key = auth
+        if auth_type != "Internal":
             return False
-
-        credentials = base64.b64decode(credentials).decode("utf-8")
-        return credentials == f"zaneops:{settings.SECRET_KEY}"
+        return key == settings.SECRET_KEY
 
 
 class HasWorkspace(BasePermission):

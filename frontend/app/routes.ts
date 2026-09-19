@@ -95,9 +95,7 @@ export default [
           )
         ]),
 
-        route("ssh-keys", "./routes/server-admin/ssh-keys-list.tsx"),
-        route("ssh-keys/new", "./routes/server-admin/create-ssh-key.tsx"),
-        route("server-console", "./routes/server-admin/server-terminal.tsx"),
+        route("ssh-keys/:slug", "./routes/server-admin/ssh-key-details.tsx"),
         route(
           "build-registries",
           "./routes/server-admin/build-registry-list.tsx"
@@ -114,7 +112,19 @@ export default [
           "build-registries/:id",
           "./routes/server-admin/build-registry-details.tsx"
         ),
-        route("http-logs", "./routes/server-admin/global-http-logs.tsx")
+        route("http-logs", "./routes/server-admin/global-http-logs.tsx"),
+        route("servers", "./routes/server-admin/swarm-node-list.tsx"),
+        ...prefix("servers/:serverId", [
+          route(
+            "ssh-keys",
+            "./routes/server-admin/create-swarm-node-ssh-key.tsx"
+          ),
+          layout("./routes/layouts/swarm-node-layout.tsx", [
+            index("./routes/server-admin/swarm-node-details.tsx"),
+            route("console", "./routes/server-admin/swarm-node-console.tsx"),
+            route("services", "./routes/server-admin/swarm-node-services.tsx")
+          ])
+        ])
       ])
     ]),
 

@@ -1,8 +1,8 @@
 import type { ApiResponse, RequestParams } from "./client";
 
 export type SSHKey = NonNullable<
-  ApiResponse<"get", "/api/shell/ssh-keys/">
->[number];
+  ApiResponse<"get", "/api/shell/ssh-keys/{slug}/">
+>;
 
 export type BuildRegistry = NonNullable<
   ApiResponse<"get", "/api/registries/build-registries/{id}/">
@@ -116,6 +116,11 @@ export type PasswordResetToken = ApiResponse<
   "get",
   "/api/console/password-tokens/{id}"
 >;
+
+export type SwarmNode = ApiResponse<
+  "get",
+  "/api/swarm/nodes/"
+>["results"][number];
 
 export type WorkspaceWithOwner = ApiResponse<
   "get",

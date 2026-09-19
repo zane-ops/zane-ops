@@ -19,7 +19,6 @@ from pathlib import Path
 import uvloop
 
 from .api_description import API_DESCRIPTION
-from .bootstrap import register_zaneops_app_on_proxy
 from dotenv import load_dotenv
 
 
@@ -87,6 +86,7 @@ ALLOWED_HOSTS = (
         "127.0.0.1",
         ZANE_APP_DOMAIN,
         "host.docker.internal",
+        ".zaneops.internal",
     ]
     if ENVIRONMENT != PRODUCTION_ENV
     else ["127.0.0.1", f".{ROOT_DOMAIN}", f".{ZANE_APP_DOMAIN}", ".zaneops.internal"]
@@ -147,6 +147,7 @@ INSTALLED_APPS = [
     "container_registry.apps.ContainerRegistryConfig",
     "compose.apps.ComposeConfig",
     "console.apps.ConsoleConfig",
+    "swarm.apps.SwarmConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
@@ -409,6 +410,16 @@ SPECTACULAR_SETTINGS = {
             ("HEALTHY", "Healthy"),
             ("UNHEALTHY", "Unhealthy"),
         ),
+        "WorkspaceRoleEnum": (
+            (10, "Viewer"),
+            (30, "Member"),
+            (40, "Admin"),
+            (50, "Owner"),
+        ),
+        "SwarmRoleEnum": (
+            ("MANAGER", "Manager"),
+            ("WORKER", "Worker"),
+        ),
     },
     "POSTPROCESSING_HOOKS": [
         "drf_standardized_errors.openapi_hooks.postprocess_schema_enums",
@@ -427,6 +438,7 @@ CADDY_PROXY_ADMIN_HOST = os.environ.get(
     "http://127.0.0.1:2019",
 )
 CLOUDFLARE_API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
+ENABLE_AUTOMATIC_HTTPS_REDIRECT = os.environ.get("ZANE_HTTP_MODE", "http") == "https"
 
 ZANE_FRONT_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:5173"
@@ -464,16 +476,6 @@ except Exception:
 ZANE_OPS_STATIC_PATH_PREFIXES = ("/assets/", "/fonts/", "/logo/")
 ZANE_OPS_PROXY_APP_NAME = "zane_ops"
 
-if BACKEND_COMPONENT == "API" and not TESTING:
-    register_zaneops_app_on_proxy(
-        proxy_url=CADDY_PROXY_ADMIN_HOST,
-        zane_app_domain=ZANE_APP_DOMAIN,
-        zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
-        zane_api_internal_domain=ZANE_API_SERVICE_INTERNAL_DOMAIN,
-        internal_tls=DEBUG,
-        cloudflare_api_token=CLOUDFLARE_API_TOKEN,
-        app_name=ZANE_OPS_PROXY_APP_NAME,
-    )
 
 # Docker image version
 IMAGE_VERSION = os.environ.get("IMAGE_VERSION", "canary")

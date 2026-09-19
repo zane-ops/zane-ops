@@ -1,0 +1,28 @@
+from rest_framework import serializers
+from .models import SwarmNode
+from webshell.serializers import SSHKeySerializer
+
+
+class SwarmNodeSerializer(serializers.ModelSerializer):
+    ssh_keys = SSHKeySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = SwarmNode
+        fields = [
+            "id",
+            "hostname",
+            "role",
+            "private_ip",
+            "public_ip",
+            "status",
+            "last_status_update",
+            "docker_version",
+            "is_build_server",
+            "is_app_server",
+            "is_initial_install_server",
+            "cpus",
+            "memory_bytes",
+            "created_at",
+            "updated_at",
+            "ssh_keys",
+        ]

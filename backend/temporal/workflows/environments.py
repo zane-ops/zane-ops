@@ -50,27 +50,6 @@ class ArchiveEnvWorkflow:
             retry_policy=self.retry_policy,
         )
 
-        await asyncio.gather(
-            *[
-                workflow.execute_activity_method(
-                    DockerSwarmActivities.unexpose_docker_service_from_http,
-                    service,
-                    start_to_close_timeout=timedelta(seconds=10),
-                    retry_policy=self.retry_policy,
-                )
-                for service in services
-            ],
-            *[
-                workflow.execute_activity_method(
-                    ComposeStackActivities.unexpose_stack_services_from_http,
-                    stack,
-                    start_to_close_timeout=timedelta(seconds=10),
-                    retry_policy=self.retry_policy,
-                )
-                for stack in environment.compose_stacks
-            ],
-        )
-
         all_stack_services = await asyncio.gather(
             *[
                 workflow.execute_activity_method(

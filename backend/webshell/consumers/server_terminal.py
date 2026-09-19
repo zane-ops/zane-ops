@@ -17,8 +17,10 @@ import struct
 from ..serializers import (
     DeploymentTerminalResizeSerializer,
 )
-from ..exceptions import log_consumer_exceptions
-from ..models import SSHKey
+from webshell.exceptions import log_consumer_exceptions
+from webshell.models import SSHKey
+from swarm.models import SwarmNode
+
 from django.conf import settings
 import tempfile
 from django.contrib.auth.models import AbstractUser
@@ -31,6 +33,7 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
         self.docker_client = docker.from_env()
         self.key_path: Optional[str] = None
         self.ssh_key: Optional[SSHKey] = None
+        self.server: Optional[SwarmNode] = None
         # file descriptor used for writing to the terminal
         self.master_file_descriptor: Optional[int] = None
         self.process: Optional[asyncio.subprocess.Process] = None
@@ -39,7 +42,8 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
         self.user: AbstractUser = self.scope["user"]  # type: ignore
         kwargs = self.scope["url_route"]["kwargs"]  # type: ignore
 
-        key_slug = kwargs["slug"]
+        key_slug = kwargs["key_slug"]
+        node_id = kwargs["node_id"]
 
         await self.accept()
         # Only instance owners a.k.a superusers can have access to the server's terminal
@@ -51,22 +55,20 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
 
         try:
             self.ssh_key = await SSHKey.objects.aget(slug=key_slug)
+            self.node = await SwarmNode.objects.aget(id=node_id)
+        except SwarmNode.DoesNotExist:
+            return await self.send(
+                f"A ZaneOps cluster with the id `{node_id}` does not exist{Colors.ENDC}\n\r",
+                close=True,
+            )
         except SSHKey.DoesNotExist:
             return await self.send(
                 f"An SSHKey with the slug `{key_slug}` does not exist{Colors.ENDC}\n\r",
                 close=True,
             )
 
-        # gateway = network.attrs['IPAM']['Config'][0]['Gateway']
-        if settings.ENVIRONMENT == settings.PRODUCTION_ENV:
-            docker_bridge_network = self.docker_client.networks.get("bridge")
-            gateway = docker_bridge_network.attrs["IPAM"]["Config"][0]["Gateway"]
-        else:
-            # we use `docker-compose` locally, so we can access the host using `host.docker.internal`
-            gateway = "host.docker.internal"
-
         await self.send(
-            f"Connecting to default network `{gateway}` using key `{self.ssh_key.slug}` \n\r"
+            f"Connecting to server `{self.node.hostname}` using key `{self.ssh_key.slug}` \n\r"
         )
 
         print("Creating temp file for private key...")
@@ -83,6 +85,8 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
         cmd = [
             "ssh",
             "-t",
+            "-p",
+            str(self.ssh_key.port),
             "-i",
             self.key_path,
             # disable strict host key checking
@@ -90,7 +94,7 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
             "StrictHostKeyChecking=no",
             "-o",
             "UserKnownHostsFile=/dev/null",
-            f"{self.ssh_key.user}@{gateway}",
+            f"{self.ssh_key.user}@{self.node.private_ip}",
             "TERM=xterm $SHELL",
         ]
 
@@ -176,6 +180,8 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
 
                     try:
                         await asyncio.wait_for(self.process.wait(), timeout=1.5)
+                    except TimeoutError:
+                        print("[disconnect] Process exited")
                     finally:
                         if self.process.returncode is not None:
                             print("Process exited correctly")
@@ -197,6 +203,10 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
                 os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
                 await self.process.wait()
                 print("Done ✅")
+
+            await self.send(
+                text_data=f"Process exited with code {self.process.returncode}"
+            )
             print(f"[disconnect]: Process exited with code {self.process.returncode}")
 
         print("[disconnect] Deleting private ssh key file...")

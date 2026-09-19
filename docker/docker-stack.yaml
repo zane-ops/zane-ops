@@ -1,7 +1,24 @@
+x-internal-envs: &internal-envs
+  API_HOST: host.docker.internal:8000
+  DJANGO_SECRET_KEY: 'django-insecure-^@$$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx' # default value set in `settings.py`
+
 services:
+  zane-fluentd:
+    image: fluentd:v1.16.2-1.1
+    volumes:
+      - "./fluentd/fluent.conf:/fluentd/etc/fluent.conf"
+      - "$HOME/.fluentd/:/var/fluentd/"
+    networks:
+      zane:
+        aliases:
+          - zane.fluentd
+    environment:
+      <<: *internal-envs
+    deploy:
+      mode: global
   proxy:
-    image: ghcr.io/zane-ops/proxy:canary
-    command: caddy run --resume
+    image: ghcr.io/fredkiss3/caddy-cloudflare:2.11.4-alpine
+    command: caddy run  --resume  --config /etc/caddy/config.json 
     logging:
       driver: "fluentd"
       options:
@@ -12,7 +29,7 @@ services:
         fluentd-sub-second-precision: "true"
         tag: '{"service_id":"zane.proxy"}'
     deploy:
-      replicas: 1
+      mode: global
       update_config:
         parallelism: 1
         delay: 5s
@@ -20,9 +37,6 @@ services:
         failure_action: rollback
       restart_policy:
         condition: any
-      placement:
-        constraints:
-          - node.role==manager
       labels:
         zane.role: "proxy"
     ports:
@@ -36,14 +50,16 @@ services:
         mode: host
       - "2019:2019"
     volumes:
-      - caddy-data:/data
-      - caddy-config:/config
+      - ./proxy/default-caddy-config.json:/etc/caddy/config.json:ro
+      - config-storage:/config
     environment:
+      <<: *internal-envs
       CADDY_ADMIN: 0.0.0.0:2019
     networks:
       zane:
         aliases:
           - zane.proxy
+  
   temporal-admin-tools:
     image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-1.0.0
     environment:
@@ -69,11 +85,15 @@ services:
       mode: replicated-job
       restart_policy:
         condition: on-failure
+      placement:
+        constraints:
+          - node.labels.zane.main-server==true
     networks:
       - zane
 volumes:
-  caddy-data:
-  caddy-config:
+  # caddy-data:
+  # caddy-config:
+  config-storage:
 networks:
   zane:
     external: true

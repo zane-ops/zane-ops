@@ -223,6 +223,11 @@ urlpatterns = [
         name="proxy.check_certificates",
     ),
     re_path(
+        r"^_proxy/config/?$",
+        views.CaddyConfigAPIView.as_view(),
+        name="proxy.config",
+    ),
+    re_path(
         "^logs/ingest/?$",
         views.LogIngestAPIView.as_view(),
         name="logs.ingest",

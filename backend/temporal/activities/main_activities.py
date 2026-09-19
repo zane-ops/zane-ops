@@ -1742,22 +1742,11 @@ class DockerSwarmActivities:
                 deployment,
                 f"Configuring service URLs for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
-            previous_deployment: Deployment | None = await (
-                Deployment.objects.filter(
-                    Q(service_id=deployment.service.id)
-                    & Q(is_current_production=True)
-                    & Q(queued_at__lt=deployment.queued_at_as_datetime)
-                    & ~Q(hash=deployment.hash)
-                )
-                .order_by("-queued_at")
-                .afirst()
-            )
 
             for url in service.urls:
                 ZaneProxyClient.upsert_service_url(
                     url=url,
                     current_deployment=deployment,
-                    previous_deployment=previous_deployment,
                 )
 
             await deployment_log(
@@ -1918,7 +1907,6 @@ class DockerSwarmActivities:
                 ZaneProxyClient.upsert_service_url(
                     url=url,
                     current_deployment=previous_deployment,
-                    previous_deployment=deployment,
                 )
 
     @activity.defn

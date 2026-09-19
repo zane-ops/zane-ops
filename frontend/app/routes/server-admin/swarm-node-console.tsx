@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useLocalStorage } from "@uidotdev/usehooks";
 import { Maximize2Icon, Minimize2Icon } from "lucide-react";
 import * as React from "react";
 import { useSearchParams } from "react-router";
@@ -15,62 +16,53 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import { Separator } from "~/components/ui/separator";
+
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { sshKeysQueries } from "~/lib/queries";
-import { getQueryClient } from "~/lib/query-client";
-import { useLocalStorage } from "~/lib/use-local-storage";
+import { createDevLogger } from "~/lib/logger";
+import { swarmQueries } from "~/lib/queries";
 import { cn, metaTitle } from "~/lib/utils";
-import type { Route } from "./+types/server-terminal";
+import type { Route } from "./+types/swarm-node-console";
 
 export function meta() {
-  return [metaTitle("Terminal")] satisfies ReturnType<Route.MetaFunction>;
+  return [metaTitle("Server Console")] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader() {
-  const queryClient = getQueryClient();
-  const sshKeys = await queryClient.ensureQueryData(sshKeysQueries.list);
-  return { sshKeys };
-}
+const logger = createDevLogger(import.meta.url);
 
-export default function ServerTerminalPage({
-  loaderData
+export default function SwarmNodeConsolePage({
+  params,
+  matches: {
+    "3": { loaderData }
+  }
 }: Route.ComponentProps) {
-  const { data: sshKeys } = useQuery({
-    ...sshKeysQueries.list,
-    initialData: loaderData.sshKeys
+  const { data: node } = useQuery({
+    ...swarmQueries.singleNode(params.serverId),
+    initialData: loaderData.node
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
   const slugInSearch = searchParams.get("ssh_key_slug")?.toString().trim();
 
   const [lasKeySlug, setLastKeySlug] = useLocalStorage<string | null>(
-    "server_console_last_ssh_key_slug",
+    `server_console_last_ssh_key_slug_for_${node.id}`,
     slugInSearch ?? null
   );
 
   const [counter, setCounter] = React.useState(0);
 
   const keySlug = slugInSearch ?? lasKeySlug;
+  const [selectedKey, setSelectedKey] = React.useState(keySlug);
   const isMaximized = searchParams.get("isMaximized") === "true";
 
-  React.useEffect(() => {
-    if (slugInSearch) {
-      setLastKeySlug(slugInSearch);
-    }
-  }, [slugInSearch]);
+  logger.scope("SwarmNodeConsolePage").info({ selectedKey });
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex items-center gap-4">
-        <h2 className="text-2xl">Server Console</h2>
-      </div>
-      <Separator />
       <h3 className="text-grey">Connect via SSH to your server.</h3>
 
       <div
@@ -86,6 +78,12 @@ export default function ServerTerminalPage({
               searchParams.set("ssh_key_slug", keySlug);
               setLastKeySlug(keySlug);
             }
+
+            logger.scope("form.action").info({
+              'formData.get("ssh_key_slug")': keySlug,
+              'searchParams.get("ssh_key_slug")':
+                searchParams.get("ssh_key_slug")
+            });
             setSearchParams(searchParams);
             setCounter((c) => c + 1); // force rerender
           }}
@@ -121,24 +119,36 @@ export default function ServerTerminalPage({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <FieldSet name="slug" className="flex flex-col gap-1.5">
+
+          {/*
+             This is to mitigate a behavior with React 
+             which resets the value of inputs after a succesfull `action`
+            */}
+          <input
+            type="hidden"
+            name="ssh_key_slug"
+            value={selectedKey ?? undefined}
+          />
+
+          <FieldSet name="" className="flex flex-col gap-1.5">
             <FieldSetLabel htmlFor="ssh_key_slug" className="sr-only">
               SSH Key
             </FieldSetLabel>
             <FieldSetSelect
-              name="ssh_key_slug"
-              defaultValue={keySlug ?? undefined}
+              defaultValue={selectedKey ?? undefined}
+              value={selectedKey ?? undefined}
+              onValueChange={setSelectedKey}
             >
               <SelectTrigger id="ssh_key_slug" className="w-56">
                 <SelectValue placeholder="Select a Key" />
               </SelectTrigger>
               <SelectContent className="z-200">
-                {sshKeys.length === 0 && (
+                {node.ssh_keys.length === 0 && (
                   <SelectItem disabled value="none">
                     No SSH keys found
                   </SelectItem>
                 )}
-                {sshKeys.map((ssh) => (
+                {node.ssh_keys.map((ssh) => (
                   <SelectItem key={ssh.id} value={ssh.slug}>
                     {ssh.slug} ({ssh.user})
                   </SelectItem>
@@ -157,6 +167,7 @@ export default function ServerTerminalPage({
             <ServerTerminal
               key_slug={keySlug}
               key={counter}
+              nodeId={node.id}
               className={cn(
                 isMaximized
                   ? "h-[calc(100vh-(var(--spacing)*20))]"
@@ -176,14 +187,15 @@ export default function ServerTerminalPage({
 
 function ServerTerminal({
   key_slug,
+  nodeId,
   className
-}: { key_slug: string; className?: string }) {
+}: { key_slug: string; nodeId: string; className?: string }) {
   const webSocketScheme = window.location.protocol === "http:" ? "ws" : "wss";
   let apiHost = window.location.host;
 
   if (apiHost.includes("localhost:5173")) {
     apiHost = "localhost:8000";
   }
-  const baseWebSocketURL = `${webSocketScheme}://${apiHost}/ws/server-ssh/${key_slug}`;
+  const baseWebSocketURL = `${webSocketScheme}://${apiHost}/ws/server-ssh/${nodeId}/${key_slug}`;
   return <Terminal baseWebSocketURL={baseWebSocketURL} className={className} />;
 }

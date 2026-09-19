@@ -530,7 +530,7 @@ class BaseService(TimestampedModel):
         to=Project, on_delete=models.CASCADE, related_name="services"
     )
     ports = models.ManyToManyField(to="PortConfiguration")
-    urls = models.ManyToManyField(to=URL)
+    urls = models.ManyToManyField(to=URL, related_name="services")
     healthcheck = models.ForeignKey(
         to=HealthCheck, null=True, on_delete=models.SET_NULL
     )
@@ -2358,6 +2358,7 @@ class CloneEnvPreviewPayload:
 class Environment(TimestampedModel):
     if TYPE_CHECKING:
         compose_stacks: RelatedManager["ComposeStack"]
+        project_id: str
     services: Manager[Service]
     variables: Manager["SharedEnvVariable"]
     PRODUCTION_ENV_NAME = "production"

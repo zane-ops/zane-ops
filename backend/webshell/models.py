@@ -12,6 +12,7 @@ class SSHKey(TimestampedModel):
     private_key = models.TextField(blank=False)
     slug = models.SlugField(max_length=255, blank=False, unique=True)
     fingerprint = models.CharField(null=True, default=None)
+    port = models.PositiveIntegerField(default=22)
 
     @classmethod
     def create_key_pair(cls) -> tuple[str, str]:
