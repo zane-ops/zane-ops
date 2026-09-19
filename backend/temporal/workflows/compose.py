@@ -185,13 +185,6 @@ class DeployComposeStackWorkflow:
             if self.check_for_cancellation(deployment):
                 return await self.handle_cancellation(deployment, build_details)
 
-            await workflow.execute_activity_method(
-                ComposeStackActivities.expose_stack_services_to_http,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-
             healthcheck_activity_handle = workflow.start_activity_method(
                 ComposeStackActivities.check_stack_health,
                 deployment,
@@ -228,13 +221,6 @@ class DeployComposeStackWorkflow:
             )
             await workflow.execute_activity_method(
                 ComposeStackActivities.create_stack_metrics_schedule,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-
-            await workflow.execute_activity_method(
-                ComposeStackActivities.cleanup_old_stack_urls,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
@@ -297,13 +283,6 @@ class ArchiveComposeStackWorkflow:
         )
 
         try:
-            deleted_routes = await workflow.execute_activity_method(
-                ComposeStackActivities.unexpose_stack_services_from_http,
-                details,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-
             services = await workflow.execute_activity_method(
                 ComposeStackActivities.get_services_in_stack,
                 details,
@@ -313,7 +292,6 @@ class ArchiveComposeStackWorkflow:
 
             result = ComposeStackArchiveResult(
                 services_deleted=services,
-                routes_removed=deleted_routes,
             )
 
             await workflow.execute_activity_method(

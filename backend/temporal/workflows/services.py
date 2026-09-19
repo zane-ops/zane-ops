@@ -288,14 +288,6 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
                 )
 
             if deployment_status == Deployment.DeploymentStatus.HEALTHY:
-                # if len(deployment.service.urls) > 0:
-                #     await workflow.execute_activity_method(
-                #         DockerSwarmActivities.expose_docker_service_to_http,
-                #         deployment,
-                #         start_to_close_timeout=timedelta(seconds=30),
-                #         retry_policy=self.retry_policy,
-                #     )
-
                 if await self.check_for_cancellation(
                     DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP,
                     pause_at_step=pause_at_step,
@@ -420,14 +412,6 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
             retry_policy=self.retry_policy,
         )
 
-        if last_completed_step >= DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP:
-            await workflow.execute_activity_method(
-                DockerSwarmActivities.remove_changed_urls_in_deployment,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=60),
-                retry_policy=self.retry_policy,
-            )
-
         if last_completed_step >= DockerDeploymentStep.SWARM_SERVICE_CREATED:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
@@ -543,13 +527,6 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )
-
-        # await workflow.execute_activity_method(
-        #     DockerSwarmActivities.remove_old_urls,
-        #     current_deployment,
-        #     start_to_close_timeout=timedelta(seconds=30),
-        #     retry_policy=self.retry_policy,
-        # )
 
         await workflow.execute_activity_method(
             DockerSwarmActivities.cleanup_previous_production_deployment,
@@ -1028,14 +1005,6 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             deployment_status, deployment_status_reason = result
 
             if deployment_status == Deployment.DeploymentStatus.HEALTHY:
-                # if len(deployment.service.urls) > 0:
-                #     await workflow.execute_activity_method(
-                #         DockerSwarmActivities.expose_docker_service_to_http,
-                #         deployment,
-                #         start_to_close_timeout=timedelta(seconds=30),
-                #         retry_policy=self.retry_policy,
-                #     )
-
                 if await self.check_for_cancellation(
                     GitDeploymentStep.SERVICE_EXPOSED_TO_HTTP,
                     pause_at_step=pause_at_step,
@@ -1263,14 +1232,6 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             retry_policy=self.retry_policy,
         )
 
-        if last_completed_step >= GitDeploymentStep.SERVICE_EXPOSED_TO_HTTP:
-            await workflow.execute_activity_method(
-                DockerSwarmActivities.remove_changed_urls_in_deployment,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=60),
-                retry_policy=self.retry_policy,
-            )
-
         if last_completed_step >= GitDeploymentStep.SWARM_SERVICE_CREATED:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_down_and_remove_docker_service_deployment,
@@ -1386,13 +1347,6 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             retry_policy=self.retry_policy,
         )
 
-        # await workflow.execute_activity_method(
-        #     DockerSwarmActivities.remove_old_urls,
-        #     current_deployment,
-        #     start_to_close_timeout=timedelta(seconds=30),
-        #     retry_policy=self.retry_policy,
-        # )
-
         await workflow.execute_activity_method(
             DockerSwarmActivities.cleanup_previous_production_deployment,
             previous_deployment,
@@ -1408,14 +1362,6 @@ class ArchiveDockerServiceWorkflow:
         print(f"\nRunning workflow `ArchiveDockerServiceWorkflow` with {service=}")
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
-        )
-
-        print(f"Running activity `unexpose_docker_service_from_http({service=})`")
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.unexpose_docker_service_from_http,
-            service,
-            start_to_close_timeout=timedelta(seconds=10),
-            retry_policy=retry_policy,
         )
 
         print(f"Running activity `cleanup_docker_service_resources({service=})`")
@@ -1434,14 +1380,6 @@ class ArchiveGitServiceWorkflow:
         print(f"\nRunning workflow `ArchiveGitServiceWorkflow` with {service=}")
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
-        )
-
-        print(f"Running activity `unexpose_docker_service_from_http({service=})`")
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.unexpose_docker_service_from_http,
-            service,
-            start_to_close_timeout=timedelta(seconds=10),
-            retry_policy=retry_policy,
         )
 
         print(f"Running activity `cleanup_docker_service_resources({service=})`")

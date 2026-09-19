@@ -636,7 +636,6 @@ class ComposeStackArchiveResult:
     services_deleted: List[str] = field(default_factory=list)
     volumes_deleted: List[str] = field(default_factory=list)
     config_deleted: List[str] = field(default_factory=list)
-    routes_removed: List[ProxyURLRoute] = field(default_factory=list)
 
 
 @dataclass
