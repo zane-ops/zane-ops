@@ -1,4 +1,18 @@
 services:
+  zane-fluentd:
+    image: fluentd:v1.16.2-1.1
+    volumes:
+      - "./fluentd/fluent.conf:/fluentd/etc/fluent.conf"
+      - "$HOME/.fluentd/:/var/fluentd/"
+    networks:
+      zane:
+        aliases:
+          - zane.fluentd
+    environment:
+      API_HOST: host.docker.internal:8000
+      DJANGO_SECRET_KEY: 'django-insecure-^@$$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx' # default value set in `settings.py`
+    deploy:
+      mode: global
   proxy:
     image: ghcr.io/zane-ops/proxy:canary
     command: caddy run --resume
@@ -12,7 +26,8 @@ services:
         fluentd-sub-second-precision: "true"
         tag: '{"service_id":"zane.proxy"}'
     deploy:
-      replicas: 1
+      mode: global
+      # replicas: 1
       update_config:
         parallelism: 1
         delay: 5s

@@ -1,0 +1,36 @@
+x-backend-vars: &env-vars
+  ENVIRONMENT: PRODUCTION
+  REDIS_URL: redis://zane.valkey:6379/0
+  DB_HOST: zane.pgbouncer
+  DB_PORT: 5432
+  DB_NAME: zane
+  DB_USER: ${ZANE_DB_USER:-zane}
+  DB_PASSWORD: ${ZANE_DB_PASSWORD}
+  ROOT_DOMAIN: ${ROOT_DOMAIN}
+  ZANE_APP_DOMAIN: ${ZANE_APP_DOMAIN}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+  CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
+  ZANE_FLUENTD_HOST: unix://${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.fluentd/fluentd.sock
+  TEMPORALIO_SERVER_URL: zane.temporal:7233
+  __DANGEROUS_ALLOW_HTTP_SESSION: ${__DANGEROUS_ALLOW_HTTP_SESSION:-false}
+  LOKI_HOST: http://zane.loki:3100
+  GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+  TELEMETRY_ENABLED: ${TELEMETRY_ENABLED:-true}
+  # OpenTelemetry tracing is opt-in on production: set OTEL_TRACES_ENABLED=true
+  # and deploy the observability stack (see docker-stack.prod-otel.yaml).
+  OTEL_TRACES_ENABLED: ${OTEL_TRACES_ENABLED:-false}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  MAX_CONCURRENT_DEPLOYS: ${MAX_CONCURRENT_DEPLOYS:-5}
+  ZANE_HTTP_MODE: ${MODE:-https}
+  CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+  # the operator sets `MAXMIND_DB_HOST_PATH` (path of the DB on the host), we mount it at
+  # a fixed path in the container and tell django about it.
+  # When unset, `/dev/null` is mounted instead and django disables GeoIP,
+  MAXMIND_DB_PATH: /app/GeoLite2-Country.mmdb
+
+services:
+    # TODO: Add temporal `node` (schedule) worker
+
+networks:
+  zane:
+    external: true

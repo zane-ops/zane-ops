@@ -42,7 +42,8 @@ services:
         fluentd-sub-second-precision: "true"
         tag: '{"service_id":"zane.proxy"}'
     deploy:
-      replicas: 1
+      mode: global
+      # replicas: 1
       update_config:
         parallelism: 1
         delay: 5s
@@ -50,9 +51,9 @@ services:
         failure_action: rollback
       restart_policy:
         condition: any
-      placement:
-        constraints:
-          - node.role==manager
+      # placement:
+      #   constraints:
+      #     - node.role==manager
       labels:
         zane.stack: "true"
         zane.role: "proxy"
@@ -390,12 +391,13 @@ services:
       API_HOST: zane.api.zaneops.internal:80
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
     deploy:
-      replicas: 1
+      # replicas: 1
+      mode: global
       restart_policy:
         condition: any
-      placement:
-        constraints:
-          - node.role==manager
+      # placement:
+      #   constraints:
+      #     - node.role==manager
       labels:
         zane.stack: "true"
       resources:
