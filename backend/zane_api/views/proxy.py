@@ -14,6 +14,8 @@ from zane_api.utils import domain_to_wildcard
 from container_registry.models import BuildRegistry
 from typing import cast
 from compose.models import ComposeStack
+from ..permissions import InternalZaneAppPermission
+from temporal.proxy import ZaneProxyClient
 
 
 class CertificateCheckSerializer(serializers.Serializer):
@@ -80,3 +82,13 @@ class CheckCertificatesAPIView(APIView):
         raise exceptions.PermissionDenied(
             "A certificate cannot be issued for this domain"
         )
+
+
+@extend_schema(exclude=True)
+class GetCaddyConfig(APIView):
+    permission_classes = [InternalZaneAppPermission]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "tls_certificates"
+
+    def get(self, request: Request):
+        return Response(ZaneProxyClient.get_full_caddy_config())

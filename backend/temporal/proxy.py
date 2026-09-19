@@ -11,6 +11,13 @@ import requests
 from rest_framework import status
 
 from compose.dtos import ComposeStackUrlRouteDto
+from .constants import (
+    DEFAULT_CADDY_LOGGING,
+    DEFAULT_404_CONFIG,
+    DEFAULT_502_CONFIG,
+    DEFAULT_CADDY_CERT_STORAGE,
+    DEFAULT_ADMIN_CONFIG,
+)
 
 
 class ZaneProxyEtagError(Exception):
@@ -787,3 +794,44 @@ class ZaneProxyClient:
         raise ZaneProxyEtagError(
             f"Failed inserting the url {url} in the proxy because `Etag` precondition failed"
         )
+
+    @classmethod
+    def get_full_caddy_config(cls):
+        """
+        The single source of truth for what every Caddy instance's config
+        should look like right now, computed straight from the DB.
+        """
+        routes = [DEFAULT_404_CONFIG]
+
+        return {
+            "@id": "root",
+            "logging": DEFAULT_CADDY_LOGGING,
+            "storage": DEFAULT_CADDY_CERT_STORAGE,
+            "admin": DEFAULT_ADMIN_CONFIG,
+            "apps": {
+                "http": {
+                    "servers": {
+                        "zane": {
+                            "@id": "zane-server",
+                            "errors": {"routes": [DEFAULT_502_CONFIG]},
+                            "listen": [":443", ":80"],
+                            "routes": [
+                                {
+                                    "handle": [
+                                        {
+                                            "handler": "subroute",
+                                            "@id": "zane-url-root",
+                                            "routes": routes,
+                                        }
+                                    ],
+                                    "terminal": True,
+                                }
+                            ],
+                            "tls_connection_policies": [{}],
+                            "logs": {},
+                        }
+                    }
+                },
+                "tls": {},
+            },
+        }
