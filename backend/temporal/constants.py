@@ -476,3 +476,5 @@ ZANE_CATCHALL_404_ROUTE = {
         },
     ],
 }
+
+ZANE_PROXY_CONFIG_CACHE_KEY = "[zaneops::internal::caddy-config]"

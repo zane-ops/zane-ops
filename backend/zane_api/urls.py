@@ -224,7 +224,7 @@ urlpatterns = [
     ),
     re_path(
         r"^_proxy/config/?$",
-        views.GetCaddyConfig.as_view(),
+        views.CaddyConfigAPIView.as_view(),
         name="proxy.config",
     ),
     re_path(

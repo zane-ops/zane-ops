@@ -85,7 +85,7 @@ class CheckCertificatesAPIView(APIView):
 
 
 @extend_schema(exclude=True)
-class GetCaddyConfig(APIView):
+class CaddyConfigAPIView(APIView):
     permission_classes = [InternalZaneAppPermission]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "tls_certificates"

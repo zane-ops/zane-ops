@@ -7,12 +7,13 @@ from zane_api.models import Deployment, URL
 from compose.models import ComposeStack
 
 from container_registry.models import BuildRegistry
-from zane_api.utils import strip_slash_if_exists
+from zane_api.utils import strip_slash_if_exists, cache_result
 from .shared import DeploymentDetails
 from django.conf import settings
 from zane_api.dtos import URLDto, URLRedirectToDto
 import requests
 from rest_framework import status
+from datetime import timedelta
 
 from compose.dtos import ComposeStackUrlRouteDto
 from .constants import (
@@ -21,6 +22,7 @@ from .constants import (
     ZANE_CATCHALL_502_ROUTE,
     DEFAULT_CADDY_CERT_STORAGE,
     DEFAULT_ADMIN_CONFIG,
+    ZANE_PROXY_CONFIG_CACHE_KEY,
 )
 
 from django.conf import settings
@@ -776,6 +778,7 @@ class ZaneProxyClient:
         )
 
     @classmethod
+    @cache_result(timeout=timedelta(seconds=5), cache_key=ZANE_PROXY_CONFIG_CACHE_KEY)
     def get_full_caddy_config(cls):
         """
         The single source of truth for what every Caddy instance's config
