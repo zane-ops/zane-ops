@@ -476,16 +476,6 @@ except Exception:
 ZANE_OPS_STATIC_PATH_PREFIXES = ("/assets/", "/fonts/", "/logo/")
 ZANE_OPS_PROXY_APP_NAME = "zane_ops"
 
-if BACKEND_COMPONENT == "API" and not TESTING:
-    register_zaneops_app_on_proxy(
-        proxy_url=CADDY_PROXY_ADMIN_HOST,
-        zane_app_domain=ZANE_APP_DOMAIN,
-        zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
-        zane_api_internal_domain=ZANE_API_SERVICE_INTERNAL_DOMAIN,
-        internal_tls=DEBUG,
-        cloudflare_api_token=CLOUDFLARE_API_TOKEN,
-        app_name=ZANE_OPS_PROXY_APP_NAME,
-    )
 
 # Docker image version
 IMAGE_VERSION = os.environ.get("IMAGE_VERSION", "canary")
