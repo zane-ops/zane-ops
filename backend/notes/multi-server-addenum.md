@@ -16,3 +16,15 @@ Add port to SSHKey handling.
   - Implemented as a Django management command instead of a Temporal job — `fix_swarm_networking` ([swarm/management/commands/fix_swarm_networking.py](../swarm/management/commands/fix_swarm_networking.py))
   - `docker swarm leave -f` + fresh `docker swarm init` wipes every network and service Swarm knows about (not just the ones tied to the old advertise-addr), so the fix isn't a light touch-up: it recreates every environment's overlay network, then redeploys every `Service` and `ComposeStack` from scratch using ZaneOps' own DB records (same `prepare_new_docker/git_deployment` + `TemporalClient.start_workflow` path as a normal manual redeploy, just looped over everything on the instance)
   - Prompts for confirmation before running (`--yes` to skip) since it redeploys the entire instance
+
+## Files needed on every non-main node
+
+Global services in [compose.prod.yaml](../../docker/compose.prod.yaml) bind-mount host paths, and Swarm does **not** create missing bind sources — the task stays in `Pending`/restart loop until they exist. So before (or right after) a node joins, `ZANE_APP_DIRECTORY` must exist **at the exact same path as on the main node** (default `/var/www/zaneops`) with:
+
+| Path (relative to `ZANE_APP_DIRECTORY`) | Source in repo                                                                               | Used by                          |
+| --------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------- |
+| `proxy/default-caddy-config.json`       | [docker/proxy/default-caddy-config.json](../../docker/proxy/default-caddy-config.json)       | `zane-proxy`                     |
+| `fluent.conf`                           | [docker/fluentd/fluent.conf](../../docker/fluentd/fluent.conf)                               | `zane-fluentd`                   |
+| `.fluentd/` (empty dir, `chmod 777`)    | —                                                                                            | `zane-fluentd` socket, every container's fluentd log driver |
+
+Nothing else: `zane-temporal-node-worker` / `zane-temporal-build-worker` only mount `/var/run/docker.sock` and named volumes (created per node automatically), and their env is baked into the service spec — no `.env` needed on other nodes. Same for `pgbouncer/`, `temporalio/`, `loki-config.yaml`: those are only mounted by services pinned to `zane.main-server`.
