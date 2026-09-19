@@ -17,6 +17,16 @@ def insert_initial_swarm_server(apps, schema_editor):
     swarm_node_id = info["Swarm"]["NodeID"]
 
     self_node = client.nodes.get(swarm_node_id)
+    self_node.update(
+        {
+            "Availability": "active",
+            "Role": "manager",
+            "Labels": {
+                "zane.app-server": "true",
+                "zane.build-server": "true",
+            },
+        }
+    )
 
     response = requests.get("https://ipinfo.io/ip")
     response.raise_for_status()
@@ -35,6 +45,7 @@ def insert_initial_swarm_server(apps, schema_editor):
         is_initial_install_server=True,
         last_status_update=timezone.now(),
     )
+
     node.save()
 
 
