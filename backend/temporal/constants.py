@@ -435,7 +435,7 @@ FALLBACK_502_HTML = """
 </html>
 """
 
-DEFAULT_502_CONFIG = {
+ZANE_CATCHALL_502_ROUTE = {
     "@id": "zane-error-502",
     "match": [{"expression": "{http.error.status_code} in [502]"}],
     "handle": [
@@ -456,7 +456,7 @@ DEFAULT_502_CONFIG = {
     ],
 }
 
-DEFAULT_404_CONFIG = {
+ZANE_CATCHALL_404_ROUTE = {
     "@id": "zane-catchall-404",
     "handle": [
         {

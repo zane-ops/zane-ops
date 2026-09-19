@@ -4,7 +4,7 @@ from typing import Dict, List, TypedDict
 
 from .shared import DeploymentDetails, ProxyURLRoute
 from zane_api.models import Deployment, URL
-from zane_api.utils import strip_slash_if_exists
+from zane_api.utils import strip_slash_if_exists, jprint
 from django.conf import settings
 from zane_api.dtos import URLDto
 import requests
@@ -13,11 +13,13 @@ from rest_framework import status
 from compose.dtos import ComposeStackUrlRouteDto
 from .constants import (
     DEFAULT_CADDY_LOGGING,
-    DEFAULT_404_CONFIG,
-    DEFAULT_502_CONFIG,
+    ZANE_CATCHALL_404_ROUTE,
+    ZANE_CATCHALL_502_ROUTE,
     DEFAULT_CADDY_CERT_STORAGE,
     DEFAULT_ADMIN_CONFIG,
 )
+
+from django.conf import settings
 
 
 class ZaneProxyEtagError(Exception):
@@ -801,7 +803,51 @@ class ZaneProxyClient:
         The single source of truth for what every Caddy instance's config
         should look like right now, computed straight from the DB.
         """
-        routes = [DEFAULT_404_CONFIG]
+        routes = []
+
+        routes.extend(cls._get_dashboard_routes())
+        routes.append(ZANE_CATCHALL_404_ROUTE)
+
+        # TLS config
+        tls_policy: dict = {"on_demand": True}
+        if settings.DEBUG:
+            tls_policy.update(
+                {
+                    "issuers": [{"module": "internal"}],
+                }
+            )
+        elif settings.CLOUDFLARE_API_TOKEN:
+            tls_policy.update(
+                {
+                    "issuers": [
+                        {
+                            "module": "acme",
+                            "challenges": {
+                                "dns": {
+                                    "provider": {
+                                        "name": "cloudflare",
+                                        "api_token": "{env.CLOUDFLARE_API_TOKEN}",
+                                    }
+                                }
+                            },
+                        },
+                        {"module": "acme"},
+                    ],
+                }
+            )
+
+        tls_app_config = {
+            "automation": {
+                "policies": [tls_policy],
+                "on_demand": {
+                    "permission": {
+                        "@id": "tls-endpoint",
+                        "endpoint": "http://{env.API_HOST}/api/_proxy/check-certiticates",
+                        "module": "http",
+                    }
+                },
+            }
+        }
 
         return {
             "@id": "root",
@@ -813,7 +859,7 @@ class ZaneProxyClient:
                     "servers": {
                         "zane": {
                             "@id": "zane-server",
-                            "errors": {"routes": [DEFAULT_502_CONFIG]},
+                            "errors": {"routes": [ZANE_CATCHALL_502_ROUTE]},
                             "listen": [":443", ":80"],
                             "routes": [
                                 {
@@ -832,6 +878,122 @@ class ZaneProxyClient:
                         }
                     }
                 },
-                "tls": {},
+                "tls": tls_app_config,
             },
         }
+
+    @classmethod
+    def _get_dashboard_routes(cls):
+        """
+        ZaneOps dashboard routes
+        """
+        return [
+            {
+                "@id": "api.zaneops.internal",
+                "group": "zaneops.internal",
+                "handle": [
+                    {
+                        "handler": "subroute",
+                        "routes": [
+                            {
+                                "handle": [
+                                    {
+                                        "handler": "log_append",
+                                        "key": "zane_service_type",
+                                        "value": settings.ZANE_OPS_PROXY_APP_NAME,
+                                    },
+                                    {
+                                        "handler": "log_append",
+                                        "key": "zane_request_id",
+                                        "value": "{http.request.uuid}",
+                                    },
+                                    {
+                                        "handler": "headers",
+                                        "response": {
+                                            "add": {
+                                                "x-zane-request-id": [
+                                                    "{http.request.uuid}"
+                                                ],
+                                            },
+                                        },
+                                        "request": {
+                                            "add": {
+                                                "x-request-id": ["{http.request.uuid}"],
+                                            },
+                                        },
+                                    },
+                                    {
+                                        "handler": "encode",
+                                        "encodings": {"gzip": {}},
+                                        "prefer": ["gzip"],
+                                    },
+                                    {
+                                        "handler": "reverse_proxy",
+                                        "upstreams": [
+                                            {
+                                                "dial": settings.ZANE_API_SERVICE_INTERNAL_DOMAIN
+                                            }
+                                        ],
+                                    },
+                                ]
+                            }
+                        ],
+                    }
+                ],
+                "match": [{"path": ["/api/*"], "host": [settings.ZANE_APP_DOMAIN]}],
+            },
+            {
+                "@id": "front.zaneops.internal",
+                "group": "zaneops.internal",
+                "handle": [
+                    {
+                        "handler": "subroute",
+                        "routes": [
+                            {
+                                "handle": [
+                                    {
+                                        "handler": "log_append",
+                                        "key": "zane_service_type",
+                                        "value": settings.ZANE_OPS_PROXY_APP_NAME,
+                                    },
+                                    {
+                                        "handler": "log_append",
+                                        "key": "zane_request_id",
+                                        "value": "{http.request.uuid}",
+                                    },
+                                    {
+                                        "handler": "headers",
+                                        "response": {
+                                            "add": {
+                                                "x-zane-request-id": [
+                                                    "{http.request.uuid}"
+                                                ],
+                                            },
+                                        },
+                                        "request": {
+                                            "add": {
+                                                "x-request-id": ["{http.request.uuid}"],
+                                            },
+                                        },
+                                    },
+                                    {
+                                        "handler": "encode",
+                                        "encodings": {"gzip": {}},
+                                        "prefer": ["gzip"],
+                                    },
+                                    {
+                                        "handler": "reverse_proxy",
+                                        "upstreams": [
+                                            {
+                                                "dial": settings.ZANE_FRONT_SERVICE_INTERNAL_DOMAIN
+                                            }
+                                        ],
+                                    },
+                                ]
+                            }
+                        ],
+                    }
+                ],
+                "match": [{"path": ["/*"], "host": [settings.ZANE_APP_DOMAIN]}],
+            },
+        ]
