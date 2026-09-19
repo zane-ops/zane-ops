@@ -37,9 +37,6 @@ services:
         failure_action: rollback
       restart_policy:
         condition: any
-      placement:
-        constraints:
-          - node.labels.zane.app-server == true
       labels:
         zane.role: "proxy"
     ports:
@@ -88,6 +85,9 @@ services:
       mode: replicated-job
       restart_policy:
         condition: on-failure
+      placement:
+        constraints:
+          - node.labels.zane.main-server==true
     networks:
       - zane
 volumes:
