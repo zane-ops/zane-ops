@@ -115,7 +115,7 @@ export default function SwarmNodeLayout({
                 <TerminalIcon size={15} className="flex-none" />
               </HorizontalNavLink>
             </li>
-            <li>
+            {/* <li>
               <HorizontalNavLink
                 to={href("/admin/servers/:serverId/services", params)}
                 prefetch="viewport"
@@ -123,7 +123,7 @@ export default function SwarmNodeLayout({
                 <span>Containers</span>
                 <NetworkIcon size={15} className="flex-none" />
               </HorizontalNavLink>
-            </li>
+            </li> */}
           </ul>
         </nav>
 
