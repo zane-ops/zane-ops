@@ -544,12 +544,12 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
             retry_policy=self.retry_policy,
         )
 
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.remove_old_urls,
-            current_deployment,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+        # await workflow.execute_activity_method(
+        #     DockerSwarmActivities.remove_old_urls,
+        #     current_deployment,
+        #     start_to_close_timeout=timedelta(seconds=30),
+        #     retry_policy=self.retry_policy,
+        # )
 
         await workflow.execute_activity_method(
             DockerSwarmActivities.cleanup_previous_production_deployment,
@@ -1386,12 +1386,12 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             retry_policy=self.retry_policy,
         )
 
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.remove_old_urls,
-            current_deployment,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+        # await workflow.execute_activity_method(
+        #     DockerSwarmActivities.remove_old_urls,
+        #     current_deployment,
+        #     start_to_close_timeout=timedelta(seconds=30),
+        #     retry_policy=self.retry_policy,
+        # )
 
         await workflow.execute_activity_method(
             DockerSwarmActivities.cleanup_previous_production_deployment,
