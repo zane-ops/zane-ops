@@ -457,7 +457,8 @@ export const swarmQueries = {
         }
         return DEFAULT_QUERY_REFETCH_INTERVAL;
       },
-      placeholderData: keepPreviousData
+      placeholderData: keepPreviousData,
+      refetchIntervalInBackground: true
     })
 };
 

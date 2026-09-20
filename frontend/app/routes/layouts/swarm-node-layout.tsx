@@ -42,7 +42,7 @@ export default function SwarmNodeLayout({
   });
 
   const status_emoji_map = {
-    READY: "🟢",
+    READY: "💚",
     DOWN: "🔴",
     FAILED: "❌",
     DRAINED: "🗑️",

@@ -8,6 +8,8 @@ import {
   CheckIcon,
   ChevronRightIcon,
   CpuIcon,
+  EyeIcon,
+  EyeOffIcon,
   FlameIcon,
   GlobeIcon,
   GlobeLockIcon,
@@ -312,7 +314,10 @@ export default function SwarmNodeDetailsPage({
                         >
                           <GlobeIcon className="text-grey size-4 flex-none mr-1" />
                           {node.public_ip ? (
-                            <span>{node.public_ip}</span>
+                            <HiddenValue
+                              realValue={node.public_ip}
+                              className="ml-0.5"
+                            />
                           ) : (
                             <code className="text-grey italic">
                               {"<unknown>"}
@@ -325,7 +330,7 @@ export default function SwarmNodeDetailsPage({
                                   <CopyButton
                                     value={node.public_ip}
                                     label={node.public_ip}
-                                    className="!opacity-100 ml-1.5"
+                                    className="!opacity-100 ml-0.5"
                                   />
                                 </TooltipTrigger>
                                 <TooltipContent>Copy Public IP</TooltipContent>
@@ -519,6 +524,55 @@ export default function SwarmNodeDetailsPage({
         </div>
       </div>
     </section>
+  );
+}
+
+type HiddenValueProps = {
+  realValue: string | number;
+  className?: string;
+};
+
+function HiddenValue({ realValue, className }: HiddenValueProps) {
+  const [isValueShown, setShowValue] = React.useState(false);
+
+  const Icon = isValueShown ? EyeOffIcon : EyeIcon;
+  const arr = Array.from({ length: realValue.toString().length }, (_, i) => i);
+
+  return (
+    <span className={cn("inline-flex items-center gap-2", className)}>
+      {isValueShown ? (
+        realValue
+      ) : (
+        <span className="inline-flex items-center gap-0.5">
+          {arr.map((i) => (
+            <span
+              key={i}
+              className="inline-block bg-card-foreground size-1.5 rounded-full flex-none"
+            />
+          ))}
+        </span>
+      )}
+      <TooltipProvider>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("px-2.5 py-0.5", "inline-flex gap-1 items-center")}
+              onClick={() => setShowValue(!isValueShown)}
+            >
+              <Icon className="size-4 flex-none" />
+              <span className="sr-only">
+                {isValueShown ? "Hide Value" : "Show value"}
+              </span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {isValueShown ? "Hide Value" : "Show value"}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </span>
   );
 }
 
