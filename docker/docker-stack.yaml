@@ -1,6 +1,6 @@
 x-internal-envs: &internal-envs
   API_HOST: host.docker.internal:8000
-  DJANGO_SECRET_KEY: 'django-insecure-^@$$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx' # default value set in `settings.py`
+  DJANGO_SECRET_KEY: "django-insecure-^@$$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx" # default value set in `settings.py`
 
 services:
   zane-fluentd:
@@ -16,9 +16,33 @@ services:
       <<: *internal-envs
     deploy:
       mode: global
-  proxy:
+  zane-valkey:
+    image: valkey/valkey:7.2.5-alpine
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6381:6379"
+    networks:
+      zane:
+        aliases:
+          - zane.valkey
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.labels.zane.main-server==true
+      labels:
+        zane.stack: "true"
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 500M
+
+  zane-proxy:
     image: ghcr.io/fredkiss3/caddy-cloudflare:2.11.4-alpine
-    command: caddy run  --resume  --config /etc/caddy/config.json 
+    command: caddy run  --resume  --config /etc/caddy/config.json
     logging:
       driver: "fluentd"
       options:
@@ -28,6 +52,8 @@ services:
         fluentd-max-retries: 10
         fluentd-sub-second-precision: "true"
         tag: '{"service_id":"zane.proxy"}'
+    depends_on:
+      - zane-valkey
     deploy:
       mode: global
       update_config:
@@ -59,8 +85,7 @@ services:
       zane:
         aliases:
           - zane.proxy
-  
-  temporal-admin-tools:
+  zane-temporal-admin-tools:
     image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-1.0.0
     environment:
       - DB=postgres12
@@ -91,9 +116,8 @@ services:
     networks:
       - zane
 volumes:
-  # caddy-data:
-  # caddy-config:
   config-storage:
+  redis-data:
 networks:
   zane:
     external: true

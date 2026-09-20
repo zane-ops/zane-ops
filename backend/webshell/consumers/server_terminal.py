@@ -89,7 +89,6 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
             str(self.ssh_key.port),
             "-i",
             self.key_path,
-            # disable strict host key checking
             "-o",
             "StrictHostKeyChecking=no",
             "-o",

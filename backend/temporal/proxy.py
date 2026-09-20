@@ -20,7 +20,6 @@ from .constants import (
     DEFAULT_CADDY_LOGGING,
     ZANE_CATCHALL_404_ROUTE,
     ZANE_CATCHALL_502_ROUTE,
-    DEFAULT_CADDY_CERT_STORAGE,
     DEFAULT_ADMIN_CONFIG,
     ZANE_PROXY_CONFIG_CACHE_KEY,
 )
@@ -890,7 +889,12 @@ class ZaneProxyClient:
         return {
             "@id": "root",
             "logging": DEFAULT_CADDY_LOGGING,
-            "storage": DEFAULT_CADDY_CERT_STORAGE,
+            "storage": {
+                "address": [f"{settings.REDIS_HOST}:{settings.REDIS_PORT}"],
+                "db": 1,
+                "timeout": "5",
+                "module": "redis",
+            },
             "admin": DEFAULT_ADMIN_CONFIG,
             "apps": {
                 "http": {

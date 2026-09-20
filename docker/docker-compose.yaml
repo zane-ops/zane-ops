@@ -1,5 +1,6 @@
 x-backend-vars: &env-vars
-  REDIS_URL: redis://zane.valkey:6379/0
+  REDIS_HOST: zane.valkey
+  REDIS_PORT: 6379
   DB_HOST: zane.db
   DB_PORT: 5432
   CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
@@ -128,7 +129,6 @@ services:
       - ${MAXMIND_DB_HOST_PATH:-/dev/null}:/code/GeoLite2-Country.mmdb
     depends_on:
       - zane-db
-      - zane-redis
       - zane-temporal-server
       - zane-tempo
     restart: always
@@ -167,7 +167,6 @@ services:
       - docker-data:/root/.docker
     depends_on:
       - zane-db
-      - zane-redis
       - zane-temporal-server
     environment:
       <<: *env-vars
@@ -190,7 +189,6 @@ services:
       - docker-data:/root/.docker
     depends_on:
       - zane-db
-      - zane-redis
       - zane-temporal-server
     environment:
       <<: *env-vars
@@ -198,17 +196,6 @@ services:
       TEMPORALIO_WORKER_TASK_QUEUE: schedule-task-queue
     networks:
       - zane
-  zane-redis:
-    image: valkey/valkey:7.2.5-alpine
-    container_name: zane-redis
-    volumes:
-      - redis-data:/data
-    ports:
-      - "6381:6379"
-    networks:
-      zane:
-        aliases:
-          - zane.valkey
   zane-db:
     image: postgres:16-alpine
     container_name: zane-db
@@ -249,7 +236,6 @@ services:
       - 8082:8080
 volumes:
   db-data:
-  redis-data:
   redisinsight:
   caddy-data:
   docker-buildx-store:

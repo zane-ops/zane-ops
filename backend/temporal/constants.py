@@ -135,12 +135,7 @@ DEFAULT_CADDY_LOGGING = {
         }
     }
 }
-DEFAULT_CADDY_CERT_STORAGE = {
-    "address": ["zane.valkey:6379"],
-    "db": 1,
-    "timeout": "5",
-    "module": "redis",
-}
+
 DEFAULT_ADMIN_CONFIG = {
     "config": {
         # This module is used for reloading the next caddy config

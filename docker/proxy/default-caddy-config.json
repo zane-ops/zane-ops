@@ -17,11 +17,5 @@
         "writer": { "output": "stdout" }
       }
     }
-  },
-  "storage": {
-    "address": ["zane.valkey:6379"],
-    "db": 1,
-    "module": "redis",
-    "timeout": "5"
   }
 }

@@ -1,4 +1,4 @@
-.PHONY: all clean test setup help stop deploy create-user delete-resources setup-v2
+.PHONY: all clean test setup help stop deploy create-user delete-resources
 
 SHELL := /bin/bash
 current_dir = $(shell pwd)

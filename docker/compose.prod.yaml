@@ -1,5 +1,7 @@
 x-backend-vars: &env-vars
   ENVIRONMENT: PRODUCTION
+  REDIS_HOST: zane.valkey
+  REDIS_PORT: 6379
   REDIS_URL: redis://zane.valkey:6379/0
   DB_HOST: zane.pgbouncer
   DB_PORT: 5432
@@ -32,11 +34,10 @@ x-internal-envs: &internal-envs
   API_HOST: zane.api.zaneops.internal:80
   DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
 
-
 services:
   zane-proxy:
     image: ghcr.io/fredkiss3/caddy-cloudflare:2.11.4-alpine
-    command: caddy run --resume  --config /etc/caddy/config.json 
+    command: caddy run --resume  --config /etc/caddy/config.json
     logging:
       driver: "fluentd"
       options:
@@ -120,7 +121,7 @@ services:
           memory: 1G
     networks:
       - zane
- 
+
   zane-temporal-node-worker:
     image: ghcr.io/zane-ops/app:${IMAGE_VERSION}
     command: /bin/bash -l -c "/app/scripts/run_worker.sh"
@@ -154,7 +155,7 @@ services:
           memory: 1G
     networks:
       - zane
- 
+
   zane-temporal-build-worker:
     image: ghcr.io/zane-ops/app:${IMAGE_VERSION}
     command: /bin/bash -l -c "/app/scripts/run_worker.sh"
@@ -426,7 +427,7 @@ services:
         aliases:
           - zane.fluentd
     environment:
-       <<: *internal-envs
+      <<: *internal-envs
     deploy:
       mode: global
       restart_policy:

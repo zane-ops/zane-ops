@@ -1,5 +1,7 @@
 x-backend-vars: &env-vars
   ENVIRONMENT: PRODUCTION
+  REDIS_HOST: zane.valkey
+  REDIS_PORT: 6379
   REDIS_URL: redis://zane.valkey:6379/0
   DB_HOST: zane.pgbouncer
   DB_PORT: 5432
@@ -376,7 +378,7 @@ services:
         limits:
           cpus: "1"
           memory: 1G
-  
+
   zane-fluentd:
     image: fluentd:v1.16.2-1.1
     volumes:
