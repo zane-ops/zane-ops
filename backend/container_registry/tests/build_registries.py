@@ -101,12 +101,10 @@ class BuildRegistryViewTests(AuthAPITestCase):
         self.assertGreater(len(swarm_service.configs), 0)
 
         # check that it has been added to caddy
-        response = requests.get(
-            ZaneProxyClient.get_uri_for_build_registry(
-                cast(str, registry.service_alias)
-            )
+        config = await ZaneProxyClient.aget_route_config(
+            cast(str, registry.service_alias)
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertIsNotNone(config)
 
     def test_create_new_registry_with_default_unset_the_current_default_registry(self):
         self.loginUser()
@@ -288,12 +286,10 @@ class BuildRegistryViewTests(AuthAPITestCase):
         self.assertIsNone(swarm_service)
 
         # check that it has been added to caddy
-        response = requests.get(
-            ZaneProxyClient.get_uri_for_build_registry(
-                cast(str, registry.service_alias),
-            )
+        config = await ZaneProxyClient.aget_route_config(
+            cast(str, registry.service_alias)
         )
-        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+        self.assertIsNone(config)
 
     @responses.activate()
     async def test_build_git_service_push_to_default_registry(self):
@@ -477,15 +473,15 @@ class BuildRegistryViewTests(AuthAPITestCase):
         )
 
         # the domain should also be udpated in caddy
-        response = requests.get(
-            ZaneProxyClient.get_uri_for_build_registry(
-                cast(str, old_registry.service_alias),
-            )
+        config = cast(
+            dict,
+            await ZaneProxyClient.aget_route_config(
+                cast(str, new_registry.service_alias)
+            ),
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        data = response.json()
-        jprint(response.json())
-        self.assertEqual(new_registry.registry_domain, data["match"][0]["host"][0])
+        self.assertIsNotNone(config)
+        jprint(config)
+        self.assertEqual(new_registry.registry_domain, config["match"][0]["host"][0])
 
     @responses.activate()
     def test_create_registry_with_local_storage_do_not_persist_s3_credentials(

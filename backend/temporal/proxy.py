@@ -7,13 +7,14 @@ from zane_api.models import Deployment, URL
 from compose.models import ComposeStack
 
 from container_registry.models import BuildRegistry
-from zane_api.utils import strip_slash_if_exists, cache_result
+from zane_api.utils import strip_slash_if_exists, cache_result, find_item_in_sequence
 from .shared import DeploymentDetails
 from django.conf import settings
 from zane_api.dtos import URLDto, URLRedirectToDto
 import requests
 from rest_framework import status
 from datetime import timedelta
+from asgiref.sync import sync_to_async
 
 from compose.dtos import ComposeStackUrlRouteDto
 from .constants import (
@@ -400,6 +401,23 @@ class ZaneProxyClient:
     @classmethod
     def get_uri_for_build_registry(cls, registry_alias: str):
         return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{registry_alias}"
+
+    @classmethod
+    def get_route_config(cls, route_id: str):
+        # path: $.apps.http.servers.zane.,routes..routes
+        full_config = cls.get_full_caddy_config()
+        all_routes: list[dict] = full_config["apps"]["http"]["servers"]["zane"][
+            "routes"
+        ][0]["handle"][0]["routes"]
+
+        route_config = find_item_in_sequence(
+            lambda item: item["@id"] == route_id, all_routes
+        )
+        return route_config
+
+    @classmethod
+    def aget_route_config(cls, route_id: str):
+        return sync_to_async(cls.get_route_config)(route_id)
 
     @classmethod
     def _get_request_for_build_registry(
