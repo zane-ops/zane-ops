@@ -1,12 +1,19 @@
 x-internal-envs: &internal-envs
+  REDIS_HOST: host.docker.internal
+  REDIS_PORT: 6381
   API_HOST: host.docker.internal:8000
+  # REDIS_HOST: zane.valkey
+  # REDIS_PORT: 6379
+  # API_HOST: zane.api.zaneops.internal:8000
   DJANGO_SECRET_KEY: "django-insecure-^@$$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx" # default value set in `settings.py`
 
 services:
   zane-fluentd:
     image: fluentd:v1.16.2-1.1
+    configs:
+      - source: fluentd.conf
+        target: /fluentd/etc/fluent.conf
     volumes:
-      - "./fluentd/fluent.conf:/fluentd/etc/fluent.conf"
       - "$HOME/.fluentd/:/var/fluentd/"
     networks:
       zane:
@@ -16,30 +23,6 @@ services:
       <<: *internal-envs
     deploy:
       mode: global
-  zane-valkey:
-    image: valkey/valkey:7.2.5-alpine
-    volumes:
-      - redis-data:/data
-    ports:
-      - "6381:6379"
-    networks:
-      zane:
-        aliases:
-          - zane.valkey
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: any
-      placement:
-        constraints:
-          - node.labels.zane.main-server==true
-      labels:
-        zane.stack: "true"
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 500M
-
   zane-proxy:
     image: ghcr.io/fredkiss3/caddy-cloudflare:2.11.4-alpine
     command: caddy run  --resume  --config /etc/caddy/config.json
@@ -75,9 +58,12 @@ services:
         protocol: tcp
         mode: host
       - "2019:2019"
+    configs:
+      - source: config.json
+        target: /etc/caddy/config.json
     volumes:
-      - ./proxy/default-caddy-config.json:/etc/caddy/config.json:ro
-      - config-storage:/config
+      # - ./proxy/default-caddy-config.json:/etc/caddy/config.json:ro
+      - caddy-config-store:/config
     environment:
       <<: *internal-envs
       CADDY_ADMIN: 0.0.0.0:2019
@@ -116,8 +102,14 @@ services:
     networks:
       - zane
 volumes:
-  config-storage:
-  redis-data:
+  caddy-config-store:
+
+configs:
+  config.json:
+    file: ./proxy/default-caddy-config.json
+  fluentd.conf:
+    file: ./fluentd/fluent.conf
+
 networks:
   zane:
     external: true

@@ -33,6 +33,8 @@ x-backend-vars: &env-vars
 x-internal-envs: &internal-envs
   API_HOST: zane.api.zaneops.internal:80
   DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+  REDIS_HOST: zane.valkey
+  REDIS_PORT: 6379
 
 services:
   zane-proxy:

@@ -1,6 +1,5 @@
 x-backend-vars: &env-vars
-  REDIS_HOST: zane.valkey
-  REDIS_PORT: 6379
+  REDIS_URL: redis://zane.valkey:6379/0
   DB_HOST: zane.db
   DB_PORT: 5432
   CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
@@ -14,6 +13,14 @@ x-backend-vars: &env-vars
   ZANE_HTTP_MODE: ${MODE:-http}
 
 services:
+  zane-portainer:
+    image: portainer/portainer-ce:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
+    ports:
+      - "9000:9000"
+
   zane-loki:
     image: grafana/loki:3.4
     ports:
@@ -212,6 +219,16 @@ services:
       zane:
         aliases:
           - zane.db
+  zane-valkey:
+    image: valkey/valkey:9-alpine
+    volumes:
+      - valkey-data:/data
+    ports:
+      - "6381:6379"
+    networks:
+      zane:
+        aliases:
+          - zane.valkey
   zane-redis-gui:
     image: redis/redisinsight
     container_name: zane-redis-gui
@@ -244,6 +261,8 @@ volumes:
   grafana-data:
   tempo-data:
   drizzle-gateway-data:
+  portainer-data:
+  valkey-data:
 networks:
   zane:
     external: true
