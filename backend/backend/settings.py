@@ -57,9 +57,7 @@ CSRF_COOKIE_SECURE = (
 SESSION_COOKIE_SECURE = (
     False if __DANGEROUS_ALLOW_HTTP_SESSION else ENVIRONMENT == PRODUCTION_ENV
 )
-REDIS_HOST = os.environ.get("REDIS_HOST", "127.0.0.1")
-REDIS_PORT = os.environ.get("REDIS_PORT", 6381)
-REDIS_URL = os.environ.get("REDIS_URL", f"redis://{REDIS_HOST}:{REDIS_PORT}/0")
+REDIS_URL = os.environ.get("REDIS_URL", f"redis://127.0.0.1:6381/0")
 
 SECURE_HSTS_SECONDS = (
     0 if (__DANGEROUS_ALLOW_HTTP_SESSION or ENVIRONMENT != PRODUCTION_ENV) else 60
@@ -103,6 +101,10 @@ if ENVIRONMENT == PRODUCTION_ENV:
         SESSION_COOKIE_DOMAIN = f".{ROOT_DOMAIN}"
     else:
         SESSION_COOKIE_DOMAIN = ZANE_APP_DOMAIN
+
+APP_SERVER_LABEL = "zane.app-server"
+BUILD_SERVER_LABEL = "zane.build-server"
+MAIN_SERVER_LABEL = "zane.main-server"
 
 # This is necessary for making sure that CSRF protections work on production
 CSRF_TRUSTED_ORIGINS = (

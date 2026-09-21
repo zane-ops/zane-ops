@@ -22,9 +22,9 @@ def insert_initial_swarm_server(apps, schema_editor):
             "Availability": "active",
             "Role": "manager",
             "Labels": {
-                "zane.main-server": "true",
-                "zane.app-server": "true",
-                "zane.build-server": "true",
+                settings.MAIN_SERVER_LABEL: "true",
+                settings.APP_SERVER_LABEL: "true",
+                settings.BUILD_SERVER_LABEL: "true",
             },
         }
     )

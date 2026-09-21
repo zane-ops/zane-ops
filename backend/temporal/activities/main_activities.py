@@ -1405,6 +1405,7 @@ class DockerSwarmActivities:
                     project_id=deployment.service.project_id,
                     service_id=deployment.service.id,
                 ),
+                constraints=[f"node.labels.{settings.APP_SERVER_LABEL}==true"],
                 mounts=mounts,
                 endpoint_spec=endpoint_spec,
                 env=envs,
