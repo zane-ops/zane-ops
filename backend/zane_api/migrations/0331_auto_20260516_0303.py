@@ -7,8 +7,9 @@ def create_default_workspace_and_attach_gitapp(apps, schema_editor):
     Workspace = apps.get_model("zane_api", "Workspace")
     GitApp = apps.get_model("zane_api", "GitApp")
 
-    default_workspace = Workspace.objects.earliest("created_at")
-    GitApp.objects.update(workspace=default_workspace)
+    default_workspace = Workspace.objects.order_by("created_at").first()
+    if default_workspace is not None:
+        GitApp.objects.update(workspace=default_workspace)
 
 
 def rollback_workspace_and_gitapp(apps, schema_editor):

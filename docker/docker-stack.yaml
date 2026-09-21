@@ -14,7 +14,7 @@ services:
       - source: fluentd.conf
         target: /fluentd/etc/fluent.conf
     volumes:
-      - "$HOME/.fluentd/:/var/fluentd/"
+      - "${FLUENTD_HOST_DIR:-$HOME/.fluentd}/:/var/fluentd/"
     networks:
       zane:
         aliases:
@@ -30,7 +30,7 @@ services:
       driver: "fluentd"
       options:
         mode: "non-blocking"
-        fluentd-address: "unix://$HOME/.fluentd/fluentd.sock"
+        fluentd-address: "unix://${FLUENTD_HOST_DIR:-$HOME/.fluentd}/fluentd.sock"
         fluentd-async: "true"
         fluentd-max-retries: 10
         fluentd-sub-second-precision: "true"
@@ -72,7 +72,7 @@ services:
         aliases:
           - zane.proxy
   zane-temporal-admin-tools:
-    image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-1.0.0
+    image: temporalio/admin-tools:1.30.5
     environment:
       - DB=postgres12
       - DB_PORT=5432

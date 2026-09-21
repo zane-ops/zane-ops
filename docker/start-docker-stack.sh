@@ -17,7 +17,14 @@ docker compose down --remove-orphans
 docker stack rm zane
 
 docker compose up -d --remove-orphans
-docker stack deploy --with-registry-auth --compose-file ./docker-stack.yaml zane
+
+if [ -f ./.env ]; then
+  echo "File .env";
+  set -a; . ./.env; set +a; docker stack deploy --with-registry-auth --compose-file ./docker-stack.yaml zane;
+else
+  docker stack deploy --with-registry-auth --compose-file ./docker-stack.yaml zane;
+fi
+
 
 echo "Scaling up all zane-ops services..."
 # File containing the services to scale up

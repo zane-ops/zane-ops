@@ -89,23 +89,19 @@ services:
     environment:
       CADDY_ADMIN: 0.0.0.0:2020
   zane-temporal-server:
-    entrypoint: ["/etc/temporal/entrypoint.sh"]
+    image: temporalio/server:1.30.5
     environment:
       - DB=postgres12
       - DB_PORT=5432
       - POSTGRES_USER=postgres
       - POSTGRES_PWD=password
       - POSTGRES_SEEDS=zane.db
-      - SKIP_SCHEMA_SETUP=false
-      - SKIP_DB_SETUP=false
       - SERVICES=history,matching,frontend,worker
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
       - BIND_ON_IP=0.0.0.0
-    image: temporalio/auto-setup:1.24.2
     volumes:
       - ./temporalio/config/dynamicconfig:/etc/temporal/config/dynamicconfig/
       - ./temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml
-      - ./temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh
     networks:
       zane:
         aliases:
@@ -137,7 +133,6 @@ services:
       - ${MAXMIND_DB_HOST_PATH:-/dev/null}:/code/GeoLite2-Country.mmdb
     depends_on:
       - zane-db
-      - zane-temporal-server
       - zane-tempo
     restart: always
     environment:
