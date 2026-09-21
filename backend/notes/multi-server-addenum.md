@@ -1,7 +1,7 @@
 ## TODO:
 
 - ~~Add port to SSHKey handling.~~
-- Adapt docker-stack.prod.yaml/compose.prod.yaml stacks
+- ~~Adapt docker-stack.prod.yaml/compose.prod.yaml stacks~~
 
 ## Notes
 
@@ -22,10 +22,8 @@
 
 Global services in [compose.prod.yaml](../../docker/compose.prod.yaml) bind-mount host paths, and Swarm does **not** create missing bind sources — the task stays in `Pending`/restart loop until they exist. So before (or right after) a node joins, `ZANE_APP_DIRECTORY` must exist **at the exact same path as on the main node** (default `/var/www/zaneops`) with:
 
-| Path (relative to `ZANE_APP_DIRECTORY`) | Source in repo                                                                         | Used by                                                     |
-| --------------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `proxy/default-caddy-config.json`       | [docker/proxy/default-caddy-config.json](../../docker/proxy/default-caddy-config.json) | `zane-proxy`                                                |
-| `fluent.conf`                           | [docker/fluentd/fluent.conf](../../docker/fluentd/fluent.conf)                         | `zane-fluentd`                                              |
-| `.fluentd/` (empty dir, `chmod 777`)    | —                                                                                      | `zane-fluentd` socket, every container's fluentd log driver |
+| Path (relative to `ZANE_APP_DIRECTORY`) | Source in repo | Used by                                                     |
+| --------------------------------------- | -------------- | ----------------------------------------------------------- |
+| `.fluentd/` (empty dir, `chmod 777`)    | —              | `zane-fluentd` socket, every container's fluentd log driver |
 
 Nothing else: `zane-temporal-node-worker` / `zane-temporal-build-worker` only mount `/var/run/docker.sock` and named volumes (created per node automatically), and their env is baked into the service spec — no `.env` needed on other nodes. Same for `pgbouncer/`, `temporalio/`, `loki-config.yaml`: those are only mounted by services pinned to `zane.main-server`.
