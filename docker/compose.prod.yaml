@@ -31,7 +31,7 @@ x-backend-vars: &env-vars
   MAXMIND_DB_PATH: /app/GeoLite2-Country.mmdb
 
 x-internal-envs: &internal-envs
-  API_HOST: zane.api.zaneops.internal:80
+  API_HOST: zane.api.zaneops.internal:8000
   DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
   REDIS_HOST: zane.valkey
   REDIS_PORT: 6379
