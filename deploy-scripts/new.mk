@@ -40,6 +40,8 @@ setup: ### Launch initial setup before installing zaneops, Usage: make setup BRA
 	@echo "Step 3️⃣: Downloading docker compose files for zaneops..."
 	@mkdir -p $(current_dir)/pgbouncer
 	@mkdir -p $(current_dir)/proxy
+	@mkdir -p $(current_dir)/fluentd
+	@mkdir -p $(current_dir)/loki
 	@mkdir -p $(current_dir)/temporalio/config/dynamicconfig
 	@curl $(raw_url)/docker/temporalio/entrypoint.sh > ./temporalio/entrypoint.sh
 	@curl $(raw_url)/docker/temporalio/admin-tools-entrypoint.sh > ./temporalio/admin-tools-entrypoint.sh
@@ -47,8 +49,8 @@ setup: ### Launch initial setup before installing zaneops, Usage: make setup BRA
 	@curl $(raw_url)/docker/temporalio/config/dynamicconfig/production-sql.yaml > ./temporalio/config/dynamicconfig/production-sql.yaml
 	@curl $(raw_url)/docker/compose.prod.yaml > ./compose.prod.yaml
 	@curl $(raw_url)/docker/proxy/default-caddy-config.json > ./proxy/default-caddy-config.json
-	@curl $(raw_url)/docker/fluentd/fluent.conf > ./fluent.conf
-	@curl $(raw_url)/docker/loki/config.yaml > ./loki-config.yaml
+	@curl $(raw_url)/docker/fluentd/fluent.conf > ./fluentd/fluent.conf
+	@curl $(raw_url)/docker/loki/config.yaml > ./loki/config.yaml
 	@curl $(raw_url)/docker/docker-stack.prod-temporal-ui.yaml > ./docker-stack.prod-temporal-ui.yaml
 	@curl $(raw_url)/docker/docker-stack.prod-otel.yaml > ./docker-stack.prod-otel.yaml
 	@curl $(raw_url)/docker/tempo/config.yaml > ./tempo-config.yaml

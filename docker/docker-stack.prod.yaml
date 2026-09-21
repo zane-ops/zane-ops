@@ -199,6 +199,7 @@ services:
         target: /etc/temporal/config/config_template.yaml
       - source: admin-tools-entrypoint.sh
         target: /scripts/setup-postgres.sh
+        mode: 0555
     entrypoint: ["/bin/sh"]
     command: /scripts/setup-postgres.sh
     deploy:
@@ -464,10 +465,8 @@ volumes:
       zane.stack: "true"
 
 configs:
-  config.json:
-    file: ./proxy/default-caddy-config.json
   fluentd.conf:
-    file: ./fluentd/fluent.conf
+    file: ./fluent.conf
   production-sql.yaml:
     file: ./temporalio/config/dynamicconfig/production-sql.yaml
   config_template.yaml:

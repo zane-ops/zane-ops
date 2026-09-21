@@ -319,6 +319,7 @@ services:
         target: /etc/temporal/config/config_template.yaml
       - source: admin-tools-entrypoint.sh
         target: /scripts/setup-postgres.sh
+        mode: 0555
     entrypoint: ["/bin/sh"]
     command: /scripts/setup-postgres.sh
     deploy:
@@ -408,8 +409,10 @@ services:
       zane:
         aliases:
           - zane.pgbouncer
-    volumes:
-      - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/pgbouncer/entrypoint.sh:/entrypoint.sh
+    configs:
+      - source: pgbouncer-entrypoint.sh
+        target: /entrypoint.sh
+        mode: 0555
     entrypoint: ["/entrypoint.sh"]
     healthcheck:
       test: ["CMD", "pg_isready", "-h", "localhost"]
@@ -456,8 +459,10 @@ services:
   zane-loki:
     image: grafana/loki:3.4
     volumes:
-      - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/loki-config.yaml:/etc/loki/local-config.yaml
       - loki-data:/loki
+    configs:
+      - source: loki-config.yaml
+        target: /etc/loki/local-config.yaml
     command: -config.file=/etc/loki/local-config.yaml -config.expand-env=true
     networks:
       zane:
@@ -494,6 +499,10 @@ configs:
     file: ./temporalio/config/config_template.yaml
   admin-tools-entrypoint.sh:
     file: ./temporalio/admin-tools-entrypoint.sh
+  pgbouncer-entrypoint.sh:
+    file: ./pgbouncer/entrypoint.sh
+  loki-config.yaml:
+    file: ./loki/config.yaml
 
 volumes:
   loki-data:
