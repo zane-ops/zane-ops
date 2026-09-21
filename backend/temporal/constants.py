@@ -136,6 +136,13 @@ DEFAULT_CADDY_LOGGING = {
     }
 }
 
+DEFAULT_CADDY_STORAGE_CONFIG = {
+    "address": ["{env.REDIS_HOST}:{env.REDIS_PORT}"],
+    "db": 1,
+    "timeout": "5",
+    "module": "redis",
+}
+
 DEFAULT_ADMIN_CONFIG = {
     "config": {
         # This module is used for reloading the next caddy config

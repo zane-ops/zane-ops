@@ -23,6 +23,7 @@ from .constants import (
     ZANE_CATCHALL_502_ROUTE,
     DEFAULT_ADMIN_CONFIG,
     ZANE_PROXY_CONFIG_CACHE_KEY,
+    DEFAULT_CADDY_STORAGE_CONFIG,
 )
 
 from django.conf import settings
@@ -907,12 +908,7 @@ class ZaneProxyClient:
         return {
             "@id": "root",
             "logging": DEFAULT_CADDY_LOGGING,
-            "storage": {
-                "address": [f"{settings.REDIS_HOST}:{settings.REDIS_PORT}"],
-                "db": 1,
-                "timeout": "5",
-                "module": "redis",
-            },
+            "storage": DEFAULT_CADDY_STORAGE_CONFIG,
             "admin": DEFAULT_ADMIN_CONFIG,
             "apps": {
                 "http": {
