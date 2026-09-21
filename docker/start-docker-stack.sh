@@ -13,10 +13,10 @@ trap cleanup SIGTERM
 
 # Deploy the stack
 echo "Deploying the stack..."
-docker-compose down --remove-orphans
+docker compose down --remove-orphans
 docker stack rm zane
 
-docker-compose up -d --remove-orphans
+docker compose up -d --remove-orphans
 docker stack deploy --with-registry-auth --compose-file ./docker-stack.yaml zane
 
 echo "Scaling up all zane-ops services..."
