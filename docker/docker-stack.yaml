@@ -126,8 +126,9 @@ services:
       - BIND_ON_IP=0.0.0.0
     entrypoint: ["/bin/sh"]
     command: /scripts/setup-postgres.sh
-    volumes:
-      - "./temporalio/admin-tools-entrypoint.sh:/scripts/setup-postgres.sh"
+    configs:
+      - source: admin-tools-entrypoint.sh
+        target: /scripts/setup-postgres.sh
     deploy:
       mode: replicated-job
       restart_policy:
@@ -145,6 +146,8 @@ configs:
     file: ./proxy/default-caddy-config.json
   fluentd.conf:
     file: ./fluentd/fluent.conf
+  admin-tools-entrypoint.sh:
+    file: ./temporalio/admin-tools-entrypoint.sh
 
 networks:
   zane:

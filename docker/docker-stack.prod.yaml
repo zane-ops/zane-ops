@@ -137,11 +137,13 @@ services:
       - POSTGRES_SEEDS=zane.db
       - SERVICES=history,matching,frontend,worker
       - BIND_ON_IP=0.0.0.0
-      - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/config/dynamicconfig/development-sql.yaml
-    image: temporalio/server:1.30.5
-    volumes:
-      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/dynamicconfig/production-sql.yaml:/etc/temporal/config/dynamicconfig/development-sql.yaml"
-      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml"
+      - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/config/dynamicconfig/production-sql.yaml
+    image: temporalio/server:1.32.0
+    configs:
+      - source: production-sql.yaml
+        target: /etc/temporal/config/dynamicconfig/production-sql.yaml
+      - source: config_template.yaml
+        target: /etc/temporal/config/config_template.yaml
     deploy:
       replicas: 1
       update_config:
@@ -174,7 +176,7 @@ services:
       start_period: 30s
       retries: 60
   zane-temporal-admin-tools:
-    image: temporalio/admin-tools:1.30.5
+    image: temporalio/admin-tools:1.32.0
     environment:
       - DB=postgres12
       - DB_PORT=5432
@@ -190,10 +192,15 @@ services:
       - TEMPORAL_CLI_ADDRESS=zane.temporal:7233
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/production-sql.yaml
       - BIND_ON_IP=0.0.0.0
-    volumes:
-      - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/admin-tools-entrypoint.sh:/etc/temporal/setup.sh"
+    configs:
+      - source: production-sql.yaml
+        target: /etc/temporal/config/dynamicconfig/production-sql.yaml
+      - source: config_template.yaml
+        target: /etc/temporal/config/config_template.yaml
+      - source: admin-tools-entrypoint.sh
+        target: /scripts/setup-postgres.sh
     entrypoint: ["/bin/sh"]
-    command: "/etc/temporal/setup.sh"
+    command: /scripts/setup-postgres.sh
     deploy:
       mode: replicated-job
       restart_policy:
@@ -455,6 +462,19 @@ volumes:
   caddy-config:
     labels:
       zane.stack: "true"
+
+configs:
+  config.json:
+    file: ./proxy/default-caddy-config.json
+  fluentd.conf:
+    file: ./fluentd/fluent.conf
+  production-sql.yaml:
+    file: ./temporalio/config/dynamicconfig/production-sql.yaml
+  config_template.yaml:
+    file: ./temporalio/config/config_template.yaml
+  admin-tools-entrypoint.sh:
+    file: ./temporalio/admin-tools-entrypoint.sh
+
 networks:
   zane:
     external: true
