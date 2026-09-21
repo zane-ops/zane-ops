@@ -71,8 +71,44 @@ services:
       zane:
         aliases:
           - zane.proxy
-  zane-temporal-admin-tools:
-    image: temporalio/admin-tools:1.30.5
+  zane-temporal-server:
+    image: temporalio/server:1.32.0
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=password
+      - POSTGRES_SEEDS=zane.db
+      - SERVICES=history,matching,frontend,worker
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - BIND_ON_IP=0.0.0.0
+    volumes:
+      - ./temporalio/config/dynamicconfig:/etc/temporal/config/dynamicconfig/
+      - ./temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml
+    networks:
+      zane:
+        aliases:
+          - zane.temporal
+    ports:
+      - 7233:7233
+    depends_on:
+      - temporal-admin-tools
+    deploy:
+      replicas: 1
+      labels:
+        zane.role: "temporal"
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.labels.zane.main-server==true
+  temporal-admin-tools:
+    image: temporalio/admin-tools:1.32.0
     environment:
       - DB=postgres12
       - DB_PORT=5432
@@ -88,10 +124,10 @@ services:
       - TEMPORAL_CLI_ADDRESS=zane.temporal:7233
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
       - BIND_ON_IP=0.0.0.0
+    entrypoint: ["/bin/sh"]
+    command: /scripts/setup-postgres.sh
     volumes:
-      - "./temporalio/admin-tools-entrypoint.sh:/etc/temporal/setup.sh"
-    entrypoint:
-      - /etc/temporal/setup.sh
+      - "./temporalio/admin-tools-entrypoint.sh:/scripts/setup-postgres.sh"
     deploy:
       mode: replicated-job
       restart_policy:

@@ -88,32 +88,6 @@ services:
       - "2020:2020"
     environment:
       CADDY_ADMIN: 0.0.0.0:2020
-  zane-temporal-server:
-    image: temporalio/server:1.30.5
-    environment:
-      - DB=postgres12
-      - DB_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PWD=password
-      - POSTGRES_SEEDS=zane.db
-      - SERVICES=history,matching,frontend,worker
-      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
-      - BIND_ON_IP=0.0.0.0
-    volumes:
-      - ./temporalio/config/dynamicconfig:/etc/temporal/config/dynamicconfig/
-      - ./temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml
-    networks:
-      zane:
-        aliases:
-          - zane.temporal
-    ports:
-      - 7233:7233
-    deploy:
-      labels:
-        zane.role: "temporal"
-    depends_on:
-      - zane-db
-    restart: always
   zane-api:
     build:
       context: ../backend
@@ -168,9 +142,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - docker-buildx-store:/root/.docker/buildx
       - docker-data:/root/.docker
-    depends_on:
-      - zane-db
-      - zane-temporal-server
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
@@ -190,9 +161,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - docker-buildx-store:/root/.docker/buildx
       - docker-data:/root/.docker
-    depends_on:
-      - zane-db
-      - zane-temporal-server
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
@@ -237,8 +205,6 @@ services:
     networks:
       - zane
   zane-temporal-ui:
-    depends_on:
-      - zane-temporal-server
     environment:
       - TEMPORAL_ADDRESS=zane.temporal:7233
       - TEMPORAL_CORS_ORIGINS=http://localhost:3000
