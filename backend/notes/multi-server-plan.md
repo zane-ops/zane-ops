@@ -211,21 +211,19 @@ Either way, the important rule stays the same: **every step of one build/deploym
 
 ---
 
-## 5. Fluentd (log collection) — one setup, running identically everywhere <a id="sec-5"></a>
+## 5. Vector (log collection) — one setup, running identically everywhere <a id="sec-5"></a>
 
-**Today:** there's one Fluentd (log collector) running on the manager, and every container is told to send its logs to a specific file path on disk (a "unix socket") at `${ZANE_APP_DIRECTORY}/.fluentd/fluentd.sock` ([main_activities.py:1444](../temporal/activities/main_activities.py#L1444)). If a container ran on a different machine, it would be pointing at a socket file that doesn't exist there — logging would break.
+**Design:** `zane-vector` runs as a **global service** (one copy automatically on every machine). Each instance's `docker_logs` source pulls container logs straight off the *local* Docker Engine API (`docker.sock`, already mounted read-only by other ZaneOps components on every node) — not through Docker's `--log-driver` mechanism, so there's no socket file, no host path to provision, and no network port to expose. Because a new node's Vector instance talks to that node's own Docker daemon, it works correctly the moment it's scheduled there — nothing needs to be pre-provisioned on the machine for logging to work.
 
-**Fix:** make `zane-fluentd` a **global service** (one copy automatically on every machine) and make sure every machine has that same file path set up. Since each machine evaluates that address locally, the *exact same* config keeps working with **zero code changes** — it just now works correctly everywhere because there really is a matching Fluentd on every machine.
+Vector reads each container's **labels** as the log's metadata (`service`, `deployment_hash`, `zane-stack`, `zane.stack.service`, ...), replacing the old log-driver `tag` template entirely. Which containers get shipped at all is controlled by a `zane.logs=true` container label, checked via Vector's `include_labels`. This is a real, container-level label, not the Swarm `deploy.labels` field — Swarm's `deploy.labels` is service-level metadata and does **not** propagate down to the actual container, so `zane-proxy` and every deployed/compose-stack service container explicitly set both: `main_activities.py`'s `services.create()` passes `labels=` (service-level) and `container_labels=` (container-level, includes `zane.logs: "true"`), and the compose-stack `ComposeServiceSpec` DTO has a dedicated `labels` field (container-level) alongside its existing `deploy.labels`.
 
-This is why "ZaneOps must be installed at the exact same folder path on every machine" is a real, enforced requirement — not just a nice-to-have — and the setup process for adding a new node needs to guarantee it.
+Every instance posts its batch straight to the central API (`POST /api/logs/ingest`, `VectorLogIngestAPIView`) — still just one place logs get collected, and Loki (log storage/search) doesn't need to change at all.
 
-This also means we don't need the more complicated idea (from the original notes) of routing logs through Caddy to reach Fluentd — drop that. Each machine's Fluentd still sends logs the same way it does today, over the internal network to the central API, so there's still just one place logs get collected, and Loki (log storage/search) doesn't need to change at all.
+**Why not the per-node Temporal worker instead** (considered and rejected): streaming every container's logs through the same process that also handles that node's healthchecks/metrics/exec would mean unbounded log volume shares fate with — and could stall — health monitoring, with no isolation if one container gets noisy. A dedicated collector process keeps that blast radius contained to logging.
 
-**Update (2026-09-22): replacing Fluentd with [Vector](https://vector.dev), tested and confirmed as the better fit.** The fix above (global service + identical socket path on every machine) works, but it's still a real, enforced provisioning requirement per node, and reusing the per-node Temporal worker instead (considered as an alternative) turned out worse — it would put unbounded per-container log-streaming load on the same process that also handles that node's healthchecks/metrics/exec, with no isolation if logging gets noisy.
+**Status:** done. `compose.prod.yaml` and `docker-stack.yaml` (dev) both run `zane-vector` (pinned `timberio/vector:0.58.0-alpine`, `mode: global`); `ZANE_FLUENTD_HOST` is removed from `settings.py`; `compose/processor.py` no longer sets any log-driver options and tags its containers with `zane.logs`/`zane.stack.service` the same way.
 
-Vector's `docker_logs` source pulls container logs straight off the local Docker Engine API (`docker.sock`, already mounted read-only by other ZaneOps components on every node) instead of Docker's `--log-driver` mechanism — no socket file, no host path to provision, no network port to expose. It also reads each container's labels natively, which is now the source of metadata (`service_id`, `zane-managed`, etc.) instead of the old log-driver `tag` template — see the `container_labels=` addition in `main_activities.py`'s `services.create()` call and the plain top-level `labels:` block added to `zane-proxy` (Swarm's `deploy.labels` is service-level only, doesn't propagate to the container — this bit us during testing). Filtering which containers get shipped is a `zane.logs=true` container label, checked via Vector's `include_labels`.
-
-`compose.prod.yaml` and `docker-stack.yaml` (dev) now run `zane-vector` (pinned `timberio/vector:0.58.0-alpine`) as a `mode: global` service instead of `zane-fluentd`; `ZANE_FLUENTD_HOST` is removed from `settings.py`. **Not done yet:** `compose/processor.py` (the ComposeStack feature) still sets the old `driver: fluentd` log-driver options and references `settings.ZANE_FLUENTD_HOST`, which no longer exists — that code path is broken until it's migrated to the label-based approach too.
+**Legacy note (superseded 2026-09-22):** the original design was Fluentd, also as a global service, but addressed over a Unix socket at a fixed file path (`${ZANE_APP_DIRECTORY}/.fluentd/fluentd.sock`) that every node had to provision identically — Swarm doesn't auto-create missing bind-mount sources, so this was a real, enforced per-node setup step, not just a nice-to-have. Fluentd is retired; nothing in the current design depends on it.
 
 ---
 
@@ -417,11 +415,11 @@ This becomes a Temporal workflow, using SSH login details the user provides once
 
 1. connect via SSH, check the OS/CPU architecture/CPU count/memory, and confirm the manager can actually reach this machine's internal IP
 2. install Docker if it's missing, and verify the version
-3. create the ZaneOps folder **at the exact same path used on the manager**, and set up its config files (`.env`, `fluent.conf`, the Fluentd socket folder)
+3. create the ZaneOps folder **at the exact same path used on the manager**, and set up its config files (`.env`) — Vector needs nothing provisioned here (see [§5](#sec-5))
 4. run `docker swarm join`, using a join token fetched from the manager, joining either as a manager or a worker
 5. apply the right labels to the node (`zane.build`, `zane.apps`)
 6. force-update the global services so Swarm notices the new machine and schedules things onto it
-7. wait until Fluentd, the node worker, and the proxy are all reporting healthy on that machine
+7. wait until Vector, the node worker, and the proxy are all reporting healthy on that machine
 8. mark the `ServerNode` as `READY`
 
 Each of these steps is written so it can safely be retried on its own — so if something fails partway through, we can resume instead of starting over. Removing a machine is basically the reverse: first do `docker node update --availability drain` (tell Swarm to stop scheduling new things there and move existing ones off), wait for that to finish, then remove it.
@@ -438,7 +436,7 @@ Each phase ends with a fully working cluster, so this can ship gradually instead
 | --- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0   | Model + backfill                             | Rework `ServerNode`, auto-migrate every existing install into a valid 1-node cluster, add a read-only "list of nodes" screen in the UI                                                                                                                                                                                                                                                                                            | no visible behavior change yet                                                                                                                          |
 | 1   | Node lifecycle                               | SSH-based setup workflow, joining/leaving/draining a machine, labels, port-reachability check, checking if a node is alive                                                                                                                                                                                                                                                                                                        | you can add machines to the cluster; nothing runs on them yet                                                                                           |
-| 2   | Multi-node data plane                        | Fluentd everywhere, Caddy everywhere + shared cert storage + **keeping every Caddy instance's config in sync** ([§6](#sec-6)), confirm image pulling works from a second machine                                                                                                                                                                                                                                                  | user services can actually run on any machine                                                                                                           |
+| 2   | Multi-node data plane                        | Vector everywhere, Caddy everywhere + shared cert storage + **keeping every Caddy instance's config in sync** ([§6](#sec-6)), confirm image pulling works from a second machine                                                                                                                                                                                                                                                  | user services can actually run on any machine                                                                                                           |
 | 3   | Placement                                    | Let Projects/Environments/Services choose where they run, volume pinning, `SharedVolume` handling, UI for picking a machine                                                                                                                                                                                                                                                                                                       | users can choose where things run                                                                                                                       |
 | 4   | Distributed builds                           | Split build jobs from cluster-control jobs ([§2.1](#sec-2-1)), per-machine build queues, both routing modes, global build worker service                                                                                                                                                                                                                                                                                          | builds no longer have to happen on the manager                                                                                                          |
 | 5   | Per-node operations                          | Node worker as a global service, combining metrics from all machines, SSH-based container shell, "pick a replica" UI, **move `pull_image_for_deployment`, `run_deployment_healthcheck`'s container calls, and `DockerSystemPruneActivities` off `main-task-queue`** (found during the [§2.1](#sec-2-1) audit — see below), **retire `schedule-task-queue` — all schedules target a `node-<hostname>` queue** ([§2.2](#sec-2-2-1)) | full visibility across all machines                                                                                                                     |
@@ -472,7 +470,7 @@ Which ZaneOps pieces are global vs. manager-only, regardless of cluster size:
 | API + DB + Temporal server            | manager only                         | control plane, never moves                                                                                                                                        |
 | Temporal worker on `main-task-queue`  | manager only                         | the only thing allowed to call the Swarm API ([§2.1](#sec-2-1))                                                                                                   |
 | Temporal worker on `node-<hostname>`  | **every** node, always               | health polling, metrics, exec, and all Temporal schedules — added in phase 5, not label-gated. Replaces today's `schedule-task-queue` worker ([§2.2](#sec-2-2-1)) |
-| Fluentd                               | **every** node, always               | global service, no label — see [§5](#sec-5)                                                                                                                       |
+| Vector                                | **every** node, always               | global service, filtered by the `zane.logs=true` container label — see [§5](#sec-5)                                                                               |
 | Caddy (proxy)                         | **every** node, always               | global service, no label — routing mesh means it doesn't need to be co-located with the app it routes to                                                          |
 | Temporal worker on `build-<hostname>` | only nodes labeled `zane.build=true` | this is the one thing that's label-gated                                                                                                                          |
 | User service containers               | only nodes labeled `zane.apps=true`  | via the placement chain in [§3](#sec-3)                                                                                                                           |
@@ -488,7 +486,7 @@ flowchart TB
         mainq["Temporal worker (task queue: main-task-queue)"]
         buildq["Temporal worker (task queue: build-A)"]
         nodeq["Temporal worker (task queue: node-A)"]
-        fluentd["Fluentd"]
+        vector["Vector"]
         caddy["Caddy"]
         apps["user service containers"]
     end
@@ -509,14 +507,14 @@ flowchart TB
         api["API + DB + Temporal"]
         mainq["Temporal worker (task queue: main-task-queue)"]
         nodeqA["Temporal worker (task queue: node-A)"]
-        fluentdA["Fluentd"]
+        vectorA["Vector"]
         caddyA["Caddy"]
         apps["user service containers"]
     end
     subgraph B["Node B — worker · build=true · apps=false"]
         buildq["Temporal worker (task queue: build-B)"]
         nodeqB["Temporal worker (task queue: node-B)"]
-        fluentdB["Fluentd"]
+        vectorB["Vector"]
         caddyB["Caddy"]
     end
 ```
@@ -535,12 +533,12 @@ flowchart TB
         mainq["Temporal worker (task queue: main-task-queue)"]
         buildq["Temporal worker (task queue: build-A)"]
         nodeqA["Temporal worker (task queue: node-A)"]
-        fluentdA["Fluentd"]
+        vectorA["Vector"]
         caddyA["Caddy"]
     end
     subgraph B["Node B — worker · build=false · apps=true"]
         nodeqB["Temporal worker (task queue: node-B)"]
-        fluentdB["Fluentd"]
+        vectorB["Vector"]
         caddyB["Caddy"]
         apps["user service containers"]
     end
@@ -562,18 +560,18 @@ flowchart TB
         api["API + DB + Temporal"]
         mainq["Temporal worker (task queue: main-task-queue)"]
         nodeqA["Temporal worker (task queue: node-A)"]
-        fluentdA["Fluentd"]
+        vectorA["Vector"]
         caddyA["Caddy"]
     end
     subgraph B["Node B — worker · build=true · apps=false"]
         buildq["Temporal worker (task queue: build-B)"]
         nodeqB["Temporal worker (task queue: node-B)"]
-        fluentdB["Fluentd"]
+        vectorB["Vector"]
         caddyB["Caddy"]
     end
     subgraph C["Node C — worker · build=false · apps=true"]
         nodeqC["Temporal worker (task queue: node-C)"]
-        fluentdC["Fluentd"]
+        vectorC["Vector"]
         caddyC["Caddy"]
         apps["user service containers"]
     end
@@ -684,19 +682,19 @@ flowchart TB
         mainq["Temporal worker (task queue: main-task-queue)"]
         buildq["Temporal worker (task queue: build-A)"]
         nodeqA["Temporal worker (task queue: node-A)"]
-        fluentdA["Fluentd"]
+        vectorA["Vector"]
         caddyA["Caddy (serves the dashboard)"]
     end
     subgraph B["Node B — worker · build=false · apps=true"]
         nodeqB["Temporal worker (task queue: node-B)"]
-        fluentdB["Fluentd"]
+        vectorB["Vector"]
         caddyB["Caddy"]
         svc1["user service (ex: web API) · replica 1/2"]
         vol1["user volume (ex: pg DB) · running"]
     end
     subgraph C["Node C — worker · build=false · apps=true"]
         nodeqC["Temporal worker (task queue: node-C)"]
-        fluentdC["Fluentd"]
+        vectorC["Vector"]
         caddyC["Caddy"]
         svc2["user service (ex: web API) · replica 2/2"]
         vol2["user volume (ex: pg DB) · replica"]
@@ -749,17 +747,17 @@ flowchart TB
             mainq["Temporal worker (task queue: main-task-queue)"]
             nodeqM1["Temporal worker (task queue: node-M1)"]
             caddyM1["Caddy (dashboard)"]
-            fluentdM1["Fluentd"]
+            vectorM1["Vector"]
         end
         subgraph M2["M2"]
             nodeqM2["Temporal worker (task queue: node-M2)"]
             caddyM2["Caddy"]
-            fluentdM2["Fluentd"]
+            vectorM2["Vector"]
         end
         subgraph M3["M3"]
             nodeqM3["Temporal worker (task queue: node-M3)"]
             caddyM3["Caddy"]
-            fluentdM3["Fluentd"]
+            vectorM3["Vector"]
         end
     end
     subgraph workers["Workers — zane.build=true · zane.apps=true · replicated storage"]
@@ -767,7 +765,7 @@ flowchart TB
             buildq1["Temporal worker (task queues: build-W1, build-router)"]
             nodeqW1["Temporal worker (task queue: node-W1)"]
             caddyW1["Caddy"]
-            fluentdW1["Fluentd"]
+            vectorW1["Vector"]
             svc1["user service (ex: web API) · replica 1/2"]
             vol1["user volume (ex: pg DB) · running"]
         end
@@ -775,7 +773,7 @@ flowchart TB
             buildq2["Temporal worker (task queues: build-W2, build-router)"]
             nodeqW2["Temporal worker (task queue: node-W2)"]
             caddyW2["Caddy"]
-            fluentdW2["Fluentd"]
+            vectorW2["Vector"]
             svc2["user service (ex: web API) · replica 2/2"]
             vol2["user volume (ex: pg DB) · replica"]
         end

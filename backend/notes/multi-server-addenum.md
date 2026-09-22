@@ -3,7 +3,7 @@
 - ~~Add port to SSHKey handling.~~
 - ~~Adapt docker-stack.prod.yaml/compose.prod.yaml stacks~~
 - Wire `deploy-scripts/install.sh`/`Makefile` to `compose.prod.yaml` instead of `docker-stack.prod.yaml` — deliberately not done yet. Existing installs are all on `docker-stack.prod.yaml` (single-node: `node.role==manager` placement, no global services); switching the installer's target file is a breaking change for them, so it should ship as a major version bump, not a silent swap.
-- `compose/processor.py` (ComposeStack feature) still sets `driver: fluentd` log-driver options and reads `settings.ZANE_FLUENTD_HOST`, which no longer exists (removed from `settings.py` as part of the fluentd → vector switch, see [§5 of the plan](multi-server-plan.md#sec-5)) — that code path is currently broken and needs migrating to the `zane.logs=true` container-label approach, same as `main_activities.py`/`zane-proxy` already are.
+- ~~`compose/processor.py` (ComposeStack feature) still sets `driver: fluentd` log-driver options~~ — done: migrated to the `zane.logs=true` container-label approach (`ComposeServiceSpec` gained a container-level `labels` field alongside its existing `deploy.labels`), same as `main_activities.py`/`zane-proxy`. See [§5 of the plan](multi-server-plan.md#sec-5).
 
 ## Notes
 
