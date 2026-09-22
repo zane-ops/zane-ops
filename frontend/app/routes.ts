@@ -121,8 +121,7 @@ export default [
           ),
           layout("./routes/layouts/swarm-node-layout.tsx", [
             index("./routes/server-admin/swarm-node-details.tsx"),
-            route("console", "./routes/server-admin/swarm-node-console.tsx"),
-            route("services", "./routes/server-admin/swarm-node-services.tsx")
+            route("console", "./routes/server-admin/swarm-node-console.tsx")
           ])
         ])
       ])

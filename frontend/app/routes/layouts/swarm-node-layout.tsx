@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   CrownIcon,
   InfoIcon,
-  NetworkIcon,
   ServerIcon,
   SettingsIcon,
   TerminalIcon
@@ -115,15 +114,6 @@ export default function SwarmNodeLayout({
                 <TerminalIcon size={15} className="flex-none" />
               </HorizontalNavLink>
             </li>
-            {/* <li>
-              <HorizontalNavLink
-                to={href("/admin/servers/:serverId/services", params)}
-                prefetch="viewport"
-              >
-                <span>Containers</span>
-                <NetworkIcon size={15} className="flex-none" />
-              </HorizontalNavLink>
-            </li> */}
           </ul>
         </nav>
 
