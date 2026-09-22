@@ -1,7 +1,9 @@
-.PHONY: all clean test setup help stop deploy create-user delete-resources setup-v2
+.PHONY: all clean test setup help stop deploy create-user delete-resources
 
 SHELL := /bin/bash
 current_dir = $(shell pwd)
+BRANCH ?= main
+raw_url = https://raw.githubusercontent.com/zane-ops/zane-ops/$(BRANCH)
 db_password = "$(shell openssl rand -base64 32)"
 django_secret = "$(shell openssl rand -base64 48 | tr -d '=+/ ' | cut -c1-64)"
 db_username = "$(shell curl -s https://randomuser.me/api/ | jq -r '.results[0].login.username')"
@@ -9,7 +11,7 @@ db_username = "$(shell curl -s https://randomuser.me/api/ | jq -r '.results[0].l
 help: ### Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-setup: ### Launch initial setup before installing zaneops
+setup: ### Launch initial setup before installing zaneops, Usage: make setup BRANCH=feat/multi-server or BRANCH=feat/multi-server make setup
 	@echo -e "====== \x1b[94m⚒️  INITIAL SETUP OF ZANEOPS ⚒️\x1b[0m ======"
 	@echo "Step 1️⃣ : Verifying docker swarm status..."
 	@if docker info --format '{{.Swarm.LocalNodeState}}' | grep -qw "active"; then \
@@ -32,31 +34,32 @@ setup: ### Launch initial setup before installing zaneops
 	fi
 	@echo "Step 1️⃣ Done ✅"
 	@echo "Step 2️⃣: Preparing the current folder..."
-	@mkdir -p .fluentd
-	@chmod 777 .fluentd
 	@echo "Step 2️⃣ Done ✅"
 	@echo "Step 3️⃣: Downloading docker compose files for zaneops..."
 	@mkdir -p $(current_dir)/pgbouncer
+	@mkdir -p $(current_dir)/proxy
+	@mkdir -p $(current_dir)/vector
+	@mkdir -p $(current_dir)/loki
 	@mkdir -p $(current_dir)/temporalio/config/dynamicconfig
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/entrypoint.sh > ./temporalio/entrypoint.sh
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/admin-tools-entrypoint.sh > ./temporalio/admin-tools-entrypoint.sh
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/config/config_template.yaml > ./temporalio/config/config_template.yaml
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/temporalio/config/dynamicconfig/production-sql.yaml > ./temporalio/config/dynamicconfig/production-sql.yaml
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod.yaml > ./docker-stack.prod.yaml
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-http.yaml > ./docker-stack.prod-http.yaml
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/fluentd/fluent.conf > ./fluent.conf
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/loki/config.yaml > ./loki-config.yaml
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-temporal-ui.yaml > ./docker-stack.prod-temporal-ui.yaml
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/docker-stack.prod-otel.yaml > ./docker-stack.prod-otel.yaml
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/tempo/config.yaml > ./tempo-config.yaml
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/grafana/datasources/datasource.yaml > ./grafana-datasources.yaml
-	@curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/docker/pgbouncer/entrypoint.sh > ./pgbouncer/entrypoint.sh
+	@curl $(raw_url)/docker/temporalio/entrypoint.sh > ./temporalio/entrypoint.sh
+	@curl $(raw_url)/docker/temporalio/admin-tools-entrypoint.sh > ./temporalio/admin-tools-entrypoint.sh
+	@curl $(raw_url)/docker/temporalio/config/config_template.yaml > ./temporalio/config/config_template.yaml
+	@curl $(raw_url)/docker/temporalio/config/dynamicconfig/production-sql.yaml > ./temporalio/config/dynamicconfig/production-sql.yaml
+	@curl $(raw_url)/docker/compose.prod.yaml > ./compose.prod.yaml
+	@curl $(raw_url)/docker/proxy/default-caddy-config.json > ./proxy/default-caddy-config.json
+	@curl $(raw_url)/docker/vector/vector.yaml > ./vector/vector.yaml
+	@curl $(raw_url)/docker/loki/config.yaml > ./loki/config.yaml
+	@curl $(raw_url)/docker/docker-stack.prod-temporal-ui.yaml > ./docker-stack.prod-temporal-ui.yaml
+	@curl $(raw_url)/docker/docker-stack.prod-otel.yaml > ./docker-stack.prod-otel.yaml
+	@curl $(raw_url)/docker/tempo/config.yaml > ./tempo-config.yaml
+	@curl $(raw_url)/docker/grafana/datasources/datasource.yaml > ./grafana-datasources.yaml
+	@curl $(raw_url)/docker/pgbouncer/entrypoint.sh > ./pgbouncer/entrypoint.sh
 	@chmod -R a+x ./temporalio/*.sh
 	@chmod -R a+x ./pgbouncer/*.sh
 	@echo "Step 3️⃣ Done ✅"
 	@echo "Step 4️⃣: Downloading the env file template..."
 	@if [ ! -f ".env" ]; then \
-		curl https://raw.githubusercontent.com/zane-ops/zane-ops/main/.env.template > ./.env; \
+		curl $(raw_url)/.env.template > ./.env; \
 		sed -i'.bak' "s#{{INSTALL_DIR}}#$(current_dir)#g" ./.env; \
 		sed -i'.bak' "s#{{ZANE_DB_USER}}#\"$(db_username)\"#g" ./.env; \
 		sed -i'.bak' "s#{{ZANE_DB_PASSWORD}}#\"$(db_password)\"#g" ./.env; \
@@ -76,22 +79,24 @@ setup: ### Launch initial setup before installing zaneops
     	docker network create --attachable --driver overlay --label zane.stack=true zane; \
 	fi
 	@echo "Step 5️⃣ Done ✅"
+	@echo "Step 6️⃣: Labelling this node as the main (and build) server..."
+	@docker node update --label-add zane.main-server=true --label-add zane.build-server=true $$(docker info --format '{{.Swarm.NodeID}}') > /dev/null
+	@echo "Step 6️⃣ Done ✅"
 	@echo "Setup finished 🏁"
 
 deploy: ### Install and deploy zaneops based on MODE (https or http)
 	@set -a; . ./.env; set +a; \
 	if [ "$$MODE" = "https" ]; then \
 		echo -e "====== \x1b[94mDeploying ZaneOps \x1b[92mwith HTTPS 🔒\x1b[0m ======"; \
-		docker stack deploy --detach --with-registry-auth --prune --compose-file docker-stack.prod.yaml zane; \
 		ACCESS_URL="https://$$ZANE_APP_DOMAIN"; \
 	elif [ "$$MODE" = "http" ]; then \
 		echo -e "====== \x1b[94mDeploying ZaneOps\x1b[0m \x1b[38;5;208m⚠️  with HTTP enabled ⚠️\x1b[0m  ======"; \
-		docker stack deploy --detach --with-registry-auth --prune --compose-file docker-stack.prod.yaml --compose-file docker-stack.prod-http.yaml zane; \
 		ACCESS_URL="http://$$ZANE_APP_DOMAIN"; \
 	else \
 		echo -e "\x1b[91mError: MODE must be either 'https' or 'http'\x1b[0m"; \
 		exit 1; \
 	fi; \
+	docker stack deploy --detach --with-registry-auth --prune --compose-file compose.prod.yaml zane; \
 	docker service ls --filter "label=zane-managed=true" --filter "label=status=active" -q | xargs -P 0 -I {} docker service scale --detach {}=1; \
 	echo -e "\n🏁 Deploy initiated"; \
 	spinner=( '◐' '◓' '◑' '◒' ); i=0; \
@@ -105,7 +110,7 @@ deploy: ### Install and deploy zaneops based on MODE (https or http)
 					break; \
 				fi; \
 			else \
-				if [[ "$$svc_replicas" != "1/1" ]]; then \
+				if [[ "$${svc_replicas%%/*}" != "$${svc_replicas##*/}" ]]; then \
 					incomplete=1;\
 					break; \
 				fi; \
