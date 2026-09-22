@@ -184,9 +184,12 @@ echo ""
 echo "📋 Installation Summary"
 echo "   ZaneOps is a self-hosted, open-source PaaS for deploying web apps, static"
 echo "   sites, databases and services — built on Docker Swarm and the Caddy proxy."
-echo "   This script will install Docker (if missing), initialize a Docker Swarm,"
-echo "   download the ZaneOps Makefile, and deploy the ZaneOps stack as a set of"
-echo "   Swarm services on this machine."
+echo ""
+echo "   This script will:"
+echo "   1️⃣  Install the required dependencies (Docker included) if they are missing"
+echo "   2️⃣  Initialize a Docker Swarm on this machine"
+echo "   3️⃣  Download the ZaneOps Makefile and configure the environment"
+echo "   4️⃣  Deploy the ZaneOps stack as a set of Swarm services"
 echo ""
 echo "   Version              : $VERSION"
 echo "   Mode                 : ${MODE:-<default>}"
@@ -211,7 +214,7 @@ else
 fi
 echo ""
 
-echo "➡️ Checking OS and installing dependencies..."
+echo "1️⃣  Checking OS and installing dependencies..."
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     if [ -f /etc/debian_version ]; then
@@ -219,7 +222,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         apt install -y make curl jq openssl ca-certificates lsb-release gnupg
 
         if ! command -v docker &>/dev/null; then
-            echo "➡️ Installing Docker..."
+            echo "   ➡️ Installing Docker..."
             install -m 0755 -d /etc/apt/keyrings
             curl -fsSL https://download.docker.com/linux/$(. /etc/os-release && echo "$ID")/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
             echo \
@@ -233,7 +236,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     elif [ -f /etc/redhat-release ]; then
         dnf install -y make curl jq openssl yum-utils
         if ! command -v docker &>/dev/null; then
-            echo "➡️ Installing Docker..."
+            echo "   ➡️ Installing Docker..."
             dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
             dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
         fi
@@ -263,70 +266,73 @@ else
 fi
 
 # Add user to docker group
-echo "➡️ Adding $ORIGINAL_USER to docker group..."
+echo "   ➡️ Adding $ORIGINAL_USER to docker group..."
 if ! groups "$ORIGINAL_USER" | grep -q '\bdocker\b'; then
     usermod -aG docker "$ORIGINAL_USER"
-    echo "✅ User $ORIGINAL_USER added to docker group"
-    echo "⚠️  Note: $ORIGINAL_USER will need to log out and back in for docker group changes to take effect"
+    echo "   ✅ User $ORIGINAL_USER added to docker group"
+    echo "   ⚠️  Note: $ORIGINAL_USER will need to log out and back in for docker group changes to take effect"
 else
-    echo "✅ User $ORIGINAL_USER is already in docker group"
+    echo "   ✅ User $ORIGINAL_USER is already in docker group"
 fi
 
-# Create installation directory
-echo "➡️ Using INSTALL_DIR=${INSTALL_DIR}"
+# Initialize Docker Swarm if not already active
+echo ""
+echo "2️⃣  Initializing Docker Swarm..."
+if ! docker info 2>/dev/null | grep -q 'Swarm: active'; then
+    docker swarm init --advertise-addr 127.0.0.1
+else
+    echo "   ✅ Docker Swarm is already active"
+fi
 
+# Create installation directory, download the Makefile & configure the environment
+echo ""
+echo "3️⃣  Downloading the Makefile and configuring the environment..."
+echo "   ➡️ Using INSTALL_DIR=${INSTALL_DIR}"
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-# Initialize Docker Swarm if not already active
-if ! docker info 2>/dev/null | grep -q 'Swarm: active'; then
-    echo "➡️ Initializing Docker Swarm"
-    docker swarm init --advertise-addr 127.0.0.1
-fi
-
-# Download Makefile
-echo "➡️ Downloading Makefile..."
+echo "   ➡️ Downloading Makefile..."
 curl -sSL https://cdn.zaneops.dev/makefile -o Makefile
 
 # Run setup (creates .env)
-echo "➡️ Running make setup..."
+echo "   ➡️ Running make setup..."
 make setup
 
 # Update .env with custom values
 if [ -f .env ]; then
-    echo "➡️ Configuring .env file..."
+    echo "   ➡️ Configuring .env file..."
     
     # Update IMAGE_VERSION
-    echo "  - Setting IMAGE_VERSION to $VERSION..."
+    echo "      - Setting IMAGE_VERSION to $VERSION..."
     sed -i "s/^IMAGE_VERSION=.*/IMAGE_VERSION=${VERSION}/" .env
     
     # Update MODE if provided
     if [ -n "$MODE" ]; then
-        echo "  - Setting MODE to $MODE..."
+        echo "      - Setting MODE to $MODE..."
         sed -i "s/^MODE=.*/MODE='${MODE}'/" .env
     fi
     
     # Update ROOT_DOMAIN if provided
     if [ -n "$ROOT_DOMAIN" ]; then
-        echo "  - Setting ROOT_DOMAIN to $ROOT_DOMAIN..."
+        echo "      - Setting ROOT_DOMAIN to $ROOT_DOMAIN..."
         sed -i "s/^ROOT_DOMAIN=.*/ROOT_DOMAIN=\"${ROOT_DOMAIN}\"/" .env
     fi
     
     # Update ZANE_APP_DOMAIN if provided
     if [ -n "$APP_DOMAIN" ]; then
-        echo "  - Setting ZANE_APP_DOMAIN to $APP_DOMAIN..."
+        echo "      - Setting ZANE_APP_DOMAIN to $APP_DOMAIN..."
         sed -i "s/^ZANE_APP_DOMAIN=.*/ZANE_APP_DOMAIN=\"${APP_DOMAIN}\"/" .env
     fi
     
     # Update ZANE_APP_DIRECTORY if provided
     if [ -n "$APP_DIRECTORY" ]; then
-        echo "  - Setting ZANE_APP_DIRECTORY to $APP_DIRECTORY..."
+        echo "      - Setting ZANE_APP_DIRECTORY to $APP_DIRECTORY..."
         sed -i "s|^ZANE_APP_DIRECTORY=.*|ZANE_APP_DIRECTORY=${APP_DIRECTORY}|" .env
     fi
     
     # Update __DANGEROUS_ALLOW_HTTP_SESSION if provided
     if [ -n "$ALLOW_HTTP_SESSION" ]; then
-        echo "  - Setting __DANGEROUS_ALLOW_HTTP_SESSION to $ALLOW_HTTP_SESSION..."
+        echo "      - Setting __DANGEROUS_ALLOW_HTTP_SESSION to $ALLOW_HTTP_SESSION..."
         # Check if the line exists (commented or not)
         if grep -q "^#\?__DANGEROUS_ALLOW_HTTP_SESSION=" .env; then
             # Uncomment and update the value
@@ -338,13 +344,15 @@ if [ -f .env ]; then
         fi
     fi
 else
-    echo "❌ .env not found after setup!"
+    echo "   ❌ .env not found after setup!"
     exit 1
 fi
 
 # Adjust ownership and deploy
-echo "➡️ Adjusting ownership of $INSTALL_DIR to $ORIGINAL_USER..."
+echo ""
+echo "4️⃣  Deploying the ZaneOps stack..."
+echo "   ➡️ Adjusting ownership of $INSTALL_DIR to $ORIGINAL_USER..."
 chown -R "$ORIGINAL_USER":"$ORIGINAL_USER" "$INSTALL_DIR"
 
-echo "➡️ Running make deploy..."
+echo "   ➡️ Running make deploy..."
 make deploy
