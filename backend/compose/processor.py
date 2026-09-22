@@ -702,19 +702,28 @@ class ComposeSpecProcessor:
                 )
 
             # Add ZaneOps tracking labels
+            zane_labels = {
+                "zane-stack": stack.id,
+                "zane-managed": "true",
+                "zane-project": stack.project_id,
+                "zane-environment": stack.environment_id,
+                "status": "active",  # so that `make deploy` restart this service
+            }
+            # Service labels
             service.deploy["labels"] = service.deploy.get("labels", {})
-            service.deploy["labels"].update(
+            service.deploy["labels"].update(zane_labels)
+
+            # Container labels
+            service.labels = service.labels or dict()
+            service.labels.update(
                 {
-                    "zane-stack": stack.id,
-                    "zane-managed": "true",
-                    "zane-project": stack.project_id,
-                    "zane-environment": stack.environment_id,
-                    "status": "active",  # so that `make deploy` restart this service
+                    **zane_labels,
+                    "zane.logs": "true",
+                    "zane.stack.service": service_name.removeprefix(
+                        f"{stack.hash_prefix}_"
+                    ),
                 }
             )
-            service.labels = service.labels or dict()
-            # to collect logs from the service
-            service.labels["zane.logs"] = "true"
 
             # update dependencies with hashed names
             service_dependencies = []

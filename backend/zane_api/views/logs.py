@@ -234,6 +234,7 @@ class VectorLogIngestAPIView(APIView):
             else:
                 deployment_id = labels.get("deployment_hash")
                 service_id = labels.get("service_id")
+                stack_id = labels.get("zane-stack")
                 if deployment_id is not None:
                     simple_logs.append(
                         RuntimeLogDto(
@@ -247,6 +248,25 @@ class VectorLogIngestAPIView(APIView):
                             source=RuntimeLogSource.SERVICE,
                             service_id=service_id,
                             deployment_id=deployment_id,
+                            container_id=log["container_id"],
+                            content=log["message"],
+                            content_text=escape_ansi(log["message"]),
+                        )
+                    )
+                stack_service_name = labels.get("zane.stack.service")
+                if stack_id is not None:
+                    simple_logs.append(
+                        RuntimeLogDto(
+                            time=log["timestamp"],
+                            created_at=timezone.now(),
+                            level=(
+                                RuntimeLogLevel.INFO
+                                if log["stream"] == "stdout"
+                                else RuntimeLogLevel.ERROR
+                            ),
+                            source=RuntimeLogSource.SERVICE,
+                            stack_id=stack_id,
+                            stack_service_name=stack_service_name,
                             container_id=log["container_id"],
                             content=log["message"],
                             content_text=escape_ansi(log["message"]),
