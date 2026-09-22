@@ -39,6 +39,27 @@ EOF
   exit 0
 }
 
+TOTAL_STEPS=4
+
+# Print a highly visible banner so each step stands out in the logs
+print_step() {
+    local number="$1"
+    local emoji="$2"
+    local title="$3"
+    local bar="════════════════════════════════════════════════════════════════════"
+    local bold="" blue="" reset=""
+    if [ -t 1 ]; then
+        bold="\033[1m"
+        blue="\033[34m"
+        reset="\033[0m"
+    fi
+    echo ""
+    printf "%b%s%b\n" "$blue" "$bar" "$reset"
+    printf "%b%b  %s  %s  [step %s/%s]%b\n" "$blue" "$bold" "$emoji" "$title" "$number" "$TOTAL_STEPS" "$reset"
+    printf "%b%s%b\n" "$blue" "$bar" "$reset"
+    echo ""
+}
+
 # Check for help flag before anything else
 for arg in "$@"; do
   if [ "$arg" = "-h" ] || [ "$arg" = "--help" ]; then
@@ -124,11 +145,14 @@ APP_DOMAIN="${CLI_APP_DOMAIN:-${APP_DOMAIN}}"
 APP_DIRECTORY="${CLI_APP_DIRECTORY:-${APP_DIRECTORY}}"
 ALLOW_HTTP_SESSION="${CLI_ALLOW_HTTP_SESSION:-${ALLOW_HTTP_SESSION}}"
 
+# Defaults applied by `make setup` when nothing is provided (see .env.template)
+SSLIP_IP=$(ip route show default 2>/dev/null | awk '/src/ {for (i=1; i<=NF; i++) if ($i=="src") print $(i+1)}' | sed 's/\./-/g')
+DEFAULT_SSLIP_DOMAIN="${SSLIP_IP:-127-0-0-1}.sslip.io"
+DEFAULT_MODE="https"
+DEFAULT_ALLOW_HTTP_SESSION="false"
+
 # Interactively ask for domains if in a terminal and not already provided
 if [ -t 0 ] && { [ -z "$ROOT_DOMAIN" ] || [ -z "$APP_DOMAIN" ]; }; then
-    SSLIP_IP=$(ip route show default | awk '/src/ {for (i=1; i<=NF; i++) if ($i=="src") print $(i+1)}' | sed 's/\./-/g')
-    DEFAULT_SSLIP_DOMAIN="${SSLIP_IP}.sslip.io"
-
     echo ""
     echo "🌐 Domain Configuration"
     echo "   ZaneOps needs two domains:"
@@ -192,11 +216,11 @@ echo "   3️⃣  Download the ZaneOps Makefile and configure the environment"
 echo "   4️⃣  Deploy the ZaneOps stack as a set of Swarm services"
 echo ""
 echo "   Version              : $VERSION"
-echo "   Mode                 : ${MODE:-<default>}"
-echo "   Root Domain          : ${ROOT_DOMAIN:-<default>}"
-echo "   App Domain           : ${APP_DOMAIN:-<default>}"
+echo "   Mode                 : ${MODE:-$DEFAULT_MODE}"
+echo "   Root Domain          : ${ROOT_DOMAIN:-$DEFAULT_SSLIP_DOMAIN}"
+echo "   App Domain           : ${APP_DOMAIN:-$DEFAULT_SSLIP_DOMAIN}"
 echo "   Install Directory    : $INSTALL_DIR"
-echo "   Allow HTTP Session   : ${ALLOW_HTTP_SESSION:-<default>}"
+echo "   Allow HTTP Session   : ${ALLOW_HTTP_SESSION:-$DEFAULT_ALLOW_HTTP_SESSION}"
 echo "   Target User          : $ORIGINAL_USER"
 echo ""
 
@@ -214,7 +238,7 @@ else
 fi
 echo ""
 
-echo "1️⃣  Checking OS and installing dependencies..."
+print_step 1 "1️⃣" "Checking OS and installing dependencies"
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     if [ -f /etc/debian_version ]; then
@@ -276,8 +300,7 @@ else
 fi
 
 # Initialize Docker Swarm if not already active
-echo ""
-echo "2️⃣  Initializing Docker Swarm..."
+print_step 2 "2️⃣" "Initializing Docker Swarm"
 if ! docker info 2>/dev/null | grep -q 'Swarm: active'; then
     docker swarm init --advertise-addr 127.0.0.1
 else
@@ -285,8 +308,7 @@ else
 fi
 
 # Create installation directory, download the Makefile & configure the environment
-echo ""
-echo "3️⃣  Downloading the Makefile and configuring the environment..."
+print_step 3 "3️⃣" "Downloading the Makefile and configuring the environment"
 echo "   ➡️ Using INSTALL_DIR=${INSTALL_DIR}"
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
@@ -349,8 +371,7 @@ else
 fi
 
 # Adjust ownership and deploy
-echo ""
-echo "4️⃣  Deploying the ZaneOps stack..."
+print_step 4 "4️⃣" "Deploying the ZaneOps stack"
 echo "   ➡️ Adjusting ownership of $INSTALL_DIR to $ORIGINAL_USER..."
 chown -R "$ORIGINAL_USER":"$ORIGINAL_USER" "$INSTALL_DIR"
 
