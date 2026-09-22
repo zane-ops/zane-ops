@@ -88,6 +88,7 @@ ALLOWED_HOSTS = (
         ZANE_APP_DOMAIN,
         "host.docker.internal",
         ".zaneops.internal",
+        ".orb.local",
     ]
     if ENVIRONMENT != PRODUCTION_ENV
     else ["127.0.0.1", f".{ROOT_DOMAIN}", f".{ZANE_APP_DOMAIN}", ".zaneops.internal"]

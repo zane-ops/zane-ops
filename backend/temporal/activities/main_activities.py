@@ -1415,6 +1415,16 @@ class DockerSwarmActivities:
                     service=deployment.service.id,
                     status="active",
                 ),
+                # Service-level `labels` above aren't copied down to the actual
+                # containers, this adds them too
+                container_labels=get_resource_labels(
+                    service.project_id,
+                    deployment_hash=deployment.hash,
+                    service=deployment.service.id,
+                    status="active",
+                    # This is used for collecting logs
+                    **{"zane.logs": "true"},
+                ),
                 networks=[
                     NetworkAttachmentConfig(
                         target=get_env_network_resource_name(
@@ -1443,20 +1453,6 @@ class DockerSwarmActivities:
                 # this disables the default container healthcheck, since we control the healthcheck externally
                 healthcheck=DockerHealthcheckType(test=["NONE"]),
                 stop_grace_period=int(30e9),  # stop_grace_period is in nanoseconds
-                log_driver="fluentd",
-                log_driver_options={
-                    "fluentd-address": settings.ZANE_FLUENTD_HOST,
-                    "tag": json.dumps(
-                        {
-                            "service_id": deployment.service.id,
-                            "deployment_id": deployment.hash,
-                        }
-                    ),
-                    "mode": "non-blocking",
-                    "fluentd-async": "true",
-                    "fluentd-max-retries": "10",
-                    "fluentd-sub-second-precision": "true",
-                },
                 resources=resources,
                 configs=configs,
             )

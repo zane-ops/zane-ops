@@ -229,7 +229,7 @@ urlpatterns = [
     ),
     re_path(
         "^logs/ingest/?$",
-        views.LogIngestAPIView.as_view(),
+        views.VectorLogIngestAPIView.as_view(),
         name="logs.ingest",
     ),
     re_path(

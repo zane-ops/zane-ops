@@ -25,6 +25,7 @@ from .serializers import (
     DockerContainerLogsResponseSerializer,
     DockerContainerLogsRequestSerializer,
     HTTPServiceLogSerializer,
+    VectorLogsRequestSerializer,
 )
 from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
 from search.loki_client import LokiSearchClient
@@ -133,7 +134,152 @@ def _build_http_log(
 
 
 @extend_schema(exclude=True)
-class LogIngestAPIView(APIView):
+class VectorLogIngestAPIView(APIView):
+    """
+    New log ingester endpoint based on `vector`
+    """
+
+    permission_classes = [InternalZaneAppPermission]
+    throttle_scope = "log_collect"
+    throttle_classes = [ScopedRateThrottle]
+
+    def post(self, request: Request):
+        serializer = VectorLogsRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        entries = cast(list[dict], serializer.data)
+
+        simple_logs: list[RuntimeLogDto] = []
+        http_logs: list[HttpLog] = []
+        for log in entries:
+            labels = cast(dict[str, str], log["label"])
+            is_proxy = labels.get("zane.role") == "proxy"
+            if is_proxy:
+                try:
+                    content = json.loads(log["message"])
+                except json.JSONDecodeError:
+                    # DO NOT Store non JSON log
+                    pass
+                else:
+                    log_serializer = HTTPServiceLogSerializer(data=content)
+                    if log_serializer.is_valid():
+                        log_content = cast(dict, log_serializer.data)
+
+                        service_type = log_content.get("zane_service_type")
+                        service_id = log_content.get("zane_service_id")
+                        stack_id = log_content.get("zane_stack_id")
+                        registry_id = log_content.get("zane_registry_id")
+
+                        http_log: HttpLog | None = None
+
+                        if (
+                            service_id
+                            or stack_id
+                            or registry_id
+                            or service_type == ZaneProxyClient.ServiceType.ZANE_OPS
+                        ):
+                            match service_type:
+                                case ZaneProxyClient.ServiceType.ZANE_OPS:
+                                    http_log = _build_http_log(
+                                        log["timestamp"],
+                                        log_content,
+                                        source=ZaneProxyClient.ServiceType.ZANE_OPS,
+                                    )
+
+                                case ZaneProxyClient.ServiceType.BUILD_REGISTRY:
+                                    if registry_id:
+                                        http_log = _build_http_log(
+                                            log["timestamp"],
+                                            log_content,
+                                            registry_id=registry_id,
+                                            source=ZaneProxyClient.ServiceType.BUILD_REGISTRY,
+                                        )
+
+                                case ZaneProxyClient.ServiceType.COMPOSE_STACK_SERVICE:
+                                    stack_service_name = content.get(
+                                        "zane_stack_service_name"
+                                    )
+                                    if stack_service_name:
+                                        http_log = _build_http_log(
+                                            log["timestamp"],
+                                            log_content,
+                                            stack_id=stack_id,
+                                            stack_service_name=stack_service_name,
+                                            source=ZaneProxyClient.ServiceType.COMPOSE_STACK_SERVICE,
+                                        )
+                                case ZaneProxyClient.ServiceType.MANAGED_SERVICE:
+                                    deployment_id = content.get("zane_deployment_id")
+
+                                    if deployment_id:
+                                        http_log = _build_http_log(
+                                            log["timestamp"],
+                                            log_content,
+                                            service_id=log_content.get(
+                                                "zane_service_id"
+                                            ),
+                                            deployment_id=deployment_id,
+                                            source=ZaneProxyClient.ServiceType.MANAGED_SERVICE,
+                                        )
+
+                        else:
+                            http_log = _build_http_log(
+                                log["timestamp"],
+                                log_content,
+                                source=None,
+                            )
+
+                        if http_log:
+                            http_logs.append(http_log)
+                        continue
+
+            else:
+                deployment_id = labels.get("deployment_hash")
+                service_id = labels.get("service_id")
+                if deployment_id is not None:
+                    simple_logs.append(
+                        RuntimeLogDto(
+                            time=log["timestamp"],
+                            created_at=timezone.now(),
+                            level=(
+                                RuntimeLogLevel.INFO
+                                if log["stream"] == "stdout"
+                                else RuntimeLogLevel.ERROR
+                            ),
+                            source=RuntimeLogSource.SERVICE,
+                            service_id=service_id,
+                            deployment_id=deployment_id,
+                            container_id=log["container_id"],
+                            content=log["message"],
+                            content_text=escape_ansi(log["message"]),
+                        )
+                    )
+
+        start_time = datetime.now()
+        search_client = LokiSearchClient(host=settings.LOKI_HOST)
+        search_client.bulk_insert(simple_logs)
+        HttpLog.objects.bulk_create(http_logs)
+        end_time = datetime.now()
+
+        response = DockerContainerLogsResponseSerializer(
+            {
+                "simple_logs_inserted": len(simple_logs),
+                "http_logs_inserted": len(http_logs),
+            }
+        )
+        print("====== LOGS INGEST ======")
+        print(
+            f"Took {(end_time - start_time).microseconds / 1000}{Colors.GREY}ms{Colors.ENDC}"
+        )
+        print(f"Simple logs inserted = {Colors.BLUE}{len(simple_logs)}{Colors.ENDC}")
+        print(f"HTTP logs inserted = {Colors.BLUE}{len(http_logs)}{Colors.ENDC}")
+        return Response(response.data, status=status.HTTP_200_OK)
+
+
+@extend_schema(exclude=True)
+class FluentdLogIngestAPIView(APIView):
+    """
+    Old log ingestion endpoint based on `fluentd`
+    """
+
     permission_classes = [InternalZaneAppPermission]
     throttle_scope = "log_collect"
     throttle_classes = [ScopedRateThrottle]

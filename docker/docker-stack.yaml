@@ -8,33 +8,46 @@ x-internal-envs: &internal-envs
   DJANGO_SECRET_KEY: "django-insecure-^@$$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx" # default value set in `settings.py`
 
 services:
-  zane-fluentd:
-    image: fluentd:v1.16.2-1.1
+  # zane-fluentd:
+  #   image: fluentd:v1.16.2-1.1
+  #   configs:
+  #     - source: fluentd.conf
+  #       target: /fluentd/etc/fluent.conf
+  #   volumes:
+  #     - "${FLUENTD_HOST_DIR:-$HOME/.fluentd}/:/var/fluentd/"
+  #   networks:
+  #     zane:
+  #       aliases:
+  #         - zane.fluentd
+  #   environment:
+  #     <<: *internal-envs
+  #   deploy:
+  #     mode: global
+  # Spike: evaluating vector as a possible fluentd replacement, running in
+  # parallel — see docker/vector/vector.toml. Posts to a separate endpoint
+  # (`/api/logs/vector-ingest`) so it doesn't interfere with zane-fluentd above.
+  zane-vector:
+    image: timberio/vector:0.58.0-alpine
     configs:
-      - source: fluentd.conf
-        target: /fluentd/etc/fluent.conf
+      - source: vector.yaml
+        target: /etc/vector/vector.yaml
     volumes:
-      - "${FLUENTD_HOST_DIR:-$HOME/.fluentd}/:/var/fluentd/"
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
-      zane:
-        aliases:
-          - zane.fluentd
+      - zane
     environment:
       <<: *internal-envs
+      # Vector 0.57+ disabled ${VAR} config interpolation by default (security
+      # hardening against env leaking through templated fields) — needed for
+      # vector.yaml's ${API_HOST}/${DJANGO_SECRET_KEY}. Fine for this spike;
+      # Vector's "secrets backend" would be the non-"dangerously" way to do
+      # this if we keep vector around long-term.
+      VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION: "true"
     deploy:
       mode: global
   zane-proxy:
     image: ghcr.io/fredkiss3/caddy-cloudflare:2.11.4-alpine
     command: caddy run  --resume  --config /etc/caddy/config.json
-    logging:
-      driver: "fluentd"
-      options:
-        mode: "non-blocking"
-        fluentd-address: "unix://${FLUENTD_HOST_DIR:-$HOME/.fluentd}/fluentd.sock"
-        fluentd-async: "true"
-        fluentd-max-retries: 10
-        fluentd-sub-second-precision: "true"
-        tag: '{"service_id":"zane.proxy"}'
     depends_on:
       - zane-valkey
     deploy:
@@ -48,6 +61,11 @@ services:
         condition: any
       labels:
         zane.role: "proxy"
+    # `deploy.labels` above is service-level only (Swarm doesn't copy it down
+    # to the container)
+    labels:
+      zane.logs: "true"
+      zane.role: "proxy"
     ports:
       - target: 80
         published: 80
@@ -146,6 +164,8 @@ configs:
     file: ./proxy/default-caddy-config.json
   fluentd.conf:
     file: ./fluentd/fluent.conf
+  vector.yaml:
+    file: ./vector/vector.yaml
   admin-tools-entrypoint.sh:
     file: ./temporalio/admin-tools-entrypoint.sh
 
