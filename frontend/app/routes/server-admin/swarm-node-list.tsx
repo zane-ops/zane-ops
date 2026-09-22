@@ -2,16 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router";
 
 import {
+  BrainIcon,
   CpuIcon,
   CrownIcon,
-  GlobeIcon,
   HeartPulseIcon,
   HourglassIcon,
   LoaderIcon,
   type LucideIcon,
   MemoryStickIcon,
-  NetworkIcon,
   PenLineIcon,
+  PickaxeIcon,
   PlusIcon,
   PowerOffIcon,
   ServerIcon,
@@ -162,7 +162,16 @@ export function ServerCard({
 
           <div className="flex flex-col gap-1.5 items-start w-full">
             <div className="flex items-center gap-2 w-full justify-between">
-              <h3 className="font-medium text-lg">{hostname ?? private_ip}</h3>
+              <h3 className="font-medium text-lg">
+                {hostname ? (
+                  <span>
+                    {hostname}
+                    <span className="text-grey">@{private_ip}</span>{" "}
+                  </span>
+                ) : (
+                  private_ip
+                )}
+              </h3>
 
               <div className="flex items-center gap-2">
                 <Button
@@ -206,31 +215,25 @@ export function ServerCard({
               <TooltipProvider>
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
-                    <span className="flex items-center gap-0.5 group cursor-help">
-                      <GlobeIcon className="size-4 text-grey flex-none" />
-                      <span className="sr-only">private IP:</span>
-                      &nbsp;
-                      <span className="group-hover:underline decoration-wavy decoration-1 ">
-                        {private_ip}
-                      </span>
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-64">
-                    Private IP
-                  </TooltipContent>
-                </Tooltip>
-
-                <span>&middot;</span>
-
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <span className="flex items-center gap-0.5 group cursor-help">
-                      <NetworkIcon className="size-3.5 flex-none text-grey" />
-                      <span className="sr-only">Swarm Role:</span>
-                      &nbsp;
-                      <span className="group-hover:underline decoration-wavy decoration-1">
-                        {capitalizeText(role)}
-                      </span>
+                    <span className=" group cursor-help">
+                      <div
+                        className={cn(
+                          "py-1 text-sm rounded-md px-2 inline-flex gap-1 items-center",
+                          role === "WORKER"
+                            ? "bg-slate-400/20 dark:bg-slate-600/25 text-slate-600 dark:text-slate-400"
+                            : "bg-purple-600/20 text-purple-600 dark:text-purple-400"
+                        )}
+                      >
+                        {role === "MANAGER" ? (
+                          <BrainIcon className="size-3.5 flex-none" />
+                        ) : (
+                          <PickaxeIcon className="size-3.5 flex-none" />
+                        )}
+                        <span className="sr-only">Swarm Role: </span>
+                        <span className="group-hover:underline decoration-wavy decoration-1">
+                          {role}
+                        </span>
+                      </div>
                     </span>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-64">
@@ -299,7 +302,7 @@ export function ServerCard({
               {is_app_server && (
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
-                    <Code className="inline-flex items-center gap-1 cursor-help">
+                    <Code className="inline-flex items-center gap-1 cursor-help decoration-1 decoration-wavy hover:underline">
                       app server
                     </Code>
                   </TooltipTrigger>
@@ -314,7 +317,7 @@ export function ServerCard({
               {is_build_server && (
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
-                    <Code className="inline-flex items-center gap-1 cursor-help">
+                    <Code className="inline-flex items-center gap-1 cursor-help decoration-1 decoration-wavy hover:underline">
                       build server
                     </Code>
                   </TooltipTrigger>
