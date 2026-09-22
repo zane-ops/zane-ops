@@ -1,31 +1,10 @@
 x-internal-envs: &internal-envs
-  # REDIS_HOST: host.docker.internal
-  # REDIS_PORT: 6381
-  # API_HOST: host.docker.internal:8000
   REDIS_HOST: zane.valkey
   REDIS_PORT: 6379
   API_HOST: zane.api.zaneops.internal:8000
   DJANGO_SECRET_KEY: "django-insecure-^@$$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx" # default value set in `settings.py`
 
 services:
-  # zane-fluentd:
-  #   image: fluentd:v1.16.2-1.1
-  #   configs:
-  #     - source: fluentd.conf
-  #       target: /fluentd/etc/fluent.conf
-  #   volumes:
-  #     - "${FLUENTD_HOST_DIR:-$HOME/.fluentd}/:/var/fluentd/"
-  #   networks:
-  #     zane:
-  #       aliases:
-  #         - zane.fluentd
-  #   environment:
-  #     <<: *internal-envs
-  #   deploy:
-  #     mode: global
-  # Spike: evaluating vector as a possible fluentd replacement, running in
-  # parallel — see docker/vector/vector.toml. Posts to a separate endpoint
-  # (`/api/logs/vector-ingest`) so it doesn't interfere with zane-fluentd above.
   zane-vector:
     image: timberio/vector:0.58.0-alpine
     configs:
@@ -39,9 +18,7 @@ services:
       <<: *internal-envs
       # Vector 0.57+ disabled ${VAR} config interpolation by default (security
       # hardening against env leaking through templated fields) — needed for
-      # vector.yaml's ${API_HOST}/${DJANGO_SECRET_KEY}. Fine for this spike;
-      # Vector's "secrets backend" would be the non-"dangerously" way to do
-      # this if we keep vector around long-term.
+      # vector.yaml's ${API_HOST}/${DJANGO_SECRET_KEY}.
       VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION: "true"
     deploy:
       mode: global
@@ -162,8 +139,6 @@ volumes:
 configs:
   config.json:
     file: ./proxy/default-caddy-config.json
-  fluentd.conf:
-    file: ./fluentd/fluent.conf
   vector.yaml:
     file: ./vector/vector.yaml
   admin-tools-entrypoint.sh:

@@ -221,6 +221,12 @@ This is why "ZaneOps must be installed at the exact same folder path on every ma
 
 This also means we don't need the more complicated idea (from the original notes) of routing logs through Caddy to reach Fluentd — drop that. Each machine's Fluentd still sends logs the same way it does today, over the internal network to the central API, so there's still just one place logs get collected, and Loki (log storage/search) doesn't need to change at all.
 
+**Update (2026-09-22): replacing Fluentd with [Vector](https://vector.dev), tested and confirmed as the better fit.** The fix above (global service + identical socket path on every machine) works, but it's still a real, enforced provisioning requirement per node, and reusing the per-node Temporal worker instead (considered as an alternative) turned out worse — it would put unbounded per-container log-streaming load on the same process that also handles that node's healthchecks/metrics/exec, with no isolation if logging gets noisy.
+
+Vector's `docker_logs` source pulls container logs straight off the local Docker Engine API (`docker.sock`, already mounted read-only by other ZaneOps components on every node) instead of Docker's `--log-driver` mechanism — no socket file, no host path to provision, no network port to expose. It also reads each container's labels natively, which is now the source of metadata (`service_id`, `zane-managed`, etc.) instead of the old log-driver `tag` template — see the `container_labels=` addition in `main_activities.py`'s `services.create()` call and the plain top-level `labels:` block added to `zane-proxy` (Swarm's `deploy.labels` is service-level only, doesn't propagate to the container — this bit us during testing). Filtering which containers get shipped is a `zane.logs=true` container label, checked via Vector's `include_labels`.
+
+`compose.prod.yaml` and `docker-stack.yaml` (dev) now run `zane-vector` (pinned `timberio/vector:0.58.0-alpine`) as a `mode: global` service instead of `zane-fluentd`; `ZANE_FLUENTD_HOST` is removed from `settings.py`. **Not done yet:** `compose/processor.py` (the ComposeStack feature) still sets the old `driver: fluentd` log-driver options and references `settings.ZANE_FLUENTD_HOST`, which no longer exists — that code path is broken until it's migrated to the label-based approach too.
+
 ---
 
 ## 6. Proxy (Caddy) — the part most likely to be underestimated <a id="sec-6"></a>

@@ -680,27 +680,6 @@ class ComposeSpecProcessor:
                 aliases.append(original_service_name)
             service.networks["default"].update({"aliases": aliases})
 
-            # Add logging configuration (for Fluentd log collection)
-            service.logging = {
-                "driver": "fluentd",
-                "options": {
-                    "fluentd-address": settings.ZANE_FLUENTD_HOST,
-                    "tag": json.dumps(
-                        {
-                            "zane.stack": stack.id,
-                            "zane.stack.service": service_name.removeprefix(
-                                f"{stack.hash_prefix}_"
-                            ),
-                        }
-                    ),
-                    "fluentd-max-retries": "10",
-                    "fluentd-sub-second-precision": "true",
-                    # Non-blocking logging
-                    "fluentd-async": "true",
-                    "mode": "non-blocking",
-                },
-            }
-
             # Inject safe update_config for rolling updates
             # And restart_policy
             # only on non jobs
@@ -733,6 +712,9 @@ class ComposeSpecProcessor:
                     "status": "active",  # so that `make deploy` restart this service
                 }
             )
+            service.labels = service.labels or dict()
+            # to collect logs from the service
+            service.labels["zane.logs"] = "true"
 
             # update dependencies with hashed names
             service_dependencies = []

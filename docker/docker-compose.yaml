@@ -4,7 +4,6 @@ x-backend-vars: &env-vars
   DB_PORT: 5432
   CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
   ZANE_APP_DIRECTORY: /var/www/zaneops
-  ZANE_FLUENTD_HOST: ${ZANE_FLUENTD_HOST:-unix://${HOME}/.fluentd/fluentd.sock}
   TEMPORALIO_SERVER_URL: zane.temporal:7233
   LOKI_HOST: http://zane.loki:3100
   ROOT_DOMAIN: ${ROOT_DOMAIN:-127-0-0-1.sslip.io}

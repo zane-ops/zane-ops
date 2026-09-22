@@ -3,6 +3,7 @@
 - ~~Add port to SSHKey handling.~~
 - ~~Adapt docker-stack.prod.yaml/compose.prod.yaml stacks~~
 - Wire `deploy-scripts/install.sh`/`Makefile` to `compose.prod.yaml` instead of `docker-stack.prod.yaml` — deliberately not done yet. Existing installs are all on `docker-stack.prod.yaml` (single-node: `node.role==manager` placement, no global services); switching the installer's target file is a breaking change for them, so it should ship as a major version bump, not a silent swap.
+- `compose/processor.py` (ComposeStack feature) still sets `driver: fluentd` log-driver options and reads `settings.ZANE_FLUENTD_HOST`, which no longer exists (removed from `settings.py` as part of the fluentd → vector switch, see [§5 of the plan](multi-server-plan.md#sec-5)) — that code path is currently broken and needs migrating to the `zane.logs=true` container-label approach, same as `main_activities.py`/`zane-proxy` already are.
 
 ## Notes
 
@@ -21,10 +22,6 @@
 
 ## Files needed on every non-main node
 
-Global services in [compose.prod.yaml](../../docker/compose.prod.yaml) bind-mount host paths, and Swarm does **not** create missing bind sources — the task stays in `Pending`/restart loop until they exist. So before (or right after) a node joins, `ZANE_APP_DIRECTORY` must exist **at the exact same path as on the main node** (default `/var/www/zaneops`) with:
+**Update (2026-09-22): none.** This section used to require `${ZANE_APP_DIRECTORY}/.fluentd/` pre-created on every node for `zane-fluentd`'s socket (Swarm doesn't auto-create missing bind sources — the task just sits in `Pending`/restart loop until the path exists). Fluentd is retired in favor of [Vector](https://vector.dev) (`zane-vector`, `mode: global`), which pulls container logs from the local Docker Engine API (`docker.sock`) instead of a docker-log-driver socket — no bind mount, no path to provision, nothing node-specific to set up.
 
-| Path (relative to `ZANE_APP_DIRECTORY`) | Source in repo | Used by                                                     |
-| --------------------------------------- | -------------- | ----------------------------------------------------------- |
-| `.fluentd/` (empty dir, `chmod 777`)    | —              | `zane-fluentd` socket, every container's fluentd log driver |
-
-Nothing else: `zane-temporal-node-worker` / `zane-temporal-build-worker` only mount `/var/run/docker.sock` and named volumes (created per node automatically), and their env is baked into the service spec — no `.env` needed on other nodes. Same for `pgbouncer/`, `temporalio/`, `loki-config.yaml`: those are only mounted by services pinned to `zane.main-server`.
+`zane-temporal-node-worker` / `zane-temporal-build-worker` only mount `/var/run/docker.sock` and named volumes (created per node automatically), and their env is baked into the service spec — no `.env` needed on other nodes. Same for `pgbouncer/`, `temporalio/`, `loki-config.yaml`: those are only mounted by services pinned to `zane.main-server`.
