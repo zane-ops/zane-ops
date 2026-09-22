@@ -231,9 +231,33 @@ class VectorLogIngestAPIView(APIView):
                             http_logs.append(http_log)
                         continue
 
+                    proxy_app_log_serializer = ProxyServiceLogSerializer(data=content)
+                    if proxy_app_log_serializer.is_valid():
+                        proxy_log_data = cast(dict, proxy_app_log_serializer.data)
+                        log_level_map: dict[str, Literal["INFO", "ERROR"]] = {
+                            "debug": RuntimeLogLevel.INFO,
+                            "info": RuntimeLogLevel.INFO,
+                            "warn": RuntimeLogLevel.INFO,
+                            "error": RuntimeLogLevel.ERROR,
+                            "panic": RuntimeLogLevel.ERROR,
+                            "fatal": RuntimeLogLevel.ERROR,
+                        }
+                        simple_logs.append(
+                            RuntimeLogDto(
+                                time=log["timestamp"],
+                                created_at=timezone.now(),
+                                level=log_level_map[proxy_log_data["level"]],
+                                source=RuntimeLogSource.PROXY,
+                                container_id=log["container_id"],
+                                content=log["message"],
+                                content_text=escape_ansi(log["message"]),
+                            )
+                        )
+
             else:
                 deployment_id = labels.get("deployment_hash")
-                service_id = labels.get("service_id")
+                service_id = labels.get("service")
+                stack_service_name = labels.get("zane.stack.service")
                 stack_id = labels.get("zane-stack")
                 if deployment_id is not None:
                     simple_logs.append(
@@ -253,8 +277,7 @@ class VectorLogIngestAPIView(APIView):
                             content_text=escape_ansi(log["message"]),
                         )
                     )
-                stack_service_name = labels.get("zane.stack.service")
-                if stack_id is not None:
+                if stack_id is not None and stack_service_name is not None:
                     simple_logs.append(
                         RuntimeLogDto(
                             time=log["timestamp"],
