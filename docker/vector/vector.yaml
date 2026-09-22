@@ -1,6 +1,5 @@
 # Reads container logs directly via the Docker Engine API over the local
-# docker.sock (no docker log-driver socket/tag config needed on any service),
-# which also carries each container's labels for free.
+# docker.sock which also carries each container's labels for free.
 
 sources:
   docker_logs:
