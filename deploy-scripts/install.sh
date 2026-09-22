@@ -10,7 +10,7 @@ Usage:
   sudo $0 [OPTIONS]
 
 Options:
-  -v, --version=VERSION           Set ZaneOps version (default: latest)
+  -v, --version=VERSION           Set ZaneOps version (default: latest, or 'canary' for main branch)
   -m, --mode=MODE                 Set mode: http or https
   -r, --root-domain=DOMAIN        Set root domain
   -a, --app-domain=DOMAIN         Set app domain
@@ -158,12 +158,58 @@ if [ -t 0 ] && { [ -z "$ROOT_DOMAIN" ] || [ -z "$APP_DOMAIN" ]; }; then
     echo ""
 fi
 
-echo "➡️ Installing ZaneOps version: $VERSION"
-[ -n "$MODE" ] && echo "➡️ Mode: $MODE"
-[ -n "$ROOT_DOMAIN" ] && echo "➡️ Root Domain: $ROOT_DOMAIN"
-[ -n "$APP_DOMAIN" ] && echo "➡️ App Domain: $APP_DOMAIN"
-[ -n "$APP_DIRECTORY" ] && echo "➡️ App Directory: $APP_DIRECTORY"
-[ -n "$ALLOW_HTTP_SESSION" ] && echo "➡️ Allow HTTP Session: $ALLOW_HTTP_SESSION"
+if [ "$VERSION" = "canary" ]; then
+    echo ""
+    echo "⚠️  WARNING: 'canary' tracks the latest commit on main."
+    echo "   It is not guaranteed to be bug-free and can break at any time."
+    if [ -t 0 ]; then
+        read -r -p "   Are you sure you want to continue? [y/N]: " _confirm_canary
+        case "$_confirm_canary" in
+            [yY]|[yY][eE][sS]) ;;
+            *)
+                echo "❌ Installation cancelled."
+                exit 1
+                ;;
+        esac
+    else
+        echo "   Non-interactive session detected: proceeding with canary install."
+    fi
+    echo ""
+fi
+
+# Compute installation directory ahead of the summary so it can be shown to the user
+INSTALL_DIR="${APP_DIRECTORY:-/var/www/zaneops}"
+
+echo ""
+echo "📋 Installation Summary"
+echo "   ZaneOps is a self-hosted, open-source PaaS for deploying web apps, static"
+echo "   sites, databases and services — built on Docker Swarm and the Caddy proxy."
+echo "   This script will install Docker (if missing), initialize a Docker Swarm,"
+echo "   download the ZaneOps Makefile, and deploy the ZaneOps stack as a set of"
+echo "   Swarm services on this machine."
+echo ""
+echo "   Version              : $VERSION"
+echo "   Mode                 : ${MODE:-<default>}"
+echo "   Root Domain          : ${ROOT_DOMAIN:-<default>}"
+echo "   App Domain           : ${APP_DOMAIN:-<default>}"
+echo "   Install Directory    : $INSTALL_DIR"
+echo "   Allow HTTP Session   : ${ALLOW_HTTP_SESSION:-<default>}"
+echo "   Target User          : $ORIGINAL_USER"
+echo ""
+
+if [ -t 0 ]; then
+    read -r -p "   Proceed with installation? [y/N]: " _confirm_install
+    case "$_confirm_install" in
+        [yY]|[yY][eE][sS]) ;;
+        *)
+            echo "❌ Installation cancelled."
+            exit 1
+            ;;
+    esac
+else
+    echo "   Non-interactive session detected: proceeding without confirmation."
+fi
+echo ""
 
 echo "➡️ Checking OS and installing dependencies..."
 
@@ -227,15 +273,14 @@ else
 fi
 
 # Create installation directory
-INSTALL_DIR="${APP_DIRECTORY:-/var/www/zaneops}"
-echo "➡️ Using INSTALL_DIR=${INSTALL_DIR}" 
+echo "➡️ Using INSTALL_DIR=${INSTALL_DIR}"
 
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
 # Initialize Docker Swarm if not already active
 if ! docker info 2>/dev/null | grep -q 'Swarm: active'; then
-    echo "➡️ Initializing Docker Swarm on 127.0.0.1..."
+    echo "➡️ Initializing Docker Swarm"
     docker swarm init --advertise-addr 127.0.0.1
 fi
 
