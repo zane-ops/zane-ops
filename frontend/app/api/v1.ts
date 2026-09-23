@@ -8471,7 +8471,6 @@ export interface components {
       hostname: string | null;
       role: components["schemas"]["SwarmRoleEnum"];
       private_ip: string;
-      public_ip: string | null;
       status: components["schemas"]["SwarmNodeStatusEnum"];
       /** Format: date-time */
       last_status_update: string | null;
@@ -8489,14 +8488,15 @@ export interface components {
       ssh_keys: readonly components["schemas"]["SSHKey"][];
     };
     /**
-     * @description * `PROVISIONING` - Provisioning
+     * @description * `CREATED` - Created
+     * * `PROVISIONING` - Provisioning
      * * `READY` - Ready
      * * `DOWN` - Down
      * * `DRAINED` - Drained
      * * `FAILED` - Failed
      * @enum {string}
      */
-    SwarmNodeStatusEnum: "PROVISIONING" | "READY" | "DOWN" | "DRAINED" | "FAILED";
+    SwarmNodeStatusEnum: "CREATED" | "PROVISIONING" | "READY" | "DOWN" | "DRAINED" | "FAILED";
     SwarmNodesListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SwarmNodesRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     /**

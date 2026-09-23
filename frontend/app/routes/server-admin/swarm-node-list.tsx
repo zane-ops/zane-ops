@@ -15,6 +15,7 @@ import {
   PlusIcon,
   PowerOffIcon,
   ServerIcon,
+  SparklesIcon,
   TerminalIcon,
   TriangleAlertIcon,
   XIcon
@@ -342,7 +343,8 @@ const SERVER_STATUS_COLOR_MAP = {
   PROVISIONING: "blue",
   DOWN: "red",
   FAILED: "red",
-  DRAINED: "gray"
+  DRAINED: "gray",
+  CREATED: "gray"
 } as const satisfies Record<SwarmNode["status"], StatusBadgeColor>;
 
 type ServerStatusBadgeProps = {
@@ -363,7 +365,8 @@ export function ServerStatusBadge({
     PROVISIONING: HourglassIcon,
     DOWN: PowerOffIcon,
     FAILED: XIcon,
-    DRAINED: TriangleAlertIcon
+    DRAINED: TriangleAlertIcon,
+    CREATED: SparklesIcon
   } as const satisfies Record<typeof status, LucideIcon>;
 
   const Icon = icons[status];

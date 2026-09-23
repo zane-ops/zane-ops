@@ -197,7 +197,7 @@ export default function SwarmNodeDetailsPage({
               </div>
               <div className="h-full border border-grey/50"></div>
             </div>
-            <div className="w-full flex flex-col gap-12 pt-1 pb-14">
+            <div className="w-full flex flex-col gap-12 pt-1 pb-8">
               <div className="flex flex-col gap-6">
                 <h2 className="text-lg text-grey">Networking</h2>
 
@@ -290,56 +290,6 @@ export default function SwarmNodeDetailsPage({
                         </span>
                       </div>
                     </FieldSet>
-
-                    <FieldSet
-                      name="public_ip"
-                      className="flex flex-col gap-1.5 flex-1"
-                    >
-                      <FieldSetLabel>Public IP</FieldSetLabel>
-                      <div className="relative">
-                        <FieldSetInput
-                          disabled
-                          className={cn(
-                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                            "disabled:border-transparent disabled:opacity-100",
-                            "disabled:text-transparent disabled:select-none"
-                          )}
-                        />
-
-                        <span
-                          className={cn(
-                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
-                            "max-w-full min-w-0 overflow-auto pr-4"
-                          )}
-                        >
-                          <GlobeIcon className="text-grey size-4 flex-none mr-1" />
-                          {node.public_ip ? (
-                            <HiddenValue
-                              realValue={node.public_ip}
-                              className="ml-0.5"
-                            />
-                          ) : (
-                            <code className="text-grey italic">
-                              {"<unknown>"}
-                            </code>
-                          )}
-                          {node.public_ip && (
-                            <TooltipProvider>
-                              <Tooltip delayDuration={0}>
-                                <TooltipTrigger asChild>
-                                  <CopyButton
-                                    value={node.public_ip}
-                                    label={node.public_ip}
-                                    className="!opacity-100 ml-0.5"
-                                  />
-                                </TooltipTrigger>
-                                <TooltipContent>Copy Public IP</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </span>
-                      </div>
-                    </FieldSet>
                   </div>
                 </div>
               </div>
@@ -353,7 +303,7 @@ export default function SwarmNodeDetailsPage({
               </div>
               <div className="h-full border border-grey/50"></div>
             </div>
-            <div className="w-full flex flex-col gap-12 pt-1 pb-14">
+            <div className="w-full flex flex-col gap-12 pt-1 pb-8">
               <div className="flex flex-col gap-6">
                 <h2 className="text-lg text-grey">Hardware</h2>
 

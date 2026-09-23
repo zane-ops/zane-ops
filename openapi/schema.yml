@@ -34651,9 +34651,6 @@ components:
           $ref: '#/components/schemas/SwarmRoleEnum'
         private_ip:
           type: string
-        public_ip:
-          type: string
-          nullable: true
         status:
           $ref: '#/components/schemas/SwarmNodeStatusEnum'
         last_status_update:
@@ -34705,13 +34702,13 @@ components:
       - last_status_update
       - memory_bytes
       - private_ip
-      - public_ip
       - role
       - ssh_keys
       - status
       - updated_at
     SwarmNodeStatusEnum:
       enum:
+      - CREATED
       - PROVISIONING
       - READY
       - DOWN
@@ -34719,6 +34716,7 @@ components:
       - FAILED
       type: string
       description: |-
+        * `CREATED` - Created
         * `PROVISIONING` - Provisioning
         * `READY` - Ready
         * `DOWN` - Down

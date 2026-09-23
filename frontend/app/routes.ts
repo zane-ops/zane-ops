@@ -114,6 +114,7 @@ export default [
         ),
         route("http-logs", "./routes/server-admin/global-http-logs.tsx"),
         route("servers", "./routes/server-admin/swarm-node-list.tsx"),
+        route("servers/new", "./routes/server-admin/create-new-swarm-node.tsx"),
         ...prefix("servers/:serverId", [
           route(
             "ssh-keys",
