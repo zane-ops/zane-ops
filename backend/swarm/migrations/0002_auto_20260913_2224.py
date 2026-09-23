@@ -29,15 +29,11 @@ def insert_initial_swarm_server(apps, schema_editor):
         }
     )
 
-    response = requests.get("https://ipinfo.io/ip")
-    response.raise_for_status()
-
     node = SwarmNode(
         cpus=info["NCPU"],
         memory_bytes=info["MemTotal"],
         hostname=self_node.attrs["Description"]["Hostname"],
         private_ip=self_node.attrs["Status"]["Addr"],
-        public_ip=response.text.strip(),
         swarm_node_id=swarm_node_id,
         role="MANAGER",
         status="READY",

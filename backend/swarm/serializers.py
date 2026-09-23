@@ -13,7 +13,6 @@ class SwarmNodeSerializer(serializers.ModelSerializer):
             "hostname",
             "role",
             "private_ip",
-            "public_ip",
             "status",
             "last_status_update",
             "docker_version",

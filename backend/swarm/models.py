@@ -34,7 +34,6 @@ class SwarmNode(TimestampedModel):
         unique=True, null=True
     )  # == swarm node Description.Hostname
     private_ip = models.GenericIPAddressField()  # overlay / VPC address
-    public_ip = models.GenericIPAddressField(null=True)
 
     status = models.CharField(choices=Status.choices, default=Status.PROVISIONING)
     last_status_update = models.DateTimeField(null=True)
