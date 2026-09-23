@@ -48,7 +48,7 @@ export function SSHKeyCard({ sshKey, className, serverId }: SSHKeyCardProps) {
           </Badge>
         </div>
         <div className="flex flex-col flex-1 gap-0.5 pr-3 text-sm">
-          <h3 className="font-medium text-base">{sshKey.slug}</h3>
+          <h3 className="font-medium text-base">{sshKey.name}</h3>
           <div className="text-link flex items-center gap-1">
             <UserIcon size={15} className="flex-none" />
             <span>{sshKey.user}</span>
@@ -80,7 +80,7 @@ export function SSHKeyCard({ sshKey, className, serverId }: SSHKeyCardProps) {
                       pathname: href("/admin/servers/:serverId/console", {
                         serverId
                       }),
-                      search: `?ssh_key_slug=${encodeURIComponent(sshKey.slug)}`
+                      search: `?ssh_key_id=${sshKey.id}`
                     }}
                   >
                     <TerminalIcon size={15} />
@@ -105,7 +105,7 @@ export function SSHKeyCard({ sshKey, className, serverId }: SSHKeyCardProps) {
               <TooltipContent>Copy Public Key</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <DeleteConfirmationFormDialog sshKey={sshKey} />
+          <DeleteConfirmationFormDialog sshKey={sshKey} serverId={serverId} />
         </div>
       </CardContent>
     </Card>
@@ -114,10 +114,12 @@ export function SSHKeyCard({ sshKey, className, serverId }: SSHKeyCardProps) {
 
 type DeleteConfirmationFormDialogProps = {
   sshKey: SSHKey;
+  serverId: string;
 };
 
 function DeleteConfirmationFormDialog({
-  sshKey
+  sshKey,
+  serverId
 }: DeleteConfirmationFormDialogProps) {
   const fetcher = useFetcher();
 
@@ -127,7 +129,7 @@ function DeleteConfirmationFormDialog({
       title={
         <>
           Delete the SSH key&nbsp;
-          <span className="text-grey">&ldquo;{sshKey.slug}&rdquo;</span>?
+          <span className="text-grey">&ldquo;{sshKey.name}&rdquo;</span>?
         </>
       }
       message={
@@ -142,7 +144,10 @@ function DeleteConfirmationFormDialog({
       form={
         <fetcher.Form
           method="post"
-          action={href("/admin/ssh-keys/:slug", { slug: sshKey.slug })}
+          action={href("/admin/servers/:serverId/ssh-keys/:keyId", {
+            serverId,
+            keyId: sshKey.id.toString()
+          })}
         >
           <input type="hidden" name="intent" value="delete_ssh_key" />
         </fetcher.Form>
@@ -154,7 +159,7 @@ function DeleteConfirmationFormDialog({
               <DialogTrigger asChild>
                 <Button size="sm" variant="ghost">
                   <Trash2Icon size={15} className="text-red-400" />
-                  <span className="sr-only">Delete SSH key {sshKey.slug}</span>
+                  <span className="sr-only">Delete SSH key {sshKey.name}</span>
                 </Button>
               </DialogTrigger>
             </TooltipTrigger>

@@ -41,6 +41,7 @@ export default function SwarmNodeLayout({
   });
 
   const status_emoji_map = {
+    CREATED: "🆕",
     READY: "💚",
     DOWN: "🔴",
     FAILED: "❌",

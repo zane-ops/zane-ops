@@ -46,17 +46,17 @@ export default function SwarmNodeConsolePage({
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const slugInSearch = searchParams.get("ssh_key_slug")?.toString().trim();
+  const keyIdInSearch = searchParams.get("ssh_key_id")?.toString().trim();
 
-  const [lasKeySlug, setLastKeySlug] = useLocalStorage<string | null>(
-    `server_console_last_ssh_key_slug_for_${node.id}`,
-    slugInSearch ?? null
+  const [lastKeyId, setLastKeyId] = useLocalStorage<string | null>(
+    `server_console_last_ssh_key_id_for_${node.id}`,
+    keyIdInSearch ?? null
   );
 
   const [counter, setCounter] = React.useState(0);
 
-  const keySlug = slugInSearch ?? lasKeySlug;
-  const [selectedKey, setSelectedKey] = React.useState(keySlug);
+  const keyId = keyIdInSearch ?? lastKeyId;
+  const [selectedKey, setSelectedKey] = React.useState(keyId);
   const isMaximized = searchParams.get("isMaximized") === "true";
 
   logger.scope("SwarmNodeConsolePage").info({ selectedKey });
@@ -73,16 +73,15 @@ export default function SwarmNodeConsolePage({
       >
         <form
           action={(formData) => {
-            const keySlug = formData.get("ssh_key_slug")?.toString().trim();
-            if (keySlug) {
-              searchParams.set("ssh_key_slug", keySlug);
-              setLastKeySlug(keySlug);
+            const keyId = formData.get("ssh_key_id")?.toString().trim();
+            if (keyId) {
+              searchParams.set("ssh_key_id", keyId);
+              setLastKeyId(keyId);
             }
 
             logger.scope("form.action").info({
-              'formData.get("ssh_key_slug")': keySlug,
-              'searchParams.get("ssh_key_slug")':
-                searchParams.get("ssh_key_slug")
+              'formData.get("ssh_key_id")': keyId,
+              'searchParams.get("ssh_key_id")': searchParams.get("ssh_key_id")
             });
             setSearchParams(searchParams);
             setCounter((c) => c + 1); // force rerender
@@ -91,7 +90,7 @@ export default function SwarmNodeConsolePage({
           className={cn(
             "flex items-end gap-2",
             "p-2.5 flex items-center gap-2 bg-muted rounded-none",
-            keySlug && !isMaximized && "rounded-t-md"
+            keyId && !isMaximized && "rounded-t-md"
           )}
         >
           <TooltipProvider>
@@ -126,12 +125,12 @@ export default function SwarmNodeConsolePage({
             */}
           <input
             type="hidden"
-            name="ssh_key_slug"
+            name="ssh_key_id"
             value={selectedKey ?? undefined}
           />
 
           <FieldSet name="" className="flex flex-col gap-1.5">
-            <FieldSetLabel htmlFor="ssh_key_slug" className="sr-only">
+            <FieldSetLabel htmlFor="ssh_key_id" className="sr-only">
               SSH Key
             </FieldSetLabel>
             <FieldSetSelect
@@ -139,7 +138,7 @@ export default function SwarmNodeConsolePage({
               value={selectedKey ?? undefined}
               onValueChange={setSelectedKey}
             >
-              <SelectTrigger id="ssh_key_slug" className="w-56">
+              <SelectTrigger id="ssh_key_id" className="w-56">
                 <SelectValue placeholder="Select a Key" />
               </SelectTrigger>
               <SelectContent className="z-200">
@@ -149,8 +148,8 @@ export default function SwarmNodeConsolePage({
                   </SelectItem>
                 )}
                 {node.ssh_keys.map((ssh) => (
-                  <SelectItem key={ssh.id} value={ssh.slug}>
-                    {ssh.slug} ({ssh.user})
+                  <SelectItem key={ssh.id} value={ssh.id.toString()}>
+                    {ssh.name} ({ssh.user})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -158,14 +157,14 @@ export default function SwarmNodeConsolePage({
           </FieldSet>
 
           <Button type="submit" variant="outline">
-            {keySlug ? "Reconnect" : "Connect"}
+            {keyId ? "Reconnect" : "Connect"}
           </Button>
         </form>
 
-        <div className={cn("flex-1 py-2", keySlug && "bg-terminal px-2")}>
-          {keySlug ? (
+        <div className={cn("flex-1 py-2", keyId && "bg-terminal px-2")}>
+          {keyId ? (
             <ServerTerminal
-              key_slug={keySlug}
+              keyId={keyId}
               key={counter}
               nodeId={node.id}
               className={cn(
@@ -186,16 +185,16 @@ export default function SwarmNodeConsolePage({
 }
 
 function ServerTerminal({
-  key_slug,
+  keyId,
   nodeId,
   className
-}: { key_slug: string; nodeId: string; className?: string }) {
+}: { keyId: string; nodeId: string; className?: string }) {
   const webSocketScheme = window.location.protocol === "http:" ? "ws" : "wss";
   let apiHost = window.location.host;
 
   if (apiHost.includes("localhost:5173")) {
     apiHost = "localhost:8000";
   }
-  const baseWebSocketURL = `${webSocketScheme}://${apiHost}/ws/server-ssh/${nodeId}/${key_slug}`;
+  const baseWebSocketURL = `${webSocketScheme}://${apiHost}/ws/server-ssh/${nodeId}/${keyId}`;
   return <Terminal baseWebSocketURL={baseWebSocketURL} className={className} />;
 }

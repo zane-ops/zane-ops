@@ -19,7 +19,7 @@ export async function clientAction({
 
   switch (intent) {
     case "delete_ssh_key": {
-      return deleteSSHKey(params.slug);
+      return deleteSSHKey(params.serverId, params.keyId);
     }
     default: {
       throw new Error("Unexpected intent");
@@ -27,17 +27,17 @@ export async function clientAction({
   }
 }
 
-async function deleteSSHKey(slug: string) {
+async function deleteSSHKey(serverId: string, keyId: string) {
   const queryClient = getQueryClient();
 
   const { error: errors } = await apiClient.DELETE(
-    "/api/shell/ssh-keys/{slug}/",
+    "/api/swarm/nodes/{id}/ssh-keys/{key_id}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
       },
       params: {
-        path: { slug }
+        path: { id: serverId, key_id: keyId }
       }
     }
   );
@@ -60,12 +60,7 @@ async function deleteSSHKey(slug: string) {
 
   toast.success("SSH key deleted", {
     closeButton: true,
-    description: (
-      <span>
-        The key&nbsp;<code>{slug}</code>&nbsp;can no longer be used to connect
-        to servers.
-      </span>
-    )
+    description: "This key can no longer be used to connect to servers."
   });
 
   return { data: null };

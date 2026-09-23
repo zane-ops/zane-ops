@@ -624,13 +624,11 @@ export interface paths {
      */
     get: operations["getAPISettings"];
   };
-  "/api/shell/ssh-keys/{slug}/": {
-    get: operations["shell_ssh_keys_retrieve"];
-    delete: operations["shell_ssh_keys_destroy"];
-  };
   "/api/swarm/nodes/": {
     /** List all swarm nodes in ZaneOps installation */
     get: operations["swarm_nodes_list"];
+    /** Add new Swarm node to ZaneOps cluster */
+    post: operations["swarm_nodes_create"];
   };
   "/api/swarm/nodes/{id}/": {
     get: operations["swarm_nodes_retrieve"];
@@ -638,6 +636,9 @@ export interface paths {
   "/api/swarm/nodes/{id}/ssh-keys/": {
     /** Create a new SSH key attached to this swarm node */
     post: operations["createSwarmNodeSSHKey"];
+  };
+  "/api/swarm/nodes/{id}/ssh-keys/{key_id}/": {
+    delete: operations["swarm_nodes_ssh_keys_destroy"];
   };
   "/api/trigger-preview/{deploy_token}/": {
     /** Webhook to trigger a new preview environment */
@@ -3071,10 +3072,31 @@ export interface components {
     };
     CreateSSHKeyRequestRequest: {
       user: string;
-      slug: string;
+      name: string;
+      /** @default 22 */
+      port?: number;
     };
-    CreateSwarmNodeSSHKeyError: components["schemas"]["CreateSwarmNodeSSHKeyNonFieldErrorsErrorComponent"] | components["schemas"]["CreateSwarmNodeSSHKeyUserErrorComponent"] | components["schemas"]["CreateSwarmNodeSSHKeySlugErrorComponent"];
+    CreateSwarmNodeSSHKeyError: components["schemas"]["CreateSwarmNodeSSHKeyNonFieldErrorsErrorComponent"] | components["schemas"]["CreateSwarmNodeSSHKeyUserErrorComponent"] | components["schemas"]["CreateSwarmNodeSSHKeyNameErrorComponent"] | components["schemas"]["CreateSwarmNodeSSHKeyPortErrorComponent"];
     CreateSwarmNodeSSHKeyErrorResponse400: components["schemas"]["CreateSwarmNodeSSHKeyValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CreateSwarmNodeSSHKeyNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     CreateSwarmNodeSSHKeyNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -3088,22 +3110,21 @@ export interface components {
       code: "invalid";
       detail: string;
     };
-    CreateSwarmNodeSSHKeySlugErrorComponent: {
+    CreateSwarmNodeSSHKeyPortErrorComponent: {
       /**
-       * @description * `slug` - slug
+       * @description * `port` - port
        * @enum {string}
        */
-      attr: "slug";
+      attr: "port";
       /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
        * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "invalid" | "max_string_length" | "max_value" | "min_value" | "null";
       detail: string;
     };
     CreateSwarmNodeSSHKeyUserErrorComponent: {
@@ -8087,12 +8108,19 @@ export interface components {
       id: number;
       user: string;
       public_key: string;
-      slug: string;
+      name: string;
       fingerprint: string | null;
+      port: number;
       /** Format: date-time */
       updated_at: string;
       /** Format: date-time */
       created_at: string;
+    };
+    SSHKeyRequest: {
+      user: string;
+      name: string;
+      fingerprint?: string | null;
+      port?: number;
     };
     /**
      * @description * `deploy:write` - Trigger / cancel / redeploy deployments and previews
@@ -8344,8 +8372,6 @@ export interface components {
       volume_id: string;
       container_path: string;
     };
-    ShellSshKeysDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ShellSshKeysRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SimpleComposeStackService: {
       id: string;
       slug: string;
@@ -8487,6 +8513,12 @@ export interface components {
       updated_at: string;
       ssh_keys: readonly components["schemas"]["SSHKey"][];
     };
+    SwarmNodeRequest: {
+      role: components["schemas"]["SwarmRoleEnum"];
+      private_ip: string;
+      is_build_server?: boolean;
+      is_app_server?: boolean;
+    };
     /**
      * @description * `CREATED` - Created
      * * `PROVISIONING` - Provisioning
@@ -8497,8 +8529,90 @@ export interface components {
      * @enum {string}
      */
     SwarmNodeStatusEnum: "CREATED" | "PROVISIONING" | "READY" | "DOWN" | "DRAINED" | "FAILED";
+    SwarmNodesCreateError: components["schemas"]["SwarmNodesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["SwarmNodesCreateRoleErrorComponent"] | components["schemas"]["SwarmNodesCreatePrivateIpErrorComponent"] | components["schemas"]["SwarmNodesCreateIsBuildServerErrorComponent"] | components["schemas"]["SwarmNodesCreateIsAppServerErrorComponent"];
+    SwarmNodesCreateErrorResponse400: components["schemas"]["SwarmNodesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    SwarmNodesCreateIsAppServerErrorComponent: {
+      /**
+       * @description * `is_app_server` - is_app_server
+       * @enum {string}
+       */
+      attr: "is_app_server";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    SwarmNodesCreateIsBuildServerErrorComponent: {
+      /**
+       * @description * `is_build_server` - is_build_server
+       * @enum {string}
+       */
+      attr: "is_build_server";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    SwarmNodesCreateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    SwarmNodesCreatePrivateIpErrorComponent: {
+      /**
+       * @description * `private_ip` - private_ip
+       * @enum {string}
+       */
+      attr: "private_ip";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * * `unique` - unique
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
+      detail: string;
+    };
+    SwarmNodesCreateRoleErrorComponent: {
+      /**
+       * @description * `role` - role
+       * @enum {string}
+       */
+      attr: "role";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    SwarmNodesCreateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["SwarmNodesCreateError"][];
+    };
     SwarmNodesListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SwarmNodesRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    SwarmNodesSshKeysDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     /**
      * @description * `MANAGER` - Manager
      * * `WORKER` - Worker
@@ -16290,83 +16404,6 @@ export interface operations {
       };
     };
   };
-  shell_ssh_keys_retrieve: {
-    parameters: {
-      path: {
-        slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["SSHKey"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ShellSshKeysRetrieveErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      403: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse403"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  shell_ssh_keys_destroy: {
-    parameters: {
-      path: {
-        slug: string;
-      };
-    };
-    responses: {
-      /** @description No response body */
-      204: {
-        content: never;
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ShellSshKeysDestroyErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      403: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse403"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
   /** List all swarm nodes in ZaneOps installation */
   swarm_nodes_list: {
     parameters: {
@@ -16386,6 +16423,48 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["SwarmNodesListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Add new Swarm node to ZaneOps cluster */
+  swarm_nodes_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SwarmNodeRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["SwarmNodeRequest"];
+        "multipart/form-data": components["schemas"]["SwarmNodeRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["SwarmNode"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["SwarmNodesCreateErrorResponse400"];
         };
       };
       401: {
@@ -16489,9 +16568,43 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
-      409: {
+      429: {
         content: {
-          "application/json": components["schemas"]["ErrorResponse409"];
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  swarm_nodes_ssh_keys_destroy: {
+    parameters: {
+      path: {
+        id: string;
+        key_id: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["SwarmNodesSshKeysDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

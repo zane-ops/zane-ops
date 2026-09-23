@@ -95,7 +95,6 @@ export default [
           )
         ]),
 
-        route("ssh-keys/:slug", "./routes/server-admin/ssh-key-details.tsx"),
         route(
           "build-registries",
           "./routes/server-admin/build-registry-list.tsx"
@@ -120,6 +119,7 @@ export default [
             "ssh-keys",
             "./routes/server-admin/create-swarm-node-ssh-key.tsx"
           ),
+          route("ssh-keys/:keyId", "./routes/server-admin/ssh-key-details.tsx"),
           layout("./routes/layouts/swarm-node-layout.tsx", [
             index("./routes/server-admin/swarm-node-details.tsx"),
             route("console", "./routes/server-admin/swarm-node-console.tsx")
