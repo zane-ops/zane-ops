@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
   AtSignIcon,
-  BoxIcon,
   BrainIcon,
   CableIcon,
   CheckIcon,
@@ -11,7 +10,6 @@ import {
   EyeIcon,
   EyeOffIcon,
   FlameIcon,
-  GlobeIcon,
   GlobeLockIcon,
   InfoIcon,
   KeyRoundIcon,
@@ -589,7 +587,7 @@ function SSHKeyAddDialog({ serverId }: SSHKeyAddDialogProps) {
               <>
                 SSH key&nbsp;
                 <span className="text-grey">
-                  &ldquo;{createdKey.slug}&rdquo;
+                  &ldquo;{createdKey.name}&rdquo;
                 </span>
                 &nbsp;created
               </>
@@ -687,15 +685,15 @@ function SSHKeyAddDialog({ serverId }: SSHKeyAddDialogProps) {
               />
             </FieldSet>
             <FieldSet
-              errors={errors.slug}
-              name="slug"
+              errors={errors.name}
+              name="name"
               required
               className="flex flex-col gap-1"
             >
-              <FieldSetLabel>Slug</FieldSetLabel>
+              <FieldSetLabel>Name</FieldSetLabel>
               <FieldSetInput
-                placeholder="ex: my-ssh-key"
-                defaultValue={data?.userData?.slug}
+                placeholder="ex: my ssh key"
+                defaultValue={data?.userData?.name}
               />
             </FieldSet>
           </fetcher.Form>
@@ -711,7 +709,7 @@ function SSHKeyAddDialog({ serverId }: SSHKeyAddDialogProps) {
                       pathname: href("/admin/servers/:serverId/console", {
                         serverId
                       }),
-                      search: `?ssh_key_slug=${encodeURIComponent(createdKey.slug)}`
+                      search: `?ssh_key_id=${createdKey.id}`
                     }}
                     className="items-center gap-2"
                   >
