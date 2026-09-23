@@ -6,6 +6,7 @@ from .services import *
 from .projects import *
 from .registries import *
 from .compose import *
+from .swarm import *
 
 with workflow.unsafe.imports_passed_through():
     from ..activities import (

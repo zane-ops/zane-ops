@@ -26,6 +26,7 @@ from temporalio.types import (
     ReturnType,
     SelfType,
 )
+from temporalio.api.enums.v1 import EventType
 
 
 with workflow.unsafe.imports_passed_through():
@@ -63,6 +64,40 @@ class TemporalClient:
         if cls._client is None:
             cls._client = await get_temporalio_client()
         return cls._client
+
+    @classmethod
+    async def get_workflow_state(cls, id: str):
+        """
+        Test function to get the WF state
+        """
+        client = await cls._ensure_client()
+        wf = client.get_workflow_handle(id)
+        conv = client.data_converter
+        scheduled: dict[int, str] = {}
+
+        async for e in wf.fetch_history_events():
+            t = e.event_type
+            if t == EventType.EVENT_TYPE_ACTIVITY_TASK_SCHEDULED:
+                a = e.activity_task_scheduled_event_attributes
+                scheduled[e.event_id] = a.activity_type.name
+                print(
+                    "SCHEDULED",
+                    a.activity_type.name,
+                    await conv.decode(a.input.payloads),
+                )
+            elif t == EventType.EVENT_TYPE_ACTIVITY_TASK_COMPLETED:
+                a = e.activity_task_completed_event_attributes
+                print(
+                    "COMPLETED",
+                    scheduled[a.scheduled_event_id],
+                    await conv.decode(a.result.payloads),
+                )
+            elif t == EventType.EVENT_TYPE_ACTIVITY_TASK_FAILED:
+                a = e.activity_task_failed_event_attributes
+                print("FAILED", scheduled[a.scheduled_event_id], a.failure.message)
+            elif t == EventType.EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED:
+                a = e.workflow_execution_completed_event_attributes
+                print("RESULT", await conv.decode(a.result.payloads))
 
     @classmethod
     def start_workflow(
