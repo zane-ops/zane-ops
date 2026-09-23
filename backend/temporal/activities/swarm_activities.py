@@ -48,9 +48,7 @@ class SwarmNodeActivities:
         process = await asyncio.create_subprocess_exec(*cmd)
         await process.communicate()
 
-        cmd_string = multiline_command(shlex.join(cmd))
-        log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
-        print(log_message)
+        print(f"Running shell command : {Colors.YELLOW}{shlex.join(cmd)}{Colors.ENDC}")
         if process.returncode == 0:
             result = f" ✅ Connection to server {node.private_ip} over port {node.ssh_port} is possible"
         else:
