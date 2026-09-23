@@ -12,6 +12,31 @@ with workflow.unsafe.imports_passed_through():
 from ..shared import SwarmNodeDetails, SwarmNodeSSHKeyDetails
 
 
+def get_ssh_exec_cmd(details: SwarmNodeSSHKeyDetails, *cmd: str):
+    node = details.node
+    return [
+        "ssh",
+        "-q",  # quiet mode
+        "-p",
+        str(node.ssh_port),
+        "-i",
+        details.path,
+        "-o",
+        # Do not prompt for known_hosts
+        "StrictHostKeyChecking=no",
+        "-o",
+        # Do not stpre pubkey known_hosts
+        "UserKnownHostsFile=/dev/null",
+        "-o",
+        # Fail without asking for more input, no password prompt or anything
+        "BatchMode=yes",
+        "-o",
+        "ConnectTimeout=5",
+        f"root@{node.private_ip}",
+        *cmd,
+    ]
+
+
 class SwarmNodeActivities:
     @activity.defn
     async def create_ssh_key_temp_file(self, node: SwarmNodeDetails):
@@ -23,27 +48,7 @@ class SwarmNodeActivities:
     @activity.defn
     async def test_ssh_connection(self, details: SwarmNodeSSHKeyDetails) -> str:
         node = details.node
-        cmd = [
-            "ssh",
-            "-q",  # quiet mode
-            "-p",
-            str(node.ssh_port),
-            "-i",
-            details.path,
-            "-o",
-            # Do not prompt for known_hosts
-            "StrictHostKeyChecking=no",
-            "-o",
-            # Do not stpre pubkey known_hosts
-            "UserKnownHostsFile=/dev/null",
-            "-o",
-            # Fail without asking for more input, no password prompt or anything
-            "BatchMode=yes",
-            "-o",
-            "ConnectTimeout=5",
-            f"root@{node.private_ip}",
-            "exit 0",
-        ]
+        cmd = get_ssh_exec_cmd(details, "exit 0")
 
         process = await asyncio.create_subprocess_exec(*cmd)
         await process.communicate()
