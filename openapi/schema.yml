@@ -22958,11 +22958,6 @@ components:
           type: string
           minLength: 1
           maxLength: 255
-        port:
-          type: integer
-          maximum: 65535
-          minimum: 1
-          default: 22
       required:
       - name
       - user
@@ -22971,14 +22966,12 @@ components:
       - $ref: '#/components/schemas/CreateSwarmNodeSSHKeyNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/CreateSwarmNodeSSHKeyUserErrorComponent'
       - $ref: '#/components/schemas/CreateSwarmNodeSSHKeyNameErrorComponent'
-      - $ref: '#/components/schemas/CreateSwarmNodeSSHKeyPortErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/CreateSwarmNodeSSHKeyNonFieldErrorsErrorComponent'
           user: '#/components/schemas/CreateSwarmNodeSSHKeyUserErrorComponent'
           name: '#/components/schemas/CreateSwarmNodeSSHKeyNameErrorComponent'
-          port: '#/components/schemas/CreateSwarmNodeSSHKeyPortErrorComponent'
     CreateSwarmNodeSSHKeyErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/CreateSwarmNodeSSHKeyValidationError'
@@ -23033,34 +23026,6 @@ components:
           - invalid
           type: string
           description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateSwarmNodeSSHKeyPortErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - port
-          type: string
-          description: '* `port` - port'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - max_value
-          - min_value
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `max_value` - max_value
-            * `min_value` - min_value
-            * `null` - null
         detail:
           type: string
       required:
@@ -33538,10 +33503,6 @@ components:
         fingerprint:
           type: string
           nullable: true
-        port:
-          type: integer
-          maximum: 2147483647
-          minimum: 0
         updated_at:
           type: string
           format: date-time
@@ -33555,7 +33516,6 @@ components:
       - fingerprint
       - id
       - name
-      - port
       - public_key
       - updated_at
       - user
@@ -33574,10 +33534,6 @@ components:
           type: string
           nullable: true
           minLength: 1
-        port:
-          type: integer
-          maximum: 2147483647
-          minimum: 0
       required:
       - name
       - user
@@ -34708,6 +34664,10 @@ components:
           $ref: '#/components/schemas/SwarmRoleEnum'
         private_ip:
           type: string
+        ssh_port:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
         status:
           allOf:
           - $ref: '#/components/schemas/SwarmNodeStatusEnum'
@@ -34768,6 +34728,7 @@ components:
       - private_ip
       - role
       - ssh_keys
+      - ssh_port
       - status
       - updated_at
     SwarmNodeRequest:
@@ -34778,6 +34739,10 @@ components:
         private_ip:
           type: string
           minLength: 1
+        ssh_port:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
         is_build_server:
           type: boolean
         is_app_server:
@@ -34806,6 +34771,7 @@ components:
       - $ref: '#/components/schemas/SwarmNodesCreateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/SwarmNodesCreateRoleErrorComponent'
       - $ref: '#/components/schemas/SwarmNodesCreatePrivateIpErrorComponent'
+      - $ref: '#/components/schemas/SwarmNodesCreateSshPortErrorComponent'
       - $ref: '#/components/schemas/SwarmNodesCreateIsBuildServerErrorComponent'
       - $ref: '#/components/schemas/SwarmNodesCreateIsAppServerErrorComponent'
       discriminator:
@@ -34814,6 +34780,7 @@ components:
           non_field_errors: '#/components/schemas/SwarmNodesCreateNonFieldErrorsErrorComponent'
           role: '#/components/schemas/SwarmNodesCreateRoleErrorComponent'
           private_ip: '#/components/schemas/SwarmNodesCreatePrivateIpErrorComponent'
+          ssh_port: '#/components/schemas/SwarmNodesCreateSshPortErrorComponent'
           is_build_server: '#/components/schemas/SwarmNodesCreateIsBuildServerErrorComponent'
           is_app_server: '#/components/schemas/SwarmNodesCreateIsAppServerErrorComponent'
     SwarmNodesCreateErrorResponse400:
@@ -34938,6 +34905,34 @@ components:
             * `invalid_choice` - invalid_choice
             * `null` - null
             * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    SwarmNodesCreateSshPortErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ssh_port
+          type: string
+          description: '* `ssh_port` - ssh_port'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+            * `null` - null
         detail:
           type: string
       required:

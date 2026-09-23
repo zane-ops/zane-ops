@@ -19,6 +19,7 @@ class CreateSwarmNodeViewTests(AuthAPITestCase):
                 "role": SwarmNode.Role.WORKER,
                 "is_app_server": True,
                 "is_build_server": False,
+                "ssh_port": 2222,
             },
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -30,3 +31,4 @@ class CreateSwarmNodeViewTests(AuthAPITestCase):
         self.assertIsNotNone(created_node)
         self.assertEqual(SwarmNode.Status.CREATED, created_node.status)
         self.assertEqual(SwarmNode.Role.WORKER, created_node.role)
+        self.assertEqual(2222, created_node.ssh_port)

@@ -7,6 +7,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from django.db import models
 from shortuuid.django_fields import ShortUUIDField
 from zane_api.models.base import TimestampedModel
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -60,6 +61,15 @@ class SwarmNode(TimestampedModel):
     cpus = models.PositiveIntegerField(null=True)
     memory_bytes = models.BigIntegerField(null=True)
 
+    ssh_port = models.PositiveIntegerField(
+        default=22,
+        validators=[
+            # Valid port range of unix
+            MinValueValidator(1),
+            MaxValueValidator(65_535),
+        ],
+    )
+
     @property
     def build_task_queue(self) -> str:
         """
@@ -98,7 +108,6 @@ class SSHKey(TimestampedModel):
     private_key = models.TextField(blank=False)
     name = models.CharField(max_length=255, blank=False)
     fingerprint = models.CharField(null=True, default=None)
-    port = models.PositiveIntegerField(default=22)
 
     @classmethod
     def create_key_pair(cls) -> tuple[str, str]:

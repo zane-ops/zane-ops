@@ -85,7 +85,7 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
             "ssh",
             "-t",
             "-p",
-            str(self.ssh_key.port),
+            str(self.node.ssh_port),
             "-i",
             self.key_path,
             "-o",

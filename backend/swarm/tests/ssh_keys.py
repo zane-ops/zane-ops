@@ -45,46 +45,11 @@ class CreateSSHKeyForSwarmNodeViewTests(AuthAPITestCase):
         self.assertIn("public_key", data)
         self.assertNotIn("private_key", data)
 
-    def test_create_ssh_key_defaults_port_to_22(self):
-        self.loginUser()
-        response = self.client.post(
-            reverse("swarm:node.ssh_keys", kwargs={"id": self.node.id}),
-            data={"user": "root", "name": "my key"},
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        self.assertEqual(22, response.json()["port"])
-
-        key = SSHKey.objects.get(name="my key")
-        self.assertEqual(22, key.port)
-
-    def test_create_ssh_key_with_custom_port(self):
-        self.loginUser()
-        response = self.client.post(
-            reverse("swarm:node.ssh_keys", kwargs={"id": self.node.id}),
-            data={"user": "root", "name": "my key", "port": 2222},
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        self.assertEqual(2222, response.json()["port"])
-
-        key = SSHKey.objects.get(name="my key")
-        self.assertEqual(2222, key.port)
-
-    def test_create_ssh_key_with_invalid_port(self):
-        self.loginUser()
-        response = self.client.post(
-            reverse("swarm:node.ssh_keys", kwargs={"id": self.node.id}),
-            data={"user": "root", "name": "my key", "port": 0},
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(self.get_error_from_response(response, "port"))
-        self.assertEqual(0, SSHKey.objects.count())
-
     def test_create_ssh_key_is_visible_in_node_details(self):
         self.loginUser()
         response = self.client.post(
             reverse("swarm:node.ssh_keys", kwargs={"id": self.node.id}),
-            data={"user": "root", "name": "my key", "port": 2222},
+            data={"user": "root", "name": "my key"},
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
@@ -95,7 +60,6 @@ class CreateSSHKeyForSwarmNodeViewTests(AuthAPITestCase):
         ssh_keys = response.json()["ssh_keys"]
         self.assertEqual(1, len(ssh_keys))
         self.assertEqual("my key", ssh_keys[0]["name"])
-        self.assertEqual(2222, ssh_keys[0]["port"])
 
     def test_create_ssh_key_with_an_already_used_name_still_works(self):
         self.loginUser()
@@ -159,7 +123,6 @@ class DeleteSSHKeyViewTests(AuthAPITestCase):
             name="my key",
             public_key=public_key,
             private_key=private_key,
-            port=2222,
             fingerprint=SSHKey.generate_fingerprint(public_key),
         )
 

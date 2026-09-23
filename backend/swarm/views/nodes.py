@@ -81,7 +81,6 @@ class SwarmNodeSSHKeysAPIView(APIView):
             name=data["name"],
             public_key=public_key,
             private_key=private_key,
-            port=data["port"],
             fingerprint=SSHKey.generate_fingerprint(public_key),
         )
 

@@ -16,7 +16,6 @@ class SSHKeyFilterSet(django_filters.FilterSet):
 class CreateSSHKeyRequestSerializer(serializers.Serializer):
     user = serializers.CharField(validators=[validate_unix_username])
     name = serializers.CharField(max_length=255)
-    port = serializers.IntegerField(min_value=1, max_value=65_535, default=22)
 
 
 class SSHKeySerializer(serializers.ModelSerializer):
@@ -30,7 +29,6 @@ class SSHKeySerializer(serializers.ModelSerializer):
             "public_key",
             "name",
             "fingerprint",
-            "port",
             "updated_at",
             "created_at",
         ]
@@ -46,6 +44,7 @@ class SwarmNodeSerializer(serializers.ModelSerializer):
             "hostname",
             "role",
             "private_ip",
+            "ssh_port",
             "status",
             "last_status_update",
             "docker_version",
@@ -63,6 +62,7 @@ class SwarmNodeSerializer(serializers.ModelSerializer):
         fields = super().get_fields()
         writable = {
             "private_ip",
+            "ssh_port",
             "role",
             "is_build_server",
             "is_app_server",

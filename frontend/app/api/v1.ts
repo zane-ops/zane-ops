@@ -3073,10 +3073,8 @@ export interface components {
     CreateSSHKeyRequestRequest: {
       user: string;
       name: string;
-      /** @default 22 */
-      port?: number;
     };
-    CreateSwarmNodeSSHKeyError: components["schemas"]["CreateSwarmNodeSSHKeyNonFieldErrorsErrorComponent"] | components["schemas"]["CreateSwarmNodeSSHKeyUserErrorComponent"] | components["schemas"]["CreateSwarmNodeSSHKeyNameErrorComponent"] | components["schemas"]["CreateSwarmNodeSSHKeyPortErrorComponent"];
+    CreateSwarmNodeSSHKeyError: components["schemas"]["CreateSwarmNodeSSHKeyNonFieldErrorsErrorComponent"] | components["schemas"]["CreateSwarmNodeSSHKeyUserErrorComponent"] | components["schemas"]["CreateSwarmNodeSSHKeyNameErrorComponent"];
     CreateSwarmNodeSSHKeyErrorResponse400: components["schemas"]["CreateSwarmNodeSSHKeyValidationError"] | components["schemas"]["ParseErrorResponse"];
     CreateSwarmNodeSSHKeyNameErrorComponent: {
       /**
@@ -3108,23 +3106,6 @@ export interface components {
        * @enum {string}
        */
       code: "invalid";
-      detail: string;
-    };
-    CreateSwarmNodeSSHKeyPortErrorComponent: {
-      /**
-       * @description * `port` - port
-       * @enum {string}
-       */
-      attr: "port";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_string_length` - max_string_length
-       * * `max_value` - max_value
-       * * `min_value` - min_value
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "max_string_length" | "max_value" | "min_value" | "null";
       detail: string;
     };
     CreateSwarmNodeSSHKeyUserErrorComponent: {
@@ -8110,7 +8091,6 @@ export interface components {
       public_key: string;
       name: string;
       fingerprint: string | null;
-      port: number;
       /** Format: date-time */
       updated_at: string;
       /** Format: date-time */
@@ -8120,7 +8100,6 @@ export interface components {
       user: string;
       name: string;
       fingerprint?: string | null;
-      port?: number;
     };
     /**
      * @description * `deploy:write` - Trigger / cancel / redeploy deployments and previews
@@ -8497,6 +8476,7 @@ export interface components {
       hostname: string | null;
       role: components["schemas"]["SwarmRoleEnum"];
       private_ip: string;
+      ssh_port: number;
       status: components["schemas"]["SwarmNodeStatusEnum"];
       /** Format: date-time */
       last_status_update: string | null;
@@ -8516,6 +8496,7 @@ export interface components {
     SwarmNodeRequest: {
       role: components["schemas"]["SwarmRoleEnum"];
       private_ip: string;
+      ssh_port?: number;
       is_build_server?: boolean;
       is_app_server?: boolean;
     };
@@ -8529,7 +8510,7 @@ export interface components {
      * @enum {string}
      */
     SwarmNodeStatusEnum: "CREATED" | "PROVISIONING" | "READY" | "DOWN" | "DRAINED" | "FAILED";
-    SwarmNodesCreateError: components["schemas"]["SwarmNodesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["SwarmNodesCreateRoleErrorComponent"] | components["schemas"]["SwarmNodesCreatePrivateIpErrorComponent"] | components["schemas"]["SwarmNodesCreateIsBuildServerErrorComponent"] | components["schemas"]["SwarmNodesCreateIsAppServerErrorComponent"];
+    SwarmNodesCreateError: components["schemas"]["SwarmNodesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["SwarmNodesCreateRoleErrorComponent"] | components["schemas"]["SwarmNodesCreatePrivateIpErrorComponent"] | components["schemas"]["SwarmNodesCreateSshPortErrorComponent"] | components["schemas"]["SwarmNodesCreateIsBuildServerErrorComponent"] | components["schemas"]["SwarmNodesCreateIsAppServerErrorComponent"];
     SwarmNodesCreateErrorResponse400: components["schemas"]["SwarmNodesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     SwarmNodesCreateIsAppServerErrorComponent: {
       /**
@@ -8604,6 +8585,23 @@ export interface components {
        * @enum {string}
        */
       code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    SwarmNodesCreateSshPortErrorComponent: {
+      /**
+       * @description * `ssh_port` - ssh_port
+       * @enum {string}
+       */
+      attr: "ssh_port";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value" | "null";
       detail: string;
     };
     SwarmNodesCreateValidationError: {
