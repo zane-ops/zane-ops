@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router";
 
 import {
   BrainIcon,
+  ClockPlusIcon,
   CpuIcon,
   CrownIcon,
   HeartPulseIcon,
@@ -15,7 +16,6 @@ import {
   PlusIcon,
   PowerOffIcon,
   ServerIcon,
-  SparklesIcon,
   TerminalIcon,
   TriangleAlertIcon,
   XIcon
@@ -105,7 +105,7 @@ export default function SwarmNodeListPage({
         can be deployed to any server in this list.
       </h3>
 
-      <ul>
+      <ul className="flex flex-col w-full items-stretch gap-4">
         {nodes.map((node) => (
           <ServerCard key={node.id} {...node} />
         ))}
@@ -202,7 +202,7 @@ export function ServerCard({
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 mb-0.5">
               {is_initial_install_server && (
                 <div className="py-1 text-sm rounded-md bg-link/20 text-link px-2  inline-flex gap-1 items-center">
                   <CrownIcon className="size-4 flex-none" />
@@ -366,7 +366,7 @@ export function ServerStatusBadge({
     DOWN: PowerOffIcon,
     FAILED: XIcon,
     DRAINED: TriangleAlertIcon,
-    CREATED: SparklesIcon
+    CREATED: ClockPlusIcon
   } as const satisfies Record<typeof status, LucideIcon>;
 
   const Icon = icons[status];
