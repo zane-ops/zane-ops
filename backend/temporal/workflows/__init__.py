@@ -33,6 +33,7 @@ with workflow.unsafe.imports_passed_through():
         create_registry_health_check_schedule,
         delete_registry_health_check_schedule,
         ComposeStackActivities,
+        SwarmNodeActivities,
     )
     from ..activities.service_auto_update import (
         schedule_update_docker_service,
@@ -60,6 +61,7 @@ with workflow.unsafe.imports_passed_through():
         DeployComposeStackWorkflow,
         ArchiveComposeStackWorkflow,
         ToggleComposeStackWorkflow,
+        ProvisionSwarmNodeWorkflow,
     )
     from ..schedules import (
         MonitorDockerDeploymentWorkflow,
@@ -89,6 +91,7 @@ def get_workflows_and_activities():
     monitor_stack_activites = MonitorComposeStackActivites()
     stack_activites = ComposeStackActivities()
     stack_metrics_activites = DockerComposeStackMetricsActivities()
+    swarm_node_activities = SwarmNodeActivities()
 
     return dict(
         workflows=[
@@ -117,6 +120,7 @@ def get_workflows_and_activities():
             ArchiveComposeStackWorkflow,
             ToggleComposeStackWorkflow,
             CollectComposeStacksMetricsWorkflow,
+            ProvisionSwarmNodeWorkflow,
         ],
         activities=[
             *get_extra_activities(),
@@ -213,6 +217,9 @@ def get_workflows_and_activities():
             monitor_stack_activites.run_stack_healthcheck,
             stack_metrics_activites.collect_compose_stack_metrics,
             stack_metrics_activites.save_compose_stack_metrics,
+            swarm_node_activities.create_ssh_key_temp_file,
+            swarm_node_activities.test_ssh_connection,
+            swarm_node_activities.delete_ssh_key_temp_file,
             acquire_service_deploy_semaphore,
             lock_deploy_semaphore,
             release_service_deploy_semaphore,

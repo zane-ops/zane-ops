@@ -1,19 +1,12 @@
-import asyncio
 from datetime import timedelta
-from typing import Optional
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 
 
-from temporalio.exceptions import ActivityError, is_cancelled_exception
-from temporalio.workflow import ActivityHandle
-
 with workflow.unsafe.imports_passed_through():
-    from ..activities import ComposeStackActivities
-    from ..schedules import MonitorComposeStackActivites
+    from ..activities import SwarmNodeActivities
     from ..shared import SwarmNodeDetails
-    from swarm.models import SwarmNode
 
 
 @workflow.defn(name="provision-swarm-node")
@@ -24,6 +17,26 @@ class ProvisionSwarmNodeWorkflow:
         )
 
     @workflow.run
-    async def run(self, deployment: SwarmNodeDetails):
-        print(f"Running workflow ProvisionSwarmNodeWorkflow.run({deployment=})")
-        pass
+    async def run(self, node: SwarmNodeDetails) -> str:
+        print(f"Running workflow ProvisionSwarmNodeWorkflow.run({node.private_ip=})")
+        result = await workflow.execute_activity_method(
+            SwarmNodeActivities.create_ssh_key_temp_file,
+            node,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+        res = await workflow.execute_activity_method(
+            SwarmNodeActivities.test_ssh_connection,
+            result,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+        await workflow.execute_activity_method(
+            SwarmNodeActivities.delete_ssh_key_temp_file,
+            result,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+        return res

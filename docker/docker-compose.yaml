@@ -129,7 +129,7 @@ services:
     command: >
       bash -c "source /opt/.venv/bin/activate &&
                uv sync --locked --active &&
-               watchmedo auto-restart --directory=/code --pattern=*.py --ignore-patterns="/code/zane_api/tests/**" --recursive -- python manage.py run_worker"
+               watchmedo auto-restart --directory=/code --pattern=*.py --ignore-patterns="/code/*/tests/**" --recursive -- python manage.py run_worker"
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro

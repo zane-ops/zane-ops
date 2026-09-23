@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 class SwarmNode(TimestampedModel):
     if TYPE_CHECKING:
-        ssh_keys = RelatedManager["SSHKey"]
+        ssh_keys: RelatedManager["SSHKey"]
 
     ID_PREFIX = "node_"
     ID_LENGTH = 11

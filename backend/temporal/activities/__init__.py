@@ -4,4 +4,4 @@ from .git_activities import *
 from .environments import *
 from .registries import *
 from .stack_activities import *
-from .swarm_nodes import *
+from .swarm_activities import *

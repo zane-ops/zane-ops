@@ -667,18 +667,19 @@ class ComposeStackDeploymentDetails:
 
 
 @dataclass
-class SwarmNodeSSHKey:
-    key: str
-    port: int
-
-
-@dataclass
 class SwarmNodeDetails:
     private_ip: str
     role: Literal["WORKER", "MANAGER"]
     is_app_server: bool
     is_build_server: bool
-    ssh_key: SwarmNodeSSHKey
+    ssh_key: str
+    ssh_port: int
+
+
+@dataclass
+class SwarmNodeSSHKeyDetails:
+    path: str
+    node: SwarmNodeDetails
 
 
 @dataclass
