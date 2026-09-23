@@ -15,12 +15,13 @@ jobs:
     strategy:
       matrix:
         # Split into parallel jobs
-        app: 
+        app:
           - zane_api
           - container_registry
-          - git_connectors 
+          - git_connectors
           - compose
           - console
+          - ssh_keys
           - ee.licensing
 
     services:
