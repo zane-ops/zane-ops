@@ -35,7 +35,7 @@ class SwarmNode(TimestampedModel):
     )  # == swarm node Description.Hostname
     private_ip = models.GenericIPAddressField()  # overlay / VPC address
 
-    status = models.CharField(choices=Status.choices, default=Status.PROVISIONING)
+    status = models.CharField(choices=Status.choices, default=Status.CREATED)
     last_status_update = models.DateTimeField(null=True)
 
     docker_version = models.CharField(null=True)
@@ -77,3 +77,4 @@ class SwarmNode(TimestampedModel):
                 name="unique_initial_install_server",
             ),
         ]
+        indexes = [models.Index(fields=["private_ip"])]

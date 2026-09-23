@@ -25,3 +25,16 @@ class SwarmNodeSerializer(serializers.ModelSerializer):
             "updated_at",
             "ssh_keys",
         ]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        writable = {
+            "private_ip",
+            "role",
+            "is_build_server",
+            "is_app_server",
+        }
+
+        for field_name, field in fields.items():
+            field.read_only = field_name not in writable
+        return fields

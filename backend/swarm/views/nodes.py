@@ -3,7 +3,7 @@ from django.db import IntegrityError, transaction
 from drf_spectacular.utils import extend_schema
 
 from rest_framework import exceptions, status
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
@@ -19,11 +19,17 @@ from webshell.models import SSHKey
 from webshell.serializers import CreateSSHKeyRequestSerializer, SSHKeySerializer
 
 
-class SwarmNodeListAPIView(ListAPIView):
+class SwarmNodeListAPIView(ListCreateAPIView):
     permission_classes = [IsInstanceOwner]
     serializer_class = SwarmNodeSerializer
     queryset = SwarmNode.objects.all().order_by("hostname").prefetch_related("ssh_keys")
     pagination_class = DefaultPageNumberPagination
+
+    @extend_schema(
+        summary="Add new Swarm node to ZaneOps cluster",
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
 
     @extend_schema(
         summary="List all swarm nodes in ZaneOps installation",
