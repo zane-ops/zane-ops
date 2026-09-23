@@ -31,7 +31,7 @@ setup: ### Initial setup of the project
 	chmod -R a+rx ./docker/temporalio/*.sh
 
 deploy-temporal-ui:
-	docker stack deploy --with-registry-auth --detach=false --compose-file docker-stack.prod-temporal-ui.yaml zane-temporal-ui
+	docker stack deploy --with-registry-auth --detach=false --compose-file docker/compose.prod-temporal-ui.yaml zane-temporal-ui
 
 stop-temporal-ui:
 	docker stack rm zane-temporal-ui

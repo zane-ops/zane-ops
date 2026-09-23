@@ -41,6 +41,8 @@ setup: ### Launch initial setup before installing zaneops, Usage: make setup BRA
 	@mkdir -p $(current_dir)/vector
 	@mkdir -p $(current_dir)/loki
 	@mkdir -p $(current_dir)/temporalio/config/dynamicconfig
+	@mkdir -p $(current_dir)/tempo
+	@mkdir -p $(current_dir)/grafana/datasources
 	@curl $(raw_url)/docker/temporalio/entrypoint.sh > ./temporalio/entrypoint.sh
 	@curl $(raw_url)/docker/temporalio/admin-tools-entrypoint.sh > ./temporalio/admin-tools-entrypoint.sh
 	@curl $(raw_url)/docker/temporalio/config/config_template.yaml > ./temporalio/config/config_template.yaml
@@ -49,10 +51,10 @@ setup: ### Launch initial setup before installing zaneops, Usage: make setup BRA
 	@curl $(raw_url)/docker/proxy/default-caddy-config.json > ./proxy/default-caddy-config.json
 	@curl $(raw_url)/docker/vector/vector.yaml > ./vector/vector.yaml
 	@curl $(raw_url)/docker/loki/config.yaml > ./loki/config.yaml
-	@curl $(raw_url)/docker/docker-stack.prod-temporal-ui.yaml > ./docker-stack.prod-temporal-ui.yaml
-	@curl $(raw_url)/docker/docker-stack.prod-otel.yaml > ./docker-stack.prod-otel.yaml
-	@curl $(raw_url)/docker/tempo/config.yaml > ./tempo-config.yaml
-	@curl $(raw_url)/docker/grafana/datasources/datasource.yaml > ./grafana-datasources.yaml
+	@curl $(raw_url)/docker/compose.prod-temporal-ui.yaml > ./compose.prod-temporal-ui.yaml
+	@curl $(raw_url)/docker/compose.prod-otel.yaml > ./compose.prod-otel.yaml
+	@curl $(raw_url)/docker/tempo/config.yaml > ./tempo/config.yaml
+	@curl $(raw_url)/docker/grafana/datasources/datasource.yaml > ./grafana/datasources/datasource.yaml
 	@curl $(raw_url)/docker/pgbouncer/entrypoint.sh > ./pgbouncer/entrypoint.sh
 	@chmod -R a+x ./temporalio/*.sh
 	@chmod -R a+x ./pgbouncer/*.sh
@@ -189,7 +191,7 @@ deploy: ### Install and deploy zaneops based on MODE (https or http)
 
 deploy-otel: ### Deploy the optional observability stack (Tempo + Grafana on :3004)
 	@set -a; . ./.env; set +a; \
-	docker stack deploy --detach --with-registry-auth --prune --compose-file docker-stack.prod-otel.yaml zane-otel
+	docker stack deploy --detach --with-registry-auth --prune --compose-file compose.prod-otel.yaml zane-otel
 	@echo -e "> Observability stack deployed. Set \x1b[96mOTEL_TRACES_ENABLED=true\x1b[0m and \x1b[96mOTEL_EXPORTER_OTLP_ENDPOINT=http://zane.tempo:4317\x1b[0m in .env, then re-run \x1b[96mmake deploy\x1b[0m."
 
 stop-otel: ### Take down the optional observability stack
@@ -197,7 +199,7 @@ stop-otel: ### Take down the optional observability stack
 
 deploy-temporal-ui: ### Deploy the temporal UI stack
 	@set -a; . ./.env; set +a; \
-	docker stack deploy --detach --with-registry-auth --prune --compose-file docker-stack.prod-temporal-ui.yaml zane-temporal
+	docker stack deploy --detach --with-registry-auth --prune --compose-file compose.prod-temporal-ui.yaml zane-temporal
 
 stop-temporal-ui: ### Take down the temporal UI stack
 	@docker stack rm zane-temporal

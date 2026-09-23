@@ -19,7 +19,7 @@ x-backend-vars: &env-vars
   GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
   TELEMETRY_ENABLED: ${TELEMETRY_ENABLED:-true}
   # OpenTelemetry tracing is opt-in on production: set OTEL_TRACES_ENABLED=true
-  # and deploy the observability stack (see docker-stack.prod-otel.yaml).
+  # and deploy the observability stack (see compose.prod-otel.yaml).
   OTEL_TRACES_ENABLED: ${OTEL_TRACES_ENABLED:-false}
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
   MAX_CONCURRENT_DEPLOYS: ${MAX_CONCURRENT_DEPLOYS:-5}
