@@ -4,13 +4,29 @@ from typing import Dict, List, TypedDict
 
 from .shared import DeploymentDetails, ProxyURLRoute
 from zane_api.models import Deployment, URL
-from zane_api.utils import strip_slash_if_exists
+from compose.models import ComposeStack
+
+from container_registry.models import BuildRegistry
+from zane_api.utils import strip_slash_if_exists, cache_result, find_item_in_sequence
+from .shared import DeploymentDetails
 from django.conf import settings
-from zane_api.dtos import URLDto
+from zane_api.dtos import URLDto, URLRedirectToDto
 import requests
 from rest_framework import status
+from datetime import timedelta
+from asgiref.sync import sync_to_async
 
 from compose.dtos import ComposeStackUrlRouteDto
+from .constants import (
+    DEFAULT_CADDY_LOGGING,
+    ZANE_CATCHALL_404_ROUTE,
+    ZANE_CATCHALL_502_ROUTE,
+    DEFAULT_ADMIN_CONFIG,
+    ZANE_PROXY_CONFIG_CACHE_KEY,
+    DEFAULT_CADDY_STORAGE_CONFIG,
+)
+
+from django.conf import settings
 
 
 class ZaneProxyEtagError(Exception):
@@ -117,7 +133,6 @@ class ZaneProxyClient:
         cls,
         url: URLDto,
         current_deployment: DeploymentDetails | Deployment,
-        previous_deployment: Deployment | DeploymentDetails | None,
     ):
         AuthDict = TypedDict("AuthDict", {"username": str, "password": str})
         auth_options: AuthDict | None = None
@@ -150,19 +165,6 @@ class ZaneProxyClient:
 
         service = current_deployment.service
         http_port = url.associated_port
-        blue_hash = None
-        green_hash = None
-
-        if current_deployment.slot == "BLUE":
-            blue_hash = current_deployment.hash
-        elif current_deployment.slot == "GREEN":
-            green_hash = current_deployment.hash
-
-        if previous_deployment is not None:
-            if previous_deployment.slot == "BLUE":
-                blue_hash = previous_deployment.hash
-            elif previous_deployment.slot == "GREEN":
-                green_hash = previous_deployment.hash
 
         proxy_handlers = [
             {
@@ -174,16 +176,6 @@ class ZaneProxyClient:
                 "handler": "log_append",
                 "key": "zane_service_id",
                 "value": service.id,
-            },
-            {
-                "handler": "log_append",
-                "key": "zane_deployment_blue_hash",
-                "value": blue_hash,
-            },
-            {
-                "handler": "log_append",
-                "key": "zane_deployment_green_hash",
-                "value": green_hash,
             },
             {
                 "handler": "log_append",
@@ -310,7 +302,6 @@ class ZaneProxyClient:
         cls,
         url: URLDto,
         current_deployment: DeploymentDetails | Deployment,
-        previous_deployment: Deployment | DeploymentDetails | None,
     ) -> bool:
         attempts = 0
 
@@ -331,7 +322,6 @@ class ZaneProxyClient:
             new_url = cls._get_request_for_service_url(
                 url=url,
                 current_deployment=current_deployment,
-                previous_deployment=previous_deployment,
             )
             routes.append(new_url)
             routes = cls._sort_routes(routes)  # type: ignore
@@ -412,6 +402,23 @@ class ZaneProxyClient:
     @classmethod
     def get_uri_for_build_registry(cls, registry_alias: str):
         return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{registry_alias}"
+
+    @classmethod
+    def get_route_config(cls, route_id: str):
+        # path: $.apps.http.servers.zane.,routes..routes
+        full_config = cls.get_full_caddy_config()
+        all_routes: list[dict] = full_config["apps"]["http"]["servers"]["zane"][
+            "routes"
+        ][0]["handle"][0]["routes"]
+
+        route_config = find_item_in_sequence(
+            lambda item: item["@id"] == route_id, all_routes
+        )
+        return route_config
+
+    @classmethod
+    def aget_route_config(cls, route_id: str):
+        return sync_to_async(cls.get_route_config)(route_id)
 
     @classmethod
     def _get_request_for_build_registry(
@@ -787,3 +794,265 @@ class ZaneProxyClient:
         raise ZaneProxyEtagError(
             f"Failed inserting the url {url} in the proxy because `Etag` precondition failed"
         )
+
+    @classmethod
+    @cache_result(timeout=timedelta(seconds=5), cache_key=ZANE_PROXY_CONFIG_CACHE_KEY)
+    def get_full_caddy_config(cls):
+        """
+        The single source of truth for what every Caddy instance's config
+        should look like right now, computed straight from the DB.
+        """
+        routes = []
+
+        deployments = (
+            Deployment.objects.filter(
+                is_current_production=True,
+                service_snapshot__isnull=False,
+            )
+            .select_related("service")
+            .prefetch_related(
+                "service__urls",
+                "service__environment",
+                "service__environment__preview_metadata",
+            )
+        )
+
+        for deployment in deployments:
+            service = deployment.service
+            for url in service.urls.all():
+                routes.append(
+                    cls._get_request_for_service_url(
+                        url=URLDto(
+                            domain=url.domain,
+                            base_path=url.base_path,
+                            associated_port=url.associated_port,
+                            strip_prefix=url.strip_prefix,
+                            redirect_to=URLRedirectToDto.from_dict(url.redirect_to)
+                            if url.redirect_to is not None
+                            else None,
+                        ),
+                        current_deployment=deployment,
+                    )
+                )
+
+        for stack in (
+            ComposeStack.objects.filter(urls__isnull=False, deployments__isnull=False)
+            .prefetch_related("env_overrides")
+            .distinct("id")
+        ):
+            for service_name, service_urls in stack.snapshot.urls.items():
+                for url in service_urls:
+                    routes.append(
+                        cls._get_request_for_compose_stack_service_url(
+                            stack_id=stack.id,
+                            stack_hash_prefix=stack.hash_prefix,
+                            service_name=service_name,
+                            url=url,
+                        )
+                    )
+
+        for registry in BuildRegistry.objects.filter(service_alias__isnull=False):
+            routes.append(
+                cls._get_request_for_build_registry(
+                    registry_id=registry.id,
+                    registry_alias=str(registry.service_alias),
+                    domain=registry.registry_domain,
+                    is_secure=registry.is_secure,
+                )
+            )
+
+        routes.extend(cls._get_dashboard_routes())
+        routes.append(ZANE_CATCHALL_404_ROUTE)
+
+        # TLS config
+        tls_policy: dict = {"on_demand": True}
+        if settings.DEBUG:
+            tls_policy.update(
+                {
+                    "issuers": [{"module": "internal"}],
+                }
+            )
+        elif settings.CLOUDFLARE_API_TOKEN:
+            tls_policy.update(
+                {
+                    "issuers": [
+                        {
+                            "module": "acme",
+                            "challenges": {
+                                "dns": {
+                                    "provider": {
+                                        "name": "cloudflare",
+                                        "api_token": "{env.CLOUDFLARE_API_TOKEN}",
+                                    }
+                                }
+                            },
+                        },
+                        {"module": "acme"},
+                    ],
+                }
+            )
+
+        tls_app_config = {
+            "automation": {
+                "policies": [tls_policy],
+                "on_demand": {
+                    "permission": {
+                        "@id": "tls-endpoint",
+                        "endpoint": "http://{env.API_HOST}/api/_proxy/check-certiticates",
+                        "module": "http",
+                    }
+                },
+            }
+        }
+
+        return {
+            "@id": "root",
+            "logging": DEFAULT_CADDY_LOGGING,
+            "storage": DEFAULT_CADDY_STORAGE_CONFIG,
+            "admin": DEFAULT_ADMIN_CONFIG,
+            "apps": {
+                "http": {
+                    "servers": {
+                        "zane": {
+                            "@id": "zane-server",
+                            "tls_connection_policies": [{}],
+                            "logs": {},
+                            "automatic_https": {
+                                "disable_redirects": not settings.ENABLE_AUTOMATIC_HTTPS_REDIRECT
+                            },
+                            "errors": {"routes": [ZANE_CATCHALL_502_ROUTE]},
+                            "listen": [":443", ":80"],
+                            "routes": [
+                                {
+                                    "handle": [
+                                        {
+                                            "handler": "subroute",
+                                            "@id": "zane-url-root",
+                                            "routes": cls._sort_routes(routes),
+                                        }
+                                    ],
+                                    "terminal": True,
+                                }
+                            ],
+                        },
+                    }
+                },
+                "tls": tls_app_config,
+            },
+        }
+
+    @classmethod
+    def _get_dashboard_routes(cls):
+        """
+        ZaneOps dashboard routes
+        """
+        return [
+            {
+                "@id": "api.zaneops.internal",
+                "group": "zaneops.internal",
+                "handle": [
+                    {
+                        "handler": "subroute",
+                        "routes": [
+                            {
+                                "handle": [
+                                    {
+                                        "handler": "log_append",
+                                        "key": "zane_service_type",
+                                        "value": settings.ZANE_OPS_PROXY_APP_NAME,
+                                    },
+                                    {
+                                        "handler": "log_append",
+                                        "key": "zane_request_id",
+                                        "value": "{http.request.uuid}",
+                                    },
+                                    {
+                                        "handler": "headers",
+                                        "response": {
+                                            "add": {
+                                                "x-zane-request-id": [
+                                                    "{http.request.uuid}"
+                                                ],
+                                            },
+                                        },
+                                        "request": {
+                                            "add": {
+                                                "x-request-id": ["{http.request.uuid}"],
+                                            },
+                                        },
+                                    },
+                                    {
+                                        "handler": "encode",
+                                        "encodings": {"gzip": {}},
+                                        "prefer": ["gzip"],
+                                    },
+                                    {
+                                        "handler": "reverse_proxy",
+                                        "upstreams": [
+                                            {
+                                                "dial": settings.ZANE_API_SERVICE_INTERNAL_DOMAIN
+                                            }
+                                        ],
+                                    },
+                                ]
+                            }
+                        ],
+                    }
+                ],
+                "match": [{"path": ["/api/*"], "host": [settings.ZANE_APP_DOMAIN]}],
+            },
+            {
+                "@id": "front.zaneops.internal",
+                "group": "zaneops.internal",
+                "handle": [
+                    {
+                        "handler": "subroute",
+                        "routes": [
+                            {
+                                "handle": [
+                                    {
+                                        "handler": "log_append",
+                                        "key": "zane_service_type",
+                                        "value": settings.ZANE_OPS_PROXY_APP_NAME,
+                                    },
+                                    {
+                                        "handler": "log_append",
+                                        "key": "zane_request_id",
+                                        "value": "{http.request.uuid}",
+                                    },
+                                    {
+                                        "handler": "headers",
+                                        "response": {
+                                            "add": {
+                                                "x-zane-request-id": [
+                                                    "{http.request.uuid}"
+                                                ],
+                                            },
+                                        },
+                                        "request": {
+                                            "add": {
+                                                "x-request-id": ["{http.request.uuid}"],
+                                            },
+                                        },
+                                    },
+                                    {
+                                        "handler": "encode",
+                                        "encodings": {"gzip": {}},
+                                        "prefer": ["gzip"],
+                                    },
+                                    {
+                                        "handler": "reverse_proxy",
+                                        "upstreams": [
+                                            {
+                                                "dial": settings.ZANE_FRONT_SERVICE_INTERNAL_DOMAIN
+                                            }
+                                        ],
+                                    },
+                                ]
+                            }
+                        ],
+                    }
+                ],
+                "match": [{"path": ["/*"], "host": [settings.ZANE_APP_DOMAIN]}],
+            },
+        ]

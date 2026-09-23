@@ -1405,6 +1405,7 @@ class DockerSwarmActivities:
                     project_id=deployment.service.project_id,
                     service_id=deployment.service.id,
                 ),
+                constraints=[f"node.labels.{settings.APP_SERVER_LABEL}==true"],
                 mounts=mounts,
                 endpoint_spec=endpoint_spec,
                 env=envs,
@@ -1413,6 +1414,16 @@ class DockerSwarmActivities:
                     deployment_hash=deployment.hash,
                     service=deployment.service.id,
                     status="active",
+                ),
+                # Service-level `labels` above aren't copied down to the actual
+                # containers, this adds them too
+                container_labels=get_resource_labels(
+                    service.project_id,
+                    deployment_hash=deployment.hash,
+                    service=deployment.service.id,
+                    status="active",
+                    # This is used for collecting logs
+                    **{"zane.logs": "true"},
                 ),
                 networks=[
                     NetworkAttachmentConfig(
@@ -1442,20 +1453,6 @@ class DockerSwarmActivities:
                 # this disables the default container healthcheck, since we control the healthcheck externally
                 healthcheck=DockerHealthcheckType(test=["NONE"]),
                 stop_grace_period=int(30e9),  # stop_grace_period is in nanoseconds
-                log_driver="fluentd",
-                log_driver_options={
-                    "fluentd-address": settings.ZANE_FLUENTD_HOST,
-                    "tag": json.dumps(
-                        {
-                            "service_id": deployment.service.id,
-                            "deployment_id": deployment.hash,
-                        }
-                    ),
-                    "mode": "non-blocking",
-                    "fluentd-async": "true",
-                    "fluentd-max-retries": "10",
-                    "fluentd-sub-second-precision": "true",
-                },
                 resources=resources,
                 configs=configs,
             )
@@ -1742,22 +1739,11 @@ class DockerSwarmActivities:
                 deployment,
                 f"Configuring service URLs for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
-            previous_deployment: Deployment | None = await (
-                Deployment.objects.filter(
-                    Q(service_id=deployment.service.id)
-                    & Q(is_current_production=True)
-                    & Q(queued_at__lt=deployment.queued_at_as_datetime)
-                    & ~Q(hash=deployment.hash)
-                )
-                .order_by("-queued_at")
-                .afirst()
-            )
 
             for url in service.urls:
                 ZaneProxyClient.upsert_service_url(
                     url=url,
                     current_deployment=deployment,
-                    previous_deployment=previous_deployment,
                 )
 
             await deployment_log(
@@ -1918,7 +1904,6 @@ class DockerSwarmActivities:
                 ZaneProxyClient.upsert_service_url(
                     url=url,
                     current_deployment=previous_deployment,
-                    previous_deployment=deployment,
                 )
 
     @activity.defn

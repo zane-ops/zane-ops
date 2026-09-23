@@ -3,7 +3,6 @@ import {
   ArrowLeftRightIcon,
   ContainerIcon,
   FolderPlusIcon,
-  KeyRoundIcon,
   LaptopMinimalIcon,
   LogOutIcon,
   type LucideIcon,
@@ -92,12 +91,6 @@ export function useCommandBarActionGroups(): CommandBarActionGroup[] {
         heading: "Server Admin",
         minRole: "ServerAdmin",
         items: [
-          {
-            id: "create-ssh-key",
-            title: "New SSH Key",
-            href: href("/admin/ssh-keys/new"),
-            icon: KeyRoundIcon
-          },
           {
             id: "create-build-registry",
             title: "New Build Registry",

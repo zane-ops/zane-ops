@@ -24,6 +24,9 @@ services:
         limits:
           cpus: "0.1"
           memory: 100M
+      placement:
+        constraints:
+          - node.labels.zane.main-server==true
 networks:
   zane:
     external: true

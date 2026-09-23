@@ -10,9 +10,10 @@ def create_default_workspace_and_attach_registries(apps, schema_editor):
     )
     BuildRegistry = apps.get_model("container_registry", "BuildRegistry")
 
-    default_workspace = Workspace.objects.earliest("created_at")
-    SharedRegistryCredentials.objects.update(workspace=default_workspace)
-    BuildRegistry.objects.update(workspace=default_workspace)
+    default_workspace = Workspace.objects.order_by("created_at").first()
+    if default_workspace is not None:
+        SharedRegistryCredentials.objects.update(workspace=default_workspace)
+        BuildRegistry.objects.update(workspace=default_workspace)
 
 
 def rollback_workspace_and_registries(apps, schema_editor):

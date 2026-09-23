@@ -11,8 +11,10 @@ services:
     image: grafana/tempo:2.6.1
     command: -config.file=/etc/tempo/config.yaml
     volumes:
-      - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/tempo-config.yaml:/etc/tempo/config.yaml
       - tempo-data:/var/tempo
+    configs:
+      - source: tempo-config.yaml
+        target: /etc/tempo/config.yaml
     networks:
       zane:
         aliases:
@@ -26,7 +28,7 @@ services:
         window: 120s
       placement:
         constraints:
-          - node.role==manager
+          - node.labels.zane.main-server==true
       labels:
         zane.stack: "true"
       resources:
@@ -44,8 +46,10 @@ services:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-change-me-please}
     volumes:
-      - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
       - grafana-data:/var/lib/grafana
+    configs:
+      - source: grafana-datasource.yaml
+        target: /etc/grafana/provisioning/datasources/datasource.yaml
     networks:
       - zane
     deploy:
@@ -57,13 +61,19 @@ services:
         window: 120s
       placement:
         constraints:
-          - node.role==manager
+          - node.labels.zane.main-server==true
       labels:
         zane.stack: "true"
       resources:
         limits:
           cpus: "0.5"
           memory: 300M
+
+configs:
+  tempo-config.yaml:
+    file: ./tempo/config.yaml
+  grafana-datasource.yaml:
+    file: ./grafana/datasources/datasource.yaml
 
 volumes:
   tempo-data:

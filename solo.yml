@@ -15,6 +15,13 @@ processes:
     auto_restart: true
     restart_when_changed: []
     env: {}
+  dc logs temporal-main-worker:
+    command: docker compose -f ./docker/docker-compose.yaml logs -f zane-temporal-main-worker
+    working_dir: null
+    auto_start: true
+    auto_restart: true
+    restart_when_changed: []
+    env: {}
   api:
     command: make dev-api
     working_dir: null

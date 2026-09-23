@@ -10,6 +10,8 @@ want you to act as all knowing, please respond simply and unless you are
 
 Be EXTREMELY concise. Short responses only. No blabbering.
 
+When you finish a task, end with a short, skimmable summary: a few bullet points max (what changed, what's next). No long recap paragraphs.
+
 ## Code style
 
 We use a **test-first approach**. When implementing features:
@@ -32,7 +34,7 @@ ZaneOps is a self-hosted, open-source PaaS (Platform as a Service) for deploying
 - **Async Processing**: Temporal.io for workflows and long-running tasks
 - **Database**: PostgreSQL 16
 - **Cache**: Redis (Valkey 7.2.5)
-- **Logging**: Fluentd, Loki, Grafana
+- **Logging**: Vector, Loki, Grafana
 - **Package Managers**: pnpm (frontend/workspace), uv (Python backend)
 
 ## Development Setup
@@ -224,7 +226,7 @@ Two worker processes run different task queues:
    - Creates/updates Docker Swarm service
    - Configures Caddy proxy routes
 4. Deployment status streamed via WebSockets (Django Channels)
-5. Runtime logs collected via Fluentd → Loki → API
+5. Runtime logs collected via Vector → Loki → API
 
 ## Testing
 

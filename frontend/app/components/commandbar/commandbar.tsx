@@ -27,7 +27,6 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandItem,
-  CommandList,
   CommandSeparator
 } from "~/components/ui/command";
 import { createDevLogger } from "~/lib/logger";

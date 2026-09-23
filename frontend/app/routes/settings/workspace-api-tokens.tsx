@@ -299,13 +299,13 @@ function TokenRow({ token }: { token: WorkspaceApiToken }) {
       </TableCell>
       <TableCell className="p-2">{token.created_by.username}</TableCell>
       <TableCell className="p-2">
-        {token.is_active && <RevokeTokenFormDialog token={token} />}
+        <DeleteTokenFormDialog token={token} />
       </TableCell>
     </TableRow>
   );
 }
 
-function RevokeTokenFormDialog({ token }: { token: WorkspaceApiToken }) {
+function DeleteTokenFormDialog({ token }: { token: WorkspaceApiToken }) {
   const fetcher = useFetcher<typeof clientAction>();
 
   return (

@@ -138,7 +138,7 @@ def get_env_network_resource_name(env_id: str, project_id: str) -> str:
     return f"net-{project_id}-{env_id}"
 
 
-def get_resource_labels(project_id: str, **kwargs):
+def get_resource_labels(project_id: str, **kwargs: str):
     return {"zane-managed": "true", "zane-project": project_id, **kwargs}
 
 

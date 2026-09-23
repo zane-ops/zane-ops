@@ -71,6 +71,10 @@ class URLRedirectToDto:
     url: str
     permanent: bool = False
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        return cls(**data)
+
 
 @dataclass
 class URLDto:

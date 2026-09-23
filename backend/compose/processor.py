@@ -680,27 +680,6 @@ class ComposeSpecProcessor:
                 aliases.append(original_service_name)
             service.networks["default"].update({"aliases": aliases})
 
-            # Add logging configuration (for Fluentd log collection)
-            service.logging = {
-                "driver": "fluentd",
-                "options": {
-                    "fluentd-address": settings.ZANE_FLUENTD_HOST,
-                    "tag": json.dumps(
-                        {
-                            "zane.stack": stack.id,
-                            "zane.stack.service": service_name.removeprefix(
-                                f"{stack.hash_prefix}_"
-                            ),
-                        }
-                    ),
-                    "fluentd-max-retries": "10",
-                    "fluentd-sub-second-precision": "true",
-                    # Non-blocking logging
-                    "fluentd-async": "true",
-                    "mode": "non-blocking",
-                },
-            }
-
             # Inject safe update_config for rolling updates
             # And restart_policy
             # only on non jobs
@@ -723,14 +702,26 @@ class ComposeSpecProcessor:
                 )
 
             # Add ZaneOps tracking labels
+            zane_labels = {
+                "zane-stack": stack.id,
+                "zane-managed": "true",
+                "zane-project": stack.project_id,
+                "zane-environment": stack.environment_id,
+                "status": "active",  # so that `make deploy` restart this service
+            }
+            # Service labels
             service.deploy["labels"] = service.deploy.get("labels", {})
-            service.deploy["labels"].update(
+            service.deploy["labels"].update(zane_labels)
+
+            # Container labels
+            service.labels = service.labels or dict()
+            service.labels.update(
                 {
-                    "zane-stack": stack.id,
-                    "zane-managed": "true",
-                    "zane-project": stack.project_id,
-                    "zane-environment": stack.environment_id,
-                    "status": "active",  # so that `make deploy` restart this service
+                    **zane_labels,
+                    "zane.logs": "true",
+                    "zane.stack.service": service_name.removeprefix(
+                        f"{stack.hash_prefix}_"
+                    ),
                 }
             )
 
@@ -887,14 +878,8 @@ class ComposeSpecProcessor:
         # use the json format of the compose file
         json_spec = json.dumps(reconcilied, indent=2)
 
-        print("=== json_spec ===")
-        print(json_spec)
-
         x_envs = spec.to_dict()["x-zane-env"]
         expanded = expand(json_spec, environ=x_envs, surrounded_vars_only=True)
-
-        print("=== expanded ===")
-        print(expanded)
 
         # in case there is a single slash that isn't correctly formatted after var expansion:
         # ex: "echo \$date" , it should be reformatted correctly to `"echo \\$date"`
@@ -920,9 +905,6 @@ class ComposeSpecProcessor:
             return full[: match.start(1) - match.start(0)] + escaped_inner + '"'
 
         expanded = re.sub(all_quoted_strings, escape_inner_quotes, expanded)
-
-        print("=== expanded reformatted ===")
-        print(expanded)
 
         # convert <service>.deploy.replicas to integer (if set)
         expanded_spec = json.loads(expanded)

@@ -111,9 +111,7 @@ class ProxyLogTestBase(AuthAPITestCase):
         response = self.client.post(
             reverse("zane_api:logs.ingest"),
             data=entries,
-            headers={
-                "Authorization": f"Basic {base64.b64encode(f'zaneops:{settings.SECRET_KEY}'.encode()).decode()}"
-            },
+            headers={"Authorization": f"Internal {settings.SECRET_KEY}"},
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         return response

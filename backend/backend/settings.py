@@ -19,7 +19,6 @@ from pathlib import Path
 import uvloop
 
 from .api_description import API_DESCRIPTION
-from .bootstrap import register_zaneops_app_on_proxy
 from dotenv import load_dotenv
 
 
@@ -58,7 +57,8 @@ CSRF_COOKIE_SECURE = (
 SESSION_COOKIE_SECURE = (
     False if __DANGEROUS_ALLOW_HTTP_SESSION else ENVIRONMENT == PRODUCTION_ENV
 )
-REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6381/0")
+REDIS_URL = os.environ.get("REDIS_URL", f"redis://127.0.0.1:6381/0")
+
 SECURE_HSTS_SECONDS = (
     0 if (__DANGEROUS_ALLOW_HTTP_SESSION or ENVIRONMENT != PRODUCTION_ENV) else 60
 )
@@ -87,6 +87,8 @@ ALLOWED_HOSTS = (
         "127.0.0.1",
         ZANE_APP_DOMAIN,
         "host.docker.internal",
+        ".zaneops.internal",
+        ".orb.local",
     ]
     if ENVIRONMENT != PRODUCTION_ENV
     else ["127.0.0.1", f".{ROOT_DOMAIN}", f".{ZANE_APP_DOMAIN}", ".zaneops.internal"]
@@ -100,6 +102,10 @@ if ENVIRONMENT == PRODUCTION_ENV:
         SESSION_COOKIE_DOMAIN = f".{ROOT_DOMAIN}"
     else:
         SESSION_COOKIE_DOMAIN = ZANE_APP_DOMAIN
+
+APP_SERVER_LABEL = "zane.app-server"
+BUILD_SERVER_LABEL = "zane.build-server"
+MAIN_SERVER_LABEL = "zane.main-server"
 
 # This is necessary for making sure that CSRF protections work on production
 CSRF_TRUSTED_ORIGINS = (
@@ -147,6 +153,7 @@ INSTALLED_APPS = [
     "container_registry.apps.ContainerRegistryConfig",
     "compose.apps.ComposeConfig",
     "console.apps.ConsoleConfig",
+    "swarm.apps.SwarmConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
@@ -409,6 +416,16 @@ SPECTACULAR_SETTINGS = {
             ("HEALTHY", "Healthy"),
             ("UNHEALTHY", "Unhealthy"),
         ),
+        "WorkspaceRoleEnum": (
+            (10, "Viewer"),
+            (30, "Member"),
+            (40, "Admin"),
+            (50, "Owner"),
+        ),
+        "SwarmRoleEnum": (
+            ("MANAGER", "Manager"),
+            ("WORKER", "Worker"),
+        ),
     },
     "POSTPROCESSING_HOOKS": [
         "drf_standardized_errors.openapi_hooks.postprocess_schema_enums",
@@ -427,6 +444,7 @@ CADDY_PROXY_ADMIN_HOST = os.environ.get(
     "http://127.0.0.1:2019",
 )
 CLOUDFLARE_API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
+ENABLE_AUTOMATIC_HTTPS_REDIRECT = os.environ.get("ZANE_HTTP_MODE", "http") == "https"
 
 ZANE_FRONT_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:5173"
@@ -439,10 +457,6 @@ ZANE_API_SERVICE_INTERNAL_DOMAIN = (
     if ENVIRONMENT != PRODUCTION_ENV
     else "zane.front.zaneops.internal:80"
 )
-ZANE_FLUENTD_HOST = os.environ.get(
-    "ZANE_FLUENTD_HOST", "unix://$HOME/.fluentd/fluentd.sock"
-)
-
 DEFAULT_HEALTHCHECK_TIMEOUT = 30  # seconds
 DEFAULT_HEALTHCHECK_INTERVAL = 30  # seconds
 DEFAULT_HEALTHCHECK_WAIT_INTERVAL = 5.0  # seconds
@@ -464,16 +478,6 @@ except Exception:
 ZANE_OPS_STATIC_PATH_PREFIXES = ("/assets/", "/fonts/", "/logo/")
 ZANE_OPS_PROXY_APP_NAME = "zane_ops"
 
-if BACKEND_COMPONENT == "API" and not TESTING:
-    register_zaneops_app_on_proxy(
-        proxy_url=CADDY_PROXY_ADMIN_HOST,
-        zane_app_domain=ZANE_APP_DOMAIN,
-        zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
-        zane_api_internal_domain=ZANE_API_SERVICE_INTERNAL_DOMAIN,
-        internal_tls=DEBUG,
-        cloudflare_api_token=CLOUDFLARE_API_TOKEN,
-        app_name=ZANE_OPS_PROXY_APP_NAME,
-    )
 
 # Docker image version
 IMAGE_VERSION = os.environ.get("IMAGE_VERSION", "canary")

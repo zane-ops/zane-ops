@@ -37,6 +37,25 @@ class DockerContainerLogSerializer(serializers.Serializer):
     source = serializers.ChoiceField(choices=SOURCES, required=True)
 
 
+class VectorLogEntrySerializer(serializers.Serializer):
+    message = serializers.CharField(
+        required=True, allow_blank=True, trim_whitespace=False
+    )
+    container_id = serializers.CharField(required=True)
+    container_name = serializers.CharField(required=True)
+    timestamp = serializers.CharField(required=True)
+    stream = serializers.ChoiceField(
+        choices=DockerContainerLogSerializer.SOURCES, required=True
+    )
+    label = serializers.DictField(
+        child=serializers.CharField(allow_blank=True), required=True
+    )
+
+
+class VectorLogsRequestSerializer(serializers.ListSerializer):
+    child = VectorLogEntrySerializer()
+
+
 class HTTPServiceRequestSerializer(serializers.Serializer):
     remote_ip = serializers.IPAddressField(required=True)
     client_ip = serializers.IPAddressField(required=True)

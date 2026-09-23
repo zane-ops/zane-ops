@@ -116,27 +116,6 @@ export const buildRegistryQueries = {
     })
 };
 
-export const sshKeysQueries = {
-  list: queryOptions({
-    queryKey: ["SSH_KEYS"] as const,
-    queryFn: async ({ signal }) => {
-      const { data } = await apiClient.GET("/api/shell/ssh-keys/", {
-        signal
-      });
-      if (!data) {
-        throw notFound("Oops !");
-      }
-      return data;
-    },
-    refetchInterval: (query) => {
-      if (query.state.data) {
-        return DEFAULT_QUERY_REFETCH_INTERVAL;
-      }
-      return false;
-    }
-  })
-};
-
 export const passwordTokenListFilters = zfd.formData({
   page: zfd.numeric().optional().catch(1).optional(),
   per_page: zfd.numeric().optional().catch(10).optional()
@@ -430,6 +409,57 @@ export const licenseQueries = {
       return false;
     }
   })
+};
+
+export const swarmNodeListFilters = zfd.formData({
+  page: zfd.numeric().optional().catch(1).optional(),
+  per_page: zfd.numeric().optional().catch(10).optional()
+});
+
+export const swarmQueries = {
+  nodeList: (filters: z.infer<typeof swarmNodeListFilters> = {}) =>
+    queryOptions({
+      queryKey: ["SWARM_NODES", "LIST", filters] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/swarm/nodes/", {
+          signal,
+          params: {
+            query: filters
+          }
+        });
+        if (!data) throw notFound("Not found");
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (!query.state.data) {
+          return false;
+        }
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData
+    }),
+  singleNode: (id: string) =>
+    queryOptions({
+      queryKey: ["SWARM_NODES", "SINGLE", id] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/swarm/nodes/{id}/", {
+          signal,
+          params: {
+            path: { id }
+          }
+        });
+        if (!data) throw notFound("Not found");
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (!query.state.data) {
+          return false;
+        }
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData,
+      refetchIntervalInBackground: true
+    })
 };
 
 export const systemQueries = {

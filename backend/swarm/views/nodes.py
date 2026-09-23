@@ -1,0 +1,104 @@
+from typing import cast
+from drf_spectacular.utils import extend_schema
+
+from rest_framework import exceptions, status
+from rest_framework.generics import (
+    ListCreateAPIView,
+    RetrieveAPIView,
+    DestroyAPIView,
+)
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.utils.serializer_helpers import ReturnDict
+from rest_framework.views import APIView
+
+from zane_api.permissions import IsInstanceOwner
+from zane_api.views.base import DefaultPageNumberPagination, EMPTY_PAGINATED_RESPONSE
+
+from swarm.models import SSHKey, SwarmNode
+from swarm.serializers import (
+    CreateSSHKeyRequestSerializer,
+    SSHKeySerializer,
+    SwarmNodeSerializer,
+)
+
+
+class SwarmNodeListAPIView(ListCreateAPIView):
+    permission_classes = [IsInstanceOwner]
+    serializer_class = SwarmNodeSerializer
+    queryset = SwarmNode.objects.all().order_by("hostname").prefetch_related("ssh_keys")
+    pagination_class = DefaultPageNumberPagination
+
+    @extend_schema(
+        summary="Add new Swarm node to ZaneOps cluster",
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="List all swarm nodes in ZaneOps installation",
+    )
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except exceptions.NotFound as e:
+            if "Invalid page" in str(e.detail):
+                return Response(EMPTY_PAGINATED_RESPONSE)
+            raise e
+
+
+class SwarmNodeDetailsAPIView(RetrieveAPIView):
+    permission_classes = [IsInstanceOwner]
+    serializer_class = SwarmNodeSerializer
+    queryset = SwarmNode.objects.prefetch_related("ssh_keys").all()
+    lookup_field = "id"
+
+
+class SwarmNodeSSHKeysAPIView(APIView):
+    permission_classes = [IsInstanceOwner]
+    serializer_class = SSHKeySerializer
+
+    @extend_schema(
+        request=CreateSSHKeyRequestSerializer,
+        responses={201: SSHKeySerializer},
+        operation_id="createSwarmNodeSSHKey",
+        summary="Create a new SSH key attached to this swarm node",
+    )
+    def post(self, request: Request, id: str):
+        try:
+            node = SwarmNode.objects.get(id=id)
+        except SwarmNode.DoesNotExist:
+            raise exceptions.NotFound(f"A server with the id `{id}` does not exist")
+
+        form = CreateSSHKeyRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+
+        data = cast(ReturnDict, form.data)
+        public_key, private_key = SSHKey.create_key_pair()
+        new_key = SSHKey.objects.create(
+            node=node,
+            user=data["user"],
+            name=data["name"],
+            public_key=public_key,
+            private_key=private_key,
+            fingerprint=SSHKey.generate_fingerprint(public_key),
+        )
+
+        response = SSHKeySerializer(new_key)
+        return Response(response.data, status=status.HTTP_201_CREATED)
+
+
+class SwarmNodeSSHKeyDetailsAPIView(DestroyAPIView):
+    permission_classes = [IsInstanceOwner]
+    serializer_class = SSHKeySerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "key_id"
+
+    def get_queryset(self):  # type: ignore
+        id = self.kwargs["id"]
+        try:
+            node = SwarmNode.objects.get(id=id)
+        except SwarmNode.DoesNotExist:
+            raise exceptions.NotFound(f"A server with the id `{id}` does not exist")
+
+        return SSHKey.objects.filter(node=node)

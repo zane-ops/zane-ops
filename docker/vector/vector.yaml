@@ -1,0 +1,27 @@
+# Reads container logs directly via the Docker Engine API over the local
+# docker.sock which also carries each container's labels for free.
+
+sources:
+  docker_logs:
+    type: docker_logs
+    include_labels:
+      - "zane.logs=true"
+
+sinks:
+  zane_api:
+    type: http
+    inputs:
+      - docker_logs
+    uri: http://${API_HOST}/api/logs/ingest
+    encoding:
+      codec: json
+    batch:
+      max_events: 500
+      # Comfortably under Django's default DATA_UPLOAD_MAX_MEMORY_SIZE (2.5MB)
+      # so a burst of noisy containers flushes early instead of getting the
+      # whole batch rejected.
+      max_bytes: 500000 # a little under 500 KB
+      timeout_secs: 5
+    request:
+      headers:
+        Authorization: Internal ${DJANGO_SECRET_KEY}

@@ -3,15 +3,25 @@ x-backend-vars: &env-vars
   DB_HOST: zane.db
   DB_PORT: 5432
   CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
-  ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
+  ZANE_APP_DIRECTORY: /var/www/zaneops
   TEMPORALIO_SERVER_URL: zane.temporal:7233
   LOKI_HOST: http://zane.loki:3100
+  ROOT_DOMAIN: ${ROOT_DOMAIN:-127-0-0-1.sslip.io}
   ZANE_APP_DOMAIN: ${ZANE_APP_DOMAIN:-127-0-0-1.sslip.io}
   # the operator sets `MAXMIND_DB_HOST_PATH` (path of the DB on the host), we mount it at
   # a fixed path in the container and tell django about it.
   MAXMIND_DB_PATH: /code/GeoLite2-Country.mmdb
+  ZANE_HTTP_MODE: ${MODE:-http}
 
 services:
+  zane-portainer:
+    image: portainer/portainer-ce:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
+    ports:
+      - "9000:9000"
+
   zane-loki:
     image: grafana/loki:3.4
     ports:
@@ -71,43 +81,6 @@ services:
     networks:
       - zane
 
-  zane-proxy-test:
-    image: ghcr.io/zane-ops/proxy:canary
-    command: caddy run --resume
-    ports:
-      - "2020:2020"
-    environment:
-      CADDY_ADMIN: 0.0.0.0:2020
-  zane-temporal-server:
-    entrypoint: ["/etc/temporal/entrypoint.sh"]
-    environment:
-      - DB=postgres12
-      - DB_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PWD=password
-      - POSTGRES_SEEDS=zane.db
-      - SKIP_SCHEMA_SETUP=false
-      - SKIP_DB_SETUP=false
-      - SERVICES=history,matching,frontend,worker
-      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
-      - BIND_ON_IP=0.0.0.0
-    image: temporalio/auto-setup:1.24.2
-    volumes:
-      - ./temporalio/config/dynamicconfig:/etc/temporal/config/dynamicconfig/
-      - ./temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml
-      - ./temporalio/entrypoint.sh:/etc/temporal/entrypoint.sh
-    networks:
-      zane:
-        aliases:
-          - zane.temporal
-    ports:
-      - 7233:7233
-    deploy:
-      labels:
-        zane.role: "temporal"
-    depends_on:
-      - zane-db
-    restart: always
   zane-api:
     build:
       context: ../backend
@@ -127,8 +100,6 @@ services:
       - ${MAXMIND_DB_HOST_PATH:-/dev/null}:/code/GeoLite2-Country.mmdb
     depends_on:
       - zane-db
-      - zane-redis
-      - zane-temporal-server
       - zane-tempo
     restart: always
     environment:
@@ -164,10 +135,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - docker-buildx-store:/root/.docker/buildx
       - docker-data:/root/.docker
-    depends_on:
-      - zane-db
-      - zane-redis
-      - zane-temporal-server
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
@@ -187,27 +154,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - docker-buildx-store:/root/.docker/buildx
       - docker-data:/root/.docker
-    depends_on:
-      - zane-db
-      - zane-redis
-      - zane-temporal-server
     environment:
       <<: *env-vars
       BACKEND_COMPONENT: WORKER
       TEMPORALIO_WORKER_TASK_QUEUE: schedule-task-queue
     networks:
       - zane
-  zane-redis:
-    image: valkey/valkey:7.2.5-alpine
-    container_name: zane-redis
-    volumes:
-      - redis-data:/data
-    ports:
-      - "6381:6379"
-    networks:
-      zane:
-        aliases:
-          - zane.valkey
   zane-db:
     image: postgres:16-alpine
     container_name: zane-db
@@ -224,6 +176,16 @@ services:
       zane:
         aliases:
           - zane.db
+  zane-valkey:
+    image: valkey/valkey:9-alpine
+    volumes:
+      - valkey-data:/data
+    ports:
+      - "6381:6379"
+    networks:
+      zane:
+        aliases:
+          - zane.valkey
   zane-redis-gui:
     image: redis/redisinsight
     container_name: zane-redis-gui
@@ -235,23 +197,7 @@ services:
       - redisinsight:/data
     networks:
       - zane
-  zane-fluentd:
-    image: fluentd:v1.16.2-1.1
-    volumes:
-      - "./fluentd/fluent.conf:/fluentd/etc/fluent.conf"
-      - "$HOME/.fluentd/:/var/fluentd/"
-    networks:
-      zane:
-        aliases:
-          - zane.fluentd
-    environment:
-      API_HOST: host.docker.internal:8000
-      DJANGO_SECRET_KEY: "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx" # default value set in `settings.py`
-    deploy:
-      mode: global
   zane-temporal-ui:
-    depends_on:
-      - zane-temporal-server
     environment:
       - TEMPORAL_ADDRESS=zane.temporal:7233
       - TEMPORAL_CORS_ORIGINS=http://localhost:3000
@@ -262,7 +208,6 @@ services:
       - 8082:8080
 volumes:
   db-data:
-  redis-data:
   redisinsight:
   caddy-data:
   docker-buildx-store:
@@ -271,6 +216,8 @@ volumes:
   grafana-data:
   tempo-data:
   drizzle-gateway-data:
+  portainer-data:
+  valkey-data:
 networks:
   zane:
     external: true

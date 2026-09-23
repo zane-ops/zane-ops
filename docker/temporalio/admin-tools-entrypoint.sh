@@ -22,10 +22,10 @@ set -eux -o pipefail
 : "${MYSQL_PWD:=}"
 : "${MYSQL_TX_ISOLATION_COMPAT:=false}"
 
-: "${POSTGRES_SEEDS:=}"
-: "${POSTGRES_SEEDS_CREATE:=}"
-: "${POSTGRES_USER:=}"
-: "${POSTGRES_PWD:=}"
+# Validate required environment variables
+: "${POSTGRES_SEEDS:?ERROR: POSTGRES_SEEDS environment variable is required}"
+: "${POSTGRES_USER:?ERROR: POSTGRES_USER environment variable is required}"
+: "${POSTGRES_PWD:?ERROR: POSTGRES_PWD environment variable is required}"
 
 
 # Server setup
@@ -37,33 +37,14 @@ set -eux -o pipefail
 
 : "${SKIP_ADD_CUSTOM_SEARCH_ATTRIBUTES:=false}"
 
-# === Helper functions ===
-
-die() {
-    echo "$*" 1>&2
-    exit 1
-}
 
 # === Main database functions ===
 
-validate_db_env() {
-    if [[ -z ${POSTGRES_SEEDS} ]]; then
-        die "POSTGRES_SEEDS env must be set if DB is ${DB}."
-    fi
-}
-
-
 wait_for_postgres() {
-    until nc -z "${POSTGRES_SEEDS%%,*}" "${DB_PORT}"; do
-        echo 'Waiting for PostgreSQL to startup.'
-        sleep 1
-    done
-
-    echo 'PostgreSQL started.'
-}
-
-wait_for_db() {
-    wait_for_postgres
+    echo 'Starting PostgreSQL schema setup...'
+    echo 'Waiting for PostgreSQL port to be available...'
+    nc -z -w 10 ${POSTGRES_SEEDS} ${DB_PORT:-5432}
+    echo 'PostgreSQL port is available'
 }
 
 
@@ -92,9 +73,6 @@ setup_postgres_schema() {
     temporal-sql-tool --plugin ${DB} --ep "${POSTGRES_SEEDS}" -u "${POSTGRES_USER}" -p "${DB_PORT}" --db "${VISIBILITY_DBNAME}" update-schema -d "${VISIBILITY_SCHEMA_DIR}"
 }
 
-setup_schema() {
-     setup_postgres_schema
-}
 
 # === Server setup ===
 
@@ -150,10 +128,7 @@ setup_server(){
 
 # === Main ===
 
-if [[ ${SKIP_SCHEMA_SETUP} != true ]]; then
-    validate_db_env
-    wait_for_db
-    setup_schema
-fi
+wait_for_postgres
+setup_postgres_schema
 
 setup_server

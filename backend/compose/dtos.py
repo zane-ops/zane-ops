@@ -182,6 +182,7 @@ class ComposeServiceSpec:
     environment: Dict[str, ComposeEnvVarSpec] = field(default_factory=dict)
     networks: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     deploy: Dict[str, Any] = field(default_factory=dict)
+    labels: Dict[str, str] | None = None
     logging: Optional[Dict[str, Any]] = None
     volumes: list[ComposeVolumeMountSpec] = field(default_factory=list)
     depends_on: list[str] = field(default_factory=list)
@@ -257,6 +258,7 @@ class ComposeServiceSpec:
                 ComposeVolumeMountSpec.from_docker_compose_volume(volume)
                 for volume in data.get("volumes", [])
             ],
+            labels=data.get("labels", {}),
             configs=[
                 ComposeServiceConfigSpec.from_dict(config)
                 for config in data.get("configs", [])
@@ -272,7 +274,6 @@ class ComposeServiceSpec:
             "image": self.image,
             "networks": self.networks,
             "deploy": self.deploy,
-            "logging": self.logging,
         }
 
         if len(self.volumes) > 0:
@@ -284,8 +285,14 @@ class ComposeServiceSpec:
         if len(self.depends_on) > 0:
             spec_dict.update(depends_on=self.depends_on)
 
+        if self.logging is not None:
+            spec_dict.update(logging=self.logging)
+
         if self.healthcheck is not None:
             spec_dict.update(healthcheck=self.healthcheck)
+
+        if self.labels is not None:
+            spec_dict.update(labels=self.labels)
 
         env_dict = {}
         for env_spec in self.environment.values():

@@ -1,18 +1,34 @@
+x-internal-envs: &internal-envs
+  REDIS_HOST: zane.valkey
+  REDIS_PORT: 6379
+  API_HOST: zane.api.zaneops.internal:8000
+  DJANGO_SECRET_KEY: "django-insecure-^@$$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx" # default value set in `settings.py`
+
 services:
-  proxy:
-    image: ghcr.io/zane-ops/proxy:canary
-    command: caddy run --resume
-    logging:
-      driver: "fluentd"
-      options:
-        mode: "non-blocking"
-        fluentd-address: "unix://$HOME/.fluentd/fluentd.sock"
-        fluentd-async: "true"
-        fluentd-max-retries: 10
-        fluentd-sub-second-precision: "true"
-        tag: '{"service_id":"zane.proxy"}'
+  zane-vector:
+    image: timberio/vector:0.58.0-alpine
+    configs:
+      - source: vector.yaml
+        target: /etc/vector/vector.yaml
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - zane
+    environment:
+      <<: *internal-envs
+      # Vector 0.57+ disabled ${VAR} config interpolation by default (security
+      # hardening against env leaking through templated fields) — needed for
+      # vector.yaml's ${API_HOST}/${DJANGO_SECRET_KEY}.
+      VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION: "true"
     deploy:
-      replicas: 1
+      mode: global
+  zane-proxy:
+    image: ghcr.io/fredkiss3/caddy-cloudflare:2.11.4-alpine
+    command: caddy run  --resume  --config /etc/caddy/config.json
+    depends_on:
+      - zane-valkey
+    deploy:
+      mode: global
       update_config:
         parallelism: 1
         delay: 5s
@@ -20,11 +36,13 @@ services:
         failure_action: rollback
       restart_policy:
         condition: any
-      placement:
-        constraints:
-          - node.role==manager
       labels:
         zane.role: "proxy"
+    # `deploy.labels` above is service-level only (Swarm doesn't copy it down
+    # to the container)
+    labels:
+      zane.logs: "true"
+      zane.role: "proxy"
     ports:
       - target: 80
         published: 80
@@ -35,17 +53,57 @@ services:
         protocol: tcp
         mode: host
       - "2019:2019"
+    configs:
+      - source: config.json
+        target: /etc/caddy/config.json
     volumes:
-      - caddy-data:/data
-      - caddy-config:/config
+      # - ./proxy/default-caddy-config.json:/etc/caddy/config.json:ro
+      - caddy-config-store:/config
     environment:
+      <<: *internal-envs
       CADDY_ADMIN: 0.0.0.0:2019
     networks:
       zane:
         aliases:
           - zane.proxy
+  zane-temporal-server:
+    image: temporalio/server:1.32.0
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=password
+      - POSTGRES_SEEDS=zane.db
+      - SERVICES=history,matching,frontend,worker
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - BIND_ON_IP=0.0.0.0
+    volumes:
+      - ./temporalio/config/dynamicconfig:/etc/temporal/config/dynamicconfig/
+      - ./temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml
+    networks:
+      zane:
+        aliases:
+          - zane.temporal
+    ports:
+      - 7233:7233
+    depends_on:
+      - temporal-admin-tools
+    deploy:
+      replicas: 1
+      labels:
+        zane.role: "temporal"
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.labels.zane.main-server==true
   temporal-admin-tools:
-    image: temporalio/admin-tools:1.24.2-tctl-1.18.1-cli-1.0.0
+    image: temporalio/admin-tools:1.32.0
     environment:
       - DB=postgres12
       - DB_PORT=5432
@@ -61,19 +119,31 @@ services:
       - TEMPORAL_CLI_ADDRESS=zane.temporal:7233
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
       - BIND_ON_IP=0.0.0.0
-    volumes:
-      - "./temporalio/admin-tools-entrypoint.sh:/etc/temporal/setup.sh"
-    entrypoint:
-      - /etc/temporal/setup.sh
+    entrypoint: ["/bin/sh"]
+    command: /scripts/setup-postgres.sh
+    configs:
+      - source: admin-tools-entrypoint.sh
+        target: /scripts/setup-postgres.sh
     deploy:
       mode: replicated-job
       restart_policy:
         condition: on-failure
+      placement:
+        constraints:
+          - node.labels.zane.main-server==true
     networks:
       - zane
 volumes:
-  caddy-data:
-  caddy-config:
+  caddy-config-store:
+
+configs:
+  config.json:
+    file: ./proxy/default-caddy-config.json
+  vector.yaml:
+    file: ./vector/vector.yaml
+  admin-tools-entrypoint.sh:
+    file: ./temporalio/admin-tools-entrypoint.sh
+
 networks:
   zane:
     external: true

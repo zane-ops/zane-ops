@@ -14951,179 +14951,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/Settings'
           description: ''
-  /api/shell/ssh-keys/:
+  /api/swarm/nodes/:
     get:
-      operationId: getSSHKeyList
-      summary: List all ssh keys
-      tags:
-      - shell
-      security:
-      - cookieAuth: []
-      - workspaceApiToken: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetSSHKeyListErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse403'
-              examples:
-                PermissionDenied:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: permission_denied
-                      detail: You do not have permission to perform this action.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/SSHKey'
-          description: ''
-    post:
-      operationId: createSSHKey
-      summary: Create a new SSH key
-      tags:
-      - shell
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateSSHKeyRequestRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/CreateSSHKeyRequestRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/CreateSSHKeyRequestRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - workspaceApiToken: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateSSHKeyErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse403'
-              examples:
-                PermissionDenied:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: permission_denied
-                      detail: You do not have permission to perform this action.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
-          description: ''
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SSHKey'
-          description: ''
-  /api/shell/ssh-keys/{slug}/:
-    get:
-      operationId: shell_ssh_keys_retrieve
+      operationId: swarm_nodes_list
+      summary: List all swarm nodes in ZaneOps installation
       parameters:
-      - in: path
-        name: slug
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
         schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
+          type: integer
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
       tags:
-      - shell
+      - swarm
       security:
       - cookieAuth: []
       - workspaceApiToken: []
@@ -15132,7 +14978,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ShellSshKeysRetrieveErrorResponse400'
+                $ref: '#/components/schemas/SwarmNodesListErrorResponse400'
           description: ''
         '401':
           content:
@@ -15201,19 +15047,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SSHKey'
+                $ref: '#/components/schemas/PaginatedSwarmNodeList'
           description: ''
-    delete:
-      operationId: shell_ssh_keys_destroy
-      parameters:
-      - in: path
-        name: slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
+    post:
+      operationId: swarm_nodes_create
+      summary: Add new Swarm node to ZaneOps cluster
       tags:
-      - shell
+      - swarm
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SwarmNodeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SwarmNodeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SwarmNodeRequest'
+        required: true
       security:
       - cookieAuth: []
       - workspaceApiToken: []
@@ -15222,7 +15074,299 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ShellSshKeysDestroyErrorResponse400'
+                $ref: '#/components/schemas/SwarmNodesCreateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwarmNode'
+          description: ''
+  /api/swarm/nodes/{id}/:
+    get:
+      operationId: swarm_nodes_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - swarm
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwarmNodesRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwarmNode'
+          description: ''
+  /api/swarm/nodes/{id}/ssh-keys/:
+    post:
+      operationId: createSwarmNodeSSHKey
+      summary: Create a new SSH key attached to this swarm node
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - swarm
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSSHKeyRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateSSHKeyRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateSSHKeyRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateSwarmNodeSSHKeyErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SSHKey'
+          description: ''
+  /api/swarm/nodes/{id}/ssh-keys/{key_id}/:
+    delete:
+      operationId: swarm_nodes_ssh_keys_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: key_id
+        schema:
+          type: string
+          pattern: ^[0-9]+$
+        required: true
+      tags:
+      - swarm
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwarmNodesSshKeysDestroyErrorResponse400'
           description: ''
         '401':
           content:
@@ -21248,7 +21392,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           minimum: 0
           maximum: 32767
         accessible_projects:
@@ -21280,7 +21424,7 @@ components:
       properties:
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           minimum: 0
           maximum: 32767
         created_at:
@@ -22804,27 +22948,72 @@ components:
       required:
       - errors
       - type
-    CreateSSHKeyError:
+    CreateSSHKeyRequestRequest:
+      type: object
+      properties:
+        user:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+      required:
+      - name
+      - user
+    CreateSwarmNodeSSHKeyError:
       oneOf:
-      - $ref: '#/components/schemas/CreateSSHKeyNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/CreateSSHKeyUserErrorComponent'
-      - $ref: '#/components/schemas/CreateSSHKeySlugErrorComponent'
+      - $ref: '#/components/schemas/CreateSwarmNodeSSHKeyNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateSwarmNodeSSHKeyUserErrorComponent'
+      - $ref: '#/components/schemas/CreateSwarmNodeSSHKeyNameErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          non_field_errors: '#/components/schemas/CreateSSHKeyNonFieldErrorsErrorComponent'
-          user: '#/components/schemas/CreateSSHKeyUserErrorComponent'
-          slug: '#/components/schemas/CreateSSHKeySlugErrorComponent'
-    CreateSSHKeyErrorResponse400:
+          non_field_errors: '#/components/schemas/CreateSwarmNodeSSHKeyNonFieldErrorsErrorComponent'
+          user: '#/components/schemas/CreateSwarmNodeSSHKeyUserErrorComponent'
+          name: '#/components/schemas/CreateSwarmNodeSSHKeyNameErrorComponent'
+    CreateSwarmNodeSSHKeyErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/CreateSSHKeyValidationError'
+      - $ref: '#/components/schemas/CreateSwarmNodeSSHKeyValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/CreateSSHKeyValidationError'
+          validation_error: '#/components/schemas/CreateSwarmNodeSSHKeyValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    CreateSSHKeyNonFieldErrorsErrorComponent:
+    CreateSwarmNodeSSHKeyNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateSwarmNodeSSHKeyNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -22843,50 +23032,7 @@ components:
       - attr
       - code
       - detail
-    CreateSSHKeyRequestRequest:
-      type: object
-      properties:
-        user:
-          type: string
-          minLength: 1
-        slug:
-          type: string
-          minLength: 1
-          pattern: ^[-a-zA-Z0-9_]+$
-      required:
-      - slug
-      - user
-    CreateSSHKeySlugErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - slug
-          type: string
-          description: '* `slug` - slug'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateSSHKeyUserErrorComponent:
+    CreateSwarmNodeSSHKeyUserErrorComponent:
       type: object
       properties:
         attr:
@@ -22916,7 +23062,7 @@ components:
       - attr
       - code
       - detail
-    CreateSSHKeyValidationError:
+    CreateSwarmNodeSSHKeyValidationError:
       type: object
       properties:
         type:
@@ -22924,7 +23070,7 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/CreateSSHKeyError'
+            $ref: '#/components/schemas/CreateSwarmNodeSSHKeyError'
       required:
       - errors
       - type
@@ -23075,7 +23221,7 @@ components:
           minLength: 1
           maxLength: 255
         role:
-          $ref: '#/components/schemas/RoleEnum'
+          $ref: '#/components/schemas/WorkspaceRoleEnum'
         scopes:
           type: array
           items:
@@ -24912,13 +25058,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    GetSSHKeyListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     GetServerResouceLimitsErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -25985,7 +26124,7 @@ components:
           default: 3
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           default: 10
         username:
           type: string
@@ -26905,6 +27044,31 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ServiceDeployment'
+    PaginatedSwarmNodeList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SwarmNode'
     PaginatedWorkspaceInvitationList:
       type: object
       required:
@@ -33164,18 +33328,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    RoleEnum:
-      enum:
-      - 10
-      - 30
-      - 40
-      - 50
-      type: integer
-      description: |-
-        * `10` - Viewer
-        * `30` - Member
-        * `40` - Admin
-        * `50` - Owner
     RoleNameEnum:
       enum:
       - Owner
@@ -33345,10 +33497,9 @@ components:
         public_key:
           type: string
           readOnly: true
-        slug:
+        name:
           type: string
           maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
         fingerprint:
           type: string
           nullable: true
@@ -33364,9 +33515,27 @@ components:
       - created_at
       - fingerprint
       - id
+      - name
       - public_key
-      - slug
       - updated_at
+      - user
+    SSHKeyRequest:
+      type: object
+      properties:
+        user:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        fingerprint:
+          type: string
+          nullable: true
+          minLength: 1
+      required:
+      - name
       - user
     ScopesEnum:
       enum:
@@ -34142,20 +34311,6 @@ components:
       required:
       - container_path
       - volume_id
-    ShellSshKeysDestroyErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ShellSshKeysRetrieveErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     SimpleComposeStackService:
       type: object
       properties:
@@ -34494,6 +34649,337 @@ components:
       description: |-
         * `LOCAL` - Local Disk
         * `S3` - S3
+    SwarmNode:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+          maxLength: 255
+        hostname:
+          type: string
+          readOnly: true
+          nullable: true
+        role:
+          $ref: '#/components/schemas/SwarmRoleEnum'
+        private_ip:
+          type: string
+        ssh_port:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SwarmNodeStatusEnum'
+          readOnly: true
+        last_status_update:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        docker_version:
+          type: string
+          readOnly: true
+          nullable: true
+        is_build_server:
+          type: boolean
+        is_app_server:
+          type: boolean
+        is_initial_install_server:
+          type: boolean
+          readOnly: true
+        cpus:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          readOnly: true
+          nullable: true
+        memory_bytes:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        ssh_keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/SSHKey'
+          readOnly: true
+      required:
+      - cpus
+      - created_at
+      - docker_version
+      - hostname
+      - id
+      - is_app_server
+      - is_build_server
+      - is_initial_install_server
+      - last_status_update
+      - memory_bytes
+      - private_ip
+      - role
+      - ssh_keys
+      - ssh_port
+      - status
+      - updated_at
+    SwarmNodeRequest:
+      type: object
+      properties:
+        role:
+          $ref: '#/components/schemas/SwarmRoleEnum'
+        private_ip:
+          type: string
+          minLength: 1
+        ssh_port:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_build_server:
+          type: boolean
+        is_app_server:
+          type: boolean
+      required:
+      - private_ip
+      - role
+    SwarmNodeStatusEnum:
+      enum:
+      - CREATED
+      - PROVISIONING
+      - READY
+      - DOWN
+      - DRAINED
+      - FAILED
+      type: string
+      description: |-
+        * `CREATED` - Created
+        * `PROVISIONING` - Provisioning
+        * `READY` - Ready
+        * `DOWN` - Down
+        * `DRAINED` - Drained
+        * `FAILED` - Failed
+    SwarmNodesCreateError:
+      oneOf:
+      - $ref: '#/components/schemas/SwarmNodesCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/SwarmNodesCreateRoleErrorComponent'
+      - $ref: '#/components/schemas/SwarmNodesCreatePrivateIpErrorComponent'
+      - $ref: '#/components/schemas/SwarmNodesCreateSshPortErrorComponent'
+      - $ref: '#/components/schemas/SwarmNodesCreateIsBuildServerErrorComponent'
+      - $ref: '#/components/schemas/SwarmNodesCreateIsAppServerErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/SwarmNodesCreateNonFieldErrorsErrorComponent'
+          role: '#/components/schemas/SwarmNodesCreateRoleErrorComponent'
+          private_ip: '#/components/schemas/SwarmNodesCreatePrivateIpErrorComponent'
+          ssh_port: '#/components/schemas/SwarmNodesCreateSshPortErrorComponent'
+          is_build_server: '#/components/schemas/SwarmNodesCreateIsBuildServerErrorComponent'
+          is_app_server: '#/components/schemas/SwarmNodesCreateIsAppServerErrorComponent'
+    SwarmNodesCreateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/SwarmNodesCreateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/SwarmNodesCreateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    SwarmNodesCreateIsAppServerErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_app_server
+          type: string
+          description: '* `is_app_server` - is_app_server'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    SwarmNodesCreateIsBuildServerErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_build_server
+          type: string
+          description: '* `is_build_server` - is_build_server'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    SwarmNodesCreateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    SwarmNodesCreatePrivateIpErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - private_ip
+          type: string
+          description: '* `private_ip` - private_ip'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    SwarmNodesCreateRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - role
+          type: string
+          description: '* `role` - role'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    SwarmNodesCreateSshPortErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ssh_port
+          type: string
+          description: '* `ssh_port` - ssh_port'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    SwarmNodesCreateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/SwarmNodesCreateError'
+      required:
+      - errors
+      - type
+    SwarmNodesListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    SwarmNodesRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    SwarmNodesSshKeysDestroyErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    SwarmRoleEnum:
+      enum:
+      - MANAGER
+      - WORKER
+      type: string
+      description: |-
+        * `MANAGER` - Manager
+        * `WORKER` - Worker
     SwitchWorkspaceError:
       oneOf:
       - $ref: '#/components/schemas/SwitchWorkspaceNonFieldErrorsErrorComponent'
@@ -36699,7 +37185,7 @@ components:
           maxLength: 255
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           readOnly: true
           minimum: 0
           maximum: 32767
@@ -36777,7 +37263,7 @@ components:
           maxLength: 255
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           readOnly: true
           minimum: 0
           maximum: 32767
@@ -36882,7 +37368,7 @@ components:
       type: object
       properties:
         role:
-          $ref: '#/components/schemas/RoleEnum'
+          $ref: '#/components/schemas/WorkspaceRoleEnum'
         accessible_project_ids:
           type: array
           items:
@@ -36908,7 +37394,7 @@ components:
           format: date-time
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           minimum: 0
           maximum: 32767
         token:
@@ -36943,7 +37429,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           minimum: 0
           maximum: 32767
         token:
@@ -37011,7 +37497,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           minimum: 0
           maximum: 32767
         accessible_projects:
@@ -37132,7 +37618,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/WorkspaceRoleEnum'
           minimum: 0
           maximum: 32767
         workspace:
@@ -37194,6 +37680,18 @@ components:
           type: boolean
       required:
       - success
+    WorkspaceRoleEnum:
+      enum:
+      - 10
+      - 30
+      - 40
+      - 50
+      type: integer
+      description: |-
+        * `10` - Viewer
+        * `30` - Member
+        * `40` - Admin
+        * `50` - Owner
     WorkspaceTokensPartialUpdateError:
       oneOf:
       - $ref: '#/components/schemas/WorkspaceTokensPartialUpdateNonFieldErrorsErrorComponent'

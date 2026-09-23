@@ -22,7 +22,7 @@ import { cn, getBuildName, hasMinRole } from "~/lib/utils";
 import { CommandBar } from "~/components/commandbar/commandbar";
 import { useCommandBarActionGroups } from "~/components/commandbar/commandbar-actions";
 import { MAIN_NAV_GROUPS } from "~/components/commandbar/commandbar-nav-items";
-import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
+// import { ZaneUpdateNotifier } from "~/components/zane-update-notifier";
 import { BUILD_EDITION } from "~/lib/constants";
 import { createDevLogger } from "~/lib/logger";
 import { getQueryClient } from "~/lib/query-client";
@@ -89,7 +89,7 @@ export default function MainLayout({ loaderData }: Route.ComponentProps) {
 
       <Footer />
 
-      {hasMinRole(user, "ServerAdmin") && <ZaneUpdateNotifier />}
+      {/* {hasMinRole(user, "ServerAdmin") && <ZaneUpdateNotifier />} */}
     </div>
   );
 }

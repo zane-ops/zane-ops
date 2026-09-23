@@ -12,8 +12,6 @@ with workflow.unsafe.imports_passed_through():
         create_docker_volume_for_registry,
         pull_registry_image,
         cleanup_docker_registry_service_resources,
-        remove_service_registry_url,
-        upsert_registry_url_in_proxy,
         delete_previous_docker_configs_for_registry,
         update_build_registry_swarm_service,
         wait_for_registry_service_to_be_updated,
@@ -30,7 +28,6 @@ from ..shared import (
     SwarmRegistryServiceDetails,
     DeleteSwarmRegistryServiceDetails,
     UpdateRegistryPayload,
-    DeleteSwarmRegistryDomainDetails,
     RegistryHealthCheckResult,
 )
 
@@ -45,15 +42,6 @@ class DestroyBuildRegistryWorkflow:
     @workflow.run
     async def run(self, payload: DeleteSwarmRegistryServiceDetails):
         await asyncio.gather(
-            workflow.execute_activity(
-                remove_service_registry_url,
-                DeleteSwarmRegistryDomainDetails(
-                    service_alias=payload.service_alias,
-                    domain=payload.domain,
-                ),
-                start_to_close_timeout=timedelta(minutes=5),
-                retry_policy=self.retry_policy,
-            ),
             workflow.execute_activity(
                 cleanup_docker_registry_service_resources,
                 payload,
@@ -119,13 +107,6 @@ class DeployBuildRegistryWorkflow:
             await workflow.execute_activity(
                 create_build_registry_swarm_service,
                 swarm_details,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-
-            await workflow.execute_activity(
-                upsert_registry_url_in_proxy,
-                payload,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
@@ -206,13 +187,6 @@ class UpdateBuildRegistryWorkflow:
             await workflow.execute_activity(
                 update_build_registry_swarm_service,
                 swarm_details,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-
-            await workflow.execute_activity(
-                upsert_registry_url_in_proxy,
-                payload.current,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )

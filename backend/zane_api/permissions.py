@@ -161,7 +161,7 @@ def build_token_access(token: WorkspaceApiToken) -> EffectiveAccess | None:
 
 class InternalZaneAppPermission(BasePermission):
     """
-    Allow only internal zaneops apps like fluentd.
+    Allow only internal zaneops apps.
     This is so that critical internal endpoints are still secure even though they are open to the internet.
     """
 
@@ -171,12 +171,10 @@ class InternalZaneAppPermission(BasePermission):
         if len(auth) != 2:
             return False
 
-        _type, credentials = auth
-        if _type != "Basic":
+        auth_type, key = auth
+        if auth_type != "Internal":
             return False
-
-        credentials = base64.b64decode(credentials).decode("utf-8")
-        return credentials == f"zaneops:{settings.SECRET_KEY}"
+        return key == settings.SECRET_KEY
 
 
 class HasWorkspace(BasePermission):
