@@ -16,7 +16,7 @@ websocket_urlpatterns = [
         consumers.ComposeStackTerminalConsumer.as_asgi(),
     ),
     re_path(
-        r"ws/server-ssh/(?P<node_id>[a-zA-Z0-9-_]+)/(?P<key_slug>[-_\w]+)/?$",
+        r"ws/server-ssh/(?P<node_id>[a-zA-Z0-9-_]+)/(?P<key_id>[0-9]+)/?$",
         consumers.ServerTerminalConsumer.as_asgi(),
     ),
 ]

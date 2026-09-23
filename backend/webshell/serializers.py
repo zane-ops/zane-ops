@@ -1,36 +1,4 @@
-import django_filters
 from rest_framework import serializers
-from . import models
-from .validators import validate_unix_username
-
-
-class SSHKeyFilterSet(django_filters.FilterSet):
-    user = django_filters.CharFilter(lookup_expr="icontains")
-
-    class Meta:
-        model = models.SSHKey
-        fields = ["user"]
-
-
-class CreateSSHKeyRequestSerializer(serializers.Serializer):
-    user = serializers.CharField(validators=[validate_unix_username])
-    slug = serializers.SlugField()
-
-
-class SSHKeySerializer(serializers.ModelSerializer):
-    public_key = serializers.CharField(read_only=True)
-
-    class Meta:
-        model = models.SSHKey
-        fields = [
-            "id",
-            "user",
-            "public_key",
-            "slug",
-            "fingerprint",
-            "updated_at",
-            "created_at",
-        ]
 
 
 class ContainerTerminalQuerySerializer(serializers.Serializer):

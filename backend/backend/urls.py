@@ -38,7 +38,6 @@ if settings.DEBUG or settings.ENABLE_API_SCHEMA:
 
 urlpatterns += [
     path("api/registries/", include("container_registry.urls")),
-    path("api/shell/", include("webshell.urls")),
     path("api/connectors/", include("git_connectors.urls")),
     path("api/compose/", include("compose.urls")),
     path("api/console/", include("console.urls")),

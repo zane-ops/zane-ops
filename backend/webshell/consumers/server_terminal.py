@@ -18,8 +18,7 @@ from ..serializers import (
     DeploymentTerminalResizeSerializer,
 )
 from webshell.exceptions import log_consumer_exceptions
-from webshell.models import SSHKey
-from swarm.models import SwarmNode
+from swarm.models import SSHKey, SwarmNode
 
 from django.conf import settings
 import tempfile
@@ -42,7 +41,7 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
         self.user: AbstractUser = self.scope["user"]  # type: ignore
         kwargs = self.scope["url_route"]["kwargs"]  # type: ignore
 
-        key_slug = kwargs["key_slug"]
+        key_id = kwargs["key_id"]
         node_id = kwargs["node_id"]
 
         await self.accept()
@@ -54,8 +53,8 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
             )
 
         try:
-            self.ssh_key = await SSHKey.objects.aget(slug=key_slug)
             self.node = await SwarmNode.objects.aget(id=node_id)
+            self.ssh_key = await SSHKey.objects.aget(id=key_id, node_id=node_id)
         except SwarmNode.DoesNotExist:
             return await self.send(
                 f"A ZaneOps cluster with the id `{node_id}` does not exist{Colors.ENDC}\n\r",
@@ -63,12 +62,12 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
             )
         except SSHKey.DoesNotExist:
             return await self.send(
-                f"An SSHKey with the slug `{key_slug}` does not exist{Colors.ENDC}\n\r",
+                f"An SSHKey with the id `{key_id}` does not exist{Colors.ENDC}\n\r",
                 close=True,
             )
 
         await self.send(
-            f"Connecting to server `{self.node.hostname}` using key `{self.ssh_key.slug}` \n\r"
+            f"Connecting to server `{self.node.hostname}` using key `{self.ssh_key.name}` \n\r"
         )
 
         print("Creating temp file for private key...")

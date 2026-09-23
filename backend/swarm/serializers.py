@@ -1,6 +1,39 @@
+import django_filters
 from rest_framework import serializers
-from .models import SwarmNode
-from webshell.serializers import SSHKeySerializer
+
+from .models import SSHKey, SwarmNode
+from .validators import validate_unix_username
+
+
+class SSHKeyFilterSet(django_filters.FilterSet):
+    user = django_filters.CharFilter(lookup_expr="icontains")
+
+    class Meta:
+        model = SSHKey
+        fields = ["user"]
+
+
+class CreateSSHKeyRequestSerializer(serializers.Serializer):
+    user = serializers.CharField(validators=[validate_unix_username])
+    name = serializers.CharField(max_length=255)
+    port = serializers.IntegerField(min_value=1, max_value=65_535, default=22)
+
+
+class SSHKeySerializer(serializers.ModelSerializer):
+    public_key = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = SSHKey
+        fields = [
+            "id",
+            "user",
+            "public_key",
+            "name",
+            "fingerprint",
+            "port",
+            "updated_at",
+            "created_at",
+        ]
 
 
 class SwarmNodeSerializer(serializers.ModelSerializer):

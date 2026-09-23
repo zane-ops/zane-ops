@@ -20,4 +20,9 @@ urlpatterns = [
         views.SwarmNodeSSHKeysAPIView.as_view(),
         name="node.ssh_keys",
     ),
+    re_path(
+        r"^nodes/(?P<id>[a-zA-Z0-9_]+)/ssh-keys/(?P<key_id>[0-9]+)/?$",
+        views.SwarmNodeSSHKeyDetailsAPIView.as_view(),
+        name="node.ssh_keys.details",
+    ),
 ]
