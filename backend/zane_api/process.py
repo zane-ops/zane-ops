@@ -30,8 +30,8 @@ async def read_until(stream: asyncio.StreamReader, delimiters: list[bytes]):
     return bytes(buffer)
 
 
-class OutputHandlerFunction(Protocol):
-    async def __call__(self, message: str) -> Any: ...
+class OutputHandlerFunction[T](Protocol):
+    async def __call__(self, message: str) -> T: ...
 
 
 async def default_output_handler(message: str):

@@ -694,6 +694,61 @@ class ProvisionSwarmNodeContext:
 
 
 @dataclass
+class DockerSwarmRemoteManager:
+    Addr: str
+    NodeID: str
+
+
+@dataclass
+class DockerSwarmInfo:
+    NodeID: str
+    NodeAddr: str
+    RemoteManagers: List[DockerSwarmRemoteManager]
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        managers: list[dict] = data["RemoteManagers"]
+
+        return cls(
+            NodeID=data["NodeID"],
+            NodeAddr=data["NodeAddr"],
+            RemoteManagers=[
+                DockerSwarmRemoteManager(
+                    Addr=manager["Addr"],
+                    NodeID=manager["NodeID"],
+                )
+                for manager in managers
+            ],
+        )
+
+
+@dataclass
+class DockerSystemInfo:
+    ServerVersion: str
+    Swarm: DockerSwarmInfo | None
+    NCPU: int
+    MemTotal: int
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        Swarm = data["Swarm"]
+        return cls(
+            ServerVersion=data["ServerVersion"],
+            NCPU=data["NCPU"],
+            MemTotal=data["MemTotal"],
+            Swarm=DockerSwarmInfo.from_dict(Swarm)
+            if Swarm["NodeID"] is not None and len(Swarm["NodeID"].strip()) > 0
+            else None,
+        )
+
+
+@dataclass
+class DockerInstallContext:
+    info: DockerSystemInfo | None
+    ctx: ProvisionSwarmNodeContext
+
+
+@dataclass
 class ComposeStackBuildDetails:
     tmp_build_dir: str
     deployment: ComposeStackDeploymentDetails

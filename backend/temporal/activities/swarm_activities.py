@@ -1,7 +1,8 @@
+import json
 import os
 import shlex
 import shutil
-from typing import Literal
+from typing import Literal, cast
 
 from temporalio import activity, workflow
 import asyncio
@@ -18,21 +19,24 @@ with workflow.unsafe.imports_passed_through():
 
 
 from ..shared import (
+    DockerInstallContext,
+    DockerSystemInfo,
     ProvisionSwarmNodePayload,
     ProvisionSwarmNodeContext,
     SwarmNodeDetails,
 )
 
 
-async def exec_cmd_in_server(
+async def exec_cmd_in_server[T](
     ssh_key_dir: str,
     node: SwarmNodeDetails,
-    cmd: list[str],
-    output_handler: OutputHandlerFunction = default_output_handler,
-):
+    cmd: str,
+    output_handler: OutputHandlerFunction[T] = default_output_handler,
+) -> tuple[int | None, T | None]:
     heartbeat_task = None
     cancel_event = asyncio.Event()
     exit_code: int | None = None
+    result: T | None = None
 
     try:
 
@@ -69,7 +73,7 @@ async def exec_cmd_in_server(
             "-o",
             "ConnectTimeout=5",
             f"root@{node.private_ip}",
-            *cmd,
+            cmd,
         ]
 
         print(
@@ -89,7 +93,8 @@ async def exec_cmd_in_server(
         )
 
         if cmd_task in done_first:
-            exit_code, _ = cmd_task.result()
+            exit_code, raw_result = cmd_task.result()
+            result = cast(T | None, raw_result)
             print("`cmd_task()` finished first")
         else:
             print("cancelling `cmd_task()`")
@@ -101,7 +106,7 @@ async def exec_cmd_in_server(
     finally:
         if heartbeat_task:
             heartbeat_task.cancel()
-    return exit_code
+    return exit_code, result
 
 
 """
@@ -166,37 +171,70 @@ class SwarmNodeActivities:
         return ProvisionSwarmNodeContext(temp_dir=temp_dir, details=details)
 
     @activity.defn
-    async def test_ssh_connection(self, ctx: ProvisionSwarmNodeContext) -> str:
+    async def test_ssh_connection(self, ctx: ProvisionSwarmNodeContext) -> bool:
         node = ctx.details.new_node
         print(
             f"Testing SSH Connection to server {Colors.YELLOW}{node.private_ip}{Colors.ENDC} over port {Colors.YELLOW}{node.ssh_port}{Colors.ENDC}..."
         )
-        exit_code = await exec_cmd_in_server(ctx.temp_dir, node, cmd=["exit 0"])
+        exit_code, _ = await exec_cmd_in_server(ctx.temp_dir, node, cmd="exit 0")
 
+        can_connect = exit_code == 0
         print(f"{exit_code=}")
 
-        if exit_code == 0:
-            result = f"✅ Connection to server {node.private_ip} over port {node.ssh_port} is possible"
+        if can_connect:
+            print(
+                f"✅ Connection to server {node.private_ip} over port {node.ssh_port} is possible"
+            )
         else:
-            result = f"❌ Connection to server {node.private_ip} over port {node.ssh_port} is NOT possible"
-        print(result)
-        return result
+            print(
+                f"❌ Connection to server {node.private_ip} over port {node.ssh_port} is NOT possible"
+            )
+        return can_connect
 
-    # @activity.defn
-    # async def check_docker_version(self, details: SwarmNodeSSHKeyDetails) -> str:
-    #     node = details.node
-    #     cmd = get_ssh_exec_cmd(details, "exit 0")
+    @activity.defn
+    async def check_docker_installation(
+        self, ctx: ProvisionSwarmNodeContext
+    ) -> DockerSystemInfo | None:
+        node = ctx.details.new_node
 
-    #     process = await asyncio.create_subprocess_exec(*cmd)
-    #     await process.communicate()
+        async def message_handler(message: str):
+            print(message)
+            system_info: DockerSystemInfo | None = None
+            try:
+                parsed_data = json.loads(message)
+            except json.JSONDecodeError:
+                # Invalid JSON, not the data we are looking for
+                pass
+            else:
+                system_info = DockerSystemInfo.from_dict(parsed_data)
+            return system_info
 
-    #     print(f"Running shell command : {Colors.YELLOW}{shlex.join(cmd)}{Colors.ENDC}")
-    #     if process.returncode == 0:
-    #         result = f" ✅ Connection to server {node.private_ip} over port {node.ssh_port} is possible"
-    #     else:
-    #         result = f"❌ Connection to server {node.private_ip} over port {node.ssh_port} is NOT possible"
-    #     print(result)
-    #     return result
+        check_docker_version = (
+            "command -v docker >/dev/null 2>&1 && docker info -f json"
+        )
+
+        print(f"Checking existing Docker installation...")
+        exit_code, result = await exec_cmd_in_server(
+            ctx.temp_dir, node, cmd=check_docker_version, output_handler=message_handler
+        )
+        if exit_code == 0 and result is not None:
+            print(
+                f"Found Docker installation with version {Colors.YELLOW}{result.ServerVersion}{Colors.ENDC} ✅ "
+            )
+            return result
+        else:
+            print(f"Docker is not installed on this server ❌")
+
+        return None
+
+    @activity.defn
+    async def install_latest_docker_version(
+        self, ctx: DockerInstallContext
+    ) -> DockerSystemInfo | None:
+        if ctx.info is not None:
+            print("Docker installed on this server")
+        else:
+            pass  # install
 
     @activity.defn
     async def delete_ssh_keys_temp_dir(self, ctx: ProvisionSwarmNodeContext):
