@@ -671,8 +671,6 @@ class SwarmNodeDetails:
     id: str
     private_ip: str
     swarm_role: Literal["WORKER", "MANAGER"]
-    is_app_server: bool
-    is_build_server: bool
     ssh_key: str
     ssh_port: int
     cluster_roles: list[Literal["APP_SERVER", "BUILD_SERVER"]] = field(

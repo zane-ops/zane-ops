@@ -24,7 +24,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         node_id: str = options["node"]
 
-        print(SwarmNode.objects.all())
         try:
             node = SwarmNode.objects.get(id=node_id)
         except SwarmNode.DoesNotExist:
@@ -51,16 +50,16 @@ class Command(BaseCommand):
             new_node=SwarmNodeDetails(
                 id=node.id,
                 private_ip=node.private_ip,
-                swarm_role=node.role,  # type: ignore
-                cluster_roles=node.cluster_roles,
+                swarm_role=node.swarm_role,  # type: ignore
+                cluster_roles=node.cluster_roles,  # type: ignore
                 ssh_key=new_key.private_key,
                 ssh_port=node.ssh_port,
             ),
             main_node=SwarmNodeDetails(
                 id=main_node.id,
                 private_ip=main_node.private_ip,
-                role=main_node.role,  # type: ignore
-                cluster_roles=main_node.cluster_roles,
+                swarm_role=main_node.swarm_role,  # type: ignore
+                cluster_roles=main_node.cluster_roles,  # type: ignore
                 ssh_key=main_key.private_key,
                 ssh_port=main_node.ssh_port,
             ),
@@ -68,8 +67,8 @@ class Command(BaseCommand):
 
         workflow_id = f"provision-{node.id}-{int(time.time())}"
         self.stdout.write(
-            f"{Colors.BLUE}Provisioning {payload.new_node.private_ip}:{payload.new_node.ssh_port}"
-            f" as a {payload.new_node.swarm_role}...{Colors.ENDC}"
+            f"Provisioning {Colors.ORANGE}{payload.new_node.private_ip}:{payload.new_node.ssh_port}{Colors.ENDC}"
+            f" as a {Colors.ORANGE}{payload.new_node.swarm_role}{Colors.ENDC}..."
         )
 
         result = async_to_sync(self.run_workflow)(payload, workflow_id)

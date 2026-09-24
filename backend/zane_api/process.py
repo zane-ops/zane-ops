@@ -34,13 +34,17 @@ class OutputHandlerFunction(Protocol):
     async def __call__(self, message: str) -> Any: ...
 
 
+async def default_output_handler(message: str):
+    print(message)
+
+
 class AyncSubProcessRunner:
     def __init__(
         self,
         command: str,
         cancel_event: asyncio.Event,
-        output_handler: OutputHandlerFunction,
         operation_name: str,
+        output_handler: OutputHandlerFunction = default_output_handler,
     ):
         self.command = command
         self.cancel_event = cancel_event

@@ -6,7 +6,8 @@ from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
     from ..activities import SwarmNodeActivities
-    from ..shared import SwarmNodeDetails, ProvisionSwarmNodePayload
+    from ..shared import ProvisionSwarmNodePayload
+    from zane_api.utils import Colors
 
 
 @workflow.defn(name="provision-swarm-node")
@@ -19,10 +20,16 @@ class ProvisionSwarmNodeWorkflow:
     @workflow.run
     async def run(self, details: ProvisionSwarmNodePayload) -> str:
         print(
+            f"\n\n{Colors.BLUE}==============================================================={Colors.ENDC}"
+        )
+        print(
             f"Running workflow ProvisionSwarmNodeWorkflow.run({details.main_node.private_ip=}, {details.new_node.private_ip=})"
         )
+        print(
+            f"{Colors.BLUE}==============================================================={Colors.ENDC}"
+        )
         result = await workflow.execute_activity_method(
-            SwarmNodeActivities.create_ssh_key_temp_files,
+            SwarmNodeActivities.create_ssh_keys_temp_dir,
             details,
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
@@ -36,9 +43,18 @@ class ProvisionSwarmNodeWorkflow:
         )
 
         await workflow.execute_activity_method(
-            SwarmNodeActivities.delete_ssh_key_temp_file,
+            SwarmNodeActivities.delete_ssh_keys_temp_dir,
             result,
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
+        )
+        print(
+            f"\n{Colors.BLUE}==============================================================={Colors.ENDC}"
+        )
+        print(
+            f" DONE Running workflow ProvisionSwarmNodeWorkflow.run({details.main_node.private_ip=}, {details.new_node.private_ip=})"
+        )
+        print(
+            f"{Colors.BLUE}==============================================================={Colors.ENDC}\n\n"
         )
         return res
