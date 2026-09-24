@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Literal, Optional, TYPE_CHECKING, cast
 import yaml
-
+import os
 
 if TYPE_CHECKING:
     from zane_api.models import Deployment, Environment
@@ -668,18 +668,31 @@ class ComposeStackDeploymentDetails:
 
 @dataclass
 class SwarmNodeDetails:
+    id: str
     private_ip: str
-    role: Literal["WORKER", "MANAGER"]
+    swarm_role: Literal["WORKER", "MANAGER"]
     is_app_server: bool
     is_build_server: bool
     ssh_key: str
     ssh_port: int
+    cluster_roles: list[Literal["APP_SERVER", "BUILD_SERVER"]] = field(
+        default_factory=list
+    )
+
+    def get_ssh_key_path(self, tmp_dir: str):
+        return os.path.join(tmp_dir, f"{self.id}.key")
 
 
 @dataclass
-class SwarmNodeSSHKeyDetails:
-    path: str
-    node: SwarmNodeDetails
+class ProvisionSwarmNodePayload:
+    main_node: SwarmNodeDetails
+    new_node: SwarmNodeDetails
+
+
+@dataclass
+class ProvisionSwarmNodeContext:
+    details: ProvisionSwarmNodePayload
+    temp_dir: str
 
 
 @dataclass

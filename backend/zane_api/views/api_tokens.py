@@ -137,7 +137,7 @@ class WorkspaceApiTokenListCreateAPIView(ListCreateAPIView):
             created_by=request.user,
             name=data["name"],
             role=data["role"],
-            scopes=data["scopes"],
+            scopes=list(set(data["scopes"])),
             expires_at=data["expires_at"],
         )
         token.accessible_projects.set(data["accessible_project_ids"])

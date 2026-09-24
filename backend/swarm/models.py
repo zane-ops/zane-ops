@@ -8,6 +8,7 @@ from django.db import models
 from shortuuid.django_fields import ShortUUIDField
 from zane_api.models.base import TimestampedModel
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.contrib.postgres.fields import ArrayField
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -23,6 +24,12 @@ class SwarmNode(TimestampedModel):
     class Role(models.TextChoices):
         MANAGER = "MANAGER", "Manager"
         WORKER = "WORKER", "Worker"
+
+    class ClusterRole(models.TextChoices):
+        # Can this run builds ?
+        BUILD_SERVER = "BUILD_SERVER", "Build Server"
+        # Can this run user defined apps ?
+        APP_SERVER = "APP_SERVER", "App Server"
 
     class Status(models.TextChoices):
         CREATED = "CREATED", "Created"
@@ -40,7 +47,7 @@ class SwarmNode(TimestampedModel):
     )  # type: ignore
 
     swarm_node_id = models.CharField(unique=True, null=True)
-    role = models.CharField(choices=Role.choices)
+    swarm_role = models.CharField(choices=Role.choices)
     hostname = models.CharField(
         unique=True, null=True
     )  # == swarm node Description.Hostname
@@ -50,10 +57,11 @@ class SwarmNode(TimestampedModel):
     last_status_update = models.DateTimeField(null=True)
 
     docker_version = models.CharField(null=True)
-    # Can this run builds ?
-    is_build_server = models.BooleanField(default=False)
-    # Can this run user defined apps ?
-    is_app_server = models.BooleanField(default=True)
+    cluster_roles = ArrayField(
+        base_field=models.CharField(max_length=255, choices=ClusterRole.choices),
+        default=list,
+        blank=True,
+    )
     # The initial server from which ZaneOps was install
     is_initial_install_server = models.BooleanField(default=False)
 

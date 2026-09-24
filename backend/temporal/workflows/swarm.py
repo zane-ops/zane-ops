@@ -6,7 +6,7 @@ from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
     from ..activities import SwarmNodeActivities
-    from ..shared import SwarmNodeDetails
+    from ..shared import SwarmNodeDetails, ProvisionSwarmNodePayload
 
 
 @workflow.defn(name="provision-swarm-node")
@@ -17,11 +17,13 @@ class ProvisionSwarmNodeWorkflow:
         )
 
     @workflow.run
-    async def run(self, node: SwarmNodeDetails) -> str:
-        print(f"Running workflow ProvisionSwarmNodeWorkflow.run({node.private_ip=})")
+    async def run(self, details: ProvisionSwarmNodePayload) -> str:
+        print(
+            f"Running workflow ProvisionSwarmNodeWorkflow.run({details.main_node.private_ip=}, {details.new_node.private_ip=})"
+        )
         result = await workflow.execute_activity_method(
-            SwarmNodeActivities.create_ssh_key_temp_file,
-            node,
+            SwarmNodeActivities.create_ssh_key_temp_files,
+            details,
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )

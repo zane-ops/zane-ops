@@ -120,13 +120,13 @@ export default function SwarmNodeDetailsPage({
                           "max-w-full min-w-0 overflow-auto pr-4"
                         )}
                       >
-                        {node.role === "MANAGER" ? (
+                        {node.swarm_role === "MANAGER" ? (
                           <BrainIcon className="text-grey size-4 flex-none mr-1" />
                         ) : (
                           <PickaxeIcon className="text-grey size-4 flex-none mr-1" />
                         )}
                         <span className="text-card-foreground">
-                          {node.role}
+                          {node.swarm_role}
                         </span>
                       </span>
                     </div>
@@ -138,7 +138,7 @@ export default function SwarmNodeDetailsPage({
                   >
                     <FieldSetLabel>ZaneOps Cluster Roles</FieldSetLabel>
                     <div className="flex items-center gap-1.5">
-                      {node.is_app_server && (
+                      {node.cluster_roles.includes("APP_SERVER") && (
                         <TooltipProvider>
                           <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild>
@@ -158,7 +158,7 @@ export default function SwarmNodeDetailsPage({
                           </Tooltip>
                         </TooltipProvider>
                       )}
-                      {node.is_build_server && (
+                      {node.cluster_roles.includes("BUILD_SERVER") && (
                         <TooltipProvider>
                           <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild>

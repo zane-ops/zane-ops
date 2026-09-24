@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from swarm.models import SwarmNode
 from temporal.client import TemporalClient
-from temporal.shared import SwarmNodeDetails
+from temporal.shared import SwarmNodeDetails, ProvisionSwarmNodePayload
 from temporal.workflows import ProvisionSwarmNodeWorkflow
 from zane_api.utils import Colors
 
@@ -29,38 +29,56 @@ class Command(BaseCommand):
             node = SwarmNode.objects.get(id=node_id)
         except SwarmNode.DoesNotExist:
             raise CommandError(f"A server with the id `{node_id}` does not exist")
+        try:
+            main_node = SwarmNode.objects.get(is_initial_install_server=True)
+        except SwarmNode.DoesNotExist:  #  SwarmNode.MultipleObjectsReturned
+            raise CommandError(f"No main server exists on the cluster")
 
-        key = node.ssh_keys.filter(user="root").first()
-        if key is None:
+        new_key = node.ssh_keys.filter(user="root").first()
+        if new_key is None:
             raise CommandError(f"No Root SSH key found for the node `{node_id}`")
 
+        main_key = node.ssh_keys.filter(user="root").first()
+        if main_key is None:
+            raise CommandError(f"No Root SSH key found for the main node")
+
         self.stdout.write(
-            f"Using Root SSH key {Colors.ORANGE}{key.name}{Colors.ENDC}"
-            f" (id={key.id}, user={key.user})"
+            f"Using Root SSH key {Colors.ORANGE}{new_key.name}{Colors.ENDC}"
+            f" (id={new_key.id}, user={new_key.user})"
         )
 
-        details = SwarmNodeDetails(
-            private_ip=node.private_ip,
-            role=node.role,  # type: ignore
-            is_app_server=node.is_app_server,
-            is_build_server=node.is_build_server,
-            ssh_key=key.private_key,
-            ssh_port=node.ssh_port,
+        payload = ProvisionSwarmNodePayload(
+            new_node=SwarmNodeDetails(
+                id=node.id,
+                private_ip=node.private_ip,
+                swarm_role=node.role,  # type: ignore
+                cluster_roles=node.cluster_roles,
+                ssh_key=new_key.private_key,
+                ssh_port=node.ssh_port,
+            ),
+            main_node=SwarmNodeDetails(
+                id=main_node.id,
+                private_ip=main_node.private_ip,
+                role=main_node.role,  # type: ignore
+                cluster_roles=main_node.cluster_roles,
+                ssh_key=main_key.private_key,
+                ssh_port=main_node.ssh_port,
+            ),
         )
 
         workflow_id = f"provision-{node.id}-{int(time.time())}"
         self.stdout.write(
-            f"{Colors.BLUE}Provisioning {details.private_ip}:{details.ssh_port}"
-            f" as a {details.role}...{Colors.ENDC}"
+            f"{Colors.BLUE}Provisioning {payload.new_node.private_ip}:{payload.new_node.ssh_port}"
+            f" as a {payload.new_node.swarm_role}...{Colors.ENDC}"
         )
 
-        result = async_to_sync(self.run_workflow)(details, workflow_id)
+        result = async_to_sync(self.run_workflow)(payload, workflow_id)
         self.stdout.write(f"{Colors.GREEN}Workflow finished ✅{Colors.ENDC} {result=}")
 
-    async def run_workflow(self, details: SwarmNodeDetails, workflow_id: str):
+    async def run_workflow(self, payload: ProvisionSwarmNodePayload, workflow_id: str):
         handle = await TemporalClient.astart_workflow(
             ProvisionSwarmNodeWorkflow.run,
-            details,
+            payload,
             id=workflow_id,
         )
         self.stdout.write(

@@ -217,7 +217,7 @@ def get_workflows_and_activities():
             monitor_stack_activites.run_stack_healthcheck,
             stack_metrics_activites.collect_compose_stack_metrics,
             stack_metrics_activites.save_compose_stack_metrics,
-            swarm_node_activities.create_ssh_key_temp_file,
+            swarm_node_activities.create_ssh_key_temp_files,
             swarm_node_activities.test_ssh_connection,
             swarm_node_activities.delete_ssh_key_temp_file,
             acquire_service_deploy_semaphore,

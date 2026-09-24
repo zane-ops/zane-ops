@@ -4,7 +4,6 @@ from django.db import migrations
 from django.conf import settings
 import docker
 from django.utils import timezone
-import requests
 
 
 def insert_initial_swarm_server(apps, schema_editor):

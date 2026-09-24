@@ -899,9 +899,9 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "gitdb" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ca/dc/126b28e76b24a9268ba931ad3e012f71ebdadf62fd9f17758f7074bb0b20/gitpython-3.1.59.tar.gz", hash = "sha256:0a1475cfdc38a5bfba1a3e9a4a9da52a39749ecec322b772915c019f94e5b7e4", size = 230445, upload-time = "2026-08-10T12:03:20.271031Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ca/dc/126b28e76b24a9268ba931ad3e012f71ebdadf62fd9f17758f7074bb0b20/gitpython-3.1.59.tar.gz", hash = "sha256:0a1475cfdc38a5bfba1a3e9a4a9da52a39749ecec322b772915c019f94e5b7e4", size = 230445, upload-time = "2026-08-10T12:03:20.271Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ef/ed/ae57eb7d344f43f87b74b3a281ead6ec7d6394eef72a7b1dcb28dd089550/gitpython-3.1.59-py3-none-any.whl", hash = "sha256:67a82f537384578643624c8b2c531938a9b82be431663e575dcf638526631d4c", size = 220996, upload-time = "2026-08-10T12:03:18.804945Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/ed/ae57eb7d344f43f87b74b3a281ead6ec7d6394eef72a7b1dcb28dd089550/gitpython-3.1.59-py3-none-any.whl", hash = "sha256:67a82f537384578643624c8b2c531938a9b82be431663e575dcf638526631d4c", size = 220996, upload-time = "2026-08-10T12:03:18.804Z" },
 ]
 
 [[package]]
@@ -2138,6 +2138,15 @@ wheels = [
 ]
 
 [[package]]
+name = "semver"
+version = "3.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/92/f5/e1dfe8e1d91c54ce212fd93916eb01fd1c590f413be0a0978c39a97aa1bb/semver-3.1.0.tar.gz", hash = "sha256:14bc073439513d7773662a338f4db9829cf16c12b74b9568e2d2689975fbd7fc", size = 304162, upload-time = "2026-09-12T18:38:14.045Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/be/02/bce7a1d70e9d0f6ea8623c16386138c251b5855af6cd3a11433d3fba4e66/semver-3.1.0-py3-none-any.whl", hash = "sha256:6e4998f8b4762acdfea85f9bfd5b4032e0bb50038dc04bf82011b42d5d1145c5", size = 18783, upload-time = "2026-09-12T18:38:12.457Z" },
+]
+
+[[package]]
 name = "service-identity"
 version = "24.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2741,6 +2750,7 @@ dependencies = [
     { name = "requests" },
     { name = "responses" },
     { name = "rpds-py" },
+    { name = "semver" },
     { name = "service-identity" },
     { name = "setuptools" },
     { name = "shortuuid" },
@@ -2877,6 +2887,7 @@ dev = [
     { name = "responses" },
     { name = "rich" },
     { name = "rpds-py" },
+    { name = "semver" },
     { name = "service-identity" },
     { name = "setuptools" },
     { name = "shortuuid" },
@@ -3006,6 +3017,7 @@ requires-dist = [
     { name = "requests", specifier = "==2.31.0" },
     { name = "responses", specifier = "==0.25.0" },
     { name = "rpds-py", specifier = "==0.18.0" },
+    { name = "semver", specifier = ">=3.1.0" },
     { name = "service-identity", specifier = "==24.2.0" },
     { name = "setuptools", specifier = "==79.0.1" },
     { name = "shortuuid", specifier = "==1.0.13" },
@@ -3142,6 +3154,7 @@ dev = [
     { name = "responses", specifier = "==0.25.0" },
     { name = "rich", specifier = "==14.0.0" },
     { name = "rpds-py", specifier = "==0.18.0" },
+    { name = "semver", specifier = ">=3.1.0" },
     { name = "service-identity", specifier = "==24.2.0" },
     { name = "setuptools", specifier = "==79.0.1" },
     { name = "shortuuid", specifier = "==1.0.13" },
