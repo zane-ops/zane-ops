@@ -9,13 +9,8 @@ import asyncio
 import tempfile
 
 with workflow.unsafe.imports_passed_through():
-    from zane_api.utils import Colors, multiline_command
-    from temporal.helpers import empty_folder
-    from zane_api.process import (
-        AyncSubProcessRunner,
-        OutputHandlerFunction,
-        default_output_handler,
-    )
+    from zane_api.utils import Colors
+    from temporal.helpers import empty_folder, exec_cmd_in_server
 
 
 from ..shared import (
@@ -23,90 +18,7 @@ from ..shared import (
     DockerSystemInfo,
     ProvisionSwarmNodePayload,
     ProvisionSwarmNodeContext,
-    SwarmNodeDetails,
 )
-
-
-async def exec_cmd_in_server[T](
-    ssh_key_dir: str,
-    node: SwarmNodeDetails,
-    cmd: str,
-    output_handler: OutputHandlerFunction[T] = default_output_handler,
-) -> tuple[int | None, T | None]:
-    heartbeat_task = None
-    cancel_event = asyncio.Event()
-    exit_code: int | None = None
-    result: T | None = None
-
-    try:
-
-        async def send_heartbeat():
-            """
-            We want this activity to be cancellable,
-            for activities to be cancellable, they need to send regular heartbeats:
-            https://docs.temporal.io/develop/python/cancellation#cancel-activity
-            """
-            while True:
-                activity.heartbeat(
-                    "Heartbeat from `clone_repository_and_checkout_to_commit()`..."
-                )
-                await asyncio.sleep(0.1)
-
-        heartbeat_task = asyncio.create_task(send_heartbeat())
-
-        full_cmd = [
-            "ssh",
-            "-p",
-            str(node.ssh_port),
-            "-i",
-            node.get_ssh_key_path(ssh_key_dir),
-            # Do not prompt for known_hosts
-            "-o",
-            "StrictHostKeyChecking=no",
-            # Do not store pubkey known_hosts
-            "-o",
-            "UserKnownHostsFile=/dev/null",
-            # Fail without asking for more input, no password prompt or anything
-            "-o",
-            "BatchMode=yes",
-            # SSH connection timeout of 5sec
-            "-o",
-            "ConnectTimeout=5",
-            f"root@{node.private_ip}",
-            cmd,
-        ]
-
-        print(
-            f"Running shell command : {Colors.YELLOW}{shlex.join(full_cmd)}{Colors.ENDC}"
-        )
-
-        runner = AyncSubProcessRunner(
-            command=shlex.join(full_cmd),
-            cancel_event=cancel_event,
-            operation_name="ssh",
-            output_handler=output_handler,
-        )
-        cmd_task = asyncio.create_task(runner.run())
-
-        done_first, _ = await asyncio.wait(
-            [heartbeat_task, cmd_task], return_when=asyncio.FIRST_COMPLETED
-        )
-
-        if cmd_task in done_first:
-            exit_code, raw_result = cmd_task.result()
-            result = cast(T | None, raw_result)
-            print("`cmd_task()` finished first")
-        else:
-            print("cancelling `cmd_task()`")
-            cmd_task.cancel()
-            await cmd_task
-    except asyncio.CancelledError:
-        cancel_event.set()
-        raise
-    finally:
-        if heartbeat_task:
-            heartbeat_task.cancel()
-    return exit_code, result
 
 
 """
