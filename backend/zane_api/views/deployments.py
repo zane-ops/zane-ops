@@ -64,7 +64,6 @@ from temporal.shared import (
 from ..authentication import WorkspaceTokenAuthentication
 from ..permissions import (
     HasWorkspace,
-    HasDeployWebhookAccess,
     IsWorkspaceMember,
     IsWorkspaceViewer,
     request_access,

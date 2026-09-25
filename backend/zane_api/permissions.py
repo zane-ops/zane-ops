@@ -154,7 +154,7 @@ def build_token_access(token: WorkspaceApiToken) -> EffectiveAccess | None:
         workspace=token.workspace,
         role=role,
         project_ids=project_ids,
-        scopes=None if len(token.scopes) == 0 else frozenset(token.scopes),
+        scopes=frozenset(token.scopes),
         token=token,
     )
 
