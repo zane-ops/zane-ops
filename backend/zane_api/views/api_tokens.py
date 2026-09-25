@@ -11,7 +11,6 @@ from rest_framework.views import APIView
 from django.db.models import Q, QuerySet
 from ..models import WorkspaceApiToken, WorkspaceRole
 from ..permissions import (
-    HasRequiredScopes,
     HasWorkspace,
     IsWorkspaceMember,
     IsWorkspaceViewer,

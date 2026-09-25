@@ -15,6 +15,7 @@ from ..models import (
     Deployment,
     DeploymentChange,
     Environment,
+    TokenScope,
 )
 import django.db.transaction as transaction
 from .serializers import (
@@ -67,6 +68,7 @@ from ..permissions import (
     IsWorkspaceMember,
     IsWorkspaceViewer,
     request_access,
+    HasRequiredAPITokenScopes,
 )
 
 
@@ -127,8 +129,15 @@ class WebhookDeployDockerServiceAPIView(APIView):
     # `deploy_token` in the URL is now only a service identifier — the request
     # must carry an API token with `deploy:write`; the session is never
     # consulted for a deploy webhook (plan §7).
+
+    # token-only: the session is never consulted for a deploy webhook (plan §7)
     authentication_classes = [WorkspaceTokenAuthentication]
-    permission_classes = [HasWorkspace, HasDeployWebhookAccess]
+
+    # deploy webhook permission
+    permission_classes = [HasWorkspace, HasRequiredAPITokenScopes]
+    api_token_scopes = [TokenScope.DEPLOY_WRITE]
+
+    # Rate-limits
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
 
@@ -158,9 +167,7 @@ class WebhookDeployDockerServiceAPIView(APIView):
                 detail=f"A service with a deploy_token `{deploy_token}` doesn't exist."
             )
 
-        if not request_access(request).can_access_project(
-            service.project_id
-        ):
+        if not request_access(request).can_access_project(service.project_id):
             raise exceptions.PermissionDenied(
                 "This API token does not have access to this service's project."
             )
@@ -238,7 +245,12 @@ class WebhookDeployDockerServiceAPIView(APIView):
 class WebhookDeployGitServiceAPIView(APIView):
     # token-only: the session is never consulted for a deploy webhook (plan §7)
     authentication_classes = [WorkspaceTokenAuthentication]
-    permission_classes = [HasWorkspace, HasDeployWebhookAccess]
+
+    # deploy webhook permission
+    permission_classes = [HasWorkspace, HasRequiredAPITokenScopes]
+    api_token_scopes = [TokenScope.DEPLOY_WRITE]
+
+    # Rate-limit
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
 
@@ -268,9 +280,7 @@ class WebhookDeployGitServiceAPIView(APIView):
                 detail=f"A service with a deploy_token `{deploy_token}` doesn't exist."
             )
 
-        if not request_access(request).can_access_project(
-            service.project_id
-        ):
+        if not request_access(request).can_access_project(service.project_id):
             raise exceptions.PermissionDenied(
                 "This API token does not have access to this service's project."
             )
@@ -741,7 +751,9 @@ class RecentDeploymentsAPIView(ListAPIView):
         latest_per_service = (
             Deployment.objects.filter(
                 Q(
-                    service__project__id__in=request_access(self.request).accessible_project_ids()
+                    service__project__id__in=request_access(
+                        self.request
+                    ).accessible_project_ids()
                 )
                 & (
                     Q(is_current_production=True)
