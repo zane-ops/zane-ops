@@ -1,3 +1,4 @@
+import asyncio
 from datetime import timedelta
 
 from temporalio import workflow
@@ -6,7 +7,11 @@ from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
     from ..activities import SwarmNodeActivities
-    from ..shared import ProvisionSwarmNodePayload, DockerSystemInfo
+    from ..shared import (
+        ProvisionSwarmNodePayload,
+        DockerInstallContext,
+        ProvisionSwarmNodeContext,
+    )
     from zane_api.utils import Colors
 
 
@@ -18,40 +23,70 @@ class ProvisionSwarmNodeWorkflow:
         )
 
     @workflow.run
-    async def run(self, details: ProvisionSwarmNodePayload) -> DockerSystemInfo | None:
+    async def run(self, payload: ProvisionSwarmNodePayload):
         print(
             f"\n\n{Colors.BLUE}==============================================================={Colors.ENDC}"
         )
         print(
-            f"Running workflow ProvisionSwarmNodeWorkflow.run({details.main_node.private_ip=}, {details.new_node.private_ip=})"
+            f"Running workflow ProvisionSwarmNodeWorkflow.run({payload.main_node.private_ip=}, {payload.new_node.private_ip=})"
         )
         print(
             f"{Colors.BLUE}==============================================================={Colors.ENDC}"
         )
-        result = await workflow.execute_activity_method(
+        tmp_dir = await workflow.execute_activity_method(
             SwarmNodeActivities.create_ssh_keys_temp_dir,
-            details,
+            payload,
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )
 
-        res = await workflow.execute_activity_method(
+        ssh_test_new_task = workflow.start_activity_method(
             SwarmNodeActivities.test_ssh_connection,
-            result,
+            ProvisionSwarmNodeContext(node=payload.new_node, tmp_dir=tmp_dir),
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )
 
-        docker_info = await workflow.execute_activity_method(
-            SwarmNodeActivities.check_docker_installation,
-            result,
+        ssh_test_main_task = workflow.start_activity_method(
+            SwarmNodeActivities.test_ssh_connection,
+            ProvisionSwarmNodeContext(node=payload.main_node, tmp_dir=tmp_dir),
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )
+
+        result = await asyncio.gather(ssh_test_new_task, ssh_test_main_task)
+
+        if all(result):
+            docker_info = await workflow.execute_activity_method(
+                SwarmNodeActivities.check_docker_installation,
+                ProvisionSwarmNodeContext(node=payload.new_node, tmp_dir=tmp_dir),
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+            print(f"{docker_info=}")
+
+            docker_info = await workflow.execute_activity_method(
+                SwarmNodeActivities.install_latest_docker_version,
+                DockerInstallContext(
+                    node=payload.new_node, tmp_dir=tmp_dir, info=docker_info
+                ),
+                start_to_close_timeout=timedelta(minutes=5),
+                retry_policy=self.retry_policy,
+            )
+
+            if docker_info is not None:
+                await workflow.execute_activity_method(
+                    SwarmNodeActivities.enable_docker_service,
+                    DockerInstallContext(
+                        node=payload.new_node, tmp_dir=tmp_dir, info=docker_info
+                    ),
+                    start_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=self.retry_policy,
+                )
 
         await workflow.execute_activity_method(
             SwarmNodeActivities.delete_ssh_keys_temp_dir,
-            result,
+            tmp_dir,
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )
@@ -59,9 +94,9 @@ class ProvisionSwarmNodeWorkflow:
             f"\n{Colors.BLUE}==============================================================={Colors.ENDC}"
         )
         print(
-            f" DONE Running workflow ProvisionSwarmNodeWorkflow.run({details.main_node.private_ip=}, {details.new_node.private_ip=})"
+            f" DONE Running workflow ProvisionSwarmNodeWorkflow.run({payload.main_node.private_ip=}, {payload.new_node.private_ip=})"
         )
         print(
             f"{Colors.BLUE}==============================================================={Colors.ENDC}\n\n"
         )
-        return docker_info
+        return

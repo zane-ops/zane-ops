@@ -7,10 +7,17 @@ from typing import Literal, cast
 from temporalio import activity, workflow
 import asyncio
 import tempfile
+import semver
 
 with workflow.unsafe.imports_passed_through():
     from zane_api.utils import Colors
     from temporal.helpers import empty_folder, exec_cmd_in_server
+    from temporal.constants import (
+        DOCKER_CHECK_SCRIPT,
+        DOCKER_INSTALL_SCRIPT,
+        DOCKER_ENABLE_SCRIPT,
+        MINIMAL_DOCKER_VERSION_REQUIREMENTS,
+    )
 
 
 from ..shared import (
@@ -64,7 +71,7 @@ class SwarmNodeActivities:
                 f"Wrote ssh key for {Colors.BLUE}MAIN NODE{Colors.ENDC} at {Colors.YELLOW}{main_node_key_location}{Colors.ENDC} ✅"
             )
         print(
-            f"Updating ssh key permissions for {Colors.YELLOW}{main_node_key_location}{Colors.ENDC} to 600"
+            f"Adjusting ssh key permissions for {Colors.YELLOW}{main_node_key_location}{Colors.ENDC}"
         )
         os.chmod(main_node_key_location, 0o600)
         print(f"Done ✅")
@@ -75,20 +82,20 @@ class SwarmNodeActivities:
                 f"Wrote ssh key for the {Colors.BLUE}NEW NODE{Colors.ENDC} at {Colors.YELLOW}{new_node_key_location}{Colors.ENDC} ✅"
             )
         print(
-            f"Updating ssh key permissions for {Colors.YELLOW}{new_node_key_location}{Colors.ENDC} to 600"
+            f"Adjusting ssh key permissions for {Colors.YELLOW}{new_node_key_location}{Colors.ENDC}"
         )
         os.chmod(new_node_key_location, 0o600)
         print(f"Done ✅")
 
-        return ProvisionSwarmNodeContext(temp_dir=temp_dir, details=details)
+        return temp_dir
 
     @activity.defn
     async def test_ssh_connection(self, ctx: ProvisionSwarmNodeContext) -> bool:
-        node = ctx.details.new_node
+        node = ctx.node
         print(
             f"Testing SSH Connection to server {Colors.YELLOW}{node.private_ip}{Colors.ENDC} over port {Colors.YELLOW}{node.ssh_port}{Colors.ENDC}..."
         )
-        exit_code, _ = await exec_cmd_in_server(ctx.temp_dir, node, cmd="exit 0")
+        exit_code, _ = await exec_cmd_in_server(ctx, cmd="exit 0")
 
         can_connect = exit_code == 0
         print(f"{exit_code=}")
@@ -107,8 +114,6 @@ class SwarmNodeActivities:
     async def check_docker_installation(
         self, ctx: ProvisionSwarmNodeContext
     ) -> DockerSystemInfo | None:
-        node = ctx.details.new_node
-
         async def message_handler(message: str):
             print(message)
             system_info: DockerSystemInfo | None = None
@@ -121,13 +126,11 @@ class SwarmNodeActivities:
                 system_info = DockerSystemInfo.from_dict(parsed_data)
             return system_info
 
-        check_docker_version = (
-            "command -v docker >/dev/null 2>&1 && docker info -f json"
-        )
+        check_docker_version = DOCKER_CHECK_SCRIPT
 
         print(f"Checking existing Docker installation...")
         exit_code, result = await exec_cmd_in_server(
-            ctx.temp_dir, node, cmd=check_docker_version, output_handler=message_handler
+            ctx, cmd=check_docker_version, output_handler=message_handler
         )
         if exit_code == 0 and result is not None:
             print(
@@ -143,15 +146,63 @@ class SwarmNodeActivities:
     async def install_latest_docker_version(
         self, ctx: DockerInstallContext
     ) -> DockerSystemInfo | None:
-        if ctx.info is not None:
-            print("Docker installed on this server")
+        if (
+            ctx.info is not None
+            # Check that docker version meets minimal version requirements
+            and semver.compare(
+                ctx.info.ServerVersion, MINIMAL_DOCKER_VERSION_REQUIREMENTS
+            )
+            >= 0
+        ):
+            print(
+                f"{Colors.YELLOW}Docker v{ctx.info.ServerVersion}{Colors.ENDC} already installed on server, skipping installation ⏩"
+            )
+            return ctx.info
+
+        async def message_handler(message: str):
+            print(message)
+            system_info: DockerSystemInfo | None = None
+            try:
+                parsed_data = json.loads(message)
+            except json.JSONDecodeError:
+                # Invalid JSON, not the data we are looking for
+                pass
+            else:
+                system_info = DockerSystemInfo.from_dict(parsed_data)
+            return system_info
+
+        exit_code, result = await exec_cmd_in_server(
+            ctx,
+            cmd=DOCKER_INSTALL_SCRIPT,
+            output_handler=message_handler,
+        )
+
+        if exit_code == 0 and result is not None:
+            print(
+                f"Succesfully Installed Docker {Colors.YELLOW}v{result.ServerVersion}{Colors.ENDC} ✅ "
+            )
+            return result
         else:
-            pass  # install
+            print(
+                f"{Colors.RED}Failed to install docker on server {Colors.BLUE}{ctx.node.private_ip} ❌{Colors.ENDC}"
+            )
+        return result
 
     @activity.defn
-    async def delete_ssh_keys_temp_dir(self, ctx: ProvisionSwarmNodeContext):
-        print(
-            f"Deleting temporary folder for SSH keys {Colors.YELLOW}{ctx.temp_dir}{Colors.ENDC}..."
+    async def enable_docker_service(self, ctx: ProvisionSwarmNodeContext):
+        print(f"Enabling Docker system service...")
+        exit_code, _ = await exec_cmd_in_server(
+            ctx,
+            cmd=DOCKER_ENABLE_SCRIPT,
         )
-        shutil.rmtree(ctx.temp_dir, ignore_errors=True)
+        if exit_code == 0:
+            print(f"Succesfully Enabled Docker ✅ ")
+        return exit_code == 0
+
+    @activity.defn
+    async def delete_ssh_keys_temp_dir(self, tmp_dir: str):
+        print(
+            f"Deleting temporary folder for SSH keys {Colors.YELLOW}{tmp_dir}{Colors.ENDC}..."
+        )
+        shutil.rmtree(tmp_dir, ignore_errors=True)
         print("Temporary folder for SSH keys deleted ✅")

@@ -17,6 +17,7 @@ from zane_api.process import (
 from .shared import (
     DeploymentDetails,
     ContainerMetrics,
+    ProvisionSwarmNodeContext,
     SwarmNodeDetails,
 )
 
@@ -905,8 +906,7 @@ async def send_regular_heartbeat(name: str):
 
 
 async def exec_cmd_in_server[T](
-    ssh_key_dir: str,
-    node: SwarmNodeDetails,
+    ctx: ProvisionSwarmNodeContext,
     cmd: str,
     output_handler: OutputHandlerFunction[T] = default_output_handler,
 ) -> tuple[int | None, T | None]:
@@ -934,9 +934,9 @@ async def exec_cmd_in_server[T](
         full_cmd = [
             "ssh",
             "-p",
-            str(node.ssh_port),
+            str(ctx.node.ssh_port),
             "-i",
-            node.get_ssh_key_path(ssh_key_dir),
+            ctx.node.get_ssh_key_path(ctx.tmp_dir),
             # Do not prompt for known_hosts
             "-o",
             "StrictHostKeyChecking=no",
@@ -949,13 +949,9 @@ async def exec_cmd_in_server[T](
             # SSH connection timeout of 5sec
             "-o",
             "ConnectTimeout=5",
-            f"root@{node.private_ip}",
+            f"root@{ctx.node.private_ip}",
             cmd,
         ]
-
-        print(
-            f"Running shell command : {Colors.YELLOW}{shlex.join(full_cmd)}{Colors.ENDC}"
-        )
 
         runner = AyncSubProcessRunner(
             command=shlex.join(full_cmd),

@@ -480,3 +480,114 @@ ZANE_CATCHALL_404_ROUTE = {
 }
 
 ZANE_PROXY_CONFIG_CACHE_KEY = "[zaneops::internal::caddy-config]"
+
+# =========================================
+#     Provision Swarm server scripts      #
+# =========================================
+
+MINIMAL_DOCKER_VERSION_REQUIREMENTS = "27.0.3"
+
+
+class Colors:
+    GREEN = "\033[92m"
+    BLUE = "\033[94m"
+    ORANGE = "\033[38;5;208m"
+    YELLOW = "\033[33m"
+    RED = "\033[91m"
+    GREY = "\033[90m"
+    ENDC = "\033[0m"  # Reset to default color
+
+
+DOCKER_CHECK_SCRIPT = "command -v docker >/dev/null 2>&1 && docker info -f json"
+
+DOCKER_INSTALL_SCRIPT = f"""
+if [ -f /etc/debian_version ]; then
+    apt update
+    apt install -y ca-certificates curl gnupg
+    
+    DISTRIBUTION=$(. /etc/os-release && echo "$ID")
+
+    echo "Detected Debian Linux Distribution: {Colors.BLUE}$DISTRIBUTION{Colors.ENDC}"
+    echo "➡️ Uninstalling old Docker versions..."
+    apt remove -y $(dpkg --get-selections docker.io docker-compose docker-compose-v2 docker-doc docker-buildx podman-docker containerd runc | cut -f1)
+
+    echo "➡️ Installing Docker..."
+
+    # Add Docker's official GPG key:
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/$DISTRIBUTION/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    
+    # Add the repository to Apt sources:
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/$DISTRIBUTION \
+      $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+    
+    # Install Docker
+    apt update
+    apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    # Get Docker system info
+    docker info -f json
+
+elif [ -f /etc/redhat-release ]; then
+   echo "Detected {Colors.BLUE}RedHat{Colors.ENDC} Linux Distribution"
+
+   echo "➡️ Uninstalling old Docker versions..."
+   dnf remove -y docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-engine
+
+    dnf install -y dnf-plugins-core
+
+    echo "➡️ Installing Docker..."
+    dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    # Get Docker system info
+    docker info -f json
+
+elif [ -f /etc/alpine-release ]; then
+      echo "Detected {Colors.BLUE}Alpine{Colors.ENDC} Linux Distribution"
+      
+      echo "➡️ Installing Docker..."
+      apk add --no-cache curl docker
+      rc-update add docker boot
+
+      # Get Docker system info
+      docker info -f json
+
+elif [ -f /etc/arch-release ]; then
+      echo "Detected {Colors.BLUE}Arch{Colors.ENDC} Linux Distribution"
+      
+      echo "➡️ Installing Docker..."
+      pacman -Syu --noconfirm curl docker
+
+      # Get Docker system info
+      docker info -f json
+
+else
+      echo "{Colors.RED}❌ Unsupported Linux distribution{Colors.ENDC}"
+      exit 1
+fi
+"""
+
+
+DOCKER_ENABLE_SCRIPT = f"""
+if [ -f /etc/debian_version ] ||  [  f /etc/redhat-release ] ||  [ -f /etc/arch-release ]; then
+
+    systemctl enable --now docker
+
+elif [ -f /etc/alpine-release ]; then
+
+    service docker start
+
+else
+    echo "{Colors.RED}❌ Unsupported Linux distribution{Colors.ENDC}"
+    exit 1
+fi
+"""

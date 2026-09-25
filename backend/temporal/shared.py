@@ -689,8 +689,8 @@ class ProvisionSwarmNodePayload:
 
 @dataclass
 class ProvisionSwarmNodeContext:
-    details: ProvisionSwarmNodePayload
-    temp_dir: str
+    node: SwarmNodeDetails
+    tmp_dir: str
 
 
 @dataclass
@@ -743,9 +743,8 @@ class DockerSystemInfo:
 
 
 @dataclass
-class DockerInstallContext:
+class DockerInstallContext(ProvisionSwarmNodeContext):
     info: DockerSystemInfo | None
-    ctx: ProvisionSwarmNodeContext
 
 
 @dataclass
