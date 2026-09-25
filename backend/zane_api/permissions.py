@@ -202,10 +202,10 @@ class HasWorkspace(BasePermission):
 
         workspace = qs.order_by("created_at").first()
 
-        request.workspace = workspace  # type: ignore
         if workspace is None:
             return False
 
+        request.workspace = workspace  # type: ignore
         request.access = build_session_access(  # type: ignore
             cast(AbstractUser, request.user), workspace
         )
