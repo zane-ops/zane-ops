@@ -53,7 +53,7 @@ import {
   getCurrentWorkspace,
   useCurrentWorkspace
 } from "~/lib/workspace-store";
-import type { Route } from "./+types/workspace-api-tokens";
+import type { Route } from "./+types/workspace-api-token-list";
 
 export function meta() {
   return [metaTitle("API Tokens")] satisfies ReturnType<Route.MetaFunction>;
@@ -212,7 +212,7 @@ function TokenRow({ token }: { token: WorkspaceApiToken }) {
       </TableCell>
       <TableCell className="p-2">
         {token.accessible_projects.length === 0 ? (
-          <Code className="px-2 whitespace-nowrap">All projects</Code>
+          <Code className="px-2 whitespace-nowrap">all projects</Code>
         ) : (
           <Popover>
             <PopoverTrigger asChild>
