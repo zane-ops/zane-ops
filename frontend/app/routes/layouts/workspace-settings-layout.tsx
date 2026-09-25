@@ -36,19 +36,18 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
     });
   }
   if (hasMinRole(membership, "Admin")) {
-    sidebarNavItems.push({
-      title: "User Invitations",
-      href: href("/workspace/settings/invitations"),
-      icon: MailIcon
-    });
-  }
-
-  if (hasMinRole(membership, "Admin")) {
-    sidebarNavItems.push({
-      title: "Git",
-      href: href("/workspace/settings/git-apps"),
-      icon: GitBranchIcon
-    });
+    sidebarNavItems.push(
+      {
+        title: "User Invitations",
+        href: href("/workspace/settings/invitations"),
+        icon: MailIcon
+      },
+      {
+        title: "Git",
+        href: href("/workspace/settings/git-apps"),
+        icon: GitBranchIcon
+      }
+    );
   }
 
   // members pick a shared credential when creating a service, they just can't edit them
