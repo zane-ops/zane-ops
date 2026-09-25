@@ -706,7 +706,7 @@ class DockerSwarmInfo:
     RemoteManagers: List[DockerSwarmRemoteManager]
 
     @property
-    def swarm_role(self) -> Literal["MANAGER", "WORKER"]:
+    def role(self) -> Literal["MANAGER", "WORKER"]:
         if any([self.NodeID == manager.NodeID for manager in self.RemoteManagers]):
             return "MANAGER"
         return "WORKER"
@@ -768,6 +768,11 @@ class DockerSwarmJoinCredentials:
 class DockerSwarmJoinContext(ProvisionSwarmNodeContext):
     credentials: DockerSwarmJoinCredentials
     info: DockerSystemInfo
+
+
+@dataclass
+class DockerNodeUpdateContext(ProvisionSwarmNodeContext):
+    swarm_info: DockerSwarmInfo
 
 
 @dataclass

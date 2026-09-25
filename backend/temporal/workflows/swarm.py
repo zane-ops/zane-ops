@@ -12,6 +12,8 @@ with workflow.unsafe.imports_passed_through():
         DockerInstallContext,
         ProvisionSwarmNodeContext,
         ProvisionSwarmNodeContextWithRole,
+        DockerSwarmJoinContext,
+        DockerNodeUpdateContext,
     )
     from zane_api.utils import Colors
 
@@ -88,7 +90,29 @@ class ProvisionSwarmNodeWorkflow:
                 )
 
                 if credentials is not None:
-                    pass
+                    swarm_info = await workflow.execute_activity_method(
+                        SwarmNodeActivities.join_swarm_cluster,
+                        DockerSwarmJoinContext(
+                            node=payload.new_node,
+                            tmp_dir=tmp_dir,
+                            credentials=credentials,
+                            info=docker_info,
+                        ),
+                        start_to_close_timeout=timedelta(minutes=3),
+                        retry_policy=self.retry_policy,
+                    )
+
+                    if swarm_info:
+                        await workflow.execute_activity_method(
+                            SwarmNodeActivities.update_node_labels,
+                            DockerNodeUpdateContext(
+                                node=payload.new_node,
+                                tmp_dir=tmp_dir,
+                                swarm_info=swarm_info,
+                            ),
+                            start_to_close_timeout=timedelta(minutes=3),
+                            retry_policy=self.retry_policy,
+                        )
 
         await workflow.execute_activity_method(
             SwarmNodeActivities.delete_ssh_keys_temp_dir,

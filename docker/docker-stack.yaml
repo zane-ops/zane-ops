@@ -22,6 +22,8 @@ services:
       VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION: "true"
     deploy:
       mode: global
+      labels:
+        zane.role: "log-collector"
   zane-proxy:
     image: ghcr.io/fredkiss3/caddy-cloudflare:2.11.4-alpine
     command: caddy run  --resume  --config /etc/caddy/config.json

@@ -1,33 +1,36 @@
 import json
 import os
-import shlex
 import shutil
-from typing import Literal, cast
-
 from temporalio import activity, workflow
 import asyncio
 import tempfile
 import semver
 
 with workflow.unsafe.imports_passed_through():
-    from zane_api.utils import Colors
+    from zane_api.utils import Colors, find_item_in_sequence
     from temporal.helpers import empty_folder, exec_cmd_in_server
     from temporal.constants import (
         DOCKER_CHECK_SCRIPT,
         DOCKER_INSTALL_SCRIPT,
-        DOCKER_ENABLE_SCRIPT,
         MINIMAL_DOCKER_VERSION_REQUIREMENTS,
+        DOCKER_SYSTEM_INFO_CMD,
     )
+    import docker
+    import docker.errors
+    from docker.models.nodes import Node as DockerSwarmNode
+    from django.conf import settings
 
 
 from ..shared import (
     DockerInstallContext,
+    DockerNodeUpdateContext,
     DockerSwarmJoinContext,
     DockerSwarmJoinCredentials,
     DockerSystemInfo,
     ProvisionSwarmNodePayload,
     ProvisionSwarmNodeContext,
     ProvisionSwarmNodeContextWithRole,
+    DockerSwarmInfo,
 )
 
 
@@ -149,6 +152,9 @@ class SwarmNodeActivities:
     async def install_latest_docker_version(
         self, ctx: DockerInstallContext
     ) -> DockerSystemInfo | None:
+        print(
+            f"Installing docker on server {Colors.BLUE}{ctx.node.private_ip}{Colors.ENDC}..."
+        )
         if (
             ctx.info is not None
             # Check that docker version meets minimal version requirements
@@ -226,9 +232,91 @@ class SwarmNodeActivities:
     @activity.defn
     async def join_swarm_cluster(
         self, ctx: DockerSwarmJoinContext
-    ) -> DockerSwarmJoinCredentials | None:
+    ) -> DockerSwarmInfo | None:
+        info = ctx.info
+        node = ctx.node
+        credentials = ctx.credentials
+        print(
+            f"Joining server {Colors.BLUE}{node.private_ip}{Colors.ENDC} to docker swarm cluster from manager {Colors.BLUE}{credentials.manager_addr}{Colors.ENDC}..."
+        )
+        if info.Swarm is not None:
+            if (
+                any(
+                    [
+                        manager.Addr == credentials.manager_addr
+                        for manager in info.Swarm.RemoteManagers
+                    ]
+                )
+                and info.Swarm.role == node.swarm_role
+            ):
+                print(
+                    f"Server is already part of the swarm cluster with the {Colors.YELLOW}{node.swarm_role}{Colors.ENDC} with ID {Colors.YELLOW}{info.Swarm.NodeID}{Colors.ENDC}, skipping join ⏩"
+                )
+                return info.Swarm
 
-        pass
+        async def message_handler(message: str):
+            print(message)
+            system_info: DockerSystemInfo | None = None
+            try:
+                parsed_data = json.loads(message)
+            except json.JSONDecodeError:
+                # Invalid JSON, not the data we are looking for
+                pass
+            else:
+                system_info = DockerSystemInfo.from_dict(parsed_data)
+            return system_info
+
+        exit_code, result = await exec_cmd_in_server(
+            ctx,
+            cmd=f"docker swarm leave --force >/dev/null 2>&1; docker swarm join --advertise-addr {node.private_ip} --token {credentials.token} {credentials.manager_addr} && {DOCKER_SYSTEM_INFO_CMD}",
+            output_handler=message_handler,
+        )
+        if exit_code == 0 and result is not None and result.Swarm is not None:
+            print(
+                f"Server {Colors.BLUE}{node.private_ip}{Colors.ENDC} joined the cluster as a {Colors.BLUE}{node.swarm_role.lower()}{Colors.ENDC} with ID {Colors.YELLOW}{result.Swarm.NodeID}{Colors.ENDC} ✅"
+            )
+            return result.Swarm
+        else:
+            print(
+                f"{Colors.RED}Failed to add server {Colors.BLUE}{node.private_ip}{Colors.ENDC} swarm cluster ❌{Colors.ENDC}"
+            )
+
+        return None
+
+    @activity.defn
+    async def update_node_labels(self, ctx: DockerNodeUpdateContext):
+        docker_client = docker.from_env()
+
+        info = ctx.swarm_info
+        node = ctx.node
+        print(
+            f"Updating labels for swarm node {Colors.BLUE}{info.NodeID}{Colors.ENDC}..."
+        )
+        try:
+            swarm_node = docker_client.nodes.get(info.NodeID)
+
+            labels = {}
+            if "APP_SERVER" in node.cluster_roles:
+                labels[settings.APP_SERVER_LABEL] = "true"
+            if "BUILD_SERVER" in node.cluster_roles:
+                labels[settings.BUILD_SERVER_LABEL] = "true"
+
+            swarm_node.update(
+                {
+                    "Availability": "active",
+                    "Role": ctx.node.swarm_role.lower(),
+                    "Labels": labels,
+                }
+            )
+        except docker.errors.APIError:
+            print(
+                f"{Colors.RED}Failed to update swarm labels {info.NodeID} ❌{Colors.ENDC}"
+            )
+            raise
+        else:
+            print(
+                f"Succesfully updated labels for Swarm Node {Colors.BLUE}{info.NodeID}{Colors.ENDC} ✅"
+            )
 
     @activity.defn
     async def delete_ssh_keys_temp_dir(self, tmp_dir: str):

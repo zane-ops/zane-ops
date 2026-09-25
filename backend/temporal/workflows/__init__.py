@@ -222,6 +222,8 @@ def get_workflows_and_activities():
             swarm_node_activities.check_docker_installation,
             swarm_node_activities.install_latest_docker_version,
             swarm_node_activities.get_swarm_join_token,
+            swarm_node_activities.join_swarm_cluster,
+            swarm_node_activities.update_node_labels,
             swarm_node_activities.delete_ssh_keys_temp_dir,
             acquire_service_deploy_semaphore,
             lock_deploy_semaphore,
