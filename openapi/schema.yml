@@ -18897,6 +18897,14 @@ components:
       description: |-
         * `ALL` - All services
         * `ONLY` - Only specific services
+    ClusterRolesEnum:
+      enum:
+      - BUILD_SERVER
+      - APP_SERVER
+      type: string
+      description: |-
+        * `BUILD_SERVER` - Build Server
+        * `APP_SERVER` - App Server
     ComposeConfigVersion:
       type: object
       properties:
@@ -34660,14 +34668,14 @@ components:
           type: string
           readOnly: true
           nullable: true
-        role:
+        swarm_role:
           $ref: '#/components/schemas/SwarmRoleEnum'
         private_ip:
           type: string
         ssh_port:
           type: integer
-          maximum: 2147483647
-          minimum: 0
+          maximum: 65535
+          minimum: 1
         status:
           allOf:
           - $ref: '#/components/schemas/SwarmNodeStatusEnum'
@@ -34681,10 +34689,10 @@ components:
           type: string
           readOnly: true
           nullable: true
-        is_build_server:
-          type: boolean
-        is_app_server:
-          type: boolean
+        cluster_roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClusterRolesEnum'
         is_initial_install_server:
           type: boolean
           readOnly: true
@@ -34715,41 +34723,40 @@ components:
             $ref: '#/components/schemas/SSHKey'
           readOnly: true
       required:
+      - cluster_roles
       - cpus
       - created_at
       - docker_version
       - hostname
       - id
-      - is_app_server
-      - is_build_server
       - is_initial_install_server
       - last_status_update
       - memory_bytes
       - private_ip
-      - role
       - ssh_keys
       - ssh_port
       - status
+      - swarm_role
       - updated_at
     SwarmNodeRequest:
       type: object
       properties:
-        role:
+        swarm_role:
           $ref: '#/components/schemas/SwarmRoleEnum'
         private_ip:
           type: string
           minLength: 1
         ssh_port:
           type: integer
-          maximum: 2147483647
-          minimum: 0
-        is_build_server:
-          type: boolean
-        is_app_server:
-          type: boolean
+          maximum: 65535
+          minimum: 1
+        cluster_roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClusterRolesEnum'
       required:
       - private_ip
-      - role
+      - swarm_role
     SwarmNodeStatusEnum:
       enum:
       - CREATED
@@ -34766,23 +34773,69 @@ components:
         * `DOWN` - Down
         * `DRAINED` - Drained
         * `FAILED` - Failed
+    SwarmNodesCreateClusterRolesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - cluster_roles
+          type: string
+          description: '* `cluster_roles` - cluster_roles'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    SwarmNodesCreateClusterRolesINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - cluster_roles.INDEX
+          type: string
+          description: '* `cluster_roles.INDEX` - cluster_roles.INDEX'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     SwarmNodesCreateError:
       oneOf:
       - $ref: '#/components/schemas/SwarmNodesCreateNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/SwarmNodesCreateRoleErrorComponent'
+      - $ref: '#/components/schemas/SwarmNodesCreateSwarmRoleErrorComponent'
       - $ref: '#/components/schemas/SwarmNodesCreatePrivateIpErrorComponent'
       - $ref: '#/components/schemas/SwarmNodesCreateSshPortErrorComponent'
-      - $ref: '#/components/schemas/SwarmNodesCreateIsBuildServerErrorComponent'
-      - $ref: '#/components/schemas/SwarmNodesCreateIsAppServerErrorComponent'
+      - $ref: '#/components/schemas/SwarmNodesCreateClusterRolesErrorComponent'
+      - $ref: '#/components/schemas/SwarmNodesCreateClusterRolesINDEXErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/SwarmNodesCreateNonFieldErrorsErrorComponent'
-          role: '#/components/schemas/SwarmNodesCreateRoleErrorComponent'
+          swarm_role: '#/components/schemas/SwarmNodesCreateSwarmRoleErrorComponent'
           private_ip: '#/components/schemas/SwarmNodesCreatePrivateIpErrorComponent'
           ssh_port: '#/components/schemas/SwarmNodesCreateSshPortErrorComponent'
-          is_build_server: '#/components/schemas/SwarmNodesCreateIsBuildServerErrorComponent'
-          is_app_server: '#/components/schemas/SwarmNodesCreateIsAppServerErrorComponent'
+          cluster_roles: '#/components/schemas/SwarmNodesCreateClusterRolesErrorComponent'
+          cluster_roles.INDEX: '#/components/schemas/SwarmNodesCreateClusterRolesINDEXErrorComponent'
     SwarmNodesCreateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/SwarmNodesCreateValidationError'
@@ -34792,50 +34845,6 @@ components:
         mapping:
           validation_error: '#/components/schemas/SwarmNodesCreateValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    SwarmNodesCreateIsAppServerErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - is_app_server
-          type: string
-          description: '* `is_app_server` - is_app_server'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    SwarmNodesCreateIsBuildServerErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - is_build_server
-          type: string
-          description: '* `is_build_server` - is_build_server'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     SwarmNodesCreateNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -34887,30 +34896,6 @@ components:
       - attr
       - code
       - detail
-    SwarmNodesCreateRoleErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - role
-          type: string
-          description: '* `role` - role'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     SwarmNodesCreateSshPortErrorComponent:
       type: object
       properties:
@@ -34933,6 +34918,30 @@ components:
             * `max_value` - max_value
             * `min_value` - min_value
             * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    SwarmNodesCreateSwarmRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - swarm_role
+          type: string
+          description: '* `swarm_role` - swarm_role'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
         detail:
           type: string
       required:

@@ -108,6 +108,7 @@ services:
         condition: any
       labels:
         zane.stack: "true"
+        zane.role: "log-collector"
       resources:
         limits:
           cpus: "0.5"

@@ -480,3 +480,139 @@ ZANE_CATCHALL_404_ROUTE = {
 }
 
 ZANE_PROXY_CONFIG_CACHE_KEY = "[zaneops::internal::caddy-config]"
+
+# =========================================
+#     Provision Swarm server scripts      #
+# =========================================
+
+MINIMAL_DOCKER_VERSION_REQUIREMENTS = "27.0.3"
+
+
+class Colors:
+    GREEN = "\033[92m"
+    BLUE = "\033[94m"
+    ORANGE = "\033[38;5;208m"
+    YELLOW = "\033[33m"
+    RED = "\033[91m"
+    GREY = "\033[90m"
+    ENDC = "\033[0m"  # Reset to default color
+
+
+DOCKER_SYSTEM_INFO_CMD = "docker system info --format json"
+
+DOCKER_CHECK_SCRIPT = f"command -v docker >/dev/null 2>&1 && {DOCKER_SYSTEM_INFO_CMD}"
+
+DOCKER_ENABLE_SCRIPT = f"""
+set -e
+
+if [ -f /etc/debian_version ] || [ -f /etc/redhat-release ] || [ -f /etc/arch-release ]; then
+  
+    echo "➡️ Enable Docker system service..."
+    systemctl enable --now docker
+
+elif [ -f /etc/alpine-release ]; then
+
+    echo "➡️ Enable Docker system service..."
+    rc-update add docker default
+    service docker start
+
+else
+    echo "{Colors.RED}❌ Unsupported Linux distribution{Colors.ENDC}"
+    exit 1
+fi
+"""
+
+DOCKER_INSTALL_SCRIPT = f"""
+set -e
+
+if [ -f /etc/debian_version ]; then
+    export DEBIAN_FRONTEND=noninteractive
+
+    . /etc/os-release
+    DISTRIBUTION="$ID"
+    CODENAME="${{UBUNTU_CODENAME:-$VERSION_CODENAME}}"
+
+    case "$DISTRIBUTION" in
+        debian|ubuntu|raspbian) ;;
+        *)
+            echo "{Colors.RED}❌ Unsupported Debian based distribution: $DISTRIBUTION{Colors.ENDC}"
+            exit 1
+            ;;
+    esac
+
+    echo "Detected Debian Linux Distribution: {Colors.BLUE}$DISTRIBUTION{Colors.ENDC}"
+    apt-get update
+    apt-get install -y ca-certificates curl
+
+    echo "➡️ Uninstalling old Docker versions..."
+    apt-get remove -y $(dpkg --get-selections docker.io docker-compose docker-compose-v2 docker-doc docker-buildx podman-docker containerd runc 2>/dev/null | cut -f1)
+
+    echo "➡️ Installing Docker..."
+
+    # Add Docker's official GPG key:
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/$DISTRIBUTION/gpg -o /etc/apt/keyrings/docker.asc
+    chmod a+r /etc/apt/keyrings/docker.asc
+
+    # Add the repository to Apt sources:
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/$DISTRIBUTION \
+      $CODENAME stable" > /etc/apt/sources.list.d/docker.list
+
+    # Install Docker
+    apt-get update
+    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+elif [ -f /etc/redhat-release ]; then
+    . /etc/os-release
+    case "$ID" in
+        fedora) REPO_DISTRIBUTION=fedora ;;
+        rhel) REPO_DISTRIBUTION=rhel ;;
+        *) REPO_DISTRIBUTION=centos ;;
+    esac
+    REPO_URL="https://download.docker.com/linux/$REPO_DISTRIBUTION/docker-ce.repo"
+
+    echo "Detected {Colors.BLUE}RedHat{Colors.ENDC} Linux Distribution: {Colors.BLUE}$ID{Colors.ENDC}"
+
+    echo "➡️ Uninstalling old Docker versions..."
+    dnf remove -y docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-engine \
+                  podman \
+                  runc || true
+
+    dnf install -y dnf-plugins-core
+
+    echo "➡️ Installing Docker..."
+    if command -v dnf5 >/dev/null 2>&1; then
+        dnf config-manager addrepo --overwrite --from-repofile="$REPO_URL"
+    else
+        dnf config-manager --add-repo "$REPO_URL"
+    fi
+    dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+elif [ -f /etc/alpine-release ]; then
+    echo "Detected {Colors.BLUE}Alpine{Colors.ENDC} Linux Distribution"
+
+    echo "➡️ Installing Docker..."
+    apk add --no-cache curl docker docker-cli-buildx docker-cli-compose
+
+elif [ -f /etc/arch-release ]; then
+    echo "Detected {Colors.BLUE}Arch{Colors.ENDC} Linux Distribution"
+
+    echo "➡️ Installing Docker..."
+    pacman -Syu --noconfirm curl docker docker-buildx docker-compose
+
+else
+    echo "{Colors.RED}❌ Unsupported Linux distribution{Colors.ENDC}"
+    exit 1
+fi
+
+{DOCKER_ENABLE_SCRIPT}
+{DOCKER_SYSTEM_INFO_CMD}
+"""

@@ -30,8 +30,12 @@ async def read_until(stream: asyncio.StreamReader, delimiters: list[bytes]):
     return bytes(buffer)
 
 
-class OutputHandlerFunction(Protocol):
-    async def __call__(self, message: str) -> Any: ...
+class OutputHandlerFunction[T](Protocol):
+    async def __call__(self, message: str) -> T: ...
+
+
+async def default_output_handler(message: str):
+    print(message)
 
 
 class AyncSubProcessRunner:
@@ -39,8 +43,8 @@ class AyncSubProcessRunner:
         self,
         command: str,
         cancel_event: asyncio.Event,
-        output_handler: OutputHandlerFunction,
         operation_name: str,
+        output_handler: OutputHandlerFunction = default_output_handler,
     ):
         self.command = command
         self.cancel_event = cancel_event

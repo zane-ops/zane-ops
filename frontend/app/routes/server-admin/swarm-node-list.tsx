@@ -143,10 +143,9 @@ export function ServerCard({
   cpus,
   memory_bytes,
   docker_version,
-  is_app_server,
-  is_build_server,
+  cluster_roles,
   status,
-  role,
+  swarm_role: role,
   private_ip,
   is_initial_install_server
 }: SwarmNode) {
@@ -300,7 +299,7 @@ export function ServerCard({
             <span className="w-px bg-muted h-3" />
 
             <div className="flex items-center gap-1">
-              {is_app_server && (
+              {cluster_roles.includes("APP_SERVER") && (
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
                     <Code className="inline-flex items-center gap-1 cursor-help decoration-1 decoration-wavy hover:underline">
@@ -315,7 +314,7 @@ export function ServerCard({
                   </TooltipContent>
                 </Tooltip>
               )}
-              {is_build_server && (
+              {cluster_roles.includes("BUILD_SERVER") && (
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
                     <Code className="inline-flex items-center gap-1 cursor-help decoration-1 decoration-wavy hover:underline">

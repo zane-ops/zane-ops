@@ -1,20 +1,27 @@
 import asyncio
 import base64
 import os
+import shlex
 import shutil
 
 from typing import Any, Dict, List, Literal, Optional, TypedDict, cast
 from docker.models.services import Service as DockerService
 from docker.models.configs import Config as DockerConfig
-
-
-from .shared import DeploymentDetails, ContainerMetrics
-
-from zane_api.utils import (
-    cache_result,
-    excerpt,
-    escape_ansi,
+from zane_api.process import (
+    AyncSubProcessRunner,
+    OutputHandlerFunction,
+    default_output_handler,
 )
+
+
+from .shared import (
+    DeploymentDetails,
+    ContainerMetrics,
+    ProvisionSwarmNodeContext,
+    SwarmNodeDetails,
+)
+
+from zane_api.utils import cache_result, excerpt, escape_ansi, Colors
 from search.loki_client import LokiSearchClient
 from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
 from django.conf import settings
@@ -896,3 +903,80 @@ async def send_regular_heartbeat(name: str):
     while True:
         activity.heartbeat(f"Heartbeat from `{name}()`...")
         await asyncio.sleep(0.1)
+
+
+async def exec_cmd_in_server[T](
+    ctx: ProvisionSwarmNodeContext,
+    cmd: str,
+    output_handler: OutputHandlerFunction[T] = default_output_handler,
+) -> tuple[int | None, T | None]:
+    heartbeat_task = None
+    cancel_event = asyncio.Event()
+    exit_code: int | None = None
+    result: T | None = None
+
+    try:
+
+        async def send_heartbeat():
+            """
+            We want this activity to be cancellable,
+            for activities to be cancellable, they need to send regular heartbeats:
+            https://docs.temporal.io/develop/python/cancellation#cancel-activity
+            """
+            while True:
+                activity.heartbeat(
+                    "Heartbeat from `clone_repository_and_checkout_to_commit()`..."
+                )
+                await asyncio.sleep(0.1)
+
+        heartbeat_task = asyncio.create_task(send_heartbeat())
+
+        full_cmd = [
+            "ssh",
+            "-p",
+            str(ctx.node.ssh_port),
+            "-i",
+            ctx.node.get_ssh_key_path(ctx.tmp_dir),
+            # Do not prompt for known_hosts
+            "-o",
+            "StrictHostKeyChecking=no",
+            # Do not store pubkey known_hosts
+            "-o",
+            "UserKnownHostsFile=/dev/null",
+            # Fail without asking for more input, no password prompt or anything
+            "-o",
+            "BatchMode=yes",
+            # SSH connection timeout of 5sec
+            "-o",
+            "ConnectTimeout=5",
+            f"root@{ctx.node.private_ip}",
+            cmd,
+        ]
+
+        runner = AyncSubProcessRunner(
+            command=shlex.join(full_cmd),
+            cancel_event=cancel_event,
+            operation_name="ssh",
+            output_handler=output_handler,
+        )
+        cmd_task = asyncio.create_task(runner.run())
+
+        done_first, _ = await asyncio.wait(
+            [heartbeat_task, cmd_task], return_when=asyncio.FIRST_COMPLETED
+        )
+
+        if cmd_task in done_first:
+            exit_code, raw_result = cmd_task.result()
+            result = cast(T | None, raw_result)
+            print("`cmd_task()` finished first")
+        else:
+            print("cancelling `cmd_task()`")
+            cmd_task.cancel()
+            await cmd_task
+    except asyncio.CancelledError:
+        cancel_event.set()
+        raise
+    finally:
+        if heartbeat_task:
+            heartbeat_task.cancel()
+    return exit_code, result

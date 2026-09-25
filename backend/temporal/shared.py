@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Literal, Optional, TYPE_CHECKING, cast
 import yaml
-
+import os
 
 if TYPE_CHECKING:
     from zane_api.models import Deployment, Environment
@@ -664,6 +664,130 @@ class ComposeStackDeploymentDetails:
             hash=data["hash"],
             stack=ComposeStackSnapshot.from_dict(data["stack"]),
         )
+
+
+@dataclass
+class SwarmNodeDetails:
+    id: str
+    private_ip: str
+    swarm_role: Literal["WORKER", "MANAGER"]
+    ssh_key: str
+    ssh_port: int
+    cluster_roles: list[Literal["APP_SERVER", "BUILD_SERVER"]] = field(
+        default_factory=list
+    )
+
+    def get_ssh_key_path(self, tmp_dir: str):
+        return os.path.join(tmp_dir, f"{self.id}.key")
+
+
+@dataclass
+class ProvisionSwarmNodePayload:
+    main_node: SwarmNodeDetails
+    new_node: SwarmNodeDetails
+
+
+@dataclass
+class ProvisionSwarmNodeContext:
+    node: SwarmNodeDetails
+    tmp_dir: str
+
+
+@dataclass
+class DockerSwarmRemoteManager:
+    Addr: str
+    NodeID: str
+
+
+@dataclass
+class DockerSwarmInfo:
+    NodeID: str
+    NodeAddr: str
+    RemoteManagers: List[DockerSwarmRemoteManager]
+
+    @property
+    def role(self) -> Literal["MANAGER", "WORKER"]:
+        if any([self.NodeID == manager.NodeID for manager in self.RemoteManagers]):
+            return "MANAGER"
+        return "WORKER"
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        managers: list[dict] = data["RemoteManagers"]
+
+        return cls(
+            NodeID=data["NodeID"],
+            NodeAddr=data["NodeAddr"],
+            RemoteManagers=[
+                DockerSwarmRemoteManager(
+                    Addr=manager["Addr"],
+                    NodeID=manager["NodeID"],
+                )
+                for manager in managers
+            ],
+        )
+
+
+@dataclass
+class DockerSystemInfo:
+    ServerVersion: str
+    Swarm: DockerSwarmInfo | None
+    NCPU: int
+    MemTotal: int
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        Swarm = data["Swarm"]
+        return cls(
+            ServerVersion=data["ServerVersion"],
+            NCPU=data["NCPU"],
+            MemTotal=data["MemTotal"],
+            Swarm=DockerSwarmInfo.from_dict(Swarm)
+            if Swarm["NodeID"] is not None and len(Swarm["NodeID"].strip()) > 0
+            else None,
+        )
+
+
+@dataclass
+class DockerInstallContext(ProvisionSwarmNodeContext):
+    info: DockerSystemInfo | None
+
+
+@dataclass
+class ProvisionSwarmNodeContextWithRole(ProvisionSwarmNodeContext):
+    swarm_role: Literal["WORKER", "MANAGER"]
+
+
+@dataclass
+class DockerSwarmJoinCredentials:
+    token: str
+    manager_addr: str
+
+
+@dataclass
+class DockerSwarmJoinContext(ProvisionSwarmNodeContext):
+    credentials: DockerSwarmJoinCredentials
+    info: DockerSystemInfo
+
+
+@dataclass
+class DockerNodeUpdateContext(ProvisionSwarmNodeContext):
+    swarm_info: DockerSwarmInfo
+
+
+@dataclass
+class SwarmNodeStatusResult:
+    node: SwarmNodeDetails
+    status: Literal[
+        "CREATED",
+        "PROVISIONING",
+        "READY",
+        "DOWN",
+        "DRAINED",
+        "FAILED",
+    ]
+    docker_info: DockerSystemInfo | None = None
+    swarm_hostname: str | None = None
 
 
 @dataclass
