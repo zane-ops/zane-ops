@@ -175,7 +175,7 @@ function TokenRow({ token }: { token: WorkspaceApiToken }) {
       </TableCell>
       <TableCell className="p-2">
         {token.scopes.length === 0 ? (
-          <Code className="px-2 whitespace-nowrap">all scopes</Code>
+          <span className="text-grey font-mono text-sm">N/A</span>
         ) : (
           <Popover>
             <PopoverTrigger asChild>
