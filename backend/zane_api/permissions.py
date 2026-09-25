@@ -187,8 +187,11 @@ class HasWorkspace(BasePermission):
         token = request.auth if isinstance(request.auth, WorkspaceApiToken) else None
         if token is not None:
             access = build_token_access(token)
-            if access is None:
+            required_scopes = getattr(view, "api_token_scopes", None)
+            # Each endpoint that accept token auth should have a `api_token_scopes `attribute`
+            if access is None or required_scopes is None:
                 return False
+
             request.workspace = access.workspace  # type: ignore
             request.access = access  # type: ignore
             return True
@@ -202,10 +205,10 @@ class HasWorkspace(BasePermission):
 
         workspace = qs.order_by("created_at").first()
 
-        request.workspace = workspace  # type: ignore
         if workspace is None:
             return False
 
+        request.workspace = workspace  # type: ignore
         request.access = build_session_access(  # type: ignore
             cast(AbstractUser, request.user), workspace
         )
@@ -231,7 +234,6 @@ class MinRolePermission(BasePermission):
     def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
         if not request.user or isinstance(request.user, AnonymousUser):
             return False
-
         return has_min_role(request, self.min_role)
 
 
@@ -251,26 +253,30 @@ class IsWorkspaceOwner(MinRolePermission):
     min_role = WorkspaceRole.OWNER
 
 
-class HasRequiredScopes(BasePermission):
+class HasRequiredAPITokenScopes(BasePermission):
     """
-    Enforces `view.required_scopes` for API-token requests (plan §6).
+    Enforces `view.api_token_scopes` for API-token requests (plan §6).
 
     - a logged-in user (`request.access.scopes is None`) always passes;
-    - a token passes if it holds **any one** of the view's `required_scopes`;
-    - a view with no `required_scopes` cannot be reached by a token at all —
+    - a token passes if it holds **any one** of the view's `api_token_scopes`;
+    - a view with no `api_token_scopes` cannot be reached by a token at all —
       forgetting to annotate a view fails safe (token denied, never opened).
     """
 
     def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
         access: EffectiveAccess | None = getattr(request, "access", None)
-        if access is None or access.scopes is None:
-            return True
-
-        required = getattr(view, "required_scopes", None)
-        if not required:
+        if access is None:
             return False
 
-        return any(access.has_scope(str(scope)) for scope in required)
+        if access.scopes is None:
+            # Scopes is None => logged in user with session auth
+            return True
+
+        required_scopes = getattr(view, "api_token_scopes", None)
+        if not required_scopes:
+            return False
+
+        return any(access.has_scope(str(scope)) for scope in required_scopes)
 
 
 class HasDeployWebhookAccess(BasePermission):
@@ -285,7 +291,9 @@ class HasDeployWebhookAccess(BasePermission):
 
     def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
         access: EffectiveAccess | None = getattr(request, "access", None)
-        if access is None or access.token is None:
+        if (
+            access is None or access.token is None
+        ):  # This webhook deploy only works with token auth
             return False
         return access.has_scope(TokenScope.DEPLOY_WRITE)
 

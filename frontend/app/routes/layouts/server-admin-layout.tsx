@@ -135,7 +135,7 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
   }
 
   return (
-    <div className="grid md:grid-cols-12 gap-6 md:gap-4 relative max-w-full">
+    <div className="grid md:grid-cols-12 lg:grid-cols-13 xl:grid-cols-14 gap-6 md:gap-4 relative max-w-full">
       <div className="md:col-span-full">
         <h1 className="text-3xl font-medium flex items-center gap-2">
           <ServerIcon className="size-8 flex-none text-grey" />
@@ -170,7 +170,9 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
           </ul>
         </nav>
       </aside>
-      <div className="md:col-span-9 overflow-hidden py-1 px-2">{children}</div>
+      <div className="md:col-span-9 lg:col-span-10 xl:col-span-11 overflow-hidden py-1 px-2">
+        {children}
+      </div>
     </div>
   );
 }
