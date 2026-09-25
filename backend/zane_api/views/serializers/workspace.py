@@ -218,6 +218,12 @@ class CreateWorkspaceApiTokenRequestSerializer(serializers.Serializer):
             )
         return role
 
+    def validate_scopes(self, scopes: list[str]):
+        # no scope selected => the token can reach every area
+        if len(scopes) == 0:
+            return list(TokenScope.values)
+        return scopes
+
     def validate_accessible_project_ids(self, projects: Sequence[Project]):
         for project in projects:
             if project.workspace_id != self._get_workspace().id:
