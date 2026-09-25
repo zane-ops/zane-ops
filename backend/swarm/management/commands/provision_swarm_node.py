@@ -37,13 +37,18 @@ class Command(BaseCommand):
         if new_key is None:
             raise CommandError(f"No Root SSH key found for the node `{node_id}`")
 
-        main_key = node.ssh_keys.filter(user="root").first()
+        main_key = main_node.ssh_keys.filter(user="root").first()
         if main_key is None:
             raise CommandError(f"No Root SSH key found for the main node")
 
         self.stdout.write(
-            f"Using Root SSH key {Colors.ORANGE}{new_key.name}{Colors.ENDC}"
-            f" (id={new_key.id}, user={new_key.user})"
+            f"Using Root SSH key {Colors.ORANGE}{main_key.name}{Colors.ENDC} for MAIN SERVER"
+            f" (user={main_key.user})"
+        )
+
+        self.stdout.write(
+            f"Using Root SSH key {Colors.ORANGE}{new_key.name}{Colors.ENDC} for NEW SERVER"
+            f" (user={new_key.user})"
         )
 
         payload = ProvisionSwarmNodePayload(

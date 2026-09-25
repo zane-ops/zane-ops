@@ -22,9 +22,12 @@ with workflow.unsafe.imports_passed_through():
 
 from ..shared import (
     DockerInstallContext,
+    DockerSwarmJoinContext,
+    DockerSwarmJoinCredentials,
     DockerSystemInfo,
     ProvisionSwarmNodePayload,
     ProvisionSwarmNodeContext,
+    ProvisionSwarmNodeContextWithRole,
 )
 
 
@@ -189,15 +192,43 @@ class SwarmNodeActivities:
         return result
 
     @activity.defn
-    async def enable_docker_service(self, ctx: ProvisionSwarmNodeContext):
-        print(f"Enabling Docker system service...")
-        exit_code, _ = await exec_cmd_in_server(
+    async def get_swarm_join_token(
+        self, ctx: ProvisionSwarmNodeContextWithRole
+    ) -> DockerSwarmJoinCredentials | None:
+        async def message_handler(message: str):
+            print(message)
+
+            if message.strip().startswith("docker swarm join --token"):
+                token, manager_ip = message.replace(
+                    "docker swarm join --token", ""
+                ).split()
+
+                return token, manager_ip
+
+        print(f"Get Docker swarm Join credentials...")
+        exit_code, result = await exec_cmd_in_server(
             ctx,
-            cmd=DOCKER_ENABLE_SCRIPT,
+            cmd=f"docker swarm join-token {ctx.swarm_role.lower()}",
+            output_handler=message_handler,
         )
-        if exit_code == 0:
-            print(f"Succesfully Enabled Docker ✅ ")
-        return exit_code == 0
+        if exit_code == 0 and result is not None:
+            credentials = DockerSwarmJoinCredentials(
+                token=result[0],
+                manager_addr=result[1],
+            )
+            print(
+                f"Got credentials {credentials.token=} {credentials.manager_addr=} ✅"
+            )
+            return credentials
+        print(f"{Colors.RED}Failed to get Swarm Join credentials ❌{Colors.ENDC}")
+        return None
+
+    @activity.defn
+    async def join_swarm_cluster(
+        self, ctx: DockerSwarmJoinContext
+    ) -> DockerSwarmJoinCredentials | None:
+
+        pass
 
     @activity.defn
     async def delete_ssh_keys_temp_dir(self, tmp_dir: str):

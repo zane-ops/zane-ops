@@ -705,6 +705,12 @@ class DockerSwarmInfo:
     NodeAddr: str
     RemoteManagers: List[DockerSwarmRemoteManager]
 
+    @property
+    def swarm_role(self) -> Literal["MANAGER", "WORKER"]:
+        if any([self.NodeID == manager.NodeID for manager in self.RemoteManagers]):
+            return "MANAGER"
+        return "WORKER"
+
     @classmethod
     def from_dict(cls, data: dict):
         managers: list[dict] = data["RemoteManagers"]
@@ -745,6 +751,23 @@ class DockerSystemInfo:
 @dataclass
 class DockerInstallContext(ProvisionSwarmNodeContext):
     info: DockerSystemInfo | None
+
+
+@dataclass
+class ProvisionSwarmNodeContextWithRole(ProvisionSwarmNodeContext):
+    swarm_role: Literal["WORKER", "MANAGER"]
+
+
+@dataclass
+class DockerSwarmJoinCredentials:
+    token: str
+    manager_addr: str
+
+
+@dataclass
+class DockerSwarmJoinContext(ProvisionSwarmNodeContext):
+    credentials: DockerSwarmJoinCredentials
+    info: DockerSystemInfo
 
 
 @dataclass
