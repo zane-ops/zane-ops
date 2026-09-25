@@ -405,7 +405,6 @@ class SwarmNodeActivities:
                 print(f"{task_list=}")
                 time_left = healthcheck_timeout - (time.monotonic() - start_time)
 
-            print(f"{task_list=}")
             return len(task_list) > 0
 
         services_updated = await asyncio.gather(
