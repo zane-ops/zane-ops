@@ -36,19 +36,18 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
     });
   }
   if (hasMinRole(membership, "Admin")) {
-    sidebarNavItems.push({
-      title: "User Invitations",
-      href: href("/workspace/settings/invitations"),
-      icon: MailIcon
-    });
-  }
-
-  if (hasMinRole(membership, "Admin")) {
-    sidebarNavItems.push({
-      title: "Git",
-      href: href("/workspace/settings/git-apps"),
-      icon: GitBranchIcon
-    });
+    sidebarNavItems.push(
+      {
+        title: "User Invitations",
+        href: href("/workspace/settings/invitations"),
+        icon: MailIcon
+      },
+      {
+        title: "Git",
+        href: href("/workspace/settings/git-apps"),
+        icon: GitBranchIcon
+      }
+    );
   }
 
   // members pick a shared credential when creating a service, they just can't edit them
@@ -69,7 +68,7 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
 
   return (
     <>
-      <div className="my-6 grid md:grid-cols-12 gap-6 md:gap-4 relative max-w-full">
+      <div className="my-6 grid md:grid-cols-12 lg:grid-cols-13 xl:grid-cols-14 gap-6 md:gap-4 relative max-w-full">
         <div className="md:col-span-full">
           <h1 className="text-3xl font-medium flex items-center gap-2">
             <Building2Icon className="size-8 flex-none text-grey" />
@@ -104,7 +103,7 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
             </ul>
           </nav>
         </aside>
-        <div className="md:col-span-9 overflow-hidden py-1 px-2">
+        <div className="md:col-span-9 lg:col-span-10 xl:col-span-11 overflow-hidden py-1 px-2">
           <Outlet />
         </div>
       </div>

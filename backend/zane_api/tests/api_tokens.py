@@ -1,12 +1,29 @@
+import re
 from datetime import timedelta
 from typing import cast
+
+import responses
 
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 
+from compose.models import ComposeStack
+from compose.tests.fixtures import DOCKER_COMPOSE_MINIMAL
+from git_connectors.models import GitHubApp
+from git_connectors.tests.fixtures import (
+    GITHUB_APP_MANIFEST_DATA,
+    GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
+    get_github_signed_event_headers,
+    mock_github_comments_api,
+    mock_github_pr_api,
+)
+from git_connectors.views import GithubWebhookEvent
+
 from ..models import (
+    Environment,
+    GitApp,
     Project,
     TokenScope,
     Workspace,
@@ -14,7 +31,7 @@ from ..models import (
     WorkspaceMembership,
     WorkspaceRole,
 )
-from ..utils import jprint
+from ..utils import generate_random_chars, jprint
 from .base import AuthAPITestCase
 
 
@@ -397,6 +414,36 @@ class WorkspaceApiTokenCRUDViewTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_create_with_empty_scopes_grants_all_scopes(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:workspace.tokens"),
+            data={
+                "name": "all-scopes",
+                "role": WorkspaceRole.MEMBER,
+                "scopes": [],
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        token = WorkspaceApiToken.objects.get()
+        self.assertCountEqual(TokenScope.values, token.scopes)
+        self.assertCountEqual(TokenScope.values, response.json()["scopes"])
+
+    def test_create_without_scopes_grants_all_scopes(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:workspace.tokens"),
+            data={
+                "name": "all-scopes",
+                "role": WorkspaceRole.MEMBER,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        token = WorkspaceApiToken.objects.get()
+        self.assertCountEqual(TokenScope.values, token.scopes)
 
     def test_create_with_accessible_projects(self):
         self.loginUser()
@@ -933,3 +980,247 @@ class WorkspaceTokenAuthenticationTests(AuthAPITestCase):
         request_role = WorkspaceApiToken.objects.get().role
         self.assertEqual(WorkspaceRole.ADMIN, request_role)  # stored role unchanged
         # (effective role is recomputed per request in permissions.build_token_access)
+
+    def test_token_with_all_scopes_triggers_a_deployment(self):
+        _, full = self.make_token(scopes=TokenScope.values)
+        response = self.call(full)
+        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
+
+    def test_token_with_empty_scopes_is_403(self):
+        _, full = self.make_token(scopes=[])
+        response = self.call(full)
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+
+class DeployWebhookTokenTestsMixin:
+    """
+    Token auth + scope checks shared by every deploy webhook route (plan §7).
+    Subclasses implement `setup_target()` and `call()`; `success_status` is
+    the expected status of an accepted request, `None` to only check that the
+    request got past authentication & permissions.
+    """
+
+    success_status: int | None = status.HTTP_202_ACCEPTED
+
+    def setUp(self):
+        super().setUp()  # type: ignore
+        self.workspace = cast(Workspace, Workspace.objects.first())
+        self.project = self.setup_target()
+        # the webhook routes are token-only, drop the session to be explicit
+        self.client.logout()  # type: ignore
+
+    def setup_target(self) -> Project:
+        raise NotImplementedError
+
+    def call(self, full: str | None):
+        raise NotImplementedError
+
+    def bearer(self, full: str | None) -> dict:
+        if full is None:
+            return {}
+        return {"headers": {"Authorization": f"Bearer {full}"}}
+
+    def make_token(self, **kwargs):
+        kwargs.setdefault("scopes", [TokenScope.DEPLOY_WRITE])
+        kwargs.setdefault("role", WorkspaceRole.MEMBER)
+        return self.create_api_token(**kwargs)  # type: ignore
+
+    def assertAccepted(self, response):
+        jprint(response.json() if response.content else {})
+        if self.success_status is None:
+            self.assertNotIn(  # type: ignore
+                response.status_code,
+                [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN],
+            )
+        else:
+            self.assertEqual(self.success_status, response.status_code)  # type: ignore
+
+    def test_valid_deploy_token_is_accepted(self):
+        _, full = self.make_token()
+        self.assertAccepted(self.call(full))
+
+    def test_token_with_all_scopes_is_accepted(self):
+        _, full = self.make_token(scopes=TokenScope.values)
+        self.assertAccepted(self.call(full))
+
+    def test_missing_authorization_header_is_401(self):
+        response = self.call(None)
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)  # type: ignore
+
+    def test_session_auth_is_ignored(self):
+        self.loginUser()  # type: ignore
+        response = self.call(None)
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)  # type: ignore
+
+    def test_revoked_token_is_401(self):
+        token, full = self.make_token()
+        token.delete()
+        response = self.call(full)
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)  # type: ignore
+
+    def test_token_without_deploy_scope_is_403(self):
+        _, full = self.make_token(scopes=[TokenScope.SERVICE_READ])
+        response = self.call(full)
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)  # type: ignore
+
+    def test_token_with_empty_scopes_is_403(self):
+        _, full = self.make_token(scopes=[])
+        response = self.call(full)
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)  # type: ignore
+
+    def test_token_scoped_to_another_project_is_403(self):
+        other_project = Project.objects.create(slug="other", workspace=self.workspace)
+        _, full = self.make_token(accessible_projects=[other_project])
+        response = self.call(full)
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)  # type: ignore
+
+    def test_token_from_another_workspace_is_404(self):
+        owner = User.objects.get(username="Fredkiss3")
+        other_ws = Workspace.objects.create(name="Other")
+        WorkspaceMembership.objects.create(
+            user=owner, workspace=other_ws, role=WorkspaceRole.OWNER
+        )
+        _, full = self.make_token(workspace=other_ws)
+        response = self.call(full)
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)  # type: ignore
+
+
+class DockerServiceDeployWebhookTokenTests(
+    DeployWebhookTokenTestsMixin, AuthAPITestCase
+):
+    def setup_target(self) -> Project:
+        project, self.service = self.create_redis_docker_service()
+        return project
+
+    def call(self, full: str | None):
+        return self.client.put(
+            reverse(
+                "zane_api:services.docker.webhook_deploy",
+                kwargs={"deploy_token": self.service.deploy_token},
+            ),
+            data={"new_image": "valkey/valkey:8-alpine"},
+            **self.bearer(full),
+        )
+
+
+class GitServiceDeployWebhookTokenTests(DeployWebhookTokenTestsMixin, AuthAPITestCase):
+    def setup_target(self) -> Project:
+        project, self.service = self.create_git_service(
+            repository_url="https://github.com/zane-ops/docs"
+        )
+        return project
+
+    def call(self, full: str | None):
+        return self.client.put(
+            reverse(
+                "zane_api:services.git.webhook_deploy",
+                kwargs={"deploy_token": self.service.deploy_token},
+            ),
+            data={"commit_sha": "abcd1236"},
+            **self.bearer(full),
+        )
+
+
+class ComposeStackDeployWebhookTokenTests(
+    DeployWebhookTokenTestsMixin, AuthAPITestCase
+):
+    def setup_target(self) -> Project:
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "compose"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        project = Project.objects.get(slug="compose")
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data={"slug": "my-stack", "user_content": DOCKER_COMPOSE_MINIMAL},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.stack = ComposeStack.objects.get(slug="my-stack")
+        return project
+
+    def call(self, full: str | None):
+        return self.client.put(
+            reverse(
+                "compose:stacks.webhook_deploy",
+                kwargs={"deploy_token": self.stack.deploy_token},
+            ),
+            **self.bearer(full),
+        )
+
+
+class TriggerPreviewEnvWebhookTokenTests(DeployWebhookTokenTestsMixin, AuthAPITestCase):
+    success_status = status.HTTP_201_CREATED
+
+    def setUp(self):
+        # the preview env is created through the github API
+        responses.start()
+        self.addCleanup(responses.reset)
+        self.addCleanup(responses.stop)
+        super().setUp()
+
+    def create_and_install_github_app(self) -> GitApp:
+        self.loginUser()
+        mock_github_pr_api()
+        mock_github_comments_api()
+        responses.add(
+            responses.POST,
+            url=re.compile(
+                r"^https://api\.github\.com/app/installations/.*", re.IGNORECASE
+            ),
+            status=status.HTTP_200_OK,
+            json={"token": generate_random_chars(32)},
+        )
+
+        github = GitHubApp.objects.create(
+            webhook_secret=GITHUB_APP_MANIFEST_DATA["webhook_secret"],
+            app_id=GITHUB_APP_MANIFEST_DATA["id"],
+            name=GITHUB_APP_MANIFEST_DATA["name"],
+            client_id=GITHUB_APP_MANIFEST_DATA["client_id"],
+            client_secret=GITHUB_APP_MANIFEST_DATA["client_secret"],
+            private_key=GITHUB_APP_MANIFEST_DATA["pem"],
+            app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
+            installation_id=1,
+        )
+        gitapp = GitApp.objects.create(github=github, workspace=self.workspace)
+
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.INSTALLATION,
+                GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        return gitapp
+
+    @responses.activate
+    def setup_target(self) -> Project:
+        gitapp = self.create_and_install_github_app()
+        project, self.service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+        return project
+
+    def call(self, full: str | None):
+        return self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": self.service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1"},
+            **self.bearer(full),
+        )

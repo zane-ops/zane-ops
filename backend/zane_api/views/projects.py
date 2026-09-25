@@ -73,7 +73,6 @@ from temporal.workflows import (
 from ..permissions import (
     HasWorkspace,
     IsWorkspaceAdmin,
-    IsWorkspaceMember,
     IsWorkspaceViewer,
     request_access,
 )

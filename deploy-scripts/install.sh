@@ -10,7 +10,7 @@ Usage:
   sudo $0 [OPTIONS]
 
 Options:
-  -v, --version=VERSION           Set ZaneOps version (default: latest)
+  -v, --version=VERSION           Set ZaneOps version (default: latest, or 'canary' for main branch)
   -m, --mode=MODE                 Set mode: http or https
   -r, --root-domain=DOMAIN        Set root domain
   -a, --app-domain=DOMAIN         Set app domain
@@ -37,6 +37,27 @@ Examples:
 
 EOF
   exit 0
+}
+
+TOTAL_STEPS=4
+
+# Print a highly visible banner so each step stands out in the logs
+print_step() {
+    local number="$1"
+    local emoji="$2"
+    local title="$3"
+    local bar="════════════════════════════════════════════════════════════════════"
+    local bold="" blue="" reset=""
+    if [ -t 1 ]; then
+        bold="\033[1m"
+        blue="\033[34m"
+        reset="\033[0m"
+    fi
+    echo ""
+    printf "%b%s%b\n" "$blue" "$bar" "$reset"
+    printf "%b%b  %s  %s  [step %s/%s]%b\n" "$blue" "$bold" "$emoji" "$title" "$number" "$TOTAL_STEPS" "$reset"
+    printf "%b%s%b\n" "$blue" "$bar" "$reset"
+    echo ""
 }
 
 # Check for help flag before anything else
@@ -124,11 +145,14 @@ APP_DOMAIN="${CLI_APP_DOMAIN:-${APP_DOMAIN}}"
 APP_DIRECTORY="${CLI_APP_DIRECTORY:-${APP_DIRECTORY}}"
 ALLOW_HTTP_SESSION="${CLI_ALLOW_HTTP_SESSION:-${ALLOW_HTTP_SESSION}}"
 
+# Defaults applied by `make setup` when nothing is provided (see .env.template)
+SSLIP_IP=$(ip route show default 2>/dev/null | awk '/src/ {for (i=1; i<=NF; i++) if ($i=="src") print $(i+1)}' | sed 's/\./-/g')
+DEFAULT_SSLIP_DOMAIN="${SSLIP_IP:-127-0-0-1}.sslip.io"
+DEFAULT_MODE="https"
+DEFAULT_ALLOW_HTTP_SESSION="false"
+
 # Interactively ask for domains if in a terminal and not already provided
 if [ -t 0 ] && { [ -z "$ROOT_DOMAIN" ] || [ -z "$APP_DOMAIN" ]; }; then
-    SSLIP_IP=$(ip route show default | awk '/src/ {for (i=1; i<=NF; i++) if ($i=="src") print $(i+1)}' | sed 's/\./-/g')
-    DEFAULT_SSLIP_DOMAIN="${SSLIP_IP}.sslip.io"
-
     echo ""
     echo "🌐 Domain Configuration"
     echo "   ZaneOps needs two domains:"
@@ -158,14 +182,63 @@ if [ -t 0 ] && { [ -z "$ROOT_DOMAIN" ] || [ -z "$APP_DOMAIN" ]; }; then
     echo ""
 fi
 
-echo "➡️ Installing ZaneOps version: $VERSION"
-[ -n "$MODE" ] && echo "➡️ Mode: $MODE"
-[ -n "$ROOT_DOMAIN" ] && echo "➡️ Root Domain: $ROOT_DOMAIN"
-[ -n "$APP_DOMAIN" ] && echo "➡️ App Domain: $APP_DOMAIN"
-[ -n "$APP_DIRECTORY" ] && echo "➡️ App Directory: $APP_DIRECTORY"
-[ -n "$ALLOW_HTTP_SESSION" ] && echo "➡️ Allow HTTP Session: $ALLOW_HTTP_SESSION"
+if [ "$VERSION" = "canary" ]; then
+    echo ""
+    echo "⚠️  WARNING: 'canary' tracks the latest commit on main."
+    echo "   It is not guaranteed to be bug-free and can break at any time."
+    if [ -t 0 ]; then
+        read -r -p "   Are you sure you want to continue? [y/N]: " _confirm_canary
+        case "$_confirm_canary" in
+            [yY]|[yY][eE][sS]) ;;
+            *)
+                echo "❌ Installation cancelled."
+                exit 1
+                ;;
+        esac
+    else
+        echo "   Non-interactive session detected: proceeding with canary install."
+    fi
+    echo ""
+fi
 
-echo "➡️ Checking OS and installing dependencies..."
+# Compute installation directory ahead of the summary so it can be shown to the user
+INSTALL_DIR="${APP_DIRECTORY:-/var/www/zaneops}"
+
+echo ""
+echo "📋 Installation Summary"
+echo "   ZaneOps is a self-hosted, open-source PaaS for deploying web apps, static"
+echo "   sites, databases and services — built on Docker Swarm and the Caddy proxy."
+echo ""
+echo "   This script will:"
+echo "   1️⃣  Install the required dependencies (Docker included) if they are missing"
+echo "   2️⃣  Initialize a Docker Swarm on this machine"
+echo "   3️⃣  Download the ZaneOps Makefile and configure the environment"
+echo "   4️⃣  Deploy the ZaneOps stack as a set of Swarm services"
+echo ""
+echo "   Version              : $VERSION"
+echo "   Mode                 : ${MODE:-$DEFAULT_MODE}"
+echo "   Root Domain          : ${ROOT_DOMAIN:-$DEFAULT_SSLIP_DOMAIN}"
+echo "   App Domain           : ${APP_DOMAIN:-$DEFAULT_SSLIP_DOMAIN}"
+echo "   Install Directory    : $INSTALL_DIR"
+echo "   Allow HTTP Session   : ${ALLOW_HTTP_SESSION:-$DEFAULT_ALLOW_HTTP_SESSION}"
+echo "   Target User          : $ORIGINAL_USER"
+echo ""
+
+if [ -t 0 ]; then
+    read -r -p "   Proceed with installation? [y/N]: " _confirm_install
+    case "$_confirm_install" in
+        [yY]|[yY][eE][sS]) ;;
+        *)
+            echo "❌ Installation cancelled."
+            exit 1
+            ;;
+    esac
+else
+    echo "   Non-interactive session detected: proceeding without confirmation."
+fi
+echo ""
+
+print_step 1 "1️⃣" "Checking OS and installing dependencies"
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     if [ -f /etc/debian_version ]; then
@@ -173,7 +246,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         apt install -y make curl jq openssl ca-certificates lsb-release gnupg
 
         if ! command -v docker &>/dev/null; then
-            echo "➡️ Installing Docker..."
+            echo "   ➡️ Installing Docker..."
             install -m 0755 -d /etc/apt/keyrings
             curl -fsSL https://download.docker.com/linux/$(. /etc/os-release && echo "$ID")/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
             echo \
@@ -187,7 +260,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     elif [ -f /etc/redhat-release ]; then
         dnf install -y make curl jq openssl yum-utils
         if ! command -v docker &>/dev/null; then
-            echo "➡️ Installing Docker..."
+            echo "   ➡️ Installing Docker..."
             dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
             dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
         fi
@@ -217,71 +290,71 @@ else
 fi
 
 # Add user to docker group
-echo "➡️ Adding $ORIGINAL_USER to docker group..."
+echo "   ➡️ Adding $ORIGINAL_USER to docker group..."
 if ! groups "$ORIGINAL_USER" | grep -q '\bdocker\b'; then
     usermod -aG docker "$ORIGINAL_USER"
-    echo "✅ User $ORIGINAL_USER added to docker group"
-    echo "⚠️  Note: $ORIGINAL_USER will need to log out and back in for docker group changes to take effect"
+    echo "   ✅ User $ORIGINAL_USER added to docker group"
+    echo "   ⚠️  Note: $ORIGINAL_USER will need to log out and back in for docker group changes to take effect"
 else
-    echo "✅ User $ORIGINAL_USER is already in docker group"
+    echo "   ✅ User $ORIGINAL_USER is already in docker group"
 fi
 
-# Create installation directory
-INSTALL_DIR="${APP_DIRECTORY:-/var/www/zaneops}"
-echo "➡️ Using INSTALL_DIR=${INSTALL_DIR}" 
+# Initialize Docker Swarm if not already active
+print_step 2 "2️⃣" "Initializing Docker Swarm"
+if ! docker info 2>/dev/null | grep -q 'Swarm: active'; then
+    docker swarm init --advertise-addr 127.0.0.1
+else
+    echo "   ✅ Docker Swarm is already active"
+fi
 
+# Create installation directory, download the Makefile & configure the environment
+print_step 3 "3️⃣" "Downloading the Makefile and configuring the environment"
+echo "   ➡️ Using INSTALL_DIR=${INSTALL_DIR}"
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-# Initialize Docker Swarm if not already active
-if ! docker info 2>/dev/null | grep -q 'Swarm: active'; then
-    echo "➡️ Initializing Docker Swarm on 127.0.0.1..."
-    docker swarm init --advertise-addr 127.0.0.1
-fi
-
-# Download Makefile
-echo "➡️ Downloading Makefile..."
+echo "   ➡️ Downloading Makefile..."
 curl -sSL https://cdn.zaneops.dev/makefile -o Makefile
 
 # Run setup (creates .env)
-echo "➡️ Running make setup..."
+echo "   ➡️ Running make setup..."
 make setup
 
 # Update .env with custom values
 if [ -f .env ]; then
-    echo "➡️ Configuring .env file..."
+    echo "   ➡️ Configuring .env file..."
     
     # Update IMAGE_VERSION
-    echo "  - Setting IMAGE_VERSION to $VERSION..."
+    echo "      - Setting IMAGE_VERSION to $VERSION..."
     sed -i "s/^IMAGE_VERSION=.*/IMAGE_VERSION=${VERSION}/" .env
     
     # Update MODE if provided
     if [ -n "$MODE" ]; then
-        echo "  - Setting MODE to $MODE..."
+        echo "      - Setting MODE to $MODE..."
         sed -i "s/^MODE=.*/MODE='${MODE}'/" .env
     fi
     
     # Update ROOT_DOMAIN if provided
     if [ -n "$ROOT_DOMAIN" ]; then
-        echo "  - Setting ROOT_DOMAIN to $ROOT_DOMAIN..."
+        echo "      - Setting ROOT_DOMAIN to $ROOT_DOMAIN..."
         sed -i "s/^ROOT_DOMAIN=.*/ROOT_DOMAIN=\"${ROOT_DOMAIN}\"/" .env
     fi
     
     # Update ZANE_APP_DOMAIN if provided
     if [ -n "$APP_DOMAIN" ]; then
-        echo "  - Setting ZANE_APP_DOMAIN to $APP_DOMAIN..."
+        echo "      - Setting ZANE_APP_DOMAIN to $APP_DOMAIN..."
         sed -i "s/^ZANE_APP_DOMAIN=.*/ZANE_APP_DOMAIN=\"${APP_DOMAIN}\"/" .env
     fi
     
     # Update ZANE_APP_DIRECTORY if provided
     if [ -n "$APP_DIRECTORY" ]; then
-        echo "  - Setting ZANE_APP_DIRECTORY to $APP_DIRECTORY..."
+        echo "      - Setting ZANE_APP_DIRECTORY to $APP_DIRECTORY..."
         sed -i "s|^ZANE_APP_DIRECTORY=.*|ZANE_APP_DIRECTORY=${APP_DIRECTORY}|" .env
     fi
     
     # Update __DANGEROUS_ALLOW_HTTP_SESSION if provided
     if [ -n "$ALLOW_HTTP_SESSION" ]; then
-        echo "  - Setting __DANGEROUS_ALLOW_HTTP_SESSION to $ALLOW_HTTP_SESSION..."
+        echo "      - Setting __DANGEROUS_ALLOW_HTTP_SESSION to $ALLOW_HTTP_SESSION..."
         # Check if the line exists (commented or not)
         if grep -q "^#\?__DANGEROUS_ALLOW_HTTP_SESSION=" .env; then
             # Uncomment and update the value
@@ -293,13 +366,14 @@ if [ -f .env ]; then
         fi
     fi
 else
-    echo "❌ .env not found after setup!"
+    echo "   ❌ .env not found after setup!"
     exit 1
 fi
 
 # Adjust ownership and deploy
-echo "➡️ Adjusting ownership of $INSTALL_DIR to $ORIGINAL_USER..."
+print_step 4 "4️⃣" "Deploying the ZaneOps stack"
+echo "   ➡️ Adjusting ownership of $INSTALL_DIR to $ORIGINAL_USER..."
 chown -R "$ORIGINAL_USER":"$ORIGINAL_USER" "$INSTALL_DIR"
 
-echo "➡️ Running make deploy..."
+echo "   ➡️ Running make deploy..."
 make deploy

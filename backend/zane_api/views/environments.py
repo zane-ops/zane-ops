@@ -31,6 +31,7 @@ from ..models import (
     PreviewEnvMetadata,
     GitApp,
     CloneEnvPreviewPayload,
+    TokenScope,
 )
 from ..serializers import (
     EnvironmentSerializer,
@@ -63,7 +64,7 @@ from rest_framework import serializers
 from ..authentication import WorkspaceTokenAuthentication
 from ..permissions import (
     HasWorkspace,
-    HasDeployWebhookAccess,
+    HasRequiredAPITokenScopes,
     IsWorkspaceMember,
     IsWorkspaceViewer,
     IsWorkspaceAdmin,
@@ -657,7 +658,8 @@ class TriggerPreviewEnvironmentAPIView(APIView):
     # must carry an API token with `deploy:write`; the session is never
     # consulted for a deploy webhook (plan §7).
     authentication_classes = [WorkspaceTokenAuthentication]
-    permission_classes = [HasWorkspace, HasDeployWebhookAccess]
+    permission_classes = [HasWorkspace, HasRequiredAPITokenScopes]
+    api_token_scopes = [TokenScope.DEPLOY_WRITE]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
 

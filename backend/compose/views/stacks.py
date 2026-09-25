@@ -31,10 +31,10 @@ from temporal.workflows import (
     ToggleComposeStackWorkflow,
 )
 from zane_api.authentication import WorkspaceTokenAuthentication
-from zane_api.models import Environment, Project
+from zane_api.models import Environment, Project, TokenScope
 from zane_api.permissions import (
-    HasDeployWebhookAccess,
     HasWorkspace,
+    HasRequiredAPITokenScopes,
     IsWorkspaceAdmin,
     IsWorkspaceMember,
     IsWorkspaceViewer,
@@ -739,7 +739,12 @@ class ComposeStackWebhookDeployAPIView(APIView):
     # must carry an API token with `deploy:write`; the session is never
     # consulted for a deploy webhook (plan §7).
     authentication_classes = [WorkspaceTokenAuthentication]
-    permission_classes = [HasWorkspace, HasDeployWebhookAccess]
+
+    # token permissions
+    permission_classes = [HasWorkspace, HasRequiredAPITokenScopes]
+    api_token_scopes = [TokenScope.DEPLOY_WRITE]
+
+    # Rate-limit
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
 
