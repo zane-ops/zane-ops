@@ -22,6 +22,7 @@ from ..serializers import (
     WorkspaceApiTokenWithSecretSerializer,
 )
 from .serializers import CreateWorkspaceApiTokenRequestSerializer
+from rest_framework.authentication import SessionAuthentication
 
 
 def _get_token_or_404(request: Request, token_id: str) -> WorkspaceApiToken:
@@ -59,11 +60,11 @@ def _get_token_or_404(request: Request, token_id: str) -> WorkspaceApiToken:
 
 class WorkspaceApiTokenListCreateAPIView(ListCreateAPIView):
     throttle_classes = [ScopedRateThrottle]
+    authentication_classes = [SessionAuthentication]
     throttle_scope = "token"
 
-    # no `required_scopes` => `HasRequiredScopes` denies API tokens outright:
     # a token can never create or list tokens (plan §10).
-    permission_classes = [HasWorkspace, HasRequiredScopes, IsWorkspaceMember]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
     pagination_class = None
 
     queryset = WorkspaceApiToken.objects.all()  # just used for the openAPI docs
@@ -148,7 +149,8 @@ class WorkspaceApiTokenListCreateAPIView(ListCreateAPIView):
 
 
 class WorkspaceApiTokenDetailAPIView(RetrieveUpdateAPIView):
-    permission_classes = [HasWorkspace, HasRequiredScopes, IsWorkspaceViewer]
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [HasWorkspace, IsWorkspaceViewer]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "token"
     serializer_class = WorkspaceApiTokenSerializer
@@ -166,7 +168,8 @@ class WorkspaceApiTokenDetailAPIView(RetrieveUpdateAPIView):
 
 
 class WorkspaceApiTokenRevokeAPIView(APIView):
-    permission_classes = [HasWorkspace, HasRequiredScopes, IsWorkspaceMember]
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "token"
 
