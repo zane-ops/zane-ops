@@ -294,6 +294,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "zane_api.permissions.HasWorkspace",
         "zane_api.permissions.IsWorkspaceViewer",
+        "zane_api.permissions.HasRequiredScopes",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
