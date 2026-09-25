@@ -263,14 +263,15 @@ class HasRequiredScopes(BasePermission):
 
     def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
         access: EffectiveAccess | None = getattr(request, "access", None)
-        if access is None or access.scopes is None:
-            return True
-
-        required = getattr(view, "required_scopes", None)
-        if not required:
+        required_scopes = getattr(view, "required_scopes", None)
+        if access is None or not required_scopes:
             return False
 
-        return any(access.has_scope(str(scope)) for scope in required)
+        # Scopes is None => logged in user with session auth
+        if access.scopes is None:
+            return True
+
+        return any(access.has_scope(str(scope)) for scope in required_scopes)
 
 
 class HasDeployWebhookAccess(BasePermission):
@@ -285,7 +286,9 @@ class HasDeployWebhookAccess(BasePermission):
 
     def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
         access: EffectiveAccess | None = getattr(request, "access", None)
-        if access is None or access.token is None:
+        if (
+            access is None or access.token is None
+        ):  # This webhook deploy only works with token auth
             return False
         return access.has_scope(TokenScope.DEPLOY_WRITE)
 
