@@ -5,6 +5,7 @@ from temporalio import activity, workflow
 import asyncio
 import tempfile
 import semver
+from temporalio.exceptions import ApplicationError
 
 with workflow.unsafe.imports_passed_through():
     from zane_api.utils import Colors, find_item_in_sequence
@@ -19,6 +20,7 @@ with workflow.unsafe.imports_passed_through():
     import docker.errors
     from docker.models.nodes import Node as DockerSwarmNode
     from django.conf import settings
+    from swarm.models import SwarmNode
 
 
 from ..shared import (
@@ -31,6 +33,8 @@ from ..shared import (
     ProvisionSwarmNodeContext,
     ProvisionSwarmNodeContextWithRole,
     DockerSwarmInfo,
+    SwarmNodeDetails,
+    SwarmNodeStatusResult,
 )
 
 
@@ -55,8 +59,44 @@ Provisionning steps:
 
 class SwarmNodeActivities:
     @activity.defn
-    async def create_ssh_keys_temp_dir(self, details: ProvisionSwarmNodePayload):
-        print("Creating temporary folder for SSH key..")
+    async def prepare_node_deployment(self, node: SwarmNodeDetails):
+        await SwarmNode.objects.filter(id=node.id).aupdate(
+            status=SwarmNode.Status.PROVISIONING
+        )
+
+    @activity.defn
+    async def finish_and_save_node_deployment(self, result: SwarmNodeStatusResult):
+        try:
+            node = await SwarmNode.objects.filter(id=result.node.id).aget()
+
+            node.status = result.status
+            if result.docker_info:
+                node.cpus = result.docker_info.NCPU
+                node.memory_bytes = result.docker_info.MemTotal
+                node.docker_version = result.docker_info.ServerVersion
+            if result.swarm_hostname:
+                node.hostname = result.swarm_hostname
+
+            await node.asave(
+                update_fields=[
+                    "updated_at",
+                    "status",
+                    "cpus",
+                    "memory_bytes",
+                    "docker_version",
+                    "hostname",
+                ]
+            )
+
+        except SwarmNode.DoesNotExist:
+            raise ApplicationError(
+                "Cannot save a non existent node.",
+                non_retryable=True,
+            )
+
+    @activity.defn
+    async def create_ssh_keys_temp_dir(self, payload: ProvisionSwarmNodePayload):
+        print("Creating temporary folder for SSH key...")
         temp_dir = tempfile.mkdtemp()
         print(f"Temporary folder created at {Colors.YELLOW}{temp_dir}{Colors.ENDC} ✅")
 
@@ -64,15 +104,15 @@ class SwarmNodeActivities:
         await asyncio.to_thread(empty_folder, temp_dir)
         print("Temporary emptyed ✅")
 
-        main_node_key_location = os.path.join(temp_dir, f"{details.main_node.id}.key")
-        new_node_key_location = os.path.join(temp_dir, f"{details.new_node.id}.key")
+        main_node_key_location = os.path.join(temp_dir, f"{payload.main_node.id}.key")
+        new_node_key_location = os.path.join(temp_dir, f"{payload.new_node.id}.key")
 
         print(f"Writing SSH Keys into  {Colors.YELLOW}{temp_dir}{Colors.ENDC}...")
         with open(
             main_node_key_location,
             "w",
         ) as file:
-            file.write(details.main_node.ssh_key)
+            file.write(payload.main_node.ssh_key)
             print(
                 f"Wrote ssh key for {Colors.BLUE}MAIN NODE{Colors.ENDC} at {Colors.YELLOW}{main_node_key_location}{Colors.ENDC} ✅"
             )
@@ -83,7 +123,7 @@ class SwarmNodeActivities:
         print(f"Done ✅")
 
         with open(new_node_key_location, "+w") as file:
-            file.write(details.new_node.ssh_key)
+            file.write(payload.new_node.ssh_key)
             print(
                 f"Wrote ssh key for the {Colors.BLUE}NEW NODE{Colors.ENDC} at {Colors.YELLOW}{new_node_key_location}{Colors.ENDC} ✅"
             )
@@ -312,11 +352,13 @@ class SwarmNodeActivities:
             print(
                 f"{Colors.RED}Failed to update swarm labels {info.NodeID} ❌{Colors.ENDC}"
             )
-            raise
+            return None
         else:
             print(
                 f"Succesfully updated labels for Swarm Node {Colors.BLUE}{info.NodeID}{Colors.ENDC} ✅"
             )
+
+        return swarm_node.attrs["Description"]["Hostname"]
 
     @activity.defn
     async def delete_ssh_keys_temp_dir(self, tmp_dir: str):

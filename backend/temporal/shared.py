@@ -776,6 +776,21 @@ class DockerNodeUpdateContext(ProvisionSwarmNodeContext):
 
 
 @dataclass
+class SwarmNodeStatusResult:
+    node: SwarmNodeDetails
+    status: Literal[
+        "CREATED",
+        "PROVISIONING",
+        "READY",
+        "DOWN",
+        "DRAINED",
+        "FAILED",
+    ]
+    docker_info: DockerSystemInfo | None = None
+    swarm_hostname: str | None = None
+
+
+@dataclass
 class ComposeStackBuildDetails:
     tmp_build_dir: str
     deployment: ComposeStackDeploymentDetails

@@ -14,6 +14,7 @@ with workflow.unsafe.imports_passed_through():
         ProvisionSwarmNodeContextWithRole,
         DockerSwarmJoinContext,
         DockerNodeUpdateContext,
+        SwarmNodeStatusResult,
     )
     from zane_api.utils import Colors
 
@@ -36,6 +37,18 @@ class ProvisionSwarmNodeWorkflow:
         print(
             f"{Colors.BLUE}==============================================================={Colors.ENDC}"
         )
+        tmp_dir = await workflow.execute_activity_method(
+            SwarmNodeActivities.prepare_node_deployment,
+            payload.new_node,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+        node_deployment_result = SwarmNodeStatusResult(
+            node=payload.new_node,
+            status="FAILED",
+        )
+
         tmp_dir = await workflow.execute_activity_method(
             SwarmNodeActivities.create_ssh_keys_temp_dir,
             payload,
@@ -66,7 +79,6 @@ class ProvisionSwarmNodeWorkflow:
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
-            print(f"{docker_info=}")
 
             docker_info = await workflow.execute_activity_method(
                 SwarmNodeActivities.install_latest_docker_version,
@@ -76,6 +88,8 @@ class ProvisionSwarmNodeWorkflow:
                 start_to_close_timeout=timedelta(minutes=5),
                 retry_policy=self.retry_policy,
             )
+
+            node_deployment_result.docker_info = docker_info
 
             if docker_info is not None:
                 credentials = await workflow.execute_activity_method(
@@ -103,15 +117,17 @@ class ProvisionSwarmNodeWorkflow:
                     )
 
                     if swarm_info:
-                        await workflow.execute_activity_method(
-                            SwarmNodeActivities.update_node_labels,
-                            DockerNodeUpdateContext(
-                                node=payload.new_node,
-                                tmp_dir=tmp_dir,
-                                swarm_info=swarm_info,
-                            ),
-                            start_to_close_timeout=timedelta(minutes=3),
-                            retry_policy=self.retry_policy,
+                        node_deployment_result.swarm_hostname = (
+                            await workflow.execute_activity_method(
+                                SwarmNodeActivities.update_node_labels,
+                                DockerNodeUpdateContext(
+                                    node=payload.new_node,
+                                    tmp_dir=tmp_dir,
+                                    swarm_info=swarm_info,
+                                ),
+                                start_to_close_timeout=timedelta(minutes=3),
+                                retry_policy=self.retry_policy,
+                            )
                         )
 
         await workflow.execute_activity_method(
@@ -120,6 +136,14 @@ class ProvisionSwarmNodeWorkflow:
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )
+
+        await workflow.execute_activity_method(
+            SwarmNodeActivities.finish_and_save_node_deployment,
+            node_deployment_result,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
         print(
             f"\n{Colors.BLUE}==============================================================={Colors.ENDC}"
         )
