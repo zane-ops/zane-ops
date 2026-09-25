@@ -130,6 +130,18 @@ class ProvisionSwarmNodeWorkflow:
                             )
                         )
 
+                        if node_deployment_result.swarm_hostname:
+                            all_healthy = await workflow.execute_activity_method(
+                                SwarmNodeActivities.wait_for_global_services_to_be_propagated,
+                                swarm_info,
+                                start_to_close_timeout=timedelta(minutes=5),
+                                retry_policy=self.retry_policy,
+                            )
+
+                            node_deployment_result.status = (
+                                "READY" if all_healthy else "PROVISIONING"
+                            )
+
         await workflow.execute_activity_method(
             SwarmNodeActivities.delete_ssh_keys_temp_dir,
             tmp_dir,
@@ -153,4 +165,4 @@ class ProvisionSwarmNodeWorkflow:
         print(
             f"{Colors.BLUE}==============================================================={Colors.ENDC}\n\n"
         )
-        return
+        return node_deployment_result

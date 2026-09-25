@@ -6,9 +6,11 @@ import asyncio
 import tempfile
 import semver
 from temporalio.exceptions import ApplicationError
+from datetime import timedelta
+import time
 
 with workflow.unsafe.imports_passed_through():
-    from zane_api.utils import Colors, find_item_in_sequence
+    from zane_api.utils import Colors, format_duration
     from temporal.helpers import empty_folder, exec_cmd_in_server
     from temporal.constants import (
         DOCKER_CHECK_SCRIPT,
@@ -18,7 +20,7 @@ with workflow.unsafe.imports_passed_through():
     )
     import docker
     import docker.errors
-    from docker.models.nodes import Node as DockerSwarmNode
+    from docker.models.services import Service
     from django.conf import settings
     from swarm.models import SwarmNode
 
@@ -359,6 +361,58 @@ class SwarmNodeActivities:
             )
 
         return swarm_node.attrs["Description"]["Hostname"]
+
+    @activity.defn
+    async def wait_for_global_services_to_be_propagated(
+        self, swarm_info: DockerSwarmInfo
+    ):
+        docker_client = docker.from_env()
+
+        proxy_service: list[Service] = docker_client.services.list(
+            filters={"label": ["zane.role=proxy"]},
+            status=True,
+        )
+
+        log_collector_service: list[Service] = docker_client.services.list(
+            filters={"label": ["zane.role=log-collector"]},
+        )
+
+        services = [*proxy_service, *log_collector_service]
+
+        healthcheck_timeout = timedelta(minutes=3).total_seconds()
+
+        async def wait_for_swarm_service_to_be_updated(service: Service):
+
+            print(
+                f"Waiting for service `{Colors.BLUE}{service.name=}{Colors.ENDC}` to be updated..."
+            )
+            start_time = time.monotonic()
+            time_left = timedelta(minutes=3).total_seconds()
+
+            filters = {"node": swarm_info.NodeID, "desired-state": "running"}
+            task_list: list = service.tasks(filters=filters)
+
+            print(f"{filters=}")
+
+            while len(task_list) == 0 and time_left >= 1:
+                print(
+                    f"service `{Colors.BLUE}{service.name}{Colors.ENDC}` is not updated , "
+                    + f"| retrying in `{Colors.ORANGE}{settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL}s{Colors.ENDC}`"
+                    + f"| healthcheck_time_left={Colors.ORANGE}{format_duration(time_left)}{Colors.ENDC}..."
+                )
+                await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                task_list = task_list = service.tasks(filters=filters)
+                print(f"{task_list=}")
+                time_left = healthcheck_timeout - (time.monotonic() - start_time)
+
+            print(f"{task_list=}")
+            return len(task_list) > 0
+
+        services_updated = await asyncio.gather(
+            *[wait_for_swarm_service_to_be_updated(service) for service in services]
+        )
+
+        return all(services_updated)
 
     @activity.defn
     async def delete_ssh_keys_temp_dir(self, tmp_dir: str):

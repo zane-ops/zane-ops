@@ -226,6 +226,7 @@ def get_workflows_and_activities():
             swarm_node_activities.update_node_labels,
             swarm_node_activities.prepare_node_deployment,
             swarm_node_activities.finish_and_save_node_deployment,
+            swarm_node_activities.wait_for_global_services_to_be_propagated,
             swarm_node_activities.delete_ssh_keys_temp_dir,
             acquire_service_deploy_semaphore,
             lock_deploy_semaphore,
