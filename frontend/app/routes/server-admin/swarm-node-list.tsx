@@ -166,7 +166,7 @@ export function ServerCard({
               <h3 className="font-medium text-lg">
                 <Link
                   to={`./${id}`}
-                  className="hover:underline group inline-flex gap-2 items-center "
+                  className="hover:underline group inline-flex gap-2 items-center decoration-wavy decoration-grey underline-offset-2"
                 >
                   {hostname ? (
                     <span>
