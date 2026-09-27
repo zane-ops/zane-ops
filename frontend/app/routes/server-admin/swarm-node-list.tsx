@@ -12,6 +12,7 @@ import {
   type LucideIcon,
   MemoryStickIcon,
   PenLineIcon,
+  PencilLineIcon,
   PickaxeIcon,
   PlusIcon,
   PowerOffIcon,
@@ -163,30 +164,24 @@ export function ServerCard({
           <div className="flex flex-col gap-1.5 items-start w-full">
             <div className="flex items-center gap-2 w-full justify-between">
               <h3 className="font-medium text-lg">
-                {hostname ? (
-                  <span>
-                    {hostname}
-                    <span className="text-grey">@{private_ip}</span>{" "}
-                  </span>
-                ) : (
-                  private_ip
-                )}
+                <Link
+                  to={`./${id}`}
+                  className="hover:underline group inline-flex gap-2 items-center "
+                >
+                  {hostname ? (
+                    <span>
+                      {hostname}
+                      <span className="text-grey">@{private_ip}</span>{" "}
+                    </span>
+                  ) : (
+                    private_ip
+                  )}
+
+                  <PencilLineIcon className="size-4 flex-none opacity-0 group-hover:opacity-100" />
+                </Link>
               </h3>
 
               <div className="flex items-center gap-2">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  asChild
-                  className="text-xs py-1.5 px-2.5 w-auto h-auto gap-2"
-                >
-                  <Link to={`./${id}`}>
-                    <PenLineIcon className="size-4 flex-none text-grey" />
-                    <span className="">Details</span>
-                  </Link>
-                </Button>
-
-                <span className="w-px bg-muted h-3 rounded-lg" />
                 <Button
                   size="icon"
                   variant="ghost"
