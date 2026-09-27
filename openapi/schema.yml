@@ -16988,7 +16988,6 @@ paths:
       - workspace
       security:
       - cookieAuth: []
-      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -17072,7 +17071,6 @@ paths:
         required: true
       security:
       - cookieAuth: []
-      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -17149,7 +17147,6 @@ paths:
       - workspace
       security:
       - cookieAuth: []
-      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -17250,7 +17247,6 @@ paths:
               $ref: '#/components/schemas/PatchedWorkspaceApiTokenRequest'
       security:
       - cookieAuth: []
-      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -17342,7 +17338,6 @@ paths:
       - workspace
       security:
       - cookieAuth: []
-      - workspaceApiToken: []
       responses:
         '400':
           content:
@@ -34668,6 +34663,10 @@ components:
           type: string
           readOnly: true
           nullable: true
+        swarm_node_id:
+          type: string
+          readOnly: true
+          nullable: true
         swarm_role:
           $ref: '#/components/schemas/SwarmRoleEnum'
         private_ip:
@@ -34736,6 +34735,7 @@ components:
       - ssh_keys
       - ssh_port
       - status
+      - swarm_node_id
       - swarm_role
       - updated_at
     SwarmNodeRequest:
@@ -34765,6 +34765,7 @@ components:
       - DOWN
       - DRAINED
       - FAILED
+      - REMOVED
       type: string
       description: |-
         * `CREATED` - Created
@@ -34773,6 +34774,7 @@ components:
         * `DOWN` - Down
         * `DRAINED` - Drained
         * `FAILED` - Failed
+        * `REMOVED` - Removed
     SwarmNodesCreateClusterRolesErrorComponent:
       type: object
       properties:

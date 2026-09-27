@@ -62,6 +62,7 @@ with workflow.unsafe.imports_passed_through():
         ArchiveComposeStackWorkflow,
         ToggleComposeStackWorkflow,
         ProvisionSwarmNodeWorkflow,
+        DetachSwarmNodeFromClusterWorkflow,
     )
     from ..schedules import (
         MonitorDockerDeploymentWorkflow,
@@ -121,6 +122,7 @@ def get_workflows_and_activities():
             ToggleComposeStackWorkflow,
             CollectComposeStacksMetricsWorkflow,
             ProvisionSwarmNodeWorkflow,
+            DetachSwarmNodeFromClusterWorkflow,
         ],
         activities=[
             *get_extra_activities(),
@@ -228,6 +230,10 @@ def get_workflows_and_activities():
             swarm_node_activities.finish_and_save_node_deployment,
             swarm_node_activities.wait_for_global_services_to_be_propagated,
             swarm_node_activities.delete_ssh_keys_temp_dir,
+            swarm_node_activities.drain_swarm_node_and_remove_labels,
+            swarm_node_activities.wait_for_global_services_to_be_drained,
+            swarm_node_activities.detach_swarm_node_from_cluster,
+            swarm_node_activities.remove_swarm_node_from_cluster,
             acquire_service_deploy_semaphore,
             lock_deploy_semaphore,
             release_service_deploy_semaphore,

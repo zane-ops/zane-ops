@@ -38,6 +38,7 @@ class SwarmNode(TimestampedModel):
         DOWN = "DOWN", "Down"
         DRAINED = "DRAINED", "Drained"
         FAILED = "FAILED", "Failed"
+        REMOVED = "REMOVED", "Removed"
 
     id = ShortUUIDField(
         length=ID_LENGTH,

@@ -673,24 +673,45 @@ class SwarmNodeDetails:
     swarm_role: Literal["WORKER", "MANAGER"]
     ssh_key: str
     ssh_port: int
-    cluster_roles: list[Literal["APP_SERVER", "BUILD_SERVER"]] = field(
-        default_factory=list
-    )
+    cluster_roles: list[Literal["APP_SERVER", "BUILD_SERVER"]]
 
     def get_ssh_key_path(self, tmp_dir: str):
         return os.path.join(tmp_dir, f"{self.id}.key")
 
 
 @dataclass
-class ProvisionSwarmNodePayload:
+class SwarmNodeWorkflowPayload:
     main_node: SwarmNodeDetails
-    new_node: SwarmNodeDetails
+    target_node: SwarmNodeDetails
 
 
 @dataclass
-class ProvisionSwarmNodeContext:
-    node: SwarmNodeDetails
+class ProvisionedSwarmNodeDetails(SwarmNodeDetails):
+    swarm_node_id: str
+
+
+@dataclass
+class CreateSSHKeyDirContext:
+    main_node: SwarmNodeDetails | ProvisionedSwarmNodeDetails
+    target_node: SwarmNodeDetails | ProvisionedSwarmNodeDetails
+
+
+@dataclass
+class DrainSwarmNodePayload:
+    main_node: ProvisionedSwarmNodeDetails
+    target_node: ProvisionedSwarmNodeDetails
+
+
+@dataclass
+class SwarmNodeActivityContext:
+    node: SwarmNodeDetails | ProvisionedSwarmNodeDetails
     tmp_dir: str
+
+
+@dataclass
+class RemoveSwarmNodeContext:
+    activity_ctx: SwarmNodeActivityContext
+    target_node: ProvisionedSwarmNodeDetails
 
 
 @dataclass
@@ -749,12 +770,12 @@ class DockerSystemInfo:
 
 
 @dataclass
-class DockerInstallContext(ProvisionSwarmNodeContext):
+class DockerInstallContext(SwarmNodeActivityContext):
     info: DockerSystemInfo | None
 
 
 @dataclass
-class ProvisionSwarmNodeContextWithRole(ProvisionSwarmNodeContext):
+class ProvisionSwarmNodeContextWithRole(SwarmNodeActivityContext):
     swarm_role: Literal["WORKER", "MANAGER"]
 
 
@@ -765,19 +786,19 @@ class DockerSwarmJoinCredentials:
 
 
 @dataclass
-class DockerSwarmJoinContext(ProvisionSwarmNodeContext):
+class DockerSwarmJoinContext(SwarmNodeActivityContext):
     credentials: DockerSwarmJoinCredentials
     info: DockerSystemInfo
 
 
 @dataclass
-class DockerNodeUpdateContext(ProvisionSwarmNodeContext):
+class DockerNodeUpdateContext(SwarmNodeActivityContext):
     swarm_info: DockerSwarmInfo
 
 
 @dataclass
 class SwarmNodeStatusResult:
-    node: SwarmNodeDetails
+    id: str
     status: Literal[
         "CREATED",
         "PROVISIONING",
@@ -785,6 +806,7 @@ class SwarmNodeStatusResult:
         "DOWN",
         "DRAINED",
         "FAILED",
+        "REMOVED",
     ]
     docker_info: DockerSystemInfo | None = None
     swarm_hostname: str | None = None

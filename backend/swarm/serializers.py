@@ -56,6 +56,7 @@ class SwarmNodeSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "hostname",
+            "swarm_node_id",
             "swarm_role",
             "private_ip",
             "ssh_port",

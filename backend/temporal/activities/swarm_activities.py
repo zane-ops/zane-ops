@@ -1,6 +1,8 @@
+from copy import deepcopy
 import json
 import os
 import shutil
+from typing import cast
 from temporalio import activity, workflow
 import asyncio
 import tempfile
@@ -23,40 +25,26 @@ with workflow.unsafe.imports_passed_through():
     from docker.models.services import Service
     from django.conf import settings
     from swarm.models import SwarmNode
+    from docker.models.nodes import Node as DockerSwarmNode
 
 
 from ..shared import (
+    CreateSSHKeyDirContext,
     DockerInstallContext,
     DockerNodeUpdateContext,
     DockerSwarmJoinContext,
     DockerSwarmJoinCredentials,
     DockerSystemInfo,
-    ProvisionSwarmNodePayload,
-    ProvisionSwarmNodeContext,
+    ProvisionedSwarmNodeDetails,
+    RemoveSwarmNodeContext,
+    SwarmNodeWorkflowPayload,
+    SwarmNodeActivityContext,
     ProvisionSwarmNodeContextWithRole,
     DockerSwarmInfo,
     SwarmNodeDetails,
     SwarmNodeStatusResult,
+    DrainSwarmNodePayload,
 )
-
-
-"""
-Provisionning steps:
-1- check ssh connection
-2- Check docker installation:
-    a- if docker does not exist: => install docker and required packages 
-    b- if docker exists && version >= 27.0.3 => ok
-    c- if docker exists && version < 27.0.3 => reinstall docker (or upgrade docker)
-3- Check if node part of already swarm and if the swarm role correspond to the one we chose
-    a- if everything ok => skip
-    b- if already part of a different swarm 
-        or already part of a current swarm with different role 
-        or not part of a swarm
-        => quit swarm  (if member of swarm)
-        => Then Join swarm cluster with initial server IP (with the role chosen) and private IP as advertise-addr
-4- Update swarm node labels
-5- Ok ?
-"""
 
 
 class SwarmNodeActivities:
@@ -69,7 +57,7 @@ class SwarmNodeActivities:
     @activity.defn
     async def finish_and_save_node_deployment(self, result: SwarmNodeStatusResult):
         try:
-            node = await SwarmNode.objects.filter(id=result.node.id).aget()
+            node = await SwarmNode.objects.filter(id=result.id).aget()
 
             node.status = result.status
             if result.docker_info:
@@ -78,6 +66,8 @@ class SwarmNodeActivities:
                 node.docker_version = result.docker_info.ServerVersion
             if result.swarm_hostname:
                 node.hostname = result.swarm_hostname
+            if result.docker_info is not None and result.docker_info.Swarm is not None:
+                node.swarm_node_id = result.docker_info.Swarm.NodeID
 
             await node.asave(
                 update_fields=[
@@ -87,6 +77,7 @@ class SwarmNodeActivities:
                     "memory_bytes",
                     "docker_version",
                     "hostname",
+                    "swarm_node_id",
                 ]
             )
 
@@ -97,7 +88,7 @@ class SwarmNodeActivities:
             )
 
     @activity.defn
-    async def create_ssh_keys_temp_dir(self, payload: ProvisionSwarmNodePayload):
+    async def create_ssh_keys_temp_dir(self, payload: CreateSSHKeyDirContext):
         print("Creating temporary folder for SSH key...")
         temp_dir = tempfile.mkdtemp()
         print(f"Temporary folder created at {Colors.YELLOW}{temp_dir}{Colors.ENDC} ✅")
@@ -107,7 +98,7 @@ class SwarmNodeActivities:
         print("Temporary emptyed ✅")
 
         main_node_key_location = os.path.join(temp_dir, f"{payload.main_node.id}.key")
-        new_node_key_location = os.path.join(temp_dir, f"{payload.new_node.id}.key")
+        new_node_key_location = os.path.join(temp_dir, f"{payload.target_node.id}.key")
 
         print(f"Writing SSH Keys into  {Colors.YELLOW}{temp_dir}{Colors.ENDC}...")
         with open(
@@ -125,7 +116,7 @@ class SwarmNodeActivities:
         print(f"Done ✅")
 
         with open(new_node_key_location, "+w") as file:
-            file.write(payload.new_node.ssh_key)
+            file.write(payload.target_node.ssh_key)
             print(
                 f"Wrote ssh key for the {Colors.BLUE}NEW NODE{Colors.ENDC} at {Colors.YELLOW}{new_node_key_location}{Colors.ENDC} ✅"
             )
@@ -138,7 +129,7 @@ class SwarmNodeActivities:
         return temp_dir
 
     @activity.defn
-    async def test_ssh_connection(self, ctx: ProvisionSwarmNodeContext) -> bool:
+    async def test_ssh_connection(self, ctx: SwarmNodeActivityContext) -> bool:
         node = ctx.node
         print(
             f"Testing SSH Connection to server {Colors.YELLOW}{node.private_ip}{Colors.ENDC} over port {Colors.YELLOW}{node.ssh_port}{Colors.ENDC}..."
@@ -160,7 +151,7 @@ class SwarmNodeActivities:
 
     @activity.defn
     async def check_docker_installation(
-        self, ctx: ProvisionSwarmNodeContext
+        self, ctx: SwarmNodeActivityContext
     ) -> DockerSystemInfo | None:
         async def message_handler(message: str):
             print(message)
@@ -335,7 +326,10 @@ class SwarmNodeActivities:
             f"Updating labels for swarm node {Colors.BLUE}{info.NodeID}{Colors.ENDC}..."
         )
         try:
-            swarm_node = docker_client.nodes.get(info.NodeID)
+            swarm_node: DockerSwarmNode = docker_client.nodes.get(info.NodeID)
+            original_spec = swarm_node.attrs["Spec"]
+
+            new_spec = deepcopy(original_spec)
 
             labels = {}
             if "APP_SERVER" in node.cluster_roles:
@@ -343,13 +337,8 @@ class SwarmNodeActivities:
             if "BUILD_SERVER" in node.cluster_roles:
                 labels[settings.BUILD_SERVER_LABEL] = "true"
 
-            swarm_node.update(
-                {
-                    "Availability": "active",
-                    "Role": ctx.node.swarm_role.lower(),
-                    "Labels": labels,
-                }
-            )
+            new_spec["Labels"] = labels
+            swarm_node.update(new_spec)
         except docker.errors.APIError:
             print(
                 f"{Colors.RED}Failed to update swarm labels {info.NodeID} ❌{Colors.ENDC}"
@@ -396,8 +385,8 @@ class SwarmNodeActivities:
 
             while len(task_list) == 0 and time_left >= 1:
                 print(
-                    f"service `{Colors.BLUE}{service.name}{Colors.ENDC}` is not updated , "
-                    + f"| retrying in `{Colors.ORANGE}{settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL}s{Colors.ENDC}`"
+                    f"Swarm service {Colors.BLUE}{service.name}{Colors.ENDC} is not updated, "
+                    + f"| retrying in {Colors.ORANGE}{settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL}s{Colors.ENDC}"
                     + f"| healthcheck_time_left={Colors.ORANGE}{format_duration(time_left)}{Colors.ENDC}..."
                 )
                 await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
@@ -405,7 +394,12 @@ class SwarmNodeActivities:
                 print(f"{task_list=}")
                 time_left = healthcheck_timeout - (time.monotonic() - start_time)
 
-            return len(task_list) > 0
+            successful = len(task_list) > 0
+            if successful:
+                print(
+                    f"Succesfully updated swarm service {Colors.BLUE}{service.name}{Colors.ENDC} ✅"
+                )
+            return successful
 
         services_updated = await asyncio.gather(
             *[wait_for_swarm_service_to_be_updated(service) for service in services]
@@ -420,3 +414,126 @@ class SwarmNodeActivities:
         )
         shutil.rmtree(tmp_dir, ignore_errors=True)
         print("Temporary folder for SSH keys deleted ✅")
+
+    @activity.defn
+    async def drain_swarm_node_and_remove_labels(self, payload: DrainSwarmNodePayload):
+        docker_client = docker.from_env()
+        target_node = payload.target_node
+        print(
+            f"Draining swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.ENDC}..."
+        )
+        try:
+            swarm_node = docker_client.nodes.get(target_node.swarm_node_id)
+            original_spec = swarm_node.attrs["Spec"]
+
+            new_spec = deepcopy(original_spec)
+            new_spec["Labels"] = {}
+            new_spec["Availability"] = "drain"
+
+            swarm_node.update(new_spec)
+        except docker.errors.NotFound:
+            print(
+                f"{Colors.RED}Failed to drain swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.RED} and remove its labels ❌{Colors.ENDC}"
+            )
+            return False
+        else:
+            print(
+                f"Swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.ENDC} drained and labels removed, no new tasks will be scheduled on it ✅"
+            )
+
+        return True
+
+    @activity.defn
+    async def wait_for_global_services_to_be_drained(
+        self, payload: DrainSwarmNodePayload
+    ):
+        docker_client = docker.from_env()
+        target_node = payload.target_node
+
+        proxy_service: list[Service] = docker_client.services.list(
+            filters={"label": ["zane.role=proxy"]},
+            status=True,
+        )
+
+        log_collector_service: list[Service] = docker_client.services.list(
+            filters={"label": ["zane.role=log-collector"]},
+        )
+
+        services = [*proxy_service, *log_collector_service]
+
+        healthcheck_timeout = timedelta(minutes=3).total_seconds()
+
+        async def wait_for_swarm_service_to_be_updated(service: Service):
+            try:
+                print(
+                    f"Waiting for service `{Colors.BLUE}{service.name=}{Colors.ENDC}` to be updated..."
+                )
+                start_time = time.monotonic()
+                time_left = timedelta(minutes=3).total_seconds()
+
+                filters = {
+                    "node": target_node.swarm_node_id,
+                    "desired-state": "running",
+                }
+                task_list: list = service.tasks(filters=filters)
+
+                print(f"{filters=}")
+
+                while len(task_list) > 0 and time_left >= 1:
+                    print(
+                        f"Swarm service {Colors.BLUE}{service.name}{Colors.ENDC} is not updated , "
+                        + f"| retrying in {Colors.ORANGE}{settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL}s{Colors.ENDC}"
+                        + f"| healthcheck_time_left={Colors.ORANGE}{format_duration(time_left)}{Colors.ENDC}..."
+                    )
+                    await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                    task_list = task_list = service.tasks(filters=filters)
+                    print(f"{task_list=}")
+                    time_left = healthcheck_timeout - (time.monotonic() - start_time)
+
+                successful = len(task_list) == 0
+                if successful:
+                    print(
+                        f"Succesfully updated swarm service {Colors.BLUE}{service.name}{Colors.ENDC} ✅"
+                    )
+                return successful
+            except docker.errors.NotFound:
+                # The node probably was removed from the cluster already
+                return True
+
+        services_updated = await asyncio.gather(
+            *[wait_for_swarm_service_to_be_updated(service) for service in services]
+        )
+
+        return all(services_updated)
+
+    @activity.defn
+    async def detach_swarm_node_from_cluster(self, ctx: SwarmNodeActivityContext):
+        node = ctx.node
+        print(
+            f"detaching swarm node {Colors.BLUE}{node.id}{Colors.ENDC} from cluster..."
+        )
+        exit_code, _ = await exec_cmd_in_server(
+            ctx,
+            cmd=f"docker swarm leave --force",
+        )
+        if exit_code == 0:
+            print(
+                f"Swarm node {Colors.BLUE}{node.id}{Colors.ENDC} succesfully detached from cluster ✅"
+            )
+            return True
+        return False
+
+    @activity.defn
+    async def remove_swarm_node_from_cluster(self, ctx: RemoveSwarmNodeContext):
+        node = ctx.target_node
+        print(f"Removing node {Colors.BLUE}{node.id}{Colors.ENDC} from cluster...")
+        exit_code, _ = await exec_cmd_in_server(
+            ctx.activity_ctx,
+            cmd=f"docker node rm {node.swarm_node_id} --force",
+        )
+        if exit_code == 0:
+            print(
+                f"Swarm node {Colors.BLUE}{node.id}{Colors.ENDC} succesfully removed from cluster ✅"
+            )
+            return True
+        return False

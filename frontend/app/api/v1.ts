@@ -8480,6 +8480,7 @@ export interface components {
     SwarmNode: {
       id: string;
       hostname: string | null;
+      swarm_node_id: string | null;
       swarm_role: components["schemas"]["SwarmRoleEnum"];
       private_ip: string;
       ssh_port: number;
@@ -8511,9 +8512,10 @@ export interface components {
      * * `DOWN` - Down
      * * `DRAINED` - Drained
      * * `FAILED` - Failed
+     * * `REMOVED` - Removed
      * @enum {string}
      */
-    SwarmNodeStatusEnum: "CREATED" | "PROVISIONING" | "READY" | "DOWN" | "DRAINED" | "FAILED";
+    SwarmNodeStatusEnum: "CREATED" | "PROVISIONING" | "READY" | "DOWN" | "DRAINED" | "FAILED" | "REMOVED";
     SwarmNodesCreateClusterRolesErrorComponent: {
       /**
        * @description * `cluster_roles` - cluster_roles
