@@ -29,19 +29,19 @@ with workflow.unsafe.imports_passed_through():
 
 
 from ..shared import (
-    CreateSSHKeyDirContext,
+    SwarmNodePair,
     DockerInstallContext,
     DockerNodeUpdateContext,
     DockerSwarmJoinContext,
     DockerSwarmJoinCredentials,
     DockerSystemInfo,
     RemoveSwarmNodeContext,
-    SwarmNodeActivityContext,
-    ProvisionSwarmNodeContextWithRole,
+    SwarmNodeSSHContext,
+    GetSwarmJoinTokenInput,
     DockerSwarmInfo,
     SwarmNodeDetails,
     SwarmNodeStatusResult,
-    DrainSwarmNodePayload,
+    RemoveSwarmNodeWorkflowPayload,
 )
 
 
@@ -108,7 +108,7 @@ class SwarmNodeActivities:
         )
 
     @activity.defn
-    async def create_ssh_keys_temp_dir(self, payload: CreateSSHKeyDirContext):
+    async def create_ssh_keys_temp_dir(self, payload: SwarmNodePair):
         print("Creating temporary folder for SSH key...")
         temp_dir = tempfile.mkdtemp()
         print(f"Temporary folder created at {Colors.YELLOW}{temp_dir}{Colors.ENDC} ✅")
@@ -149,7 +149,7 @@ class SwarmNodeActivities:
         return temp_dir
 
     @activity.defn
-    async def test_ssh_connection(self, ctx: SwarmNodeActivityContext) -> bool:
+    async def test_ssh_connection(self, ctx: SwarmNodeSSHContext) -> bool:
         node = ctx.node
         print(
             f"Testing SSH Connection to server {Colors.YELLOW}{node.private_ip}{Colors.ENDC} over port {Colors.YELLOW}{node.ssh_port}{Colors.ENDC}..."
@@ -171,7 +171,7 @@ class SwarmNodeActivities:
 
     @activity.defn
     async def check_docker_installation(
-        self, ctx: SwarmNodeActivityContext
+        self, ctx: SwarmNodeSSHContext
     ) -> DockerSystemInfo | None:
         async def message_handler(message: str):
             print(message)
@@ -252,7 +252,7 @@ class SwarmNodeActivities:
 
     @activity.defn
     async def get_swarm_join_token(
-        self, ctx: ProvisionSwarmNodeContextWithRole
+        self, ctx: GetSwarmJoinTokenInput
     ) -> DockerSwarmJoinCredentials | None:
         async def message_handler(message: str):
             print(message)
@@ -436,7 +436,9 @@ class SwarmNodeActivities:
         print("Temporary folder for SSH keys deleted ✅")
 
     @activity.defn
-    async def drain_swarm_node_and_remove_labels(self, payload: DrainSwarmNodePayload):
+    async def drain_swarm_node_and_remove_labels(
+        self, payload: RemoveSwarmNodeWorkflowPayload
+    ):
         docker_client = docker.from_env()
         target_node = payload.target_node
         print(
@@ -465,7 +467,7 @@ class SwarmNodeActivities:
 
     @activity.defn
     async def wait_for_global_services_to_be_drained(
-        self, payload: DrainSwarmNodePayload
+        self, payload: RemoveSwarmNodeWorkflowPayload
     ):
         docker_client = docker.from_env()
         target_node = payload.target_node
@@ -527,7 +529,7 @@ class SwarmNodeActivities:
         return all(services_updated)
 
     @activity.defn
-    async def detach_swarm_node_from_cluster(self, ctx: SwarmNodeActivityContext):
+    async def detach_swarm_node_from_cluster(self, ctx: SwarmNodeSSHContext):
         node = ctx.node
         print(
             f"detaching swarm node {Colors.BLUE}{node.id}{Colors.ENDC} from cluster..."

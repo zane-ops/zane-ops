@@ -691,26 +691,26 @@ class ProvisionedSwarmNodeDetails(SwarmNodeDetails):
 
 
 @dataclass
-class CreateSSHKeyDirContext:
+class SwarmNodePair:
     main_node: SwarmNodeDetails | ProvisionedSwarmNodeDetails
     target_node: SwarmNodeDetails | ProvisionedSwarmNodeDetails
 
 
 @dataclass
-class DrainSwarmNodePayload:
+class RemoveSwarmNodeWorkflowPayload:
     main_node: ProvisionedSwarmNodeDetails
     target_node: ProvisionedSwarmNodeDetails
 
 
 @dataclass
-class SwarmNodeActivityContext:
+class SwarmNodeSSHContext:
     node: SwarmNodeDetails | ProvisionedSwarmNodeDetails
     tmp_dir: str
 
 
 @dataclass
 class RemoveSwarmNodeContext:
-    activity_ctx: SwarmNodeActivityContext
+    activity_ctx: SwarmNodeSSHContext
     target_node: ProvisionedSwarmNodeDetails
 
 
@@ -770,12 +770,12 @@ class DockerSystemInfo:
 
 
 @dataclass
-class DockerInstallContext(SwarmNodeActivityContext):
+class DockerInstallContext(SwarmNodeSSHContext):
     info: DockerSystemInfo | None
 
 
 @dataclass
-class ProvisionSwarmNodeContextWithRole(SwarmNodeActivityContext):
+class GetSwarmJoinTokenInput(SwarmNodeSSHContext):
     swarm_role: Literal["WORKER", "MANAGER"]
 
 
@@ -786,13 +786,13 @@ class DockerSwarmJoinCredentials:
 
 
 @dataclass
-class DockerSwarmJoinContext(SwarmNodeActivityContext):
+class DockerSwarmJoinContext(SwarmNodeSSHContext):
     credentials: DockerSwarmJoinCredentials
     info: DockerSystemInfo
 
 
 @dataclass
-class DockerNodeUpdateContext(SwarmNodeActivityContext):
+class DockerNodeUpdateContext(SwarmNodeSSHContext):
     swarm_info: DockerSwarmInfo
 
 

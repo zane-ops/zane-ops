@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from swarm.models import SwarmNode
 from temporal.client import TemporalClient
-from temporal.shared import DrainSwarmNodePayload, ProvisionedSwarmNodeDetails
+from temporal.shared import RemoveSwarmNodeWorkflowPayload, ProvisionedSwarmNodeDetails
 from temporal.workflows import RemoveSwarmNodeFromClusterWorkflow
 from zane_api.utils import Colors
 
@@ -63,7 +63,7 @@ class Command(BaseCommand):
             f" (user={target_key.user})"
         )
 
-        payload = DrainSwarmNodePayload(
+        payload = RemoveSwarmNodeWorkflowPayload(
             target_node=ProvisionedSwarmNodeDetails(
                 id=node.id,
                 private_ip=node.private_ip,
@@ -93,7 +93,9 @@ class Command(BaseCommand):
         result = async_to_sync(self.run_workflow)(payload, workflow_id)
         self.stdout.write(f"{Colors.GREEN}Workflow finished ✅{Colors.ENDC} {result=}")
 
-    async def run_workflow(self, payload: DrainSwarmNodePayload, workflow_id: str):
+    async def run_workflow(
+        self, payload: RemoveSwarmNodeWorkflowPayload, workflow_id: str
+    ):
         handle = await TemporalClient.astart_workflow(
             RemoveSwarmNodeFromClusterWorkflow.run,
             payload,

@@ -10,16 +10,16 @@ with workflow.unsafe.imports_passed_through():
     from zane_api.utils import Colors
 
 from ..shared import (
-    CreateSSHKeyDirContext,
+    SwarmNodePair,
     RemoveSwarmNodeContext,
     SwarmNodeWorkflowPayload,
     DockerInstallContext,
-    SwarmNodeActivityContext,
-    ProvisionSwarmNodeContextWithRole,
+    SwarmNodeSSHContext,
+    GetSwarmJoinTokenInput,
     DockerSwarmJoinContext,
     DockerNodeUpdateContext,
     SwarmNodeStatusResult,
-    DrainSwarmNodePayload,
+    RemoveSwarmNodeWorkflowPayload,
 )
 
 
@@ -51,7 +51,7 @@ class ProvisionSwarmNodeWorkflow:
 
         tmp_dir = await workflow.execute_activity_method(
             SwarmNodeActivities.create_ssh_keys_temp_dir,
-            CreateSSHKeyDirContext(
+            SwarmNodePair(
                 main_node=payload.main_node,
                 target_node=payload.target_node,
             ),
@@ -61,14 +61,14 @@ class ProvisionSwarmNodeWorkflow:
 
         ssh_test_new_task = workflow.start_activity_method(
             SwarmNodeActivities.test_ssh_connection,
-            SwarmNodeActivityContext(node=payload.target_node, tmp_dir=tmp_dir),
+            SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )
 
         ssh_test_main_task = workflow.start_activity_method(
             SwarmNodeActivities.test_ssh_connection,
-            SwarmNodeActivityContext(node=payload.main_node, tmp_dir=tmp_dir),
+            SwarmNodeSSHContext(node=payload.main_node, tmp_dir=tmp_dir),
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )
@@ -78,7 +78,7 @@ class ProvisionSwarmNodeWorkflow:
         if all(result):
             docker_info = await workflow.execute_activity_method(
                 SwarmNodeActivities.check_docker_installation,
-                SwarmNodeActivityContext(node=payload.target_node, tmp_dir=tmp_dir),
+                SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
@@ -97,7 +97,7 @@ class ProvisionSwarmNodeWorkflow:
             if docker_info is not None:
                 credentials = await workflow.execute_activity_method(
                     SwarmNodeActivities.get_swarm_join_token,
-                    ProvisionSwarmNodeContextWithRole(
+                    GetSwarmJoinTokenInput(
                         node=payload.main_node,
                         tmp_dir=tmp_dir,
                         swarm_role=payload.target_node.swarm_role,
@@ -175,7 +175,9 @@ class RemoveSwarmNodeFromClusterWorkflow:
         )
 
     @workflow.run
-    async def run(self, payload: DrainSwarmNodePayload) -> SwarmNodeStatusResult:
+    async def run(
+        self, payload: RemoveSwarmNodeWorkflowPayload
+    ) -> SwarmNodeStatusResult:
         print(
             f"\n\n{Colors.BLUE}==============================================================={Colors.ENDC}\n"
             f"Running workflow DrainSwarmNodeWorkflow.run({payload.target_node.id=}, {payload.target_node.private_ip=})\n"
@@ -188,7 +190,7 @@ class RemoveSwarmNodeFromClusterWorkflow:
 
         tmp_dir = await workflow.execute_activity_method(
             SwarmNodeActivities.create_ssh_keys_temp_dir,
-            CreateSSHKeyDirContext(
+            SwarmNodePair(
                 main_node=payload.main_node,
                 target_node=payload.target_node,
             ),
@@ -198,14 +200,14 @@ class RemoveSwarmNodeFromClusterWorkflow:
 
         ssh_test_target_task = workflow.start_activity_method(
             SwarmNodeActivities.test_ssh_connection,
-            SwarmNodeActivityContext(node=payload.target_node, tmp_dir=tmp_dir),
+            SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )
 
         ssh_test_main_task = workflow.start_activity_method(
             SwarmNodeActivities.test_ssh_connection,
-            SwarmNodeActivityContext(node=payload.main_node, tmp_dir=tmp_dir),
+            SwarmNodeSSHContext(node=payload.main_node, tmp_dir=tmp_dir),
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )
@@ -237,9 +239,7 @@ class RemoveSwarmNodeFromClusterWorkflow:
 
                     detached = await workflow.execute_activity_method(
                         SwarmNodeActivities.detach_swarm_node_from_cluster,
-                        SwarmNodeActivityContext(
-                            node=payload.target_node, tmp_dir=tmp_dir
-                        ),
+                        SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
                         start_to_close_timeout=timedelta(seconds=30),
                         retry_policy=self.retry_policy,
                     )
@@ -249,7 +249,7 @@ class RemoveSwarmNodeFromClusterWorkflow:
                             SwarmNodeActivities.remove_swarm_node_from_cluster,
                             RemoveSwarmNodeContext(
                                 target_node=payload.target_node,
-                                activity_ctx=SwarmNodeActivityContext(
+                                activity_ctx=SwarmNodeSSHContext(
                                     node=payload.main_node, tmp_dir=tmp_dir
                                 ),
                             ),

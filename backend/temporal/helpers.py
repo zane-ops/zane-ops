@@ -17,7 +17,7 @@ from zane_api.process import (
 from .shared import (
     DeploymentDetails,
     ContainerMetrics,
-    SwarmNodeActivityContext,
+    SwarmNodeSSHContext,
     SwarmNodeDetails,
 )
 
@@ -906,7 +906,7 @@ async def send_regular_heartbeat(name: str):
 
 
 async def exec_cmd_in_server[T](
-    ctx: SwarmNodeActivityContext,
+    ctx: SwarmNodeSSHContext,
     cmd: str,
     output_handler: OutputHandlerFunction[T] = default_output_handler,
 ) -> tuple[int | None, T | None]:
