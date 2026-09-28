@@ -11,15 +11,14 @@ with workflow.unsafe.imports_passed_through():
 
 from ..shared import (
     SwarmNodePair,
+    ClusterSwarmNodePair,
     RemoveSwarmNodeContext,
-    SwarmNodeWorkflowPayload,
     DockerInstallContext,
     SwarmNodeSSHContext,
     GetSwarmJoinTokenInput,
     DockerSwarmJoinContext,
     DockerNodeUpdateContext,
     SwarmNodeStatusResult,
-    RemoveSwarmNodeWorkflowPayload,
 )
 
 
@@ -31,7 +30,7 @@ class ProvisionSwarmNodeWorkflow:
         )
 
     @workflow.run
-    async def run(self, payload: SwarmNodeWorkflowPayload) -> SwarmNodeStatusResult:
+    async def run(self, payload: SwarmNodePair) -> SwarmNodeStatusResult:
         print(
             f"\n\n{Colors.BLUE}==============================================================={Colors.ENDC}\n"
             f"Running workflow ProvisionSwarmNodeWorkflow.run({payload.main_node.private_ip=}, {payload.target_node.private_ip=})\n"
@@ -51,10 +50,7 @@ class ProvisionSwarmNodeWorkflow:
 
         tmp_dir = await workflow.execute_activity_method(
             SwarmNodeActivities.create_ssh_keys_temp_dir,
-            SwarmNodePair(
-                main_node=payload.main_node,
-                target_node=payload.target_node,
-            ),
+            payload,
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )
@@ -175,9 +171,7 @@ class RemoveSwarmNodeFromClusterWorkflow:
         )
 
     @workflow.run
-    async def run(
-        self, payload: RemoveSwarmNodeWorkflowPayload
-    ) -> SwarmNodeStatusResult:
+    async def run(self, payload: ClusterSwarmNodePair) -> SwarmNodeStatusResult:
         print(
             f"\n\n{Colors.BLUE}==============================================================={Colors.ENDC}\n"
             f"Running workflow DrainSwarmNodeWorkflow.run({payload.target_node.id=}, {payload.target_node.private_ip=})\n"
@@ -190,10 +184,7 @@ class RemoveSwarmNodeFromClusterWorkflow:
 
         tmp_dir = await workflow.execute_activity_method(
             SwarmNodeActivities.create_ssh_keys_temp_dir,
-            SwarmNodePair(
-                main_node=payload.main_node,
-                target_node=payload.target_node,
-            ),
+            payload,
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )

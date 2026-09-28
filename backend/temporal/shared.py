@@ -680,38 +680,32 @@ class SwarmNodeDetails:
 
 
 @dataclass
-class SwarmNodeWorkflowPayload:
+class ClusterSwarmNodeDetails(SwarmNodeDetails):
+    swarm_node_id: str
+
+
+@dataclass(frozen=True)
+class SwarmNodePair:
     main_node: SwarmNodeDetails
     target_node: SwarmNodeDetails
 
 
-@dataclass
-class ProvisionedSwarmNodeDetails(SwarmNodeDetails):
-    swarm_node_id: str
-
-
-@dataclass
-class SwarmNodePair:
-    main_node: SwarmNodeDetails | ProvisionedSwarmNodeDetails
-    target_node: SwarmNodeDetails | ProvisionedSwarmNodeDetails
-
-
-@dataclass
-class RemoveSwarmNodeWorkflowPayload:
-    main_node: ProvisionedSwarmNodeDetails
-    target_node: ProvisionedSwarmNodeDetails
+@dataclass(frozen=True)
+class ClusterSwarmNodePair(SwarmNodePair):
+    main_node: ClusterSwarmNodeDetails
+    target_node: ClusterSwarmNodeDetails
 
 
 @dataclass
 class SwarmNodeSSHContext:
-    node: SwarmNodeDetails | ProvisionedSwarmNodeDetails
+    node: SwarmNodeDetails
     tmp_dir: str
 
 
 @dataclass
 class RemoveSwarmNodeContext:
     activity_ctx: SwarmNodeSSHContext
-    target_node: ProvisionedSwarmNodeDetails
+    target_node: ClusterSwarmNodeDetails
 
 
 @dataclass

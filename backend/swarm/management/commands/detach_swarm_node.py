@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from swarm.models import SwarmNode
 from temporal.client import TemporalClient
-from temporal.shared import RemoveSwarmNodeWorkflowPayload, ProvisionedSwarmNodeDetails
+from temporal.shared import ClusterSwarmNodePair, ClusterSwarmNodeDetails
 from temporal.workflows import RemoveSwarmNodeFromClusterWorkflow
 from zane_api.utils import Colors
 
@@ -25,14 +25,14 @@ class Command(BaseCommand):
         node_id: str = options["node"]
 
         try:
-            node = SwarmNode.objects.get(id=node_id)
+            target_node = SwarmNode.objects.get(id=node_id)
         except SwarmNode.DoesNotExist:
             raise CommandError(f"A server with the id `{node_id}` does not exist")
 
-        if node.is_initial_install_server:
+        if target_node.is_initial_install_server:
             raise CommandError(f"Cannot detach the main server from the cluster")
 
-        if node.swarm_node_id is None:
+        if target_node.swarm_node_id is None:
             raise CommandError(
                 f"The node `{node_id}` is not part of the swarm cluster (no swarm node id)"
             )
@@ -45,7 +45,7 @@ class Command(BaseCommand):
         if main_node.swarm_node_id is None:
             raise CommandError(f"The main node has no swarm node id")
 
-        target_key = node.ssh_keys.filter(user="root").first()
+        target_key = target_node.ssh_keys.filter(user="root").first()
         if target_key is None:
             raise CommandError(f"No Root SSH key found for the node `{node_id}`")
 
@@ -63,17 +63,17 @@ class Command(BaseCommand):
             f" (user={target_key.user})"
         )
 
-        payload = RemoveSwarmNodeWorkflowPayload(
-            target_node=ProvisionedSwarmNodeDetails(
-                id=node.id,
-                private_ip=node.private_ip,
-                swarm_role=node.swarm_role,  # type: ignore
-                cluster_roles=node.cluster_roles,  # type: ignore
+        payload = ClusterSwarmNodePair(
+            target_node=ClusterSwarmNodeDetails(
+                id=target_node.id,
+                private_ip=target_node.private_ip,
+                swarm_role=target_node.swarm_role,  # type: ignore
+                cluster_roles=target_node.cluster_roles,  # type: ignore
                 ssh_key=target_key.private_key,
-                ssh_port=node.ssh_port,
-                swarm_node_id=node.swarm_node_id,
+                ssh_port=target_node.ssh_port,
+                swarm_node_id=target_node.swarm_node_id,
             ),
-            main_node=ProvisionedSwarmNodeDetails(
+            main_node=ClusterSwarmNodeDetails(
                 id=main_node.id,
                 private_ip=main_node.private_ip,
                 swarm_role=main_node.swarm_role,  # type: ignore
@@ -84,18 +84,16 @@ class Command(BaseCommand):
             ),
         )
 
-        workflow_id = f"detach-{node.id}-{int(time.time())}"
+        workflow_id = f"detach-{target_node.id}-{int(time.time())}"
         self.stdout.write(
-            f"Detaching {Colors.ORANGE}{payload.target_node.private_ip}{Colors.ENDC}"
-            f" (swarm node {Colors.ORANGE}{payload.target_node.swarm_node_id}{Colors.ENDC}) from the cluster..."
+            f"Detaching {Colors.ORANGE}{target_node.private_ip}{Colors.ENDC}"
+            f" (swarm node {Colors.ORANGE}{target_node.swarm_node_id}{Colors.ENDC}) from the cluster..."
         )
 
         result = async_to_sync(self.run_workflow)(payload, workflow_id)
         self.stdout.write(f"{Colors.GREEN}Workflow finished ✅{Colors.ENDC} {result=}")
 
-    async def run_workflow(
-        self, payload: RemoveSwarmNodeWorkflowPayload, workflow_id: str
-    ):
+    async def run_workflow(self, payload: ClusterSwarmNodePair, workflow_id: str):
         handle = await TemporalClient.astart_workflow(
             RemoveSwarmNodeFromClusterWorkflow.run,
             payload,

@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from swarm.models import SwarmNode
 from temporal.client import TemporalClient
-from temporal.shared import SwarmNodeDetails, SwarmNodeWorkflowPayload
+from temporal.shared import SwarmNodeDetails, SwarmNodePair
 from temporal.workflows import ProvisionSwarmNodeWorkflow
 from zane_api.utils import Colors
 
@@ -51,7 +51,7 @@ class Command(BaseCommand):
             f" (user={new_key.user})"
         )
 
-        payload = SwarmNodeWorkflowPayload(
+        payload = SwarmNodePair(
             target_node=SwarmNodeDetails(
                 id=node.id,
                 private_ip=node.private_ip,
@@ -79,7 +79,7 @@ class Command(BaseCommand):
         result = async_to_sync(self.run_workflow)(payload, workflow_id)
         self.stdout.write(f"{Colors.GREEN}Workflow finished ✅{Colors.ENDC} {result=}")
 
-    async def run_workflow(self, payload: SwarmNodeWorkflowPayload, workflow_id: str):
+    async def run_workflow(self, payload: SwarmNodePair, workflow_id: str):
         handle = await TemporalClient.astart_workflow(
             ProvisionSwarmNodeWorkflow.run,
             payload,

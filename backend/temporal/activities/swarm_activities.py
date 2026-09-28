@@ -30,6 +30,7 @@ with workflow.unsafe.imports_passed_through():
 
 from ..shared import (
     SwarmNodePair,
+    ClusterSwarmNodePair,
     DockerInstallContext,
     DockerNodeUpdateContext,
     DockerSwarmJoinContext,
@@ -41,7 +42,6 @@ from ..shared import (
     DockerSwarmInfo,
     SwarmNodeDetails,
     SwarmNodeStatusResult,
-    RemoveSwarmNodeWorkflowPayload,
 )
 
 
@@ -436,9 +436,7 @@ class SwarmNodeActivities:
         print("Temporary folder for SSH keys deleted ✅")
 
     @activity.defn
-    async def drain_swarm_node_and_remove_labels(
-        self, payload: RemoveSwarmNodeWorkflowPayload
-    ):
+    async def drain_swarm_node_and_remove_labels(self, payload: ClusterSwarmNodePair):
         docker_client = docker.from_env()
         target_node = payload.target_node
         print(
@@ -467,7 +465,7 @@ class SwarmNodeActivities:
 
     @activity.defn
     async def wait_for_global_services_to_be_drained(
-        self, payload: RemoveSwarmNodeWorkflowPayload
+        self, payload: ClusterSwarmNodePair
     ):
         docker_client = docker.from_env()
         target_node = payload.target_node
