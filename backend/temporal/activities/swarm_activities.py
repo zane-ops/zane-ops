@@ -351,12 +351,13 @@ class SwarmNodeActivities:
 
             new_spec = deepcopy(original_spec)
 
-            labels = {}
+            labels = new_spec.get("Labels", {})
             if "APP_SERVER" in node.cluster_roles:
                 labels[settings.APP_SERVER_LABEL] = "true"
             if "BUILD_SERVER" in node.cluster_roles:
                 labels[settings.BUILD_SERVER_LABEL] = "true"
 
+            new_spec["role"] = node.swarm_role.lower()
             new_spec["Labels"] = labels
             swarm_node.update(new_spec)
         except docker.errors.APIError:
