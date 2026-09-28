@@ -36,7 +36,7 @@ class ProvisionSwarmNodeWorkflow:
             f"Running workflow ProvisionSwarmNodeWorkflow.run({payload.main_node.private_ip=}, {payload.target_node.private_ip=})\n"
             f"{Colors.BLUE}==============================================================={Colors.ENDC}"
         )
-        tmp_dir = await workflow.execute_activity_method(
+        await workflow.execute_activity_method(
             SwarmNodeActivities.prepare_node_deployment,
             payload.target_node,
             start_to_close_timeout=timedelta(seconds=30),
@@ -221,7 +221,7 @@ class RemoveSwarmNodeFromClusterWorkflow:
                 all_removed = await workflow.execute_activity_method(
                     SwarmNodeActivities.wait_for_global_services_to_be_drained,
                     payload,
-                    start_to_close_timeout=timedelta(minutes=3),
+                    start_to_close_timeout=timedelta(minutes=5),
                     retry_policy=self.retry_policy,
                 )
 
