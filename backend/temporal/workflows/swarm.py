@@ -167,8 +167,8 @@ class ProvisionSwarmNodeWorkflow:
         return node_deployment_result
 
 
-@workflow.defn(name="detach-swarm-node-from-cluster")
-class DetachSwarmNodeFromClusterWorkflow:
+@workflow.defn(name="remove-swarm-node-from-cluster")
+class RemoveSwarmNodeFromClusterWorkflow:
     def __init__(self):
         self.retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
@@ -260,12 +260,20 @@ class DetachSwarmNodeFromClusterWorkflow:
                         if removed:
                             node_deployment_result.status = "REMOVED"
 
-            await workflow.execute_activity_method(
-                SwarmNodeActivities.finish_and_save_node_deployment,
-                node_deployment_result,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
+            if node_deployment_result.status == "REMOVED":
+                await workflow.execute_activity_method(
+                    SwarmNodeActivities.clear_removed_swarm_node_attributes,
+                    node_deployment_result,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
+            else:
+                await workflow.execute_activity_method(
+                    SwarmNodeActivities.finish_and_save_node_deployment,
+                    node_deployment_result,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
 
         await workflow.execute_activity_method(
             SwarmNodeActivities.delete_ssh_keys_temp_dir,

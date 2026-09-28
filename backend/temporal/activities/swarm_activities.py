@@ -88,6 +88,28 @@ class SwarmNodeActivities:
             )
 
     @activity.defn
+    async def clear_removed_swarm_node_attributes(self, result: SwarmNodeStatusResult):
+        print(
+            f"Clearing swarm attributes for removed node {Colors.BLUE}{result.id}{Colors.ENDC}..."
+        )
+        updated = await SwarmNode.objects.filter(id=result.id).aupdate(
+            status=result.status,
+            swarm_node_id=None,
+            hostname=None,
+            docker_version=None,
+            cpus=None,
+            memory_bytes=None,
+        )
+        if updated == 0:
+            raise ApplicationError(
+                "Cannot clear attributes of a non existent node.",
+                non_retryable=True,
+            )
+        print(
+            f"Swarm attributes cleared for removed node {Colors.BLUE}{result.id}{Colors.ENDC} ✅"
+        )
+
+    @activity.defn
     async def create_ssh_keys_temp_dir(self, payload: CreateSSHKeyDirContext):
         print("Creating temporary folder for SSH key...")
         temp_dir = tempfile.mkdtemp()
