@@ -18,6 +18,7 @@ import {
   PowerOffIcon,
   ServerIcon,
   TerminalIcon,
+  Trash2Icon,
   TriangleAlertIcon,
   XIcon
 } from "lucide-react";
@@ -338,7 +339,8 @@ const SERVER_STATUS_COLOR_MAP = {
   DOWN: "red",
   FAILED: "red",
   DRAINED: "gray",
-  CREATED: "gray"
+  CREATED: "gray",
+  REMOVED: "gray",
 } as const satisfies Record<SwarmNode["status"], StatusBadgeColor>;
 
 type ServerStatusBadgeProps = {
@@ -360,7 +362,8 @@ export function ServerStatusBadge({
     DOWN: PowerOffIcon,
     FAILED: XIcon,
     DRAINED: TriangleAlertIcon,
-    CREATED: ClockPlusIcon
+    CREATED: ClockPlusIcon,
+    REMOVED: Trash2Icon,
   } as const satisfies Record<typeof status, LucideIcon>;
 
   const Icon = icons[status];

@@ -110,7 +110,9 @@ class SwarmNode(TimestampedModel):
 class SSHKey(TimestampedModel):
     id: int
     node = models.ForeignKey(
-        to=SwarmNode, on_delete=models.CASCADE, related_name="ssh_keys"
+        to=SwarmNode,
+        on_delete=models.CASCADE,
+        related_name="ssh_keys",
     )
     user = models.CharField(max_length=255, blank=False)
     public_key = models.TextField(blank=False)
