@@ -1,7 +1,0 @@
-services:
-  zane-proxy:
-    ports:
-      - target: 80
-        published: ${HTTP_PORT:-80}
-        protocol: tcp
-        mode: host
