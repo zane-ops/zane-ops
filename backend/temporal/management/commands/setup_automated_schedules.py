@@ -46,7 +46,6 @@ async def setup_jobs():
             schedule_id=settings.SWARM_HEALTHCHECK_SCHEDULE_ID,
             workflow=SwarmHealthcheckWorkflow.run,
             schedule_cron=settings.SWARM_HEALTHCHECK_SCHEDULE_CRON,
-            task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
         ),
     ]
     if settings.ENVIRONMENT == settings.PRODUCTION_ENV:

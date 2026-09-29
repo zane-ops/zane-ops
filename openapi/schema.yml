@@ -34675,10 +34675,17 @@ components:
           type: integer
           maximum: 65535
           minimum: 1
+        services:
+          readOnly: true
+          nullable: true
         status:
           allOf:
           - $ref: '#/components/schemas/SwarmNodeStatusEnum'
           readOnly: true
+        status_message:
+          type: string
+          readOnly: true
+          nullable: true
         last_status_update:
           type: string
           format: date-time
@@ -34732,9 +34739,11 @@ components:
       - last_status_update
       - memory_bytes
       - private_ip
+      - services
       - ssh_keys
       - ssh_port
       - status
+      - status_message
       - swarm_node_id
       - swarm_role
       - updated_at
@@ -34761,8 +34770,9 @@ components:
       enum:
       - CREATED
       - PROVISIONING
-      - READY
+      - ACTIVE
       - DOWN
+      - PAUSED
       - DRAINED
       - FAILED
       - REMOVED
@@ -34770,8 +34780,9 @@ components:
       description: |-
         * `CREATED` - Created
         * `PROVISIONING` - Provisioning
-        * `READY` - Ready
+        * `ACTIVE` - Active
         * `DOWN` - Down
+        * `PAUSED` - Paused
         * `DRAINED` - Drained
         * `FAILED` - Failed
         * `REMOVED` - Removed

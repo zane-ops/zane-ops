@@ -8484,7 +8484,9 @@ export interface components {
       swarm_role: components["schemas"]["SwarmRoleEnum"];
       private_ip: string;
       ssh_port: number;
+      services: unknown;
       status: components["schemas"]["SwarmNodeStatusEnum"];
+      status_message: string | null;
       /** Format: date-time */
       last_status_update: string | null;
       docker_version: string | null;
@@ -8508,14 +8510,15 @@ export interface components {
     /**
      * @description * `CREATED` - Created
      * * `PROVISIONING` - Provisioning
-     * * `READY` - Ready
+     * * `ACTIVE` - Active
      * * `DOWN` - Down
+     * * `PAUSED` - Paused
      * * `DRAINED` - Drained
      * * `FAILED` - Failed
      * * `REMOVED` - Removed
      * @enum {string}
      */
-    SwarmNodeStatusEnum: "CREATED" | "PROVISIONING" | "READY" | "DOWN" | "DRAINED" | "FAILED" | "REMOVED";
+    SwarmNodeStatusEnum: "CREATED" | "PROVISIONING" | "ACTIVE" | "DOWN" | "PAUSED" | "DRAINED" | "FAILED" | "REMOVED";
     SwarmNodesCreateClusterRolesErrorComponent: {
       /**
        * @description * `cluster_roles` - cluster_roles

@@ -631,9 +631,8 @@ class SwarmNodeActivities:
             & ~Q(status__in=["CREATED", "PROVISIONING", "FAILED", "REMOVED"])
         ).all()
 
-        # WTF ???
         async for node in all_nodes:
-            node_status = result.nodes.get(node.id)
+            node_status = result.nodes.get(cast(str, node.swarm_node_id))
 
             if node_status is not None:
                 node.status_message = node_status.message

@@ -42,10 +42,11 @@ export default function SwarmNodeLayout({
 
   const status_emoji_map = {
     CREATED: "🆕",
-    READY: "💚",
+    ACTIVE: "💚",
     DOWN: "🔴",
     FAILED: "❌",
     DRAINED: "⏸️",
+    PAUSED: "⏸️",
     PROVISIONING: "▶️",
     REMOVED: "🗑️"
   } satisfies Record<(typeof node)["status"], string>;

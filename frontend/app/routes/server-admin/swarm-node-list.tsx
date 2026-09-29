@@ -11,6 +11,7 @@ import {
   LoaderIcon,
   type LucideIcon,
   MemoryStickIcon,
+  PauseIcon,
   PenLineIcon,
   PencilLineIcon,
   PickaxeIcon,
@@ -178,7 +179,7 @@ export function ServerCard({
                     private_ip
                   )}
 
-                  <PencilLineIcon className="size-4 flex-none opacity-0 group-hover:opacity-100" />
+                  <PencilLineIcon className="size-4 text-grey flex-none opacity-0 group-hover:opacity-100" />
                 </Link>
               </h3>
 
@@ -334,13 +335,14 @@ export function ServerCard({
 }
 
 const SERVER_STATUS_COLOR_MAP = {
-  READY: "green",
+  ACTIVE: "green",
   PROVISIONING: "blue",
   DOWN: "red",
+  PAUSED: "yellow",
   FAILED: "red",
   DRAINED: "gray",
   CREATED: "gray",
-  REMOVED: "gray",
+  REMOVED: "gray"
 } as const satisfies Record<SwarmNode["status"], StatusBadgeColor>;
 
 type ServerStatusBadgeProps = {
@@ -357,19 +359,20 @@ export function ServerStatusBadge({
   const color = SERVER_STATUS_COLOR_MAP[status];
 
   const icons = {
-    READY: HeartPulseIcon,
+    ACTIVE: HeartPulseIcon,
     PROVISIONING: HourglassIcon,
     DOWN: PowerOffIcon,
     FAILED: XIcon,
     DRAINED: TriangleAlertIcon,
+    PAUSED: PauseIcon,
     CREATED: ClockPlusIcon,
-    REMOVED: Trash2Icon,
+    REMOVED: Trash2Icon
   } as const satisfies Record<typeof status, LucideIcon>;
 
   const Icon = icons[status];
 
   const isLoading = status === "PROVISIONING";
-  const isActive = status === "READY";
+  const isActive = status === "ACTIVE";
 
   return (
     <div
