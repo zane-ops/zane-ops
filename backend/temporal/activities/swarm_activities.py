@@ -629,14 +629,16 @@ class SwarmNodeActivities:
         all_nodes = SwarmNode.objects.filter(
             Q(swarm_node_id__isnull=False)
             & ~Q(status__in=["CREATED", "PROVISIONING", "FAILED", "REMOVED"])
-        )
+        ).all()
 
+        # WTF ???
         async for node in all_nodes:
             node_status = result.nodes.get(node.id)
 
             if node_status is not None:
                 node.status_message = node_status.message
 
+                print(f"{node_status=}")
                 if node_status.status != "ready":
                     node.status = SwarmNode.Status.DOWN
                 else:
@@ -655,7 +657,8 @@ class SwarmNodeActivities:
                         }
                         for svc in node_status.services.values()
                     }
-                    print(f"{node.services=}")
+                print(f"{node.services=}")
+                print(f"{node.status=}")
 
         async def save_node(node: SwarmNode):
             await node.asave(
