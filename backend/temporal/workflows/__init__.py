@@ -123,6 +123,7 @@ def get_workflows_and_activities():
             CollectComposeStacksMetricsWorkflow,
             ProvisionSwarmNodeWorkflow,
             RemoveSwarmNodeFromClusterWorkflow,
+            SwarmHealthcheckWorkflow,
         ],
         activities=[
             *get_extra_activities(),

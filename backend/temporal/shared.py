@@ -809,6 +809,7 @@ class SwarmNodeStatusResult:
 
 @dataclass
 class SwarmNodeServiceHealthcheck:
+    service_name: str
     status: str
     message: str
 
@@ -816,7 +817,7 @@ class SwarmNodeServiceHealthcheck:
 @dataclass
 class SwarmNodeHealthcheckResult:
     status: Literal["unknown", "down", "ready", "disconnected"]
-    message: str
+    message: str | None
     availability: Literal["drain", "active", "pause"]
     services: dict[Literal["proxy", "log_collector"], SwarmNodeServiceHealthcheck] = (
         field(default_factory=dict)

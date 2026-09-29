@@ -27,6 +27,7 @@ with workflow.unsafe.imports_passed_through():
     from swarm.models import SwarmNode
     from docker.models.nodes import Node as DockerSwarmNode
     from django.utils import timezone
+    from django.db.models import Q
 
 
 from ..shared import (
@@ -44,6 +45,7 @@ from ..shared import (
     GetSwarmJoinTokenInput,
     DockerSwarmInfo,
     SwarmNodeDetails,
+    SwarmNodeServiceHealthcheck,
     SwarmNodeStatusResult,
 )
 
@@ -572,12 +574,13 @@ class SwarmNodeActivities:
 
         nodes_statuses: dict[str, SwarmNodeHealthcheckResult] = {}
         for node in all_nodes:
-            node = cast(DockerSwarmNode, node)
-            nodes_statuses[cast(str, node.id)] = SwarmNodeHealthcheckResult(
-                status=node.attrs["Status"]["State"],
-                message=node.attrs["Status"]["Message"],
-                availability=node.attrs["Spec"]["Availability"],
-            )
+            if node.id is not None:
+                node = cast(DockerSwarmNode, node)
+                nodes_statuses[cast(str, node.id)] = SwarmNodeHealthcheckResult(
+                    status=node.attrs["Status"]["State"],
+                    message=node.attrs["Status"].get("Message"),
+                    availability=node.attrs["Spec"]["Availability"],
+                )
 
         proxy_service: list[Service] = self.docker_client.services.list(
             filters={"label": ["zane.role=proxy"]},
@@ -588,45 +591,47 @@ class SwarmNodeActivities:
         )
 
         if len(proxy_service) > 0:
+            service = proxy_service[0]
             tasks = [
                 DockerSwarmTask.from_dict(task)
-                for task in proxy_service[0].tasks(filters={"desired-state": "running"})
+                for task in service.tasks(filters={"desired-state": "running"})
             ]
 
             for task in tasks:
-                nodes_statuses[task.NodeID].services[
-                    "proxy"
-                ].status = task.Status.State.value
-                nodes_statuses[task.NodeID].services[
-                    "proxy"
-                ].message = task.Status.Message
+                nodes_statuses[task.NodeID].services["proxy"] = (
+                    SwarmNodeServiceHealthcheck(
+                        service_name=service.name,
+                        status=task.Status.State.value,
+                        message=task.Status.Message,
+                    )
+                )
 
         if len(log_collector_service) > 0:
+            service = log_collector_service[0]
             tasks = [
                 DockerSwarmTask.from_dict(task)
-                for task in proxy_service[0].tasks(filters={"desired-state": "running"})
+                for task in service.tasks(filters={"desired-state": "running"})
             ]
 
             for task in tasks:
-                nodes_statuses[task.NodeID].services[
-                    "log_collector"
-                ].status = task.Status.State.value
-                nodes_statuses[task.NodeID].services[
-                    "log_collector"
-                ].message = task.Status.Message
+                nodes_statuses[task.NodeID].services["log_collector"] = (
+                    SwarmNodeServiceHealthcheck(
+                        service_name=service.name,
+                        status=task.Status.State.value,
+                        message=task.Status.Message,
+                    )
+                )
 
         return SwarmHealthcheckResult(nodes=nodes_statuses)
 
     @activity.defn
     async def save_swarm_healthcheck(self, result: SwarmHealthcheckResult):
         all_nodes = SwarmNode.objects.filter(
-            swarm_node_id__isnull=False,
-            is_initial_install_server=False,
-            status__not_in=["CREATED", "PROVISIONING", "FAILED", "REMOVED"],
+            Q(swarm_node_id__isnull=False)
+            & ~Q(status__in=["CREATED", "PROVISIONING", "FAILED", "REMOVED"])
         )
 
-        updated_nodes: list[SwarmNode] = []
-        for node in all_nodes:
+        async for node in all_nodes:
             node_status = result.nodes.get(node.id)
 
             if node_status is not None:
@@ -642,16 +647,25 @@ class SwarmNodeActivities:
                             node.status = SwarmNode.Status.DRAINED
                         case "pause":
                             node.status = SwarmNode.Status.PAUSED
-                updated_nodes.append(node)
+
+                    node.services = {  # type: ignore
+                        svc.service_name: {
+                            "message": svc.message,
+                            "status": svc.status,
+                        }
+                        for svc in node_status.services.values()
+                    }
+                    print(f"{node.services=}")
 
         async def save_node(node: SwarmNode):
             await node.asave(
                 update_fields=[
                     "status",
+                    "services",
                     "status_message",
                     "updated_at",
                     "last_status_update",
                 ]
             )
 
-        await asyncio.gather(*[save_node(node) for node in updated_nodes])
+        await asyncio.gather(*[save_node(node) async for node in all_nodes])
