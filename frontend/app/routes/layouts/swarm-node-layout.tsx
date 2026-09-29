@@ -45,8 +45,9 @@ export default function SwarmNodeLayout({
     READY: "💚",
     DOWN: "🔴",
     FAILED: "❌",
-    DRAINED: "🗑️",
-    PROVISIONING: "▶️"
+    DRAINED: "⏸️",
+    PROVISIONING: "▶️",
+    REMOVED: "🗑️"
   } satisfies Record<(typeof node)["status"], string>;
 
   const { title } = metaTitle(
