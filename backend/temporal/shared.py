@@ -690,6 +690,7 @@ class SwarmNodePair:
     target_node: SwarmNodeDetails
 
 
+# Frozen dataclass allows us to override the attributes types
 @dataclass(frozen=True)
 class ClusterSwarmNodePair(SwarmNodePair):
     main_node: ClusterSwarmNodeDetails
@@ -796,7 +797,7 @@ class SwarmNodeStatusResult:
     status: Literal[
         "CREATED",
         "PROVISIONING",
-        "READY",
+        "ACTIVE",
         "DOWN",
         "DRAINED",
         "FAILED",
@@ -804,6 +805,27 @@ class SwarmNodeStatusResult:
     ]
     docker_info: DockerSystemInfo | None = None
     swarm_hostname: str | None = None
+
+
+@dataclass
+class SwarmNodeServiceHealthcheck:
+    status: str
+    message: str
+
+
+@dataclass
+class SwarmNodeHealthcheckResult:
+    status: Literal["unknown", "down", "ready", "disconnected"]
+    message: str
+    availability: Literal["drain", "active", "pause"]
+    services: dict[Literal["proxy", "log_collector"], SwarmNodeServiceHealthcheck] = (
+        field(default_factory=dict)
+    )
+
+
+@dataclass
+class SwarmHealthcheckResult:
+    nodes: dict[str, SwarmNodeHealthcheckResult]
 
 
 @dataclass

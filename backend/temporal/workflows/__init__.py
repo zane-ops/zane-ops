@@ -235,6 +235,8 @@ def get_workflows_and_activities():
             swarm_node_activities.wait_for_global_services_to_be_drained,
             swarm_node_activities.detach_swarm_node_from_cluster,
             swarm_node_activities.remove_swarm_node_from_cluster,
+            swarm_node_activities.run_swarm_healthcheck,
+            swarm_node_activities.save_swarm_healthcheck,
             acquire_service_deploy_semaphore,
             lock_deploy_semaphore,
             release_service_deploy_semaphore,

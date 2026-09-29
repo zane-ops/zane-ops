@@ -12,7 +12,7 @@ from datetime import timedelta
 import time
 
 with workflow.unsafe.imports_passed_through():
-    from zane_api.utils import Colors, format_duration
+    from zane_api.utils import Colors, format_duration, DockerSwarmTask
     from temporal.helpers import empty_folder, exec_cmd_in_server
     from temporal.constants import (
         DOCKER_CHECK_SCRIPT,
@@ -26,9 +26,12 @@ with workflow.unsafe.imports_passed_through():
     from django.conf import settings
     from swarm.models import SwarmNode
     from docker.models.nodes import Node as DockerSwarmNode
+    from django.utils import timezone
 
 
 from ..shared import (
+    SwarmHealthcheckResult,
+    SwarmNodeHealthcheckResult,
     SwarmNodePair,
     ClusterSwarmNodePair,
     DockerInstallContext,
@@ -46,10 +49,14 @@ from ..shared import (
 
 
 class SwarmNodeActivities:
+    def __init__(self):
+        self.docker_client = docker.from_env()
+
     @activity.defn
     async def prepare_node_deployment(self, node: SwarmNodeDetails):
         await SwarmNode.objects.filter(id=node.id).aupdate(
-            status=SwarmNode.Status.PROVISIONING
+            status=SwarmNode.Status.PROVISIONING,
+            last_status_update=timezone.now(),
         )
 
     @activity.defn
@@ -76,6 +83,7 @@ class SwarmNodeActivities:
                     "docker_version",
                     "hostname",
                     "swarm_node_id",
+                    "last_status_update",
                 ]
             )
 
@@ -97,6 +105,7 @@ class SwarmNodeActivities:
             docker_version=None,
             cpus=None,
             memory_bytes=None,
+            last_status_update=timezone.now(),
         )
         if updated == 0:
             raise ApplicationError(
@@ -338,7 +347,6 @@ class SwarmNodeActivities:
 
     @activity.defn
     async def update_node_labels(self, ctx: DockerNodeUpdateContext):
-        docker_client = docker.from_env()
 
         info = ctx.swarm_info
         node = ctx.node
@@ -346,7 +354,7 @@ class SwarmNodeActivities:
             f"Updating labels for swarm node {Colors.BLUE}{info.NodeID}{Colors.ENDC}..."
         )
         try:
-            swarm_node: DockerSwarmNode = docker_client.nodes.get(info.NodeID)
+            swarm_node: DockerSwarmNode = self.docker_client.nodes.get(info.NodeID)
             original_spec = swarm_node.attrs["Spec"]
 
             new_spec = deepcopy(original_spec)
@@ -376,14 +384,13 @@ class SwarmNodeActivities:
     async def wait_for_global_services_to_be_propagated(
         self, swarm_info: DockerSwarmInfo
     ):
-        docker_client = docker.from_env()
 
-        proxy_service: list[Service] = docker_client.services.list(
+        proxy_service: list[Service] = self.docker_client.services.list(
             filters={"label": ["zane.role=proxy"]},
             status=True,
         )
 
-        log_collector_service: list[Service] = docker_client.services.list(
+        log_collector_service: list[Service] = self.docker_client.services.list(
             filters={"label": ["zane.role=log-collector"]},
         )
 
@@ -438,13 +445,13 @@ class SwarmNodeActivities:
 
     @activity.defn
     async def drain_swarm_node_and_remove_labels(self, payload: ClusterSwarmNodePair):
-        docker_client = docker.from_env()
+
         target_node = payload.target_node
         print(
             f"Draining swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.ENDC}..."
         )
         try:
-            swarm_node = docker_client.nodes.get(target_node.swarm_node_id)
+            swarm_node = self.docker_client.nodes.get(target_node.swarm_node_id)
             original_spec = swarm_node.attrs["Spec"]
 
             new_spec = deepcopy(original_spec)
@@ -468,15 +475,15 @@ class SwarmNodeActivities:
     async def wait_for_global_services_to_be_drained(
         self, payload: ClusterSwarmNodePair
     ):
-        docker_client = docker.from_env()
+
         target_node = payload.target_node
 
-        proxy_service: list[Service] = docker_client.services.list(
+        proxy_service: list[Service] = self.docker_client.services.list(
             filters={"label": ["zane.role=proxy"]},
             status=True,
         )
 
-        log_collector_service: list[Service] = docker_client.services.list(
+        log_collector_service: list[Service] = self.docker_client.services.list(
             filters={"label": ["zane.role=log-collector"]},
         )
 
@@ -558,3 +565,93 @@ class SwarmNodeActivities:
             )
             return True
         return False
+
+    @activity.defn
+    async def run_swarm_healthcheck(self) -> SwarmHealthcheckResult:
+        all_nodes: list[DockerSwarmNode] = self.docker_client.nodes.list()
+
+        nodes_statuses: dict[str, SwarmNodeHealthcheckResult] = {}
+        for node in all_nodes:
+            node = cast(DockerSwarmNode, node)
+            nodes_statuses[cast(str, node.id)] = SwarmNodeHealthcheckResult(
+                status=node.attrs["Status"]["State"],
+                message=node.attrs["Status"]["Message"],
+                availability=node.attrs["Spec"]["Availability"],
+            )
+
+        proxy_service: list[Service] = self.docker_client.services.list(
+            filters={"label": ["zane.role=proxy"]},
+        )
+
+        log_collector_service: list[Service] = self.docker_client.services.list(
+            filters={"label": ["zane.role=log-collector"]},
+        )
+
+        if len(proxy_service) > 0:
+            tasks = [
+                DockerSwarmTask.from_dict(task)
+                for task in proxy_service[0].tasks(filters={"desired-state": "running"})
+            ]
+
+            for task in tasks:
+                nodes_statuses[task.NodeID].services[
+                    "proxy"
+                ].status = task.Status.State.value
+                nodes_statuses[task.NodeID].services[
+                    "proxy"
+                ].message = task.Status.Message
+
+        if len(log_collector_service) > 0:
+            tasks = [
+                DockerSwarmTask.from_dict(task)
+                for task in proxy_service[0].tasks(filters={"desired-state": "running"})
+            ]
+
+            for task in tasks:
+                nodes_statuses[task.NodeID].services[
+                    "log_collector"
+                ].status = task.Status.State.value
+                nodes_statuses[task.NodeID].services[
+                    "log_collector"
+                ].message = task.Status.Message
+
+        return SwarmHealthcheckResult(nodes=nodes_statuses)
+
+    @activity.defn
+    async def save_swarm_healthcheck(self, result: SwarmHealthcheckResult):
+        all_nodes = SwarmNode.objects.filter(
+            swarm_node_id__isnull=False,
+            is_initial_install_server=False,
+            status__not_in=["CREATED", "PROVISIONING", "FAILED", "REMOVED"],
+        )
+
+        updated_nodes: list[SwarmNode] = []
+        for node in all_nodes:
+            node_status = result.nodes.get(node.id)
+
+            if node_status is not None:
+                node.status_message = node_status.message
+
+                if node_status.status != "ready":
+                    node.status = SwarmNode.Status.DOWN
+                else:
+                    match node_status.availability:
+                        case "active":
+                            node.status = SwarmNode.Status.ACTIVE
+                        case "drain":
+                            node.status = SwarmNode.Status.DRAINED
+                        case "pause":
+                            node.status = SwarmNode.Status.PAUSED
+                updated_nodes.append(node)
+
+        async def save_node(node: SwarmNode):
+            await node.asave(
+                update_fields=[
+                    "status",
+                    "status_message",
+                    "updated_at",
+                    "last_status_update",
+                ]
+            )
+
+        await asyncio.gather(*[save_node(node) for node in updated_nodes])

@@ -34,8 +34,9 @@ class SwarmNode(TimestampedModel):
     class Status(models.TextChoices):
         CREATED = "CREATED", "Created"
         PROVISIONING = "PROVISIONING", "Provisioning"
-        READY = "READY", "Ready"
+        ACTIVE = "ACTIVE", "Active"
         DOWN = "DOWN", "Down"
+        PAUSED = "PAUSED", "Paused"
         DRAINED = "DRAINED", "Drained"
         FAILED = "FAILED", "Failed"
         REMOVED = "REMOVED", "Removed"
@@ -55,7 +56,8 @@ class SwarmNode(TimestampedModel):
     private_ip = models.GenericIPAddressField(unique=True)  # overlay / VPC address
 
     status = models.CharField(choices=Status.choices, default=Status.CREATED)
-    last_status_update = models.DateTimeField(null=True)
+    last_status_update = models.DateTimeField(null=True, auto_now=True)
+    status_message = models.CharField(null=True)
 
     docker_version = models.CharField(null=True)
     cluster_roles = ArrayField(
@@ -79,13 +81,23 @@ class SwarmNode(TimestampedModel):
         ],
     )
 
+    # service statuses
+    services = models.JSONField(null=True)
+    # format:
+    # {
+    #   "proxy"|"log_collector": {
+    #     "status": "healthy" | "unhealthy"
+    #     "message": "<anything...>"
+    #   }
+    # }
+
     @property
     def build_task_queue(self) -> str:
         """
         Queue name for running builds on this node specifically. Only nodes
         with `is_build_server=True` run a worker on this queue.
         """
-        return f"build-{self.hostname}"
+        return f"build-{self.swarm_node_id}"
 
     @property
     def node_task_queue(self) -> str:
@@ -95,7 +107,7 @@ class SwarmNode(TimestampedModel):
         schedules.
         Every node runs a worker on its own queue, always.
         """
-        return f"node-{self.hostname}"
+        return f"node-{self.swarm_node_id}"
 
     class Meta:  # type: ignore
         constraints = [
