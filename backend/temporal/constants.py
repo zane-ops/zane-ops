@@ -522,6 +522,50 @@ else
 fi
 """
 
+DOCKER_CHECK_OS_SCRIPT = f"""
+set -e
+
+if command -v uname >/dev/null 2>&1; then
+    CPU_ARCH=$(uname -m)
+else
+    CPU_ARCH=unknown
+fi
+
+if [ -f /etc/debian_version ]; then
+  export DEBIAN_FRONTEND=noninteractive
+
+  . /etc/os-release
+  DISTRIBUTION="$ID"
+  CODENAME="${{UBUNTU_CODENAME:-$VERSION_CODENAME}}"
+
+  case "$DISTRIBUTION" in
+      debian|ubuntu|raspbian) ;;
+      *)
+          echo "{Colors.RED}❌ Unsupported Debian based distribution: $DISTRIBUTION{Colors.ENDC}"
+          exit 1
+          ;;
+  esac
+  echo "os=$DISTRIBUTION"
+elif [ -f /etc/redhat-release ]; then
+    . /etc/os-release
+    case "$ID" in
+        fedora) REPO_DISTRIBUTION=fedora ;;
+        rhel) REPO_DISTRIBUTION=rhel ;;
+        *) REPO_DISTRIBUTION=centos ;;
+    esac
+    echo "os=$ID"
+elif [ -f /etc/alpine-release ]; then
+    echo "os=alpine"
+elif [ -f /etc/arch-release ]; then
+    echo "os=arch"
+else
+    echo "{Colors.RED}❌ Unsupported Linux distribution{Colors.ENDC}"
+    exit 1
+fi
+
+echo "arch=$CPU_ARCH"
+"""
+
 DOCKER_INSTALL_SCRIPT = f"""
 set -e
 
