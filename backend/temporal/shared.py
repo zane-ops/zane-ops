@@ -802,6 +802,7 @@ class SwarmNodeStatusResult:
         "DRAINED",
         "FAILED",
         "REMOVED",
+        "PAUSED",
     ]
     docker_info: DockerSystemInfo | None = None
     swarm_hostname: str | None = None

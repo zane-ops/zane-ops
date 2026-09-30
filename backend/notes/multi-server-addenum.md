@@ -4,15 +4,14 @@
 
 ### Swarm node workflows — safety
 
-- [ ] When joining, if the server already belongs to another swarm (e.g. the user's own), fail with a clear error — today we run `docker swarm leave --force` first, which destroys that other swarm
-- [ ] Stop printing the output of `docker swarm join-token` in `get_swarm_join_token` — it contains the secret join token, which ends up in the worker logs
-- [ ] When removing a manager node: demote it to worker first, refuse to remove the main server (`is_self`) or the last manager
+- [x] When joining, if the server already belongs to another swarm (e.g. the user's own), fail with a clear error - today we run `docker swarm leave --force` first, which destroys that other swarm
+- [x] Stop printing the output of `docker swarm join-token` in `get_swarm_join_token` — it contains the secret join token, which ends up in the worker logs
 
 ### Swarm node workflows — robustness
 
-- [ ] Wrap both workflows in `try/finally` — if an activity crashes, the SSH keys stay on disk and the node stays stuck in `PROVISIONING` forever
+- [x] Wrap both workflows in `try/finally` — if an activity crashes, the SSH keys stay on disk and the node stays stuck in `PROVISIONING` forever
 - [ ] Make activities raise `ApplicationError` instead of returning `False`/`None` — right now failures are never retried and the node shows `FAILED` without saying why (store the reason on the node for the UI)
-- [ ] Only allow one workflow per node at a time — workflow IDs include a timestamp, so a provision and a removal of the same node can run at the same time
+- [x] Only allow one workflow per node at a time — workflow IDs include a timestamp, so a provision and a removal of the same node can run at the same time
 - [ ] Add heartbeats to long activities (docker install, waiting for services) 
 - [ ] Allow removing a node that is dead/unreachable — the removal workflow needs SSH on the node, so it gets stuck; add a "force" option that only runs `docker node rm --force` from the manager
 - [ ] Re-running a removal that already got past "leave swarm" gets stuck — `docker swarm leave` errors with "not part of a swarm", so we never reach `docker node rm`; treat that error as success
@@ -36,3 +35,4 @@
 
 - The API endpoint that removes a node must first check if any service has a volume on that node, and block (or warn) — once the node is drained, these services can't start anywhere else (they stay `Pending`), and their data is lost when the node is removed. The management commands skip this check, they're only for testing.
 - The node removal endpoint/UI must warn if removing a manager would leave too few managers to keep the cluster working (quorum, see [§14 of the plan](multi-server-plan.md#sec-14)).
+- When removing a manager node: demote it to worker first, refuse to remove the main server (`is_self`) or the last manager

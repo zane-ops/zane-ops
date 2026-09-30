@@ -70,13 +70,14 @@ class Command(BaseCommand):
             ),
         )
 
-        workflow_id = f"provision-{node.id}-{int(time.time())}"
         self.stdout.write(
             f"Provisioning {Colors.ORANGE}{payload.target_node.private_ip}:{payload.target_node.ssh_port}{Colors.ENDC}"
             f" as a {Colors.ORANGE}{payload.target_node.swarm_role}{Colors.ENDC}..."
         )
 
-        result = async_to_sync(self.run_workflow)(payload, workflow_id)
+        result = async_to_sync(self.run_workflow)(
+            payload, node.provision_swarm_node_workflow_id
+        )
         self.stdout.write(f"{Colors.GREEN}Workflow finished ✅{Colors.ENDC} {result=}")
 
     async def run_workflow(self, payload: SwarmNodePair, workflow_id: str):

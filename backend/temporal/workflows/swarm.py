@@ -3,7 +3,11 @@ from datetime import timedelta
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
-
+from temporalio.exceptions import (
+    ApplicationError,
+    ActivityError,
+    is_cancelled_exception,
+)
 
 with workflow.unsafe.imports_passed_through():
     from ..activities import SwarmNodeActivities
@@ -36,42 +40,43 @@ class ProvisionSwarmNodeWorkflow:
             f"Running workflow ProvisionSwarmNodeWorkflow.run({payload.main_node.private_ip=}, {payload.target_node.private_ip=})\n"
             f"{Colors.BLUE}==============================================================={Colors.ENDC}"
         )
-        await workflow.execute_activity_method(
-            SwarmNodeActivities.prepare_node_deployment,
-            payload.target_node,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
 
+        tmp_dir: str | None = None
         node_deployment_result = SwarmNodeStatusResult(
             id=payload.target_node.id,
             status="FAILED",
         )
+        try:
+            await workflow.execute_activity_method(
+                SwarmNodeActivities.prepare_node_deployment,
+                payload.target_node,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
-        tmp_dir = await workflow.execute_activity_method(
-            SwarmNodeActivities.create_ssh_keys_temp_dir,
-            payload,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+            tmp_dir = await workflow.execute_activity_method(
+                SwarmNodeActivities.create_ssh_keys_temp_dir,
+                payload,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
-        ssh_test_new_task = workflow.start_activity_method(
-            SwarmNodeActivities.test_ssh_connection,
-            SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+            ssh_test_new_task = workflow.start_activity_method(
+                SwarmNodeActivities.test_ssh_connection,
+                SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
-        ssh_test_main_task = workflow.start_activity_method(
-            SwarmNodeActivities.test_ssh_connection,
-            SwarmNodeSSHContext(node=payload.main_node, tmp_dir=tmp_dir),
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+            ssh_test_main_task = workflow.start_activity_method(
+                SwarmNodeActivities.test_ssh_connection,
+                SwarmNodeSSHContext(node=payload.main_node, tmp_dir=tmp_dir),
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
-        result = await asyncio.gather(ssh_test_new_task, ssh_test_main_task)
+            await asyncio.gather(ssh_test_new_task, ssh_test_main_task)
 
-        if all(result):
             docker_info = await workflow.execute_activity_method(
                 SwarmNodeActivities.check_docker_installation,
                 SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
@@ -86,6 +91,7 @@ class ProvisionSwarmNodeWorkflow:
                 ),
                 start_to_close_timeout=timedelta(minutes=5),
                 retry_policy=self.retry_policy,
+                heartbeat_timeout=timedelta(seconds=3),
             )
 
             node_deployment_result.docker_info = docker_info
@@ -141,25 +147,31 @@ class ProvisionSwarmNodeWorkflow:
                                 "ACTIVE" if all_healthy else "PROVISIONING"
                             )
 
-        await workflow.execute_activity_method(
-            SwarmNodeActivities.delete_ssh_keys_temp_dir,
-            tmp_dir,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+        except ActivityError as e:
+            if is_cancelled_exception(e):
+                return node_deployment_result
+            raise
+        finally:
+            if tmp_dir is not None:
+                await workflow.execute_activity_method(
+                    SwarmNodeActivities.delete_ssh_keys_temp_dir,
+                    tmp_dir,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
 
-        await workflow.execute_activity_method(
-            SwarmNodeActivities.finish_and_save_node_deployment,
-            node_deployment_result,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+            await workflow.execute_activity_method(
+                SwarmNodeActivities.finish_and_save_node_deployment,
+                node_deployment_result,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
-        print(
-            f"\n{Colors.BLUE}==============================================================={Colors.ENDC}\n"
-            f" DONE Running workflow ProvisionSwarmNodeWorkflow.run({payload.main_node.private_ip=}, {payload.target_node.private_ip=})\n"
-            f"{Colors.BLUE}==============================================================={Colors.ENDC}\n\n"
-        )
+            print(
+                f"\n{Colors.BLUE}==============================================================={Colors.ENDC}\n"
+                f" DONE Running workflow ProvisionSwarmNodeWorkflow.run({payload.main_node.private_ip=}, {payload.target_node.private_ip=})\n"
+                f"{Colors.BLUE}==============================================================={Colors.ENDC}\n\n"
+            )
         return node_deployment_result
 
 

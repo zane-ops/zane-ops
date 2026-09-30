@@ -84,13 +84,14 @@ class Command(BaseCommand):
             ),
         )
 
-        workflow_id = f"detach-{target_node.id}-{int(time.time())}"
         self.stdout.write(
             f"Detaching {Colors.ORANGE}{target_node.private_ip}{Colors.ENDC}"
             f" (swarm node {Colors.ORANGE}{target_node.swarm_node_id}{Colors.ENDC}) from the cluster..."
         )
 
-        result = async_to_sync(self.run_workflow)(payload, workflow_id)
+        result = async_to_sync(self.run_workflow)(
+            payload, target_node.remove_swarm_node_workflow_id
+        )
         self.stdout.write(f"{Colors.GREEN}Workflow finished ✅{Colors.ENDC} {result=}")
 
     async def run_workflow(self, payload: ClusterSwarmNodePair, workflow_id: str):

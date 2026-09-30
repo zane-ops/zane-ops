@@ -1,6 +1,7 @@
 from copy import deepcopy
 import json
 import os
+import re
 import shutil
 from typing import cast
 from temporalio import activity, workflow
@@ -56,10 +57,19 @@ class SwarmNodeActivities:
 
     @activity.defn
     async def prepare_node_deployment(self, node: SwarmNodeDetails):
-        await SwarmNode.objects.filter(id=node.id).aupdate(
+        updated = await SwarmNode.objects.filter(
+            id=node.id,
+            status__in=["CREATED", "FAILED", "REMOVED"],
+        ).aupdate(
             status=SwarmNode.Status.PROVISIONING,
             last_status_update=timezone.now(),
         )
+
+        if updated == 0:
+            raise ApplicationError(
+                "Cannot provision a nonexistent or active node.",
+                non_retryable=True,
+            )
 
     @activity.defn
     async def finish_and_save_node_deployment(self, result: SwarmNodeStatusResult):
@@ -160,17 +170,14 @@ class SwarmNodeActivities:
         return temp_dir
 
     @activity.defn
-    async def test_ssh_connection(self, ctx: SwarmNodeSSHContext) -> bool:
+    async def test_ssh_connection(self, ctx: SwarmNodeSSHContext):
         node = ctx.node
         print(
             f"Testing SSH Connection to server {Colors.YELLOW}{node.private_ip}{Colors.ENDC} over port {Colors.YELLOW}{node.ssh_port}{Colors.ENDC}..."
         )
         exit_code, _ = await exec_cmd_in_server(ctx, cmd="exit 0")
 
-        can_connect = exit_code == 0
-        print(f"{exit_code=}")
-
-        if can_connect:
+        if exit_code == 0:
             print(
                 f"✅ Connection to server {node.private_ip} over port {node.ssh_port} is possible"
             )
@@ -178,7 +185,7 @@ class SwarmNodeActivities:
             print(
                 f"❌ Connection to server {node.private_ip} over port {node.ssh_port} is NOT possible"
             )
-        return can_connect
+            raise ApplicationError(message="Connection to server", non_retryable=True)
 
     @activity.defn
     async def check_docker_installation(
@@ -286,9 +293,7 @@ class SwarmNodeActivities:
                 token=result[0],
                 manager_addr=result[1],
             )
-            print(
-                f"Got credentials {credentials.token=} {credentials.manager_addr=} ✅"
-            )
+            print(f"Got credentials {credentials.manager_addr=} ✅")
             return credentials
         print(f"{Colors.RED}Failed to get Swarm Join credentials ❌{Colors.ENDC}")
         return None
@@ -332,7 +337,7 @@ class SwarmNodeActivities:
 
         exit_code, result = await exec_cmd_in_server(
             ctx,
-            cmd=f"docker swarm leave --force >/dev/null 2>&1; docker swarm join --advertise-addr {node.private_ip} --token {credentials.token} {credentials.manager_addr} && {DOCKER_SYSTEM_INFO_CMD}",
+            cmd=f"docker swarm join --advertise-addr {node.private_ip} --token {credentials.token} {credentials.manager_addr} && {DOCKER_SYSTEM_INFO_CMD}",
             output_handler=message_handler,
         )
         if exit_code == 0 and result is not None and result.Swarm is not None:
