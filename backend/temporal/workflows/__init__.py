@@ -239,6 +239,7 @@ def get_workflows_and_activities():
             swarm_node_activities.run_swarm_healthcheck,
             swarm_node_activities.save_swarm_healthcheck,
             swarm_node_activities.check_os_compatibility,
+            swarm_node_activities.check_swarm_ports_reachability,
             acquire_service_deploy_semaphore,
             lock_deploy_semaphore,
             release_service_deploy_semaphore,

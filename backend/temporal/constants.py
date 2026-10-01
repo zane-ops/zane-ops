@@ -559,6 +559,31 @@ else
 fi
 """
 
+SWARM_MANAGER_TCP_PORTS = [2377, 7946]
+SWARM_WORKER_TCP_PORTS = [7946]
+# UDP is connectionless, there is no reliable way to check if these are open
+SWARM_UDP_PORTS = [7946, 4789]
+
+SWARM_PORT_CHECK_CONTAINER_PREFIX = "zane-swarm-port-check"
+
+# `--network host` so that the traffic goes through the host firewall,
+# published ports (`-p`) would bypass it because of docker's iptables rules
+SWARM_PORT_LISTENER_SCRIPT = """
+set -e
+docker rm --force {container} >/dev/null 2>&1 || true
+if docker run --rm --network host busybox nc -z -w 2 127.0.0.1 {port}; then
+    echo "Port {port} already has a listener, skipping"
+else
+    docker run --detach --rm --network host --name {container} busybox timeout 60 nc -l -p {port}
+fi
+"""
+
+SWARM_PORT_LISTENER_CLEANUP_SCRIPT = f'docker ps --all --quiet --filter name={SWARM_PORT_CHECK_CONTAINER_PREFIX} | while read -r id; do docker rm --force "$id"; done'
+
+SWARM_PORT_REACHABLE_SCRIPT = (
+    "docker run --rm --network host busybox nc -z -w 3 {ip} {port}"
+)
+
 DOCKER_INSTALL_SCRIPT = f"""
 set -e
 

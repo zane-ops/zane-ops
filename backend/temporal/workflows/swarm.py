@@ -19,6 +19,7 @@ from ..shared import (
     RemoveSwarmNodeContext,
     DockerInstallContext,
     SwarmNodeSSHContext,
+    SwarmNodePairSSHContext,
     GetSwarmJoinTokenInput,
     DockerSwarmJoinContext,
     DockerNodeUpdateContext,
@@ -102,6 +103,14 @@ class ProvisionSwarmNodeWorkflow:
             )
 
             node_deployment_result.docker_info = docker_info
+
+            await workflow.execute_activity_method(
+                SwarmNodeActivities.check_swarm_ports_reachability,
+                SwarmNodePairSSHContext(pair=payload, tmp_dir=tmp_dir),
+                start_to_close_timeout=timedelta(minutes=3),
+                retry_policy=self.retry_policy,
+                heartbeat_timeout=timedelta(seconds=3),
+            )
 
             if docker_info is not None:
                 credentials = await workflow.execute_activity_method(

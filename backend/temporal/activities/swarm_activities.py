@@ -31,6 +31,13 @@ from temporal.constants import (
     MINIMAL_DOCKER_VERSION_REQUIREMENTS,
     DOCKER_SYSTEM_INFO_CMD,
     DOCKER_CHECK_OS_SCRIPT,
+    SWARM_MANAGER_TCP_PORTS,
+    SWARM_WORKER_TCP_PORTS,
+    SWARM_UDP_PORTS,
+    SWARM_PORT_CHECK_CONTAINER_PREFIX,
+    SWARM_PORT_LISTENER_SCRIPT,
+    SWARM_PORT_LISTENER_CLEANUP_SCRIPT,
+    SWARM_PORT_REACHABLE_SCRIPT,
 )
 
 from temporal.shared import (
@@ -295,6 +302,75 @@ class SwarmNodeActivities:
         message = f"{Colors.RED}Failed to install docker on server {Colors.BLUE}{ctx.node.private_ip} ❌{Colors.ENDC}"
         print(message)
         raise ApplicationError(message=message, non_retryable=True)
+
+    @activity.defn
+    async def check_swarm_ports_reachability(self, ctx: SwarmNodePairSSHContext):
+        main_node = ctx.pair.main_node
+        target_node = ctx.pair.target_node
+        main_ctx = SwarmNodeSSHContext(node=main_node, tmp_dir=ctx.tmp_dir)
+        target_ctx = SwarmNodeSSHContext(node=target_node, tmp_dir=ctx.tmp_dir)
+
+        target_ports = (
+            SWARM_MANAGER_TCP_PORTS
+            if target_node.swarm_role == "MANAGER"
+            else SWARM_WORKER_TCP_PORTS
+        )
+        unreachable: list[str] = []
+
+        async def check_port(
+            source_ctx: SwarmNodeSSHContext, destination_ip: str, port: int
+        ):
+            print(
+                f"Checking that {Colors.BLUE}{source_ctx.node.private_ip}{Colors.ENDC} can reach {Colors.BLUE}{destination_ip}:{port}/tcp{Colors.ENDC}..."
+            )
+            exit_code, _ = await exec_cmd_in_server(
+                source_ctx,
+                cmd=SWARM_PORT_REACHABLE_SCRIPT.format(ip=destination_ip, port=port),
+            )
+            if exit_code == 0:
+                print(f"{destination_ip}:{port}/tcp is reachable ✅")
+            else:
+                print(
+                    f"{Colors.RED}{destination_ip}:{port}/tcp is NOT reachable from {source_ctx.node.private_ip} ❌{Colors.ENDC}"
+                )
+                unreachable.append(
+                    f"{source_ctx.node.private_ip} -> {destination_ip}:{port}/tcp"
+                )
+
+        # The manager is already listening on its swarm ports
+        for port in SWARM_MANAGER_TCP_PORTS:
+            await check_port(target_ctx, main_node.private_ip, port)
+
+        # Nothing listens on the target node yet, so we start temporary listeners
+        try:
+            for port in target_ports:
+                exit_code, _ = await exec_cmd_in_server(
+                    target_ctx,
+                    cmd=SWARM_PORT_LISTENER_SCRIPT.format(
+                        container=f"{SWARM_PORT_CHECK_CONTAINER_PREFIX}-{port}",
+                        port=port,
+                    ),
+                )
+                if exit_code != 0:
+                    raise ApplicationError(
+                        message=f"Failed to start a temporary listener on port {port} in server {target_node.private_ip}",
+                    )
+
+            for port in target_ports:
+                await check_port(main_ctx, target_node.private_ip, port)
+        finally:
+            await exec_cmd_in_server(target_ctx, cmd=SWARM_PORT_LISTENER_CLEANUP_SCRIPT)
+
+        print(
+            f"{Colors.YELLOW}⚠️ UDP ports {', '.join(f'{p}/udp' for p in SWARM_UDP_PORTS)} cannot be checked, "
+            f"make sure they are open between {main_node.private_ip} and {target_node.private_ip}{Colors.ENDC}"
+        )
+
+        if unreachable:
+            raise ApplicationError(
+                message=f"Swarm ports are not reachable: {', '.join(unreachable)}",
+                non_retryable=True,
+            )
 
     @activity.defn
     async def get_swarm_join_token(
