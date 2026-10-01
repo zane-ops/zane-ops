@@ -11,6 +11,8 @@ cleanup() {
 trap cleanup SIGINT
 trap cleanup SIGTERM
 
+set -x 
+
 # Deploy the stack
 echo "Deploying the stack..."
 docker compose down --remove-orphans
