@@ -3,6 +3,7 @@ import json
 import os
 import re
 import shutil
+import shlex
 from typing import cast
 from temporalio import activity, workflow
 import asyncio
@@ -88,6 +89,7 @@ class SwarmNodeActivities:
             node = await SwarmNode.objects.filter(id=result.id).aget()
 
             node.status = result.status
+            node.status_message = result.status_message
             if result.docker_info:
                 node.cpus = result.docker_info.NCPU
                 node.memory_bytes = result.docker_info.MemTotal
@@ -101,6 +103,7 @@ class SwarmNodeActivities:
                 update_fields=[
                     "updated_at",
                     "status",
+                    "status_message",
                     "cpus",
                     "memory_bytes",
                     "docker_version",
@@ -256,7 +259,7 @@ class SwarmNodeActivities:
         return None
 
     @activity.defn
-    async def install_latest_docker_version(
+    async def install_docker_on_node(
         self, ctx: DockerInstallContext
     ) -> DockerSystemInfo:
         print(
@@ -264,11 +267,8 @@ class SwarmNodeActivities:
         )
         if (
             ctx.info is not None
-            # Check that docker version meets minimal version requirements
-            and semver.compare(
-                ctx.info.ServerVersion, MINIMAL_DOCKER_VERSION_REQUIREMENTS
-            )
-            >= 0
+            # Check that docker version is already the same
+            and semver.compare(ctx.info.ServerVersion, ctx.version_to_install) == 0
         ):
             print(
                 f"{Colors.YELLOW}Docker v{ctx.info.ServerVersion}{Colors.ENDC} already installed on server, skipping installation ⏩"
@@ -287,13 +287,27 @@ class SwarmNodeActivities:
                 system_info = DockerSystemInfo.from_dict(parsed_data)
             return system_info
 
+        print(
+            f"Installing Docker {Colors.YELLOW}v{ctx.version_to_install}{Colors.ENDC} (same version as the main server)..."
+        )
         exit_code, result = await exec_cmd_in_server(
             ctx,
-            cmd=DOCKER_INSTALL_SCRIPT,
+            cmd=DOCKER_INSTALL_SCRIPT.format(
+                version=shlex.quote(ctx.version_to_install)
+            ),
             output_handler=message_handler,
         )
 
         if exit_code == 0 and result is not None:
+            # Alpine & Arch packages cannot be pinned, they install the version provided by the distribution
+            if result.ServerVersion != ctx.version_to_install:
+                message = (
+                    f"{Colors.RED}Installed Docker v{result.ServerVersion} on server {Colors.BLUE}{ctx.node.private_ip}{Colors.RED}, "
+                    f"but the main server uses Docker v{ctx.version_to_install} ❌{Colors.ENDC}"
+                )
+                print(message)
+                raise ApplicationError(message=message, non_retryable=True)
+
             print(
                 f"Succesfully Installed Docker {Colors.YELLOW}v{result.ServerVersion}{Colors.ENDC} ✅ "
             )

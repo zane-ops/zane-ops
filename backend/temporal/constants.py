@@ -584,15 +584,18 @@ SWARM_PORT_REACHABLE_SCRIPT = (
     "docker run --rm --network host busybox nc -z -w 3 {ip} {port}"
 )
 
+# use `DOCKER_INSTALL_SCRIPT.format(version=shlex.quote(...))` to set the docker version to install, ex: `28.3.3`
 DOCKER_INSTALL_SCRIPT = f"""
 set -e
+
+DOCKER_VERSION={{version}}
 
 if [ -f /etc/debian_version ]; then
     export DEBIAN_FRONTEND=noninteractive
 
     . /etc/os-release
     DISTRIBUTION="$ID"
-    CODENAME="${{UBUNTU_CODENAME:-$VERSION_CODENAME}}"
+    CODENAME="${{{{UBUNTU_CODENAME:-$VERSION_CODENAME}}}}"
 
     case "$DISTRIBUTION" in
         debian|ubuntu|raspbian) ;;
@@ -623,7 +626,16 @@ if [ -f /etc/debian_version ]; then
 
     # Install Docker
     apt-get update
-    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    # Find the exact package version, ex: `5:28.3.3-1~ubuntu.24.04~noble`
+    PACKAGE_VERSION=$(apt-cache madison docker-ce | awk -v v="$DOCKER_VERSION" '{{{{ n = split($3, a, ":"); if (index(a[n], v "-") == 1) {{{{ print $3; exit }}}} }}}}')
+    if [ -z "$PACKAGE_VERSION" ]; then
+        echo "{Colors.RED}❌ Docker version $DOCKER_VERSION is not available for $DISTRIBUTION $CODENAME{Colors.ENDC}"
+        exit 1
+    fi
+
+    echo "➡️ Installing Docker {Colors.BLUE}$PACKAGE_VERSION{Colors.ENDC}..."
+    apt-get install -y --allow-downgrades docker-ce="$PACKAGE_VERSION" docker-ce-cli="$PACKAGE_VERSION" containerd.io docker-buildx-plugin docker-compose-plugin
 
 elif [ -f /etc/redhat-release ]; then
     . /etc/os-release
@@ -656,7 +668,16 @@ elif [ -f /etc/redhat-release ]; then
     else
         dnf config-manager --add-repo "$REPO_URL"
     fi
-    dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    # Find the exact package version, ex: `3:28.3.3-1.fc42`
+    PACKAGE_VERSION=$(dnf list --showduplicates docker-ce 2>/dev/null | awk -v v="$DOCKER_VERSION" '{{{{ n = split($2, a, ":"); if (index(a[n], v "-") == 1) {{{{ print $2 }}}} }}}}' | tail -n 1)
+    if [ -z "$PACKAGE_VERSION" ]; then
+        echo "{Colors.RED}❌ Docker version $DOCKER_VERSION is not available for $ID{Colors.ENDC}"
+        exit 1
+    fi
+
+    echo "➡️ Installing Docker {Colors.BLUE}$PACKAGE_VERSION{Colors.ENDC}..."
+    dnf install -y --allowerasing docker-ce-"$PACKAGE_VERSION" docker-ce-cli-"$PACKAGE_VERSION" containerd.io docker-buildx-plugin docker-compose-plugin
 
 elif [ -f /etc/alpine-release ]; then
     echo "Detected {Colors.BLUE}Alpine{Colors.ENDC} Linux Distribution"

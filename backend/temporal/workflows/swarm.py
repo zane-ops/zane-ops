@@ -85,17 +85,37 @@ class ProvisionSwarmNodeWorkflow:
                 retry_policy=self.retry_policy,
             )
 
-            docker_info = await workflow.execute_activity_method(
+            docker_check_new_task = workflow.start_activity_method(
                 SwarmNodeActivities.check_docker_installation,
                 SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
 
+            docker_check_main_task = workflow.start_activity_method(
+                SwarmNodeActivities.check_docker_installation,
+                SwarmNodeSSHContext(node=payload.main_node, tmp_dir=tmp_dir),
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+            docker_info, main_docker_info = await asyncio.gather(
+                docker_check_new_task, docker_check_main_task
+            )
+
+            if main_docker_info is None:
+                raise ApplicationError(
+                    message=f"Docker is not installed on the main server {payload.main_node.private_ip} ❌",
+                    non_retryable=True,
+                )
+
             docker_info = await workflow.execute_activity_method(
-                SwarmNodeActivities.install_latest_docker_version,
+                SwarmNodeActivities.install_docker_on_node,
                 DockerInstallContext(
-                    node=payload.target_node, tmp_dir=tmp_dir, info=docker_info
+                    node=payload.target_node,
+                    tmp_dir=tmp_dir,
+                    info=docker_info,
+                    version_to_install=main_docker_info.ServerVersion,
                 ),
                 start_to_close_timeout=timedelta(minutes=5),
                 retry_policy=self.retry_policy,
@@ -164,9 +184,13 @@ class ProvisionSwarmNodeWorkflow:
                             )
 
         except ActivityError as e:
+            print(f"ActivityError({e=}) !")
+            reason = str(e.cause)
             if is_cancelled_exception(e):
-                return node_deployment_result
-            raise
+                reason = "Provision server workflow was manually cancelled ❌"
+
+            node_deployment_result.status = "FAILED"
+            node_deployment_result.status_message = reason
         finally:
             if tmp_dir is not None:
                 await workflow.execute_activity_method(

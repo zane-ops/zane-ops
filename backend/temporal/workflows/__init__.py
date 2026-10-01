@@ -223,7 +223,7 @@ def get_workflows_and_activities():
             swarm_node_activities.create_ssh_keys_temp_dir,
             swarm_node_activities.test_ssh_connection,
             swarm_node_activities.check_docker_installation,
-            swarm_node_activities.install_latest_docker_version,
+            swarm_node_activities.install_docker_on_node,
             swarm_node_activities.get_swarm_join_token,
             swarm_node_activities.join_swarm_cluster,
             swarm_node_activities.update_node_labels,

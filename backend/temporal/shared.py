@@ -778,6 +778,7 @@ class NodeSystemInfo:
 @dataclass
 class DockerInstallContext(SwarmNodeSSHContext):
     info: DockerSystemInfo | None
+    version_to_install: str
 
 
 @dataclass
@@ -815,6 +816,7 @@ class SwarmNodeStatusResult:
         "REMOVED",
         "PAUSED",
     ]
+    status_message: str | None = None
     docker_info: DockerSystemInfo | None = None
     swarm_hostname: str | None = None
 
