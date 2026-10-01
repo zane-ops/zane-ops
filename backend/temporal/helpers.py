@@ -19,6 +19,7 @@ from .shared import (
     ContainerMetrics,
     SwarmNodeSSHContext,
     SwarmNodeDetails,
+    SwarmNodeStatusResult,
 )
 
 from zane_api.utils import cache_result, excerpt, escape_ansi, Colors
@@ -231,11 +232,45 @@ class DeploymentResultLike(Protocol):
     def service_id(self) -> str: ...
 
 
+async def provision_log(
+    node: SwarmNodeDetails | SwarmNodeStatusResult,
+    message: str | List[str],
+    error=False,
+):
+    search_client = LokiSearchClient(host=settings.LOKI_HOST)
+
+    MAX_COLORED_CHARS = 1000
+    messages = []
+    if isinstance(message, list):
+        messages = message
+    else:
+        messages = [message]
+
+    logs = []
+    for msg in messages:
+        current_time = timezone.now()
+        print(f"[{current_time.isoformat()}]: {msg}")
+        logs.append(
+            RuntimeLogDto(
+                source=RuntimeLogSource.SYSTEM,
+                level=RuntimeLogLevel.INFO if not error else RuntimeLogLevel.ERROR,
+                content=excerpt(msg, MAX_COLORED_CHARS),
+                content_text=excerpt(escape_ansi(msg), MAX_COLORED_CHARS),
+                time=current_time,
+                created_at=current_time,
+                swarm_node_id=node.id,
+            )
+        )
+
+    search_client.bulk_insert(
+        docs=logs,
+    )
+
+
 async def deployment_log(
-    deployment: DeploymentLike
-    | DeploymentResultLike
-    | StackDeploymentLike
-    | StackServiceLike,
+    deployment: (
+        DeploymentLike | DeploymentResultLike | StackDeploymentLike | StackServiceLike
+    ),
     message: str | List[str],
     source: Literal["SYSTEM", "SERVICE", "BUILD"] = RuntimeLogSource.SYSTEM,
     error=False,
@@ -905,7 +940,9 @@ async def send_regular_heartbeat(name: str):
         await asyncio.sleep(0.1)
 
 
-async def exec_cmd_in_server[T](
+async def exec_cmd_in_server[
+    T
+](
     ctx: SwarmNodeSSHContext,
     cmd: str,
     output_handler: OutputHandlerFunction[T] = default_output_handler,

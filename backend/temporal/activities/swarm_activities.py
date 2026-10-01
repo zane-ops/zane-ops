@@ -15,7 +15,7 @@ import time
 
 with workflow.unsafe.imports_passed_through():
     from zane_api.utils import Colors, format_duration, DockerSwarmTask
-    from temporal.helpers import empty_folder, exec_cmd_in_server
+    from temporal.helpers import empty_folder, exec_cmd_in_server, provision_log
 
     import docker
     import docker.errors
@@ -68,6 +68,16 @@ class SwarmNodeActivities:
 
     @activity.defn
     async def prepare_node_deployment(self, node: SwarmNodeDetails):
+        await provision_log(
+            node,
+            [
+                f"",
+                f"",
+                f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
+                f"Preparing node provisioning for server {Colors.ORANGE}{node.private_ip}{Colors.ENDC}...",
+                f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
+            ],
+        )
         updated = await SwarmNode.objects.filter(
             id=node.id,
             is_initial_install_server=False,
@@ -113,6 +123,19 @@ class SwarmNodeActivities:
                 ]
             )
 
+            if result.status == SwarmNode.Status.FAILED:
+                await provision_log(
+                    result,
+                    f"{Colors.RED}Node provisioning failed ❌{Colors.ENDC}"
+                    + (f": {result.status_message}" if result.status_message else ""),
+                    error=True,
+                )
+            else:
+                await provision_log(
+                    result,
+                    f"Node provisioning finished with status {Colors.BLUE}{result.status}{Colors.ENDC} ✅",
+                )
+
         except SwarmNode.DoesNotExist:
             raise ApplicationError(
                 "Cannot save a non existent node.",
@@ -144,82 +167,100 @@ class SwarmNodeActivities:
 
     @activity.defn
     async def create_ssh_keys_temp_dir(self, payload: SwarmNodePair):
-        print("Creating temporary folder for SSH key...")
+        await provision_log(
+            payload.target_node, "Creating temporary folder for SSH key..."
+        )
         temp_dir = tempfile.mkdtemp()
-        print(f"Temporary folder created at {Colors.YELLOW}{temp_dir}{Colors.ENDC} ✅")
+        await provision_log(
+            payload.target_node,
+            f"Temporary folder created at {Colors.YELLOW}{temp_dir}{Colors.ENDC} ✅",
+        )
 
-        print("Emptying temporary folder...")
+        await provision_log(payload.target_node, "Emptying temporary folder...")
         await asyncio.to_thread(empty_folder, temp_dir)
-        print("Temporary emptyed ✅")
+        await provision_log(payload.target_node, "Temporary emptyed ✅")
 
         main_node_key_location = os.path.join(temp_dir, f"{payload.main_node.id}.key")
         new_node_key_location = os.path.join(temp_dir, f"{payload.target_node.id}.key")
 
-        print(f"Writing SSH Keys into  {Colors.YELLOW}{temp_dir}{Colors.ENDC}...")
+        await provision_log(
+            payload.target_node,
+            f"Writing SSH Keys into  {Colors.YELLOW}{temp_dir}{Colors.ENDC}...",
+        )
         with open(
             main_node_key_location,
             "w",
         ) as file:
             file.write(payload.main_node.ssh_key)
-            print(
-                f"Wrote ssh key for {Colors.BLUE}MAIN NODE{Colors.ENDC} at {Colors.YELLOW}{main_node_key_location}{Colors.ENDC} ✅"
+            await provision_log(
+                payload.target_node,
+                f"Wrote ssh key for {Colors.BLUE}MAIN NODE{Colors.ENDC} at {Colors.YELLOW}{main_node_key_location}{Colors.ENDC} ✅",
             )
-        print(
-            f"Adjusting ssh key permissions for {Colors.YELLOW}{main_node_key_location}{Colors.ENDC}"
+        await provision_log(
+            payload.target_node,
+            f"Adjusting ssh key permissions for {Colors.YELLOW}{main_node_key_location}{Colors.ENDC}",
         )
         os.chmod(main_node_key_location, 0o600)
-        print(f"Done ✅")
+        await provision_log(payload.target_node, f"Done ✅")
 
         with open(new_node_key_location, "+w") as file:
             file.write(payload.target_node.ssh_key)
-            print(
-                f"Wrote ssh key for the {Colors.BLUE}NEW NODE{Colors.ENDC} at {Colors.YELLOW}{new_node_key_location}{Colors.ENDC} ✅"
+            await provision_log(
+                payload.target_node,
+                f"Wrote ssh key for the {Colors.BLUE}NEW NODE{Colors.ENDC} at {Colors.YELLOW}{new_node_key_location}{Colors.ENDC} ✅",
             )
-        print(
-            f"Adjusting ssh key permissions for {Colors.YELLOW}{new_node_key_location}{Colors.ENDC}"
+        await provision_log(
+            payload.target_node,
+            f"Adjusting ssh key permissions for {Colors.YELLOW}{new_node_key_location}{Colors.ENDC}",
         )
         os.chmod(new_node_key_location, 0o600)
-        print(f"Done ✅")
+        await provision_log(payload.target_node, f"Done ✅")
 
         return temp_dir
 
     @activity.defn
     async def test_ssh_connection(self, ctx: SwarmNodeSSHContext):
         node = ctx.node
-        print(
-            f"Testing SSH Connection to server {Colors.YELLOW}{node.private_ip}{Colors.ENDC} over port {Colors.YELLOW}{node.ssh_port}{Colors.ENDC}..."
+        await provision_log(
+            node,
+            f"Testing SSH Connection to server {Colors.YELLOW}{node.private_ip}{Colors.ENDC} over port {Colors.YELLOW}{node.ssh_port}{Colors.ENDC}...",
         )
         exit_code, _ = await exec_cmd_in_server(ctx, cmd="exit 0")
 
         if exit_code == 0:
-            print(
-                f"✅ Connection to server {node.private_ip} over port {node.ssh_port} is possible"
+            await provision_log(
+                node,
+                f"✅ Connection to server {node.private_ip} over port {node.ssh_port} is possible",
             )
         else:
-            print(
-                f"❌ Connection to server {node.private_ip} over port {node.ssh_port} is NOT possible"
+            msg = f"❌ Connection to server {node.private_ip} over port {node.ssh_port} is NOT possible"
+            await provision_log(
+                node,
+                msg,
+                error=True,
             )
-            raise ApplicationError(message="Connection to server", non_retryable=True)
+            raise ApplicationError(message=msg, non_retryable=True)
 
     @activity.defn
     async def check_os_compatibility(self, ctx: SwarmNodeSSHContext) -> str:
         async def message_handler(message: str):
-            print(message)
+            await provision_log(ctx.node, message)
 
             os_pattern_match = re.compile(r"^os=([^\s]*)$").match(message)
 
             if os_pattern_match:
                 return str(os_pattern_match.groups(1))
 
-        print(f"Checking supported OS information...")
+        await provision_log(ctx.node, f"Checking supported OS information...")
         exit_code, os_info = await exec_cmd_in_server(
             ctx,
             cmd=DOCKER_CHECK_OS_SCRIPT,
             output_handler=message_handler,
         )
         if exit_code == 0 and os_info is not None:
-            print(
-                f"Detected supported OS distribution: {Colors.YELLOW}{os_info}{Colors.ENDC}  ✅ "
+            await provision_log(
+                ctx.node,
+                f"Detected supported OS distribution: {Colors.YELLOW}{os_info}{Colors.ENDC}  ✅ ",
             )
             return os_info
 
@@ -233,7 +274,7 @@ class SwarmNodeActivities:
         self, ctx: SwarmNodeSSHContext
     ) -> DockerSystemInfo | None:
         async def message_handler(message: str):
-            print(message)
+            await provision_log(ctx.node, message)
             system_info: DockerSystemInfo | None = None
             try:
                 parsed_data = json.loads(message)
@@ -244,17 +285,18 @@ class SwarmNodeActivities:
                 system_info = DockerSystemInfo.from_dict(parsed_data)
             return system_info
 
-        print(f"Checking existing Docker installation...")
+        await provision_log(ctx.node, f"Checking existing Docker installation...")
         exit_code, result = await exec_cmd_in_server(
             ctx, cmd=DOCKER_CHECK_SCRIPT, output_handler=message_handler
         )
         if exit_code == 0 and result is not None:
-            print(
-                f"Found Docker installation with version {Colors.YELLOW}{result.ServerVersion}{Colors.ENDC} ✅ "
+            await provision_log(
+                ctx.node,
+                f"Found Docker installation with version {Colors.YELLOW}{result.ServerVersion}{Colors.ENDC} ✅ ",
             )
             return result
         else:
-            print(f"Docker is not installed on this server")
+            await provision_log(ctx.node, f"Docker is not installed on this server")
 
         return None
 
@@ -262,21 +304,23 @@ class SwarmNodeActivities:
     async def install_docker_on_node(
         self, ctx: DockerInstallContext
     ) -> DockerSystemInfo:
-        print(
-            f"Installing docker on server {Colors.BLUE}{ctx.node.private_ip}{Colors.ENDC}..."
+        await provision_log(
+            ctx.node,
+            f"Installing docker on server {Colors.BLUE}{ctx.node.private_ip}{Colors.ENDC}...",
         )
         if (
             ctx.info is not None
             # Check that docker version is already the same
             and semver.compare(ctx.info.ServerVersion, ctx.version_to_install) == 0
         ):
-            print(
-                f"{Colors.YELLOW}Docker v{ctx.info.ServerVersion}{Colors.ENDC} already installed on server, skipping installation ⏩"
+            await provision_log(
+                ctx.node,
+                f"{Colors.YELLOW}Docker v{ctx.info.ServerVersion}{Colors.ENDC} already installed on server, skipping installation ⏩",
             )
             return ctx.info
 
         async def message_handler(message: str):
-            print(message)
+            await provision_log(ctx.node, message, error=True)
             system_info: DockerSystemInfo | None = None
             try:
                 parsed_data = json.loads(message)
@@ -287,8 +331,9 @@ class SwarmNodeActivities:
                 system_info = DockerSystemInfo.from_dict(parsed_data)
             return system_info
 
-        print(
-            f"Installing Docker {Colors.YELLOW}v{ctx.version_to_install}{Colors.ENDC} (same version as the main server)..."
+        await provision_log(
+            ctx.node,
+            f"Installing Docker {Colors.YELLOW}v{ctx.version_to_install}{Colors.ENDC} (same version as the main server)...",
         )
         exit_code, result = await exec_cmd_in_server(
             ctx,
@@ -305,16 +350,17 @@ class SwarmNodeActivities:
                     f"{Colors.RED}Installed Docker v{result.ServerVersion} on server {Colors.BLUE}{ctx.node.private_ip}{Colors.RED}, "
                     f"but the main server uses Docker v{ctx.version_to_install} ❌{Colors.ENDC}"
                 )
-                print(message)
+                await provision_log(ctx.node, message, error=True)
                 raise ApplicationError(message=message, non_retryable=True)
 
-            print(
-                f"Succesfully Installed Docker {Colors.YELLOW}v{result.ServerVersion}{Colors.ENDC} ✅ "
+            await provision_log(
+                ctx.node,
+                f"Succesfully Installed Docker {Colors.YELLOW}v{result.ServerVersion}{Colors.ENDC} ✅ ",
             )
             return result
 
         message = f"{Colors.RED}Failed to install docker on server {Colors.BLUE}{ctx.node.private_ip} ❌{Colors.ENDC}"
-        print(message)
+        await provision_log(ctx.node, message, error=True)
         raise ApplicationError(message=message, non_retryable=True)
 
     @activity.defn
@@ -334,18 +380,23 @@ class SwarmNodeActivities:
         async def check_port(
             source_ctx: SwarmNodeSSHContext, destination_ip: str, port: int
         ):
-            print(
-                f"Checking that {Colors.BLUE}{source_ctx.node.private_ip}{Colors.ENDC} can reach {Colors.BLUE}{destination_ip}:{port}/tcp{Colors.ENDC}..."
+            await provision_log(
+                target_node,
+                f"Checking that {Colors.BLUE}{source_ctx.node.private_ip}{Colors.ENDC} can reach {Colors.BLUE}{destination_ip}:{port}/tcp{Colors.ENDC}...",
             )
             exit_code, _ = await exec_cmd_in_server(
                 source_ctx,
                 cmd=SWARM_PORT_REACHABLE_SCRIPT.format(ip=destination_ip, port=port),
             )
             if exit_code == 0:
-                print(f"{destination_ip}:{port}/tcp is reachable ✅")
+                await provision_log(
+                    target_node, f"{destination_ip}:{port}/tcp is reachable ✅"
+                )
             else:
-                print(
-                    f"{Colors.RED}{destination_ip}:{port}/tcp is NOT reachable from {source_ctx.node.private_ip} ❌{Colors.ENDC}"
+                await provision_log(
+                    target_node,
+                    f"{Colors.RED}{destination_ip}:{port}/tcp is NOT reachable from {source_ctx.node.private_ip} ❌{Colors.ENDC}",
+                    error=True,
                 )
                 unreachable.append(
                     f"{source_ctx.node.private_ip} -> {destination_ip}:{port}/tcp"
@@ -375,9 +426,10 @@ class SwarmNodeActivities:
         finally:
             await exec_cmd_in_server(target_ctx, cmd=SWARM_PORT_LISTENER_CLEANUP_SCRIPT)
 
-        print(
+        await provision_log(
+            target_node,
             f"{Colors.YELLOW}⚠️ UDP ports {', '.join(f'{p}/udp' for p in SWARM_UDP_PORTS)} cannot be checked, "
-            f"make sure they are open between {main_node.private_ip} and {target_node.private_ip}{Colors.ENDC}"
+            f"make sure they are open between {main_node.private_ip} and {target_node.private_ip}{Colors.ENDC}",
         )
 
         if unreachable:
@@ -391,7 +443,7 @@ class SwarmNodeActivities:
         self, ctx: GetSwarmJoinTokenInput
     ) -> DockerSwarmJoinCredentials | None:
         async def message_handler(message: str):
-            print(message)
+            await provision_log(ctx.node, message)
 
             if message.strip().startswith("docker swarm join --token"):
                 token, manager_ip = message.replace(
@@ -400,7 +452,7 @@ class SwarmNodeActivities:
 
                 return token, manager_ip
 
-        print(f"Get Docker swarm Join credentials...")
+        await provision_log(ctx.node, f"Get Docker swarm Join credentials...")
         exit_code, result = await exec_cmd_in_server(
             ctx,
             cmd=f"docker swarm join-token {ctx.swarm_role.lower()}",
@@ -411,9 +463,15 @@ class SwarmNodeActivities:
                 token=result[0],
                 manager_addr=result[1],
             )
-            print(f"Got credentials {credentials.manager_addr=} ✅")
+            await provision_log(
+                ctx.node, f"Got credentials {credentials.manager_addr=} ✅"
+            )
             return credentials
-        print(f"{Colors.RED}Failed to get Swarm Join credentials ❌{Colors.ENDC}")
+        await provision_log(
+            ctx.node,
+            f"{Colors.RED}Failed to get Swarm Join credentials ❌{Colors.ENDC}",
+            error=True,
+        )
         return None
 
     @activity.defn
@@ -423,8 +481,9 @@ class SwarmNodeActivities:
         info = ctx.info
         node = ctx.node
         credentials = ctx.credentials
-        print(
-            f"Joining server {Colors.BLUE}{node.private_ip}{Colors.ENDC} to docker swarm cluster from manager {Colors.BLUE}{credentials.manager_addr}{Colors.ENDC}..."
+        await provision_log(
+            node,
+            f"Joining server {Colors.BLUE}{node.private_ip}{Colors.ENDC} to docker swarm cluster from manager {Colors.BLUE}{credentials.manager_addr}{Colors.ENDC}...",
         )
         if info.Swarm is not None:
             if (
@@ -436,13 +495,14 @@ class SwarmNodeActivities:
                 )
                 and info.Swarm.role == node.swarm_role
             ):
-                print(
-                    f"Server is already part of the swarm cluster with the {Colors.YELLOW}{node.swarm_role}{Colors.ENDC} with ID {Colors.YELLOW}{info.Swarm.NodeID}{Colors.ENDC}, skipping join ⏩"
+                await provision_log(
+                    node,
+                    f"Server is already part of the swarm cluster with the {Colors.YELLOW}{node.swarm_role}{Colors.ENDC} with ID {Colors.YELLOW}{info.Swarm.NodeID}{Colors.ENDC}, skipping join ⏩",
                 )
                 return info.Swarm
 
         async def message_handler(message: str):
-            print(message)
+            await provision_log(node, message)
             system_info: DockerSystemInfo | None = None
             try:
                 parsed_data = json.loads(message)
@@ -459,13 +519,16 @@ class SwarmNodeActivities:
             output_handler=message_handler,
         )
         if exit_code == 0 and result is not None and result.Swarm is not None:
-            print(
-                f"Server {Colors.BLUE}{node.private_ip}{Colors.ENDC} joined the cluster as a {Colors.BLUE}{node.swarm_role.lower()}{Colors.ENDC} with ID {Colors.YELLOW}{result.Swarm.NodeID}{Colors.ENDC} ✅"
+            await provision_log(
+                node,
+                f"Server {Colors.BLUE}{node.private_ip}{Colors.ENDC} joined the cluster as a {Colors.BLUE}{node.swarm_role.lower()}{Colors.ENDC} with ID {Colors.YELLOW}{result.Swarm.NodeID}{Colors.ENDC} ✅",
             )
             return result.Swarm
         else:
-            print(
-                f"{Colors.RED}Failed to add server {Colors.BLUE}{node.private_ip}{Colors.ENDC} swarm cluster ❌{Colors.ENDC}"
+            await provision_log(
+                node,
+                f"{Colors.RED}Failed to add server {Colors.BLUE}{node.private_ip}{Colors.ENDC} swarm cluster ❌{Colors.ENDC}",
+                error=True,
             )
 
         return None
@@ -475,8 +538,9 @@ class SwarmNodeActivities:
 
         info = ctx.swarm_info
         node = ctx.node
-        print(
-            f"Updating labels for swarm node {Colors.BLUE}{info.NodeID}{Colors.ENDC}..."
+        await provision_log(
+            node,
+            f"Updating labels for swarm node {Colors.BLUE}{info.NodeID}{Colors.ENDC}...",
         )
         try:
             swarm_node: DockerSwarmNode = self.docker_client.nodes.get(info.NodeID)
@@ -494,13 +558,16 @@ class SwarmNodeActivities:
             new_spec["Labels"] = labels
             swarm_node.update(new_spec)
         except docker.errors.APIError:
-            print(
-                f"{Colors.RED}Failed to update swarm labels {info.NodeID} ❌{Colors.ENDC}"
+            await provision_log(
+                node,
+                f"{Colors.RED}Failed to update swarm labels {info.NodeID} ❌{Colors.ENDC}",
+                error=True,
             )
             return None
         else:
-            print(
-                f"Succesfully updated labels for Swarm Node {Colors.BLUE}{info.NodeID}{Colors.ENDC} ✅"
+            await provision_log(
+                node,
+                f"Succesfully updated labels for Swarm Node {Colors.BLUE}{info.NodeID}{Colors.ENDC} ✅",
             )
 
         return swarm_node.attrs["Description"]["Hostname"]
@@ -572,8 +639,9 @@ class SwarmNodeActivities:
     async def drain_swarm_node_and_remove_labels(self, payload: ClusterSwarmNodePair):
 
         target_node = payload.target_node
-        print(
-            f"Draining swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.ENDC}..."
+        await provision_log(
+            target_node,
+            f"Draining swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.ENDC}...",
         )
         try:
             swarm_node = self.docker_client.nodes.get(target_node.swarm_node_id)
@@ -585,13 +653,16 @@ class SwarmNodeActivities:
 
             swarm_node.update(new_spec)
         except docker.errors.NotFound:
-            print(
-                f"{Colors.RED}Failed to drain swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.RED} and remove its labels ❌{Colors.ENDC}"
+            await provision_log(
+                target_node,
+                f"{Colors.RED}Failed to drain swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.RED} and remove its labels ❌{Colors.ENDC}",
+                error=True,
             )
             return False
         else:
-            print(
-                f"Swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.ENDC} drained and labels removed, no new tasks will be scheduled on it ✅"
+            await provision_log(
+                target_node,
+                f"Swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.ENDC} drained and labels removed, no new tasks will be scheduled on it ✅",
             )
 
         return True
@@ -618,8 +689,9 @@ class SwarmNodeActivities:
 
         async def wait_for_swarm_service_to_be_updated(service: Service):
             try:
-                print(
-                    f"Waiting for service `{Colors.BLUE}{service.name=}{Colors.ENDC}` to be updated..."
+                await provision_log(
+                    target_node,
+                    f"Waiting for service `{Colors.BLUE}{service.name=}{Colors.ENDC}` to be updated...",
                 )
                 start_time = time.monotonic()
                 time_left = timedelta(minutes=3).total_seconds()
@@ -630,23 +702,25 @@ class SwarmNodeActivities:
                 }
                 task_list: list = service.tasks(filters=filters)
 
-                print(f"{filters=}")
+                await provision_log(target_node, f"{filters=}")
 
                 while len(task_list) > 0 and time_left >= 1:
-                    print(
+                    await provision_log(
+                        target_node,
                         f"Swarm service {Colors.BLUE}{service.name}{Colors.ENDC} is not updated , "
                         + f"| retrying in {Colors.ORANGE}{settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL}s{Colors.ENDC}"
-                        + f"| healthcheck_time_left={Colors.ORANGE}{format_duration(time_left)}{Colors.ENDC}..."
+                        + f"| healthcheck_time_left={Colors.ORANGE}{format_duration(time_left)}{Colors.ENDC}...",
                     )
                     await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
                     task_list = task_list = service.tasks(filters=filters)
-                    print(f"{task_list=}")
+                    await provision_log(target_node, f"{task_list=}")
                     time_left = healthcheck_timeout - (time.monotonic() - start_time)
 
                 successful = len(task_list) == 0
                 if successful:
-                    print(
-                        f"Succesfully updated swarm service {Colors.BLUE}{service.name}{Colors.ENDC} ✅"
+                    await provision_log(
+                        target_node,
+                        f"Succesfully updated swarm service {Colors.BLUE}{service.name}{Colors.ENDC} ✅",
                     )
                 return successful
             except docker.errors.NotFound:
@@ -662,16 +736,18 @@ class SwarmNodeActivities:
     @activity.defn
     async def detach_swarm_node_from_cluster(self, ctx: SwarmNodeSSHContext):
         node = ctx.node
-        print(
-            f"detaching swarm node {Colors.BLUE}{node.id}{Colors.ENDC} from cluster..."
+        await provision_log(
+            node,
+            f"detaching swarm node {Colors.BLUE}{node.id}{Colors.ENDC} from cluster...",
         )
         exit_code, _ = await exec_cmd_in_server(
             ctx,
             cmd=f"docker swarm leave --force",
         )
         if exit_code == 0:
-            print(
-                f"Swarm node {Colors.BLUE}{node.id}{Colors.ENDC} succesfully detached from cluster ✅"
+            await provision_log(
+                node,
+                f"Swarm node {Colors.BLUE}{node.id}{Colors.ENDC} succesfully detached from cluster ✅",
             )
             return True
         return False
@@ -679,14 +755,17 @@ class SwarmNodeActivities:
     @activity.defn
     async def remove_swarm_node_from_cluster(self, ctx: RemoveSwarmNodeContext):
         node = ctx.target_node
-        print(f"Removing node {Colors.BLUE}{node.id}{Colors.ENDC} from cluster...")
+        await provision_log(
+            node, f"Removing node {Colors.BLUE}{node.id}{Colors.ENDC} from cluster..."
+        )
         exit_code, _ = await exec_cmd_in_server(
             ctx.activity_ctx,
             cmd=f"docker node rm {node.swarm_node_id} --force",
         )
         if exit_code == 0:
-            print(
-                f"Swarm node {Colors.BLUE}{node.id}{Colors.ENDC} succesfully removed from cluster ✅"
+            await provision_log(
+                node,
+                f"Swarm node {Colors.BLUE}{node.id}{Colors.ENDC} succesfully removed from cluster ✅",
             )
             return True
         return False

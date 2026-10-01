@@ -36,6 +36,7 @@ class RuntimeLogDto:
     stack_id: Optional[str] = None
     deployment_id: Optional[str] = None
     container_id: Optional[str] = None
+    swarm_node_id: Optional[str] = None
     stack_service_name: Optional[str] = None
     content: Optional[str] = None
     content_text: Optional[str] = None
@@ -47,6 +48,7 @@ class RuntimeLogDto:
     def to_dict(self):
         return {
             "service_id": self.service_id,
+            "swarm_node_id": self.swarm_node_id,
             "stack_id": self.stack_id,
             "container_id": self.container_id,
             "stack_service_name": self.stack_service_name,
