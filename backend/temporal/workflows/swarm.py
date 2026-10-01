@@ -77,6 +77,13 @@ class ProvisionSwarmNodeWorkflow:
 
             await asyncio.gather(ssh_test_new_task, ssh_test_main_task)
 
+            await workflow.execute_activity_method(
+                SwarmNodeActivities.check_os_compatibility,
+                SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
             docker_info = await workflow.execute_activity_method(
                 SwarmNodeActivities.check_docker_installation,
                 SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),

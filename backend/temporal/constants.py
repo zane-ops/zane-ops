@@ -525,11 +525,6 @@ fi
 DOCKER_CHECK_OS_SCRIPT = f"""
 set -e
 
-if command -v uname >/dev/null 2>&1; then
-    CPU_ARCH=$(uname -m)
-else
-    CPU_ARCH=unknown
-fi
 
 if [ -f /etc/debian_version ]; then
   export DEBIAN_FRONTEND=noninteractive
@@ -562,8 +557,6 @@ else
     echo "{Colors.RED}❌ Unsupported Linux distribution{Colors.ENDC}"
     exit 1
 fi
-
-echo "arch=$CPU_ARCH"
 """
 
 DOCKER_INSTALL_SCRIPT = f"""

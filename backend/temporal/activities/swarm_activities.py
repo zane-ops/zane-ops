@@ -15,12 +15,7 @@ import time
 with workflow.unsafe.imports_passed_through():
     from zane_api.utils import Colors, format_duration, DockerSwarmTask
     from temporal.helpers import empty_folder, exec_cmd_in_server
-    from temporal.constants import (
-        DOCKER_CHECK_SCRIPT,
-        DOCKER_INSTALL_SCRIPT,
-        MINIMAL_DOCKER_VERSION_REQUIREMENTS,
-        DOCKER_SYSTEM_INFO_CMD,
-    )
+
     import docker
     import docker.errors
     from docker.models.services import Service
@@ -30,8 +25,15 @@ with workflow.unsafe.imports_passed_through():
     from django.utils import timezone
     from django.db.models import Q
 
+from temporal.constants import (
+    DOCKER_CHECK_SCRIPT,
+    DOCKER_INSTALL_SCRIPT,
+    MINIMAL_DOCKER_VERSION_REQUIREMENTS,
+    DOCKER_SYSTEM_INFO_CMD,
+    DOCKER_CHECK_OS_SCRIPT,
+)
 
-from ..shared import (
+from temporal.shared import (
     SwarmHealthcheckResult,
     SwarmNodeHealthcheckResult,
     SwarmNodePair,
@@ -42,6 +44,7 @@ from ..shared import (
     DockerSwarmJoinCredentials,
     DockerSystemInfo,
     RemoveSwarmNodeContext,
+    SwarmNodePairSSHContext,
     SwarmNodeSSHContext,
     GetSwarmJoinTokenInput,
     DockerSwarmInfo,
@@ -59,6 +62,7 @@ class SwarmNodeActivities:
     async def prepare_node_deployment(self, node: SwarmNodeDetails):
         updated = await SwarmNode.objects.filter(
             id=node.id,
+            is_initial_install_server=False,
             status__in=["CREATED", "FAILED", "REMOVED"],
         ).aupdate(
             status=SwarmNode.Status.PROVISIONING,
@@ -188,6 +192,33 @@ class SwarmNodeActivities:
             raise ApplicationError(message="Connection to server", non_retryable=True)
 
     @activity.defn
+    async def check_os_compatibility(self, ctx: SwarmNodeSSHContext) -> str:
+        async def message_handler(message: str):
+            print(message)
+
+            os_pattern_match = re.compile(r"^os=([^\s]*)$").match(message)
+
+            if os_pattern_match:
+                return str(os_pattern_match.groups(1))
+
+        print(f"Checking supported OS information...")
+        exit_code, os_info = await exec_cmd_in_server(
+            ctx,
+            cmd=DOCKER_CHECK_OS_SCRIPT,
+            output_handler=message_handler,
+        )
+        if exit_code == 0 and os_info is not None:
+            print(
+                f"Detected supported OS distribution: {Colors.YELLOW}{os_info}{Colors.ENDC}  ✅ "
+            )
+            return os_info
+
+        raise ApplicationError(
+            message=f"{Colors.RED}Failed to get supported OS distribution in server {Colors.BLUE}{ctx.node.private_ip} ❌{Colors.ENDC}",
+            non_retryable=True,
+        )
+
+    @activity.defn
     async def check_docker_installation(
         self, ctx: SwarmNodeSSHContext
     ) -> DockerSystemInfo | None:
@@ -203,11 +234,9 @@ class SwarmNodeActivities:
                 system_info = DockerSystemInfo.from_dict(parsed_data)
             return system_info
 
-        check_docker_version = DOCKER_CHECK_SCRIPT
-
         print(f"Checking existing Docker installation...")
         exit_code, result = await exec_cmd_in_server(
-            ctx, cmd=check_docker_version, output_handler=message_handler
+            ctx, cmd=DOCKER_CHECK_SCRIPT, output_handler=message_handler
         )
         if exit_code == 0 and result is not None:
             print(
@@ -215,14 +244,14 @@ class SwarmNodeActivities:
             )
             return result
         else:
-            print(f"Docker is not installed on this server ❌")
+            print(f"Docker is not installed on this server")
 
         return None
 
     @activity.defn
     async def install_latest_docker_version(
         self, ctx: DockerInstallContext
-    ) -> DockerSystemInfo | None:
+    ) -> DockerSystemInfo:
         print(
             f"Installing docker on server {Colors.BLUE}{ctx.node.private_ip}{Colors.ENDC}..."
         )
@@ -262,11 +291,10 @@ class SwarmNodeActivities:
                 f"Succesfully Installed Docker {Colors.YELLOW}v{result.ServerVersion}{Colors.ENDC} ✅ "
             )
             return result
-        else:
-            print(
-                f"{Colors.RED}Failed to install docker on server {Colors.BLUE}{ctx.node.private_ip} ❌{Colors.ENDC}"
-            )
-        return result
+
+        message = f"{Colors.RED}Failed to install docker on server {Colors.BLUE}{ctx.node.private_ip} ❌{Colors.ENDC}"
+        print(message)
+        raise ApplicationError(message=message, non_retryable=True)
 
     @activity.defn
     async def get_swarm_join_token(

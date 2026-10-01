@@ -704,6 +704,12 @@ class SwarmNodeSSHContext:
 
 
 @dataclass
+class SwarmNodePairSSHContext:
+    pair: SwarmNodePair
+    tmp_dir: str
+
+
+@dataclass
 class RemoveSwarmNodeContext:
     activity_ctx: SwarmNodeSSHContext
     target_node: ClusterSwarmNodeDetails
@@ -762,6 +768,11 @@ class DockerSystemInfo:
             if Swarm["NodeID"] is not None and len(Swarm["NodeID"].strip()) > 0
             else None,
         )
+
+
+@dataclass
+class NodeSystemInfo:
+    os: str
 
 
 @dataclass
