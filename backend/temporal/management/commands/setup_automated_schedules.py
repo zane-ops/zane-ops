@@ -6,6 +6,7 @@ from django.conf import settings
 from console.models import SystemSettings
 from temporal.schedules import CleanupAppDataWorkflow
 from temporal.workflows.system import DockerSystemPruneWorkflow
+from temporal.workflows.swarm import SwarmHealthcheckWorkflow
 from temporal.client import TemporalClient
 from zane_api.utils import Colors
 
@@ -40,7 +41,12 @@ async def setup_jobs():
             schedule_id=settings.APP_DATA_CLEANUP_SCHEDULE_ID,
             workflow=CleanupAppDataWorkflow.run,
             schedule_cron=system.app_data_cleanup_cron_schedule,
-        )
+        ),
+        TemporalClient.create_or_update_schedule(
+            schedule_id=settings.SWARM_HEALTHCHECK_SCHEDULE_ID,
+            workflow=SwarmHealthcheckWorkflow.run,
+            schedule_cron=settings.SWARM_HEALTHCHECK_SCHEDULE_CRON,
+        ),
     ]
     if settings.ENVIRONMENT == settings.PRODUCTION_ENV:
         print(

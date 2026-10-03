@@ -11,12 +11,15 @@ import {
   LoaderIcon,
   type LucideIcon,
   MemoryStickIcon,
+  PauseIcon,
   PenLineIcon,
+  PencilLineIcon,
   PickaxeIcon,
   PlusIcon,
   PowerOffIcon,
   ServerIcon,
   TerminalIcon,
+  Trash2Icon,
   TriangleAlertIcon,
   XIcon
 } from "lucide-react";
@@ -143,10 +146,9 @@ export function ServerCard({
   cpus,
   memory_bytes,
   docker_version,
-  is_app_server,
-  is_build_server,
+  cluster_roles,
   status,
-  role,
+  swarm_role: role,
   private_ip,
   is_initial_install_server
 }: SwarmNode) {
@@ -164,30 +166,24 @@ export function ServerCard({
           <div className="flex flex-col gap-1.5 items-start w-full">
             <div className="flex items-center gap-2 w-full justify-between">
               <h3 className="font-medium text-lg">
-                {hostname ? (
-                  <span>
-                    {hostname}
-                    <span className="text-grey">@{private_ip}</span>{" "}
-                  </span>
-                ) : (
-                  private_ip
-                )}
+                <Link
+                  to={`./${id}`}
+                  className="hover:underline group inline-flex gap-2 items-center decoration-wavy decoration-grey underline-offset-2"
+                >
+                  {hostname ? (
+                    <span>
+                      {hostname}
+                      <span className="text-grey">@{private_ip}</span>{" "}
+                    </span>
+                  ) : (
+                    private_ip
+                  )}
+
+                  <PencilLineIcon className="size-4 text-grey flex-none opacity-0 group-hover:opacity-100" />
+                </Link>
               </h3>
 
               <div className="flex items-center gap-2">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  asChild
-                  className="text-xs py-1.5 px-2.5 w-auto h-auto gap-2"
-                >
-                  <Link to={`./${id}`}>
-                    <PenLineIcon className="size-4 flex-none text-grey" />
-                    <span className="">Details</span>
-                  </Link>
-                </Button>
-
-                <span className="w-px bg-muted h-3 rounded-lg" />
                 <Button
                   size="icon"
                   variant="ghost"
@@ -300,7 +296,7 @@ export function ServerCard({
             <span className="w-px bg-muted h-3" />
 
             <div className="flex items-center gap-1">
-              {is_app_server && (
+              {cluster_roles.includes("APP_SERVER") && (
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
                     <Code className="inline-flex items-center gap-1 cursor-help decoration-1 decoration-wavy hover:underline">
@@ -315,7 +311,7 @@ export function ServerCard({
                   </TooltipContent>
                 </Tooltip>
               )}
-              {is_build_server && (
+              {cluster_roles.includes("BUILD_SERVER") && (
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
                     <Code className="inline-flex items-center gap-1 cursor-help decoration-1 decoration-wavy hover:underline">
@@ -339,12 +335,14 @@ export function ServerCard({
 }
 
 const SERVER_STATUS_COLOR_MAP = {
-  READY: "green",
+  ACTIVE: "green",
   PROVISIONING: "blue",
   DOWN: "red",
+  PAUSED: "yellow",
   FAILED: "red",
   DRAINED: "gray",
-  CREATED: "gray"
+  CREATED: "gray",
+  REMOVED: "gray"
 } as const satisfies Record<SwarmNode["status"], StatusBadgeColor>;
 
 type ServerStatusBadgeProps = {
@@ -361,18 +359,20 @@ export function ServerStatusBadge({
   const color = SERVER_STATUS_COLOR_MAP[status];
 
   const icons = {
-    READY: HeartPulseIcon,
+    ACTIVE: HeartPulseIcon,
     PROVISIONING: HourglassIcon,
     DOWN: PowerOffIcon,
     FAILED: XIcon,
     DRAINED: TriangleAlertIcon,
-    CREATED: ClockPlusIcon
+    PAUSED: PauseIcon,
+    CREATED: ClockPlusIcon,
+    REMOVED: Trash2Icon
   } as const satisfies Record<typeof status, LucideIcon>;
 
   const Icon = icons[status];
 
   const isLoading = status === "PROVISIONING";
-  const isActive = status === "READY";
+  const isActive = status === "ACTIVE";
 
   return (
     <div

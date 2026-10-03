@@ -1241,6 +1241,12 @@ export interface components {
      * @enum {string}
      */
     CloneStrategyEnum: "ALL" | "ONLY";
+    /**
+     * @description * `BUILD_SERVER` - Build Server
+     * * `APP_SERVER` - App Server
+     * @enum {string}
+     */
+    ClusterRolesEnum: "BUILD_SERVER" | "APP_SERVER";
     ComposeConfigVersion: {
       content: string;
       version: number;
@@ -8474,15 +8480,17 @@ export interface components {
     SwarmNode: {
       id: string;
       hostname: string | null;
-      role: components["schemas"]["SwarmRoleEnum"];
+      swarm_node_id: string | null;
+      swarm_role: components["schemas"]["SwarmRoleEnum"];
       private_ip: string;
       ssh_port: number;
+      services: unknown;
       status: components["schemas"]["SwarmNodeStatusEnum"];
+      status_message: string | null;
       /** Format: date-time */
       last_status_update: string | null;
       docker_version: string | null;
-      is_build_server: boolean;
-      is_app_server: boolean;
+      cluster_roles: components["schemas"]["ClusterRolesEnum"][];
       is_initial_install_server: boolean;
       cpus: number | null;
       /** Format: int64 */
@@ -8494,52 +8502,54 @@ export interface components {
       ssh_keys: readonly components["schemas"]["SSHKey"][];
     };
     SwarmNodeRequest: {
-      role: components["schemas"]["SwarmRoleEnum"];
+      swarm_role: components["schemas"]["SwarmRoleEnum"];
       private_ip: string;
       ssh_port?: number;
-      is_build_server?: boolean;
-      is_app_server?: boolean;
+      cluster_roles?: components["schemas"]["ClusterRolesEnum"][];
     };
     /**
      * @description * `CREATED` - Created
      * * `PROVISIONING` - Provisioning
-     * * `READY` - Ready
+     * * `ACTIVE` - Active
      * * `DOWN` - Down
+     * * `PAUSED` - Paused
      * * `DRAINED` - Drained
      * * `FAILED` - Failed
+     * * `REMOVED` - Removed
      * @enum {string}
      */
-    SwarmNodeStatusEnum: "CREATED" | "PROVISIONING" | "READY" | "DOWN" | "DRAINED" | "FAILED";
-    SwarmNodesCreateError: components["schemas"]["SwarmNodesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["SwarmNodesCreateRoleErrorComponent"] | components["schemas"]["SwarmNodesCreatePrivateIpErrorComponent"] | components["schemas"]["SwarmNodesCreateSshPortErrorComponent"] | components["schemas"]["SwarmNodesCreateIsBuildServerErrorComponent"] | components["schemas"]["SwarmNodesCreateIsAppServerErrorComponent"];
+    SwarmNodeStatusEnum: "CREATED" | "PROVISIONING" | "ACTIVE" | "DOWN" | "PAUSED" | "DRAINED" | "FAILED" | "REMOVED";
+    SwarmNodesCreateClusterRolesErrorComponent: {
+      /**
+       * @description * `cluster_roles` - cluster_roles
+       * @enum {string}
+       */
+      attr: "cluster_roles";
+      /**
+       * @description * `not_a_list` - not_a_list
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "not_a_list" | "null";
+      detail: string;
+    };
+    SwarmNodesCreateClusterRolesINDEXErrorComponent: {
+      /**
+       * @description * `cluster_roles.INDEX` - cluster_roles.INDEX
+       * @enum {string}
+       */
+      attr: "cluster_roles.INDEX";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    SwarmNodesCreateError: components["schemas"]["SwarmNodesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["SwarmNodesCreateSwarmRoleErrorComponent"] | components["schemas"]["SwarmNodesCreatePrivateIpErrorComponent"] | components["schemas"]["SwarmNodesCreateSshPortErrorComponent"] | components["schemas"]["SwarmNodesCreateClusterRolesErrorComponent"] | components["schemas"]["SwarmNodesCreateClusterRolesINDEXErrorComponent"];
     SwarmNodesCreateErrorResponse400: components["schemas"]["SwarmNodesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
-    SwarmNodesCreateIsAppServerErrorComponent: {
-      /**
-       * @description * `is_app_server` - is_app_server
-       * @enum {string}
-       */
-      attr: "is_app_server";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
-    SwarmNodesCreateIsBuildServerErrorComponent: {
-      /**
-       * @description * `is_build_server` - is_build_server
-       * @enum {string}
-       */
-      attr: "is_build_server";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
     SwarmNodesCreateNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -8572,21 +8582,6 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
       detail: string;
     };
-    SwarmNodesCreateRoleErrorComponent: {
-      /**
-       * @description * `role` - role
-       * @enum {string}
-       */
-      attr: "role";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid_choice" | "null" | "required";
-      detail: string;
-    };
     SwarmNodesCreateSshPortErrorComponent: {
       /**
        * @description * `ssh_port` - ssh_port
@@ -8602,6 +8597,21 @@ export interface components {
        * @enum {string}
        */
       code: "invalid" | "max_string_length" | "max_value" | "min_value" | "null";
+      detail: string;
+    };
+    SwarmNodesCreateSwarmRoleErrorComponent: {
+      /**
+       * @description * `swarm_role` - swarm_role
+       * @enum {string}
+       */
+      attr: "swarm_role";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
       detail: string;
     };
     SwarmNodesCreateValidationError: {

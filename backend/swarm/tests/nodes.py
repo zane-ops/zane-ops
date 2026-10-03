@@ -32,3 +32,6 @@ class CreateSwarmNodeViewTests(AuthAPITestCase):
         self.assertEqual(SwarmNode.Status.CREATED, created_node.status)
         self.assertEqual(SwarmNode.Role.WORKER, created_node.role)
         self.assertEqual(2222, created_node.ssh_port)
+
+    async def test_provision_node(self):
+        pass

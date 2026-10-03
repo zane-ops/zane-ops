@@ -11,6 +11,7 @@ import {
   EyeOffIcon,
   FlameIcon,
   GlobeLockIcon,
+  HashIcon,
   InfoIcon,
   KeyRoundIcon,
   LoaderIcon,
@@ -100,6 +101,91 @@ export default function SwarmNodeDetailsPage({
 
               <div className="w-full max-w-4xl">
                 <div className="flex flex-col  gap-2 w-full">
+                  <FieldSet name="id" className="flex flex-col gap-1.5 flex-1">
+                    <FieldSetLabel>ID</FieldSetLabel>
+                    <div className="relative">
+                      <FieldSetInput
+                        disabled
+                        className={cn(
+                          "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                          "disabled:border-transparent disabled:opacity-100",
+                          "disabled:text-transparent disabled:select-none"
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
+                          "max-w-full min-w-0 overflow-auto pr-4"
+                        )}
+                      >
+                        <HashIcon className="text-grey size-4 flex-none mr-1" />
+                        <span className="text-card-foreground">{node.id}</span>
+
+                        <TooltipProvider>
+                          <Tooltip delayDuration={0}>
+                            <TooltipTrigger asChild>
+                              <CopyButton
+                                value={node.id}
+                                label={node.id}
+                                className="!opacity-100 ml-1.5"
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent>Copy ID</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </span>
+                    </div>
+                  </FieldSet>
+
+                  <FieldSet
+                    name="swarm_node_id"
+                    className="flex flex-col gap-1.5 flex-1"
+                  >
+                    <FieldSetLabel>Docker Swarm Node ID</FieldSetLabel>
+                    <div className="relative">
+                      <FieldSetInput
+                        disabled
+                        className={cn(
+                          "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                          "disabled:border-transparent disabled:opacity-100",
+                          "disabled:text-transparent disabled:select-none"
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
+                          "max-w-full min-w-0 overflow-auto pr-4"
+                        )}
+                      >
+                        <HashIcon className="text-grey size-4 flex-none mr-1" />
+                        {node.swarm_node_id ? (
+                          <span className="text-card-foreground">
+                            {node.swarm_node_id}
+                          </span>
+                        ) : (
+                          <code className="text-grey italic">
+                            {"<unknown>"}
+                          </code>
+                        )}
+
+                        {node.swarm_node_id && (
+                          <TooltipProvider>
+                            <Tooltip delayDuration={0}>
+                              <TooltipTrigger asChild>
+                                <CopyButton
+                                  value={node.swarm_node_id}
+                                  label={node.swarm_node_id}
+                                  className="!opacity-100 ml-1.5"
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent>Copy Node ID</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </span>
+                    </div>
+                  </FieldSet>
+
                   <FieldSet
                     name="swarm_role"
                     className="flex flex-col gap-1.5 flex-1"
@@ -120,13 +206,13 @@ export default function SwarmNodeDetailsPage({
                           "max-w-full min-w-0 overflow-auto pr-4"
                         )}
                       >
-                        {node.role === "MANAGER" ? (
+                        {node.swarm_role === "MANAGER" ? (
                           <BrainIcon className="text-grey size-4 flex-none mr-1" />
                         ) : (
                           <PickaxeIcon className="text-grey size-4 flex-none mr-1" />
                         )}
                         <span className="text-card-foreground">
-                          {node.role}
+                          {node.swarm_role}
                         </span>
                       </span>
                     </div>
@@ -138,7 +224,7 @@ export default function SwarmNodeDetailsPage({
                   >
                     <FieldSetLabel>ZaneOps Cluster Roles</FieldSetLabel>
                     <div className="flex items-center gap-1.5">
-                      {node.is_app_server && (
+                      {node.cluster_roles.includes("APP_SERVER") && (
                         <TooltipProvider>
                           <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild>
@@ -158,7 +244,7 @@ export default function SwarmNodeDetailsPage({
                           </Tooltip>
                         </TooltipProvider>
                       )}
-                      {node.is_build_server && (
+                      {node.cluster_roles.includes("BUILD_SERVER") && (
                         <TooltipProvider>
                           <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild>

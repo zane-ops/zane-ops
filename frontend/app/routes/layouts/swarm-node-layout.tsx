@@ -4,6 +4,7 @@ import {
   InfoIcon,
   ServerIcon,
   SettingsIcon,
+  SquareChartGanttIcon,
   TerminalIcon
 } from "lucide-react";
 import { Outlet, href } from "react-router";
@@ -42,11 +43,13 @@ export default function SwarmNodeLayout({
 
   const status_emoji_map = {
     CREATED: "🆕",
-    READY: "💚",
+    ACTIVE: "💚",
     DOWN: "🔴",
     FAILED: "❌",
-    DRAINED: "🗑️",
-    PROVISIONING: "▶️"
+    DRAINED: "⏸️",
+    PAUSED: "⏸️",
+    PROVISIONING: "▶️",
+    REMOVED: "🗑️"
   } satisfies Record<(typeof node)["status"], string>;
 
   const { title } = metaTitle(
@@ -103,7 +106,7 @@ export default function SwarmNodeLayout({
                 prefetch="viewport"
               >
                 <span>Details</span>
-                <SettingsIcon size={15} className="flex-none" />
+                <SettingsIcon className="size-4 flex-none" />
               </HorizontalNavLink>
             </li>
             <li>
@@ -112,7 +115,16 @@ export default function SwarmNodeLayout({
                 prefetch="viewport"
               >
                 <span>Console</span>
-                <TerminalIcon size={15} className="flex-none" />
+                <TerminalIcon className="size-4 flex-none" />
+              </HorizontalNavLink>
+            </li>
+            <li>
+              <HorizontalNavLink
+                to={href("/admin/servers/:serverId/console", params)}
+                prefetch="viewport"
+              >
+                <span>Provision logs</span>
+                <SquareChartGanttIcon className="size-4 flex-none" />
               </HorizontalNavLink>
             </li>
           </ul>

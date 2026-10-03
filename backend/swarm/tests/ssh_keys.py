@@ -13,7 +13,7 @@ class CreateSSHKeyForSwarmNodeViewTests(AuthAPITestCase):
             hostname="zane-main",
             private_ip="10.0.0.1",
             role=SwarmNode.Role.MANAGER,
-            status=SwarmNode.Status.READY,
+            status=SwarmNode.Status.ACTIVE,
             is_initial_install_server=True,
         )
 
@@ -113,7 +113,7 @@ class DeleteSSHKeyViewTests(AuthAPITestCase):
             hostname="zane-main",
             private_ip="10.0.0.1",
             role=SwarmNode.Role.MANAGER,
-            status=SwarmNode.Status.READY,
+            status=SwarmNode.Status.ACTIVE,
             is_initial_install_server=True,
         )
         public_key, private_key = SSHKey.create_key_pair()
@@ -155,7 +155,7 @@ class DeleteSSHKeyViewTests(AuthAPITestCase):
             hostname="zane-worker",
             private_ip="10.0.0.2",
             role=SwarmNode.Role.WORKER,
-            status=SwarmNode.Status.READY,
+            status=SwarmNode.Status.ACTIVE,
         )
         response = self.client.delete(
             reverse(

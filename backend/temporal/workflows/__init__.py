@@ -6,6 +6,7 @@ from .services import *
 from .projects import *
 from .registries import *
 from .compose import *
+from .swarm import *
 
 with workflow.unsafe.imports_passed_through():
     from ..activities import (
@@ -32,6 +33,7 @@ with workflow.unsafe.imports_passed_through():
         create_registry_health_check_schedule,
         delete_registry_health_check_schedule,
         ComposeStackActivities,
+        SwarmNodeActivities,
     )
     from ..activities.service_auto_update import (
         schedule_update_docker_service,
@@ -59,6 +61,8 @@ with workflow.unsafe.imports_passed_through():
         DeployComposeStackWorkflow,
         ArchiveComposeStackWorkflow,
         ToggleComposeStackWorkflow,
+        ProvisionSwarmNodeWorkflow,
+        RemoveSwarmNodeFromClusterWorkflow,
     )
     from ..schedules import (
         MonitorDockerDeploymentWorkflow,
@@ -88,6 +92,7 @@ def get_workflows_and_activities():
     monitor_stack_activites = MonitorComposeStackActivites()
     stack_activites = ComposeStackActivities()
     stack_metrics_activites = DockerComposeStackMetricsActivities()
+    swarm_node_activities = SwarmNodeActivities()
 
     return dict(
         workflows=[
@@ -116,6 +121,9 @@ def get_workflows_and_activities():
             ArchiveComposeStackWorkflow,
             ToggleComposeStackWorkflow,
             CollectComposeStacksMetricsWorkflow,
+            ProvisionSwarmNodeWorkflow,
+            RemoveSwarmNodeFromClusterWorkflow,
+            SwarmHealthcheckWorkflow,
         ],
         activities=[
             *get_extra_activities(),
@@ -212,6 +220,26 @@ def get_workflows_and_activities():
             monitor_stack_activites.run_stack_healthcheck,
             stack_metrics_activites.collect_compose_stack_metrics,
             stack_metrics_activites.save_compose_stack_metrics,
+            swarm_node_activities.create_ssh_keys_temp_dir,
+            swarm_node_activities.test_ssh_connection,
+            swarm_node_activities.check_docker_installation,
+            swarm_node_activities.install_docker_on_node,
+            swarm_node_activities.get_swarm_join_token,
+            swarm_node_activities.join_swarm_cluster,
+            swarm_node_activities.update_node_labels,
+            swarm_node_activities.prepare_node_deployment,
+            swarm_node_activities.finish_and_save_node_deployment,
+            swarm_node_activities.clear_removed_swarm_node_attributes,
+            swarm_node_activities.wait_for_global_services_to_be_propagated,
+            swarm_node_activities.delete_ssh_keys_temp_dir,
+            swarm_node_activities.drain_swarm_node_and_remove_labels,
+            swarm_node_activities.wait_for_global_services_to_be_drained,
+            swarm_node_activities.detach_swarm_node_from_cluster,
+            swarm_node_activities.remove_swarm_node_from_cluster,
+            swarm_node_activities.run_swarm_healthcheck,
+            swarm_node_activities.save_swarm_healthcheck,
+            swarm_node_activities.check_os_compatibility,
+            swarm_node_activities.check_swarm_ports_reachability,
             acquire_service_deploy_semaphore,
             lock_deploy_semaphore,
             release_service_deploy_semaphore,
