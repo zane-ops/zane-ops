@@ -158,6 +158,8 @@ class ProvisionSwarmNodeWorkflow:
                     )
 
                     if swarm_info:
+                        node_deployment_result.docker_info.Swarm = swarm_info
+
                         node_deployment_result.swarm_hostname = (
                             await workflow.execute_activity_method(
                                 SwarmNodeActivities.update_node_labels,

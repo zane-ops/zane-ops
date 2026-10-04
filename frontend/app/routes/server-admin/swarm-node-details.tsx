@@ -121,6 +121,124 @@ export default function SwarmNodeDetailsPage({
             </div>
           </section>
 
+          <section id="hardware" className="flex gap-1 scroll-mt-24 max-w-4xl">
+            <div className="w-16 hidden md:flex flex-col items-center">
+              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                <MicrochipIcon size={15} className="flex-none text-grey" />
+              </div>
+              <div className="h-full border border-grey/50"></div>
+            </div>
+            <div className="w-full flex flex-col gap-12 pt-1 pb-8">
+              <div className="flex flex-col gap-6">
+                <h2 className="text-lg text-grey">Hardware</h2>
+
+                <div className="w-full max-w-4xl">
+                  <div className="flex flex-col  gap-2 w-full">
+                    <FieldSet
+                      name="cpus"
+                      className="flex flex-col gap-1.5 flex-1"
+                    >
+                      <FieldSetLabel>CPUs</FieldSetLabel>
+                      <div className="relative">
+                        <FieldSetInput
+                          disabled
+                          className={cn(
+                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                            "disabled:border-transparent disabled:opacity-100",
+                            "disabled:text-transparent disabled:select-none"
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
+                            "max-w-full min-w-0 overflow-auto pr-4"
+                          )}
+                        >
+                          <CpuIcon className="text-grey size-4 flex-none mr-1" />
+                          {node.cpus ? (
+                            <span className="text-card-foreground">
+                              {node.cpus}
+                            </span>
+                          ) : (
+                            <code className="text-grey italic">
+                              {"<unknown>"}
+                            </code>
+                          )}
+                        </span>
+                      </div>
+                    </FieldSet>
+
+                    <FieldSet
+                      name="memory"
+                      className="flex flex-col gap-1.5 flex-1"
+                    >
+                      <FieldSetLabel>Memory</FieldSetLabel>
+                      <div className="relative">
+                        <FieldSetInput
+                          disabled
+                          className={cn(
+                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                            "disabled:border-transparent disabled:opacity-100",
+                            "disabled:text-transparent disabled:select-none"
+                          )}
+                        />
+
+                        <span
+                          className={cn(
+                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
+                            "max-w-full min-w-0 overflow-auto pr-4"
+                          )}
+                        >
+                          <MemoryStickIcon className="text-grey size-4 flex-none mr-1" />
+                          {memory ? (
+                            <span>{`${memory.value} ${memory.unit}`}</span>
+                          ) : (
+                            <code className="text-grey italic">
+                              {"<unknown>"}
+                            </code>
+                          )}
+                        </span>
+                      </div>
+                    </FieldSet>
+
+                    <FieldSet
+                      name="docker_version"
+                      className="flex flex-col gap-1.5 flex-1"
+                    >
+                      <FieldSetLabel>Docker Version</FieldSetLabel>
+                      <div className="relative">
+                        <FieldSetInput
+                          disabled
+                          className={cn(
+                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                            "disabled:border-transparent disabled:opacity-100",
+                            "disabled:text-transparent disabled:select-none"
+                          )}
+                        />
+
+                        <span
+                          className={cn(
+                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
+                            "max-w-full min-w-0 overflow-auto pr-4"
+                          )}
+                        >
+                          <DockerHubLogo className="size-4 flex-none mr-1" />
+                          {node.docker_version ? (
+                            <span>v{node.docker_version}</span>
+                          ) : (
+                            <code className="text-grey italic">
+                              {"<unknown>"}
+                            </code>
+                          )}
+                        </span>
+                      </div>
+                    </FieldSet>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section
             id="networking"
             className="flex gap-1 scroll-mt-24 max-w-4xl"
@@ -281,124 +399,6 @@ export default function SwarmNodeDetailsPage({
             </div>
           </section>
 
-          <section id="hardware" className="flex gap-1 scroll-mt-24 max-w-4xl">
-            <div className="w-16 hidden md:flex flex-col items-center">
-              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
-                <MicrochipIcon size={15} className="flex-none text-grey" />
-              </div>
-              <div className="h-full border border-grey/50"></div>
-            </div>
-            <div className="w-full flex flex-col gap-12 pt-1 pb-8">
-              <div className="flex flex-col gap-6">
-                <h2 className="text-lg text-grey">Hardware</h2>
-
-                <div className="w-full max-w-4xl">
-                  <div className="flex flex-col  gap-2 w-full">
-                    <FieldSet
-                      name="cpus"
-                      className="flex flex-col gap-1.5 flex-1"
-                    >
-                      <FieldSetLabel>CPUs</FieldSetLabel>
-                      <div className="relative">
-                        <FieldSetInput
-                          disabled
-                          className={cn(
-                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                            "disabled:border-transparent disabled:opacity-100",
-                            "disabled:text-transparent disabled:select-none"
-                          )}
-                        />
-                        <span
-                          className={cn(
-                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
-                            "max-w-full min-w-0 overflow-auto pr-4"
-                          )}
-                        >
-                          <CpuIcon className="text-grey size-4 flex-none mr-1" />
-                          {node.cpus ? (
-                            <span className="text-card-foreground">
-                              {node.cpus}
-                            </span>
-                          ) : (
-                            <code className="text-grey italic">
-                              {"<unknown>"}
-                            </code>
-                          )}
-                        </span>
-                      </div>
-                    </FieldSet>
-
-                    <FieldSet
-                      name="memory"
-                      className="flex flex-col gap-1.5 flex-1"
-                    >
-                      <FieldSetLabel>Memory</FieldSetLabel>
-                      <div className="relative">
-                        <FieldSetInput
-                          disabled
-                          className={cn(
-                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                            "disabled:border-transparent disabled:opacity-100",
-                            "disabled:text-transparent disabled:select-none"
-                          )}
-                        />
-
-                        <span
-                          className={cn(
-                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
-                            "max-w-full min-w-0 overflow-auto pr-4"
-                          )}
-                        >
-                          <MemoryStickIcon className="text-grey size-4 flex-none mr-1" />
-                          {memory ? (
-                            <span>{`${memory.value} ${memory.unit}`}</span>
-                          ) : (
-                            <code className="text-grey italic">
-                              {"<unknown>"}
-                            </code>
-                          )}
-                        </span>
-                      </div>
-                    </FieldSet>
-
-                    <FieldSet
-                      name="docker_version"
-                      className="flex flex-col gap-1.5 flex-1"
-                    >
-                      <FieldSetLabel>Docker Version</FieldSetLabel>
-                      <div className="relative">
-                        <FieldSetInput
-                          disabled
-                          className={cn(
-                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                            "disabled:border-transparent disabled:opacity-100",
-                            "disabled:text-transparent disabled:select-none"
-                          )}
-                        />
-
-                        <span
-                          className={cn(
-                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
-                            "max-w-full min-w-0 overflow-auto pr-4"
-                          )}
-                        >
-                          <DockerHubLogo className="size-4 flex-none mr-1" />
-                          {node.docker_version ? (
-                            <span>v{node.docker_version}</span>
-                          ) : (
-                            <code className="text-grey italic">
-                              {"<unknown>"}
-                            </code>
-                          )}
-                        </span>
-                      </div>
-                    </FieldSet>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
           <section id="ssh-keys" className="flex gap-1 scroll-mt-20">
             <div className="w-16 hidden md:flex flex-col items-center">
               <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
@@ -459,55 +459,6 @@ export default function SwarmNodeDetailsPage({
         </div>
       </div>
     </section>
-  );
-}
-
-type HiddenValueProps = {
-  realValue: string | number;
-  className?: string;
-};
-
-function HiddenValue({ realValue, className }: HiddenValueProps) {
-  const [isValueShown, setShowValue] = React.useState(false);
-
-  const Icon = isValueShown ? EyeOffIcon : EyeIcon;
-  const arr = Array.from({ length: realValue.toString().length }, (_, i) => i);
-
-  return (
-    <span className={cn("inline-flex items-center gap-2", className)}>
-      {isValueShown ? (
-        realValue
-      ) : (
-        <span className="inline-flex items-center gap-0.5">
-          {arr.map((i) => (
-            <span
-              key={i}
-              className="inline-block bg-card-foreground size-1.5 rounded-full flex-none"
-            />
-          ))}
-        </span>
-      )}
-      <TooltipProvider>
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn("px-2.5 py-0.5", "inline-flex gap-1 items-center")}
-              onClick={() => setShowValue(!isValueShown)}
-            >
-              <Icon className="size-4 flex-none" />
-              <span className="sr-only">
-                {isValueShown ? "Hide Value" : "Show value"}
-              </span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {isValueShown ? "Hide Value" : "Show value"}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    </span>
   );
 }
 
