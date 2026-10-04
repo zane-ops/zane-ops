@@ -459,7 +459,17 @@ export const swarmQueries = {
       },
       placeholderData: keepPreviousData,
       refetchIntervalInBackground: true
-    })
+    }),
+  mainNode: queryOptions({
+    queryKey: ["SWARM_NODES", "MAIN"] as const,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.GET("/api/swarm/nodes/main/", {
+        signal
+      });
+      if (!data) throw notFound("Not found");
+      return data;
+    }
+  })
 };
 
 export const systemQueries = {

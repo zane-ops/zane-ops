@@ -635,12 +635,20 @@ export interface paths {
     /** Update a swarm node */
     patch: operations["updateSwarmNode"];
   };
+  "/api/swarm/nodes/{id}/provision/": {
+    /** Provision a swarm node and add it to the ZaneOps cluster */
+    post: operations["provisionSwarmNode"];
+  };
   "/api/swarm/nodes/{id}/ssh-keys/": {
     /** Create a new SSH key attached to this swarm node */
     post: operations["createSwarmNodeSSHKey"];
   };
   "/api/swarm/nodes/{id}/ssh-keys/{key_id}/": {
     delete: operations["swarm_nodes_ssh_keys_destroy"];
+  };
+  "/api/swarm/nodes/main/": {
+    /** Get the main server of the ZaneOps cluster */
+    get: operations["getMainSwarmNode"];
   };
   "/api/trigger-preview/{deploy_token}/": {
     /** Webhook to trigger a new preview environment */
@@ -3847,6 +3855,7 @@ export interface components {
     GetComposeStackDeploymentDetailsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetComposeStackDetailsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetMainSwarmNodeErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetPasswordResetTokenErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetPreviewEnvToReviewErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetProjectListError: components["schemas"]["GetProjectListSlugErrorComponent"] | components["schemas"]["GetProjectListSortByErrorComponent"];
@@ -5864,6 +5873,61 @@ export interface components {
      * @enum {string}
      */
     ProtocolEnum: "tcp" | "udp";
+    ProvisionSwarmNodeError: components["schemas"]["ProvisionSwarmNodeNonFieldErrorsErrorComponent"] | components["schemas"]["ProvisionSwarmNodeTargetSshKeyIdErrorComponent"] | components["schemas"]["ProvisionSwarmNodeMainSshKeyIdErrorComponent"];
+    ProvisionSwarmNodeErrorResponse400: components["schemas"]["ProvisionSwarmNodeValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProvisionSwarmNodeMainSshKeyIdErrorComponent: {
+      /**
+       * @description * `main_ssh_key_id` - main_ssh_key_id
+       * @enum {string}
+       */
+      attr: "main_ssh_key_id";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "null" | "required";
+      detail: string;
+    };
+    ProvisionSwarmNodeNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ProvisionSwarmNodeRequestRequest: {
+      target_ssh_key_id: number;
+      main_ssh_key_id: number;
+    };
+    ProvisionSwarmNodeTargetSshKeyIdErrorComponent: {
+      /**
+       * @description * `target_ssh_key_id` - target_ssh_key_id
+       * @enum {string}
+       */
+      attr: "target_ssh_key_id";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "null" | "required";
+      detail: string;
+    };
+    ProvisionSwarmNodeValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ProvisionSwarmNodeError"][];
+    };
     RailpackBuilderOptions: {
       publish_directory: string;
       is_spa: boolean;
@@ -16628,6 +16692,53 @@ export interface operations {
       };
     };
   };
+  /** Provision a swarm node and add it to the ZaneOps cluster */
+  provisionSwarmNode: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProvisionSwarmNodeRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ProvisionSwarmNodeRequestRequest"];
+        "multipart/form-data": components["schemas"]["ProvisionSwarmNodeRequestRequest"];
+      };
+    };
+    responses: {
+      202: {
+        content: {
+          "application/json": components["schemas"]["SwarmNode"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProvisionSwarmNodeErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /** Create a new SSH key attached to this swarm node */
   createSwarmNodeSSHKey: {
     parameters: {
@@ -16705,6 +16816,36 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get the main server of the ZaneOps cluster */
+  getMainSwarmNode: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SwarmNode"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetMainSwarmNodeErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {

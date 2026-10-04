@@ -15338,6 +15338,110 @@ paths:
               schema:
                 $ref: '#/components/schemas/UpdateSwarmNodeSSHPort'
           description: ''
+  /api/swarm/nodes/{id}/provision/:
+    post:
+      operationId: provisionSwarmNode
+      summary: Provision a swarm node and add it to the ZaneOps cluster
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - swarm
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProvisionSwarmNodeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProvisionSwarmNodeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProvisionSwarmNodeRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvisionSwarmNodeErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwarmNode'
+          description: ''
   /api/swarm/nodes/{id}/ssh-keys/:
     post:
       operationId: createSwarmNodeSSHKey
@@ -15535,6 +15639,77 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/swarm/nodes/main/:
+    get:
+      operationId: getMainSwarmNode
+      summary: Get the main server of the ZaneOps cluster
+      tags:
+      - swarm
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetMainSwarmNodeErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwarmNode'
+          description: ''
   /api/trigger-preview/{deploy_token}/:
     post:
       operationId: webhookTriggerPreviewEnv
@@ -24877,6 +25052,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    GetMainSwarmNodeErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     GetPasswordResetTokenErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -29330,6 +29512,119 @@ components:
       description: |-
         * `tcp` - tcp
         * `udp` - udp
+    ProvisionSwarmNodeError:
+      oneOf:
+      - $ref: '#/components/schemas/ProvisionSwarmNodeNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProvisionSwarmNodeTargetSshKeyIdErrorComponent'
+      - $ref: '#/components/schemas/ProvisionSwarmNodeMainSshKeyIdErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProvisionSwarmNodeNonFieldErrorsErrorComponent'
+          target_ssh_key_id: '#/components/schemas/ProvisionSwarmNodeTargetSshKeyIdErrorComponent'
+          main_ssh_key_id: '#/components/schemas/ProvisionSwarmNodeMainSshKeyIdErrorComponent'
+    ProvisionSwarmNodeErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProvisionSwarmNodeValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProvisionSwarmNodeValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProvisionSwarmNodeMainSshKeyIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - main_ssh_key_id
+          type: string
+          description: '* `main_ssh_key_id` - main_ssh_key_id'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProvisionSwarmNodeNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProvisionSwarmNodeRequestRequest:
+      type: object
+      properties:
+        target_ssh_key_id:
+          type: integer
+        main_ssh_key_id:
+          type: integer
+      required:
+      - main_ssh_key_id
+      - target_ssh_key_id
+    ProvisionSwarmNodeTargetSshKeyIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - target_ssh_key_id
+          type: string
+          description: '* `target_ssh_key_id` - target_ssh_key_id'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProvisionSwarmNodeValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProvisionSwarmNodeError'
+      required:
+      - errors
+      - type
     RailpackBuilderOptions:
       type: object
       properties:
