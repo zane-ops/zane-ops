@@ -122,7 +122,11 @@ export default [
           route("ssh-keys/:keyId", "./routes/server-admin/ssh-key-details.tsx"),
           layout("./routes/layouts/swarm-node-layout.tsx", [
             index("./routes/server-admin/swarm-node-details.tsx"),
-            route("console", "./routes/server-admin/swarm-node-console.tsx")
+            route("console", "./routes/server-admin/swarm-node-console.tsx"),
+            route(
+              "deployment-logs",
+              "./routes/server-admin/swarm-node-deployment-logs.tsx"
+            )
           ])
         ])
       ])
