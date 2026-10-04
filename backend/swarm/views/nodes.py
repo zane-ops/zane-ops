@@ -158,7 +158,7 @@ class ProvisionSwarmNodeAPIView(APIView):
     @transaction.atomic()
     def post(self, request: Request, id: str):
         try:
-            node = SwarmNode.objects.select_for_update().get(id=id)
+            node = SwarmNode.objects.get(id=id)
         except SwarmNode.DoesNotExist:
             raise exceptions.NotFound(f"A server with the id `{id}` does not exist")
 

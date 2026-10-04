@@ -14,6 +14,7 @@ with workflow.unsafe.imports_passed_through():
     from zane_api.utils import Colors
 
 from ..shared import (
+    CancelProvisionSignalInput,
     SwarmNodePair,
     ClusterSwarmNodePair,
     RemoveSwarmNodeContext,
@@ -33,6 +34,12 @@ class ProvisionSwarmNodeWorkflow:
         self.retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
+        self.cancellation_requested: set[str] = set()
+
+    @workflow.signal
+    def cancel_deployment(self, input: CancelProvisionSignalInput):
+        self.cancellation_requested.add(input.target_node_id)
+        print(f"Received signal {input=} {self.cancellation_requested=}")
 
     @workflow.run
     async def run(self, payload: SwarmNodePair) -> SwarmNodeStatusResult:

@@ -690,6 +690,11 @@ class SwarmNodePair:
     target_node: SwarmNodeDetails
 
 
+@dataclass
+class CancelProvisionSignalInput:
+    target_node_id: str
+
+
 # Frozen dataclass allows us to override the attributes types
 @dataclass(frozen=True)
 class ClusterSwarmNodePair(SwarmNodePair):
