@@ -100,10 +100,10 @@ class TemporalClient:
                 print("RESULT", await conv.decode(a.result.payloads))
 
     @classmethod
-    def start_workflow(
+    def start_workflow[T, P](
         cls,
-        workflow: Union[str, Callable[..., Awaitable[Any]]],
-        arg: Any,
+        workflow: Callable[[P, T], Awaitable[Any]],
+        arg: T,
         id: str,
         task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
         execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,

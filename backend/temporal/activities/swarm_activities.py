@@ -29,7 +29,6 @@ with workflow.unsafe.imports_passed_through():
 from temporal.constants import (
     DOCKER_CHECK_SCRIPT,
     DOCKER_INSTALL_SCRIPT,
-    MINIMAL_DOCKER_VERSION_REQUIREMENTS,
     DOCKER_SYSTEM_INFO_CMD,
     DOCKER_CHECK_OS_SCRIPT,
     SWARM_MANAGER_TCP_PORTS,
@@ -539,7 +538,6 @@ class SwarmNodeActivities:
 
     @activity.defn
     async def update_node_labels(self, ctx: DockerNodeUpdateContext):
-
         info = ctx.swarm_info
         node = ctx.node
         await provision_log(
@@ -580,7 +578,6 @@ class SwarmNodeActivities:
     async def wait_for_global_services_to_be_propagated(
         self, swarm_info: DockerSwarmInfo
     ):
-
         proxy_service: list[Service] = self.docker_client.services.list(
             filters={"label": ["zane.role=proxy"]},
             status=True,
@@ -595,7 +592,6 @@ class SwarmNodeActivities:
         healthcheck_timeout = timedelta(minutes=3).total_seconds()
 
         async def wait_for_swarm_service_to_be_updated(service: Service):
-
             print(
                 f"Waiting for service `{Colors.BLUE}{service.name=}{Colors.ENDC}` to be updated..."
             )
@@ -641,7 +637,6 @@ class SwarmNodeActivities:
 
     @activity.defn
     async def drain_swarm_node_and_remove_labels(self, payload: ClusterSwarmNodePair):
-
         target_node = payload.target_node
         await provision_log(
             target_node,
@@ -675,7 +670,6 @@ class SwarmNodeActivities:
     async def wait_for_global_services_to_be_drained(
         self, payload: ClusterSwarmNodePair
     ):
-
         target_node = payload.target_node
 
         proxy_service: list[Service] = self.docker_client.services.list(

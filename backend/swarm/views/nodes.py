@@ -192,14 +192,15 @@ class ProvisionSwarmNodeAPIView(APIView):
                 ssh_port=main_node.ssh_port,
             ),
         )
-        # workflow_id = node.provision_swarm_node_workflow_id
-        # transaction.on_commit(
-        #     lambda: TemporalClient.start_workflow(
-        #         ProvisionSwarmNodeWorkflow.run,
-        #         payload,
-        #         id=workflow_id,
-        #     )
-        # )
+
+        workflow_id = node.provision_swarm_node_workflow_id
+        transaction.on_commit(
+            lambda: TemporalClient.start_workflow(
+                ProvisionSwarmNodeWorkflow.run,
+                payload,
+                id=workflow_id,
+            )
+        )
 
         response = FullSwarmNodeSerializer(node)
         return Response(response.data, status=status.HTTP_202_ACCEPTED)
