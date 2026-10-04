@@ -137,3 +137,11 @@ export default function SwarmNodeLayout({
     </>
   );
 }
+
+function ProvisionSwarmNodeForm() {
+  return;
+}
+
+function UpdateSwarmNodeForm() {
+  return;
+}

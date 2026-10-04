@@ -7,6 +7,7 @@ import {
   CheckIcon,
   ChevronRightIcon,
   CpuIcon,
+  EthernetPortIcon,
   EyeIcon,
   EyeOffIcon,
   FlameIcon,
@@ -84,7 +85,7 @@ export default function SwarmNodeDetailsPage({
 
   return (
     <section className="flex flex-col gap-4">
-      <h3 className="text-grey">Update the details of this workspace</h3>
+      <h3 className="text-grey">Update the details of this server</h3>
 
       <div className="grid lg:grid-cols-12 gap-10 relative">
         <div className="lg:col-span-10 flex flex-col">
@@ -371,6 +372,33 @@ export default function SwarmNodeDetailsPage({
                               <TooltipContent>Copy Private IP</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
+                        </span>
+                      </div>
+                    </FieldSet>
+
+                    <FieldSet
+                      name="ssh_port"
+                      className="flex flex-col gap-1.5 flex-1"
+                    >
+                      <FieldSetLabel>SSH Port</FieldSetLabel>
+                      <div className="relative">
+                        <FieldSetInput
+                          disabled
+                          className={cn(
+                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                            "disabled:border-transparent disabled:opacity-100",
+                            "disabled:text-transparent disabled:select-none"
+                          )}
+                        />
+
+                        <span
+                          className={cn(
+                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
+                            "max-w-full min-w-0 overflow-auto pr-4"
+                          )}
+                        >
+                          <EthernetPortIcon className="text-grey size-4 flex-none mr-1" />
+                          <span>{node.ssh_port}</span>
                         </span>
                       </div>
                     </FieldSet>
