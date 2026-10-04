@@ -632,6 +632,8 @@ export interface paths {
   };
   "/api/swarm/nodes/{id}/": {
     get: operations["swarm_nodes_retrieve"];
+    /** Update a swarm node */
+    patch: operations["updateSwarmNode"];
   };
   "/api/swarm/nodes/{id}/ssh-keys/": {
     /** Create a new SSH key attached to this swarm node */
@@ -5031,6 +5033,9 @@ export interface components {
       first_name?: string;
       last_name?: string;
     };
+    PatchedUpdateSwarmNodeSSHPortRequest: {
+      ssh_port?: number;
+    };
     PatchedWorkspaceApiTokenRequest: {
       name?: string;
     };
@@ -9226,6 +9231,46 @@ export interface components {
        */
       code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
+    };
+    UpdateSwarmNodeError: components["schemas"]["UpdateSwarmNodeNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateSwarmNodeSshPortErrorComponent"];
+    UpdateSwarmNodeErrorResponse400: components["schemas"]["UpdateSwarmNodeValidationError"] | components["schemas"]["ParseErrorResponse"];
+    UpdateSwarmNodeNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    UpdateSwarmNodeSSHPort: {
+      ssh_port: number;
+    };
+    UpdateSwarmNodeSshPortErrorComponent: {
+      /**
+       * @description * `ssh_port` - ssh_port
+       * @enum {string}
+       */
+      attr: "ssh_port";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value" | "null" | "required";
+      detail: string;
+    };
+    UpdateSwarmNodeValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["UpdateSwarmNodeError"][];
     };
     User: {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
@@ -16512,6 +16557,53 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["SwarmNodesRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Update a swarm node */
+  updateSwarmNode: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedUpdateSwarmNodeSSHPortRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedUpdateSwarmNodeSSHPortRequest"];
+        "multipart/form-data": components["schemas"]["PatchedUpdateSwarmNodeSSHPortRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["UpdateSwarmNodeSSHPort"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["UpdateSwarmNodeErrorResponse400"];
         };
       };
       401: {

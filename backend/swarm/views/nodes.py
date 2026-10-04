@@ -4,7 +4,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import exceptions, status
 from rest_framework.generics import (
     ListCreateAPIView,
-    RetrieveAPIView,
+    RetrieveUpdateAPIView,
     DestroyAPIView,
 )
 from rest_framework.request import Request
@@ -20,6 +20,7 @@ from swarm.serializers import (
     CreateSSHKeyRequestSerializer,
     SSHKeySerializer,
     SwarmNodeSerializer,
+    UpdateSwarmNodeSSHPortSerializer,
 )
 
 
@@ -47,11 +48,23 @@ class SwarmNodeListAPIView(ListCreateAPIView):
             raise e
 
 
-class SwarmNodeDetailsAPIView(RetrieveAPIView):
+class SwarmNodeDetailsAPIView(RetrieveUpdateAPIView):
     permission_classes = [IsInstanceOwner]
-    serializer_class = SwarmNodeSerializer
     queryset = SwarmNode.objects.prefetch_related("ssh_keys").all()
     lookup_field = "id"
+    http_method_names = ["get", "patch"]
+
+    def get_serializer_class(self):  # type: ignore
+        if self.request.method == "PATCH":
+            return UpdateSwarmNodeSSHPortSerializer
+        return SwarmNodeSerializer
+
+    @extend_schema(
+        operation_id="updateSwarmNode",
+        summary="Update a swarm node",
+    )
+    def patch(self, request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)
 
 
 class SwarmNodeSSHKeysAPIView(APIView):

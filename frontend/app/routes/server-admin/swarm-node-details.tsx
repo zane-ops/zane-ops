@@ -28,7 +28,10 @@ import {
 import * as React from "react";
 import { flushSync } from "react-dom";
 import { Link, href, useFetcher } from "react-router";
+import { toast } from "sonner";
+import { type RequestInput, apiClient } from "~/api/client";
 import type { SwarmNode } from "~/api/types";
+import type { components } from "~/api/v1";
 import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
 import { DockerHubLogo } from "~/components/docker-hub-logo";
@@ -66,9 +69,11 @@ import {
 } from "~/components/ui/tooltip";
 import { createDevLogger } from "~/lib/logger";
 import { swarmQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import {
   cn,
   formatStorageValue,
+  getCsrfTokenHeader,
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
@@ -1101,20 +1106,19 @@ function SwarmNodeSSHPortForm({ node }: SwarmNodeFormProps) {
   );
 }
 
-export async function clientAction({ request }: Route.ClientActionArgs) {
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
 
-  // TODO: call the node update endpoint once it is implemented
   switch (intent) {
     case "update-ssh-port": {
-      const userData = {
-        ssh_port: formData.get("ssh_port")?.toString() as unknown as number
-      };
-      logger.info({ intent, userData });
-      return { errors: undefined, data: undefined, userData };
+      return updateSSHPort(params.serverId, formData);
     }
     case "update-details": {
+      // TODO: call the node update endpoint once it is implemented
       const userData = {
         swarm_role: formData
           .get("swarm_role")
@@ -1124,10 +1128,51 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
           .map((role) => role.toString()) as SwarmNode["cluster_roles"]
       };
       logger.info({ intent, userData });
-      return { errors: undefined, data: undefined, userData };
+      return {
+        errors: undefined as
+          | components["schemas"]["SwarmNodesCreateErrorResponse400"]
+          | undefined,
+        data: undefined,
+        userData
+      };
     }
     default: {
       throw new Error(`Unexpected intent \`${intent}\``);
     }
   }
+}
+
+async function updateSSHPort(serverId: string, formData: FormData) {
+  const queryClient = getQueryClient();
+
+  const userData = {
+    ssh_port: formData.get("ssh_port")?.toString() as unknown as number
+  } satisfies RequestInput<"patch", "/api/swarm/nodes/{id}/">;
+
+  const { error: errors, data } = await apiClient.PATCH(
+    "/api/swarm/nodes/{id}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: { id: serverId }
+      },
+      body: userData
+    }
+  );
+
+  if (errors) {
+    return {
+      errors,
+      userData
+    };
+  }
+
+  await queryClient.invalidateQueries(swarmQueries.singleNode(serverId));
+  toast.success("Success", {
+    description: "SSH port updated successfully",
+    closeButton: true
+  });
+  return { data };
 }

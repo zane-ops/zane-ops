@@ -15236,6 +15236,108 @@ paths:
               schema:
                 $ref: '#/components/schemas/SwarmNode'
           description: ''
+    patch:
+      operationId: updateSwarmNode
+      summary: Update a swarm node
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - swarm
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateSwarmNodeSSHPortRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateSwarmNodeSSHPortRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateSwarmNodeSSHPortRequest'
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateSwarmNodeErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateSwarmNodeSSHPort'
+          description: ''
   /api/swarm/nodes/{id}/ssh-keys/:
     post:
       operationId: createSwarmNodeSSHKey
@@ -27421,6 +27523,13 @@ components:
         last_name:
           type: string
           maxLength: 150
+    PatchedUpdateSwarmNodeSSHPortRequest:
+      type: object
+      properties:
+        ssh_port:
+          type: integer
+          maximum: 65535
+          minimum: 1
     PatchedWorkspaceApiTokenRequest:
       type: object
       properties:
@@ -36309,6 +36418,94 @@ components:
       - attr
       - code
       - detail
+    UpdateSwarmNodeError:
+      oneOf:
+      - $ref: '#/components/schemas/UpdateSwarmNodeNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateSwarmNodeSshPortErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/UpdateSwarmNodeNonFieldErrorsErrorComponent'
+          ssh_port: '#/components/schemas/UpdateSwarmNodeSshPortErrorComponent'
+    UpdateSwarmNodeErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/UpdateSwarmNodeValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/UpdateSwarmNodeValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    UpdateSwarmNodeNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateSwarmNodeSSHPort:
+      type: object
+      properties:
+        ssh_port:
+          type: integer
+          maximum: 65535
+          minimum: 1
+      required:
+      - ssh_port
+    UpdateSwarmNodeSshPortErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ssh_port
+          type: string
+          description: '* `ssh_port` - ssh_port'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateSwarmNodeValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpdateSwarmNodeError'
+      required:
+      - errors
+      - type
     User:
       type: object
       properties:

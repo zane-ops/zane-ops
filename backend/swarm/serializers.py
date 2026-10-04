@@ -18,6 +18,13 @@ class CreateSSHKeyRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
 
 
+class UpdateSwarmNodeSSHPortSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SwarmNode
+        fields = ["ssh_port"]
+        extra_kwargs = {"ssh_port": {"required": True}}
+
+
 class SSHKeySerializer(serializers.ModelSerializer):
     public_key = serializers.CharField(read_only=True)
 
