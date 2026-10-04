@@ -11,9 +11,19 @@ urlpatterns = [
         name="nodes.list",
     ),
     re_path(
+        r"^nodes/main/?$",
+        views.MainSwarmNodeAPIView.as_view(),
+        name="node.main",
+    ),
+    re_path(
         r"^nodes/(?P<id>[a-zA-Z0-9_]+)/?$",
         views.SwarmNodeDetailsAPIView.as_view(),
         name="node.detail",
+    ),
+    re_path(
+        r"^nodes/(?P<id>[a-zA-Z0-9_]+)/provision/?$",
+        views.ProvisionSwarmNodeAPIView.as_view(),
+        name="node.provision",
     ),
     re_path(
         r"^nodes/(?P<id>[a-zA-Z0-9_]+)/ssh-keys/?$",

@@ -1,4 +1,5 @@
 from typing import cast
+from django.db import transaction
 from drf_spectacular.utils import extend_schema
 
 from rest_framework import exceptions, status
@@ -16,11 +17,16 @@ from zane_api.permissions import IsInstanceOwner
 from zane_api.views.base import DefaultPageNumberPagination, EMPTY_PAGINATED_RESPONSE
 
 from swarm.models import SSHKey, SwarmNode
+from temporal.client import TemporalClient
+from temporal.shared import SwarmNodeDetails, SwarmNodePair
+from temporal.workflows import ProvisionSwarmNodeWorkflow
 from swarm.serializers import (
     CreateSSHKeyRequestSerializer,
+    ProvisionSwarmNodeRequestSerializer,
     SSHKeySerializer,
-    SwarmNodeSerializer,
+    FullSwarmNodeSerializer,
     UpdateSwarmNodeSSHPortSerializer,
+    SwarmNodeSerializer,
 )
 
 
@@ -57,7 +63,7 @@ class SwarmNodeDetailsAPIView(RetrieveUpdateAPIView):
     def get_serializer_class(self):  # type: ignore
         if self.request.method == "PATCH":
             return UpdateSwarmNodeSSHPortSerializer
-        return SwarmNodeSerializer
+        return FullSwarmNodeSerializer
 
     @extend_schema(
         operation_id="updateSwarmNode",
@@ -65,6 +71,28 @@ class SwarmNodeDetailsAPIView(RetrieveUpdateAPIView):
     )
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
+
+
+class MainSwarmNodeAPIView(APIView):
+    permission_classes = [IsInstanceOwner]
+    serializer_class = FullSwarmNodeSerializer
+
+    @extend_schema(
+        responses={200: FullSwarmNodeSerializer},
+        operation_id="getMainSwarmNode",
+        summary="Get the main server of the ZaneOps cluster",
+    )
+    def get(self, request: Request):
+        try:
+            node = (
+                SwarmNode.objects.filter(is_initial_install_server=True)
+                .prefetch_related("ssh_keys")
+                .get()
+            )
+        except SwarmNode.DoesNotExist:
+            raise exceptions.NotFound("No main server exists on the cluster")
+
+        return Response(FullSwarmNodeSerializer(node).data)
 
 
 class SwarmNodeSSHKeysAPIView(APIView):
@@ -115,3 +143,63 @@ class SwarmNodeSSHKeyDetailsAPIView(DestroyAPIView):
             raise exceptions.NotFound(f"A server with the id `{id}` does not exist")
 
         return SSHKey.objects.filter(node=node)
+
+
+class ProvisionSwarmNodeAPIView(APIView):
+    permission_classes = [IsInstanceOwner]
+    serializer_class = FullSwarmNodeSerializer
+
+    @extend_schema(
+        request=ProvisionSwarmNodeRequestSerializer,
+        responses={202: FullSwarmNodeSerializer},
+        operation_id="provisionSwarmNode",
+        summary="Provision a swarm node and add it to the ZaneOps cluster",
+    )
+    @transaction.atomic()
+    def post(self, request: Request, id: str):
+        try:
+            node = SwarmNode.objects.select_for_update().get(id=id)
+        except SwarmNode.DoesNotExist:
+            raise exceptions.NotFound(f"A server with the id `{id}` does not exist")
+
+        main_node = SwarmNode.objects.filter(is_initial_install_server=True).first()
+
+        form = ProvisionSwarmNodeRequestSerializer(
+            data=request.data, context={"target_node": node, "main_node": main_node}
+        )
+        form.is_valid(raise_exception=True)
+        main_node = cast(SwarmNode, main_node)
+
+        data = cast(ReturnDict, form.data)
+        target_key = node.ssh_keys.get(id=data["target_ssh_key_id"])
+        main_key = main_node.ssh_keys.get(id=data["main_ssh_key_id"])
+
+        payload = SwarmNodePair(
+            target_node=SwarmNodeDetails(
+                id=node.id,
+                private_ip=node.private_ip,
+                swarm_role=node.swarm_role,  # type: ignore
+                cluster_roles=node.cluster_roles,  # type: ignore
+                ssh_key=target_key.private_key,
+                ssh_port=node.ssh_port,
+            ),
+            main_node=SwarmNodeDetails(
+                id=main_node.id,
+                private_ip=main_node.private_ip,
+                swarm_role=main_node.swarm_role,  # type: ignore
+                cluster_roles=main_node.cluster_roles,  # type: ignore
+                ssh_key=main_key.private_key,
+                ssh_port=main_node.ssh_port,
+            ),
+        )
+        # workflow_id = node.provision_swarm_node_workflow_id
+        # transaction.on_commit(
+        #     lambda: TemporalClient.start_workflow(
+        #         ProvisionSwarmNodeWorkflow.run,
+        #         payload,
+        #         id=workflow_id,
+        #     )
+        # )
+
+        response = FullSwarmNodeSerializer(node)
+        return Response(response.data, status=status.HTTP_202_ACCEPTED)
