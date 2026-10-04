@@ -19,11 +19,14 @@ import {
   MemoryStickIcon,
   MicrochipIcon,
   PackageIcon,
+  PencilLineIcon,
   PickaxeIcon,
   PlusIcon,
-  WrenchIcon
+  WrenchIcon,
+  XIcon
 } from "lucide-react";
 import * as React from "react";
+import { flushSync } from "react-dom";
 import { Link, href, useFetcher } from "react-router";
 import type { SwarmNode } from "~/api/types";
 import { Code } from "~/components/code";
@@ -42,9 +45,18 @@ import {
 } from "~/components/ui/dialog";
 import {
   FieldSet,
+  FieldSetCheckbox,
+  FieldSetErrors,
   FieldSetInput,
-  FieldSetLabel
+  FieldSetLabel,
+  FieldSetSelect
 } from "~/components/ui/fieldset";
+import {
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import {
   Tooltip,
@@ -100,175 +112,7 @@ export default function SwarmNodeDetailsPage({
             <div className="w-full flex flex-col gap-5 pt-1 pb-8">
               <h2 className="text-lg text-grey">Details</h2>
 
-              <div className="w-full max-w-4xl">
-                <div className="flex flex-col  gap-2 w-full">
-                  <FieldSet name="id" className="flex flex-col gap-1.5 flex-1">
-                    <FieldSetLabel>ID</FieldSetLabel>
-                    <div className="relative">
-                      <FieldSetInput
-                        disabled
-                        className={cn(
-                          "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                          "disabled:border-transparent disabled:opacity-100",
-                          "disabled:text-transparent disabled:select-none"
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
-                          "max-w-full min-w-0 overflow-auto pr-4"
-                        )}
-                      >
-                        <HashIcon className="text-grey size-4 flex-none mr-1" />
-                        <span className="text-card-foreground">{node.id}</span>
-
-                        <TooltipProvider>
-                          <Tooltip delayDuration={0}>
-                            <TooltipTrigger asChild>
-                              <CopyButton
-                                value={node.id}
-                                label={node.id}
-                                className="!opacity-100 ml-1.5"
-                              />
-                            </TooltipTrigger>
-                            <TooltipContent>Copy ID</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </span>
-                    </div>
-                  </FieldSet>
-
-                  <FieldSet
-                    name="swarm_node_id"
-                    className="flex flex-col gap-1.5 flex-1"
-                  >
-                    <FieldSetLabel>Docker Swarm Node ID</FieldSetLabel>
-                    <div className="relative">
-                      <FieldSetInput
-                        disabled
-                        className={cn(
-                          "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                          "disabled:border-transparent disabled:opacity-100",
-                          "disabled:text-transparent disabled:select-none"
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
-                          "max-w-full min-w-0 overflow-auto pr-4"
-                        )}
-                      >
-                        <HashIcon className="text-grey size-4 flex-none mr-1" />
-                        {node.swarm_node_id ? (
-                          <span className="text-card-foreground">
-                            {node.swarm_node_id}
-                          </span>
-                        ) : (
-                          <code className="text-grey italic">
-                            {"<unknown>"}
-                          </code>
-                        )}
-
-                        {node.swarm_node_id && (
-                          <TooltipProvider>
-                            <Tooltip delayDuration={0}>
-                              <TooltipTrigger asChild>
-                                <CopyButton
-                                  value={node.swarm_node_id}
-                                  label={node.swarm_node_id}
-                                  className="!opacity-100 ml-1.5"
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent>Copy Node ID</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                      </span>
-                    </div>
-                  </FieldSet>
-
-                  <FieldSet
-                    name="swarm_role"
-                    className="flex flex-col gap-1.5 flex-1"
-                  >
-                    <FieldSetLabel>Docker Swarm Role</FieldSetLabel>
-                    <div className="relative">
-                      <FieldSetInput
-                        disabled
-                        className={cn(
-                          "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                          "disabled:border-transparent disabled:opacity-100",
-                          "disabled:text-transparent disabled:select-none"
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
-                          "max-w-full min-w-0 overflow-auto pr-4"
-                        )}
-                      >
-                        {node.swarm_role === "MANAGER" ? (
-                          <BrainIcon className="text-grey size-4 flex-none mr-1" />
-                        ) : (
-                          <PickaxeIcon className="text-grey size-4 flex-none mr-1" />
-                        )}
-                        <span className="text-card-foreground">
-                          {node.swarm_role}
-                        </span>
-                      </span>
-                    </div>
-                  </FieldSet>
-
-                  <FieldSet
-                    name="cluster_roles"
-                    className="flex flex-col gap-1.5 flex-1"
-                  >
-                    <FieldSetLabel>ZaneOps Cluster Roles</FieldSetLabel>
-                    <div className="flex items-center gap-1.5">
-                      {node.cluster_roles.includes("APP_SERVER") && (
-                        <TooltipProvider>
-                          <Tooltip delayDuration={0}>
-                            <TooltipTrigger asChild>
-                              <Code className="inline-flex items-center gap-1 px-1.5 cursor-help">
-                                <PackageIcon className="size-4 flex-none" />
-                                <span>App Server</span>
-                                <InfoIcon className="size-3 flex-none" />
-                              </Code>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-64">
-                              <span className="dark:text-card-foreground text-grey">
-                                App server:&nbsp;
-                              </span>
-                              your services can be deployed and run on this
-                              server.
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                      {node.cluster_roles.includes("BUILD_SERVER") && (
-                        <TooltipProvider>
-                          <Tooltip delayDuration={0}>
-                            <TooltipTrigger asChild>
-                              <Code className="inline-flex items-center gap-1 px-1.5 cursor-help">
-                                <WrenchIcon className="size-4 flex-none" />
-                                <span>Build Server</span>
-                                <InfoIcon className="size-3 flex-none" />
-                              </Code>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-64">
-                              <span className="dark:text-card-foreground text-grey">
-                                Build server:&nbsp;
-                              </span>
-                              docker images for git services are built on this
-                              server.
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                    </div>
-                  </FieldSet>
-                </div>
-              </div>
+              <SwarmNodeDetailsForm node={node} />
             </div>
           </section>
 
@@ -288,6 +132,55 @@ export default function SwarmNodeDetailsPage({
 
                 <div className="w-full max-w-4xl">
                   <div className="flex flex-col  gap-2 w-full">
+                    <FieldSet
+                      name="swarm_node_id"
+                      className="flex flex-col gap-1.5 flex-1"
+                    >
+                      <FieldSetLabel>Docker Swarm Node ID</FieldSetLabel>
+                      <div className="relative">
+                        <FieldSetInput
+                          disabled
+                          className={cn(
+                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                            "disabled:border-transparent disabled:opacity-100",
+                            "disabled:text-transparent disabled:select-none"
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
+                            "max-w-full min-w-0 overflow-auto pr-4"
+                          )}
+                        >
+                          <HashIcon className="text-grey size-4 flex-none mr-1" />
+                          {node.swarm_node_id ? (
+                            <span className="text-card-foreground">
+                              {node.swarm_node_id}
+                            </span>
+                          ) : (
+                            <code className="text-grey italic">
+                              {"<unknown>"}
+                            </code>
+                          )}
+
+                          {node.swarm_node_id && (
+                            <TooltipProvider>
+                              <Tooltip delayDuration={0}>
+                                <TooltipTrigger asChild>
+                                  <CopyButton
+                                    value={node.swarm_node_id}
+                                    label={node.swarm_node_id}
+                                    className="!opacity-100 ml-1.5"
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent>Copy Node ID</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </span>
+                      </div>
+                    </FieldSet>
+
                     <FieldSet
                       name="hostname"
                       className="flex flex-col gap-1.5 flex-1"
@@ -376,32 +269,7 @@ export default function SwarmNodeDetailsPage({
                       </div>
                     </FieldSet>
 
-                    <FieldSet
-                      name="ssh_port"
-                      className="flex flex-col gap-1.5 flex-1"
-                    >
-                      <FieldSetLabel>SSH Port</FieldSetLabel>
-                      <div className="relative">
-                        <FieldSetInput
-                          disabled
-                          className={cn(
-                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                            "disabled:border-transparent disabled:opacity-100",
-                            "disabled:text-transparent disabled:select-none"
-                          )}
-                        />
-
-                        <span
-                          className={cn(
-                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
-                            "max-w-full min-w-0 overflow-auto pr-4"
-                          )}
-                        >
-                          <EthernetPortIcon className="text-grey size-4 flex-none mr-1" />
-                          <span>{node.ssh_port}</span>
-                        </span>
-                      </div>
-                    </FieldSet>
+                    <SwarmNodeSSHPortForm node={node} />
                   </div>
                 </div>
               </div>
@@ -899,4 +767,367 @@ function SwarmNodeRemoveForm(node: SwarmNode) {
       </Tooltip>
     </TooltipProvider>
   );
+}
+
+type SwarmNodeFormProps = {
+  node: SwarmNode;
+};
+
+function SwarmNodeDetailsForm({ node }: SwarmNodeFormProps) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const isPending = fetcher.state !== "idle";
+  const [data, setData] = React.useState(fetcher.data);
+  const [isEditing, setIsEditing] = React.useState(false);
+  const errors = getFormErrorsFromResponseData(data?.errors);
+
+  const [swarmRole, setSwarmRole] = React.useState(node.swarm_role);
+  const [clusterRoles, setClusterRoles] = React.useState(node.cluster_roles);
+  const SelectTriggerRef =
+    React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
+      setIsEditing(false);
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  const toggleClusterRole = (
+    role: SwarmNode["cluster_roles"][number],
+    checked: boolean
+  ) => {
+    setClusterRoles((roles) =>
+      checked ? [...roles, role] : roles.filter((r) => r !== role)
+    );
+  };
+
+  return (
+    <div className="w-full max-w-4xl">
+      <fetcher.Form method="post" className="flex flex-col gap-4 w-full">
+        {errors.non_field_errors && (
+          <Alert variant="destructive">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{errors.non_field_errors}</AlertDescription>
+          </Alert>
+        )}
+
+        <FieldSet
+          errors={errors.swarm_role}
+          name="swarm_role"
+          className="flex flex-col gap-1.5 flex-1"
+        >
+          <FieldSetLabel htmlFor="swarm_role">Docker Swarm Role</FieldSetLabel>
+          <FieldSetSelect
+            name="swarm_role"
+            value={swarmRole}
+            disabled={!isEditing}
+            onValueChange={(value) =>
+              setSwarmRole(value as SwarmNode["swarm_role"])
+            }
+          >
+            <SelectTrigger
+              id="swarm_role"
+              ref={SelectTriggerRef}
+              className={cn(
+                "[&_[data-item]]:flex-row [&_[data-item]]:gap-2",
+                "[&_[data-item]_[data-description]]:hidden",
+                "disabled:bg-muted disabled:border-transparent disabled:opacity-100"
+              )}
+            >
+              <SelectValue placeholder="Select a swarm role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                value="WORKER"
+                className="flex items-start [&_[data-indicator]]:relative [&_[data-indicator]]:top-1"
+              >
+                <div className="inline-flex items-start gap-2">
+                  <PickaxeIcon className="size-4 flex-none relative top-1" />
+                  <div className="flex flex-col" data-item>
+                    <span>Worker</span>
+                    <span className="text-muted-foreground" data-description>
+                      Only runs workloads assigned by the managers
+                    </span>
+                  </div>
+                </div>
+              </SelectItem>
+              <SelectItem
+                value="MANAGER"
+                className="flex items-start [&_[data-indicator]]:relative [&_[data-indicator]]:top-1"
+              >
+                <div className="inline-flex items-start gap-2">
+                  <BrainIcon className="size-4 flex-none relative top-1" />
+                  <div className="flex flex-col" data-item>
+                    <span>Manager</span>
+                    <span className="text-muted-foreground" data-description>
+                      Runs workloads and takes part in managing the Docker swarm
+                      cluster state
+                    </span>
+                  </div>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </FieldSetSelect>
+        </FieldSet>
+
+        <div className="flex flex-col gap-2">
+          <span>ZaneOps Cluster Roles</span>
+
+          {errors.cluster_roles && (
+            <FieldSet
+              errors={errors.cluster_roles}
+              className="flex flex-col gap-1"
+            >
+              <FieldSetErrors />
+            </FieldSet>
+          )}
+
+          <FieldSet
+            name="cluster_roles"
+            className="flex-1 inline-flex gap-2 flex-col"
+          >
+            <div className="inline-flex gap-2 items-start">
+              <FieldSetCheckbox
+                value="APP_SERVER"
+                disabled={!isEditing}
+                checked={clusterRoles.includes("APP_SERVER")}
+                onCheckedChange={(checked) =>
+                  toggleClusterRole("APP_SERVER", checked === true)
+                }
+                className="relative top-1 disabled:opacity-60"
+              />
+
+              <div className="flex flex-col gap-0.5">
+                <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
+                  <PackageIcon className="size-4 flex-none" />
+                  App Server
+                </FieldSetLabel>
+
+                <small className="text-grey text-sm">
+                  Your services can be deployed and run on this server.
+                </small>
+              </div>
+            </div>
+          </FieldSet>
+
+          <FieldSet
+            name="cluster_roles"
+            className="flex-1 inline-flex gap-2 flex-col"
+          >
+            <div className="inline-flex gap-2 items-start">
+              <FieldSetCheckbox
+                value="BUILD_SERVER"
+                disabled={!isEditing}
+                checked={clusterRoles.includes("BUILD_SERVER")}
+                onCheckedChange={(checked) =>
+                  toggleClusterRole("BUILD_SERVER", checked === true)
+                }
+                className="relative top-1 disabled:opacity-60"
+              />
+
+              <div className="flex flex-col gap-0.5">
+                <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
+                  <WrenchIcon className="size-4 flex-none" />
+                  Build Server
+                </FieldSetLabel>
+
+                <small className="text-grey text-sm">
+                  Docker images for git services can be built on this server.
+                </small>
+              </div>
+            </div>
+          </FieldSet>
+        </div>
+
+        <div className="flex gap-4">
+          {isEditing && (
+            <SubmitButton
+              isPending={isPending}
+              variant="secondary"
+              className="self-start"
+              name="intent"
+              value="update-details"
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span>Updating...</span>
+                </>
+              ) : (
+                <>
+                  <CheckIcon size={15} className="flex-none" />
+                  <span>Update</span>
+                </>
+              )}
+            </SubmitButton>
+          )}
+          <Button
+            variant="outline"
+            type="reset"
+            disabled={isPending}
+            onClick={() => {
+              const newIsEditing = !isEditing;
+              flushSync(() => {
+                setIsEditing(newIsEditing);
+                setSwarmRole(node.swarm_role);
+                setClusterRoles(node.cluster_roles);
+              });
+              if (newIsEditing) {
+                SelectTriggerRef.current?.focus();
+              }
+              setData(undefined);
+            }}
+            className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+          >
+            {!isEditing ? (
+              <>
+                <span>Edit</span>
+                <PencilLineIcon size={15} className="flex-none" />
+              </>
+            ) : (
+              <>
+                <XIcon size={15} className="flex-none" />
+                <span>Cancel</span>
+              </>
+            )}
+          </Button>
+        </div>
+      </fetcher.Form>
+    </div>
+  );
+}
+
+function SwarmNodeSSHPortForm({ node }: SwarmNodeFormProps) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const isPending = fetcher.state !== "idle";
+  const [data, setData] = React.useState(fetcher.data);
+  const [isEditing, setIsEditing] = React.useState(false);
+  const errors = getFormErrorsFromResponseData(data?.errors);
+  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
+      setIsEditing(false);
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  return (
+    <fetcher.Form
+      method="post"
+      className="flex flex-col md:flex-row gap-2 w-full"
+    >
+      <FieldSet
+        name="ssh_port"
+        errors={errors.non_field_errors || errors.ssh_port}
+        className="flex flex-col gap-1.5 flex-1"
+      >
+        <FieldSetLabel>SSH Port</FieldSetLabel>
+        <div className="relative">
+          <FieldSetInput
+            ref={inputRef}
+            placeholder="ex: 22"
+            defaultValue={node.ssh_port}
+            disabled={!isEditing}
+            className={cn(
+              "disabled:bg-muted",
+              "disabled:border-transparent disabled:opacity-100",
+              !isEditing && "pl-8"
+            )}
+          />
+          {!isEditing && (
+            <EthernetPortIcon className="text-grey size-4 flex-none absolute left-3 top-1/2 -translate-y-1/2" />
+          )}
+
+          {!isEditing && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                flushSync(() => {
+                  setIsEditing(true);
+                });
+                inputRef.current?.focus();
+              }}
+              className={cn(
+                "absolute inset-y-0 right-0 text-sm py-0 border-0",
+                "bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+              )}
+            >
+              <span>Edit</span>
+              <PencilLineIcon size={15} />
+            </Button>
+          )}
+        </div>
+      </FieldSet>
+
+      {isEditing && (
+        <div className="flex gap-2 md:relative top-8">
+          <SubmitButton
+            isPending={isPending}
+            variant="outline"
+            className="bg-inherit"
+            name="intent"
+            value="update-ssh-port"
+          >
+            {isPending ? (
+              <>
+                <LoaderIcon className="animate-spin" size={15} />
+                <span className="sr-only">Updating SSH port...</span>
+              </>
+            ) : (
+              <>
+                <CheckIcon size={15} className="flex-none" />
+                <span className="sr-only">Update SSH port</span>
+              </>
+            )}
+          </SubmitButton>
+          <Button
+            onClick={(ev) => {
+              ev.currentTarget.form?.reset();
+              setIsEditing(false);
+              setData(undefined);
+            }}
+            variant="outline"
+            className="bg-inherit"
+            type="reset"
+          >
+            <XIcon size={15} className="flex-none" />
+            <span className="sr-only">Cancel</span>
+          </Button>
+        </div>
+      )}
+    </fetcher.Form>
+  );
+}
+
+export async function clientAction({ request }: Route.ClientActionArgs) {
+  const formData = await request.formData();
+  const intent = formData.get("intent")?.toString();
+
+  // TODO: call the node update endpoint once it is implemented
+  switch (intent) {
+    case "update-ssh-port": {
+      const userData = {
+        ssh_port: formData.get("ssh_port")?.toString() as unknown as number
+      };
+      logger.info({ intent, userData });
+      return { errors: undefined, data: undefined, userData };
+    }
+    case "update-details": {
+      const userData = {
+        swarm_role: formData
+          .get("swarm_role")
+          ?.toString() as SwarmNode["swarm_role"],
+        cluster_roles: formData
+          .getAll("cluster_roles")
+          .map((role) => role.toString()) as SwarmNode["cluster_roles"]
+      };
+      logger.info({ intent, userData });
+      return { errors: undefined, data: undefined, userData };
+    }
+    default: {
+      throw new Error(`Unexpected intent \`${intent}\``);
+    }
+  }
 }
