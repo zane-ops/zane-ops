@@ -74,7 +74,6 @@ class SwarmNodeActivities:
                 f"",
                 f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
                 f"➡️ Preparing node provisioning for server {Colors.ORANGE}{node.private_ip}{Colors.ENDC}...",
-                f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
             ],
         )
         updated = await SwarmNode.objects.filter(
@@ -103,7 +102,6 @@ class SwarmNodeActivities:
                 f"",
                 f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
                 f"➡️ Preparing node deprovisioning for server {Colors.ORANGE}{node.private_ip}{Colors.ENDC}...",
-                f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
             ],
         )
         swarm_node = await SwarmNode.objects.filter(
@@ -176,10 +174,7 @@ class SwarmNodeActivities:
             )
         await provision_log(
             payload.target_node,
-            [
-                "",
-                f"➡️ Adjusting ssh key permissions for {Colors.ORANGE}{new_node_key_location}{Colors.ENDC}",
-            ],
+            f"Adjusting ssh key permissions for {Colors.ORANGE}{new_node_key_location}{Colors.ENDC}",
         )
         os.chmod(new_node_key_location, 0o600)
         await provision_log(payload.target_node, f"✅ Done")
@@ -222,7 +217,6 @@ class SwarmNodeActivities:
                     [
                         f"",
                         f"",
-                        f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
                         f"❌  Node provisioning finished with status {Colors.RED}{result.status}{Colors.ENDC}",
                         f"    and message {Colors.RED}{result.status_message}{Colors.ENDC}",
                         f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
@@ -236,7 +230,6 @@ class SwarmNodeActivities:
                     [
                         f"",
                         f"",
-                        f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
                         f"✅ Node provisioning finished with status {Colors.GREEN}{result.status}{Colors.ENDC}",
                         f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
                     ],
@@ -281,7 +274,6 @@ class SwarmNodeActivities:
                 [
                     f"",
                     f"",
-                    f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
                     f"✅ Node deprovisioning finished with status {Colors.GREY}{result.status}{Colors.ENDC}",
                     f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
                 ],
@@ -292,7 +284,6 @@ class SwarmNodeActivities:
                 [
                     f"",
                     f"",
-                    f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
                     f"❌  Node deprovisioning failed, the node is still part of the cluster with status {Colors.RED}{result.status}{Colors.ENDC}",
                     f"    and message {Colors.RED}{result.status_message}{Colors.ENDC}",
                     f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
