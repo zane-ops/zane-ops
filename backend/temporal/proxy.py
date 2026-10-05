@@ -827,9 +827,11 @@ class ZaneProxyClient:
                             base_path=url.base_path,
                             associated_port=url.associated_port,
                             strip_prefix=url.strip_prefix,
-                            redirect_to=URLRedirectToDto.from_dict(url.redirect_to)
-                            if url.redirect_to is not None
-                            else None,
+                            redirect_to=(
+                                URLRedirectToDto.from_dict(url.redirect_to)
+                                if url.redirect_to is not None
+                                else None
+                            ),
                         ),
                         current_deployment=deployment,
                     )
