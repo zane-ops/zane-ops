@@ -22,19 +22,26 @@ import {
   PencilLineIcon,
   PickaxeIcon,
   PlusIcon,
+  ServerOffIcon,
+  Trash2Icon,
   WrenchIcon,
   XIcon
 } from "lucide-react";
 import * as React from "react";
 import { flushSync } from "react-dom";
-import { Link, href, useFetcher } from "react-router";
+import { Link, href, redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
-import type { SwarmNode } from "~/api/types";
+import type { FullSwarmNode, SwarmNode } from "~/api/types";
 import type { components } from "~/api/v1";
 import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
+import {
+  DeleteConfirmationDialog,
+  SimpleConfirmationDialog
+} from "~/components/delete-confirmation-dialog";
 import { DockerHubLogo } from "~/components/docker-hub-logo";
+import { RootSSHKeySelect } from "~/components/root-ssh-key-select";
 import { SSHKeyCard } from "~/components/ssh-key-card";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
@@ -71,6 +78,7 @@ import { createDevLogger } from "~/lib/logger";
 import { swarmQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
+  type ErrorResponseFromAPI,
   cn,
   formatStorageValue,
   getCsrfTokenHeader,
@@ -711,76 +719,178 @@ function SSHKeyAddDialog({ serverId }: SSHKeyAddDialogProps) {
   );
 }
 
-function SwarmNodeDeleteForm(node: SwarmNode) {
-  const isMemberOfCluster = !["CREATED", "FAILED", "REMOVED"].includes(
-    node.status
-  );
-  // TODO: implement this
-  return (
+function SwarmNodeDeleteForm(node: FullSwarmNode) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+  const isMemberOfCluster = ![
+    "CREATED",
+    "FAILED",
+    "REMOVED",
+    "PROVISIONING"
+  ].includes(node.status);
+  const nodeName = node.hostname ?? node.private_ip;
+
+  return isMemberOfCluster ? (
     <TooltipProvider>
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
           <Button
             variant="destructive"
-            className={cn(
-              "destructive-outline gap-2",
-              isMemberOfCluster && "opacity-50"
-            )}
-            onClick={(e) => {
-              if (isMemberOfCluster) {
-                e.preventDefault();
-              }
-            }}
+            className="destructive-outline gap-2 opacity-50"
+            onClick={(e) => e.preventDefault()}
           >
+            <Trash2Icon size={15} className="flex-none" />
             Delete Server
           </Button>
         </TooltipTrigger>
-        {isMemberOfCluster && (
-          <TooltipContent className="max-w-56 text-pretty">
-            This server is still part of the cluster. Deprovision it before
-            deleting it.
-          </TooltipContent>
-        )}
+        <TooltipContent className="max-w-56 text-pretty">
+          This server is still part of the cluster. Deprovision it before
+          deleting it.
+        </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  ) : (
+    <DeleteConfirmationDialog
+      fetcher={fetcher}
+      title={
+        <>
+          Delete the server&nbsp;
+          <span className="text-grey">&ldquo;{nodeName}&rdquo;</span>?
+        </>
+      }
+      message={
+        <p>
+          This server and all its SSH keys will be permanently deleted from
+          ZaneOps. This action cannot be undone.
+        </p>
+      }
+      confirmationValue={nodeName}
+      confirmationFieldName="server_name"
+      form={
+        <fetcher.Form method="post">
+          <FieldSet name="server_name" errors={errors.server_name}>
+            <FieldSetInput />
+          </FieldSet>
+          <input type="hidden" name="intent" value="delete-server" />
+        </fetcher.Form>
+      }
+      trigger={
+        <DialogTrigger asChild>
+          <Button variant="destructive" className="destructive-outline gap-2">
+            <Trash2Icon size={15} className="flex-none" />
+            Delete Server
+          </Button>
+        </DialogTrigger>
+      }
+    />
   );
 }
 
-function SwarmDeprovisionForm(node: SwarmNode) {
+function SwarmDeprovisionForm(node: FullSwarmNode) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
   const isNotMemberOfClusterYet = [
     "CREATED",
     "FAILED",
     "REMOVED",
     "PROVISIONING"
   ].includes(node.status);
-  // TODO: implement this
-  return (
+
+  const { data: mainNode, isLoading: isLoadingMainNode } = useQuery({
+    ...swarmQueries.mainNode,
+    enabled: !isNotMemberOfClusterYet
+  });
+
+  const targetRootKeys = node.ssh_keys.filter((key) => key.user === "root");
+  const mainRootKeys = (mainNode?.ssh_keys ?? []).filter(
+    (key) => key.user === "root"
+  );
+
+  return isNotMemberOfClusterYet ? (
     <TooltipProvider>
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
           <Button
             variant="warning"
-            className={cn(
-              "destructive-outline gap-2",
-              isNotMemberOfClusterYet && "opacity-50"
-            )}
-            onClick={(e) => {
-              if (isNotMemberOfClusterYet) {
-                e.preventDefault();
-              }
-            }}
+            className="destructive-outline gap-2 opacity-50"
+            onClick={(e) => e.preventDefault()}
           >
+            <ServerOffIcon size={15} className="flex-none" />
             Deprovision Server
           </Button>
         </TooltipTrigger>
-        {isNotMemberOfClusterYet && (
-          <TooltipContent className="max-w-56 text-pretty">
-            This server is not part of the cluster yet, so there is nothing to
-            deprovision.
-          </TooltipContent>
-        )}
+        <TooltipContent className="max-w-56 text-pretty">
+          This server is not part of the cluster yet, so there is nothing to
+          deprovision.
+        </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  ) : (
+    <SimpleConfirmationDialog
+      fetcher={fetcher}
+      variant="warning"
+      className="max-w-xl"
+      title={
+        <>
+          Deprovision the server&nbsp;
+          <span className="text-grey">
+            &ldquo;{node.hostname ?? node.private_ip}&rdquo;
+          </span>
+          ?
+        </>
+      }
+      message={
+        <p>
+          All services running on this server will be moved to other servers,
+          then the server will leave the cluster. ZaneOps will need to connect
+          to both this server and the main server as <Code>root</Code> to
+          proceed.
+        </p>
+      }
+      confirmText="Deprovision"
+      pendingText="Deprovisioning..."
+      form={
+        <fetcher.Form method="post" className="flex flex-col gap-4 mb-5">
+          <input type="hidden" name="intent" value="deprovision-server" />
+          <RootSSHKeySelect
+            name="target_ssh_key_id"
+            label="Root SSH key for this server"
+            keys={targetRootKeys}
+            errors={errors.target_ssh_key_id}
+          />
+
+          {isLoadingMainNode ? (
+            <div className="flex items-center gap-2 text-grey text-sm">
+              <LoaderIcon className="animate-spin flex-none" size={15} />
+              <span>Loading main server keys...</span>
+            </div>
+          ) : mainNode ? (
+            <RootSSHKeySelect
+              name="main_ssh_key_id"
+              label="Root SSH key for the main server"
+              keys={mainRootKeys}
+              errors={errors.main_ssh_key_id}
+            />
+          ) : (
+            <Alert variant="destructive">
+              <AlertCircleIcon className="size-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>
+                Could not find the main server of the cluster.
+              </AlertDescription>
+            </Alert>
+          )}
+        </fetcher.Form>
+      }
+      trigger={
+        <DialogTrigger asChild>
+          <Button variant="warning" className="destructive-outline gap-2">
+            <ServerOffIcon size={15} className="flex-none" />
+            Deprovision Server
+          </Button>
+        </DialogTrigger>
+      }
+    />
   );
 }
 
@@ -1127,6 +1237,12 @@ export async function clientAction({
     case "update-ssh-port": {
       return updateSSHPort(params.serverId, formData);
     }
+    case "delete-server": {
+      return deleteServer(params.serverId, formData);
+    }
+    case "deprovision-server": {
+      return deprovisionServer(params.serverId, formData);
+    }
     case "update-details": {
       // TODO: call the node update endpoint once it is implemented
       const userData = {
@@ -1185,4 +1301,93 @@ async function updateSSHPort(serverId: string, formData: FormData) {
     closeButton: true
   });
   return { data };
+}
+
+async function deleteServer(serverId: string, formData: FormData) {
+  const queryClient = getQueryClient();
+  const node = await queryClient.ensureQueryData(
+    swarmQueries.singleNode(serverId)
+  );
+  const nodeName = node.hostname ?? node.private_ip;
+
+  if (formData.get("server_name")?.toString().trim() !== nodeName) {
+    return {
+      errors: {
+        type: "validation_error",
+        errors: [
+          {
+            attr: "server_name",
+            code: "invalid",
+            detail: "The server name does not match"
+          }
+        ]
+      } satisfies ErrorResponseFromAPI
+    };
+  }
+
+  const { error: errors } = await apiClient.DELETE("/api/swarm/nodes/{id}/", {
+    headers: {
+      ...(await getCsrfTokenHeader())
+    },
+    params: {
+      path: { id: serverId }
+    }
+  });
+
+  if (errors) {
+    return { errors };
+  }
+
+  queryClient.removeQueries(swarmQueries.singleNode(serverId));
+  await queryClient.invalidateQueries({
+    queryKey: swarmQueries.nodeList().queryKey.slice(0, 1)
+  });
+
+  toast.success("Success", {
+    description: (
+      <span>
+        Server <strong>{nodeName}</strong> has been deleted.
+      </span>
+    ),
+    closeButton: true
+  });
+  throw redirect(href("/admin/servers"));
+}
+
+async function deprovisionServer(serverId: string, formData: FormData) {
+  const queryClient = getQueryClient();
+
+  const userData = {
+    target_ssh_key_id: Number(formData.get("target_ssh_key_id")),
+    main_ssh_key_id: Number(formData.get("main_ssh_key_id"))
+  } satisfies RequestInput<"put", "/api/swarm/nodes/{id}/deprovision/">;
+
+  const { error: errors } = await apiClient.PUT(
+    "/api/swarm/nodes/{id}/deprovision/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: { id: serverId }
+      },
+      body: userData
+    }
+  );
+
+  if (errors) {
+    return { errors, userData };
+  }
+
+  await queryClient.invalidateQueries({
+    queryKey: swarmQueries.nodeList().queryKey.slice(0, 1)
+  });
+
+  toast.success("Success", {
+    description: "Deprovisioning of the server has started",
+    closeButton: true
+  });
+  throw redirect(
+    href("/admin/servers/:serverId/deployment-logs", { serverId })
+  );
 }
