@@ -32,7 +32,7 @@ from temporal.shared import (
 )
 from temporal.workflows import (
     ProvisionSwarmNodeWorkflow,
-    RemoveSwarmNodeFromClusterWorkflow,
+    DeprovisionSwarmNodeWorkflow,
 )
 from swarm.serializers import (
     CreateSSHKeyRequestSerializer,
@@ -293,10 +293,10 @@ class DeprovisionSwarmNodeAPIView(APIView):
             ),
         )
 
-        workflow_id = node.remove_swarm_node_workflow_id
+        workflow_id = node.deprovision_swarm_node_workflow_id
         transaction.on_commit(
             lambda: TemporalClient.start_workflow(
-                RemoveSwarmNodeFromClusterWorkflow.run,
+                DeprovisionSwarmNodeWorkflow.run,
                 payload,
                 id=workflow_id,
             )

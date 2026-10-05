@@ -99,8 +99,8 @@ class SwarmNode(TimestampedModel):
         return f"provision-{self.id}"
 
     @property
-    def remove_swarm_node_workflow_id(self) -> str:
-        return f"remove-{self.id}"
+    def deprovision_swarm_node_workflow_id(self) -> str:
+        return f"deprovision-{self.id}"
 
     @property
     def build_task_queue(self) -> str:
