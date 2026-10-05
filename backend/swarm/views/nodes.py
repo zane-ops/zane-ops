@@ -13,7 +13,13 @@ from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework.views import APIView
 
+from django.conf import settings
+
+from search.dtos import RuntimeLogSource
+from search.loki_client import LokiSearchClient
+from search.serializers import RuntimeLogsSearchSerializer
 from zane_api.permissions import IsInstanceOwner
+from zane_api.views.serializers import DeploymentBuildLogsQuerySerializer
 from zane_api.views.base import DefaultPageNumberPagination, EMPTY_PAGINATED_RESPONSE
 
 from swarm.models import SSHKey, SwarmNode
@@ -204,3 +210,32 @@ class ProvisionSwarmNodeAPIView(APIView):
 
         response = FullSwarmNodeSerializer(node)
         return Response(response.data, status=status.HTTP_202_ACCEPTED)
+
+
+class SwarmNodeBuildLogsAPIView(APIView):
+    permission_classes = [IsInstanceOwner]
+    serializer_class = RuntimeLogsSearchSerializer
+
+    @extend_schema(
+        operation_id="getSwarmNodeBuildLogs",
+        summary="Get swarm node provisioning logs",
+        parameters=[DeploymentBuildLogsQuerySerializer],
+    )
+    def get(self, request: Request, id: str):
+        try:
+            node = SwarmNode.objects.get(id=id)
+        except SwarmNode.DoesNotExist:
+            raise exceptions.NotFound(f"A server with the id `{id}` does not exist")
+
+        form = DeploymentBuildLogsQuerySerializer(data=request.query_params)
+        form.is_valid(raise_exception=True)
+
+        search_client = LokiSearchClient(host=settings.LOKI_HOST)
+        data = search_client.search(
+            query=dict(
+                **form.validated_data,  # type: ignore
+                swarm_node_id=node.id,
+                source=[RuntimeLogSource.SYSTEM],
+            )
+        )
+        return Response(data)

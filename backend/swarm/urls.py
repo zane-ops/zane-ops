@@ -26,6 +26,11 @@ urlpatterns = [
         name="node.provision",
     ),
     re_path(
+        r"^nodes/(?P<id>[a-zA-Z0-9_]+)/build-logs/?$",
+        views.SwarmNodeBuildLogsAPIView.as_view(),
+        name="node.build_logs",
+    ),
+    re_path(
         r"^nodes/(?P<id>[a-zA-Z0-9_]+)/ssh-keys/?$",
         views.SwarmNodeSSHKeysAPIView.as_view(),
         name="node.ssh_keys",
