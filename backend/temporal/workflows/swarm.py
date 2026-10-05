@@ -234,9 +234,16 @@ class DeprovisionSwarmNodeWorkflow:
             f"Running workflow DeprovisionSwarmNodeWorkflow.run({payload.target_node.id=}, {payload.target_node.private_ip=})\n"
             f"{Colors.BLUE}==============================================================={Colors.ENDC}"
         )
+        # Not in the `try` block, if the node cannot be deprovisioned we don't want to touch it
+        current_status = await workflow.execute_activity_method(
+            SwarmNodeActivities.prepare_node_deprovision,
+            payload.target_node,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
         node_deployment_result = SwarmNodeStatusResult(
             id=payload.target_node.id,
-            status="ACTIVE",
+            status=current_status,
         )
         tmp_dir: str | None = None
 

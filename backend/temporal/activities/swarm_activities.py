@@ -72,9 +72,9 @@ class SwarmNodeActivities:
             [
                 f"",
                 f"",
-                f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
+                f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
                 f"➡️ Preparing node provisioning for server {Colors.ORANGE}{node.private_ip}{Colors.ENDC}...",
-                f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
+                f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
             ],
         )
         updated = await SwarmNode.objects.filter(
@@ -91,6 +91,37 @@ class SwarmNodeActivities:
                 "Cannot provision a nonexistent or active node.",
                 non_retryable=True,
             )
+
+    @activity.defn
+    async def prepare_node_deprovision(
+        self, node: SwarmNodeDetails
+    ) -> Literal["ACTIVE", "DOWN", "PAUSED", "DRAINED"]:
+        await provision_log(
+            node,
+            [
+                f"",
+                f"",
+                f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
+                f"➡️ Preparing node deprovisioning for server {Colors.ORANGE}{node.private_ip}{Colors.ENDC}...",
+                f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
+            ],
+        )
+        swarm_node = await SwarmNode.objects.filter(
+            id=node.id,
+            is_initial_install_server=False,
+            status__in=["ACTIVE", "DOWN", "PAUSED", "DRAINED"],
+        ).afirst()
+
+        if swarm_node is None:
+            raise ApplicationError(
+                "Cannot deprovision a nonexistent node or a node that is not part of the cluster.",
+                non_retryable=True,
+            )
+
+        # clear the message of any previous run
+        swarm_node.status_message = None
+        await swarm_node.asave(update_fields=["status_message", "updated_at"])
+        return swarm_node.status  # type: ignore
 
     @activity.defn
     async def create_ssh_keys_temp_dir(self, payload: SwarmNodePair):
@@ -251,7 +282,7 @@ class SwarmNodeActivities:
                     f"",
                     f"",
                     f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
-                    f"✅ Node deprovisioning finished with status {Colors.GREEN}{result.status}{Colors.ENDC}",
+                    f"✅ Node deprovisioning finished with status {Colors.GREY}{result.status}{Colors.ENDC}",
                     f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
                 ],
             )
