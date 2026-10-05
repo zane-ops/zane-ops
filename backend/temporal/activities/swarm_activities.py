@@ -219,7 +219,7 @@ class SwarmNodeActivities:
                         f"",
                         f"❌  Node provisioning finished with status {Colors.RED}{result.status}{Colors.ENDC}",
                         f"    and message {Colors.RED}{result.status_message}{Colors.ENDC}",
-                        f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
+                        f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
                     ],
                     error=True,
                 )
@@ -231,7 +231,7 @@ class SwarmNodeActivities:
                         f"",
                         f"",
                         f"✅ Node provisioning finished with status {Colors.GREEN}{result.status}{Colors.ENDC}",
-                        f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
+                        f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
                     ],
                 )
 
@@ -275,7 +275,7 @@ class SwarmNodeActivities:
                     f"",
                     f"",
                     f"✅ Node deprovisioning finished with status {Colors.GREY}{result.status}{Colors.ENDC}",
-                    f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
+                    f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
                 ],
             )
         else:
@@ -286,7 +286,7 @@ class SwarmNodeActivities:
                     f"",
                     f"❌  Node deprovisioning failed, the node is still part of the cluster with status {Colors.RED}{result.status}{Colors.ENDC}",
                     f"    and message {Colors.RED}{result.status_message}{Colors.ENDC}",
-                    f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
+                    f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
                 ],
                 error=True,
             )
