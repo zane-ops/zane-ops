@@ -31,32 +31,29 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
         )
         self.main_key = self.create_ssh_key(self.main_node, user="root")
         self.node_key = self.create_ssh_key(self.node, user="root")
-
-    def deprovision(self, node_id: str, data: dict):
-        return self.client.post(
-            reverse("swarm:node.deprovision", kwargs={"id": node_id}),
-            data=data,
-        )
-
-    def valid_payload(self):
-        return {
+        self.VALID_PAYLOAD = {
             "target_ssh_key_id": self.node_key.id,
             "main_ssh_key_id": self.main_key.id,
         }
 
+    def deprovision(self, node_id: str, data: dict):
+        return self.client.put(
+            reverse("swarm:node.deprovision", kwargs={"id": node_id}),
+            data=data,
+        )
+
     def test_deprovision_requires_instance_owner(self):
-        response = self.deprovision(self.node.id, self.valid_payload())
+        response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
     def test_deprovision_non_existent_node(self):
         self.loginUser()
-        response = self.deprovision("node_doesnotexist", self.valid_payload())
+        response = self.deprovision("node_doesnotexist", self.VALID_PAYLOAD)
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
     def test_deprovision_successful(self):
         self.loginUser()
-        response = self.deprovision(self.node.id, self.valid_payload())
-        jprint(response.json())
+        response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
         self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
 
     def test_deprovision_requires_both_ssh_keys(self):
@@ -140,7 +137,7 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
             with self.subTest(status=node_status):
                 self.node.status = node_status
                 self.node.save()
-                response = self.deprovision(self.node.id, self.valid_payload())
+                response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
                 jprint(response.json())
                 self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
                 self.node.refresh_from_db()
@@ -157,7 +154,7 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
             with self.subTest(status=node_status):
                 self.node.status = node_status
                 self.node.save()
-                response = self.deprovision(self.node.id, self.valid_payload())
+                response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
                 self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
 
 

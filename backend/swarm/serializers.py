@@ -61,6 +61,25 @@ class ProvisionSwarmNodeRequestSerializer(serializers.Serializer):
         return attrs
 
 
+class DeprovisionSwarmNodeRequestSerializer(ProvisionSwarmNodeRequestSerializer):
+    def validate(self, attrs: dict):
+        node: SwarmNode = self.context["target_node"]
+        if node.is_initial_install_server:
+            raise serializers.ValidationError(
+                "The main server cannot be removed from the cluster"
+            )
+        if node.status not in [
+            SwarmNode.Status.ACTIVE,
+            SwarmNode.Status.DOWN,
+            SwarmNode.Status.PAUSED,
+            SwarmNode.Status.DRAINED,
+        ]:
+            raise serializers.ValidationError(
+                f"Cannot deprovision a server with the status `{node.status}`, it is not part of the cluster"
+            )
+        return attrs
+
+
 class UpdateSwarmNodeSSHPortSerializer(serializers.ModelSerializer):
     class Meta:
         model = SwarmNode

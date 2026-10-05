@@ -427,6 +427,16 @@ SPECTACULAR_SETTINGS = {
             ("MANAGER", "Manager"),
             ("WORKER", "Worker"),
         ),
+        "SwarmNodeStatusEnum": (
+            ("CREATED", "Created"),
+            ("PROVISIONING", "Provisioning"),
+            ("FAILED", "Failed"),
+            ("REMOVED", "Removed"),
+            ("ACTIVE", "Active"),
+            ("DOWN", "Down"),
+            ("PAUSED", "Paused"),
+            ("DRAINED", "Drained"),
+        ),
     },
     "POSTPROCESSING_HOOKS": [
         "drf_standardized_errors.openapi_hooks.postprocess_schema_enums",

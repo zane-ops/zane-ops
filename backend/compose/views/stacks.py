@@ -1215,4 +1215,4 @@ class ToggleComposeStackAPIView(APIView):
             )
         )
 
-        return Response(None, status=status.HTTP_202_ACCEPTED)
+        return Response(status=status.HTTP_202_ACCEPTED)

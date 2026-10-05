@@ -32,14 +32,17 @@ class SwarmNode(TimestampedModel):
         APP_SERVER = "APP_SERVER", "App Server"
 
     class Status(models.TextChoices):
+        # Not in the cluster yet
         CREATED = "CREATED", "Created"
         PROVISIONING = "PROVISIONING", "Provisioning"
+        FAILED = "FAILED", "Failed"
+        REMOVED = "REMOVED", "Removed"
+
+        # Active member of the cluster
         ACTIVE = "ACTIVE", "Active"
         DOWN = "DOWN", "Down"
         PAUSED = "PAUSED", "Paused"
         DRAINED = "DRAINED", "Drained"
-        FAILED = "FAILED", "Failed"
-        REMOVED = "REMOVED", "Removed"
 
     id = ShortUUIDField(
         length=ID_LENGTH,

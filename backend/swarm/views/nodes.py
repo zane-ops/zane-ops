@@ -24,10 +24,19 @@ from zane_api.views.base import DefaultPageNumberPagination, EMPTY_PAGINATED_RES
 
 from swarm.models import SSHKey, SwarmNode
 from temporal.client import TemporalClient
-from temporal.shared import SwarmNodeDetails, SwarmNodePair
-from temporal.workflows import ProvisionSwarmNodeWorkflow
+from temporal.shared import (
+    ClusterSwarmNodeDetails,
+    ClusterSwarmNodePair,
+    SwarmNodeDetails,
+    SwarmNodePair,
+)
+from temporal.workflows import (
+    ProvisionSwarmNodeWorkflow,
+    RemoveSwarmNodeFromClusterWorkflow,
+)
 from swarm.serializers import (
     CreateSSHKeyRequestSerializer,
+    DeprovisionSwarmNodeRequestSerializer,
     ProvisionSwarmNodeRequestSerializer,
     SSHKeySerializer,
     FullSwarmNodeSerializer,
@@ -231,7 +240,69 @@ class ProvisionSwarmNodeAPIView(APIView):
         )
 
         response = FullSwarmNodeSerializer(node)
-        return Response(response.data, status=status.HTTP_202_ACCEPTED)
+        return Response(status=status.HTTP_202_ACCEPTED)
+
+
+class DeprovisionSwarmNodeAPIView(APIView):
+    permission_classes = [IsInstanceOwner]
+    serializer_class = FullSwarmNodeSerializer
+
+    @extend_schema(
+        request=DeprovisionSwarmNodeRequestSerializer,
+        responses={202: FullSwarmNodeSerializer},
+        operation_id="deprovisionSwarmNode",
+        summary="Drain a swarm node and remove it from the ZaneOps cluster",
+    )
+    @transaction.atomic()
+    def put(self, request: Request, id: str):
+        try:
+            node = SwarmNode.objects.get(id=id)
+        except SwarmNode.DoesNotExist:
+            raise exceptions.NotFound(f"A server with the id `{id}` does not exist")
+
+        main_node = SwarmNode.objects.filter(is_initial_install_server=True).first()
+
+        form = DeprovisionSwarmNodeRequestSerializer(
+            data=request.data, context={"target_node": node, "main_node": main_node}
+        )
+        form.is_valid(raise_exception=True)
+        main_node = cast(SwarmNode, main_node)
+
+        data = cast(ReturnDict, form.data)
+        target_key = node.ssh_keys.get(id=data["target_ssh_key_id"])
+        main_key = main_node.ssh_keys.get(id=data["main_ssh_key_id"])
+
+        payload = ClusterSwarmNodePair(
+            target_node=ClusterSwarmNodeDetails(
+                id=node.id,
+                swarm_node_id=cast(str, node.swarm_node_id),
+                private_ip=node.private_ip,
+                swarm_role=node.swarm_role,  # type: ignore
+                cluster_roles=node.cluster_roles,  # type: ignore
+                ssh_key=target_key.private_key,
+                ssh_port=node.ssh_port,
+            ),
+            main_node=ClusterSwarmNodeDetails(
+                id=main_node.id,
+                swarm_node_id=cast(str, main_node.swarm_node_id),
+                private_ip=main_node.private_ip,
+                swarm_role=main_node.swarm_role,  # type: ignore
+                cluster_roles=main_node.cluster_roles,  # type: ignore
+                ssh_key=main_key.private_key,
+                ssh_port=main_node.ssh_port,
+            ),
+        )
+
+        workflow_id = node.remove_swarm_node_workflow_id
+        transaction.on_commit(
+            lambda: TemporalClient.start_workflow(
+                RemoveSwarmNodeFromClusterWorkflow.run,
+                payload,
+                id=workflow_id,
+            )
+        )
+
+        return Response(status=status.HTTP_202_ACCEPTED)
 
 
 class SwarmNodeBuildLogsAPIView(APIView):
