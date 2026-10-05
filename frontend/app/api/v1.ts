@@ -632,12 +632,18 @@ export interface paths {
   };
   "/api/swarm/nodes/{id}/": {
     get: operations["swarm_nodes_retrieve"];
+    /** Delete a swarm node */
+    delete: operations["deleteSwarmNode"];
     /** Update a swarm node */
     patch: operations["updateSwarmNode"];
   };
   "/api/swarm/nodes/{id}/build-logs/": {
     /** Get swarm node provisioning logs */
     get: operations["getSwarmNodeBuildLogs"];
+  };
+  "/api/swarm/nodes/{id}/deprovision/": {
+    /** Drain a swarm node and remove it from the ZaneOps cluster */
+    put: operations["deprovisionSwarmNode"];
   };
   "/api/swarm/nodes/{id}/provision/": {
     /** Provision a swarm node and add it to the ZaneOps cluster */
@@ -3321,6 +3327,7 @@ export interface components {
     };
     DeleteBuildRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     DeleteRegistryCredentialsErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    DeleteSwarmNodeErrorResponse400: components["schemas"]["ParseErrorResponse"];
     DeployComposeStackCommitMessageErrorComponent: {
       /**
        * @description * `commit_message` - commit_message
@@ -3565,6 +3572,61 @@ export interface components {
      * @enum {string}
      */
     DeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "BUILDING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
+    DeprovisionSwarmNodeError: components["schemas"]["DeprovisionSwarmNodeNonFieldErrorsErrorComponent"] | components["schemas"]["DeprovisionSwarmNodeTargetSshKeyIdErrorComponent"] | components["schemas"]["DeprovisionSwarmNodeMainSshKeyIdErrorComponent"];
+    DeprovisionSwarmNodeErrorResponse400: components["schemas"]["DeprovisionSwarmNodeValidationError"] | components["schemas"]["ParseErrorResponse"];
+    DeprovisionSwarmNodeMainSshKeyIdErrorComponent: {
+      /**
+       * @description * `main_ssh_key_id` - main_ssh_key_id
+       * @enum {string}
+       */
+      attr: "main_ssh_key_id";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "null" | "required";
+      detail: string;
+    };
+    DeprovisionSwarmNodeNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    DeprovisionSwarmNodeRequestRequest: {
+      target_ssh_key_id: number;
+      main_ssh_key_id: number;
+    };
+    DeprovisionSwarmNodeTargetSshKeyIdErrorComponent: {
+      /**
+       * @description * `target_ssh_key_id` - target_ssh_key_id
+       * @enum {string}
+       */
+      attr: "target_ssh_key_id";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "null" | "required";
+      detail: string;
+    };
+    DeprovisionSwarmNodeValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["DeprovisionSwarmNodeError"][];
+    };
     /**
      * @description * `start` - start
      * * `stop` - stop
@@ -3859,7 +3921,7 @@ export interface components {
       private_ip: string;
       ssh_port: number;
       services: unknown;
-      status: components["schemas"]["StatusD61Enum"];
+      status: components["schemas"]["SwarmNodeStatusEnum"];
       status_message: string | null;
       /** Format: date-time */
       last_status_update: string | null;
@@ -8565,18 +8627,6 @@ export interface components {
       index_page: string;
     };
     /**
-     * @description * `CREATED` - Created
-     * * `PROVISIONING` - Provisioning
-     * * `ACTIVE` - Active
-     * * `DOWN` - Down
-     * * `PAUSED` - Paused
-     * * `DRAINED` - Drained
-     * * `FAILED` - Failed
-     * * `REMOVED` - Removed
-     * @enum {string}
-     */
-    StatusD61Enum: "CREATED" | "PROVISIONING" | "ACTIVE" | "DOWN" | "PAUSED" | "DRAINED" | "FAILED" | "REMOVED";
-    /**
      * @description * `LOCAL` - Local Disk
      * * `S3` - S3
      * @enum {string}
@@ -8589,7 +8639,7 @@ export interface components {
       swarm_role: components["schemas"]["SwarmRoleEnum"];
       private_ip: string;
       ssh_port: number;
-      status: components["schemas"]["StatusD61Enum"];
+      status: components["schemas"]["SwarmNodeStatusEnum"];
       docker_version: string | null;
       cluster_roles: components["schemas"]["ClusterRolesEnum"][];
       is_initial_install_server: boolean;
@@ -8607,6 +8657,18 @@ export interface components {
       ssh_port?: number;
       cluster_roles?: components["schemas"]["ClusterRolesEnum"][];
     };
+    /**
+     * @description * `CREATED` - Created
+     * * `PROVISIONING` - Provisioning
+     * * `FAILED` - Failed
+     * * `REMOVED` - Removed
+     * * `ACTIVE` - Active
+     * * `DOWN` - Down
+     * * `PAUSED` - Paused
+     * * `DRAINED` - Drained
+     * @enum {string}
+     */
+    SwarmNodeStatusEnum: "CREATED" | "PROVISIONING" | "FAILED" | "REMOVED" | "ACTIVE" | "DOWN" | "PAUSED" | "DRAINED";
     SwarmNodesCreateClusterRolesErrorComponent: {
       /**
        * @description * `cluster_roles` - cluster_roles
@@ -16664,6 +16726,45 @@ export interface operations {
       };
     };
   };
+  /** Delete a swarm node */
+  deleteSwarmNode: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["DeleteSwarmNodeErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /** Update a swarm node */
   updateSwarmNode: {
     parameters: {
@@ -16731,6 +16832,53 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["GetSwarmNodeBuildLogsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Drain a swarm node and remove it from the ZaneOps cluster */
+  deprovisionSwarmNode: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeprovisionSwarmNodeRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["DeprovisionSwarmNodeRequestRequest"];
+        "multipart/form-data": components["schemas"]["DeprovisionSwarmNodeRequestRequest"];
+      };
+    };
+    responses: {
+      202: {
+        content: {
+          "application/json": components["schemas"]["FullSwarmNode"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["DeprovisionSwarmNodeErrorResponse400"];
         };
       };
       401: {
