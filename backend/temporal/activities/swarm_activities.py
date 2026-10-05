@@ -125,7 +125,7 @@ class SwarmNodeActivities:
             file.write(payload.main_node.ssh_key)
             await provision_log(
                 payload.target_node,
-                f"✅ Wrote ssh key for {Colors.BLUE}MAIN NODE{Colors.ENDC} at {Colors.YELLOW}{main_node_key_location}{Colors.ENDC}",
+                f"✅ Wrote ssh key for the {Colors.GREY}main node{Colors.ENDC} ({Colors.BLUE}{payload.main_node.private_ip}{Colors.ENDC}) at {Colors.YELLOW}{main_node_key_location}{Colors.ENDC}",
             )
         await provision_log(
             payload.target_node,
@@ -138,7 +138,7 @@ class SwarmNodeActivities:
             file.write(payload.target_node.ssh_key)
             await provision_log(
                 payload.target_node,
-                f"✅ Wrote ssh key for the {Colors.BLUE}NEW NODE{Colors.ENDC} at {Colors.YELLOW}{new_node_key_location}{Colors.ENDC}",
+                f"✅ Wrote ssh key for the {Colors.GREY}target node{Colors.ENDC} ({Colors.BLUE}{payload.target_node.private_ip}{Colors.ENDC}) at {Colors.YELLOW}{new_node_key_location}{Colors.ENDC}",
             )
         await provision_log(
             payload.target_node,
@@ -252,7 +252,7 @@ class SwarmNodeActivities:
             os_pattern_match = re.compile(r"^os=([^\s]*)$").match(message)
 
             if os_pattern_match:
-                return str(os_pattern_match.groups(1))
+                return str(os_pattern_match.groups(1)[0])
 
         await provision_log(ctx.node, f"Checking supported OS information...")
         exit_code, os_info = await exec_cmd_in_server(
