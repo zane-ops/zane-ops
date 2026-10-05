@@ -454,7 +454,7 @@ export default function SwarmNodeDetailsPage({
                         servers, then remove it from the cluster.
                       </p>
                     </div>
-                    <SwarmDecomissionForm {...node} />
+                    <SwarmDeprovisionForm {...node} />
                   </div>
                   <Separator />
 
@@ -746,10 +746,13 @@ function SwarmNodeDeleteForm(node: SwarmNode) {
   );
 }
 
-function SwarmDecomissionForm(node: SwarmNode) {
-  const isNotMemberOfClusterYet = ["CREATED", "FAILED", "REMOVED"].includes(
-    node.status
-  );
+function SwarmDeprovisionForm(node: SwarmNode) {
+  const isNotMemberOfClusterYet = [
+    "CREATED",
+    "FAILED",
+    "REMOVED",
+    "PROVISIONING"
+  ].includes(node.status);
   // TODO: implement this
   return (
     <TooltipProvider>
