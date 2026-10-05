@@ -447,14 +447,26 @@ export default function SwarmNodeDetailsPage({
                   <div className="flex md:flex-row gap-4 justify-between items-center w-full px-4">
                     <div className="flex flex-col gap-1">
                       <h3 className="text-lg font-medium">
-                        Remove Server from cluster
+                        Deprovision server
                       </h3>
                       <p>
-                        Drain all services from this server and remove it from
-                        the cluster
+                        Move all services running on this server to other
+                        servers, then remove it from the cluster.
                       </p>
                     </div>
-                    <SwarmNodeRemoveForm {...node} />
+                    <SwarmDecomissionForm {...node} />
+                  </div>
+                  <Separator />
+
+                  <div className="flex md:flex-row gap-4 justify-between items-center w-full px-4">
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-lg font-medium">Delete server</h3>
+                      <p>
+                        Delete this server and its SSH keys from ZaneOps.
+                        Nothing is uninstalled on the server itself.
+                      </p>
+                    </div>
+                    <SwarmNodeDeleteForm {...node} />
                   </div>
                 </div>
               </div>
@@ -699,23 +711,73 @@ function SSHKeyAddDialog({ serverId }: SSHKeyAddDialogProps) {
   );
 }
 
-function SwarmNodeRemoveForm(node: SwarmNode) {
+function SwarmNodeDeleteForm(node: SwarmNode) {
+  const isMemberOfCluster = !["CREATED", "FAILED", "REMOVED"].includes(
+    node.status
+  );
   // TODO: implement this
   return (
-    <Button
-      variant="destructive"
-      className={cn(
-        "destructive-outline gap-2",
-        node.is_initial_install_server && "opacity-50"
-      )}
-      onClick={(e) => {
-        if (node.is_initial_install_server) {
-          e.preventDefault();
-        }
-      }}
-    >
-      Remove Server
-    </Button>
+    <TooltipProvider>
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>
+          <Button
+            variant="destructive"
+            className={cn(
+              "destructive-outline gap-2",
+              isMemberOfCluster && "opacity-50"
+            )}
+            onClick={(e) => {
+              if (isMemberOfCluster) {
+                e.preventDefault();
+              }
+            }}
+          >
+            Delete Server
+          </Button>
+        </TooltipTrigger>
+        {isMemberOfCluster && (
+          <TooltipContent className="max-w-56 text-pretty">
+            This server is still part of the cluster. Deprovision it before
+            deleting it.
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+function SwarmDecomissionForm(node: SwarmNode) {
+  const isNotMemberOfClusterYet = ["CREATED", "FAILED", "REMOVED"].includes(
+    node.status
+  );
+  // TODO: implement this
+  return (
+    <TooltipProvider>
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>
+          <Button
+            variant="warning"
+            className={cn(
+              "destructive-outline gap-2",
+              isNotMemberOfClusterYet && "opacity-50"
+            )}
+            onClick={(e) => {
+              if (isNotMemberOfClusterYet) {
+                e.preventDefault();
+              }
+            }}
+          >
+            Deprovision Server
+          </Button>
+        </TooltipTrigger>
+        {isNotMemberOfClusterYet && (
+          <TooltipContent className="max-w-56 text-pretty">
+            This server is not part of the cluster yet, so there is nothing to
+            deprovision.
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
