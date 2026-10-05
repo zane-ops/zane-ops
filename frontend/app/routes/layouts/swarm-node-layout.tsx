@@ -10,7 +10,6 @@ import {
   KeyRoundIcon,
   LoaderIcon,
   SearchIcon,
-  ServerCogIcon,
   ServerIcon,
   SettingsIcon,
   SquareChartGanttIcon,
@@ -18,7 +17,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { Outlet, href, useFetcher } from "react-router";
-import type { SSHKey, SwarmNode } from "~/api/types";
+import type { FullSwarmNode, SSHKey, SwarmNode } from "~/api/types";
 import { Code } from "~/components/code";
 import { HorizontalNavLink } from "~/components/horizontal-nav-link";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -187,7 +186,7 @@ export default function SwarmNodeLayout({
 }
 
 type ProvisionSwarmNodeFormProps = {
-  node: SwarmNode;
+  node: FullSwarmNode;
 };
 
 function ProvisionSwarmNodeForm({ node }: ProvisionSwarmNodeFormProps) {
@@ -226,7 +225,7 @@ function ProvisionSwarmNodeForm({ node }: ProvisionSwarmNodeFormProps) {
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="secondary" className="gap-1.5" size="sm">
+        <Button className="gap-1.5" size="sm">
           <HammerIcon className="size-4 flex-none" />
           Provision node
         </Button>
