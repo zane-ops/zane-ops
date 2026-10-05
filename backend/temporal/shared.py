@@ -717,12 +717,6 @@ class SwarmNodePairSSHContext:
 
 
 @dataclass
-class RemoveSwarmNodeContext:
-    activity_ctx: SwarmNodeSSHContext
-    target_node: ClusterSwarmNodeDetails
-
-
-@dataclass
 class DockerSwarmRemoteManager:
     Addr: str
     NodeID: str

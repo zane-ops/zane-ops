@@ -16,7 +16,6 @@ from ..shared import (
     CancelProvisionSignalInput,
     SwarmNodePair,
     ClusterSwarmNodePair,
-    RemoveSwarmNodeContext,
     DockerInstallContext,
     SwarmNodeSSHContext,
     SwarmNodePairSSHContext,
@@ -207,7 +206,7 @@ class ProvisionSwarmNodeWorkflow:
                 )
 
             await workflow.execute_activity_method(
-                SwarmNodeActivities.finish_and_save_node_deployment,
+                SwarmNodeActivities.finish_and_save_node_provisioning,
                 node_deployment_result,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
@@ -232,114 +231,110 @@ class DeprovisionSwarmNodeWorkflow:
     async def run(self, payload: ClusterSwarmNodePair) -> SwarmNodeStatusResult:
         print(
             f"\n\n{Colors.BLUE}==============================================================={Colors.ENDC}\n"
-            f"Running workflow RemoveSwarmNodeFromClusterWorkflow.run({payload.target_node.id=}, {payload.target_node.private_ip=})\n"
+            f"Running workflow DeprovisionSwarmNodeWorkflow.run({payload.target_node.id=}, {payload.target_node.private_ip=})\n"
             f"{Colors.BLUE}==============================================================={Colors.ENDC}"
         )
         node_deployment_result = SwarmNodeStatusResult(
             id=payload.target_node.id,
             status="ACTIVE",
         )
+        tmp_dir: str | None = None
 
-        tmp_dir = await workflow.execute_activity_method(
-            SwarmNodeActivities.create_ssh_keys_temp_dir,
-            payload,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+        try:
+            tmp_dir = await workflow.execute_activity_method(
+                SwarmNodeActivities.create_ssh_keys_temp_dir,
+                payload,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
-        ssh_test_target_task = workflow.start_activity_method(
-            SwarmNodeActivities.test_ssh_connection,
-            SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+            ssh_test_target_task = workflow.start_activity_method(
+                SwarmNodeActivities.test_ssh_connection,
+                SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
-        ssh_test_main_task = workflow.start_activity_method(
-            SwarmNodeActivities.test_ssh_connection,
-            SwarmNodeSSHContext(
-                node=payload.main_node,
-                tmp_dir=tmp_dir,
-                target_node=payload.target_node,
-            ),
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+            ssh_test_main_task = workflow.start_activity_method(
+                SwarmNodeActivities.test_ssh_connection,
+                SwarmNodeSSHContext(
+                    node=payload.main_node,
+                    tmp_dir=tmp_dir,
+                    target_node=payload.target_node,
+                ),
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
-        result = await asyncio.gather(ssh_test_target_task, ssh_test_main_task)
+            await asyncio.gather(ssh_test_target_task, ssh_test_main_task)
 
-        if not all(result):
-            print("Failed to connect to servers, skipping job")
-        else:
-            successful = await workflow.execute_activity_method(
+            drain_result = await workflow.execute_activity_method(
                 SwarmNodeActivities.drain_swarm_node_and_remove_labels,
                 payload,
                 start_to_close_timeout=timedelta(minutes=3),
                 retry_policy=self.retry_policy,
             )
 
-            if successful:
+            if drain_result == "NOT_IN_SWARM":
+                # The node is already out of the swarm, nothing left to drain or remove
+                node_deployment_result.status = "REMOVED"
+                node_deployment_result.status_message = "The node was not found in the swarm, it may have been removed manually"
+            else:
                 node_deployment_result.status = "DOWN"
 
-                all_removed = await workflow.execute_activity_method(
+                all_drained = await workflow.execute_activity_method(
                     SwarmNodeActivities.wait_for_global_services_to_be_drained,
                     payload,
                     start_to_close_timeout=timedelta(minutes=5),
                     retry_policy=self.retry_policy,
                 )
-
-                if all_removed:
+                if all_drained:
                     node_deployment_result.status = "DRAINED"
 
-                    detached = await workflow.execute_activity_method(
-                        SwarmNodeActivities.detach_swarm_node_from_cluster,
-                        SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
-                        start_to_close_timeout=timedelta(seconds=30),
-                        retry_policy=self.retry_policy,
-                    )
-
-                    if detached:
-                        removed = await workflow.execute_activity_method(
-                            SwarmNodeActivities.remove_swarm_node_from_cluster,
-                            RemoveSwarmNodeContext(
-                                target_node=payload.target_node,
-                                activity_ctx=SwarmNodeSSHContext(
-                                    node=payload.main_node, tmp_dir=tmp_dir
-                                ),
-                            ),
-                            start_to_close_timeout=timedelta(seconds=30),
-                            retry_policy=self.retry_policy,
-                        )
-
-                        if removed:
-                            node_deployment_result.status = "REMOVED"
-
-            if node_deployment_result.status == "REMOVED":
                 await workflow.execute_activity_method(
-                    SwarmNodeActivities.clear_removed_swarm_node_attributes,
-                    node_deployment_result,
-                    start_to_close_timeout=timedelta(seconds=30),
-                    retry_policy=self.retry_policy,
-                )
-            else:
-                await workflow.execute_activity_method(
-                    SwarmNodeActivities.finish_and_save_node_deployment,
-                    node_deployment_result,
+                    SwarmNodeActivities.detach_swarm_node_from_cluster,
+                    SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
                 )
 
-        await workflow.execute_activity_method(
-            SwarmNodeActivities.delete_ssh_keys_temp_dir,
-            SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+                await workflow.execute_activity_method(
+                    SwarmNodeActivities.remove_swarm_node_from_cluster,
+                    payload,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
+                node_deployment_result.status = "REMOVED"
 
-        print(
-            f"\n\n{Colors.BLUE}==============================================================={Colors.ENDC}\n"
-            f"DONE Running workflow RemoveSwarmNodeFromClusterWorkflow.run({payload.target_node.id=}, {payload.target_node.private_ip=})\n"
-            f"{Colors.BLUE}==============================================================={Colors.ENDC}"
-        )
+        except ActivityError as e:
+            print(f"ActivityError({e=}) !")
+            reason = str(e.cause)
+            if is_cancelled_exception(e):
+                reason = "Deprovision server workflow was manually cancelled ❌"
+
+            # We keep the last status reached, as the node might still be part of the cluster
+            node_deployment_result.status_message = reason
+        finally:
+            if tmp_dir is not None:
+                await workflow.execute_activity_method(
+                    SwarmNodeActivities.delete_ssh_keys_temp_dir,
+                    SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
+
+            await workflow.execute_activity_method(
+                SwarmNodeActivities.finish_and_save_node_deprovisioning,
+                node_deployment_result,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+            print(
+                f"\n{Colors.BLUE}==============================================================={Colors.ENDC}\n"
+                f" DONE Running workflow DeprovisionSwarmNodeWorkflow.run({payload.target_node.id=}, {payload.target_node.private_ip=})\n"
+                f"{Colors.BLUE}==============================================================={Colors.ENDC}\n\n"
+            )
         return node_deployment_result
 
 

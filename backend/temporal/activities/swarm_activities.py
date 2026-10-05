@@ -4,7 +4,7 @@ import os
 import re
 import shutil
 import shlex
-from typing import cast
+from typing import Literal, cast
 from temporalio import activity, workflow
 import asyncio
 import tempfile
@@ -50,7 +50,6 @@ from temporal.shared import (
     DockerSwarmJoinContext,
     DockerSwarmJoinCredentials,
     DockerSystemInfo,
-    RemoveSwarmNodeContext,
     SwarmNodePairSSHContext,
     SwarmNodeSSHContext,
     GetSwarmJoinTokenInput,
@@ -157,7 +156,7 @@ class SwarmNodeActivities:
         return temp_dir
 
     @activity.defn
-    async def finish_and_save_node_deployment(self, result: SwarmNodeStatusResult):
+    async def finish_and_save_node_provisioning(self, result: SwarmNodeStatusResult):
         try:
             node = await SwarmNode.objects.filter(id=result.id).aget()
 
@@ -194,7 +193,7 @@ class SwarmNodeActivities:
                         f"",
                         f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
                         f"❌  Node provisioning finished with status {Colors.RED}{result.status}{Colors.ENDC}",
-                        f"    and message {Colors.RED}{result.status_status_message}{Colors.ENDC}",
+                        f"    and message {Colors.RED}{result.status_message}{Colors.ENDC}",
                         f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
                     ],
                     error=True,
@@ -219,27 +218,56 @@ class SwarmNodeActivities:
             )
 
     @activity.defn
-    async def clear_removed_swarm_node_attributes(self, result: SwarmNodeStatusResult):
-        print(
-            f"Clearing swarm attributes for removed node {Colors.BLUE}{result.id}{Colors.ENDC}..."
-        )
-        updated = await SwarmNode.objects.filter(id=result.id).aupdate(
-            status=result.status,
-            swarm_node_id=None,
-            hostname=None,
-            docker_version=None,
-            cpus=None,
-            memory_bytes=None,
-            last_status_update=timezone.now(),
-        )
+    async def finish_and_save_node_deprovisioning(self, result: SwarmNodeStatusResult):
+        if result.status == SwarmNode.Status.REMOVED:
+            # The node is not part of the cluster anymore, so its swarm attributes are not valid
+            updated = await SwarmNode.objects.filter(id=result.id).aupdate(
+                status=result.status,
+                status_message=result.status_message,
+                swarm_node_id=None,
+                hostname=None,
+                docker_version=None,
+                cpus=None,
+                memory_bytes=None,
+                last_status_update=timezone.now(),
+            )
+        else:
+            updated = await SwarmNode.objects.filter(id=result.id).aupdate(
+                status=result.status,
+                status_message=result.status_message,
+                last_status_update=timezone.now(),
+            )
+
         if updated == 0:
             raise ApplicationError(
-                "Cannot clear attributes of a non existent node.",
+                "Cannot save a non existent node.",
                 non_retryable=True,
             )
-        print(
-            f"✅ Swarm attributes cleared for removed node {Colors.BLUE}{result.id}{Colors.ENDC}"
-        )
+
+        if result.status == SwarmNode.Status.REMOVED:
+            await provision_log(
+                result,
+                [
+                    f"",
+                    f"",
+                    f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
+                    f"✅ Node deprovisioning finished with status {Colors.GREEN}{result.status}{Colors.ENDC}",
+                    f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
+                ],
+            )
+        else:
+            await provision_log(
+                result,
+                [
+                    f"",
+                    f"",
+                    f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
+                    f"❌  Node deprovisioning failed, the node is still part of the cluster with status {Colors.RED}{result.status}{Colors.ENDC}",
+                    f"    and message {Colors.RED}{result.status_message}{Colors.ENDC}",
+                    f"{Colors.BLUE}=========================================================================================={Colors.ENDC}",
+                ],
+                error=True,
+            )
 
     @activity.defn
     async def test_ssh_connection(self, ctx: SwarmNodeSSHContext):
@@ -786,41 +814,54 @@ class SwarmNodeActivities:
         )
 
     @activity.defn
-    async def drain_swarm_node_and_remove_labels(self, payload: ClusterSwarmNodePair):
+    async def drain_swarm_node_and_remove_labels(
+        self, payload: ClusterSwarmNodePair
+    ) -> Literal["DRAINED", "NOT_IN_SWARM"]:
         target_node = payload.target_node
         await provision_log(
             target_node,
-            f"Draining swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.ENDC}...",
+            [
+                "",
+                f"➡️ Draining swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.ENDC}...",
+            ],
         )
         try:
             swarm_node = self.docker_client.nodes.get(target_node.swarm_node_id)
-            original_spec = swarm_node.attrs["Spec"]
-
-            new_spec = deepcopy(original_spec)
-            new_spec["Labels"] = {}
-            new_spec["Availability"] = "drain"
-
-            swarm_node.update(new_spec)
         except docker.errors.NotFound:
             await provision_log(
                 target_node,
-                f"❌ {Colors.RED}Failed to drain swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.RED} and remove its labels{Colors.ENDC}",
-                error=True,
+                f"⚠️ {Colors.ORANGE}Swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.ORANGE} was not found in the cluster, "
+                f"it may have already been removed. Skipping drain.{Colors.ENDC}",
             )
-            return False
-        else:
-            await provision_log(
-                target_node,
-                f"✅ Swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.ENDC} drained and labels removed, no new tasks will be scheduled on it",
-            )
+            return "NOT_IN_SWARM"
 
-        return True
+        new_spec = deepcopy(swarm_node.attrs["Spec"])
+        # Removing ZaneOps labels
+        cast(dict, new_spec["Labels"]).pop(settings.APP_SERVER_LABEL, None)
+        cast(dict, new_spec["Labels"]).pop(settings.BUILD_SERVER_LABEL, None)
+        new_spec["Availability"] = "drain"
+
+        # Other docker errors are raised so that the activity is retried
+        swarm_node.update(new_spec)
+
+        await provision_log(
+            target_node,
+            f"✅ Swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.ENDC} drained and labels removed, no new tasks will be scheduled on it",
+        )
+        return "DRAINED"
 
     @activity.defn
     async def wait_for_global_services_to_be_drained(
         self, payload: ClusterSwarmNodePair
     ):
         target_node = payload.target_node
+        await provision_log(
+            target_node,
+            [
+                "",
+                f"➡️ Waiting for the ZaneOps services to be removed from swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.ENDC}...",
+            ],
+        )
 
         proxy_service: list[Service] = self.docker_client.services.list(
             filters={"label": ["zane.role=proxy"]},
@@ -835,14 +876,13 @@ class SwarmNodeActivities:
 
         healthcheck_timeout = timedelta(minutes=3).total_seconds()
 
-        async def wait_for_swarm_service_to_be_updated(service: Service):
+        async def wait_for_swarm_service_to_be_drained(service: Service):
             try:
-                await provision_log(
-                    target_node,
-                    f"Waiting for service `{Colors.BLUE}{service.name=}{Colors.ENDC}` to be updated...",
+                print(
+                    f"Waiting for service `{Colors.BLUE}{service.name=}{Colors.ENDC}` to be drained..."
                 )
                 start_time = time.monotonic()
-                time_left = timedelta(minutes=3).total_seconds()
+                time_left = healthcheck_timeout
 
                 filters = {
                     "node": target_node.swarm_node_id,
@@ -850,73 +890,111 @@ class SwarmNodeActivities:
                 }
                 task_list: list = service.tasks(filters=filters)
 
-                await provision_log(target_node, f"{filters=}")
+                print(f"{filters=}")
 
                 while len(task_list) > 0 and time_left >= 1:
-                    await provision_log(
-                        target_node,
-                        f"Swarm service {Colors.BLUE}{service.name}{Colors.ENDC} is not updated , "
+                    print(
+                        f"Swarm service {Colors.BLUE}{service.name}{Colors.ENDC} is not drained, "
                         + f"| retrying in {Colors.ORANGE}{settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL}s{Colors.ENDC}"
-                        + f"| healthcheck_time_left={Colors.ORANGE}{format_duration(time_left)}{Colors.ENDC}...",
+                        + f"| healthcheck_time_left={Colors.ORANGE}{format_duration(time_left)}{Colors.ENDC}..."
                     )
                     await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
-                    task_list = task_list = service.tasks(filters=filters)
-                    await provision_log(target_node, f"{task_list=}")
+                    task_list = service.tasks(filters=filters)
+                    print(f"{task_list=}")
                     time_left = healthcheck_timeout - (time.monotonic() - start_time)
 
                 successful = len(task_list) == 0
                 if successful:
-                    await provision_log(
-                        target_node,
-                        f"✅ Succesfully updated swarm service {Colors.BLUE}{service.name}{Colors.ENDC}",
+                    print(
+                        f"✅ Succesfully drained swarm service {Colors.BLUE}{service.name}{Colors.ENDC}"
                     )
                 return successful
             except docker.errors.NotFound:
                 # The node probably was removed from the cluster already
                 return True
 
-        services_updated = await asyncio.gather(
-            *[wait_for_swarm_service_to_be_updated(service) for service in services]
+        services_drained = all(
+            await asyncio.gather(
+                *[wait_for_swarm_service_to_be_drained(service) for service in services]
+            )
         )
 
-        return all(services_updated)
+        if services_drained:
+            await provision_log(
+                target_node,
+                f"✅ ZaneOps services are removed from swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.ENDC}",
+            )
+        else:
+            await provision_log(
+                target_node,
+                f"⚠️ {Colors.ORANGE}ZaneOps services are still running on swarm node {Colors.BLUE}{target_node.swarm_node_id}{Colors.ORANGE} "
+                f"after {Colors.GREY}{format_duration(healthcheck_timeout)}{Colors.ENDC}{Colors.ORANGE}, continuing anyway. "
+                f"They will be stopped when the node leaves the swarm.{Colors.ENDC}",
+            )
+
+        return services_drained
 
     @activity.defn
     async def detach_swarm_node_from_cluster(self, ctx: SwarmNodeSSHContext):
         node = ctx.node
         await provision_log(
             node,
-            f"detaching swarm node {Colors.BLUE}{node.id}{Colors.ENDC} from cluster...",
+            [
+                "",
+                f"➡️ Making server {Colors.BLUE}{node.private_ip}{Colors.ENDC} leave the swarm...",
+            ],
         )
-        exit_code, _ = await exec_cmd_in_server(
+
+        async def message_handler(message: str):
+            await provision_log(node, f"{Colors.GREY}{message}{Colors.ENDC}")
+            # The node already left the swarm, nothing to do
+            return "not part of a swarm" in message or None
+
+        exit_code, already_detached = await exec_cmd_in_server(
             ctx,
             cmd=f"docker swarm leave --force",
+            output_handler=message_handler,
         )
-        if exit_code == 0:
+        if exit_code == 0 or already_detached:
             await provision_log(
                 node,
-                f"✅ Swarm node {Colors.BLUE}{node.id}{Colors.ENDC} succesfully detached from cluster",
+                f"✅ Server {Colors.BLUE}{node.private_ip}{Colors.ENDC} left the swarm",
             )
-            return True
-        return False
+            return
+
+        message = f"❌ {Colors.RED}Failed to make server {Colors.BLUE}{node.private_ip}{Colors.RED} leave the swarm{Colors.ENDC}"
+        await provision_log(node, message, error=True)
+        raise ApplicationError(message=message, non_retryable=True)
 
     @activity.defn
-    async def remove_swarm_node_from_cluster(self, ctx: RemoveSwarmNodeContext):
-        node = ctx.target_node
+    async def remove_swarm_node_from_cluster(self, payload: ClusterSwarmNodePair):
+        node = payload.target_node
         await provision_log(
-            node, f"Removing node {Colors.BLUE}{node.id}{Colors.ENDC} from cluster..."
+            node,
+            [
+                "",
+                f"➡️ Removing swarm node {Colors.BLUE}{node.swarm_node_id}{Colors.ENDC} from the cluster...",
+            ],
         )
-        exit_code, _ = await exec_cmd_in_server(
-            ctx.activity_ctx,
-            cmd=f"docker node rm {node.swarm_node_id} --force",
-        )
-        if exit_code == 0:
+        try:
+            swarm_node: DockerSwarmNode = self.docker_client.nodes.get(
+                node.swarm_node_id
+            )
+            swarm_node.remove(force=True)
+        except docker.errors.NotFound:
             await provision_log(
                 node,
-                f"✅ Swarm node {Colors.BLUE}{node.id}{Colors.ENDC} succesfully removed from cluster",
+                f"⏩ Swarm node {Colors.BLUE}{node.swarm_node_id}{Colors.ENDC} is already removed from the cluster",
             )
-            return True
-        return False
+        except docker.errors.APIError as e:
+            message = f"❌ {Colors.RED}Failed to remove swarm node {Colors.BLUE}{node.swarm_node_id}{Colors.RED} from the cluster: {e}{Colors.ENDC}"
+            await provision_log(node, message, error=True)
+            raise ApplicationError(message=message, non_retryable=True)
+        else:
+            await provision_log(
+                node,
+                f"✅ Swarm node {Colors.BLUE}{node.swarm_node_id}{Colors.ENDC} removed from the cluster",
+            )
 
     @activity.defn
     async def run_swarm_healthcheck(self) -> SwarmHealthcheckResult:
