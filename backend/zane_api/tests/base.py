@@ -76,7 +76,7 @@ from temporal.workflows import (
 from ..serializers import ServiceSerializer
 
 from compose.dtos import ComposeStackSpec
-
+from swarm.models import SwarmNode, SSHKey
 from temporal.activities import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
@@ -445,6 +445,18 @@ class AuthAPITestCase(APITestCase):
         self.commit_callback: Optional[Callable[[], Coroutine]] = None
         self.workflow_env: Optional[WorkflowEnvironment] = None
         self.workflow_schedules: List[WorkflowScheduleHandle] = []
+
+    @staticmethod
+    def create_ssh_key(node: SwarmNode, user: str, name: str = "my key"):
+        public_key, private_key = SSHKey.create_key_pair()
+        return SSHKey.objects.create(
+            node=node,
+            user=user,
+            name=name,
+            public_key=public_key,
+            private_key=private_key,
+            fingerprint=SSHKey.generate_fingerprint(public_key),
+        )
 
     @staticmethod
     def get_error_from_response(response: Any, field: str):

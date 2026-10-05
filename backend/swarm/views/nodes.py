@@ -5,7 +5,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import exceptions, status
 from rest_framework.generics import (
     ListCreateAPIView,
-    RetrieveUpdateAPIView,
+    RetrieveUpdateDestroyAPIView,
     DestroyAPIView,
 )
 from rest_framework.request import Request
@@ -60,11 +60,11 @@ class SwarmNodeListAPIView(ListCreateAPIView):
             raise e
 
 
-class SwarmNodeDetailsAPIView(RetrieveUpdateAPIView):
+class SwarmNodeDetailsAPIView(RetrieveUpdateDestroyAPIView):
     permission_classes = [IsInstanceOwner]
     queryset = SwarmNode.objects.prefetch_related("ssh_keys").all()
     lookup_field = "id"
-    http_method_names = ["get", "patch"]
+    http_method_names = ["get", "patch", "delete"]
 
     def get_serializer_class(self):  # type: ignore
         if self.request.method == "PATCH":
@@ -77,6 +77,28 @@ class SwarmNodeDetailsAPIView(RetrieveUpdateAPIView):
     )
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
+
+    @extend_schema(
+        operation_id="deleteSwarmNode",
+        summary="Delete a swarm node",
+    )
+    def delete(self, request, *args, **kwargs):
+        return super().delete(request, *args, **kwargs)
+
+    def perform_destroy(self, instance: SwarmNode):
+        if instance.is_initial_install_server:
+            raise exceptions.ValidationError(
+                "The main server cannot be deleted from the cluster"
+            )
+        if instance.status not in [
+            SwarmNode.Status.CREATED,
+            SwarmNode.Status.FAILED,
+            SwarmNode.Status.REMOVED,
+        ]:
+            raise exceptions.ValidationError(
+                f"Cannot delete a server with the status `{instance.status}`, deprovision it first"
+            )
+        instance.delete()
 
 
 class MainSwarmNodeAPIView(APIView):

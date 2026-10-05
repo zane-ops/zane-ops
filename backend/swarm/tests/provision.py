@@ -25,18 +25,6 @@ class ProvisionSwarmNodeViewTests(AuthAPITestCase):
         self.main_key = self.create_ssh_key(self.main_node, user="root")
         self.node_key = self.create_ssh_key(self.node, user="root")
 
-    @staticmethod
-    def create_ssh_key(node: SwarmNode, user: str, name: str = "my key"):
-        public_key, private_key = SSHKey.create_key_pair()
-        return SSHKey.objects.create(
-            node=node,
-            user=user,
-            name=name,
-            public_key=public_key,
-            private_key=private_key,
-            fingerprint=SSHKey.generate_fingerprint(public_key),
-        )
-
     def provision(self, node_id: str, data: dict):
         return self.client.post(
             reverse("swarm:node.provision", kwargs={"id": node_id}),
