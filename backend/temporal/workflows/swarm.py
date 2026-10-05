@@ -4,7 +4,6 @@ from datetime import timedelta
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 from temporalio.exceptions import (
-    ApplicationError,
     ActivityError,
     is_cancelled_exception,
 )
@@ -25,6 +24,7 @@ from ..shared import (
     DockerSwarmJoinContext,
     DockerNodeUpdateContext,
     SwarmNodeStatusResult,
+    DockerNodeHealthCheckContext,
 )
 
 
@@ -78,7 +78,11 @@ class ProvisionSwarmNodeWorkflow:
 
             ssh_test_main_task = workflow.start_activity_method(
                 SwarmNodeActivities.test_ssh_connection,
-                SwarmNodeSSHContext(node=payload.main_node, tmp_dir=tmp_dir),
+                SwarmNodeSSHContext(
+                    node=payload.main_node,
+                    tmp_dir=tmp_dir,
+                    target_node=payload.target_node,
+                ),
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
@@ -100,8 +104,8 @@ class ProvisionSwarmNodeWorkflow:
             )
 
             docker_check_main_task = workflow.start_activity_method(
-                SwarmNodeActivities.check_docker_installation,
-                SwarmNodeSSHContext(node=payload.main_node, tmp_dir=tmp_dir),
+                SwarmNodeActivities.get_main_node_docker_info,
+                payload,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
@@ -109,12 +113,6 @@ class ProvisionSwarmNodeWorkflow:
             docker_info, main_docker_info = await asyncio.gather(
                 docker_check_new_task, docker_check_main_task
             )
-
-            if main_docker_info is None:
-                raise ApplicationError(
-                    message=f"Docker is not installed on the main server {payload.main_node.private_ip} ❌",
-                    non_retryable=True,
-                )
 
             docker_info = await workflow.execute_activity_method(
                 SwarmNodeActivities.install_docker_on_node,
@@ -139,58 +137,57 @@ class ProvisionSwarmNodeWorkflow:
                 heartbeat_timeout=timedelta(seconds=3),
             )
 
-            if docker_info is not None:
-                credentials = await workflow.execute_activity_method(
-                    SwarmNodeActivities.get_swarm_join_token,
-                    GetSwarmJoinTokenInput(
-                        node=payload.main_node,
+            credentials = await workflow.execute_activity_method(
+                SwarmNodeActivities.get_swarm_join_token,
+                GetSwarmJoinTokenInput(
+                    tmp_dir=tmp_dir,
+                    swarm_role=payload.target_node.swarm_role,
+                    node=payload.main_node,
+                    target_node=payload.target_node,
+                ),
+                start_to_close_timeout=timedelta(minutes=5),
+                retry_policy=self.retry_policy,
+            )
+
+            swarm_info = await workflow.execute_activity_method(
+                SwarmNodeActivities.join_swarm_cluster,
+                DockerSwarmJoinContext(
+                    node=payload.target_node,
+                    tmp_dir=tmp_dir,
+                    credentials=credentials,
+                    info=docker_info,
+                ),
+                start_to_close_timeout=timedelta(minutes=3),
+                retry_policy=self.retry_policy,
+            )
+
+            node_deployment_result.docker_info.Swarm = swarm_info
+
+            node_deployment_result.swarm_hostname = (
+                await workflow.execute_activity_method(
+                    SwarmNodeActivities.update_node_labels,
+                    DockerNodeUpdateContext(
+                        node=payload.target_node,
                         tmp_dir=tmp_dir,
-                        swarm_role=payload.target_node.swarm_role,
+                        swarm_info=swarm_info,
                     ),
-                    start_to_close_timeout=timedelta(minutes=5),
+                    start_to_close_timeout=timedelta(minutes=3),
                     retry_policy=self.retry_policy,
                 )
+            )
 
-                if credentials is not None:
-                    swarm_info = await workflow.execute_activity_method(
-                        SwarmNodeActivities.join_swarm_cluster,
-                        DockerSwarmJoinContext(
-                            node=payload.target_node,
-                            tmp_dir=tmp_dir,
-                            credentials=credentials,
-                            info=docker_info,
-                        ),
-                        start_to_close_timeout=timedelta(minutes=3),
-                        retry_policy=self.retry_policy,
-                    )
+            all_healthy = await workflow.execute_activity_method(
+                SwarmNodeActivities.run_swarm_node_services_healthcheck,
+                DockerNodeHealthCheckContext(
+                    node=payload.target_node,
+                    swarm_info=swarm_info,
+                ),
+                start_to_close_timeout=timedelta(minutes=5),
+                retry_policy=self.retry_policy,
+                heartbeat_timeout=timedelta(seconds=3),
+            )
 
-                    if swarm_info:
-                        node_deployment_result.docker_info.Swarm = swarm_info
-
-                        node_deployment_result.swarm_hostname = (
-                            await workflow.execute_activity_method(
-                                SwarmNodeActivities.update_node_labels,
-                                DockerNodeUpdateContext(
-                                    node=payload.target_node,
-                                    tmp_dir=tmp_dir,
-                                    swarm_info=swarm_info,
-                                ),
-                                start_to_close_timeout=timedelta(minutes=3),
-                                retry_policy=self.retry_policy,
-                            )
-                        )
-
-                        if node_deployment_result.swarm_hostname:
-                            all_healthy = await workflow.execute_activity_method(
-                                SwarmNodeActivities.wait_for_global_services_to_be_propagated,
-                                swarm_info,
-                                start_to_close_timeout=timedelta(minutes=5),
-                                retry_policy=self.retry_policy,
-                            )
-
-                            node_deployment_result.status = (
-                                "ACTIVE" if all_healthy else "PROVISIONING"
-                            )
+            node_deployment_result.status = "ACTIVE" if all_healthy else "PROVISIONING"
 
         except ActivityError as e:
             print(f"ActivityError({e=}) !")
@@ -204,7 +201,7 @@ class ProvisionSwarmNodeWorkflow:
             if tmp_dir is not None:
                 await workflow.execute_activity_method(
                     SwarmNodeActivities.delete_ssh_keys_temp_dir,
-                    tmp_dir,
+                    SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
                 )
@@ -224,8 +221,8 @@ class ProvisionSwarmNodeWorkflow:
         return node_deployment_result
 
 
-@workflow.defn(name="remove-swarm-node-from-cluster")
-class RemoveSwarmNodeFromClusterWorkflow:
+@workflow.defn(name="deprovision-swarm-node")
+class DeprovisionSwarmNodeWorkflow:
     def __init__(self):
         self.retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
@@ -259,7 +256,11 @@ class RemoveSwarmNodeFromClusterWorkflow:
 
         ssh_test_main_task = workflow.start_activity_method(
             SwarmNodeActivities.test_ssh_connection,
-            SwarmNodeSSHContext(node=payload.main_node, tmp_dir=tmp_dir),
+            SwarmNodeSSHContext(
+                node=payload.main_node,
+                tmp_dir=tmp_dir,
+                target_node=payload.target_node,
+            ),
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )
@@ -329,7 +330,7 @@ class RemoveSwarmNodeFromClusterWorkflow:
 
         await workflow.execute_activity_method(
             SwarmNodeActivities.delete_ssh_keys_temp_dir,
-            tmp_dir,
+            SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )

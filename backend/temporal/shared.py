@@ -707,6 +707,7 @@ class ClusterSwarmNodePair(SwarmNodePair):
 class SwarmNodeSSHContext:
     node: SwarmNodeDetails
     tmp_dir: str
+    target_node: SwarmNodeDetails | None = field(default=None, kw_only=True)
 
 
 @dataclass
@@ -770,9 +771,11 @@ class DockerSystemInfo:
             ServerVersion=data["ServerVersion"],
             NCPU=data["NCPU"],
             MemTotal=data["MemTotal"],
-            Swarm=DockerSwarmInfo.from_dict(Swarm)
-            if Swarm["NodeID"] is not None and len(Swarm["NodeID"].strip()) > 0
-            else None,
+            Swarm=(
+                DockerSwarmInfo.from_dict(Swarm)
+                if Swarm.get("NodeID") is not None and len(Swarm["NodeID"].strip()) > 0
+                else None
+            ),
         )
 
 
@@ -806,6 +809,12 @@ class DockerSwarmJoinContext(SwarmNodeSSHContext):
 
 @dataclass
 class DockerNodeUpdateContext(SwarmNodeSSHContext):
+    swarm_info: DockerSwarmInfo
+
+
+@dataclass
+class DockerNodeHealthCheckContext:
+    node: SwarmNodeDetails
     swarm_info: DockerSwarmInfo
 
 

@@ -498,7 +498,7 @@ class Colors:
     ENDC = "\033[0m"  # Reset to default color
 
 
-DOCKER_SYSTEM_INFO_CMD = "docker system info --format json"
+DOCKER_SYSTEM_INFO_CMD = "set -ex && docker system info --format json"
 
 DOCKER_CHECK_SCRIPT = f"command -v docker >/dev/null 2>&1 && {DOCKER_SYSTEM_INFO_CMD}"
 

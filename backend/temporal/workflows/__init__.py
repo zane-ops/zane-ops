@@ -62,7 +62,7 @@ with workflow.unsafe.imports_passed_through():
         ArchiveComposeStackWorkflow,
         ToggleComposeStackWorkflow,
         ProvisionSwarmNodeWorkflow,
-        RemoveSwarmNodeFromClusterWorkflow,
+        DeprovisionSwarmNodeWorkflow,
     )
     from ..schedules import (
         MonitorDockerDeploymentWorkflow,
@@ -122,7 +122,7 @@ def get_workflows_and_activities():
             ToggleComposeStackWorkflow,
             CollectComposeStacksMetricsWorkflow,
             ProvisionSwarmNodeWorkflow,
-            RemoveSwarmNodeFromClusterWorkflow,
+            DeprovisionSwarmNodeWorkflow,
             SwarmHealthcheckWorkflow,
         ],
         activities=[
@@ -223,6 +223,7 @@ def get_workflows_and_activities():
             swarm_node_activities.create_ssh_keys_temp_dir,
             swarm_node_activities.test_ssh_connection,
             swarm_node_activities.check_docker_installation,
+            swarm_node_activities.get_main_node_docker_info,
             swarm_node_activities.install_docker_on_node,
             swarm_node_activities.get_swarm_join_token,
             swarm_node_activities.join_swarm_cluster,
@@ -230,7 +231,7 @@ def get_workflows_and_activities():
             swarm_node_activities.prepare_node_deployment,
             swarm_node_activities.finish_and_save_node_deployment,
             swarm_node_activities.clear_removed_swarm_node_attributes,
-            swarm_node_activities.wait_for_global_services_to_be_propagated,
+            swarm_node_activities.run_swarm_node_services_healthcheck,
             swarm_node_activities.delete_ssh_keys_temp_dir,
             swarm_node_activities.drain_swarm_node_and_remove_labels,
             swarm_node_activities.wait_for_global_services_to_be_drained,
