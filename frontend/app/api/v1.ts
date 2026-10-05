@@ -635,6 +635,10 @@ export interface paths {
     /** Update a swarm node */
     patch: operations["updateSwarmNode"];
   };
+  "/api/swarm/nodes/{id}/build-logs/": {
+    /** Get swarm node provisioning logs */
+    get: operations["getSwarmNodeBuildLogs"];
+  };
   "/api/swarm/nodes/{id}/provision/": {
     /** Provision a swarm node and add it to the ZaneOps cluster */
     post: operations["provisionSwarmNode"];
@@ -3847,6 +3851,30 @@ export interface components {
      * @enum {string}
      */
     FieldChangeTypeEnum: "UPDATE";
+    FullSwarmNode: {
+      id: string;
+      hostname: string | null;
+      swarm_node_id: string | null;
+      swarm_role: components["schemas"]["SwarmRoleEnum"];
+      private_ip: string;
+      ssh_port: number;
+      services: unknown;
+      status: components["schemas"]["StatusD61Enum"];
+      status_message: string | null;
+      /** Format: date-time */
+      last_status_update: string | null;
+      docker_version: string | null;
+      cluster_roles: components["schemas"]["ClusterRolesEnum"][];
+      is_initial_install_server: boolean;
+      cpus: number | null;
+      /** Format: int64 */
+      memory_bytes: number | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+      ssh_keys: readonly components["schemas"]["SSHKey"][];
+    };
     GeneratePasswordResetTokenErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetAPISettingsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetAuthedUserErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -3995,6 +4023,7 @@ export interface components {
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetSwarmNodeBuildLogsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GitApp: {
       id: string;
       github: components["schemas"]["GithubApp"] | null;
@@ -8171,11 +8200,6 @@ export interface components {
       /** Format: date-time */
       created_at: string;
     };
-    SSHKeyRequest: {
-      user: string;
-      name: string;
-      fingerprint?: string | null;
-    };
     /**
      * @description * `deploy:write` - Trigger / cancel / redeploy deployments and previews
      * * `service:read` - Read service and compose-stack configuration
@@ -8541,6 +8565,18 @@ export interface components {
       index_page: string;
     };
     /**
+     * @description * `CREATED` - Created
+     * * `PROVISIONING` - Provisioning
+     * * `ACTIVE` - Active
+     * * `DOWN` - Down
+     * * `PAUSED` - Paused
+     * * `DRAINED` - Drained
+     * * `FAILED` - Failed
+     * * `REMOVED` - Removed
+     * @enum {string}
+     */
+    StatusD61Enum: "CREATED" | "PROVISIONING" | "ACTIVE" | "DOWN" | "PAUSED" | "DRAINED" | "FAILED" | "REMOVED";
+    /**
      * @description * `LOCAL` - Local Disk
      * * `S3` - S3
      * @enum {string}
@@ -8553,11 +8589,7 @@ export interface components {
       swarm_role: components["schemas"]["SwarmRoleEnum"];
       private_ip: string;
       ssh_port: number;
-      services: unknown;
-      status: components["schemas"]["SwarmNodeStatusEnum"];
-      status_message: string | null;
-      /** Format: date-time */
-      last_status_update: string | null;
+      status: components["schemas"]["StatusD61Enum"];
       docker_version: string | null;
       cluster_roles: components["schemas"]["ClusterRolesEnum"][];
       is_initial_install_server: boolean;
@@ -8568,7 +8600,6 @@ export interface components {
       created_at: string;
       /** Format: date-time */
       updated_at: string;
-      ssh_keys: readonly components["schemas"]["SSHKey"][];
     };
     SwarmNodeRequest: {
       swarm_role: components["schemas"]["SwarmRoleEnum"];
@@ -8576,18 +8607,6 @@ export interface components {
       ssh_port?: number;
       cluster_roles?: components["schemas"]["ClusterRolesEnum"][];
     };
-    /**
-     * @description * `CREATED` - Created
-     * * `PROVISIONING` - Provisioning
-     * * `ACTIVE` - Active
-     * * `DOWN` - Down
-     * * `PAUSED` - Paused
-     * * `DRAINED` - Drained
-     * * `FAILED` - Failed
-     * * `REMOVED` - Removed
-     * @enum {string}
-     */
-    SwarmNodeStatusEnum: "CREATED" | "PROVISIONING" | "ACTIVE" | "DOWN" | "PAUSED" | "DRAINED" | "FAILED" | "REMOVED";
     SwarmNodesCreateClusterRolesErrorComponent: {
       /**
        * @description * `cluster_roles` - cluster_roles
@@ -16615,7 +16634,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["SwarmNode"];
+          "application/json": components["schemas"]["FullSwarmNode"];
         };
       };
       400: {
@@ -16692,6 +16711,50 @@ export interface operations {
       };
     };
   };
+  /** Get swarm node provisioning logs */
+  getSwarmNodeBuildLogs: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        per_page?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RuntimeLogsSearch"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetSwarmNodeBuildLogsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /** Provision a swarm node and add it to the ZaneOps cluster */
   provisionSwarmNode: {
     parameters: {
@@ -16709,7 +16772,7 @@ export interface operations {
     responses: {
       202: {
         content: {
-          "application/json": components["schemas"]["SwarmNode"];
+          "application/json": components["schemas"]["FullSwarmNode"];
         };
       };
       400: {
@@ -16830,7 +16893,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["SwarmNode"];
+          "application/json": components["schemas"]["FullSwarmNode"];
         };
       };
       400: {

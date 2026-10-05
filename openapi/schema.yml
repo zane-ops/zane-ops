@@ -15234,7 +15234,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SwarmNode'
+                $ref: '#/components/schemas/FullSwarmNode'
           description: ''
     patch:
       operationId: updateSwarmNode
@@ -15338,6 +15338,110 @@ paths:
               schema:
                 $ref: '#/components/schemas/UpdateSwarmNodeSSHPort'
           description: ''
+  /api/swarm/nodes/{id}/build-logs/:
+    get:
+      operationId: getSwarmNodeBuildLogs
+      summary: Get swarm node provisioning logs
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+          minLength: 1
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+      tags:
+      - swarm
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSwarmNodeBuildLogsErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeLogsSearch'
+          description: ''
   /api/swarm/nodes/{id}/provision/:
     post:
       operationId: provisionSwarmNode
@@ -15440,7 +15544,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SwarmNode'
+                $ref: '#/components/schemas/FullSwarmNode'
           description: ''
   /api/swarm/nodes/{id}/ssh-keys/:
     post:
@@ -15708,7 +15812,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SwarmNode'
+                $ref: '#/components/schemas/FullSwarmNode'
           description: ''
   /api/trigger-preview/{deploy_token}/:
     post:
@@ -24996,6 +25100,90 @@ components:
       - UPDATE
       type: string
       description: '* `UPDATE` - Update'
+    FullSwarmNode:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        hostname:
+          type: string
+          nullable: true
+        swarm_node_id:
+          type: string
+          nullable: true
+        swarm_role:
+          $ref: '#/components/schemas/SwarmRoleEnum'
+        private_ip:
+          type: string
+        ssh_port:
+          type: integer
+          maximum: 65535
+          minimum: 1
+        services:
+          nullable: true
+        status:
+          $ref: '#/components/schemas/StatusD61Enum'
+        status_message:
+          type: string
+          nullable: true
+        last_status_update:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        docker_version:
+          type: string
+          nullable: true
+        cluster_roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClusterRolesEnum'
+        is_initial_install_server:
+          type: boolean
+        cpus:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        memory_bytes:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        ssh_keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/SSHKey'
+          readOnly: true
+      required:
+      - cluster_roles
+      - cpus
+      - created_at
+      - docker_version
+      - hostname
+      - id
+      - is_initial_install_server
+      - last_status_update
+      - memory_bytes
+      - private_ip
+      - services
+      - ssh_keys
+      - ssh_port
+      - status
+      - status_message
+      - swarm_node_id
+      - swarm_role
+      - updated_at
     GeneratePasswordResetTokenErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -25360,6 +25548,13 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     GetSingleServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetSwarmNodeBuildLogsErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -33926,24 +34121,6 @@ components:
       - public_key
       - updated_at
       - user
-    SSHKeyRequest:
-      type: object
-      properties:
-        user:
-          type: string
-          minLength: 1
-          maxLength: 255
-        name:
-          type: string
-          minLength: 1
-          maxLength: 255
-        fingerprint:
-          type: string
-          nullable: true
-          minLength: 1
-      required:
-      - name
-      - user
     ScopesEnum:
       enum:
       - deploy:write
@@ -35048,6 +35225,26 @@ components:
       - is_spa
       - not_found_page
       - publish_directory
+    StatusD61Enum:
+      enum:
+      - CREATED
+      - PROVISIONING
+      - ACTIVE
+      - DOWN
+      - PAUSED
+      - DRAINED
+      - FAILED
+      - REMOVED
+      type: string
+      description: |-
+        * `CREATED` - Created
+        * `PROVISIONING` - Provisioning
+        * `ACTIVE` - Active
+        * `DOWN` - Down
+        * `PAUSED` - Paused
+        * `DRAINED` - Drained
+        * `FAILED` - Failed
+        * `REMOVED` - Removed
     StorageBackendEnum:
       enum:
       - LOCAL
@@ -35079,22 +35276,10 @@ components:
           type: integer
           maximum: 65535
           minimum: 1
-        services:
-          readOnly: true
-          nullable: true
         status:
           allOf:
-          - $ref: '#/components/schemas/SwarmNodeStatusEnum'
+          - $ref: '#/components/schemas/StatusD61Enum'
           readOnly: true
-        status_message:
-          type: string
-          readOnly: true
-          nullable: true
-        last_status_update:
-          type: string
-          format: date-time
-          readOnly: true
-          nullable: true
         docker_version:
           type: string
           readOnly: true
@@ -35127,11 +35312,6 @@ components:
           type: string
           format: date-time
           readOnly: true
-        ssh_keys:
-          type: array
-          items:
-            $ref: '#/components/schemas/SSHKey'
-          readOnly: true
       required:
       - cluster_roles
       - cpus
@@ -35140,14 +35320,10 @@ components:
       - hostname
       - id
       - is_initial_install_server
-      - last_status_update
       - memory_bytes
       - private_ip
-      - services
-      - ssh_keys
       - ssh_port
       - status
-      - status_message
       - swarm_node_id
       - swarm_role
       - updated_at
@@ -35170,26 +35346,6 @@ components:
       required:
       - private_ip
       - swarm_role
-    SwarmNodeStatusEnum:
-      enum:
-      - CREATED
-      - PROVISIONING
-      - ACTIVE
-      - DOWN
-      - PAUSED
-      - DRAINED
-      - FAILED
-      - REMOVED
-      type: string
-      description: |-
-        * `CREATED` - Created
-        * `PROVISIONING` - Provisioning
-        * `ACTIVE` - Active
-        * `DOWN` - Down
-        * `PAUSED` - Paused
-        * `DRAINED` - Drained
-        * `FAILED` - Failed
-        * `REMOVED` - Removed
     SwarmNodesCreateClusterRolesErrorComponent:
       type: object
       properties:
