@@ -39,7 +39,7 @@ from swarm.serializers import (
 class SwarmNodeListAPIView(ListCreateAPIView):
     permission_classes = [IsInstanceOwner]
     serializer_class = SwarmNodeSerializer
-    queryset = SwarmNode.objects.all().order_by("hostname").prefetch_related("ssh_keys")
+    queryset = SwarmNode.objects.all().order_by("created_at")
     pagination_class = DefaultPageNumberPagination
 
     @extend_schema(
