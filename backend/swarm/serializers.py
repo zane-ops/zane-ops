@@ -112,7 +112,7 @@ class SwarmNodeSerializer(serializers.ModelSerializer):
         )
         if not cluster_roles:
             raise serializers.ValidationError(
-                "Nodes on ZaneOps should have at lease one cluster role"
+                "Nodes on ZaneOps should have at least one cluster role"
             )
 
         attrs["cluster_roles"] = list(set(cluster_roles))
@@ -162,7 +162,7 @@ class FullSwarmNodeSerializer(serializers.ModelSerializer):
         )
         if not cluster_roles:
             raise serializers.ValidationError(
-                "Nodes on ZaneOps should have at lease one cluster role"
+                "Nodes on ZaneOps should have at least one cluster role"
             )
 
         attrs["cluster_roles"] = list(set(cluster_roles))

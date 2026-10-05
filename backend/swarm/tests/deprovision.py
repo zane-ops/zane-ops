@@ -1,11 +1,8 @@
-from unittest.mock import MagicMock, patch
-
 from django.urls import reverse
 from rest_framework import status
 
 from swarm.models import SSHKey, SwarmNode
-from temporal.shared import ClusterSwarmNodePair
-from temporal.workflows import RemoveSwarmNodeFromClusterWorkflow
+
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import jprint
 
