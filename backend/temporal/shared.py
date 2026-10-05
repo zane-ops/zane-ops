@@ -700,6 +700,7 @@ class CancelProvisionSignalInput:
 class ClusterSwarmNodePair(SwarmNodePair):
     main_node: ClusterSwarmNodeDetails
     target_node: ClusterSwarmNodeDetails
+    force: bool = False
 
 
 @dataclass
