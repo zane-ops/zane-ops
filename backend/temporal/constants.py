@@ -630,14 +630,20 @@ if [ -f /etc/debian_version ]; then
     apt-get update
 
     # Find the exact package version, ex: `5:28.3.3-1~ubuntu.24.04~noble`
-    PACKAGE_VERSION=$(apt-cache madison docker-ce | awk -v v="$DOCKER_VERSION" '{{{{ n = split($3, a, ":"); if (index(a[n], v "-") == 1) {{{{ print $3; exit }}}} }}}}')
-    if [ -z "$PACKAGE_VERSION" ]; then
+    ENGINE_PACKAGE_VERSION=$(apt-cache madison docker-ce | awk -v v="$DOCKER_VERSION" '{{{{ n = split($3, a, ":"); if (index(a[n], v "-") == 1) {{{{ print $3; exit }}}} }}}}')
+    if [ -z "$ENGINE_PACKAGE_VERSION" ]; then
+        echo "{Colors.RED}❌ Docker version $DOCKER_VERSION is not available for $DISTRIBUTION $CODENAME{Colors.ENDC}"
+        exit 1
+    fi
+ 
+    CLI_PACKAGE_VERSION=$(apt-cache madison docker-ce-cli | awk -v v="$DOCKER_VERSION" '{{{{ n = split($3, a, ":"); if (index(a[n], v "-") == 1) {{{{ print $3; exit }}}} }}}}')
+    if [ -z "$CLI_PACKAGE_VERSION" ]; then
         echo "{Colors.RED}❌ Docker version $DOCKER_VERSION is not available for $DISTRIBUTION $CODENAME{Colors.ENDC}"
         exit 1
     fi
 
-    echo "➡️ Installing Docker {Colors.BLUE}$PACKAGE_VERSION{Colors.ENDC}..."
-    apt-get install -y --allow-downgrades docker-ce="$PACKAGE_VERSION" docker-ce-cli="$PACKAGE_VERSION" containerd.io docker-buildx-plugin docker-compose-plugin
+    echo "➡️ Installing Docker engine {Colors.BLUE}$ENGINE_PACKAGE_VERSION{Colors.GREY} - CLI {Colors.BLUE}$CLI_PACKAGE_VERSION{Colors.ENDC}..."
+    apt-get install -y --allow-downgrades docker-ce="$ENGINE_PACKAGE_VERSION" docker-ce-cli="$CLI_PACKAGE_VERSION" containerd.io docker-buildx-plugin docker-compose-plugin
 
 elif [ -f /etc/redhat-release ]; then
     . /etc/os-release
