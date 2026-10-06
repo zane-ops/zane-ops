@@ -641,6 +641,10 @@ export interface paths {
     /** Get swarm node provisioning logs */
     get: operations["getSwarmNodeBuildLogs"];
   };
+  "/api/swarm/nodes/{id}/cancel-provision/": {
+    /** Cancel a swarm node provisioning workflow */
+    put: operations["cancelSwarmNodeProvision"];
+  };
   "/api/swarm/nodes/{id}/deprovision/": {
     /** Drain a swarm node and remove it from the ZaneOps cluster */
     put: operations["deprovisionSwarmNode"];
@@ -1075,6 +1079,7 @@ export interface components {
     CancelServiceChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CancelServiceDeploymentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CancelStackChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    CancelSwarmNodeProvisionErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ChangePasswordConfirmPasswordErrorComponent: {
       /**
        * @description * `confirm_password` - confirm_password
@@ -16857,6 +16862,45 @@ export interface operations {
       };
     };
   };
+  /** Cancel a swarm node provisioning workflow */
+  cancelSwarmNodeProvision: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CancelSwarmNodeProvisionErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /** Drain a swarm node and remove it from the ZaneOps cluster */
   deprovisionSwarmNode: {
     parameters: {
@@ -16919,10 +16963,9 @@ export interface operations {
       };
     };
     responses: {
+      /** @description No response body */
       202: {
-        content: {
-          "application/json": components["schemas"]["FullSwarmNode"];
-        };
+        content: never;
       };
       400: {
         content: {
