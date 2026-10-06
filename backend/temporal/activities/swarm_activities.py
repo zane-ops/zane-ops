@@ -14,7 +14,12 @@ from datetime import timedelta
 import time
 
 with workflow.unsafe.imports_passed_through():
-    from zane_api.utils import Colors, format_duration, DockerSwarmTask
+    from zane_api.utils import (
+        Colors,
+        format_duration,
+        DockerSwarmTask,
+        escape_ansi,
+    )
     from temporal.helpers import empty_folder, exec_cmd_in_server, provision_log
 
     import docker
@@ -158,7 +163,7 @@ class SwarmNodeActivities:
             file.write(payload.main_node.ssh_key)
             await provision_log(
                 payload.target_node,
-                f"✅ Wrote ssh key for the {Colors.BLUE}main node{Colors.ENDC}[{Colors.BLUE}{payload.main_node.private_ip}{Colors.ENDC}] at {Colors.ORANGE}{main_node_key_location}{Colors.ENDC}",
+                f"✅ Wrote ssh key for the main node - {Colors.BLUE}{payload.main_node.private_ip}{Colors.ENDC} at {Colors.ORANGE}{main_node_key_location}{Colors.ENDC}",
             )
         await provision_log(
             payload.target_node,
@@ -171,7 +176,7 @@ class SwarmNodeActivities:
             file.write(payload.target_node.ssh_key)
             await provision_log(
                 payload.target_node,
-                f"✅ Wrote ssh key for the {Colors.BLUE}target node{Colors.ENDC}[{Colors.BLUE}{payload.target_node.private_ip}{Colors.ENDC}] at {Colors.ORANGE}{new_node_key_location}{Colors.ENDC}",
+                f"✅ Wrote ssh key for the target node - {Colors.BLUE}{payload.target_node.private_ip}{Colors.ENDC} at {Colors.ORANGE}{new_node_key_location}{Colors.ENDC}",
             )
         await provision_log(
             payload.target_node,
@@ -188,7 +193,11 @@ class SwarmNodeActivities:
             node = await SwarmNode.objects.filter(id=result.id).aget()
 
             node.status = result.status
-            node.status_message = result.status_message
+            node.status_message = (
+                escape_ansi(result.status_message)
+                if result.status_message is not None
+                else None
+            )
             if result.docker_info:
                 node.cpus = result.docker_info.NCPU
                 node.memory_bytes = result.docker_info.MemTotal
@@ -222,7 +231,7 @@ class SwarmNodeActivities:
                         f"",
                         f"",
                         f"❌  Node provisioning finished with status {Colors.RED}{result.status}{Colors.ENDC}",
-                        f"    and message {Colors.RED}{result.status_message}{Colors.ENDC}",
+                        f"    {Colors.RED}{result.status_message}{Colors.ENDC}",
                         f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
                     ],
                     error=True,
@@ -251,7 +260,11 @@ class SwarmNodeActivities:
             # The node is not part of the cluster anymore, so its swarm attributes are not valid
             updated = await SwarmNode.objects.filter(id=result.id).aupdate(
                 status=result.status,
-                status_message=result.status_message,
+                status_message=(
+                    escape_ansi(result.status_message)
+                    if result.status_message is not None
+                    else None
+                ),
                 swarm_node_id=None,
                 hostname=None,
                 docker_version=None,
@@ -263,7 +276,11 @@ class SwarmNodeActivities:
         else:
             updated = await SwarmNode.objects.filter(id=result.id).aupdate(
                 status=result.status,
-                status_message=result.status_message,
+                status_message=(
+                    escape_ansi(result.status_message)
+                    if result.status_message is not None
+                    else None
+                ),
                 last_status_update=timezone.now(),
             )
 
@@ -290,7 +307,7 @@ class SwarmNodeActivities:
                     f"",
                     f"",
                     f"❌  Node deprovisioning failed, the node is still part of the cluster with status {Colors.RED}{result.status}{Colors.ENDC}",
-                    f"    and message {Colors.RED}{result.status_message}{Colors.ENDC}",
+                    f"    {Colors.RED}{result.status_message}{Colors.ENDC}",
                     f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
                 ],
                 error=True,

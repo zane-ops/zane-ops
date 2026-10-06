@@ -6,6 +6,7 @@ import {
   LoaderIcon,
   Maximize2Icon,
   Minimize2Icon,
+  OctagonXIcon,
   TriangleAlertIcon
 } from "lucide-react";
 import * as React from "react";
@@ -155,23 +156,29 @@ export default function SwarmNodeDeploymentLogsPage({
     React.ComponentProps<typeof Alert>["variant"]
   > =
     node.status === "FAILED"
-      ? "danger"
+      ? "destructive"
       : node.status === "DOWN"
         ? "warning"
         : "info";
 
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex flex-col gap-4">
       {node.status_message && (
         <Alert variant={alertVariant} className={cn(isMaximized && "hidden")}>
-          {alertVariant === "danger" ? (
-            <TriangleAlertIcon className="size-4" />
+          {alertVariant === "destructive" ? (
+            <OctagonXIcon className="size-4 !top-4" />
           ) : alertVariant === "warning" ? (
             <AlertCircleIcon className="size-4" />
           ) : (
             <InfoIcon className="size-4" />
           )}
-          <AlertTitle>Message</AlertTitle>
+          <AlertTitle>
+            {alertVariant === "destructive"
+              ? "Error"
+              : alertVariant === "warning"
+                ? "Warning"
+                : "Info"}
+          </AlertTitle>
           <AlertDescription>{node.status_message}</AlertDescription>
         </Alert>
       )}

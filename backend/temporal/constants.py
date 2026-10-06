@@ -672,14 +672,21 @@ elif [ -f /etc/redhat-release ]; then
     fi
 
     # Find the exact package version, ex: `3:28.3.3-1.fc42`
-    PACKAGE_VERSION=$(dnf list --showduplicates docker-ce 2>/dev/null | awk -v v="$DOCKER_VERSION" '{{{{ n = split($2, a, ":"); if (index(a[n], v "-") == 1) {{{{ print $2 }}}} }}}}' | tail -n 1)
-    if [ -z "$PACKAGE_VERSION" ]; then
+    ENGINE_PACKAGE_VERSION=$(dnf list --showduplicates docker-ce 2>/dev/null | awk -v v="$DOCKER_VERSION" '{{{{ n = split($2, a, ":"); if (index(a[n], v "-") == 1) {{{{ print $2 }}}} }}}}' | tail -n 1)
+    if [ -z "$ENGINE_PACKAGE_VERSION" ]; then
+        echo "{Colors.RED}❌ Docker version $DOCKER_VERSION is not available for $ID{Colors.ENDC}"
+        exit 1
+    fi
+    
+    # Find the exact package version, ex: `3:28.3.3-1.fc42`
+    CLI_PACKAGE_VERSION=$(dnf list --showduplicates docker-ce-cli 2>/dev/null | awk -v v="$DOCKER_VERSION" '{{{{ n = split($2, a, ":"); if (index(a[n], v "-") == 1) {{{{ print $2 }}}} }}}}' | tail -n 1)
+    if [ -z "$CLI_PACKAGE_VERSION" ]; then
         echo "{Colors.RED}❌ Docker version $DOCKER_VERSION is not available for $ID{Colors.ENDC}"
         exit 1
     fi
 
-    echo "➡️ Installing Docker {Colors.BLUE}$PACKAGE_VERSION{Colors.ENDC}..."
-    dnf install -y --allowerasing docker-ce-"$PACKAGE_VERSION" docker-ce-cli-"$PACKAGE_VERSION" containerd.io docker-buildx-plugin docker-compose-plugin
+    echo "➡️ Installing Docker engine {Colors.BLUE}$ENGINE_PACKAGE_VERSION{Colors.GREY} - CLI {Colors.BLUE}$CLI_PACKAGE_VERSION{Colors.ENDC}..."
+    dnf install -y --allowerasing docker-ce-"$ENGINE_PACKAGE_VERSION" docker-ce-cli-"$CLI_PACKAGE_VERSION" containerd.io docker-buildx-plugin docker-compose-plugin
 
 elif [ -f /etc/alpine-release ]; then
     echo "Detected {Colors.BLUE}Alpine{Colors.ENDC} Linux Distribution"

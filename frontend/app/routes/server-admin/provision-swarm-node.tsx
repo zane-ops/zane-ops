@@ -18,8 +18,12 @@ export async function clientAction({
   const formData = await request.formData();
 
   const userData = {
-    target_ssh_key_id: Number(formData.get("target_ssh_key_id")),
-    main_ssh_key_id: Number(formData.get("main_ssh_key_id"))
+    target_ssh_key_id: formData
+      .get("target_ssh_key_id")
+      ?.toString() as unknown as number,
+    main_ssh_key_id: formData
+      .get("main_ssh_key_id")
+      ?.toString() as unknown as number
   } satisfies RequestInput<"post", "/api/swarm/nodes/{id}/provision/">;
 
   const { error: errors, data } = await apiClient.POST(
