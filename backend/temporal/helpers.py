@@ -940,9 +940,7 @@ async def send_regular_heartbeat(name: str):
         await asyncio.sleep(0.1)
 
 
-async def exec_cmd_in_server[
-    T
-](
+async def exec_cmd_in_server[T](
     ctx: SwarmNodeSSHContext,
     cmd: str,
     output_handler: OutputHandlerFunction[T] = default_output_handler,
@@ -953,20 +951,9 @@ async def exec_cmd_in_server[
     result: T | None = None
 
     try:
-
-        async def send_heartbeat():
-            """
-            We want this activity to be cancellable,
-            for activities to be cancellable, they need to send regular heartbeats:
-            https://docs.temporal.io/develop/python/cancellation#cancel-activity
-            """
-            while True:
-                activity.heartbeat(
-                    "Heartbeat from `clone_repository_and_checkout_to_commit()`..."
-                )
-                await asyncio.sleep(0.1)
-
-        heartbeat_task = asyncio.create_task(send_heartbeat())
+        heartbeat_task = asyncio.create_task(
+            send_regular_heartbeat("Heartbeat from exec_cmd_in_server")
+        )
 
         full_cmd = [
             "ssh",

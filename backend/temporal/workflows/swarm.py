@@ -1,5 +1,6 @@
 import asyncio
 from datetime import timedelta
+from typing import Optional
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
@@ -7,6 +8,7 @@ from temporalio.exceptions import (
     ActivityError,
     is_cancelled_exception,
 )
+from temporalio.workflow import ActivityHandle, ActivityCancellationType
 
 with workflow.unsafe.imports_passed_through():
     from ..activities import SwarmNodeActivities
@@ -36,9 +38,55 @@ class ProvisionSwarmNodeWorkflow:
         self.cancellation_requested: set[str] = set()
 
     @workflow.signal
-    def cancel_deployment(self, input: CancelProvisionSignalInput):
+    def cancel(self, input: CancelProvisionSignalInput):
         self.cancellation_requested.add(input.target_node_id)
         print(f"Received signal {input=} {self.cancellation_requested=}")
+
+    async def monitor_cancellation(
+        self,
+        activity_handle: ActivityHandle,
+        node_id: str,
+        timeout: Optional[timedelta] = None,
+    ):
+        """
+        Monitors an activity for cancellation requests. If a cancellation is requested,
+        cancels the activity handle.
+
+        Args:
+            activity_handle: The activity handle to monitor and potentially cancel
+            node_id: The id of the node being provisioned
+            timeout: How long to wait for a cancellation signal, `None` to wait until the monitor is cancelled
+        """
+        try:
+            print(f"await monitor_cancellation({activity_handle.get_name()})")
+            await workflow.wait_condition(
+                lambda: node_id in self.cancellation_requested,
+                timeout=timeout,
+            )
+            print(f"cancelling activity {activity_handle.get_name()}")
+        except (asyncio.CancelledError, TimeoutError):
+            pass  # do nothing
+        else:
+            activity_handle.cancel()
+
+    async def run_cancellable[T](
+        self, activity_handle: ActivityHandle[T], node_id: str
+    ) -> T:
+        """
+        Await the activity, cancelling it if a cancellation is requested for `node_id`.
+        The activity must send heartbeats (and have a `heartbeat_timeout`) for the cancellation to reach it:
+        https://docs.temporal.io/develop/python/cancellation#cancel-activity
+
+        The activity should also use `cancellation_type=ActivityCancellationType.WAIT_CANCELLATION_COMPLETED`,
+        so that its cleanup (which may need the SSH keys) finishes before the workflow's `finally` block deletes them.
+        """
+        monitor_task = asyncio.create_task(
+            self.monitor_cancellation(activity_handle, node_id)
+        )
+        try:
+            return await activity_handle
+        finally:
+            monitor_task.cancel()
 
     @workflow.run
     async def run(self, payload: SwarmNodePair) -> SwarmNodeStatusResult:
@@ -73,6 +121,8 @@ class ProvisionSwarmNodeWorkflow:
                 SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
+                heartbeat_timeout=timedelta(seconds=3),
+                cancellation_type=ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
             )
 
             ssh_test_main_task = workflow.start_activity_method(
@@ -84,15 +134,25 @@ class ProvisionSwarmNodeWorkflow:
                 ),
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
+                heartbeat_timeout=timedelta(seconds=3),
+                cancellation_type=ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
             )
 
-            await asyncio.gather(ssh_test_new_task, ssh_test_main_task)
+            await asyncio.gather(
+                self.run_cancellable(ssh_test_new_task, payload.target_node.id),
+                self.run_cancellable(ssh_test_main_task, payload.target_node.id),
+            )
 
-            system_info = await workflow.execute_activity_method(
-                SwarmNodeActivities.check_os_and_arch_compatibility,
-                SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
+            system_info = await self.run_cancellable(
+                workflow.start_activity_method(
+                    SwarmNodeActivities.check_os_and_arch_compatibility,
+                    SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                    heartbeat_timeout=timedelta(seconds=3),
+                    cancellation_type=ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
+                ),
+                payload.target_node.id,
             )
             node_deployment_result.architecture = system_info.architecture
 
@@ -101,6 +161,8 @@ class ProvisionSwarmNodeWorkflow:
                 SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
+                heartbeat_timeout=timedelta(seconds=3),
+                cancellation_type=ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
             )
 
             docker_check_main_task = workflow.start_activity_method(
@@ -111,54 +173,73 @@ class ProvisionSwarmNodeWorkflow:
             )
 
             docker_info, main_docker_info = await asyncio.gather(
-                docker_check_new_task, docker_check_main_task
+                self.run_cancellable(docker_check_new_task, payload.target_node.id),
+                docker_check_main_task,
             )
 
-            docker_info = await workflow.execute_activity_method(
-                SwarmNodeActivities.install_docker_on_node,
-                DockerInstallContext(
-                    node=payload.target_node,
-                    tmp_dir=tmp_dir,
-                    info=docker_info,
-                    version_to_install=main_docker_info.ServerVersion,
+            docker_info = await self.run_cancellable(
+                workflow.start_activity_method(
+                    SwarmNodeActivities.install_docker_on_node,
+                    DockerInstallContext(
+                        node=payload.target_node,
+                        tmp_dir=tmp_dir,
+                        info=docker_info,
+                        version_to_install=main_docker_info.ServerVersion,
+                    ),
+                    start_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=self.retry_policy,
+                    heartbeat_timeout=timedelta(seconds=3),
+                    cancellation_type=ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
                 ),
-                start_to_close_timeout=timedelta(minutes=5),
-                retry_policy=self.retry_policy,
-                heartbeat_timeout=timedelta(seconds=3),
+                payload.target_node.id,
             )
 
             node_deployment_result.docker_info = docker_info
 
-            await workflow.execute_activity_method(
-                SwarmNodeActivities.check_swarm_ports_reachability,
-                SwarmNodePairSSHContext(pair=payload, tmp_dir=tmp_dir),
-                start_to_close_timeout=timedelta(minutes=3),
-                retry_policy=self.retry_policy,
-                heartbeat_timeout=timedelta(seconds=3),
+            await self.run_cancellable(
+                workflow.start_activity_method(
+                    SwarmNodeActivities.check_swarm_ports_reachability,
+                    SwarmNodePairSSHContext(pair=payload, tmp_dir=tmp_dir),
+                    start_to_close_timeout=timedelta(minutes=3),
+                    retry_policy=self.retry_policy,
+                    heartbeat_timeout=timedelta(seconds=3),
+                    cancellation_type=ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
+                ),
+                payload.target_node.id,
             )
 
-            credentials = await workflow.execute_activity_method(
-                SwarmNodeActivities.get_swarm_join_token,
-                GetSwarmJoinTokenInput(
-                    tmp_dir=tmp_dir,
-                    swarm_role=payload.target_node.swarm_role,
-                    node=payload.main_node,
-                    target_node=payload.target_node,
+            credentials = await self.run_cancellable(
+                workflow.start_activity_method(
+                    SwarmNodeActivities.get_swarm_join_token,
+                    GetSwarmJoinTokenInput(
+                        tmp_dir=tmp_dir,
+                        swarm_role=payload.target_node.swarm_role,
+                        node=payload.main_node,
+                        target_node=payload.target_node,
+                    ),
+                    start_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=self.retry_policy,
+                    heartbeat_timeout=timedelta(seconds=3),
+                    cancellation_type=ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
                 ),
-                start_to_close_timeout=timedelta(minutes=5),
-                retry_policy=self.retry_policy,
+                payload.target_node.id,
             )
 
-            swarm_info = await workflow.execute_activity_method(
-                SwarmNodeActivities.join_swarm_cluster,
-                DockerSwarmJoinContext(
-                    node=payload.target_node,
-                    tmp_dir=tmp_dir,
-                    credentials=credentials,
-                    info=docker_info,
+            swarm_info = await self.run_cancellable(
+                workflow.start_activity_method(
+                    SwarmNodeActivities.join_swarm_cluster,
+                    DockerSwarmJoinContext(
+                        node=payload.target_node,
+                        tmp_dir=tmp_dir,
+                        credentials=credentials,
+                        info=docker_info,
+                    ),
+                    start_to_close_timeout=timedelta(minutes=3),
+                    retry_policy=self.retry_policy,
+                    heartbeat_timeout=timedelta(seconds=3),
+                    cancellation_type=ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
                 ),
-                start_to_close_timeout=timedelta(minutes=3),
-                retry_policy=self.retry_policy,
+                payload.target_node.id,
             )
 
             node_deployment_result.docker_info.Swarm = swarm_info
