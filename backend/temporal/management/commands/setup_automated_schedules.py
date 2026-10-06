@@ -11,9 +11,6 @@ from temporal.client import TemporalClient
 from zane_api.utils import Colors
 
 
-async def noop(): ...
-
-
 async def setup_jobs():
     system = await SystemSettings.aget_or_create()
 
