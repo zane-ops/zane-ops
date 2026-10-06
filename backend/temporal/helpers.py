@@ -973,6 +973,10 @@ async def exec_cmd_in_server[T](
             # SSH connection timeout of 5sec
             "-o",
             "ConnectTimeout=5",
+            # Force a TTY so that if there's a remote process
+            # that continues running in the background, when the activity is cancelled
+            # the process is also correctly interrupted on the remote side
+            "-tt",
             f"root@{ctx.node.private_ip}",
             cmd,
         ]
