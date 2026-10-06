@@ -91,7 +91,7 @@ export default function SwarmNodeLayout({
         <section className="flex items-center gap-3">
           <h2 className="text-2xl flex items-center gap-2">
             <ServerIcon className="size-6 text-grey" />
-            <div className="inline-flex gap-0.5 font-medium items-center group-hover:underline">
+            <div className="inline-flex gap-0.5 font-medium items-center group-hover:underline whitespace-nowrap">
               {capitalizeText(node.hostname ?? node.private_ip)}
             </div>
           </h2>
