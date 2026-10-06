@@ -23,6 +23,7 @@ jobs:
           - console
           - ssh_keys
           - ee.licensing
+          - swarm
 
     services:
       loki:
