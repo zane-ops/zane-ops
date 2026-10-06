@@ -41,6 +41,7 @@ from temporal.constants import (
 )
 
 from temporal.shared import (
+    NodeSystemInfo,
     SwarmHealthcheckResult,
     SwarmNodeHealthcheckResult,
     SwarmNodePair,
@@ -194,6 +195,8 @@ class SwarmNodeActivities:
                 node.docker_version = result.docker_info.ServerVersion
             if result.swarm_hostname:
                 node.hostname = result.swarm_hostname
+            if result.architecture:
+                node.architecture = result.architecture
             if result.docker_info is not None and result.docker_info.Swarm is not None:
                 node.swarm_node_id = result.docker_info.Swarm.NodeID
 
@@ -205,6 +208,7 @@ class SwarmNodeActivities:
                     "cpus",
                     "memory_bytes",
                     "docker_version",
+                    "architecture",
                     "hostname",
                     "swarm_node_id",
                     "last_status_update",
@@ -251,6 +255,7 @@ class SwarmNodeActivities:
                 swarm_node_id=None,
                 hostname=None,
                 docker_version=None,
+                architecture=None,
                 cpus=None,
                 memory_bytes=None,
                 last_status_update=timezone.now(),
@@ -315,38 +320,61 @@ class SwarmNodeActivities:
             raise ApplicationError(message=msg, non_retryable=True)
 
     @activity.defn
-    async def check_os_compatibility(self, ctx: SwarmNodeSSHContext) -> str:
+    async def check_os_and_arch_compatibility(
+        self, ctx: SwarmNodeSSHContext
+    ) -> NodeSystemInfo:
+        os_info: str | None = None
+        arch: str | None = None
+
         async def message_handler(message: str):
-            os_pattern_match = re.compile(r"^os=([^\s]*)$").match(message)
-
-            if os_pattern_match:
-                return str(os_pattern_match.groups(1)[0])
-
+            nonlocal os_info, arch
             await provision_log(ctx.node, f"{Colors.GREY}{message}{Colors.ENDC}")
+
+            os_pattern_match = re.compile(r"^os=([^\s]*)$").match(message)
+            if os_pattern_match:
+                os_info = str(os_pattern_match.groups(1)[0])
+
+            arch_pattern_match = re.compile(r"^arch=([^\s]*)$").match(message)
+            if arch_pattern_match:
+                arch = str(arch_pattern_match.groups(1)[0])
 
         await provision_log(
             ctx.node,
             [
                 "",
-                f"➡️ Checking supported OS information...",
+                f"➡️ Checking supported OS information and system architecture...",
             ],
         )
-        exit_code, os_info = await exec_cmd_in_server(
+        exit_code, _ = await exec_cmd_in_server(
             ctx,
             cmd=DOCKER_CHECK_OS_SCRIPT,
             output_handler=message_handler,
         )
-        if exit_code == 0 and os_info is not None:
-            await provision_log(
-                ctx.node,
-                f"✅ Detected supported OS distribution: {Colors.ORANGE}{os_info}{Colors.ENDC}",
-            )
-            return os_info
+        if exit_code != 0 or os_info is None or arch is None:
+            message = f"❌ {Colors.RED}Failed to get supported OS distribution in server {Colors.BLUE}{ctx.node.private_ip}{Colors.ENDC}"
+            await provision_log(ctx.node, message, error=True)
+            raise ApplicationError(message=message, non_retryable=True)
 
-        raise ApplicationError(
-            message=f"❌ {Colors.RED}Failed to get supported OS distribution in server {Colors.BLUE}{ctx.node.private_ip}{Colors.ENDC}",
-            non_retryable=True,
+        await provision_log(
+            ctx.node,
+            f"✅ Detected supported OS distribution: {Colors.ORANGE}{os_info}{Colors.ENDC}",
         )
+
+        # The main server is the one running ZaneOps, so we can query docker directly
+        main_arch: str = self.docker_client.info()["Architecture"]
+        if arch != main_arch:
+            message = (
+                f"❌ {Colors.RED}Server {Colors.BLUE}{ctx.node.private_ip}{Colors.RED} has the architecture {Colors.ORANGE}{arch}{Colors.RED}, "
+                f"but the main server uses {Colors.ORANGE}{main_arch}{Colors.RED}. All servers in the cluster must have the same architecture.{Colors.ENDC}"
+            )
+            await provision_log(ctx.node, message, error=True)
+            raise ApplicationError(message=message, non_retryable=True)
+
+        await provision_log(
+            ctx.node,
+            f"✅ Server architecture {Colors.ORANGE}{arch}{Colors.ENDC} matches the main server",
+        )
+        return NodeSystemInfo(os=os_info, architecture=arch)
 
     @activity.defn
     async def check_docker_installation(

@@ -557,6 +557,8 @@ else
     echo "{Colors.RED}❌ Unsupported Linux distribution{Colors.ENDC}"
     exit 1
 fi
+
+echo "arch=$(uname -m)"
 """
 
 SWARM_MANAGER_TCP_PORTS = [2377, 7946]

@@ -776,6 +776,7 @@ class DockerSystemInfo:
 @dataclass
 class NodeSystemInfo:
     os: str
+    architecture: str
 
 
 @dataclass
@@ -828,6 +829,7 @@ class SwarmNodeStatusResult:
     status_message: str | None = None
     docker_info: DockerSystemInfo | None = None
     swarm_hostname: str | None = None
+    architecture: str | None = None
 
 
 @dataclass
