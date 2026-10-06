@@ -2,7 +2,6 @@
 
 from django.db import migrations
 import docker
-import json
 
 
 def set_server_arch(apps, schema_editor):
