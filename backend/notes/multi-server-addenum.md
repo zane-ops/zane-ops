@@ -37,3 +37,4 @@
 - The API endpoint that removes a node must first check if any service has a volume on that node, and block (or warn) — once the node is drained, these services can't start anywhere else (they stay `Pending`), and their data is lost when the node is removed. The management commands skip this check, they're only for testing.
 - The node removal endpoint/UI must warn if removing a manager would leave too few managers to keep the cluster working (quorum, see [§14 of the plan](multi-server-plan.md#sec-14)).
 - When removing a manager node: demote it to worker first, refuse to remove the main server (`is_self`) or the last manager
+- In the docs, we can only add servers with the same architecture as the main server, we need to explain that it's so that images & services work between nodes, because some images are single arch

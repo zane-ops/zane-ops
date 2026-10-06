@@ -21,7 +21,6 @@ jobs:
           - git_connectors
           - compose
           - console
-          - ssh_keys
           - ee.licensing
           - swarm
 
