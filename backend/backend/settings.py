@@ -526,7 +526,7 @@ OLD_DOCKER_SYSTEM_PRUNE_SCHEDULE_ID = "hourly-system-cleanup"
 DOCKER_SYSTEM_PRUNE_SCHEDULE_ID = "docker-system-prune"
 
 SWARM_HEALTHCHECK_SCHEDULE_ID = "docker-swarm-healthcheck"
-SWARM_HEALTHCHECK_SCHEDULE_CRON = "* * * * *"
+SWARM_HEALTHCHECK_SCHEDULE_CRON = "* * * * *"  # every minute
 
 # GeoIP, the DB is optional : when the operator doesn't provide one,
 # `/dev/null` is bind-mounted at that path, so we only consider GeoIP
