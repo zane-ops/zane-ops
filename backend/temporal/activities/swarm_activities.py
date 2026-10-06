@@ -172,7 +172,7 @@ class SwarmNodeActivities:
         os.chmod(main_node_key_location, 0o600)
         await provision_log(payload.target_node, f"✅ Done")
 
-        with open(new_node_key_location, "+w") as file:
+        with open(new_node_key_location, "w") as file:
             file.write(payload.target_node.ssh_key)
             await provision_log(
                 payload.target_node,
