@@ -43,6 +43,7 @@ from swarm.serializers import (
     UpdateSwarmNodeSSHPortSerializer,
     SwarmNodeSerializer,
 )
+from zane_api.views.base import BadRequest
 
 
 class SwarmNodeListAPIView(ListCreateAPIView):
@@ -184,11 +185,10 @@ class SwarmNodeSSHKeyDetailsAPIView(DestroyAPIView):
 
 class ProvisionSwarmNodeAPIView(APIView):
     permission_classes = [IsInstanceOwner]
-    serializer_class = FullSwarmNodeSerializer
 
     @extend_schema(
         request=ProvisionSwarmNodeRequestSerializer,
-        responses={202: FullSwarmNodeSerializer},
+        responses={202: None},
         operation_id="provisionSwarmNode",
         summary="Provision a swarm node and add it to the ZaneOps cluster",
     )
@@ -239,7 +239,40 @@ class ProvisionSwarmNodeAPIView(APIView):
             )
         )
 
-        response = FullSwarmNodeSerializer(node)
+        return Response(status=status.HTTP_202_ACCEPTED)
+
+
+class CancelSwarmNodeProvisionAPIView(APIView):
+    permission_classes = [IsInstanceOwner]
+
+    @extend_schema(
+        request=None,
+        responses={202: None},
+        operation_id="cancelSwarmNodeProvision",
+        summary="Cancel a swarm node provisioning workflow",
+    )
+    @transaction.atomic()
+    def put(self, request: Request, id: str):
+        try:
+            node = SwarmNode.objects.get(id=id)
+        except SwarmNode.DoesNotExist:
+            raise exceptions.NotFound(f"A server with the id `{id}` does not exist")
+
+        if node.status != SwarmNode.Status.PROVISIONING:
+            raise BadRequest("Cannot cancel a server that is not being provisioned")
+
+        if node.is_initial_install_server:
+            raise BadRequest("The main server provision cannot be cancelled")
+
+        workflow_id = node.provision_swarm_node_workflow_id
+        transaction.on_commit(
+            lambda: TemporalClient.workflow_signal(
+                workflow=ProvisionSwarmNodeWorkflow.run,
+                signal=ProvisionSwarmNodeWorkflow.cancel,
+                workflow_id=workflow_id,
+            )
+        )
+
         return Response(status=status.HTTP_202_ACCEPTED)
 
 

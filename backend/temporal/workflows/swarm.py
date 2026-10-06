@@ -15,7 +15,6 @@ with workflow.unsafe.imports_passed_through():
     from zane_api.utils import Colors
 
 from ..shared import (
-    CancelProvisionSignalInput,
     SwarmNodePair,
     ClusterSwarmNodePair,
     DockerInstallContext,
@@ -35,17 +34,16 @@ class ProvisionSwarmNodeWorkflow:
         self.retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
-        self.cancellation_requested: set[str] = set()
+        self.cancellation_requested = False
 
     @workflow.signal
-    def cancel(self, input: CancelProvisionSignalInput):
-        self.cancellation_requested.add(input.target_node_id)
-        print(f"Received signal {input=} {self.cancellation_requested=}")
+    async def cancel(self):
+        self.cancellation_requested = True
+        print(f"Received signal {self.cancellation_requested=}")
 
     async def monitor_cancellation(
         self,
         activity_handle: ActivityHandle,
-        node_id: str,
         timeout: Optional[timedelta] = None,
     ):
         """
@@ -60,7 +58,7 @@ class ProvisionSwarmNodeWorkflow:
         try:
             print(f"await monitor_cancellation({activity_handle.get_name()})")
             await workflow.wait_condition(
-                lambda: node_id in self.cancellation_requested,
+                lambda: self.cancellation_requested,
                 timeout=timeout,
             )
             print(f"cancelling activity {activity_handle.get_name()}")
@@ -69,9 +67,7 @@ class ProvisionSwarmNodeWorkflow:
         else:
             activity_handle.cancel()
 
-    async def run_cancellable[T](
-        self, activity_handle: ActivityHandle[T], node_id: str
-    ) -> T:
+    async def run_cancellable[T](self, activity_handle: ActivityHandle[T]) -> T:
         """
         Await the activity, cancelling it if a cancellation is requested for `node_id`.
         The activity must send heartbeats (and have a `heartbeat_timeout`) for the cancellation to reach it:
@@ -80,9 +76,7 @@ class ProvisionSwarmNodeWorkflow:
         The activity should also use `cancellation_type=ActivityCancellationType.WAIT_CANCELLATION_COMPLETED`,
         so that its cleanup (which may need the SSH keys) finishes before the workflow's `finally` block deletes them.
         """
-        monitor_task = asyncio.create_task(
-            self.monitor_cancellation(activity_handle, node_id)
-        )
+        monitor_task = asyncio.create_task(self.monitor_cancellation(activity_handle))
         try:
             return await activity_handle
         finally:
@@ -139,8 +133,8 @@ class ProvisionSwarmNodeWorkflow:
             )
 
             await asyncio.gather(
-                self.run_cancellable(ssh_test_new_task, payload.target_node.id),
-                self.run_cancellable(ssh_test_main_task, payload.target_node.id),
+                self.run_cancellable(ssh_test_new_task),
+                self.run_cancellable(ssh_test_main_task),
             )
 
             system_info = await self.run_cancellable(
@@ -152,7 +146,6 @@ class ProvisionSwarmNodeWorkflow:
                     heartbeat_timeout=timedelta(seconds=3),
                     cancellation_type=ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
                 ),
-                payload.target_node.id,
             )
             node_deployment_result.architecture = system_info.architecture
 
@@ -173,7 +166,7 @@ class ProvisionSwarmNodeWorkflow:
             )
 
             docker_info, main_docker_info = await asyncio.gather(
-                self.run_cancellable(docker_check_new_task, payload.target_node.id),
+                self.run_cancellable(docker_check_new_task),
                 docker_check_main_task,
             )
 
@@ -191,7 +184,6 @@ class ProvisionSwarmNodeWorkflow:
                     heartbeat_timeout=timedelta(seconds=3),
                     cancellation_type=ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
                 ),
-                payload.target_node.id,
             )
 
             node_deployment_result.docker_info = docker_info
@@ -205,7 +197,6 @@ class ProvisionSwarmNodeWorkflow:
                     heartbeat_timeout=timedelta(seconds=3),
                     cancellation_type=ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
                 ),
-                payload.target_node.id,
             )
 
             credentials = await self.run_cancellable(
@@ -222,7 +213,6 @@ class ProvisionSwarmNodeWorkflow:
                     heartbeat_timeout=timedelta(seconds=3),
                     cancellation_type=ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
                 ),
-                payload.target_node.id,
             )
 
             swarm_info = await self.run_cancellable(
@@ -239,7 +229,6 @@ class ProvisionSwarmNodeWorkflow:
                     heartbeat_timeout=timedelta(seconds=3),
                     cancellation_type=ActivityCancellationType.WAIT_CANCELLATION_COMPLETED,
                 ),
-                payload.target_node.id,
             )
 
             node_deployment_result.docker_info.Swarm = swarm_info

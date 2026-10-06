@@ -26,6 +26,11 @@ urlpatterns = [
         name="node.provision",
     ),
     re_path(
+        r"^nodes/(?P<id>[a-zA-Z0-9_]+)/cancel-provision/?$",
+        views.CancelSwarmNodeProvisionAPIView.as_view(),
+        name="node.cancel_provision",
+    ),
+    re_path(
         r"^nodes/(?P<id>[a-zA-Z0-9_]+)/deprovision/?$",
         views.DeprovisionSwarmNodeAPIView.as_view(),
         name="node.deprovision",
