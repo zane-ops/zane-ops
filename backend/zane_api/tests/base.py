@@ -1745,6 +1745,7 @@ class FakeDockerClient:
                 self.swarm_tasks.append(
                     {
                         "ID": "8qx04v72iovlv7xzjvsj2ngdk",
+                        "NodeID": "ta6y1b5mo2084fzg30tiotcnm",
                         "Version": {"Index": len(self.swarm_tasks) + 1},
                         "CreatedAt": "2024-04-25T20:11:32.736667861Z",
                         "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
@@ -1786,8 +1787,9 @@ class FakeDockerClient:
 
         def get_attached_config(self, config: Config):
             return find_item_in_sequence(
-                lambda c: c["ConfigID"]
-                == get_config_resource_name(config.id, config.version),
+                lambda c: (
+                    c["ConfigID"] == get_config_resource_name(config.id, config.version)
+                ),
                 self.configs,
             )
 
