@@ -6,10 +6,9 @@ import {
   CableIcon,
   CheckIcon,
   ChevronRightIcon,
+  CogIcon,
   CpuIcon,
   EthernetPortIcon,
-  EyeIcon,
-  EyeOffIcon,
   FlameIcon,
   GlobeLockIcon,
   HashIcon,
@@ -142,6 +141,40 @@ export default function SwarmNodeDetailsPage({
 
                 <div className="w-full max-w-4xl">
                   <div className="flex flex-col  gap-2 w-full">
+                    <FieldSet
+                      name="architecture"
+                      className="flex flex-col gap-1.5 flex-1"
+                    >
+                      <FieldSetLabel>Architecture</FieldSetLabel>
+                      <div className="relative">
+                        <FieldSetInput
+                          disabled
+                          className={cn(
+                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                            "disabled:border-transparent disabled:opacity-100",
+                            "disabled:text-transparent disabled:select-none"
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
+                            "max-w-full min-w-0 overflow-auto pr-4"
+                          )}
+                        >
+                          <CogIcon className="text-grey size-4 flex-none mr-1" />
+                          {node.architecture ? (
+                            <span className="text-card-foreground">
+                              {node.architecture}
+                            </span>
+                          ) : (
+                            <code className="text-grey italic">
+                              {"<unknown>"}
+                            </code>
+                          )}
+                        </span>
+                      </div>
+                    </FieldSet>
+
                     <FieldSet
                       name="cpus"
                       className="flex flex-col gap-1.5 flex-1"

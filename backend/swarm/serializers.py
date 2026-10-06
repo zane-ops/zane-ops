@@ -189,4 +189,5 @@ class FullSwarmNodeSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "ssh_keys",
+            "architecture",
         ]

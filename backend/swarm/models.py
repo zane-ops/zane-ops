@@ -71,6 +71,9 @@ class SwarmNode(TimestampedModel):
     # The initial server from which ZaneOps was install
     is_initial_install_server = models.BooleanField(default=False)
 
+    # operating_system = models.CharField(null=True)
+    architecture = models.CharField(null=True)
+
     # server limits
     cpus = models.PositiveIntegerField(null=True)
     memory_bytes = models.BigIntegerField(null=True)

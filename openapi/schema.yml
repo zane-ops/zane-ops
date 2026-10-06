@@ -25476,7 +25476,11 @@ components:
           items:
             $ref: '#/components/schemas/SSHKey'
           readOnly: true
+        architecture:
+          type: string
+          nullable: true
       required:
+      - architecture
       - cluster_roles
       - cpus
       - created_at

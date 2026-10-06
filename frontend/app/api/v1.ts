@@ -3936,6 +3936,7 @@ export interface components {
       /** Format: date-time */
       updated_at: string;
       ssh_keys: readonly components["schemas"]["SSHKey"][];
+      architecture: string | null;
     };
     GeneratePasswordResetTokenErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetAPISettingsErrorResponse400: components["schemas"]["ParseErrorResponse"];
