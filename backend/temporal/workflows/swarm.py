@@ -90,19 +90,19 @@ class ProvisionSwarmNodeWorkflow:
             f"{Colors.BLUE}==============================================================={Colors.ENDC}"
         )
 
+        status = await workflow.execute_activity_method(
+            SwarmNodeActivities.prepare_node_deployment,
+            payload.target_node,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
         tmp_dir: str | None = None
         node_deployment_result = SwarmNodeStatusResult(
             id=payload.target_node.id,
-            status="FAILED",
+            status=status,
         )
         try:
-            await workflow.execute_activity_method(
-                SwarmNodeActivities.prepare_node_deployment,
-                payload.target_node,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-
             tmp_dir = await workflow.execute_activity_method(
                 SwarmNodeActivities.create_ssh_keys_temp_dir,
                 payload,
@@ -254,7 +254,6 @@ class ProvisionSwarmNodeWorkflow:
                 ),
                 start_to_close_timeout=timedelta(minutes=5),
                 retry_policy=self.retry_policy,
-                heartbeat_timeout=timedelta(seconds=3),
             )
 
             all_healthy = all(
@@ -275,6 +274,10 @@ class ProvisionSwarmNodeWorkflow:
 
             node_deployment_result.status = "FAILED"
             node_deployment_result.status_message = reason
+        except Exception as e:
+            reason = str(e)
+            node_deployment_result.status = "FAILED"
+            node_deployment_result.status_message = f"Unknown Error: {reason}"
         finally:
             if tmp_dir is not None:
                 await workflow.execute_activity_method(

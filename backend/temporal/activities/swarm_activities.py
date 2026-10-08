@@ -90,14 +90,16 @@ class SwarmNodeActivities:
             status__in=["CREATED", "FAILED", "REMOVED"],
         ).aupdate(
             status=SwarmNode.Status.PROVISIONING,
+            status_message=None,
+            swarm_node_id=None,
             last_status_update=timezone.now(),
         )
-
         if updated == 0:
             raise ApplicationError(
                 "Cannot provision a nonexistent or active node.",
                 non_retryable=True,
             )
+        return "PROVISIONING"
 
     @activity.defn
     async def prepare_node_deprovision(
@@ -777,7 +779,7 @@ class SwarmNodeActivities:
             if "BUILD_SERVER" in node.cluster_roles:
                 labels[settings.BUILD_SERVER_LABEL] = "true"
 
-            new_spec["role"] = node.swarm_role.lower()
+            new_spec["Role"] = node.swarm_role.lower()
             new_spec["Labels"] = labels
             swarm_node.update(new_spec)
         except docker.errors.APIError:
@@ -1177,7 +1179,7 @@ class SwarmNodeActivities:
     async def save_swarm_healthcheck(self, result: SwarmHealthcheckResult):
         all_nodes = SwarmNode.objects.filter(
             Q(swarm_node_id__isnull=False)
-            & ~Q(status__in=["CREATED", "PROVISIONING", "FAILED", "REMOVED"])
+            & ~Q(status__in=["CREATED", "FAILED", "REMOVED"])
         ).all()
 
         async for node in all_nodes:
