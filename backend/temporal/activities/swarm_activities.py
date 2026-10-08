@@ -1140,46 +1140,35 @@ class SwarmNodeActivities:
                     availability=node.attrs["Spec"]["Availability"],
                 )
 
-        proxy_service: list[Service] = self.docker_client.services.list(
-            filters={"label": ["zane.role=proxy", "com.docker.stack.namespace=zane"]},
-        )
-
-        log_collector_service: list[Service] = self.docker_client.services.list(
+        services: list[Service] = self.docker_client.services.list(
             filters={
-                "label": ["zane.role=log-collector", "com.docker.stack.namespace=zane"]
+                "label": ["com.docker.stack.namespace=zane"],
+                "mode": "global",  # Only global services have tasks on every node
             },
         )
 
-        if len(proxy_service) > 0:
-            service = proxy_service[0]
+        for service in services:
             tasks = [
                 DockerSwarmTask.from_dict(task)
                 for task in service.tasks(filters={"desired-state": "running"})
             ]
 
+            # A node can have more than one task for the same service (ex: during a `start-first` update),
+            # we only keep the most recent one per node
+            latest_task_per_node: dict[str, DockerSwarmTask] = {}
             for task in tasks:
-                nodes_statuses[task.NodeID].services[service.name] = (
-                    SwarmNodeServiceHealthcheck(
-                        service_name=service.name,
-                        status=task.Status.State.value,
-                        message=task.Status.Message,
-                    )
-                )
+                current = latest_task_per_node.get(task.NodeID)
+                if current is None or task.Version.Index > current.Version.Index:
+                    latest_task_per_node[task.NodeID] = task
 
-        if len(log_collector_service) > 0:
-            service = log_collector_service[0]
-            tasks = [
-                DockerSwarmTask.from_dict(task)
-                for task in service.tasks(filters={"desired-state": "running"})
-            ]
-
-            for task in tasks:
-                nodes_statuses[task.NodeID].services[service.name] = (
-                    SwarmNodeServiceHealthcheck(
-                        service_name=service.name,
-                        status=task.Status.State.value,
-                        message=task.Status.Message,
-                    )
+            for node_id, task in latest_task_per_node.items():
+                node_status = nodes_statuses.get(node_id)
+                if node_status is None:
+                    continue
+                node_status.services[service.name] = SwarmNodeServiceHealthcheck(
+                    service_name=service.name,
+                    status=task.Status.State.value,
+                    message=task.Status.Message,
                 )
 
         return SwarmHealthcheckResult(nodes=nodes_statuses)
