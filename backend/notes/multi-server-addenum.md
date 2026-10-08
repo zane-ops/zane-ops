@@ -15,8 +15,8 @@
 - [x] Only allow one workflow per node at a time — workflow IDs include a timestamp, so a provision and a removal of the same node can run at the same time
 - [x] Add heartbeats to long activities (docker install, waiting for services) 
 - [ ] Allow removing a node that is dead/unreachable — the removal workflow needs SSH on the node, so it gets stuck; add a "force" option that only runs `docker node rm --force` from the manager
-- [ ] Re-running a removal that already got past "leave swarm" gets stuck — `docker swarm leave` errors with "not part of a swarm", so we never reach `docker node rm`; treat that error as success
-- [ ] Re-provisioning a node with a different role (e.g. worker → manager) makes it rejoin with a new swarm ID, and the old entry stays in `docker node ls` as `Down` — remove the old one
+- [x] Re-running a removal that already got past "leave swarm" gets stuck — `docker swarm leave` errors with "not part of a swarm", so we never reach `docker node rm`; treat that error as success
+- [x] Re-provisioning a node with a different role (e.g. worker → manager) makes it rejoin with a new swarm ID, and the old entry stays in `docker node ls` as `Down` — remove the old one
 - [x] `update_node_labels` overwrites all node labels, so labels a user added by hand get deleted — only add/update the ZaneOps labels
 
 ### Later ->>
