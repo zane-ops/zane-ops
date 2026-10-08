@@ -523,7 +523,7 @@ fi
 """
 
 DOCKER_CHECK_OS_SCRIPT = f"""
-set -e
+set -ex
 
 
 if [ -f /etc/debian_version ]; then
@@ -588,7 +588,7 @@ SWARM_PORT_REACHABLE_SCRIPT = (
 
 # use `DOCKER_INSTALL_SCRIPT.format(version=shlex.quote(...))` to set the docker version to install, ex: `28.3.3`
 DOCKER_INSTALL_SCRIPT = f"""
-set -e
+set -ex
 
 DOCKER_VERSION={{version}}
 

@@ -6,15 +6,18 @@ import {
   LoaderIcon,
   Maximize2Icon,
   Minimize2Icon,
-  OctagonXIcon,
-  TriangleAlertIcon
+  OctagonXIcon
 } from "lucide-react";
 import * as React from "react";
 import { useSearchParams } from "react-router";
 import { Virtuoso } from "react-virtuoso";
 import { Log } from "~/components/log";
 import { Ping } from "~/components/ping";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import {
+  type Alert,
+  AlertDescription,
+  AlertTitle
+} from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import {
   Tooltip,
@@ -163,25 +166,6 @@ export default function SwarmNodeDeploymentLogsPage({
 
   return (
     <section className="flex flex-col gap-4">
-      {node.status_message && (
-        <Alert variant={alertVariant} className={cn(isMaximized && "hidden")}>
-          {alertVariant === "destructive" ? (
-            <OctagonXIcon className="size-4 !top-4" />
-          ) : alertVariant === "warning" ? (
-            <AlertCircleIcon className="size-4" />
-          ) : (
-            <InfoIcon className="size-4" />
-          )}
-          <AlertTitle>
-            {alertVariant === "destructive"
-              ? "Error"
-              : alertVariant === "warning"
-                ? "Warning"
-                : "Info"}
-          </AlertTitle>
-          <AlertDescription>{node.status_message}</AlertDescription>
-        </Alert>
-      )}
       <div
         className={cn(
           "grid grid-cols-12 gap-4",
