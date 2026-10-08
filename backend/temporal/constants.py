@@ -113,6 +113,8 @@ ZANEOPS_RESUME_MANUAL_MARKER = "[zaneops::internal::service_resumed_by_user]"
 
 SERVICE_DEPLOY_SEMAPHORE_KEY = "deploy-service-workflow"
 STACK_DEPLOY_SEMAPHORE_KEY = "deploy-stack-workflow"
+SWARM_NODE_SEMAPHORE_KEY = "swarm-node-workflow"
+SWARM_CLUSTER_SEMAPHORE_KEY = "swarm-cluster-workflow"
 
 ZANEOPS_ONGOING_UPDATE_CACHE_KEY = "[zaneops::internal::on-going-update]"
 

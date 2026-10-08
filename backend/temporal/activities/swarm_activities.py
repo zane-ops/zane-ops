@@ -22,6 +22,7 @@ with workflow.unsafe.imports_passed_through():
         DockerSwarmTaskState,
     )
     from temporal.helpers import empty_folder, exec_cmd_in_server, provision_log
+    from temporal.semaphore import AsyncSemaphore
 
     import docker
     import docker.errors
@@ -44,6 +45,8 @@ from temporal.constants import (
     SWARM_PORT_LISTENER_SCRIPT,
     SWARM_PORT_LISTENER_CLEANUP_SCRIPT,
     SWARM_PORT_REACHABLE_SCRIPT,
+    SWARM_NODE_SEMAPHORE_KEY,
+    SWARM_CLUSTER_SEMAPHORE_KEY,
 )
 
 from temporal.shared import (
@@ -72,6 +75,59 @@ from temporal.shared import (
 class SwarmNodeActivities:
     def __init__(self):
         self.docker_client = docker.from_env()
+
+    @staticmethod
+    def get_swarm_node_semaphore(node_id: str):
+        return AsyncSemaphore(
+            key=f"{SWARM_NODE_SEMAPHORE_KEY}-{node_id}",
+            limit=1,
+            semaphore_timeout=timedelta(minutes=30),
+        )
+
+    @staticmethod
+    def get_swarm_cluster_semaphore():
+        """
+        Shared between all provision/deprovision workflows (one slot each),
+        the healthcheck acquires all the slots so that it only runs when no workflow is running.
+        """
+        return AsyncSemaphore(
+            key=SWARM_CLUSTER_SEMAPHORE_KEY,
+            limit=100,
+            semaphore_timeout=timedelta(minutes=30),
+        )
+
+    @activity.defn
+    async def acquire_swarm_node_semaphore(self, node_id: str):
+        """
+        Only one provision/deprovision workflow can run on the same node at a time,
+        the second one waits for the first to finish.
+        """
+        if settings.TESTING:
+            return  # semaphores are causing issues in testing, blocking execution
+        await self.get_swarm_node_semaphore(node_id).acquire()
+        await self.get_swarm_cluster_semaphore().acquire()
+
+    @activity.defn
+    async def release_swarm_node_semaphore(self, node_id: str):
+        if settings.TESTING:
+            return  # semaphores are causing issues in testing, blocking execution
+        await self.get_swarm_cluster_semaphore().release()
+        await self.get_swarm_node_semaphore(node_id).release()
+
+    @activity.defn
+    async def lock_swarm_healthcheck_semaphore(self) -> bool:
+        """
+        Returns `False` if a provision/deprovision workflow is running, the healthcheck should be skipped.
+        """
+        if settings.TESTING:
+            return True  # semaphores are causing issues in testing, blocking execution
+        return await self.get_swarm_cluster_semaphore().acquire_all(max_retries=1)
+
+    @activity.defn
+    async def reset_swarm_healthcheck_semaphore(self):
+        if settings.TESTING:
+            return  # semaphores are causing issues in testing, blocking execution
+        await self.get_swarm_cluster_semaphore().reset()
 
     @activity.defn
     async def prepare_node_deployment(self, node: SwarmNodeDetails):

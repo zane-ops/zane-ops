@@ -25,6 +25,7 @@ from ..shared import (
     DockerNodeUpdateContext,
     SwarmNodeStatusResult,
     DockerNodeHealthCheckContext,
+    SwarmHealthcheckResult,
 )
 
 
@@ -84,6 +85,23 @@ class ProvisionSwarmNodeWorkflow:
 
     @workflow.run
     async def run(self, payload: SwarmNodePair) -> SwarmNodeStatusResult:
+        await workflow.execute_activity_method(
+            SwarmNodeActivities.acquire_swarm_node_semaphore,
+            payload.target_node.id,
+            start_to_close_timeout=timedelta(minutes=30),
+            retry_policy=self.retry_policy,
+        )
+        try:
+            return await self._run(payload)
+        finally:
+            await workflow.execute_activity_method(
+                SwarmNodeActivities.release_swarm_node_semaphore,
+                payload.target_node.id,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
+
+    async def _run(self, payload: SwarmNodePair) -> SwarmNodeStatusResult:
         print(
             f"\n\n{Colors.BLUE}==============================================================={Colors.ENDC}\n"
             f"Running workflow ProvisionSwarmNodeWorkflow.run({payload.main_node.private_ip=}, {payload.target_node.private_ip=})\n"
@@ -312,6 +330,23 @@ class DeprovisionSwarmNodeWorkflow:
 
     @workflow.run
     async def run(self, payload: ClusterSwarmNodePair) -> SwarmNodeStatusResult:
+        await workflow.execute_activity_method(
+            SwarmNodeActivities.acquire_swarm_node_semaphore,
+            payload.target_node.id,
+            start_to_close_timeout=timedelta(minutes=30),
+            retry_policy=self.retry_policy,
+        )
+        try:
+            return await self._run(payload)
+        finally:
+            await workflow.execute_activity_method(
+                SwarmNodeActivities.release_swarm_node_semaphore,
+                payload.target_node.id,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
+
+    async def _run(self, payload: ClusterSwarmNodePair) -> SwarmNodeStatusResult:
         print(
             f"\n\n{Colors.BLUE}==============================================================={Colors.ENDC}\n"
             f"Running workflow DeprovisionSwarmNodeWorkflow.run({payload.target_node.id=}, {payload.target_node.private_ip=})\n"
@@ -436,25 +471,42 @@ class SwarmHealthcheckWorkflow:
         )
 
     @workflow.run
-    async def run(self):
+    async def run(self) -> Optional[SwarmHealthcheckResult]:
         print(
             f"\n\n{Colors.BLUE}==============================================================={Colors.ENDC}\n"
             f"Running workflow SwarmHealthcheckWorkflow.run()\n"
             f"{Colors.BLUE}==============================================================={Colors.ENDC}"
         )
 
-        result = await workflow.execute_activity_method(
-            SwarmNodeActivities.run_swarm_healthcheck,
+        locked = await workflow.execute_activity_method(
+            SwarmNodeActivities.lock_swarm_healthcheck_semaphore,
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )
+        if not locked:
+            # A node is being provisioned/deprovisioned, its status would be overwritten by the healthcheck
+            print("A provision/deprovision workflow is running, skipping the healthcheck")
+            return None
 
-        await workflow.execute_activity_method(
-            SwarmNodeActivities.save_swarm_healthcheck,
-            result,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+        try:
+            result = await workflow.execute_activity_method(
+                SwarmNodeActivities.run_swarm_healthcheck,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+            await workflow.execute_activity_method(
+                SwarmNodeActivities.save_swarm_healthcheck,
+                result,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+        finally:
+            await workflow.execute_activity_method(
+                SwarmNodeActivities.reset_swarm_healthcheck_semaphore,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
 
         print(
             f"\n\n{Colors.BLUE}==============================================================={Colors.ENDC}\n"
