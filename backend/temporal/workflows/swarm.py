@@ -278,6 +278,7 @@ class ProvisionSwarmNodeWorkflow:
             reason = str(e)
             node_deployment_result.status = "FAILED"
             node_deployment_result.status_message = f"Unknown Error: {reason}"
+            raise
         finally:
             if tmp_dir is not None:
                 await workflow.execute_activity_method(
