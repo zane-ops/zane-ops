@@ -41,6 +41,7 @@ import {
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
+import type { clientAction as cancelProvisionClientAction } from "~/routes/server-admin/cancel-swarm-node-provision";
 import type { clientAction } from "~/routes/server-admin/provision-swarm-node";
 import { ServerStatusBadge } from "~/routes/server-admin/swarm-node-list";
 import type { Route } from "./+types/swarm-node-layout";
@@ -83,6 +84,8 @@ export default function SwarmNodeLayout({
   const isNotMemberOfClusterYet = ["CREATED", "FAILED", "REMOVED"].includes(
     node.status
   );
+  const isProvisionCancellable =
+    node.status === "PROVISIONING" && !node.is_initial_install_server;
 
   return (
     <>
@@ -122,6 +125,9 @@ export default function SwarmNodeLayout({
               <ServerStatusBadge status={node.status} className="text-sm" />
             </div>
             {isNotMemberOfClusterYet && <ProvisionSwarmNodeForm node={node} />}
+            {isProvisionCancellable && (
+              <CancelSwarmNodeProvisionForm node={node} />
+            )}
           </div>
         </section>
 
@@ -300,5 +306,44 @@ function ProvisionSwarmNodeForm({ node }: ProvisionSwarmNodeFormProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+type CancelSwarmNodeProvisionFormProps = {
+  node: FullSwarmNode;
+};
+
+function CancelSwarmNodeProvisionForm({
+  node
+}: CancelSwarmNodeProvisionFormProps) {
+  const fetcher = useFetcher<typeof cancelProvisionClientAction>();
+  const isPending = fetcher.state !== "idle";
+
+  return (
+    <fetcher.Form
+      method="post"
+      action={href("/admin/servers/:serverId/cancel-provision", {
+        serverId: node.id
+      })}
+    >
+      <SubmitButton
+        isPending={isPending}
+        size="sm"
+        variant="destructive"
+        className={cn(
+          "inline-flex gap-1 items-center",
+          isPending && "opacity-80"
+        )}
+      >
+        {isPending ? (
+          <>
+            <LoaderIcon className="animate-spin flex-none" size={15} />
+            <span>Cancelling...</span>
+          </>
+        ) : (
+          <span>Cancel provisioning</span>
+        )}
+      </SubmitButton>
+    </fetcher.Form>
   );
 }
