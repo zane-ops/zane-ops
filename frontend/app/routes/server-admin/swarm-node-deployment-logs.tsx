@@ -155,15 +155,6 @@ export default function SwarmNodeDeploymentLogsPage({
 
   const isMaximized = searchParams.get("isMaximized") === "true";
 
-  const alertVariant: NonNullable<
-    React.ComponentProps<typeof Alert>["variant"]
-  > =
-    node.status === "FAILED"
-      ? "destructive"
-      : node.status === "DOWN"
-        ? "warning"
-        : "info";
-
   return (
     <section className="flex flex-col gap-4">
       <div

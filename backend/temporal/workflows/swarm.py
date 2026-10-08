@@ -246,7 +246,7 @@ class ProvisionSwarmNodeWorkflow:
                 )
             )
 
-            all_healthy = await workflow.execute_activity_method(
+            healthcheck_result = await workflow.execute_activity_method(
                 SwarmNodeActivities.run_swarm_node_services_healthcheck,
                 DockerNodeHealthCheckContext(
                     node=payload.target_node,
@@ -257,7 +257,15 @@ class ProvisionSwarmNodeWorkflow:
                 heartbeat_timeout=timedelta(seconds=3),
             )
 
+            all_healthy = all(
+                [
+                    service.status == "running"
+                    for _, service in healthcheck_result.services.items()
+                ]
+            )
+
             node_deployment_result.status = "ACTIVE" if all_healthy else "PROVISIONING"
+            node_deployment_result.services = healthcheck_result.services
 
         except ActivityError as e:
             print(f"ActivityError({e=}) !")

@@ -814,7 +814,21 @@ class DockerNodeHealthCheckContext:
 
 
 @dataclass
-class SwarmNodeStatusResult:
+class SwarmNodeServiceHealthcheck:
+    service_name: str
+    status: str
+    message: str
+
+
+@dataclass
+class SwarmNodeServicesHealthcheckResult:
+    services: dict[str, SwarmNodeServiceHealthcheck] = field(
+        default_factory=dict, kw_only=True
+    )
+
+
+@dataclass
+class SwarmNodeStatusResult(SwarmNodeServicesHealthcheckResult):
     id: str
     status: Literal[
         "CREATED",
@@ -833,20 +847,10 @@ class SwarmNodeStatusResult:
 
 
 @dataclass
-class SwarmNodeServiceHealthcheck:
-    service_name: str
-    status: str
-    message: str
-
-
-@dataclass
-class SwarmNodeHealthcheckResult:
+class SwarmNodeHealthcheckResult(SwarmNodeServicesHealthcheckResult):
     status: Literal["unknown", "down", "ready", "disconnected"]
     message: str | None
     availability: Literal["drain", "active", "pause"]
-    services: dict[Literal["proxy", "log_collector"], SwarmNodeServiceHealthcheck] = (
-        field(default_factory=dict)
-    )
 
 
 @dataclass

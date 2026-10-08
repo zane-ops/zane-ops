@@ -19,6 +19,7 @@ with workflow.unsafe.imports_passed_through():
         format_duration,
         DockerSwarmTask,
         escape_ansi,
+        DockerSwarmTaskState,
     )
     from temporal.helpers import empty_folder, exec_cmd_in_server, provision_log
 
@@ -62,6 +63,7 @@ from temporal.shared import (
     DockerSwarmInfo,
     SwarmNodeDetails,
     SwarmNodeServiceHealthcheck,
+    SwarmNodeServicesHealthcheckResult,
     SwarmNodeStatusResult,
     DockerNodeHealthCheckContext,
 )
@@ -198,6 +200,13 @@ class SwarmNodeActivities:
                 if result.status_message is not None
                 else None
             )
+            node.services = {  # type: ignore
+                svc.service_name: {
+                    "message": svc.message,
+                    "status": svc.status,
+                }
+                for svc in result.services.values()
+            }
             if result.docker_info:
                 node.cpus = result.docker_info.NCPU
                 node.memory_bytes = result.docker_info.MemTotal
@@ -215,6 +224,7 @@ class SwarmNodeActivities:
                     "status",
                     "status_message",
                     "cpus",
+                    "services",
                     "memory_bytes",
                     "docker_version",
                     "architecture",
@@ -789,9 +799,20 @@ class SwarmNodeActivities:
     @activity.defn
     async def run_swarm_node_services_healthcheck(
         self, ctx: DockerNodeHealthCheckContext
-    ):
+    ) -> SwarmNodeServicesHealthcheckResult:
         info = ctx.swarm_info
         node = ctx.node
+
+        try:
+            node_object = await SwarmNode.objects.filter(id=node.id).aget()
+        except SwarmNode.DoesNotExist:
+            raise ApplicationError(
+                "Cannot check a status of a non existent swarm node.",
+                non_retryable=True,
+            )
+
+        result = SwarmNodeServicesHealthcheckResult()
+
         await provision_log(
             node,
             [
@@ -799,46 +820,89 @@ class SwarmNodeActivities:
                 f"➡️ Waiting for the ZaneOps services to be running on swarm node {Colors.BLUE}{info.NodeID}{Colors.ENDC}...",
             ],
         )
-        proxy_service: list[Service] = self.docker_client.services.list(
-            filters={"label": ["zane.role=proxy"]},
-            status=True,
+
+        services = self.docker_client.services.list(
+            filters={
+                "label": ["com.docker.stack.namespace=zane"],
+                "mode": "global",  # Check global services that should run on this node
+            },
         )
 
-        log_collector_service: list[Service] = self.docker_client.services.list(
-            filters={"label": ["zane.role=log-collector"]},
-        )
-
-        services = [*proxy_service, *log_collector_service]
+        if SwarmNode.ClusterRole.BUILD_SERVER not in node.cluster_roles:
+            services = [
+                svc
+                for svc in services
+                if svc.attrs["Spec"].get("Labels", {}).get("zane.role")
+                != "build-worker"
+            ]  # ignore build worker for app-only servers
 
         healthcheck_timeout = timedelta(minutes=3).total_seconds()
+
+        async def sync_latest_task_status(
+            service: Service,
+            tasks: list[DockerSwarmTask],
+        ):
+            most_recent_swarm_task = None
+            if len(tasks) > 0:
+                most_recent_swarm_task = max(
+                    tasks,
+                    key=lambda task: task.Version.Index,
+                )
+                result.services[service.name] = SwarmNodeServiceHealthcheck(
+                    service_name=service.name,
+                    status=most_recent_swarm_task.Status.State.value,
+                    message=most_recent_swarm_task.Status.Message,
+                )
+                node_object.services = {  # type: ignore
+                    svc.service_name: {
+                        "message": svc.message,
+                        "status": svc.status,
+                    }
+                    for svc in result.services.values()
+                }
+                await node_object.asave(update_fields=["services", "updated_at"])
+            return most_recent_swarm_task
 
         async def wait_for_swarm_service_to_be_updated(service: Service):
             print(
                 f"Waiting for service `{Colors.BLUE}{service.name=}{Colors.ENDC}` to be updated..."
             )
             start_time = time.monotonic()
-            time_left = timedelta(minutes=3).total_seconds()
+            time_left = healthcheck_timeout
 
             filters = {"node": info.NodeID, "desired-state": "running"}
-            task_list: list = service.tasks(filters=filters)
+            task_list = [
+                DockerSwarmTask.from_dict(task)
+                for task in service.tasks(filters=filters)
+            ]
+            latest_task = await sync_latest_task_status(service, task_list)
 
-            print(f"{filters=}")
-
-            while len(task_list) == 0 and time_left >= 1:
+            while time_left >= 1 and (
+                latest_task is None
+                or latest_task.Status.State != DockerSwarmTaskState.RUNNING
+            ):
                 print(
                     f"Swarm service {Colors.BLUE}{service.name}{Colors.ENDC} is not updated, "
                     + f"| retrying in {Colors.ORANGE}{settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL}s{Colors.ENDC}"
                     + f"| healthcheck_time_left={Colors.ORANGE}{format_duration(time_left)}{Colors.ENDC}..."
                 )
                 await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
-                task_list = task_list = service.tasks(filters=filters)
-                print(f"{task_list=}")
+
                 time_left = healthcheck_timeout - (time.monotonic() - start_time)
 
-            successful = len(task_list) > 0
+                task_list = [
+                    DockerSwarmTask.from_dict(task)
+                    for task in service.tasks(filters=filters)
+                ]
+                latest_task = await sync_latest_task_status(service, task_list)
+
+            successful = (
+                latest_task is not None
+                and latest_task.Status.State == DockerSwarmTaskState.RUNNING
+            )
             if successful:
                 print(
-                    f"✅ Succesfully updated swarm service {Colors.BLUE}{service.name}{Colors.ENDC}"
+                    f"✅ Succesfuly updated swarm service {Colors.BLUE}{service.name}{Colors.ENDC}"
                 )
             return successful
 
@@ -861,7 +925,7 @@ class SwarmNodeActivities:
                 f"The server status will be updated by the next healthcheck.{Colors.ENDC}",
             )
 
-        return services_updated
+        return result
 
     @activity.defn
     async def delete_ssh_keys_temp_dir(self, ctx: SwarmNodeSSHContext):
@@ -1078,11 +1142,13 @@ class SwarmNodeActivities:
                 )
 
         proxy_service: list[Service] = self.docker_client.services.list(
-            filters={"label": ["zane.role=proxy"]},
+            filters={"label": ["zane.role=proxy", "com.docker.stack.namespace=zane"]},
         )
 
         log_collector_service: list[Service] = self.docker_client.services.list(
-            filters={"label": ["zane.role=log-collector"]},
+            filters={
+                "label": ["zane.role=log-collector", "com.docker.stack.namespace=zane"]
+            },
         )
 
         if len(proxy_service) > 0:
@@ -1093,7 +1159,7 @@ class SwarmNodeActivities:
             ]
 
             for task in tasks:
-                nodes_statuses[task.NodeID].services["proxy"] = (
+                nodes_statuses[task.NodeID].services[service.name] = (
                     SwarmNodeServiceHealthcheck(
                         service_name=service.name,
                         status=task.Status.State.value,
@@ -1109,7 +1175,7 @@ class SwarmNodeActivities:
             ]
 
             for task in tasks:
-                nodes_statuses[task.NodeID].services["log_collector"] = (
+                nodes_statuses[task.NodeID].services[service.name] = (
                     SwarmNodeServiceHealthcheck(
                         service_name=service.name,
                         status=task.Status.State.value,
