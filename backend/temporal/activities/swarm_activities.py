@@ -994,16 +994,12 @@ class SwarmNodeActivities:
             ],
         )
 
-        proxy_service: list[Service] = self.docker_client.services.list(
-            filters={"label": ["zane.role=proxy"]},
-            status=True,
+        services = self.docker_client.services.list(
+            filters={
+                "label": ["com.docker.stack.namespace=zane"],
+                "mode": "global",  # Only global services have tasks on every node
+            },
         )
-
-        log_collector_service: list[Service] = self.docker_client.services.list(
-            filters={"label": ["zane.role=log-collector"]},
-        )
-
-        services = [*proxy_service, *log_collector_service]
 
         healthcheck_timeout = timedelta(minutes=3).total_seconds()
 
@@ -1021,8 +1017,6 @@ class SwarmNodeActivities:
                 }
                 task_list: list = service.tasks(filters=filters)
 
-                print(f"{filters=}")
-
                 while len(task_list) > 0 and time_left >= 1:
                     print(
                         f"Swarm service {Colors.BLUE}{service.name}{Colors.ENDC} is not drained, "
@@ -1031,13 +1025,18 @@ class SwarmNodeActivities:
                     )
                     await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
                     task_list = service.tasks(filters=filters)
-                    print(f"{task_list=}")
                     time_left = healthcheck_timeout - (time.monotonic() - start_time)
 
                 successful = len(task_list) == 0
                 if successful:
-                    print(
-                        f"✅ Succesfully drained swarm service {Colors.BLUE}{service.name}{Colors.ENDC}"
+                    await provision_log(
+                        target_node,
+                        f"  ✅ Service {Colors.BLUE}{service.name}{Colors.ENDC} removed",
+                    )
+                else:
+                    await provision_log(
+                        target_node,
+                        f"  ⚠️ {Colors.ORANGE}Service {Colors.BLUE}{service.name}{Colors.ORANGE} still running{Colors.ENDC}",
                     )
                 return successful
             except docker.errors.NotFound:
