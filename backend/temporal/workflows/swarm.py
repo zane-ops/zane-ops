@@ -274,7 +274,7 @@ class ProvisionSwarmNodeWorkflow:
 
             node_deployment_result.status = "FAILED"
             node_deployment_result.status_message = reason
-        except Exception as e:
+        except BaseException as e:
             reason = str(e)
             node_deployment_result.status = "FAILED"
             node_deployment_result.status_message = f"Unknown Error: {reason}"
