@@ -100,16 +100,33 @@ class UpdateSwarmNodeRolesRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"swarm_role": "The main server must stay a manager of the cluster"}
             )
-        if node.swarm_node_id is None or node.status not in [
+        in_cluster_statuses = [
             SwarmNode.Status.ACTIVE,
             SwarmNode.Status.DOWN,
             SwarmNode.Status.UNHEALTHY,
             SwarmNode.Status.PAUSED,
             SwarmNode.Status.DRAINED,
-        ]:
+        ]
+        if node.swarm_node_id is None or node.status not in in_cluster_statuses:
             raise serializers.ValidationError(
                 f"Cannot update the roles of a server with the status `{node.status}`, it is not part of the cluster"
             )
+
+        # The cluster needs at least one app server & one build server
+        other_nodes = SwarmNode.objects.filter(status__in=in_cluster_statuses).exclude(
+            id=node.id
+        )
+        for role in SwarmNode.ClusterRole:
+            if (
+                role not in attrs["cluster_roles"]
+                and not other_nodes.filter(cluster_roles__contains=[role]).exists()
+            ):
+                role_str = " ".join([part.capitalize() for part in role.split("_")])
+                raise serializers.ValidationError(
+                    {
+                        "cluster_roles": f"The cluster needs at least one server with the role `{role_str} ({role})`, this server is the last one"
+                    }
+                )
         return attrs
 
 

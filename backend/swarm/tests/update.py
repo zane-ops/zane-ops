@@ -125,6 +125,12 @@ class UpdateSwarmNodeRolesViewTests(AuthAPITestCase):
 
     def test_can_update_cluster_roles_of_the_main_server(self):
         self.loginUser()
+        # another node keeps the build role
+        self.node.cluster_roles = [  # type: ignore
+            SwarmNode.ClusterRole.APP_SERVER,
+            SwarmNode.ClusterRole.BUILD_SERVER,
+        ]
+        self.node.save()
         response = self.update_roles(
             self.main_node.id,
             {
@@ -172,3 +178,71 @@ class UpdateSwarmNodeRolesViewTests(AuthAPITestCase):
                 self.node.save()
                 response = self.update_roles(self.node.id, self.VALID_PAYLOAD)
                 self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
+
+    def test_cannot_remove_the_last_build_server(self):
+        self.loginUser()
+        response = self.update_roles(
+            self.main_node.id,
+            {
+                "swarm_role": SwarmNode.Role.MANAGER,
+                "cluster_roles": [SwarmNode.ClusterRole.APP_SERVER],
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertNodeUnchanged(self.main_node)
+
+    def test_cannot_remove_the_last_app_server(self):
+        self.loginUser()
+        self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]  # type: ignore
+        self.node.save()
+        response = self.update_roles(
+            self.main_node.id,
+            {
+                "swarm_role": SwarmNode.Role.MANAGER,
+                "cluster_roles": [SwarmNode.ClusterRole.BUILD_SERVER],
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertNodeUnchanged(self.main_node)
+
+    def test_can_remove_a_role_if_another_node_in_the_cluster_has_it(self):
+        self.loginUser()
+        self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]
+        self.node.save()
+        response = self.update_roles(
+            self.main_node.id,
+            {
+                "swarm_role": SwarmNode.Role.MANAGER,
+                "cluster_roles": [SwarmNode.ClusterRole.APP_SERVER],
+            },
+        )
+        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
+
+    def test_nodes_not_in_the_cluster_do_not_count_as_build_or_app_servers(self):
+        self.loginUser()
+        for index, node_status in enumerate(
+            [
+                SwarmNode.Status.CREATED,
+                SwarmNode.Status.PROVISIONING,
+                SwarmNode.Status.FAILED,
+                SwarmNode.Status.REMOVED,
+            ]
+        ):
+            with self.subTest(status=node_status):
+                SwarmNode.objects.create(
+                    private_ip=f"10.0.1.{index + 1}",
+                    swarm_role=SwarmNode.Role.WORKER,
+                    status=node_status,
+                    cluster_roles=[SwarmNode.ClusterRole.BUILD_SERVER],
+                )
+                response = self.update_roles(
+                    self.main_node.id,
+                    {
+                        "swarm_role": SwarmNode.Role.MANAGER,
+                        "cluster_roles": [SwarmNode.ClusterRole.APP_SERVER],
+                    },
+                )
+                jprint(response.json())
+                self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)

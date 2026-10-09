@@ -969,6 +969,13 @@ function SwarmNodeDetailsForm({ node }: SwarmNodeFormProps) {
             <AlertDescription>{errors.non_field_errors}</AlertDescription>
           </Alert>
         )}
+        {errors.cluster_roles && (
+          <Alert variant="destructive">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{errors.cluster_roles}</AlertDescription>
+          </Alert>
+        )}
 
         <FieldSet
           errors={errors.swarm_role}
@@ -1031,15 +1038,6 @@ function SwarmNodeDetailsForm({ node }: SwarmNodeFormProps) {
 
         <div className="flex flex-col gap-2">
           <span>ZaneOps Cluster Roles</span>
-
-          {errors.cluster_roles && (
-            <FieldSet
-              errors={errors.cluster_roles}
-              className="flex flex-col gap-1"
-            >
-              <FieldSetErrors />
-            </FieldSet>
-          )}
 
           <FieldSet
             name="cluster_roles"
@@ -1105,7 +1103,7 @@ function SwarmNodeDetailsForm({ node }: SwarmNodeFormProps) {
               variant="secondary"
               className="self-start"
               name="intent"
-              value="update-details"
+              value="update-roles"
             >
               {isPending ? (
                 <>
@@ -1270,6 +1268,9 @@ export async function clientAction({
     case "update-ssh-port": {
       return updateSSHPort(params.serverId, formData);
     }
+    case "update-roles": {
+      return updateRoles(params.serverId, formData);
+    }
     case "delete-server": {
       return deleteServer(params.serverId, formData);
     }
@@ -1334,6 +1335,50 @@ async function updateSSHPort(serverId: string, formData: FormData) {
     closeButton: true
   });
   return { data };
+}
+
+async function updateRoles(serverId: string, formData: FormData) {
+  const queryClient = getQueryClient();
+
+  const userData = {
+    swarm_role: (formData.get("swarm_role")?.toString() ??
+      "WORKER") as SwarmNode["swarm_role"],
+    cluster_roles: formData
+      .getAll("cluster_roles")
+      .map((role) => role.toString()) as SwarmNode["cluster_roles"]
+  } satisfies RequestInput<"put", "/api/swarm/nodes/{id}/roles/">;
+
+  const { error: errors, data } = await apiClient.PUT(
+    "/api/swarm/nodes/{id}/roles/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: { id: serverId }
+      },
+      body: userData
+    }
+  );
+
+  if (errors) {
+    return {
+      errors,
+      userData
+    };
+  }
+
+  await queryClient.invalidateQueries(swarmQueries.singleNode(serverId));
+  toast.success("Success", {
+    description: "Node is being updated",
+    closeButton: true
+  });
+
+  throw redirect(
+    href("/admin/servers/:serverId/deployment-logs", {
+      serverId: serverId
+    })
+  );
 }
 
 async function deleteServer(serverId: string, formData: FormData) {
