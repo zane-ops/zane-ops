@@ -35740,6 +35740,7 @@ components:
       - REMOVED
       - ACTIVE
       - DOWN
+      - UNHEALTHY
       - PAUSED
       - DRAINED
       type: string
@@ -35750,6 +35751,7 @@ components:
         * `REMOVED` - Removed
         * `ACTIVE` - Active
         * `DOWN` - Down
+        * `UNHEALTHY` - Unhealthy
         * `PAUSED` - Paused
         * `DRAINED` - Drained
     SwarmNodesCreateClusterRolesErrorComponent:

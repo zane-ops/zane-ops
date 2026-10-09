@@ -8670,11 +8670,12 @@ export interface components {
      * * `REMOVED` - Removed
      * * `ACTIVE` - Active
      * * `DOWN` - Down
+     * * `UNHEALTHY` - Unhealthy
      * * `PAUSED` - Paused
      * * `DRAINED` - Drained
      * @enum {string}
      */
-    SwarmNodeStatusEnum: "CREATED" | "PROVISIONING" | "FAILED" | "REMOVED" | "ACTIVE" | "DOWN" | "PAUSED" | "DRAINED";
+    SwarmNodeStatusEnum: "CREATED" | "PROVISIONING" | "FAILED" | "REMOVED" | "ACTIVE" | "DOWN" | "UNHEALTHY" | "PAUSED" | "DRAINED";
     SwarmNodesCreateClusterRolesErrorComponent: {
       /**
        * @description * `cluster_roles` - cluster_roles

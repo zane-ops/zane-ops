@@ -434,6 +434,7 @@ SPECTACULAR_SETTINGS = {
             ("REMOVED", "Removed"),
             ("ACTIVE", "Active"),
             ("DOWN", "Down"),
+            ("UNHEALTHY", "Unhealthy"),
             ("PAUSED", "Paused"),
             ("DRAINED", "Drained"),
         ),

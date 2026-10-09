@@ -70,6 +70,7 @@ export default function SwarmNodeLayout({
     CREATED: "🆕",
     ACTIVE: "💚",
     DOWN: "🔴",
+    UNHEALTHY: "💔",
     FAILED: "❌",
     DRAINED: "⏸️",
     PAUSED: "⏸️",

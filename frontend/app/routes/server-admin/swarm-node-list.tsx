@@ -6,6 +6,7 @@ import {
   ClockPlusIcon,
   CpuIcon,
   CrownIcon,
+  HeartCrackIcon,
   HeartPulseIcon,
   HourglassIcon,
   LoaderIcon,
@@ -340,6 +341,7 @@ const SERVER_STATUS_COLOR_MAP = {
   DOWN: "red",
   PAUSED: "yellow",
   FAILED: "red",
+  UNHEALTHY: "red",
   DRAINED: "gray",
   CREATED: "gray",
   REMOVED: "gray"
@@ -363,6 +365,7 @@ export function ServerStatusBadge({
     PROVISIONING: HourglassIcon,
     DOWN: PowerOffIcon,
     FAILED: XIcon,
+    UNHEALTHY: HeartCrackIcon,
     DRAINED: TriangleAlertIcon,
     PAUSED: PauseIcon,
     CREATED: ClockPlusIcon,
@@ -372,7 +375,7 @@ export function ServerStatusBadge({
   const Icon = icons[status];
 
   const isLoading = status === "PROVISIONING";
-  const isActive = status === "ACTIVE";
+  const isActive = status === "ACTIVE" || status === "UNHEALTHY";
 
   return (
     <div
@@ -383,7 +386,9 @@ export function ServerStatusBadge({
             color === "green",
           "bg-red-600/10 text-red-600 dark:text-red-400": color === "red",
           "bg-gray-600/20 dark:bg-gray-600/60 text-gray": color === "gray",
-          "bg-link/20 text-link": color === "blue"
+          "bg-link/20 text-link": color === "blue",
+          "bg-yellow-400/20 dark:bg-yellow-600/20 text-yellow-600 dark:text-yellow-400":
+            color === "yellow"
         },
         variant === "outline" && "!bg-transparent",
         className

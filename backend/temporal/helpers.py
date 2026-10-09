@@ -17,6 +17,7 @@ from zane_api.process import (
 from .shared import (
     DeploymentDetails,
     ContainerMetrics,
+    SimpleClusterSwarmNodeDetails,
     SwarmNodeSSHContext,
     SwarmNodeDetails,
     SwarmNodeStatusResult,
@@ -233,7 +234,7 @@ class DeploymentResultLike(Protocol):
 
 
 async def provision_log(
-    node: SwarmNodeDetails | SwarmNodeStatusResult,
+    node: SwarmNodeDetails | SwarmNodeStatusResult | SimpleClusterSwarmNodeDetails,
     message: str | List[str],
     error=False,
 ):

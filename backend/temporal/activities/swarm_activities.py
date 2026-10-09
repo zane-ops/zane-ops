@@ -69,6 +69,7 @@ from temporal.shared import (
     SwarmNodeServicesHealthcheckResult,
     SwarmNodeStatusResult,
     DockerNodeHealthCheckContext,
+    SimpleClusterSwarmNodeDetails,
 )
 
 
@@ -130,7 +131,7 @@ class SwarmNodeActivities:
         await self.get_swarm_cluster_semaphore().reset()
 
     @activity.defn
-    async def prepare_node_deployment(self, node: SwarmNodeDetails):
+    async def prepare_node_deployment(self, node: SwarmNodeDetails) -> str:
         await provision_log(
             node,
             [
@@ -143,7 +144,11 @@ class SwarmNodeActivities:
         updated = await SwarmNode.objects.filter(
             id=node.id,
             is_initial_install_server=False,
-            status__in=["CREATED", "FAILED", "REMOVED"],
+            status__in=[
+                SwarmNode.Status.CREATED,
+                SwarmNode.Status.FAILED,
+                SwarmNode.Status.REMOVED,
+            ],
         ).aupdate(
             status=SwarmNode.Status.PROVISIONING,
             status_message=None,
@@ -155,12 +160,10 @@ class SwarmNodeActivities:
                 "Cannot provision a nonexistent or active node.",
                 non_retryable=True,
             )
-        return "PROVISIONING"
+        return SwarmNode.Status.PROVISIONING
 
     @activity.defn
-    async def prepare_node_deprovision(
-        self, node: SwarmNodeDetails
-    ) -> Literal["ACTIVE", "DOWN", "PAUSED", "DRAINED"]:
+    async def prepare_node_deprovision(self, node: SwarmNodeDetails) -> str:
         await provision_log(
             node,
             [
@@ -173,7 +176,13 @@ class SwarmNodeActivities:
         swarm_node = await SwarmNode.objects.filter(
             id=node.id,
             is_initial_install_server=False,
-            status__in=["ACTIVE", "DOWN", "PAUSED", "DRAINED"],
+            status__in=[
+                SwarmNode.Status.ACTIVE,
+                SwarmNode.Status.DOWN,
+                SwarmNode.Status.PAUSED,
+                SwarmNode.Status.DRAINED,
+                SwarmNode.Status.UNHEALTHY,
+            ],
         ).afirst()
 
         if swarm_node is None:
@@ -185,7 +194,42 @@ class SwarmNodeActivities:
         # clear the message of any previous run
         swarm_node.status_message = None
         await swarm_node.asave(update_fields=["status_message", "updated_at"])
-        return swarm_node.status  # type: ignore
+        return swarm_node.status
+
+    @activity.defn
+    async def prepare_node_for_update(self, node: SimpleClusterSwarmNodeDetails):
+        await provision_log(
+            node,
+            [
+                f"",
+                f"",
+                f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
+                f"➡️ Preparing node update for server {Colors.ORANGE}{node.private_ip}{Colors.ENDC}...",
+            ],
+        )
+
+        swarm_node = await SwarmNode.objects.filter(
+            id=node.id,
+            swarm_node_id__isnull=False,
+            status__in=[
+                SwarmNode.Status.ACTIVE,
+                SwarmNode.Status.DOWN,
+                SwarmNode.Status.PAUSED,
+                SwarmNode.Status.DRAINED,
+                SwarmNode.Status.UNHEALTHY,
+            ],
+        ).afirst()
+
+        if swarm_node is None:
+            raise ApplicationError(
+                "Cannot update a nonexistent node or a node that is not part of the cluster.",
+                non_retryable=True,
+            )
+
+        # clear the message of any previous run
+        swarm_node.status_message = None
+        await swarm_node.asave(update_fields=["status_message", "updated_at"])
+        return swarm_node.swarm_node_id
 
     @activity.defn
     async def create_ssh_keys_temp_dir(self, payload: SwarmNodePair):
@@ -830,9 +874,9 @@ class SwarmNodeActivities:
             new_spec = deepcopy(original_spec)
 
             labels = new_spec.get("Labels", {})
-            if "APP_SERVER" in node.cluster_roles:
+            if SwarmNode.ClusterRole.APP_SERVER in node.cluster_roles:
                 labels[settings.APP_SERVER_LABEL] = "true"
-            if "BUILD_SERVER" in node.cluster_roles:
+            if SwarmNode.ClusterRole.BUILD_SERVER in node.cluster_roles:
                 labels[settings.BUILD_SERVER_LABEL] = "true"
 
             new_spec["Role"] = node.swarm_role.lower()
@@ -853,6 +897,91 @@ class SwarmNodeActivities:
             )
 
         return swarm_node.attrs["Description"]["Hostname"]
+
+    @activity.defn
+    async def update_swarm_node_in_cluster(
+        self, node: SimpleClusterSwarmNodeDetails
+    ) -> str:
+        await provision_log(
+            node,
+            [
+                "",
+                f"➡️ Updating node {Colors.BLUE}{node.private_ip} (node id: {node.swarm_node_id}){Colors.ENDC} in docker swarm cluster...",
+            ],
+        )
+        try:
+            swarm_node: DockerSwarmNode = self.docker_client.nodes.get(
+                node.swarm_node_id
+            )
+            original_spec = swarm_node.attrs["Spec"]
+
+            new_spec = deepcopy(original_spec)
+
+            labels: dict = new_spec.get("Labels", {})
+
+            # Remove labels first before readding
+            labels.pop(settings.APP_SERVER_LABEL, None)
+            labels.pop(settings.BUILD_SERVER_LABEL, None)
+
+            if SwarmNode.ClusterRole.APP_SERVER in node.cluster_roles:
+                labels[settings.APP_SERVER_LABEL] = "true"
+            if SwarmNode.ClusterRole.BUILD_SERVER in node.cluster_roles:
+                labels[settings.BUILD_SERVER_LABEL] = "true"
+
+            new_spec["Role"] = (
+                "manager" if node.is_initial_install_server else node.swarm_role.lower()
+            )  # Cannot set the main server role lower than manager
+
+            new_spec["Labels"] = labels
+            swarm_node.update(new_spec)
+        except docker.errors.APIError:
+            msg = f"❌ {Colors.RED}Failed to update node {node.swarm_node_id} in docker swarm cluster{Colors.ENDC}"
+            await provision_log(
+                node,
+                msg,
+                error=True,
+            )
+            raise ApplicationError(msg, non_retryable=True)
+        else:
+            await provision_log(
+                node,
+                f"✅ Succesfully updated Node {Colors.BLUE}{node.private_ip} (node id: {node.swarm_node_id}){Colors.ENDC} in docker swarm cluster",
+            )
+
+        return swarm_node.attrs["Description"]["Hostname"]
+
+    @activity.defn
+    async def save_updated_swarm_node(self, node: SimpleClusterSwarmNodeDetails):
+        updated = await SwarmNode.objects.filter(
+            id=node.id,
+            status__in=[
+                SwarmNode.Status.ACTIVE,
+                SwarmNode.Status.DOWN,
+                SwarmNode.Status.PAUSED,
+                SwarmNode.Status.DRAINED,
+                SwarmNode.Status.UNHEALTHY,
+            ],
+        ).aupdate(
+            swarm_role=SwarmNode.Role.MANAGER
+            if node.is_initial_install_server
+            else node.swarm_role,
+            cluster_roles=node.cluster_roles,
+        )
+        if updated == 0:
+            raise ApplicationError(
+                "Cannot save a non existent node.",
+                non_retryable=True,
+            )
+
+        await provision_log(
+            node,
+            [
+                f"",
+                f"",
+                f"✅ Node updated succesfully",
+                f"{Colors.GREY}=========================================================================================={Colors.ENDC}",
+            ],
+        )
 
     @activity.defn
     async def run_swarm_node_services_healthcheck(
@@ -1029,6 +1158,8 @@ class SwarmNodeActivities:
         cast(dict, new_spec["Labels"]).pop(settings.APP_SERVER_LABEL, None)
         cast(dict, new_spec["Labels"]).pop(settings.BUILD_SERVER_LABEL, None)
         new_spec["Availability"] = "drain"
+        # Demote swarm node to worker when removing
+        new_spec["Role"] = "worker"
 
         # Other docker errors are raised so that the activity is retried
         swarm_node.update(new_spec)
@@ -1196,6 +1327,7 @@ class SwarmNodeActivities:
                     status=node.attrs["Status"]["State"],
                     message=node.attrs["Status"].get("Message"),
                     availability=node.attrs["Spec"]["Availability"],
+                    hostname=node.attrs["Description"]["Hostname"],
                 )
 
         services: list[Service] = self.docker_client.services.list(
@@ -1235,7 +1367,13 @@ class SwarmNodeActivities:
     async def save_swarm_healthcheck(self, result: SwarmHealthcheckResult):
         all_nodes = SwarmNode.objects.filter(
             Q(swarm_node_id__isnull=False)
-            & ~Q(status__in=["CREATED", "FAILED", "REMOVED"])
+            & ~Q(
+                status__in=[
+                    SwarmNode.Status.CREATED,
+                    SwarmNode.Status.FAILED,
+                    SwarmNode.Status.REMOVED,
+                ]
+            )
         ).all()
 
         async for node in all_nodes:
@@ -1243,6 +1381,7 @@ class SwarmNodeActivities:
 
             if node_status is not None:
                 node.status_message = node_status.message
+                node.hostname = node_status.hostname
 
                 print(f"{node_status=}")
                 if node_status.status != "ready":
@@ -1250,7 +1389,17 @@ class SwarmNodeActivities:
                 else:
                     match node_status.availability:
                         case "active":
-                            node.status = SwarmNode.Status.ACTIVE
+                            all_healthy = all(
+                                [
+                                    svc.status == DockerSwarmTaskState.RUNNING.value
+                                    for svc in node_status.services.values()
+                                ]
+                            )
+                            node.status = (
+                                SwarmNode.Status.ACTIVE
+                                if all_healthy
+                                else SwarmNode.Status.UNHEALTHY
+                            )
                         case "drain":
                             node.status = SwarmNode.Status.DRAINED
                         case "pause":
@@ -1266,15 +1415,18 @@ class SwarmNodeActivities:
                 print(f"{node.services=}")
                 print(f"{node.status=}")
 
-        async def save_node(node: SwarmNode):
-            await node.asave(
-                update_fields=[
-                    "status",
-                    "services",
-                    "status_message",
-                    "updated_at",
-                    "last_status_update",
-                ]
-            )
-
-        await asyncio.gather(*[save_node(node) async for node in all_nodes])
+        await asyncio.gather(
+            *[
+                node.asave(
+                    update_fields=[
+                        "status",
+                        "hostname",
+                        "services",
+                        "status_message",
+                        "updated_at",
+                        "last_status_update",
+                    ]
+                )
+                async for node in all_nodes
+            ]
+        )

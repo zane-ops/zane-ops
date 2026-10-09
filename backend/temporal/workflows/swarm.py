@@ -13,6 +13,7 @@ from temporalio.workflow import ActivityHandle, ActivityCancellationType
 with workflow.unsafe.imports_passed_through():
     from ..activities import SwarmNodeActivities
     from zane_api.utils import Colors
+    from swarm.models import SwarmNode
 
 from ..shared import (
     SwarmNodePair,
@@ -26,6 +27,7 @@ from ..shared import (
     SwarmNodeStatusResult,
     DockerNodeHealthCheckContext,
     SwarmHealthcheckResult,
+    SimpleClusterSwarmNodeDetails,
 )
 
 
@@ -281,7 +283,11 @@ class ProvisionSwarmNodeWorkflow:
                 ]
             )
 
-            node_deployment_result.status = "ACTIVE" if all_healthy else "PROVISIONING"
+            node_deployment_result.status = (
+                SwarmNode.Status.ACTIVE
+                if all_healthy
+                else SwarmNode.Status.PROVISIONING
+            )
             node_deployment_result.services = healthcheck_result.services
 
         except ActivityError as e:
@@ -290,11 +296,11 @@ class ProvisionSwarmNodeWorkflow:
             if is_cancelled_exception(e):
                 reason = "Provision server workflow was manually cancelled ❌"
 
-            node_deployment_result.status = "FAILED"
+            node_deployment_result.status = SwarmNode.Status.FAILED
             node_deployment_result.status_message = reason
         except BaseException as e:
             reason = str(e)
-            node_deployment_result.status = "FAILED"
+            node_deployment_result.status = SwarmNode.Status.FAILED
             node_deployment_result.status_message = f"Unknown Error: {reason}"
             raise
         finally:
@@ -402,10 +408,10 @@ class DeprovisionSwarmNodeWorkflow:
 
             if drain_result == "NOT_IN_SWARM":
                 # The node is already out of the swarm, nothing left to drain or remove
-                node_deployment_result.status = "REMOVED"
+                node_deployment_result.status = SwarmNode.Status.REMOVED
                 node_deployment_result.status_message = "The node was not found in the swarm, it may have been removed manually"
             else:
-                node_deployment_result.status = "DOWN"
+                node_deployment_result.status = SwarmNode.Status.DOWN
 
                 all_drained = await workflow.execute_activity_method(
                     SwarmNodeActivities.wait_for_global_services_to_be_drained,
@@ -414,7 +420,7 @@ class DeprovisionSwarmNodeWorkflow:
                     retry_policy=self.retry_policy,
                 )
                 if all_drained:
-                    node_deployment_result.status = "DRAINED"
+                    node_deployment_result.status = SwarmNode.Status.DRAINED
 
                 await workflow.execute_activity_method(
                     SwarmNodeActivities.detach_swarm_node_from_cluster,
@@ -429,7 +435,7 @@ class DeprovisionSwarmNodeWorkflow:
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
                 )
-                node_deployment_result.status = "REMOVED"
+                node_deployment_result.status = SwarmNode.Status.REMOVED
 
         except ActivityError as e:
             print(f"ActivityError({e=}) !")
@@ -485,7 +491,9 @@ class SwarmHealthcheckWorkflow:
         )
         if not locked:
             # A node is being provisioned/deprovisioned, its status would be overwritten by the healthcheck
-            print("A provision/deprovision workflow is running, skipping the healthcheck")
+            print(
+                "A provision/deprovision workflow is running, skipping the healthcheck"
+            )
             return None
 
         try:
@@ -514,3 +522,64 @@ class SwarmHealthcheckWorkflow:
             f"{Colors.BLUE}==============================================================={Colors.ENDC}"
         )
         return result
+
+
+@workflow.defn(name="update-swarm-node")
+class UpdateSwarmNodeWorkflow:
+    def __init__(self):
+        self.retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+
+    @workflow.run
+    async def run(self, payload: SimpleClusterSwarmNodeDetails):
+        await workflow.execute_activity_method(
+            SwarmNodeActivities.acquire_swarm_node_semaphore,
+            payload.id,
+            start_to_close_timeout=timedelta(minutes=30),
+            retry_policy=self.retry_policy,
+        )
+        try:
+            return await self._run(payload)
+        finally:
+            await workflow.execute_activity_method(
+                SwarmNodeActivities.release_swarm_node_semaphore,
+                payload.id,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
+
+    async def _run(self, node: SimpleClusterSwarmNodeDetails):
+        print(
+            f"\n\n{Colors.BLUE}==============================================================={Colors.ENDC}\n"
+            f"Running workflow UpdateSwarmNodeWorkflow.run({node.id=}, {node.private_ip=})\n"
+            f"{Colors.BLUE}==============================================================={Colors.ENDC}"
+        )
+        # Not in the `try` block, if the node cannot be deprovisioned we don't want to touch it
+        await workflow.execute_activity_method(
+            SwarmNodeActivities.prepare_node_for_update,
+            node,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+        await workflow.execute_activity_method(
+            SwarmNodeActivities.update_swarm_node_in_cluster,
+            node,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+        await workflow.execute_activity_method(
+            SwarmNodeActivities.save_updated_swarm_node,
+            node,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+        print(
+            f"\n{Colors.BLUE}==============================================================={Colors.ENDC}\n"
+            f" DONE Running workflow UpdateSwarmNodeWorkflow.run({node.id=}, {node.private_ip=})\n"
+            f"{Colors.BLUE}==============================================================={Colors.ENDC}\n\n"
+        )
+        return

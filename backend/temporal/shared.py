@@ -684,6 +684,16 @@ class ClusterSwarmNodeDetails(SwarmNodeDetails):
     swarm_node_id: str
 
 
+@dataclass
+class SimpleClusterSwarmNodeDetails:
+    id: str
+    private_ip: str
+    is_initial_install_server: bool
+    swarm_node_id: str
+    swarm_role: Literal["WORKER", "MANAGER"]
+    cluster_roles: list[Literal["APP_SERVER", "BUILD_SERVER"]]
+
+
 @dataclass(frozen=True)
 class SwarmNodePair:
     main_node: SwarmNodeDetails
@@ -830,16 +840,7 @@ class SwarmNodeServicesHealthcheckResult:
 @dataclass
 class SwarmNodeStatusResult(SwarmNodeServicesHealthcheckResult):
     id: str
-    status: Literal[
-        "CREATED",
-        "PROVISIONING",
-        "ACTIVE",
-        "DOWN",
-        "DRAINED",
-        "FAILED",
-        "REMOVED",
-        "PAUSED",
-    ]
+    status: str
     status_message: str | None = None
     docker_info: DockerSystemInfo | None = None
     swarm_hostname: str | None = None
@@ -851,6 +852,7 @@ class SwarmNodeHealthcheckResult(SwarmNodeServicesHealthcheckResult):
     status: Literal["unknown", "down", "ready", "disconnected"]
     message: str | None
     availability: Literal["drain", "active", "pause"]
+    hostname: str
 
 
 @dataclass

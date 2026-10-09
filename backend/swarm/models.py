@@ -41,6 +41,7 @@ class SwarmNode(TimestampedModel):
         # Active member of the cluster
         ACTIVE = "ACTIVE", "Active"
         DOWN = "DOWN", "Down"
+        UNHEALTHY = "UNHEALTHY", "Unhealthy"
         PAUSED = "PAUSED", "Paused"
         DRAINED = "DRAINED", "Drained"
 
@@ -100,6 +101,10 @@ class SwarmNode(TimestampedModel):
     @property
     def provision_swarm_node_workflow_id(self) -> str:
         return f"provision-{self.id}"
+
+    @property
+    def update_swarm_node_workflow_id(self) -> str:
+        return f"update-{self.id}"
 
     @property
     def deprovision_swarm_node_workflow_id(self) -> str:
