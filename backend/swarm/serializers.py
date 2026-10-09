@@ -115,10 +115,15 @@ class UpdateSwarmNodeRolesRequestSerializer(serializers.Serializer):
     swarm_role = serializers.ChoiceField(choices=SwarmNode.Role.choices)
     cluster_roles = serializers.ListField(
         child=serializers.ChoiceField(choices=SwarmNode.ClusterRole.choices),
-        allow_empty=False,
+        allow_empty=True,
     )
 
     def validate_cluster_roles(self, value: list[str]):
+        node: SwarmNode = self.context["node"]
+        if len(value) == 0 and not node.is_initial_install_server:
+            raise serializers.ValidationError(
+                "Select at least one cluster role for this server. Only the main server can have none."
+            )
         return list(set(value))
 
     def validate(self, attrs: dict):

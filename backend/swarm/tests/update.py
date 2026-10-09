@@ -111,7 +111,35 @@ class UpdateSwarmNodeRolesViewTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "cluster_roles"))
         self.assertNodeUnchanged(self.node)
+
+    def test_main_server_can_have_empty_cluster_roles(self):
+        self.loginUser()
+        # another node keeps both roles
+        self.node.cluster_roles = [
+            SwarmNode.ClusterRole.APP_SERVER,
+            SwarmNode.ClusterRole.BUILD_SERVER,
+        ]
+        self.node.save()
+        response = self.update_roles(
+            self.main_node.id,
+            {"swarm_role": SwarmNode.Role.MANAGER, "cluster_roles": []},
+        )
+        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
+
+    def test_main_server_cannot_have_empty_cluster_roles_if_it_is_the_last_one_with_a_role(
+        self,
+    ):
+        self.loginUser()
+        # the other node only has the app role, the main server is the last build server
+        response = self.update_roles(
+            self.main_node.id,
+            {"swarm_role": SwarmNode.Role.MANAGER, "cluster_roles": []},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertNodeUnchanged(self.main_node)
 
     def test_cannot_demote_the_main_server_to_worker(self):
         self.loginUser()
