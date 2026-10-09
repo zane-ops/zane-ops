@@ -17,6 +17,10 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
             swarm_role=SwarmNode.Role.MANAGER,
             status=SwarmNode.Status.ACTIVE,
             is_initial_install_server=True,
+            cluster_roles=[
+                SwarmNode.ClusterRole.APP_SERVER,
+                SwarmNode.ClusterRole.BUILD_SERVER,
+            ],
         )
         self.node = SwarmNode.objects.create(
             hostname="zane-worker",
@@ -154,6 +158,53 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
                 self.node.save()
                 response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
                 self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
+
+    def test_cannot_deprovision_the_last_app_server(self):
+        self.loginUser()
+        self.main_node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]
+        self.main_node.save()
+        response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.node.refresh_from_db()
+        self.assertEqual(SwarmNode.Status.ACTIVE, self.node.status)
+
+    def test_cannot_deprovision_the_last_build_server(self):
+        self.loginUser()
+        self.main_node.cluster_roles = [SwarmNode.ClusterRole.APP_SERVER]
+        self.main_node.save()
+        self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]
+        self.node.save()
+        response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.node.refresh_from_db()
+        self.assertEqual(SwarmNode.Status.ACTIVE, self.node.status)
+
+    def test_nodes_not_in_the_cluster_do_not_count_as_app_servers_on_deprovision(
+        self,
+    ):
+        self.loginUser()
+        self.main_node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]
+        self.main_node.save()
+        for index, node_status in enumerate(
+            [
+                SwarmNode.Status.CREATED,
+                SwarmNode.Status.PROVISIONING,
+                SwarmNode.Status.FAILED,
+                SwarmNode.Status.REMOVED,
+            ]
+        ):
+            with self.subTest(status=node_status):
+                SwarmNode.objects.create(
+                    private_ip=f"10.0.1.{index + 1}",
+                    swarm_role=SwarmNode.Role.WORKER,
+                    status=node_status,
+                    cluster_roles=[SwarmNode.ClusterRole.APP_SERVER],
+                )
+                response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
+                jprint(response.json())
+                self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
 
 class DeleteSwarmNodeViewTests(AuthAPITestCase):

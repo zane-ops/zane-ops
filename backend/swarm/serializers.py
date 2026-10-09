@@ -18,6 +18,36 @@ class CreateSSHKeyRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
 
 
+IN_CLUSTER_STATUSES = [
+    SwarmNode.Status.ACTIVE,
+    SwarmNode.Status.DOWN,
+    SwarmNode.Status.UNHEALTHY,
+    SwarmNode.Status.PAUSED,
+    SwarmNode.Status.DRAINED,
+]
+
+
+def check_if_cluster_roles_requirements_are_met(
+    node: SwarmNode, new_cluster_roles: list[str]
+) -> str | None:
+    """
+    The cluster needs at least one app server & one build server,
+    returns the role that would not be held by any server anymore if `node` had `new_cluster_roles`
+    """
+    other_nodes = SwarmNode.objects.filter(status__in=IN_CLUSTER_STATUSES).exclude(
+        id=node.id
+    )
+    for role in SwarmNode.ClusterRole:
+        if (
+            role in node.cluster_roles
+            and role not in new_cluster_roles
+            and not other_nodes.filter(cluster_roles__contains=[role]).exists()
+        ):
+            role_str = " ".join([part.capitalize() for part in role.split("_")])
+            return role_str
+    return None
+
+
 class ProvisionSwarmNodeRequestSerializer(serializers.Serializer):
     target_ssh_key_id = serializers.IntegerField()
     main_ssh_key_id = serializers.IntegerField()
@@ -68,15 +98,15 @@ class DeprovisionSwarmNodeRequestSerializer(ProvisionSwarmNodeRequestSerializer)
             raise serializers.ValidationError(
                 "The main server cannot be removed from the cluster"
             )
-        if node.status not in [
-            SwarmNode.Status.ACTIVE,
-            SwarmNode.Status.DOWN,
-            SwarmNode.Status.UNHEALTHY,
-            SwarmNode.Status.PAUSED,
-            SwarmNode.Status.DRAINED,
-        ]:
+        if node.status not in IN_CLUSTER_STATUSES:
             raise serializers.ValidationError(
                 f"Cannot deprovision a server with the status `{node.status}`, it is not part of the cluster"
+            )
+
+        missing_role = check_if_cluster_roles_requirements_are_met(node, [])
+        if missing_role is not None:
+            raise serializers.ValidationError(
+                f"The cluster needs at least one server with the role `{missing_role}`, this server is the last one"
             )
         return attrs
 
@@ -100,33 +130,20 @@ class UpdateSwarmNodeRolesRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"swarm_role": "The main server must stay a manager of the cluster"}
             )
-        in_cluster_statuses = [
-            SwarmNode.Status.ACTIVE,
-            SwarmNode.Status.DOWN,
-            SwarmNode.Status.UNHEALTHY,
-            SwarmNode.Status.PAUSED,
-            SwarmNode.Status.DRAINED,
-        ]
-        if node.swarm_node_id is None or node.status not in in_cluster_statuses:
+        if node.swarm_node_id is None or node.status not in IN_CLUSTER_STATUSES:
             raise serializers.ValidationError(
                 f"Cannot update the roles of a server with the status `{node.status}`, it is not part of the cluster"
             )
 
-        # The cluster needs at least one app server & one build server
-        other_nodes = SwarmNode.objects.filter(status__in=in_cluster_statuses).exclude(
-            id=node.id
+        missing_role = check_if_cluster_roles_requirements_are_met(
+            node, attrs["cluster_roles"]
         )
-        for role in SwarmNode.ClusterRole:
-            if (
-                role not in attrs["cluster_roles"]
-                and not other_nodes.filter(cluster_roles__contains=[role]).exists()
-            ):
-                role_str = " ".join([part.capitalize() for part in role.split("_")])
-                raise serializers.ValidationError(
-                    {
-                        "cluster_roles": f"The cluster needs at least one server with the role `{role_str} ({role})`, this server is the last one"
-                    }
-                )
+        if missing_role is not None:
+            raise serializers.ValidationError(
+                {
+                    "cluster_roles": f"The cluster needs at least one server with the role `{missing_role}`, this server is the last one"
+                }
+            )
         return attrs
 
 
