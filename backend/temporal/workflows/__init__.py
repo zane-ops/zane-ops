@@ -63,6 +63,7 @@ with workflow.unsafe.imports_passed_through():
         ToggleComposeStackWorkflow,
         ProvisionSwarmNodeWorkflow,
         DeprovisionSwarmNodeWorkflow,
+        UpdateSwarmNodeWorkflow,
     )
     from ..schedules import (
         MonitorDockerDeploymentWorkflow,
@@ -124,6 +125,7 @@ def get_workflows_and_activities():
             ProvisionSwarmNodeWorkflow,
             DeprovisionSwarmNodeWorkflow,
             SwarmHealthcheckWorkflow,
+            UpdateSwarmNodeWorkflow,
         ],
         activities=[
             *get_extra_activities(),
