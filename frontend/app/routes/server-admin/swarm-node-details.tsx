@@ -986,7 +986,7 @@ function SwarmNodeDetailsForm({ node }: SwarmNodeFormProps) {
           <FieldSetSelect
             name="swarm_role"
             value={swarmRole}
-            disabled={!isEditing || node.is_initial_install_server}
+            disabled={!isEditing}
             onValueChange={(value) =>
               setSwarmRole(value as SwarmNode["swarm_role"])
             }
