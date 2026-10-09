@@ -461,7 +461,8 @@ class AuthAPITestCase(APITestCase):
     @staticmethod
     def get_error_from_response(response: Any, field: str):
         return find_item_in_sequence(
-            lambda e: e.get("attr") == field, response.json().get("errors", [])
+            lambda e: e.get("attr") == field or e.get("attr").startswith(f"{field}."),
+            response.json().get("errors", []),
         )
 
     def get_workflow_schedule_by_id(self, id: str):

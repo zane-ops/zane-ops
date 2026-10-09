@@ -71,11 +71,44 @@ class DeprovisionSwarmNodeRequestSerializer(ProvisionSwarmNodeRequestSerializer)
         if node.status not in [
             SwarmNode.Status.ACTIVE,
             SwarmNode.Status.DOWN,
+            SwarmNode.Status.UNHEALTHY,
             SwarmNode.Status.PAUSED,
             SwarmNode.Status.DRAINED,
         ]:
             raise serializers.ValidationError(
                 f"Cannot deprovision a server with the status `{node.status}`, it is not part of the cluster"
+            )
+        return attrs
+
+
+class UpdateSwarmNodeRolesRequestSerializer(serializers.Serializer):
+    swarm_role = serializers.ChoiceField(choices=SwarmNode.Role.choices)
+    cluster_roles = serializers.ListField(
+        child=serializers.ChoiceField(choices=SwarmNode.ClusterRole.choices),
+        allow_empty=False,
+    )
+
+    def validate_cluster_roles(self, value: list[str]):
+        return list(set(value))
+
+    def validate(self, attrs: dict):
+        node: SwarmNode = self.context["node"]
+        if (
+            node.is_initial_install_server
+            and attrs["swarm_role"] != SwarmNode.Role.MANAGER
+        ):
+            raise serializers.ValidationError(
+                {"swarm_role": "The main server must stay a manager of the cluster"}
+            )
+        if node.swarm_node_id is None or node.status not in [
+            SwarmNode.Status.ACTIVE,
+            SwarmNode.Status.DOWN,
+            SwarmNode.Status.UNHEALTHY,
+            SwarmNode.Status.PAUSED,
+            SwarmNode.Status.DRAINED,
+        ]:
+            raise serializers.ValidationError(
+                f"Cannot update the roles of a server with the status `{node.status}`, it is not part of the cluster"
             )
         return attrs
 

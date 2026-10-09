@@ -27,12 +27,14 @@ from temporal.client import TemporalClient
 from temporal.shared import (
     ClusterSwarmNodeDetails,
     ClusterSwarmNodePair,
+    SimpleClusterSwarmNodeDetails,
     SwarmNodeDetails,
     SwarmNodePair,
 )
 from temporal.workflows import (
     ProvisionSwarmNodeWorkflow,
     DeprovisionSwarmNodeWorkflow,
+    UpdateSwarmNodeWorkflow,
 )
 from swarm.serializers import (
     CreateSSHKeyRequestSerializer,
@@ -40,6 +42,7 @@ from swarm.serializers import (
     ProvisionSwarmNodeRequestSerializer,
     SSHKeySerializer,
     FullSwarmNodeSerializer,
+    UpdateSwarmNodeRolesRequestSerializer,
     UpdateSwarmNodeSSHPortSerializer,
     SwarmNodeSerializer,
 )
@@ -330,6 +333,49 @@ class DeprovisionSwarmNodeAPIView(APIView):
         transaction.on_commit(
             lambda: TemporalClient.start_workflow(
                 DeprovisionSwarmNodeWorkflow.run,
+                payload,
+                id=workflow_id,
+            )
+        )
+
+        return Response(status=status.HTTP_202_ACCEPTED)
+
+
+class UpdateSwarmNodeRolesAPIView(APIView):
+    permission_classes = [IsInstanceOwner]
+
+    @extend_schema(
+        request=UpdateSwarmNodeRolesRequestSerializer,
+        responses={202: None},
+        operation_id="updateSwarmNodeRoles",
+        summary="Update the swarm role and cluster roles of a swarm node",
+    )
+    @transaction.atomic()
+    def put(self, request: Request, id: str):
+        try:
+            node = SwarmNode.objects.get(id=id)
+        except SwarmNode.DoesNotExist:
+            raise exceptions.NotFound(f"A server with the id `{id}` does not exist")
+
+        form = UpdateSwarmNodeRolesRequestSerializer(
+            data=request.data, context={"node": node}
+        )
+        form.is_valid(raise_exception=True)
+
+        data = cast(ReturnDict, form.validated_data)
+        payload = SimpleClusterSwarmNodeDetails(
+            id=node.id,
+            private_ip=node.private_ip,
+            is_initial_install_server=node.is_initial_install_server,
+            swarm_node_id=cast(str, node.swarm_node_id),
+            swarm_role=data["swarm_role"],
+            cluster_roles=data["cluster_roles"],
+        )
+
+        workflow_id = node.update_swarm_node_workflow_id
+        transaction.on_commit(
+            lambda: TemporalClient.start_workflow(
+                UpdateSwarmNodeWorkflow.run,
                 payload,
                 id=workflow_id,
             )

@@ -653,6 +653,10 @@ export interface paths {
     /** Provision a swarm node and add it to the ZaneOps cluster */
     post: operations["provisionSwarmNode"];
   };
+  "/api/swarm/nodes/{id}/roles/": {
+    /** Update the swarm role and cluster roles of a swarm node */
+    put: operations["updateSwarmNodeRoles"];
+  };
   "/api/swarm/nodes/{id}/ssh-keys/": {
     /** Create a new SSH key attached to this swarm node */
     post: operations["createSwarmNodeSSHKey"];
@@ -9399,6 +9403,75 @@ export interface components {
       code: "invalid";
       detail: string;
     };
+    UpdateSwarmNodeRolesClusterRolesErrorComponent: {
+      /**
+       * @description * `cluster_roles` - cluster_roles
+       * @enum {string}
+       */
+      attr: "cluster_roles";
+      /**
+       * @description * `empty` - empty
+       * * `not_a_list` - not_a_list
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "empty" | "not_a_list" | "null" | "required";
+      detail: string;
+    };
+    UpdateSwarmNodeRolesClusterRolesINDEXErrorComponent: {
+      /**
+       * @description * `cluster_roles.INDEX` - cluster_roles.INDEX
+       * @enum {string}
+       */
+      attr: "cluster_roles.INDEX";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    UpdateSwarmNodeRolesError: components["schemas"]["UpdateSwarmNodeRolesNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateSwarmNodeRolesSwarmRoleErrorComponent"] | components["schemas"]["UpdateSwarmNodeRolesClusterRolesErrorComponent"] | components["schemas"]["UpdateSwarmNodeRolesClusterRolesINDEXErrorComponent"];
+    UpdateSwarmNodeRolesErrorResponse400: components["schemas"]["UpdateSwarmNodeRolesValidationError"] | components["schemas"]["ParseErrorResponse"];
+    UpdateSwarmNodeRolesNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    UpdateSwarmNodeRolesRequestRequest: {
+      swarm_role: components["schemas"]["SwarmRoleEnum"];
+      cluster_roles: components["schemas"]["ClusterRolesEnum"][];
+    };
+    UpdateSwarmNodeRolesSwarmRoleErrorComponent: {
+      /**
+       * @description * `swarm_role` - swarm_role
+       * @enum {string}
+       */
+      attr: "swarm_role";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    UpdateSwarmNodeRolesValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["UpdateSwarmNodeRolesError"][];
+    };
     UpdateSwarmNodeSSHPort: {
       ssh_port: number;
     };
@@ -16971,6 +17044,52 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ProvisionSwarmNodeErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Update the swarm role and cluster roles of a swarm node */
+  updateSwarmNodeRoles: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateSwarmNodeRolesRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["UpdateSwarmNodeRolesRequestRequest"];
+        "multipart/form-data": components["schemas"]["UpdateSwarmNodeRolesRequestRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["UpdateSwarmNodeRolesErrorResponse400"];
         };
       };
       401: {

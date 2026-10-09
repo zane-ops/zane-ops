@@ -36,6 +36,11 @@ urlpatterns = [
         name="node.deprovision",
     ),
     re_path(
+        r"^nodes/(?P<id>[a-zA-Z0-9_]+)/roles/?$",
+        views.UpdateSwarmNodeRolesAPIView.as_view(),
+        name="node.update_roles",
+    ),
+    re_path(
         r"^nodes/(?P<id>[a-zA-Z0-9_]+)/build-logs/?$",
         views.SwarmNodeBuildLogsAPIView.as_view(),
         name="node.build_logs",

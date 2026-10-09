@@ -145,6 +145,7 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
         for node_status in [
             SwarmNode.Status.ACTIVE,
             SwarmNode.Status.DOWN,
+            SwarmNode.Status.UNHEALTHY,
             SwarmNode.Status.PAUSED,
             SwarmNode.Status.DRAINED,
         ]:
@@ -228,6 +229,7 @@ class DeleteSwarmNodeViewTests(AuthAPITestCase):
             SwarmNode.Status.PROVISIONING,
             SwarmNode.Status.ACTIVE,
             SwarmNode.Status.DOWN,
+            SwarmNode.Status.UNHEALTHY,
             SwarmNode.Status.PAUSED,
             SwarmNode.Status.DRAINED,
         ]:

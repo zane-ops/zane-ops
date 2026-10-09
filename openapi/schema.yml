@@ -15821,6 +15821,106 @@ paths:
           description: ''
         '202':
           description: No response body
+  /api/swarm/nodes/{id}/roles/:
+    put:
+      operationId: updateSwarmNodeRoles
+      summary: Update the swarm role and cluster roles of a swarm node
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - swarm
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSwarmNodeRolesRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UpdateSwarmNodeRolesRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateSwarmNodeRolesRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateSwarmNodeRolesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '202':
+          description: No response body
   /api/swarm/nodes/{id}/ssh-keys/:
     post:
       operationId: createSwarmNodeSSHKey
@@ -37314,6 +37414,145 @@ components:
       - attr
       - code
       - detail
+    UpdateSwarmNodeRolesClusterRolesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - cluster_roles
+          type: string
+          description: '* `cluster_roles` - cluster_roles'
+        code:
+          enum:
+          - empty
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `empty` - empty
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateSwarmNodeRolesClusterRolesINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - cluster_roles.INDEX
+          type: string
+          description: '* `cluster_roles.INDEX` - cluster_roles.INDEX'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateSwarmNodeRolesError:
+      oneOf:
+      - $ref: '#/components/schemas/UpdateSwarmNodeRolesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateSwarmNodeRolesSwarmRoleErrorComponent'
+      - $ref: '#/components/schemas/UpdateSwarmNodeRolesClusterRolesErrorComponent'
+      - $ref: '#/components/schemas/UpdateSwarmNodeRolesClusterRolesINDEXErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/UpdateSwarmNodeRolesNonFieldErrorsErrorComponent'
+          swarm_role: '#/components/schemas/UpdateSwarmNodeRolesSwarmRoleErrorComponent'
+          cluster_roles: '#/components/schemas/UpdateSwarmNodeRolesClusterRolesErrorComponent'
+          cluster_roles.INDEX: '#/components/schemas/UpdateSwarmNodeRolesClusterRolesINDEXErrorComponent'
+    UpdateSwarmNodeRolesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/UpdateSwarmNodeRolesValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/UpdateSwarmNodeRolesValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    UpdateSwarmNodeRolesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateSwarmNodeRolesRequestRequest:
+      type: object
+      properties:
+        swarm_role:
+          $ref: '#/components/schemas/SwarmRoleEnum'
+        cluster_roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClusterRolesEnum'
+      required:
+      - cluster_roles
+      - swarm_role
+    UpdateSwarmNodeRolesSwarmRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - swarm_role
+          type: string
+          description: '* `swarm_role` - swarm_role'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateSwarmNodeRolesValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpdateSwarmNodeRolesError'
+      required:
+      - errors
+      - type
     UpdateSwarmNodeSSHPort:
       type: object
       properties:
