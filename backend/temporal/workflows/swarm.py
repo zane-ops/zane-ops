@@ -91,7 +91,7 @@ class ProvisionSwarmNodeWorkflow:
         await workflow.execute_activity_method(
             SwarmNodeActivities.acquire_swarm_node_semaphore,
             payload.target_node.id,
-            start_to_close_timeout=timedelta(minutes=30),
+            start_to_close_timeout=timedelta(minutes=15),
             retry_policy=self.retry_policy,
         )
         try:
@@ -342,7 +342,7 @@ class DeprovisionSwarmNodeWorkflow:
         await workflow.execute_activity_method(
             SwarmNodeActivities.acquire_swarm_node_semaphore,
             payload.target_node.id,
-            start_to_close_timeout=timedelta(minutes=30),
+            start_to_close_timeout=timedelta(minutes=15),
             retry_policy=self.retry_policy,
         )
         try:
@@ -528,7 +528,7 @@ class UpdateSwarmNodeWorkflow:
         await workflow.execute_activity_method(
             SwarmNodeActivities.acquire_swarm_node_semaphore,
             payload.id,
-            start_to_close_timeout=timedelta(minutes=30),
+            start_to_close_timeout=timedelta(minutes=15),
             retry_policy=self.retry_policy,
         )
         try:

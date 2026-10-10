@@ -94,7 +94,7 @@ class SwarmNodeActivities:
         """
         return AsyncSemaphore(
             key=SWARM_CLUSTER_SEMAPHORE_KEY,
-            limit=100,
+            limit=10,
             semaphore_timeout=timedelta(minutes=30),
         )
 
@@ -106,8 +106,35 @@ class SwarmNodeActivities:
         """
         if settings.TESTING:
             return  # semaphores are causing issues in testing, blocking execution
-        await self.get_swarm_node_semaphore(node_id).acquire()
-        await self.get_swarm_cluster_semaphore().acquire()
+
+        print(f"➡️ Getting node semaphore for {Colors.YELLOW}{node_id}{Colors.ENDC}...")
+
+        # Wait max 50 times with each attempt being 5 secs apart => 50*5 = 250 sec =~ 4 minutes
+        result = await self.get_swarm_node_semaphore(node_id).acquire(
+            max_retries=50,
+            retry_delay=5,
+        )
+        if not result:
+            print(
+                f"❌ Failed to get node semaphore for {Colors.YELLOW}{node_id}{Colors.ENDC}."
+            )
+            raise Exception("Failed to get node semaphore")
+        print(f"✅ Got node semaphore for {Colors.YELLOW}{node_id}{Colors.ENDC} !")
+
+        print(
+            f"➡️ Getting cluster semaphore for {Colors.YELLOW}{node_id}{Colors.ENDC}..."
+        )
+        # Wait max 50 times with each attempt being 5 secs apart => 50*5 = 250 sec =~ 4 minutes
+        result = await self.get_swarm_cluster_semaphore().acquire(
+            max_retries=50,
+            retry_delay=5,
+        )
+        if not result:
+            print(
+                f"❌ Failed to get cluster semaphore for {Colors.YELLOW}{node_id}{Colors.ENDC}."
+            )
+            raise Exception("Failed to get cluster semaphore")
+        print(f"✅ Got cluster semaphore for {Colors.YELLOW}{node_id}{Colors.ENDC} !")
 
     @activity.defn
     async def release_swarm_node_semaphore(self, node_id: str):
