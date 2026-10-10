@@ -24838,13 +24838,13 @@ components:
       oneOf:
       - $ref: '#/components/schemas/DeprovisionSwarmNodeNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/DeprovisionSwarmNodeTargetSshKeyIdErrorComponent'
-      - $ref: '#/components/schemas/DeprovisionSwarmNodeMainSshKeyIdErrorComponent'
+      - $ref: '#/components/schemas/DeprovisionSwarmNodeForceRemoveIfNodeUnreachableErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/DeprovisionSwarmNodeNonFieldErrorsErrorComponent'
           target_ssh_key_id: '#/components/schemas/DeprovisionSwarmNodeTargetSshKeyIdErrorComponent'
-          main_ssh_key_id: '#/components/schemas/DeprovisionSwarmNodeMainSshKeyIdErrorComponent'
+          force_remove_if_node_unreachable: '#/components/schemas/DeprovisionSwarmNodeForceRemoveIfNodeUnreachableErrorComponent'
     DeprovisionSwarmNodeErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/DeprovisionSwarmNodeValidationError'
@@ -24854,26 +24854,22 @@ components:
         mapping:
           validation_error: '#/components/schemas/DeprovisionSwarmNodeValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    DeprovisionSwarmNodeMainSshKeyIdErrorComponent:
+    DeprovisionSwarmNodeForceRemoveIfNodeUnreachableErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - main_ssh_key_id
+          - force_remove_if_node_unreachable
           type: string
-          description: '* `main_ssh_key_id` - main_ssh_key_id'
+          description: '* `force_remove_if_node_unreachable` - force_remove_if_node_unreachable'
         code:
           enum:
           - invalid
-          - max_string_length
           - 'null'
-          - required
           type: string
           description: |-
             * `invalid` - invalid
-            * `max_string_length` - max_string_length
             * `null` - null
-            * `required` - required
         detail:
           type: string
       required:
@@ -24904,10 +24900,10 @@ components:
       properties:
         target_ssh_key_id:
           type: integer
-        main_ssh_key_id:
-          type: integer
+        force_remove_if_node_unreachable:
+          type: boolean
+          default: false
       required:
-      - main_ssh_key_id
       - target_ssh_key_id
     DeprovisionSwarmNodeTargetSshKeyIdErrorComponent:
       type: object
@@ -37424,13 +37420,11 @@ components:
           description: '* `cluster_roles` - cluster_roles'
         code:
           enum:
-          - empty
           - not_a_list
           - 'null'
           - required
           type: string
           description: |-
-            * `empty` - empty
             * `not_a_list` - not_a_list
             * `null` - null
             * `required` - required
