@@ -131,7 +131,7 @@ class SwarmNodeActivities:
         await self.get_swarm_cluster_semaphore().reset()
 
     @activity.defn
-    async def prepare_node_deployment(self, node: SwarmNodeDetails) -> str:
+    async def prepare_node_provision(self, node: SwarmNodeDetails) -> str:
         await provision_log(
             node,
             [

@@ -111,7 +111,7 @@ class ProvisionSwarmNodeWorkflow:
         )
 
         status = await workflow.execute_activity_method(
-            SwarmNodeActivities.prepare_node_deployment,
+            SwarmNodeActivities.prepare_node_provision,
             payload.target_node,
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,

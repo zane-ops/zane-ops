@@ -230,7 +230,7 @@ def get_workflows_and_activities():
             swarm_node_activities.get_swarm_join_token,
             swarm_node_activities.join_swarm_cluster,
             swarm_node_activities.update_node_labels,
-            swarm_node_activities.prepare_node_deployment,
+            swarm_node_activities.prepare_node_provision,
             swarm_node_activities.prepare_node_deprovision,
             swarm_node_activities.finish_and_save_node_provisioning,
             swarm_node_activities.finish_and_save_node_deprovisioning,
