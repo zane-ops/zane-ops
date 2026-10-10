@@ -131,7 +131,8 @@ export default [
             route(
               "deployment-logs",
               "./routes/server-admin/swarm-node-deployment-logs.tsx"
-            )
+            ),
+            route("services", "./routes/server-admin/swarm-node-services.tsx")
           ])
         ])
       ])

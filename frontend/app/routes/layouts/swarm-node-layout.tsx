@@ -3,6 +3,7 @@ import {
   AlertCircleIcon,
   CrownIcon,
   HammerIcon,
+  ContainerIcon,
   InfoIcon,
   LoaderIcon,
   ServerIcon,
@@ -164,6 +165,15 @@ export default function SwarmNodeLayout({
               >
                 <span>Deployment logs</span>
                 <SquareChartGanttIcon className="size-4 flex-none" />
+              </HorizontalNavLink>
+            </li>
+            <li>
+              <HorizontalNavLink
+                to={href("/admin/servers/:serverId/services", params)}
+                prefetch="viewport"
+              >
+                <span>Services</span>
+                <ContainerIcon className="size-4 flex-none" />
               </HorizontalNavLink>
             </li>
           </ul>

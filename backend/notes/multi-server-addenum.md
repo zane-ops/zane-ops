@@ -34,6 +34,8 @@
   5. Start ZaneOps (`make deploy`)
   6. Run job to fix swarm state: `python manage.py fix_swarm_networking`
 
+- Compose Stacks services should have a node constraint with: zane.app-server=true so that they are only deployed to app servers (by default)
+- Check why compose stacks don't seem to run healthcheck correctly
 - The API endpoint that removes a node must first check if any service has a volume on that node, and block (or warn) — once the node is drained, these services can't start anywhere else (they stay `Pending`), and their data is lost when the node is removed. The management commands skip this check, they're only for testing.
 - The node removal endpoint/UI must warn if removing a manager would leave too few managers to keep the cluster working (quorum, see [§14 of the plan](multi-server-plan.md#sec-14)).
 - When removing a manager node: demote it to worker first, refuse to remove the main server (`is_self`) or the last manager
