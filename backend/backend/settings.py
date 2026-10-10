@@ -427,6 +427,17 @@ SPECTACULAR_SETTINGS = {
             ("MANAGER", "Manager"),
             ("WORKER", "Worker"),
         ),
+        "SwarmNodeStatusEnum": (
+            ("CREATED", "Created"),
+            ("PROVISIONING", "Provisioning"),
+            ("FAILED", "Failed"),
+            ("REMOVED", "Removed"),
+            ("ACTIVE", "Active"),
+            ("DOWN", "Down"),
+            ("UNHEALTHY", "Unhealthy"),
+            ("PAUSED", "Paused"),
+            ("DRAINED", "Drained"),
+        ),
     },
     "POSTPROCESSING_HOOKS": [
         "drf_standardized_errors.openapi_hooks.postprocess_schema_enums",
@@ -514,6 +525,9 @@ APP_DATA_CLEANUP_SCHEDULE_ID = "daily-app-data-cleanup"
 # The old name isn't descriptive enough for what the schedule does
 OLD_DOCKER_SYSTEM_PRUNE_SCHEDULE_ID = "hourly-system-cleanup"
 DOCKER_SYSTEM_PRUNE_SCHEDULE_ID = "docker-system-prune"
+
+SWARM_HEALTHCHECK_SCHEDULE_ID = "docker-swarm-healthcheck"
+SWARM_HEALTHCHECK_SCHEDULE_CRON = "* * * * *"  # every minute
 
 # GeoIP, the DB is optional : when the operator doesn't provide one,
 # `/dev/null` is bind-mounted at that path, so we only consider GeoIP

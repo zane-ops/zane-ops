@@ -6,27 +6,41 @@ import {
   CableIcon,
   CheckIcon,
   ChevronRightIcon,
+  CogIcon,
   CpuIcon,
-  EyeIcon,
-  EyeOffIcon,
+  EthernetPortIcon,
   FlameIcon,
   GlobeLockIcon,
+  HashIcon,
   InfoIcon,
   KeyRoundIcon,
   LoaderIcon,
   MemoryStickIcon,
   MicrochipIcon,
   PackageIcon,
+  PencilLineIcon,
   PickaxeIcon,
   PlusIcon,
-  WrenchIcon
+  ServerOffIcon,
+  Trash2Icon,
+  WrenchIcon,
+  XIcon
 } from "lucide-react";
 import * as React from "react";
-import { Link, href, useFetcher } from "react-router";
-import type { SwarmNode } from "~/api/types";
+import { flushSync } from "react-dom";
+import { Link, href, redirect, useFetcher } from "react-router";
+import { toast } from "sonner";
+import { type RequestInput, apiClient } from "~/api/client";
+import type { FullSwarmNode, SwarmNode } from "~/api/types";
+import type { components } from "~/api/v1";
 import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
+import {
+  DeleteConfirmationDialog,
+  SimpleConfirmationDialog
+} from "~/components/delete-confirmation-dialog";
 import { DockerHubLogo } from "~/components/docker-hub-logo";
+import { RootSSHKeySelect } from "~/components/root-ssh-key-select";
 import { SSHKeyCard } from "~/components/ssh-key-card";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
@@ -40,9 +54,18 @@ import {
 } from "~/components/ui/dialog";
 import {
   FieldSet,
+  FieldSetCheckbox,
+  FieldSetErrors,
   FieldSetInput,
-  FieldSetLabel
+  FieldSetLabel,
+  FieldSetSelect
 } from "~/components/ui/fieldset";
+import {
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
 import {
   Tooltip,
@@ -52,9 +75,12 @@ import {
 } from "~/components/ui/tooltip";
 import { createDevLogger } from "~/lib/logger";
 import { swarmQueries } from "~/lib/queries";
+import { getQueryClient } from "~/lib/query-client";
 import {
+  type ErrorResponseFromAPI,
   cn,
   formatStorageValue,
+  getCsrfTokenHeader,
   getFormErrorsFromResponseData,
   metaTitle
 } from "~/lib/utils";
@@ -83,7 +109,7 @@ export default function SwarmNodeDetailsPage({
 
   return (
     <section className="flex flex-col gap-4">
-      <h3 className="text-grey">Update the details of this workspace</h3>
+      <h3 className="text-grey">Update the details of this server</h3>
 
       <div className="grid lg:grid-cols-12 gap-10 relative">
         <div className="lg:col-span-10 flex flex-col">
@@ -98,199 +124,7 @@ export default function SwarmNodeDetailsPage({
             <div className="w-full flex flex-col gap-5 pt-1 pb-8">
               <h2 className="text-lg text-grey">Details</h2>
 
-              <div className="w-full max-w-4xl">
-                <div className="flex flex-col  gap-2 w-full">
-                  <FieldSet
-                    name="swarm_role"
-                    className="flex flex-col gap-1.5 flex-1"
-                  >
-                    <FieldSetLabel>Docker Swarm Role</FieldSetLabel>
-                    <div className="relative">
-                      <FieldSetInput
-                        disabled
-                        className={cn(
-                          "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                          "disabled:border-transparent disabled:opacity-100",
-                          "disabled:text-transparent disabled:select-none"
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
-                          "max-w-full min-w-0 overflow-auto pr-4"
-                        )}
-                      >
-                        {node.role === "MANAGER" ? (
-                          <BrainIcon className="text-grey size-4 flex-none mr-1" />
-                        ) : (
-                          <PickaxeIcon className="text-grey size-4 flex-none mr-1" />
-                        )}
-                        <span className="text-card-foreground">
-                          {node.role}
-                        </span>
-                      </span>
-                    </div>
-                  </FieldSet>
-
-                  <FieldSet
-                    name="cluster_roles"
-                    className="flex flex-col gap-1.5 flex-1"
-                  >
-                    <FieldSetLabel>ZaneOps Cluster Roles</FieldSetLabel>
-                    <div className="flex items-center gap-1.5">
-                      {node.is_app_server && (
-                        <TooltipProvider>
-                          <Tooltip delayDuration={0}>
-                            <TooltipTrigger asChild>
-                              <Code className="inline-flex items-center gap-1 px-1.5 cursor-help">
-                                <PackageIcon className="size-4 flex-none" />
-                                <span>App Server</span>
-                                <InfoIcon className="size-3 flex-none" />
-                              </Code>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-64">
-                              <span className="dark:text-card-foreground text-grey">
-                                App server:&nbsp;
-                              </span>
-                              your services can be deployed and run on this
-                              server.
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                      {node.is_build_server && (
-                        <TooltipProvider>
-                          <Tooltip delayDuration={0}>
-                            <TooltipTrigger asChild>
-                              <Code className="inline-flex items-center gap-1 px-1.5 cursor-help">
-                                <WrenchIcon className="size-4 flex-none" />
-                                <span>Build Server</span>
-                                <InfoIcon className="size-3 flex-none" />
-                              </Code>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-64">
-                              <span className="dark:text-card-foreground text-grey">
-                                Build server:&nbsp;
-                              </span>
-                              docker images for git services are built on this
-                              server.
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                    </div>
-                  </FieldSet>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section
-            id="networking"
-            className="flex gap-1 scroll-mt-24 max-w-4xl"
-          >
-            <div className="w-16 hidden md:flex flex-col items-center">
-              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
-                <CableIcon size={15} className="flex-none text-grey" />
-              </div>
-              <div className="h-full border border-grey/50"></div>
-            </div>
-            <div className="w-full flex flex-col gap-12 pt-1 pb-8">
-              <div className="flex flex-col gap-6">
-                <h2 className="text-lg text-grey">Networking</h2>
-
-                <div className="w-full max-w-4xl">
-                  <div className="flex flex-col  gap-2 w-full">
-                    <FieldSet
-                      name="hostname"
-                      className="flex flex-col gap-1.5 flex-1"
-                    >
-                      <FieldSetLabel>Docker Swarm Hostname</FieldSetLabel>
-                      <div className="relative">
-                        <FieldSetInput
-                          disabled
-                          className={cn(
-                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                            "disabled:border-transparent disabled:opacity-100",
-                            "disabled:text-transparent disabled:select-none"
-                          )}
-                        />
-                        <span
-                          className={cn(
-                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
-                            "max-w-full min-w-0 overflow-auto pr-4"
-                          )}
-                        >
-                          <AtSignIcon className="text-grey size-4 flex-none mr-1" />
-                          {node.hostname ? (
-                            <span className="text-card-foreground">
-                              {node.hostname}
-                            </span>
-                          ) : (
-                            <code className="text-grey italic">
-                              {"<unknown>"}
-                            </code>
-                          )}
-
-                          {node.hostname && (
-                            <TooltipProvider>
-                              <Tooltip delayDuration={0}>
-                                <TooltipTrigger asChild>
-                                  <CopyButton
-                                    value={node.hostname}
-                                    label={node.hostname}
-                                    className="!opacity-100 ml-1.5"
-                                  />
-                                </TooltipTrigger>
-                                <TooltipContent>Copy Hostname</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </span>
-                      </div>
-                    </FieldSet>
-
-                    <FieldSet
-                      name="private_ip"
-                      className="flex flex-col gap-1.5 flex-1"
-                    >
-                      <FieldSetLabel>Private IP</FieldSetLabel>
-                      <div className="relative">
-                        <FieldSetInput
-                          disabled
-                          className={cn(
-                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                            "disabled:border-transparent disabled:opacity-100",
-                            "disabled:text-transparent disabled:select-none"
-                          )}
-                        />
-
-                        <span
-                          className={cn(
-                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
-                            "max-w-full min-w-0 overflow-auto pr-4"
-                          )}
-                        >
-                          <GlobeLockIcon className="text-grey size-4 flex-none mr-1" />
-                          <span>{node.private_ip}</span>
-                          <TooltipProvider>
-                            <Tooltip delayDuration={0}>
-                              <TooltipTrigger asChild>
-                                <CopyButton
-                                  value={node.private_ip}
-                                  label={node.private_ip}
-                                  className="!opacity-100 ml-1.5"
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent>Copy Private IP</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </span>
-                      </div>
-                    </FieldSet>
-                  </div>
-                </div>
-              </div>
+              <SwarmNodeDetailsForm node={node} />
             </div>
           </section>
 
@@ -307,6 +141,40 @@ export default function SwarmNodeDetailsPage({
 
                 <div className="w-full max-w-4xl">
                   <div className="flex flex-col  gap-2 w-full">
+                    <FieldSet
+                      name="architecture"
+                      className="flex flex-col gap-1.5 flex-1"
+                    >
+                      <FieldSetLabel>Architecture</FieldSetLabel>
+                      <div className="relative">
+                        <FieldSetInput
+                          disabled
+                          className={cn(
+                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                            "disabled:border-transparent disabled:opacity-100",
+                            "disabled:text-transparent disabled:select-none"
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
+                            "max-w-full min-w-0 overflow-auto pr-4"
+                          )}
+                        >
+                          <CogIcon className="text-grey size-4 flex-none mr-1" />
+                          {node.architecture ? (
+                            <span className="text-card-foreground">
+                              {node.architecture}
+                            </span>
+                          ) : (
+                            <code className="text-grey italic">
+                              {"<unknown>"}
+                            </code>
+                          )}
+                        </span>
+                      </div>
+                    </FieldSet>
+
                     <FieldSet
                       name="cpus"
                       className="flex flex-col gap-1.5 flex-1"
@@ -412,12 +280,174 @@ export default function SwarmNodeDetailsPage({
             </div>
           </section>
 
+          <section
+            id="networking"
+            className="flex gap-1 scroll-mt-24 max-w-4xl"
+          >
+            <div className="w-16 hidden md:flex flex-col items-center">
+              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                <CableIcon size={15} className="flex-none text-grey" />
+              </div>
+              <div className="h-full border border-grey/50"></div>
+            </div>
+            <div className="w-full flex flex-col gap-12 pt-1 pb-8">
+              <div className="flex flex-col gap-6">
+                <h2 className="text-lg text-grey">Networking</h2>
+
+                <div className="w-full max-w-4xl">
+                  <div className="flex flex-col  gap-2 w-full">
+                    <FieldSet
+                      name="swarm_node_id"
+                      className="flex flex-col gap-1.5 flex-1"
+                    >
+                      <FieldSetLabel>Docker Swarm Node ID</FieldSetLabel>
+                      <div className="relative">
+                        <FieldSetInput
+                          disabled
+                          className={cn(
+                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                            "disabled:border-transparent disabled:opacity-100",
+                            "disabled:text-transparent disabled:select-none"
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
+                            "max-w-full min-w-0 overflow-auto pr-4"
+                          )}
+                        >
+                          <HashIcon className="text-grey size-4 flex-none mr-1" />
+                          {node.swarm_node_id ? (
+                            <span className="text-card-foreground">
+                              {node.swarm_node_id}
+                            </span>
+                          ) : (
+                            <code className="text-grey italic">
+                              {"<unknown>"}
+                            </code>
+                          )}
+
+                          {node.swarm_node_id && (
+                            <TooltipProvider>
+                              <Tooltip delayDuration={0}>
+                                <TooltipTrigger asChild>
+                                  <CopyButton
+                                    value={node.swarm_node_id}
+                                    label={node.swarm_node_id}
+                                    className="!opacity-100 ml-1.5"
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent>Copy Node ID</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </span>
+                      </div>
+                    </FieldSet>
+
+                    <FieldSet
+                      name="hostname"
+                      className="flex flex-col gap-1.5 flex-1"
+                    >
+                      <FieldSetLabel>Docker Swarm Hostname</FieldSetLabel>
+                      <div className="relative">
+                        <FieldSetInput
+                          disabled
+                          className={cn(
+                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                            "disabled:border-transparent disabled:opacity-100",
+                            "disabled:text-transparent disabled:select-none"
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
+                            "max-w-full min-w-0 overflow-auto pr-4"
+                          )}
+                        >
+                          <AtSignIcon className="text-grey size-4 flex-none mr-1" />
+                          {node.hostname ? (
+                            <span className="text-card-foreground">
+                              {node.hostname}
+                            </span>
+                          ) : (
+                            <code className="text-grey italic">
+                              {"<unknown>"}
+                            </code>
+                          )}
+
+                          {node.hostname && (
+                            <TooltipProvider>
+                              <Tooltip delayDuration={0}>
+                                <TooltipTrigger asChild>
+                                  <CopyButton
+                                    value={node.hostname}
+                                    label={node.hostname}
+                                    className="!opacity-100 ml-1.5"
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent>Copy Hostname</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </span>
+                      </div>
+                    </FieldSet>
+
+                    <FieldSet
+                      name="private_ip"
+                      className="flex flex-col gap-1.5 flex-1"
+                    >
+                      <FieldSetLabel>Private IP</FieldSetLabel>
+                      <div className="relative">
+                        <FieldSetInput
+                          disabled
+                          className={cn(
+                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                            "disabled:border-transparent disabled:opacity-100",
+                            "disabled:text-transparent disabled:select-none"
+                          )}
+                        />
+
+                        <span
+                          className={cn(
+                            "absolute inset-y-0 flex items-center left-3 text-sm whitespace-nowrap",
+                            "max-w-full min-w-0 overflow-auto pr-4"
+                          )}
+                        >
+                          <GlobeLockIcon className="text-grey size-4 flex-none mr-1" />
+                          <span>{node.private_ip}</span>
+                          <TooltipProvider>
+                            <Tooltip delayDuration={0}>
+                              <TooltipTrigger asChild>
+                                <CopyButton
+                                  value={node.private_ip}
+                                  label={node.private_ip}
+                                  className="!opacity-100 ml-1.5"
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent>Copy Private IP</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </span>
+                      </div>
+                    </FieldSet>
+
+                    <SwarmNodeSSHPortForm node={node} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section id="ssh-keys" className="flex gap-1 scroll-mt-20">
             <div className="w-16 hidden md:flex flex-col items-center">
               <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
                 <KeyRoundIcon size={15} className="flex-none text-grey" />
               </div>
-              <div className="h-full border border-grey/50"></div>
+              {!node.is_initial_install_server && (
+                <div className="h-full border border-grey/50"></div>
+              )}
             </div>
 
             <div className="w-full flex flex-col gap-5 pt-1 pb-8 items-start">
@@ -444,83 +474,48 @@ export default function SwarmNodeDetailsPage({
             </div>
           </section>
 
-          <section id="danger" className="flex gap-1 scroll-mt-20">
-            <div className="w-16 hidden md:flex flex-col items-center">
-              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
-                <FlameIcon size={15} className="flex-none text-red-500" />
-              </div>
-            </div>
-
-            <div className="w-full flex flex-col gap-5 pt-1 pb-14">
-              <h2 className="text-lg text-red-400">Danger Zone</h2>
-              <div className="flex flex-col gap-4 items-start max-w-4xl w-full rounded-md border border-border py-4">
-                <div className="flex md:flex-row gap-4 justify-between items-center w-full px-4">
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-lg font-medium">
-                      Remove Server from cluster
-                    </h3>
-                    <p>
-                      Drain all services from this server and remove it from the
-                      cluster
-                    </p>
-                  </div>
-                  <SwarmNodeRemoveForm {...node} />
+          {!node.is_initial_install_server && (
+            <section id="danger" className="flex gap-1 scroll-mt-20">
+              <div className="w-16 hidden md:flex flex-col items-center">
+                <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
+                  <FlameIcon size={15} className="flex-none text-red-500" />
                 </div>
               </div>
-            </div>
-          </section>
+
+              <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+                <h2 className="text-lg text-red-400">Danger Zone</h2>
+                <div className="flex flex-col gap-4 items-start max-w-4xl w-full rounded-md border border-border py-4">
+                  <div className="flex md:flex-row gap-4 justify-between items-center w-full px-4">
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-lg font-medium">
+                        Deprovision server
+                      </h3>
+                      <p>
+                        Move all services running on this server to other
+                        servers, then remove it from the cluster.
+                      </p>
+                    </div>
+                    <SwarmDeprovisionForm {...node} />
+                  </div>
+                  <Separator />
+
+                  <div className="flex md:flex-row gap-4 justify-between items-center w-full px-4">
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-lg font-medium">Delete server</h3>
+                      <p>
+                        Delete this server and its SSH keys from ZaneOps.
+                        Nothing is uninstalled on the server itself.
+                      </p>
+                    </div>
+                    <SwarmNodeDeleteForm {...node} />
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </section>
-  );
-}
-
-type HiddenValueProps = {
-  realValue: string | number;
-  className?: string;
-};
-
-function HiddenValue({ realValue, className }: HiddenValueProps) {
-  const [isValueShown, setShowValue] = React.useState(false);
-
-  const Icon = isValueShown ? EyeOffIcon : EyeIcon;
-  const arr = Array.from({ length: realValue.toString().length }, (_, i) => i);
-
-  return (
-    <span className={cn("inline-flex items-center gap-2", className)}>
-      {isValueShown ? (
-        realValue
-      ) : (
-        <span className="inline-flex items-center gap-0.5">
-          {arr.map((i) => (
-            <span
-              key={i}
-              className="inline-block bg-card-foreground size-1.5 rounded-full flex-none"
-            />
-          ))}
-        </span>
-      )}
-      <TooltipProvider>
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn("px-2.5 py-0.5", "inline-flex gap-1 items-center")}
-              onClick={() => setShowValue(!isValueShown)}
-            >
-              <Icon className="size-4 flex-none" />
-              <span className="sr-only">
-                {isValueShown ? "Hide Value" : "Show value"}
-              </span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {isValueShown ? "Hide Value" : "Show value"}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    </span>
   );
 }
 
@@ -757,32 +752,713 @@ function SSHKeyAddDialog({ serverId }: SSHKeyAddDialogProps) {
   );
 }
 
-function SwarmNodeRemoveForm(node: SwarmNode) {
-  return (
+function SwarmNodeDeleteForm(node: FullSwarmNode) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+  const isMemberOfCluster = ![
+    "CREATED",
+    "FAILED",
+    "REMOVED",
+    "PROVISIONING"
+  ].includes(node.status);
+  const nodeName = node.hostname ?? node.private_ip;
+
+  return isMemberOfCluster ? (
     <TooltipProvider>
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
           <Button
             variant="destructive"
-            className={cn(
-              "destructive-outline gap-2",
-              node.is_initial_install_server && "opacity-50"
-            )}
-            onClick={(e) => {
-              if (node.is_initial_install_server) {
-                e.preventDefault();
-              }
-            }}
+            className="destructive-outline gap-2 opacity-50"
+            onClick={(e) => e.preventDefault()}
           >
-            Remove Server
+            <Trash2Icon size={15} className="flex-none" />
+            Delete Server
           </Button>
         </TooltipTrigger>
-        {node.is_initial_install_server && (
-          <TooltipContent className="max-w-56 text-pretty">
-            You cannot remove the main ZaneOps server from the cluster.
-          </TooltipContent>
-        )}
+        <TooltipContent className="max-w-56 text-pretty">
+          This server is still part of the cluster. Deprovision it before
+          deleting it.
+        </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  ) : (
+    <DeleteConfirmationDialog
+      fetcher={fetcher}
+      title={
+        <>
+          Delete the server&nbsp;
+          <span className="text-grey">&ldquo;{nodeName}&rdquo;</span>?
+        </>
+      }
+      message={
+        <p>
+          This server and all its SSH keys will be permanently deleted from
+          ZaneOps. This action cannot be undone.
+        </p>
+      }
+      confirmationValue={nodeName}
+      confirmationFieldName="server_name"
+      form={
+        <fetcher.Form method="post">
+          <FieldSet name="server_name" errors={errors.server_name}>
+            <FieldSetInput />
+          </FieldSet>
+          <input type="hidden" name="intent" value="delete-server" />
+        </fetcher.Form>
+      }
+      trigger={
+        <DialogTrigger asChild>
+          <Button variant="destructive" className="destructive-outline gap-2">
+            <Trash2Icon size={15} className="flex-none" />
+            Delete Server
+          </Button>
+        </DialogTrigger>
+      }
+    />
+  );
+}
+
+function SwarmDeprovisionForm(node: FullSwarmNode) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+  const isNotMemberOfClusterYet = [
+    "CREATED",
+    "FAILED",
+    "REMOVED",
+    "PROVISIONING"
+  ].includes(node.status);
+
+  const targetRootKeys = node.ssh_keys.filter((key) => key.user === "root");
+
+  return isNotMemberOfClusterYet ? (
+    <TooltipProvider>
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>
+          <Button
+            variant="warning"
+            className="destructive-outline gap-2 opacity-50"
+            onClick={(e) => e.preventDefault()}
+          >
+            <ServerOffIcon size={15} className="flex-none" />
+            Deprovision Server
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-56 text-pretty">
+          This server is not part of the cluster yet, so there is nothing to
+          deprovision.
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  ) : (
+    <SimpleConfirmationDialog
+      fetcher={fetcher}
+      variant="warning"
+      className="max-w-xl"
+      title={
+        <>
+          Deprovision the server&nbsp;
+          <span className="text-grey">
+            &ldquo;{node.hostname ?? node.private_ip}&rdquo;
+          </span>
+          ?
+        </>
+      }
+      message={
+        <p>
+          All services running on this server will be moved to other servers,
+          then the server will leave the cluster. ZaneOps will need to connect
+          to both this server and the main server as <Code>root</Code> to
+          proceed.
+        </p>
+      }
+      confirmText="Deprovision"
+      pendingText="Deprovisioning..."
+      form={
+        <fetcher.Form method="post" className="flex flex-col gap-4 mb-5">
+          <input type="hidden" name="intent" value="deprovision-server" />
+          <RootSSHKeySelect
+            name="target_ssh_key_id"
+            label="Root SSH key for this server"
+            keys={targetRootKeys}
+            errors={errors.target_ssh_key_id}
+          />
+
+          <FieldSet
+            name="force_remove_if_node_unreachable"
+            errors={errors.force_remove_if_node_unreachable}
+            className="flex-1 inline-flex gap-2 flex-col"
+          >
+            <div className="inline-flex gap-2 items-start">
+              <FieldSetCheckbox className="relative top-1 disabled:opacity-60" />
+
+              <div className="flex flex-col gap-0.5">
+                <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
+                  Remove even if unreachable
+                </FieldSetLabel>
+
+                <small className="text-grey text-sm">
+                  If ZaneOps can't connect to this server over SSH, remove it
+                  from the cluster anyway. The server itself won't be cleaned
+                  up.
+                </small>
+              </div>
+            </div>
+          </FieldSet>
+        </fetcher.Form>
+      }
+      trigger={
+        <DialogTrigger asChild>
+          <Button variant="warning" className="destructive-outline gap-2">
+            <ServerOffIcon size={15} className="flex-none" />
+            Deprovision Server
+          </Button>
+        </DialogTrigger>
+      }
+    />
+  );
+}
+
+type SwarmNodeFormProps = {
+  node: SwarmNode;
+};
+
+function SwarmNodeDetailsForm({ node }: SwarmNodeFormProps) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const isPending = fetcher.state !== "idle";
+  const [data, setData] = React.useState(fetcher.data);
+  const [isEditing, setIsEditing] = React.useState(false);
+  const errors = getFormErrorsFromResponseData(data?.errors);
+
+  const [swarmRole, setSwarmRole] = React.useState(node.swarm_role);
+  const [clusterRoles, setClusterRoles] = React.useState(node.cluster_roles);
+  const SelectTriggerRef =
+    React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
+      setIsEditing(false);
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  const toggleClusterRole = (
+    role: SwarmNode["cluster_roles"][number],
+    checked: boolean
+  ) => {
+    setClusterRoles((roles) =>
+      checked ? [...roles, role] : roles.filter((r) => r !== role)
+    );
+  };
+
+  return (
+    <div className="w-full max-w-4xl">
+      <fetcher.Form method="post" className="flex flex-col gap-4 w-full">
+        {errors.non_field_errors && (
+          <Alert variant="destructive">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{errors.non_field_errors}</AlertDescription>
+          </Alert>
+        )}
+        {errors.cluster_roles && (
+          <Alert variant="destructive">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{errors.cluster_roles}</AlertDescription>
+          </Alert>
+        )}
+
+        <FieldSet
+          errors={errors.swarm_role}
+          name="swarm_role"
+          className="flex flex-col gap-1.5 flex-1"
+        >
+          <FieldSetLabel htmlFor="swarm_role">Docker Swarm Role</FieldSetLabel>
+          <FieldSetSelect
+            name="swarm_role"
+            value={swarmRole}
+            disabled={!isEditing}
+            onValueChange={(value) =>
+              setSwarmRole(value as SwarmNode["swarm_role"])
+            }
+          >
+            <SelectTrigger
+              id="swarm_role"
+              ref={SelectTriggerRef}
+              className={cn(
+                "[&_[data-item]]:flex-row [&_[data-item]]:gap-2",
+                "[&_[data-item]_[data-description]]:hidden",
+                "disabled:bg-muted disabled:border-transparent disabled:opacity-100"
+              )}
+            >
+              <SelectValue placeholder="Select a swarm role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                value="WORKER"
+                className="flex items-start [&_[data-indicator]]:relative [&_[data-indicator]]:top-1"
+              >
+                <div className="inline-flex items-start gap-2">
+                  <PickaxeIcon className="size-4 flex-none relative top-1" />
+                  <div className="flex flex-col" data-item>
+                    <span>Worker</span>
+                    <span className="text-muted-foreground" data-description>
+                      Only runs workloads assigned by the managers
+                    </span>
+                  </div>
+                </div>
+              </SelectItem>
+              <SelectItem
+                value="MANAGER"
+                className="flex items-start [&_[data-indicator]]:relative [&_[data-indicator]]:top-1"
+              >
+                <div className="inline-flex items-start gap-2">
+                  <BrainIcon className="size-4 flex-none relative top-1" />
+                  <div className="flex flex-col" data-item>
+                    <span>Manager</span>
+                    <span className="text-muted-foreground" data-description>
+                      Runs workloads and takes part in managing the Docker swarm
+                      cluster state
+                    </span>
+                  </div>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </FieldSetSelect>
+        </FieldSet>
+
+        <div className="flex flex-col gap-2">
+          <span>ZaneOps Cluster Roles</span>
+
+          <FieldSet
+            name="cluster_roles"
+            className="flex-1 inline-flex gap-2 flex-col"
+          >
+            <div className="inline-flex gap-2 items-start">
+              <FieldSetCheckbox
+                value="APP_SERVER"
+                disabled={!isEditing}
+                checked={clusterRoles.includes("APP_SERVER")}
+                onCheckedChange={(checked) =>
+                  toggleClusterRole("APP_SERVER", checked === true)
+                }
+                className="relative top-1 disabled:opacity-60"
+              />
+
+              <div className="flex flex-col gap-0.5">
+                <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
+                  <PackageIcon className="size-4 flex-none" />
+                  App Server
+                </FieldSetLabel>
+
+                <small className="text-grey text-sm">
+                  Your services can be deployed and run on this server.
+                </small>
+              </div>
+            </div>
+          </FieldSet>
+
+          <FieldSet
+            name="cluster_roles"
+            className="flex-1 inline-flex gap-2 flex-col"
+          >
+            <div className="inline-flex gap-2 items-start">
+              <FieldSetCheckbox
+                value="BUILD_SERVER"
+                disabled={!isEditing}
+                checked={clusterRoles.includes("BUILD_SERVER")}
+                onCheckedChange={(checked) =>
+                  toggleClusterRole("BUILD_SERVER", checked === true)
+                }
+                className="relative top-1 disabled:opacity-60"
+              />
+
+              <div className="flex flex-col gap-0.5">
+                <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
+                  <WrenchIcon className="size-4 flex-none" />
+                  Build Server
+                </FieldSetLabel>
+
+                <small className="text-grey text-sm">
+                  Docker images for git services can be built on this server.
+                </small>
+              </div>
+            </div>
+          </FieldSet>
+        </div>
+
+        <div className="flex gap-4">
+          {isEditing && (
+            <SubmitButton
+              isPending={isPending}
+              variant="secondary"
+              className="self-start"
+              name="intent"
+              value="update-roles"
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span>Updating...</span>
+                </>
+              ) : (
+                <>
+                  <CheckIcon size={15} className="flex-none" />
+                  <span>Update</span>
+                </>
+              )}
+            </SubmitButton>
+          )}
+          <Button
+            variant="outline"
+            type="reset"
+            disabled={isPending}
+            onClick={() => {
+              const newIsEditing = !isEditing;
+              flushSync(() => {
+                setIsEditing(newIsEditing);
+                setSwarmRole(node.swarm_role);
+                setClusterRoles(node.cluster_roles);
+              });
+              if (newIsEditing) {
+                SelectTriggerRef.current?.focus();
+              }
+              setData(undefined);
+            }}
+            className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+          >
+            {!isEditing ? (
+              <>
+                <span>Edit</span>
+                <PencilLineIcon size={15} className="flex-none" />
+              </>
+            ) : (
+              <>
+                <XIcon size={15} className="flex-none" />
+                <span>Cancel</span>
+              </>
+            )}
+          </Button>
+        </div>
+      </fetcher.Form>
+    </div>
+  );
+}
+
+function SwarmNodeSSHPortForm({ node }: SwarmNodeFormProps) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const isPending = fetcher.state !== "idle";
+  const [data, setData] = React.useState(fetcher.data);
+  const [isEditing, setIsEditing] = React.useState(false);
+  const errors = getFormErrorsFromResponseData(data?.errors);
+  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
+      setIsEditing(false);
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  return (
+    <fetcher.Form
+      method="post"
+      className="flex flex-col md:flex-row gap-2 w-full"
+    >
+      <FieldSet
+        name="ssh_port"
+        errors={errors.non_field_errors || errors.ssh_port}
+        className="flex flex-col gap-1.5 flex-1"
+      >
+        <FieldSetLabel>SSH Port</FieldSetLabel>
+        <div className="relative">
+          <FieldSetInput
+            ref={inputRef}
+            placeholder="ex: 22"
+            defaultValue={node.ssh_port}
+            disabled={!isEditing}
+            className={cn(
+              "disabled:bg-muted",
+              "disabled:border-transparent disabled:opacity-100",
+              !isEditing && "pl-8"
+            )}
+          />
+          {!isEditing && (
+            <EthernetPortIcon className="text-grey size-4 flex-none absolute left-3 top-1/2 -translate-y-1/2" />
+          )}
+
+          {!isEditing && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                flushSync(() => {
+                  setIsEditing(true);
+                });
+                inputRef.current?.focus();
+              }}
+              className={cn(
+                "absolute inset-y-0 right-0 text-sm py-0 border-0",
+                "bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+              )}
+            >
+              <span>Edit</span>
+              <PencilLineIcon size={15} />
+            </Button>
+          )}
+        </div>
+      </FieldSet>
+
+      {isEditing && (
+        <div className="flex gap-2 md:relative top-8">
+          <SubmitButton
+            isPending={isPending}
+            variant="outline"
+            className="bg-inherit"
+            name="intent"
+            value="update-ssh-port"
+          >
+            {isPending ? (
+              <>
+                <LoaderIcon className="animate-spin" size={15} />
+                <span className="sr-only">Updating SSH port...</span>
+              </>
+            ) : (
+              <>
+                <CheckIcon size={15} className="flex-none" />
+                <span className="sr-only">Update SSH port</span>
+              </>
+            )}
+          </SubmitButton>
+          <Button
+            onClick={(ev) => {
+              ev.currentTarget.form?.reset();
+              setIsEditing(false);
+              setData(undefined);
+            }}
+            variant="outline"
+            className="bg-inherit"
+            type="reset"
+          >
+            <XIcon size={15} className="flex-none" />
+            <span className="sr-only">Cancel</span>
+          </Button>
+        </div>
+      )}
+    </fetcher.Form>
+  );
+}
+
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
+  const formData = await request.formData();
+  const intent = formData.get("intent")?.toString();
+
+  switch (intent) {
+    case "update-ssh-port": {
+      return updateSSHPort(params.serverId, formData);
+    }
+    case "update-roles": {
+      return updateRoles(params.serverId, formData);
+    }
+    case "delete-server": {
+      return deleteServer(params.serverId, formData);
+    }
+    case "deprovision-server": {
+      return deprovisionServer(params.serverId, formData);
+    }
+    case "update-details": {
+      // TODO: call the node update endpoint once it is implemented
+      const userData = {
+        swarm_role: formData
+          .get("swarm_role")
+          ?.toString() as SwarmNode["swarm_role"],
+        cluster_roles: formData
+          .getAll("cluster_roles")
+          .map((role) => role.toString()) as SwarmNode["cluster_roles"]
+      };
+      logger.info({ intent, userData });
+      return {
+        errors: undefined as
+          | components["schemas"]["SwarmNodesCreateErrorResponse400"]
+          | undefined,
+        data: undefined,
+        userData
+      };
+    }
+    default: {
+      throw new Error(`Unexpected intent \`${intent}\``);
+    }
+  }
+}
+
+async function updateSSHPort(serverId: string, formData: FormData) {
+  const queryClient = getQueryClient();
+
+  const userData = {
+    ssh_port: formData.get("ssh_port")?.toString() as unknown as number
+  } satisfies RequestInput<"patch", "/api/swarm/nodes/{id}/">;
+
+  const { error: errors, data } = await apiClient.PATCH(
+    "/api/swarm/nodes/{id}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: { id: serverId }
+      },
+      body: userData
+    }
+  );
+
+  if (errors) {
+    return {
+      errors,
+      userData
+    };
+  }
+
+  await queryClient.invalidateQueries(swarmQueries.singleNode(serverId));
+  toast.success("Success", {
+    description: "SSH port updated successfully",
+    closeButton: true
+  });
+  return { data };
+}
+
+async function updateRoles(serverId: string, formData: FormData) {
+  const queryClient = getQueryClient();
+
+  const userData = {
+    swarm_role: (formData.get("swarm_role")?.toString() ??
+      "WORKER") as SwarmNode["swarm_role"],
+    cluster_roles: formData
+      .getAll("cluster_roles")
+      .map((role) => role.toString()) as SwarmNode["cluster_roles"]
+  } satisfies RequestInput<"put", "/api/swarm/nodes/{id}/roles/">;
+
+  const { error: errors, data } = await apiClient.PUT(
+    "/api/swarm/nodes/{id}/roles/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: { id: serverId }
+      },
+      body: userData
+    }
+  );
+
+  if (errors) {
+    return {
+      errors,
+      userData
+    };
+  }
+
+  await queryClient.invalidateQueries(swarmQueries.singleNode(serverId));
+  toast.success("Success", {
+    description: "Node is being updated",
+    closeButton: true
+  });
+
+  throw redirect(
+    href("/admin/servers/:serverId/deployment-logs", {
+      serverId: serverId
+    })
+  );
+}
+
+async function deleteServer(serverId: string, formData: FormData) {
+  const queryClient = getQueryClient();
+  const node = await queryClient.ensureQueryData(
+    swarmQueries.singleNode(serverId)
+  );
+  const nodeName = node.hostname ?? node.private_ip;
+
+  if (formData.get("server_name")?.toString().trim() !== nodeName) {
+    return {
+      errors: {
+        type: "validation_error",
+        errors: [
+          {
+            attr: "server_name",
+            code: "invalid",
+            detail: "The server name does not match"
+          }
+        ]
+      } satisfies ErrorResponseFromAPI
+    };
+  }
+
+  const { error: errors } = await apiClient.DELETE("/api/swarm/nodes/{id}/", {
+    headers: {
+      ...(await getCsrfTokenHeader())
+    },
+    params: {
+      path: { id: serverId }
+    }
+  });
+
+  if (errors) {
+    return { errors };
+  }
+
+  queryClient.removeQueries(swarmQueries.singleNode(serverId));
+  await queryClient.invalidateQueries({
+    queryKey: swarmQueries.nodeList().queryKey.slice(0, 1)
+  });
+
+  toast.success("Success", {
+    description: (
+      <span>
+        Server <strong>{nodeName}</strong> has been deleted.
+      </span>
+    ),
+    closeButton: true
+  });
+  throw redirect(href("/admin/servers"));
+}
+
+async function deprovisionServer(serverId: string, formData: FormData) {
+  const queryClient = getQueryClient();
+
+  const userData = {
+    target_ssh_key_id: Number(formData.get("target_ssh_key_id")),
+    force_remove_if_node_unreachable:
+      formData.get("force_remove_if_node_unreachable") == "on"
+  } satisfies RequestInput<"put", "/api/swarm/nodes/{id}/deprovision/">;
+
+  const { error: errors } = await apiClient.PUT(
+    "/api/swarm/nodes/{id}/deprovision/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: { id: serverId }
+      },
+      body: userData
+    }
+  );
+
+  if (errors) {
+    return { errors, userData };
+  }
+
+  await queryClient.invalidateQueries({
+    queryKey: swarmQueries.nodeList().queryKey.slice(0, 1)
+  });
+
+  toast.success("Success", {
+    description: "Deprovisioning of the server has started",
+    closeButton: true
+  });
+  throw redirect(
+    href("/admin/servers/:serverId/deployment-logs", { serverId })
   );
 }

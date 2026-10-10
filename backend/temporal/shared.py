@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Literal, Optional, TYPE_CHECKING, cast
 import yaml
-
+import os
 
 if TYPE_CHECKING:
     from zane_api.models import Deployment, Environment
@@ -664,6 +664,211 @@ class ComposeStackDeploymentDetails:
             hash=data["hash"],
             stack=ComposeStackSnapshot.from_dict(data["stack"]),
         )
+
+
+@dataclass
+class SwarmNodeDetails:
+    id: str
+    private_ip: str
+    swarm_role: Literal["WORKER", "MANAGER"]
+    ssh_key: str
+    ssh_port: int
+    cluster_roles: list[Literal["APP_SERVER", "BUILD_SERVER"]]
+
+    def get_ssh_key_path(self, tmp_dir: str):
+        return os.path.join(tmp_dir, f"{self.id}.key")
+
+
+@dataclass
+class ClusterSwarmNodeDetails(SwarmNodeDetails):
+    swarm_node_id: str
+
+
+@dataclass
+class SimpleClusterSwarmNodeDetails:
+    id: str
+    private_ip: str
+    is_initial_install_server: bool
+    swarm_node_id: str
+    swarm_role: Literal["WORKER", "MANAGER"]
+    cluster_roles: list[Literal["APP_SERVER", "BUILD_SERVER"]]
+
+
+@dataclass
+class OptionalSwarmNodePair:
+    target_node: SwarmNodeDetails
+    main_node: SwarmNodeDetails | None = None
+
+
+@dataclass
+class SwarmNodePair:
+    main_node: SwarmNodeDetails
+    target_node: SwarmNodeDetails
+
+
+@dataclass
+class CancelProvisionSignalInput:
+    target_node_id: str
+
+
+# Frozen dataclass allows us to override the attributes types
+@dataclass
+class DeprovisionSwarmNodePayload:
+    target_node: ClusterSwarmNodeDetails
+    force_remove_if_node_is_unreachable: bool = False
+
+
+@dataclass
+class RemoveSwarmNodeContext:
+    target_node: ClusterSwarmNodeDetails
+    is_ssh_reachable: bool = False
+
+
+@dataclass
+class SwarmNodeSSHContext:
+    node: SwarmNodeDetails
+    tmp_dir: str
+    target_node: SwarmNodeDetails | None = field(default=None, kw_only=True)
+
+
+@dataclass
+class SwarmNodePairSSHContext:
+    pair: SwarmNodePair
+    tmp_dir: str
+
+
+@dataclass
+class DockerSwarmRemoteManager:
+    Addr: str
+    NodeID: str
+
+
+@dataclass
+class DockerSwarmInfo:
+    NodeID: str
+    NodeAddr: str
+    RemoteManagers: List[DockerSwarmRemoteManager]
+
+    @property
+    def role(self) -> Literal["MANAGER", "WORKER"]:
+        if any([self.NodeID == manager.NodeID for manager in self.RemoteManagers]):
+            return "MANAGER"
+        return "WORKER"
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        managers: list[dict] = data["RemoteManagers"]
+
+        return cls(
+            NodeID=data["NodeID"],
+            NodeAddr=data["NodeAddr"],
+            RemoteManagers=[
+                DockerSwarmRemoteManager(
+                    Addr=manager["Addr"],
+                    NodeID=manager["NodeID"],
+                )
+                for manager in managers
+            ],
+        )
+
+
+@dataclass
+class DockerSystemInfo:
+    ServerVersion: str
+    Swarm: DockerSwarmInfo | None
+    NCPU: int
+    MemTotal: int
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        Swarm = data["Swarm"]
+        return cls(
+            ServerVersion=data["ServerVersion"],
+            NCPU=data["NCPU"],
+            MemTotal=data["MemTotal"],
+            Swarm=(
+                DockerSwarmInfo.from_dict(Swarm)
+                if Swarm.get("NodeID") is not None and len(Swarm["NodeID"].strip()) > 0
+                else None
+            ),
+        )
+
+
+@dataclass
+class NodeSystemInfo:
+    os: str
+    architecture: str
+
+
+@dataclass
+class DockerInstallContext(SwarmNodeSSHContext):
+    info: DockerSystemInfo | None
+    version_to_install: str
+
+
+@dataclass
+class GetSwarmJoinTokenInput(SwarmNodeSSHContext):
+    swarm_role: Literal["WORKER", "MANAGER"]
+
+
+@dataclass
+class DockerSwarmJoinCredentials:
+    token: str
+    manager_addr: str
+
+
+@dataclass
+class DockerSwarmJoinContext(SwarmNodeSSHContext):
+    credentials: DockerSwarmJoinCredentials
+    info: DockerSystemInfo
+
+
+@dataclass
+class DockerNodeUpdateContext(SwarmNodeSSHContext):
+    swarm_info: DockerSwarmInfo
+
+
+@dataclass
+class DockerNodeHealthCheckContext:
+    node: SwarmNodeDetails
+    swarm_info: DockerSwarmInfo
+
+
+@dataclass
+class SwarmNodeServiceHealthcheck:
+    service_name: str
+    status: str
+    message: str
+
+
+@dataclass
+class SwarmNodeServicesHealthcheckResult:
+    services: dict[str, SwarmNodeServiceHealthcheck] = field(
+        default_factory=dict, kw_only=True
+    )
+
+
+@dataclass
+class SwarmNodeStatusResult(SwarmNodeServicesHealthcheckResult):
+    id: str
+    status: str
+    status_message: str | None = None
+    docker_info: DockerSystemInfo | None = None
+    swarm_hostname: str | None = None
+    architecture: str | None = None
+
+
+@dataclass
+class SwarmNodeHealthcheckResult(SwarmNodeServicesHealthcheckResult):
+    status: Literal["unknown", "down", "ready", "disconnected"]
+    message: str | None
+    availability: Literal["drain", "active", "pause"]
+    hostname: str
+
+
+@dataclass
+class SwarmHealthcheckResult:
+    nodes: dict[str, SwarmNodeHealthcheckResult]
 
 
 @dataclass

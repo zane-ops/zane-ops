@@ -1444,7 +1444,7 @@ class ToggleServiceAPIView(APIView):
             )
         )
 
-        return Response(None, status=status.HTTP_202_ACCEPTED)
+        return Response(status=status.HTTP_202_ACCEPTED)
 
 
 class BulkToggleServicesAPIView(APIView):
@@ -1533,4 +1533,4 @@ class BulkToggleServicesAPIView(APIView):
                     )
 
             transaction.on_commit(commit_callback)
-        return Response(None, status=status.HTTP_202_ACCEPTED)
+        return Response(status=status.HTTP_202_ACCEPTED)

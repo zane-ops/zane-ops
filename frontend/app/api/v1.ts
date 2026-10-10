@@ -632,6 +632,30 @@ export interface paths {
   };
   "/api/swarm/nodes/{id}/": {
     get: operations["swarm_nodes_retrieve"];
+    /** Delete a swarm node */
+    delete: operations["deleteSwarmNode"];
+    /** Update a swarm node */
+    patch: operations["updateSwarmNode"];
+  };
+  "/api/swarm/nodes/{id}/build-logs/": {
+    /** Get swarm node provisioning logs */
+    get: operations["getSwarmNodeBuildLogs"];
+  };
+  "/api/swarm/nodes/{id}/cancel-provision/": {
+    /** Cancel a swarm node provisioning workflow */
+    put: operations["cancelSwarmNodeProvision"];
+  };
+  "/api/swarm/nodes/{id}/deprovision/": {
+    /** Drain a swarm node and remove it from the ZaneOps cluster */
+    put: operations["deprovisionSwarmNode"];
+  };
+  "/api/swarm/nodes/{id}/provision/": {
+    /** Provision a swarm node and add it to the ZaneOps cluster */
+    post: operations["provisionSwarmNode"];
+  };
+  "/api/swarm/nodes/{id}/roles/": {
+    /** Update the swarm role and cluster roles of a swarm node */
+    put: operations["updateSwarmNodeRoles"];
   };
   "/api/swarm/nodes/{id}/ssh-keys/": {
     /** Create a new SSH key attached to this swarm node */
@@ -639,6 +663,10 @@ export interface paths {
   };
   "/api/swarm/nodes/{id}/ssh-keys/{key_id}/": {
     delete: operations["swarm_nodes_ssh_keys_destroy"];
+  };
+  "/api/swarm/nodes/main/": {
+    /** Get the main server of the ZaneOps cluster */
+    get: operations["getMainSwarmNode"];
   };
   "/api/trigger-preview/{deploy_token}/": {
     /** Webhook to trigger a new preview environment */
@@ -1055,6 +1083,7 @@ export interface components {
     CancelServiceChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CancelServiceDeploymentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CancelStackChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    CancelSwarmNodeProvisionErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ChangePasswordConfirmPasswordErrorComponent: {
       /**
        * @description * `confirm_password` - confirm_password
@@ -1241,6 +1270,12 @@ export interface components {
      * @enum {string}
      */
     CloneStrategyEnum: "ALL" | "ONLY";
+    /**
+     * @description * `BUILD_SERVER` - Build Server
+     * * `APP_SERVER` - App Server
+     * @enum {string}
+     */
+    ClusterRolesEnum: "BUILD_SERVER" | "APP_SERVER";
     ComposeConfigVersion: {
       content: string;
       version: number;
@@ -3301,6 +3336,7 @@ export interface components {
     };
     DeleteBuildRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     DeleteRegistryCredentialsErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    DeleteSwarmNodeErrorResponse400: components["schemas"]["ParseErrorResponse"];
     DeployComposeStackCommitMessageErrorComponent: {
       /**
        * @description * `commit_message` - commit_message
@@ -3545,6 +3581,60 @@ export interface components {
      * @enum {string}
      */
     DeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "BUILDING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
+    DeprovisionSwarmNodeError: components["schemas"]["DeprovisionSwarmNodeNonFieldErrorsErrorComponent"] | components["schemas"]["DeprovisionSwarmNodeTargetSshKeyIdErrorComponent"] | components["schemas"]["DeprovisionSwarmNodeForceRemoveIfNodeUnreachableErrorComponent"];
+    DeprovisionSwarmNodeErrorResponse400: components["schemas"]["DeprovisionSwarmNodeValidationError"] | components["schemas"]["ParseErrorResponse"];
+    DeprovisionSwarmNodeForceRemoveIfNodeUnreachableErrorComponent: {
+      /**
+       * @description * `force_remove_if_node_unreachable` - force_remove_if_node_unreachable
+       * @enum {string}
+       */
+      attr: "force_remove_if_node_unreachable";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    DeprovisionSwarmNodeNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    DeprovisionSwarmNodeRequestRequest: {
+      target_ssh_key_id: number;
+      /** @default false */
+      force_remove_if_node_unreachable?: boolean;
+    };
+    DeprovisionSwarmNodeTargetSshKeyIdErrorComponent: {
+      /**
+       * @description * `target_ssh_key_id` - target_ssh_key_id
+       * @enum {string}
+       */
+      attr: "target_ssh_key_id";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "null" | "required";
+      detail: string;
+    };
+    DeprovisionSwarmNodeValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["DeprovisionSwarmNodeError"][];
+    };
     /**
      * @description * `start` - start
      * * `stop` - stop
@@ -3831,6 +3921,31 @@ export interface components {
      * @enum {string}
      */
     FieldChangeTypeEnum: "UPDATE";
+    FullSwarmNode: {
+      id: string;
+      hostname: string | null;
+      swarm_node_id: string | null;
+      swarm_role: components["schemas"]["SwarmRoleEnum"];
+      private_ip: string;
+      ssh_port: number;
+      services: unknown;
+      status: components["schemas"]["SwarmNodeStatusEnum"];
+      status_message: string | null;
+      /** Format: date-time */
+      last_status_update: string | null;
+      docker_version: string | null;
+      cluster_roles: components["schemas"]["ClusterRolesEnum"][];
+      is_initial_install_server: boolean;
+      cpus: number | null;
+      /** Format: int64 */
+      memory_bytes: number | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+      ssh_keys: readonly components["schemas"]["SSHKey"][];
+      architecture: string | null;
+    };
     GeneratePasswordResetTokenErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetAPISettingsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetAuthedUserErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -3839,6 +3954,7 @@ export interface components {
     GetComposeStackDeploymentDetailsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetComposeStackDetailsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetMainSwarmNodeErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetPasswordResetTokenErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetPreviewEnvToReviewErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetProjectListError: components["schemas"]["GetProjectListSlugErrorComponent"] | components["schemas"]["GetProjectListSortByErrorComponent"];
@@ -3978,6 +4094,7 @@ export interface components {
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetSwarmNodeBuildLogsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GitApp: {
       id: string;
       github: components["schemas"]["GithubApp"] | null;
@@ -5025,6 +5142,9 @@ export interface components {
       first_name?: string;
       last_name?: string;
     };
+    PatchedUpdateSwarmNodeSSHPortRequest: {
+      ssh_port?: number;
+    };
     PatchedWorkspaceApiTokenRequest: {
       name?: string;
     };
@@ -5853,6 +5973,61 @@ export interface components {
      * @enum {string}
      */
     ProtocolEnum: "tcp" | "udp";
+    ProvisionSwarmNodeError: components["schemas"]["ProvisionSwarmNodeNonFieldErrorsErrorComponent"] | components["schemas"]["ProvisionSwarmNodeTargetSshKeyIdErrorComponent"] | components["schemas"]["ProvisionSwarmNodeMainSshKeyIdErrorComponent"];
+    ProvisionSwarmNodeErrorResponse400: components["schemas"]["ProvisionSwarmNodeValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProvisionSwarmNodeMainSshKeyIdErrorComponent: {
+      /**
+       * @description * `main_ssh_key_id` - main_ssh_key_id
+       * @enum {string}
+       */
+      attr: "main_ssh_key_id";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "null" | "required";
+      detail: string;
+    };
+    ProvisionSwarmNodeNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ProvisionSwarmNodeRequestRequest: {
+      target_ssh_key_id: number;
+      main_ssh_key_id: number;
+    };
+    ProvisionSwarmNodeTargetSshKeyIdErrorComponent: {
+      /**
+       * @description * `target_ssh_key_id` - target_ssh_key_id
+       * @enum {string}
+       */
+      attr: "target_ssh_key_id";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "null" | "required";
+      detail: string;
+    };
+    ProvisionSwarmNodeValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ProvisionSwarmNodeError"][];
+    };
     RailpackBuilderOptions: {
       publish_directory: string;
       is_spa: boolean;
@@ -8096,11 +8271,6 @@ export interface components {
       /** Format: date-time */
       created_at: string;
     };
-    SSHKeyRequest: {
-      user: string;
-      name: string;
-      fingerprint?: string | null;
-    };
     /**
      * @description * `deploy:write` - Trigger / cancel / redeploy deployments and previews
      * * `service:read` - Read service and compose-stack configuration
@@ -8474,15 +8644,13 @@ export interface components {
     SwarmNode: {
       id: string;
       hostname: string | null;
-      role: components["schemas"]["SwarmRoleEnum"];
+      swarm_node_id: string | null;
+      swarm_role: components["schemas"]["SwarmRoleEnum"];
       private_ip: string;
       ssh_port: number;
       status: components["schemas"]["SwarmNodeStatusEnum"];
-      /** Format: date-time */
-      last_status_update: string | null;
       docker_version: string | null;
-      is_build_server: boolean;
-      is_app_server: boolean;
+      cluster_roles: components["schemas"]["ClusterRolesEnum"][];
       is_initial_install_server: boolean;
       cpus: number | null;
       /** Format: int64 */
@@ -8491,55 +8659,57 @@ export interface components {
       created_at: string;
       /** Format: date-time */
       updated_at: string;
-      ssh_keys: readonly components["schemas"]["SSHKey"][];
     };
     SwarmNodeRequest: {
-      role: components["schemas"]["SwarmRoleEnum"];
+      swarm_role: components["schemas"]["SwarmRoleEnum"];
       private_ip: string;
       ssh_port?: number;
-      is_build_server?: boolean;
-      is_app_server?: boolean;
+      cluster_roles?: components["schemas"]["ClusterRolesEnum"][];
     };
     /**
      * @description * `CREATED` - Created
      * * `PROVISIONING` - Provisioning
-     * * `READY` - Ready
-     * * `DOWN` - Down
-     * * `DRAINED` - Drained
      * * `FAILED` - Failed
+     * * `REMOVED` - Removed
+     * * `ACTIVE` - Active
+     * * `DOWN` - Down
+     * * `UNHEALTHY` - Unhealthy
+     * * `PAUSED` - Paused
+     * * `DRAINED` - Drained
      * @enum {string}
      */
-    SwarmNodeStatusEnum: "CREATED" | "PROVISIONING" | "READY" | "DOWN" | "DRAINED" | "FAILED";
-    SwarmNodesCreateError: components["schemas"]["SwarmNodesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["SwarmNodesCreateRoleErrorComponent"] | components["schemas"]["SwarmNodesCreatePrivateIpErrorComponent"] | components["schemas"]["SwarmNodesCreateSshPortErrorComponent"] | components["schemas"]["SwarmNodesCreateIsBuildServerErrorComponent"] | components["schemas"]["SwarmNodesCreateIsAppServerErrorComponent"];
+    SwarmNodeStatusEnum: "CREATED" | "PROVISIONING" | "FAILED" | "REMOVED" | "ACTIVE" | "DOWN" | "UNHEALTHY" | "PAUSED" | "DRAINED";
+    SwarmNodesCreateClusterRolesErrorComponent: {
+      /**
+       * @description * `cluster_roles` - cluster_roles
+       * @enum {string}
+       */
+      attr: "cluster_roles";
+      /**
+       * @description * `not_a_list` - not_a_list
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "not_a_list" | "null";
+      detail: string;
+    };
+    SwarmNodesCreateClusterRolesINDEXErrorComponent: {
+      /**
+       * @description * `cluster_roles.INDEX` - cluster_roles.INDEX
+       * @enum {string}
+       */
+      attr: "cluster_roles.INDEX";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    SwarmNodesCreateError: components["schemas"]["SwarmNodesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["SwarmNodesCreateSwarmRoleErrorComponent"] | components["schemas"]["SwarmNodesCreatePrivateIpErrorComponent"] | components["schemas"]["SwarmNodesCreateSshPortErrorComponent"] | components["schemas"]["SwarmNodesCreateClusterRolesErrorComponent"] | components["schemas"]["SwarmNodesCreateClusterRolesINDEXErrorComponent"];
     SwarmNodesCreateErrorResponse400: components["schemas"]["SwarmNodesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
-    SwarmNodesCreateIsAppServerErrorComponent: {
-      /**
-       * @description * `is_app_server` - is_app_server
-       * @enum {string}
-       */
-      attr: "is_app_server";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
-    SwarmNodesCreateIsBuildServerErrorComponent: {
-      /**
-       * @description * `is_build_server` - is_build_server
-       * @enum {string}
-       */
-      attr: "is_build_server";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
     SwarmNodesCreateNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -8572,21 +8742,6 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
       detail: string;
     };
-    SwarmNodesCreateRoleErrorComponent: {
-      /**
-       * @description * `role` - role
-       * @enum {string}
-       */
-      attr: "role";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid_choice" | "null" | "required";
-      detail: string;
-    };
     SwarmNodesCreateSshPortErrorComponent: {
       /**
        * @description * `ssh_port` - ssh_port
@@ -8602,6 +8757,21 @@ export interface components {
        * @enum {string}
        */
       code: "invalid" | "max_string_length" | "max_value" | "min_value" | "null";
+      detail: string;
+    };
+    SwarmNodesCreateSwarmRoleErrorComponent: {
+      /**
+       * @description * `swarm_role` - swarm_role
+       * @enum {string}
+       */
+      attr: "swarm_role";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
       detail: string;
     };
     SwarmNodesCreateValidationError: {
@@ -9216,6 +9386,114 @@ export interface components {
        */
       code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
+    };
+    UpdateSwarmNodeError: components["schemas"]["UpdateSwarmNodeNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateSwarmNodeSshPortErrorComponent"];
+    UpdateSwarmNodeErrorResponse400: components["schemas"]["UpdateSwarmNodeValidationError"] | components["schemas"]["ParseErrorResponse"];
+    UpdateSwarmNodeNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    UpdateSwarmNodeRolesClusterRolesErrorComponent: {
+      /**
+       * @description * `cluster_roles` - cluster_roles
+       * @enum {string}
+       */
+      attr: "cluster_roles";
+      /**
+       * @description * `not_a_list` - not_a_list
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "not_a_list" | "null" | "required";
+      detail: string;
+    };
+    UpdateSwarmNodeRolesClusterRolesINDEXErrorComponent: {
+      /**
+       * @description * `cluster_roles.INDEX` - cluster_roles.INDEX
+       * @enum {string}
+       */
+      attr: "cluster_roles.INDEX";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    UpdateSwarmNodeRolesError: components["schemas"]["UpdateSwarmNodeRolesNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateSwarmNodeRolesSwarmRoleErrorComponent"] | components["schemas"]["UpdateSwarmNodeRolesClusterRolesErrorComponent"] | components["schemas"]["UpdateSwarmNodeRolesClusterRolesINDEXErrorComponent"];
+    UpdateSwarmNodeRolesErrorResponse400: components["schemas"]["UpdateSwarmNodeRolesValidationError"] | components["schemas"]["ParseErrorResponse"];
+    UpdateSwarmNodeRolesNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    UpdateSwarmNodeRolesRequestRequest: {
+      swarm_role: components["schemas"]["SwarmRoleEnum"];
+      cluster_roles: components["schemas"]["ClusterRolesEnum"][];
+    };
+    UpdateSwarmNodeRolesSwarmRoleErrorComponent: {
+      /**
+       * @description * `swarm_role` - swarm_role
+       * @enum {string}
+       */
+      attr: "swarm_role";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    UpdateSwarmNodeRolesValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["UpdateSwarmNodeRolesError"][];
+    };
+    UpdateSwarmNodeSSHPort: {
+      ssh_port: number;
+    };
+    UpdateSwarmNodeSshPortErrorComponent: {
+      /**
+       * @description * `ssh_port` - ssh_port
+       * @enum {string}
+       */
+      attr: "ssh_port";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value" | "null" | "required";
+      detail: string;
+    };
+    UpdateSwarmNodeValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["UpdateSwarmNodeError"][];
     };
     User: {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
@@ -16496,12 +16774,320 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["SwarmNode"];
+          "application/json": components["schemas"]["FullSwarmNode"];
         };
       };
       400: {
         content: {
           "application/json": components["schemas"]["SwarmNodesRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Delete a swarm node */
+  deleteSwarmNode: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["DeleteSwarmNodeErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Update a swarm node */
+  updateSwarmNode: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedUpdateSwarmNodeSSHPortRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedUpdateSwarmNodeSSHPortRequest"];
+        "multipart/form-data": components["schemas"]["PatchedUpdateSwarmNodeSSHPortRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["UpdateSwarmNodeSSHPort"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["UpdateSwarmNodeErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get swarm node provisioning logs */
+  getSwarmNodeBuildLogs: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        per_page?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RuntimeLogsSearch"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetSwarmNodeBuildLogsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Cancel a swarm node provisioning workflow */
+  cancelSwarmNodeProvision: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CancelSwarmNodeProvisionErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Drain a swarm node and remove it from the ZaneOps cluster */
+  deprovisionSwarmNode: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeprovisionSwarmNodeRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["DeprovisionSwarmNodeRequestRequest"];
+        "multipart/form-data": components["schemas"]["DeprovisionSwarmNodeRequestRequest"];
+      };
+    };
+    responses: {
+      202: {
+        content: {
+          "application/json": components["schemas"]["FullSwarmNode"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["DeprovisionSwarmNodeErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Provision a swarm node and add it to the ZaneOps cluster */
+  provisionSwarmNode: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProvisionSwarmNodeRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ProvisionSwarmNodeRequestRequest"];
+        "multipart/form-data": components["schemas"]["ProvisionSwarmNodeRequestRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProvisionSwarmNodeErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Update the swarm role and cluster roles of a swarm node */
+  updateSwarmNodeRoles: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateSwarmNodeRolesRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["UpdateSwarmNodeRolesRequestRequest"];
+        "multipart/form-data": components["schemas"]["UpdateSwarmNodeRolesRequestRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["UpdateSwarmNodeRolesErrorResponse400"];
         };
       };
       401: {
@@ -16603,6 +17189,36 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get the main server of the ZaneOps cluster */
+  getMainSwarmNode: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["FullSwarmNode"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetMainSwarmNodeErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
         };
       };
       429: {

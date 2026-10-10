@@ -11,9 +11,11 @@ import type { RequestParams } from "~/api/client";
 import { apiClient } from "~/api/client";
 import {
   DEFAULT_LOGS_PER_PAGE,
-  DEFAULT_QUERY_REFETCH_INTERVAL
+  DEFAULT_QUERY_REFETCH_INTERVAL,
+  LOGS_QUERY_REFETCH_INTERVAL
 } from "~/lib/constants";
 import type {
+  DeploymentLogQueryData,
   HTTPLogFilters,
   HttpLogQueryData,
   paginationListFilters
@@ -459,7 +461,112 @@ export const swarmQueries = {
       },
       placeholderData: keepPreviousData,
       refetchIntervalInBackground: true
-    })
+    }),
+  buildLogs: ({
+    id,
+    autoRefetchEnabled = true,
+    queryClient
+  }: {
+    id: string;
+    queryClient: QueryClient;
+    autoRefetchEnabled?: boolean;
+  }) =>
+    infiniteQueryOptions({
+      queryKey: [...swarmQueries.singleNode(id).queryKey, "BUILD_LOGS"],
+      queryFn: async ({ pageParam, signal, queryKey }) => {
+        const allData = queryClient.getQueryData(queryKey) as InfiniteData<
+          DeploymentLogQueryData,
+          string | null
+        >;
+        const existingData = allData?.pages.find(
+          (_, index) => allData?.pageParams[index] === pageParam
+        );
+
+        /**
+         * We reuse the data in the query as we are sure this page is immutable,
+         * see `deploymentQueries.buildLogs` for more details
+         */
+        if (existingData?.next) {
+          return existingData;
+        }
+
+        const existingDataIndex = allData?.pages.findIndex(
+          (_, index) => allData?.pages[index].next === pageParam
+        );
+        if (!existingData && existingDataIndex > -1) {
+          const nextPage = allData.pages[existingDataIndex + 1];
+          if (nextPage) {
+            return nextPage;
+          }
+        }
+
+        const { data } = await apiClient.GET(
+          "/api/swarm/nodes/{id}/build-logs/",
+          {
+            params: {
+              path: { id },
+              query: {
+                per_page: DEFAULT_LOGS_PER_PAGE,
+                cursor: pageParam ?? existingData?.cursor ?? undefined
+              }
+            },
+            signal
+          }
+        );
+
+        let apiData: DeploymentLogQueryData = {
+          next: null,
+          previous: null,
+          results: [],
+          cursor: null
+        };
+
+        if (data) {
+          // the data from the API is in reverse order, so we reverse the results & the page pointers
+          apiData = {
+            results: data.results.toReversed(),
+            next: data?.previous ?? null,
+            previous: data?.next ?? null,
+            cursor: existingData?.cursor
+          };
+        }
+
+        // get cursor for initial page as its pageParam is `null`
+        if (
+          pageParam === null &&
+          !apiData.cursor &&
+          !apiData.next &&
+          apiData.results.length > 0
+        ) {
+          const oldestLog = apiData.results[0];
+          const cursor = { sort: [oldestLog.timestamp], order: "asc" };
+          apiData.cursor = btoa(JSON.stringify(cursor));
+        }
+
+        return apiData;
+      },
+      getNextPageParam: ({ next }) => next,
+      getPreviousPageParam: ({ previous }) => previous,
+      initialPageParam: null as string | null,
+      refetchInterval: (query) => {
+        if (!query.state.data || !autoRefetchEnabled) {
+          return false;
+        }
+        return LOGS_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData,
+      staleTime: Number.POSITIVE_INFINITY
+    }),
+  mainNode: queryOptions({
+    queryKey: ["SWARM_NODES", "MAIN"] as const,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.GET("/api/swarm/nodes/main/", {
+        signal
+      });
+      if (!data) throw notFound("Not found");
+      return data;
+    }
+  })
 };
 
 export const systemQueries = {

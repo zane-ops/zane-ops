@@ -113,6 +113,8 @@ ZANEOPS_RESUME_MANUAL_MARKER = "[zaneops::internal::service_resumed_by_user]"
 
 SERVICE_DEPLOY_SEMAPHORE_KEY = "deploy-service-workflow"
 STACK_DEPLOY_SEMAPHORE_KEY = "deploy-stack-workflow"
+SWARM_NODE_SEMAPHORE_KEY = "swarm-node-workflow"
+SWARM_CLUSTER_SEMAPHORE_KEY = "swarm-cluster-workflow"
 
 ZANEOPS_ONGOING_UPDATE_CACHE_KEY = "[zaneops::internal::on-going-update]"
 
@@ -480,3 +482,237 @@ ZANE_CATCHALL_404_ROUTE = {
 }
 
 ZANE_PROXY_CONFIG_CACHE_KEY = "[zaneops::internal::caddy-config]"
+
+# =========================================
+#     Provision Swarm server scripts      #
+# =========================================
+
+MINIMAL_DOCKER_VERSION_REQUIREMENTS = "27.0.3"
+
+
+class Colors:
+    GREEN = "\033[92m"
+    BLUE = "\033[94m"
+    ORANGE = "\033[38;5;208m"
+    YELLOW = "\033[33m"
+    RED = "\033[91m"
+    GREY = "\033[90m"
+    ENDC = "\033[0m"  # Reset to default color
+
+
+DOCKER_SYSTEM_INFO_CMD = "set -ex && docker system info --format json"
+
+DOCKER_CHECK_SCRIPT = f"command -v docker >/dev/null 2>&1 && {DOCKER_SYSTEM_INFO_CMD}"
+
+DOCKER_ENABLE_SCRIPT = f"""
+set -e
+
+if [ -f /etc/debian_version ] || [ -f /etc/redhat-release ] || [ -f /etc/arch-release ]; then
+  
+    echo "➡️ Enable Docker system service..."
+    systemctl enable --now docker
+
+elif [ -f /etc/alpine-release ]; then
+
+    echo "➡️ Enable Docker system service..."
+    rc-update add docker default
+    service docker start
+
+else
+    echo "{Colors.RED}❌ Unsupported Linux distribution{Colors.ENDC}"
+    exit 1
+fi
+"""
+
+DOCKER_CHECK_OS_SCRIPT = f"""
+set -ex
+
+
+if [ -f /etc/debian_version ]; then
+  export DEBIAN_FRONTEND=noninteractive
+
+  . /etc/os-release
+  DISTRIBUTION="$ID"
+  CODENAME="${{UBUNTU_CODENAME:-$VERSION_CODENAME}}"
+
+  case "$DISTRIBUTION" in
+      debian|ubuntu|raspbian) ;;
+      *)
+          echo "{Colors.RED}❌ Unsupported Debian based distribution: $DISTRIBUTION{Colors.ENDC}"
+          exit 1
+          ;;
+  esac
+  echo "os=$DISTRIBUTION"
+elif [ -f /etc/redhat-release ]; then
+    . /etc/os-release
+    case "$ID" in
+        fedora) REPO_DISTRIBUTION=fedora ;;
+        rhel) REPO_DISTRIBUTION=rhel ;;
+        *) REPO_DISTRIBUTION=centos ;;
+    esac
+    echo "os=$ID"
+elif [ -f /etc/alpine-release ]; then
+    echo "os=alpine"
+elif [ -f /etc/arch-release ]; then
+    echo "os=arch"
+else
+    echo "{Colors.RED}❌ Unsupported Linux distribution{Colors.ENDC}"
+    exit 1
+fi
+
+echo "arch=$(uname -m)"
+"""
+
+SWARM_MANAGER_TCP_PORTS = [2377, 7946]
+SWARM_WORKER_TCP_PORTS = [7946]
+# UDP is connectionless, there is no reliable way to check if these are open
+SWARM_UDP_PORTS = [7946, 4789]
+
+SWARM_PORT_CHECK_CONTAINER_PREFIX = "zane-swarm-port-check"
+
+# `--network host` so that the traffic goes through the host firewall,
+# published ports (`-p`) would bypass it because of docker's iptables rules
+SWARM_PORT_LISTENER_SCRIPT = """
+set -e
+docker rm --force {container} >/dev/null 2>&1 || true
+if docker run --rm --network host busybox nc -z -w 2 127.0.0.1 {port}; then
+    echo "Port {port} already has a listener, skipping"
+else
+    docker run --detach --rm --network host --name {container} busybox timeout 60 nc -l -p {port}
+fi
+"""
+
+SWARM_PORT_LISTENER_CLEANUP_SCRIPT = f'docker ps --all --quiet --filter name={SWARM_PORT_CHECK_CONTAINER_PREFIX} | while read -r id; do docker rm --force "$id"; done'
+
+SWARM_PORT_REACHABLE_SCRIPT = (
+    "docker run --rm --network host busybox nc -z -w 3 {ip} {port}"
+)
+
+# use `DOCKER_INSTALL_SCRIPT.format(version=shlex.quote(...))` to set the docker version to install, ex: `28.3.3`
+DOCKER_INSTALL_SCRIPT = f"""
+set -ex
+
+DOCKER_VERSION={{version}}
+
+if [ -f /etc/debian_version ]; then
+    export DEBIAN_FRONTEND=noninteractive
+
+    . /etc/os-release
+    DISTRIBUTION="$ID"
+    CODENAME="${{{{UBUNTU_CODENAME:-$VERSION_CODENAME}}}}"
+
+    case "$DISTRIBUTION" in
+        debian|ubuntu|raspbian) ;;
+        *)
+            echo "{Colors.RED}❌ Unsupported Debian based distribution: $DISTRIBUTION{Colors.ENDC}"
+            exit 1
+            ;;
+    esac
+
+    echo "Detected Debian Linux Distribution: {Colors.BLUE}$DISTRIBUTION{Colors.ENDC}"
+    apt-get update
+    apt-get install -y ca-certificates curl
+
+    echo "➡️ Uninstalling old Docker versions..."
+    apt-get remove -y $(dpkg --get-selections docker.io docker-compose docker-compose-v2 docker-doc docker-buildx podman-docker containerd runc 2>/dev/null | cut -f1)
+
+    echo "➡️ Installing Docker..."
+
+    # Add Docker's official GPG key:
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/$DISTRIBUTION/gpg -o /etc/apt/keyrings/docker.asc
+    chmod a+r /etc/apt/keyrings/docker.asc
+
+    # Add the repository to Apt sources:
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/$DISTRIBUTION \
+      $CODENAME stable" > /etc/apt/sources.list.d/docker.list
+
+    # Install Docker
+    apt-get update
+
+    # Find the exact package version, ex: `5:28.3.3-1~ubuntu.24.04~noble`
+    ENGINE_PACKAGE_VERSION=$(apt-cache madison docker-ce | awk -v v="$DOCKER_VERSION" '{{{{ n = split($3, a, ":"); if (index(a[n], v "-") == 1) {{{{ print $3; exit }}}} }}}}')
+    if [ -z "$ENGINE_PACKAGE_VERSION" ]; then
+        echo "{Colors.RED}❌ Docker version $DOCKER_VERSION is not available for $DISTRIBUTION $CODENAME{Colors.ENDC}"
+        exit 1
+    fi
+ 
+    CLI_PACKAGE_VERSION=$(apt-cache madison docker-ce-cli | awk -v v="$DOCKER_VERSION" '{{{{ n = split($3, a, ":"); if (index(a[n], v "-") == 1) {{{{ print $3; exit }}}} }}}}')
+    if [ -z "$CLI_PACKAGE_VERSION" ]; then
+        echo "{Colors.RED}❌ Docker version $DOCKER_VERSION is not available for $DISTRIBUTION $CODENAME{Colors.ENDC}"
+        exit 1
+    fi
+
+    echo "➡️ Installing Docker engine {Colors.BLUE}$ENGINE_PACKAGE_VERSION{Colors.GREY} - CLI {Colors.BLUE}$CLI_PACKAGE_VERSION{Colors.ENDC}..."
+    apt-get install -y --allow-downgrades docker-ce="$ENGINE_PACKAGE_VERSION" docker-ce-cli="$CLI_PACKAGE_VERSION" containerd.io docker-buildx-plugin docker-compose-plugin
+
+elif [ -f /etc/redhat-release ]; then
+    . /etc/os-release
+    case "$ID" in
+        fedora) REPO_DISTRIBUTION=fedora ;;
+        rhel) REPO_DISTRIBUTION=rhel ;;
+        *) REPO_DISTRIBUTION=centos ;;
+    esac
+    REPO_URL="https://download.docker.com/linux/$REPO_DISTRIBUTION/docker-ce.repo"
+
+    echo "Detected {Colors.BLUE}RedHat{Colors.ENDC} Linux Distribution: {Colors.BLUE}$ID{Colors.ENDC}"
+
+    echo "➡️ Uninstalling old Docker versions..."
+    dnf remove -y docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-engine \
+                  podman \
+                  runc || true
+
+    dnf install -y dnf-plugins-core
+
+    echo "➡️ Installing Docker..."
+    if command -v dnf5 >/dev/null 2>&1; then
+        dnf config-manager addrepo --overwrite --from-repofile="$REPO_URL"
+    else
+        dnf config-manager --add-repo "$REPO_URL"
+    fi
+
+    # Find the exact package version, ex: `3:28.3.3-1.fc42`
+    ENGINE_PACKAGE_VERSION=$(dnf list --showduplicates docker-ce 2>/dev/null | awk -v v="$DOCKER_VERSION" '{{{{ n = split($2, a, ":"); if (index(a[n], v "-") == 1) {{{{ print $2 }}}} }}}}' | tail -n 1)
+    if [ -z "$ENGINE_PACKAGE_VERSION" ]; then
+        echo "{Colors.RED}❌ Docker version $DOCKER_VERSION is not available for $ID{Colors.ENDC}"
+        exit 1
+    fi
+    
+    # Find the exact package version, ex: `3:28.3.3-1.fc42`
+    CLI_PACKAGE_VERSION=$(dnf list --showduplicates docker-ce-cli 2>/dev/null | awk -v v="$DOCKER_VERSION" '{{{{ n = split($2, a, ":"); if (index(a[n], v "-") == 1) {{{{ print $2 }}}} }}}}' | tail -n 1)
+    if [ -z "$CLI_PACKAGE_VERSION" ]; then
+        echo "{Colors.RED}❌ Docker version $DOCKER_VERSION is not available for $ID{Colors.ENDC}"
+        exit 1
+    fi
+
+    echo "➡️ Installing Docker engine {Colors.BLUE}$ENGINE_PACKAGE_VERSION{Colors.GREY} - CLI {Colors.BLUE}$CLI_PACKAGE_VERSION{Colors.ENDC}..."
+    dnf install -y --allowerasing docker-ce-"$ENGINE_PACKAGE_VERSION" docker-ce-cli-"$CLI_PACKAGE_VERSION" containerd.io docker-buildx-plugin docker-compose-plugin
+
+elif [ -f /etc/alpine-release ]; then
+    echo "Detected {Colors.BLUE}Alpine{Colors.ENDC} Linux Distribution"
+
+    echo "➡️ Installing Docker..."
+    apk add --no-cache curl docker docker-cli-buildx docker-cli-compose
+
+elif [ -f /etc/arch-release ]; then
+    echo "Detected {Colors.BLUE}Arch{Colors.ENDC} Linux Distribution"
+
+    echo "➡️ Installing Docker..."
+    pacman -Syu --noconfirm curl docker docker-buildx docker-compose
+
+else
+    echo "{Colors.RED}❌ Unsupported Linux distribution{Colors.ENDC}"
+    exit 1
+fi
+
+{DOCKER_ENABLE_SCRIPT}
+{DOCKER_SYSTEM_INFO_CMD}
+"""
