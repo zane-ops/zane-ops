@@ -892,11 +892,16 @@ class SwarmNodeActivities:
     async def update_node_labels(self, ctx: DockerNodeUpdateContext):
         info = ctx.swarm_info
         node = ctx.node
+        roles = ", ".join(
+            str(SwarmNode.ClusterRole(role).label) for role in node.cluster_roles
+        )
         await provision_log(
             node,
             [
                 "",
                 f"➡️ Updating labels for swarm node {Colors.BLUE}{info.NodeID}{Colors.ENDC}...",
+                f"   Swarm role: {Colors.ORANGE}{node.swarm_role.lower()}{Colors.ENDC}",
+                f"   Cluster roles: {Colors.ORANGE}{roles or 'none'}{Colors.ENDC}",
             ],
         )
         try:
@@ -934,11 +939,20 @@ class SwarmNodeActivities:
     async def update_swarm_node_in_cluster(
         self, node: SimpleClusterSwarmNodeDetails
     ) -> str:
+        # Cannot set the main server role lower than manager
+        swarm_role = (
+            "manager" if node.is_initial_install_server else node.swarm_role.lower()
+        )
+        roles = ", ".join(
+            str(SwarmNode.ClusterRole(role).label) for role in node.cluster_roles
+        )
         await provision_log(
             node,
             [
                 "",
                 f"➡️ Updating node {Colors.BLUE}{node.private_ip} (node id: {node.swarm_node_id}){Colors.ENDC} in docker swarm cluster...",
+                f"   Swarm role: {Colors.ORANGE}{swarm_role}{Colors.ENDC}",
+                f"   Cluster roles: {Colors.ORANGE}{roles or 'none'}{Colors.ENDC}",
             ],
         )
         try:
@@ -960,9 +974,7 @@ class SwarmNodeActivities:
             if SwarmNode.ClusterRole.BUILD_SERVER in node.cluster_roles:
                 labels[settings.BUILD_SERVER_LABEL] = "true"
 
-            new_spec["Role"] = (
-                "manager" if node.is_initial_install_server else node.swarm_role.lower()
-            )  # Cannot set the main server role lower than manager
+            new_spec["Role"] = swarm_role
 
             new_spec["Labels"] = labels
             swarm_node.update(new_spec)
