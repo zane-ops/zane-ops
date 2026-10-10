@@ -109,9 +109,9 @@ class SwarmNodeActivities:
 
         print(f"➡️ Getting node semaphore for {Colors.YELLOW}{node_id}{Colors.ENDC}...")
 
-        # Wait max 50 times with each attempt being 5 secs apart => 50*5 = 250 sec =~ 4 minutes
+        # Wait max 10 times with each attempt being 5 secs apart => 50 secs
         result = await self.get_swarm_node_semaphore(node_id).acquire(
-            max_retries=50,
+            max_retries=10,
             retry_delay=5,
         )
         if not result:
@@ -124,9 +124,9 @@ class SwarmNodeActivities:
         print(
             f"➡️ Getting cluster semaphore for {Colors.YELLOW}{node_id}{Colors.ENDC}..."
         )
-        # Wait max 50 times with each attempt being 5 secs apart => 50*5 = 250 sec =~ 4 minutes
+        # Wait max 10 times with each attempt being 5 secs apart => 50 secs
         result = await self.get_swarm_cluster_semaphore().acquire(
-            max_retries=50,
+            max_retries=10,
             retry_delay=5,
         )
         if not result:
