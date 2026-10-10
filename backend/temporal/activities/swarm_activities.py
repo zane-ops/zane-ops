@@ -51,10 +51,11 @@ from temporal.constants import (
 
 from temporal.shared import (
     NodeSystemInfo,
+    OptionalSwarmNodePair,
     SwarmHealthcheckResult,
     SwarmNodeHealthcheckResult,
     SwarmNodePair,
-    ClusterSwarmNodePair,
+    DeprovisionSwarmNodePayload,
     DockerInstallContext,
     DockerNodeUpdateContext,
     DockerSwarmJoinContext,
@@ -232,7 +233,7 @@ class SwarmNodeActivities:
         return swarm_node.swarm_node_id
 
     @activity.defn
-    async def create_ssh_keys_temp_dir(self, payload: SwarmNodePair):
+    async def create_ssh_keys_temp_dir(self, payload: OptionalSwarmNodePair):
         await provision_log(
             payload.target_node,
             [
@@ -250,9 +251,6 @@ class SwarmNodeActivities:
         await asyncio.to_thread(empty_folder, temp_dir)
         await provision_log(payload.target_node, "✅ Temporary emptyed")
 
-        main_node_key_location = os.path.join(temp_dir, f"{payload.main_node.id}.key")
-        new_node_key_location = os.path.join(temp_dir, f"{payload.target_node.id}.key")
-
         await provision_log(
             payload.target_node,
             [
@@ -260,22 +258,28 @@ class SwarmNodeActivities:
                 f"➡️ Writing SSH Keys into  {Colors.ORANGE}{temp_dir}{Colors.ENDC}...",
             ],
         )
-        with open(
-            main_node_key_location,
-            "w",
-        ) as file:
-            file.write(payload.main_node.ssh_key)
+
+        if payload.main_node:
+            main_node_key_location = os.path.join(
+                temp_dir, f"{payload.main_node.id}.key"
+            )
+            with open(
+                main_node_key_location,
+                "w",
+            ) as file:
+                file.write(payload.main_node.ssh_key)
+                await provision_log(
+                    payload.target_node,
+                    f"✅ Wrote ssh key for the main node - {Colors.BLUE}{payload.main_node.private_ip}{Colors.ENDC} at {Colors.ORANGE}{main_node_key_location}{Colors.ENDC}",
+                )
             await provision_log(
                 payload.target_node,
-                f"✅ Wrote ssh key for the main node - {Colors.BLUE}{payload.main_node.private_ip}{Colors.ENDC} at {Colors.ORANGE}{main_node_key_location}{Colors.ENDC}",
+                f"Adjusting ssh key permissions for {Colors.ORANGE}{main_node_key_location}{Colors.ENDC}",
             )
-        await provision_log(
-            payload.target_node,
-            f"Adjusting ssh key permissions for {Colors.ORANGE}{main_node_key_location}{Colors.ENDC}",
-        )
-        os.chmod(main_node_key_location, 0o600)
-        await provision_log(payload.target_node, f"✅ Done")
+            os.chmod(main_node_key_location, 0o600)
+            await provision_log(payload.target_node, f"✅ Done")
 
+        new_node_key_location = os.path.join(temp_dir, f"{payload.target_node.id}.key")
         with open(new_node_key_location, "w") as file:
             file.write(payload.target_node.ssh_key)
             await provision_log(
@@ -1133,7 +1137,7 @@ class SwarmNodeActivities:
 
     @activity.defn
     async def drain_swarm_node_and_remove_labels(
-        self, payload: ClusterSwarmNodePair
+        self, payload: DeprovisionSwarmNodePayload
     ) -> Literal["DRAINED", "NOT_IN_SWARM"]:
         target_node = payload.target_node
         await provision_log(
@@ -1172,7 +1176,7 @@ class SwarmNodeActivities:
 
     @activity.defn
     async def wait_for_global_services_to_be_drained(
-        self, payload: ClusterSwarmNodePair
+        self, payload: DeprovisionSwarmNodePayload
     ):
         target_node = payload.target_node
         await provision_log(
@@ -1286,7 +1290,9 @@ class SwarmNodeActivities:
         raise ApplicationError(message=message, non_retryable=True)
 
     @activity.defn
-    async def remove_swarm_node_from_cluster(self, payload: ClusterSwarmNodePair):
+    async def remove_swarm_node_from_cluster(
+        self, payload: DeprovisionSwarmNodePayload
+    ):
         node = payload.target_node
         await provision_log(
             node,

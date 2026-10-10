@@ -694,7 +694,13 @@ class SimpleClusterSwarmNodeDetails:
     cluster_roles: list[Literal["APP_SERVER", "BUILD_SERVER"]]
 
 
-@dataclass(frozen=True)
+@dataclass
+class OptionalSwarmNodePair:
+    target_node: SwarmNodeDetails
+    main_node: SwarmNodeDetails | None = None
+
+
+@dataclass
 class SwarmNodePair:
     main_node: SwarmNodeDetails
     target_node: SwarmNodeDetails
@@ -707,10 +713,9 @@ class CancelProvisionSignalInput:
 
 # Frozen dataclass allows us to override the attributes types
 @dataclass(frozen=True)
-class ClusterSwarmNodePair(SwarmNodePair):
-    main_node: ClusterSwarmNodeDetails
+class DeprovisionSwarmNodePayload:
     target_node: ClusterSwarmNodeDetails
-    force: bool = False
+    force_remove_if_node_is_unreachable: bool = False
 
 
 @dataclass

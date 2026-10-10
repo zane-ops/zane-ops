@@ -829,15 +829,7 @@ function SwarmDeprovisionForm(node: FullSwarmNode) {
     "PROVISIONING"
   ].includes(node.status);
 
-  const { data: mainNode, isLoading: isLoadingMainNode } = useQuery({
-    ...swarmQueries.mainNode,
-    enabled: !isNotMemberOfClusterYet
-  });
-
   const targetRootKeys = node.ssh_keys.filter((key) => key.user === "root");
-  const mainRootKeys = (mainNode?.ssh_keys ?? []).filter(
-    (key) => key.user === "root"
-  );
 
   return isNotMemberOfClusterYet ? (
     <TooltipProvider>
@@ -891,28 +883,6 @@ function SwarmDeprovisionForm(node: FullSwarmNode) {
             keys={targetRootKeys}
             errors={errors.target_ssh_key_id}
           />
-
-          {isLoadingMainNode ? (
-            <div className="flex items-center gap-2 text-grey text-sm">
-              <LoaderIcon className="animate-spin flex-none" size={15} />
-              <span>Loading main server keys...</span>
-            </div>
-          ) : mainNode ? (
-            <RootSSHKeySelect
-              name="main_ssh_key_id"
-              label="Root SSH key for the main server"
-              keys={mainRootKeys}
-              errors={errors.main_ssh_key_id}
-            />
-          ) : (
-            <Alert variant="destructive">
-              <AlertCircleIcon className="size-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>
-                Could not find the main server of the cluster.
-              </AlertDescription>
-            </Alert>
-          )}
         </fetcher.Form>
       }
       trigger={
@@ -1436,8 +1406,7 @@ async function deprovisionServer(serverId: string, formData: FormData) {
   const queryClient = getQueryClient();
 
   const userData = {
-    target_ssh_key_id: Number(formData.get("target_ssh_key_id")),
-    main_ssh_key_id: Number(formData.get("main_ssh_key_id"))
+    target_ssh_key_id: Number(formData.get("target_ssh_key_id"))
   } satisfies RequestInput<"put", "/api/swarm/nodes/{id}/deprovision/">;
 
   const { error: errors } = await apiClient.PUT(

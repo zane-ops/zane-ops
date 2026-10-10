@@ -32,10 +32,7 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
         )
         self.main_key = self.create_ssh_key(self.main_node, user="root")
         self.node_key = self.create_ssh_key(self.node, user="root")
-        self.VALID_PAYLOAD = {
-            "target_ssh_key_id": self.node_key.id,
-            "main_ssh_key_id": self.main_key.id,
-        }
+        self.VALID_PAYLOAD = {"target_ssh_key_id": self.node_key.id}
 
     def deprovision(self, node_id: str, data: dict):
         return self.client.put(
@@ -57,7 +54,7 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
         response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
         self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
 
-    def test_deprovision_requires_both_ssh_keys(self):
+    def test_deprovision_requires_target_ssh_key(self):
         self.loginUser()
         response = self.deprovision(self.node.id, {})
         jprint(response.json())
@@ -65,7 +62,7 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
         self.assertIsNotNone(
             self.get_error_from_response(response, "target_ssh_key_id")
         )
-        self.assertIsNotNone(self.get_error_from_response(response, "main_ssh_key_id"))
+        self.assertIsNone(self.get_error_from_response(response, "main_ssh_key_id"))
 
     def test_deprovision_with_target_key_from_another_node(self):
         self.loginUser()
@@ -73,7 +70,6 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
             self.node.id,
             {
                 "target_ssh_key_id": self.main_key.id,
-                "main_ssh_key_id": self.main_key.id,
             },
         )
         jprint(response.json())
@@ -81,31 +77,14 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
         self.assertIsNotNone(
             self.get_error_from_response(response, "target_ssh_key_id")
         )
-
-    def test_deprovision_with_main_key_from_another_node(self):
-        self.loginUser()
-        response = self.deprovision(
-            self.node.id,
-            {
-                "target_ssh_key_id": self.node_key.id,
-                "main_ssh_key_id": self.node_key.id,
-            },
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(self.get_error_from_response(response, "main_ssh_key_id"))
 
     def test_deprovision_with_non_root_keys(self):
         self.loginUser()
         non_root_target = self.create_ssh_key(self.node, user="ubuntu", name="ubuntu")
-        non_root_main = self.create_ssh_key(
-            self.main_node, user="ubuntu", name="ubuntu"
-        )
         response = self.deprovision(
             self.node.id,
             {
                 "target_ssh_key_id": non_root_target.id,
-                "main_ssh_key_id": non_root_main.id,
             },
         )
         jprint(response.json())
@@ -113,7 +92,6 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
         self.assertIsNotNone(
             self.get_error_from_response(response, "target_ssh_key_id")
         )
-        self.assertIsNotNone(self.get_error_from_response(response, "main_ssh_key_id"))
 
     def test_cannot_deprovision_the_main_server(self):
         self.loginUser()
@@ -121,7 +99,6 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
             self.main_node.id,
             {
                 "target_ssh_key_id": self.main_key.id,
-                "main_ssh_key_id": self.main_key.id,
             },
         )
         jprint(response.json())
@@ -161,7 +138,7 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
 
     def test_cannot_deprovision_the_last_app_server(self):
         self.loginUser()
-        self.main_node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]
+        self.main_node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]  # type: ignore
         self.main_node.save()
         response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
         jprint(response.json())
@@ -171,9 +148,9 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
 
     def test_cannot_deprovision_the_last_build_server(self):
         self.loginUser()
-        self.main_node.cluster_roles = [SwarmNode.ClusterRole.APP_SERVER]
+        self.main_node.cluster_roles = [SwarmNode.ClusterRole.APP_SERVER]  # type: ignore
         self.main_node.save()
-        self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]
+        self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]  # type: ignore
         self.node.save()
         response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
         jprint(response.json())
@@ -185,7 +162,7 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
         self,
     ):
         self.loginUser()
-        self.main_node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]
+        self.main_node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]  # type: ignore
         self.main_node.save()
         for index, node_status in enumerate(
             [

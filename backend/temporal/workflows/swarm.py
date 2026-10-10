@@ -17,7 +17,8 @@ with workflow.unsafe.imports_passed_through():
 
 from ..shared import (
     SwarmNodePair,
-    ClusterSwarmNodePair,
+    OptionalSwarmNodePair,
+    DeprovisionSwarmNodePayload,
     DockerInstallContext,
     SwarmNodeSSHContext,
     SwarmNodePairSSHContext,
@@ -125,7 +126,9 @@ class ProvisionSwarmNodeWorkflow:
         try:
             tmp_dir = await workflow.execute_activity_method(
                 SwarmNodeActivities.create_ssh_keys_temp_dir,
-                payload,
+                OptionalSwarmNodePair(
+                    target_node=payload.target_node, main_node=payload.main_node
+                ),
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
@@ -335,7 +338,7 @@ class DeprovisionSwarmNodeWorkflow:
         )
 
     @workflow.run
-    async def run(self, payload: ClusterSwarmNodePair) -> SwarmNodeStatusResult:
+    async def run(self, payload: DeprovisionSwarmNodePayload) -> SwarmNodeStatusResult:
         await workflow.execute_activity_method(
             SwarmNodeActivities.acquire_swarm_node_semaphore,
             payload.target_node.id,
@@ -352,7 +355,7 @@ class DeprovisionSwarmNodeWorkflow:
                 retry_policy=self.retry_policy,
             )
 
-    async def _run(self, payload: ClusterSwarmNodePair) -> SwarmNodeStatusResult:
+    async def _run(self, payload: DeprovisionSwarmNodePayload) -> SwarmNodeStatusResult:
         print(
             f"\n\n{Colors.BLUE}==============================================================={Colors.ENDC}\n"
             f"Running workflow DeprovisionSwarmNodeWorkflow.run({payload.target_node.id=}, {payload.target_node.private_ip=})\n"
@@ -374,30 +377,19 @@ class DeprovisionSwarmNodeWorkflow:
         try:
             tmp_dir = await workflow.execute_activity_method(
                 SwarmNodeActivities.create_ssh_keys_temp_dir,
-                payload,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-
-            ssh_test_target_task = workflow.start_activity_method(
-                SwarmNodeActivities.test_ssh_connection,
-                SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-
-            ssh_test_main_task = workflow.start_activity_method(
-                SwarmNodeActivities.test_ssh_connection,
-                SwarmNodeSSHContext(
-                    node=payload.main_node,
-                    tmp_dir=tmp_dir,
+                OptionalSwarmNodePair(
                     target_node=payload.target_node,
                 ),
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
 
-            await asyncio.gather(ssh_test_target_task, ssh_test_main_task)
+            await workflow.execute_activity_method(
+                SwarmNodeActivities.test_ssh_connection,
+                SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
             drain_result = await workflow.execute_activity_method(
                 SwarmNodeActivities.drain_swarm_node_and_remove_labels,

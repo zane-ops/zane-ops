@@ -3581,22 +3581,20 @@ export interface components {
      * @enum {string}
      */
     DeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "BUILDING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
-    DeprovisionSwarmNodeError: components["schemas"]["DeprovisionSwarmNodeNonFieldErrorsErrorComponent"] | components["schemas"]["DeprovisionSwarmNodeTargetSshKeyIdErrorComponent"] | components["schemas"]["DeprovisionSwarmNodeMainSshKeyIdErrorComponent"];
+    DeprovisionSwarmNodeError: components["schemas"]["DeprovisionSwarmNodeNonFieldErrorsErrorComponent"] | components["schemas"]["DeprovisionSwarmNodeTargetSshKeyIdErrorComponent"] | components["schemas"]["DeprovisionSwarmNodeForceRemoveIfNodeUnreachableErrorComponent"];
     DeprovisionSwarmNodeErrorResponse400: components["schemas"]["DeprovisionSwarmNodeValidationError"] | components["schemas"]["ParseErrorResponse"];
-    DeprovisionSwarmNodeMainSshKeyIdErrorComponent: {
+    DeprovisionSwarmNodeForceRemoveIfNodeUnreachableErrorComponent: {
       /**
-       * @description * `main_ssh_key_id` - main_ssh_key_id
+       * @description * `force_remove_if_node_unreachable` - force_remove_if_node_unreachable
        * @enum {string}
        */
-      attr: "main_ssh_key_id";
+      attr: "force_remove_if_node_unreachable";
       /**
        * @description * `invalid` - invalid
-       * * `max_string_length` - max_string_length
        * * `null` - null
-       * * `required` - required
        * @enum {string}
        */
-      code: "invalid" | "max_string_length" | "null" | "required";
+      code: "invalid" | "null";
       detail: string;
     };
     DeprovisionSwarmNodeNonFieldErrorsErrorComponent: {
@@ -3614,7 +3612,8 @@ export interface components {
     };
     DeprovisionSwarmNodeRequestRequest: {
       target_ssh_key_id: number;
-      main_ssh_key_id: number;
+      /** @default false */
+      force_remove_if_node_unreachable?: boolean;
     };
     DeprovisionSwarmNodeTargetSshKeyIdErrorComponent: {
       /**
@@ -9410,13 +9409,12 @@ export interface components {
        */
       attr: "cluster_roles";
       /**
-       * @description * `empty` - empty
-       * * `not_a_list` - not_a_list
+       * @description * `not_a_list` - not_a_list
        * * `null` - null
        * * `required` - required
        * @enum {string}
        */
-      code: "empty" | "not_a_list" | "null" | "required";
+      code: "not_a_list" | "null" | "required";
       detail: string;
     };
     UpdateSwarmNodeRolesClusterRolesINDEXErrorComponent: {

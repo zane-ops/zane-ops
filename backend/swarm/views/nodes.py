@@ -26,7 +26,7 @@ from swarm.models import SSHKey, SwarmNode
 from temporal.client import TemporalClient
 from temporal.shared import (
     ClusterSwarmNodeDetails,
-    ClusterSwarmNodePair,
+    DeprovisionSwarmNodePayload,
     SimpleClusterSwarmNodeDetails,
     SwarmNodeDetails,
     SwarmNodePair,
@@ -306,9 +306,8 @@ class DeprovisionSwarmNodeAPIView(APIView):
 
         data = cast(ReturnDict, form.data)
         target_key = node.ssh_keys.get(id=data["target_ssh_key_id"])
-        main_key = main_node.ssh_keys.get(id=data["main_ssh_key_id"])
 
-        payload = ClusterSwarmNodePair(
+        payload = DeprovisionSwarmNodePayload(
             target_node=ClusterSwarmNodeDetails(
                 id=node.id,
                 swarm_node_id=cast(str, node.swarm_node_id),
@@ -318,15 +317,9 @@ class DeprovisionSwarmNodeAPIView(APIView):
                 ssh_key=target_key.private_key,
                 ssh_port=node.ssh_port,
             ),
-            main_node=ClusterSwarmNodeDetails(
-                id=main_node.id,
-                swarm_node_id=cast(str, main_node.swarm_node_id),
-                private_ip=main_node.private_ip,
-                swarm_role=main_node.swarm_role,  # type: ignore
-                cluster_roles=main_node.cluster_roles,  # type: ignore
-                ssh_key=main_key.private_key,
-                ssh_port=main_node.ssh_port,
-            ),
+            force_remove_if_node_is_unreachable=data[
+                "force_remove_if_node_unreachable"
+            ],
         )
 
         workflow_id = node.deprovision_swarm_node_workflow_id

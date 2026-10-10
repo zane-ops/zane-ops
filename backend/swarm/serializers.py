@@ -91,7 +91,24 @@ class ProvisionSwarmNodeRequestSerializer(serializers.Serializer):
         return attrs
 
 
-class DeprovisionSwarmNodeRequestSerializer(ProvisionSwarmNodeRequestSerializer):
+class DeprovisionSwarmNodeRequestSerializer(serializers.Serializer):
+    target_ssh_key_id = serializers.IntegerField()
+    force_remove_if_node_unreachable = serializers.BooleanField(
+        required=False, default=False
+    )
+
+    def validate_target_ssh_key_id(self, key_id: int):
+        node: SwarmNode = self.context["target_node"]
+
+        key = node.ssh_keys.filter(id=key_id).first()
+        if key is None:
+            raise serializers.ValidationError(
+                f"No SSH key with the id `{key_id}` exists for the server `{node.private_ip}`"
+            )
+        if key.user != "root":
+            raise serializers.ValidationError("The SSH key must be for the `root` user")
+        return key_id
+
     def validate(self, attrs: dict):
         node: SwarmNode = self.context["target_node"]
         if node.is_initial_install_server:
