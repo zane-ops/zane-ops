@@ -1,7 +1,7 @@
 from django.urls import reverse
 from rest_framework import status
 
-from swarm.models import SSHKey, SwarmNode
+from swarm.models import SwarmNode
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import jprint
 
