@@ -14,13 +14,13 @@
 - [x] Make activities raise `ApplicationError` instead of returning `False`/`None` — right now failures are never retried and the node shows `FAILED` without saying why (store the reason on the node for the UI)
 - [x] Only allow one workflow per node at a time — workflow IDs include a timestamp, so a provision and a removal of the same node can run at the same time
 - [x] Add heartbeats to long activities (docker install, waiting for services) 
-- [ ] Allow removing a node that is dead/unreachable — the removal workflow needs SSH on the node, so it gets stuck; add a "force" option that only runs `docker node rm --force` from the manager
+- [x] Allow removing a node that is dead/unreachable — the removal workflow needs SSH on the node, so it gets stuck; add a "force" option that only runs `docker node rm --force` from the manager
 - [x] Re-running a removal that already got past "leave swarm" gets stuck — `docker swarm leave` errors with "not part of a swarm", so we never reach `docker node rm`; treat that error as success
 - [x] Re-provisioning a node with a different role (e.g. worker → manager) makes it rejoin with a new swarm ID, and the old entry stays in `docker node ls` as `Down` — remove the old one
 - [x] `update_node_labels` overwrites all node labels, so labels a user added by hand get deleted — only add/update the ZaneOps labels
 
 ### Later ->>
-- [ ] Add an `UpdateSwarmNodeWorkflow` to change a node's role (`docker node promote/demote`) and availability (`docker node update --availability active|pause|drain`), only allowed on `ACTIVE`/paused/drained nodes — so the provision workflow only handles the first setup, and changing a role doesn't require removing and re-adding the node
+- [x] Add an `UpdateSwarmNodeWorkflow` to change a node's role (`docker node promote/demote`) and availability (`docker node update --availability active|pause|drain`), only allowed on `ACTIVE`/paused/drained nodes — so the provision workflow only handles the first setup, and changing a role doesn't require removing and re-adding the node
 - [x] Add a scheduled check of node health (`docker node ls`) — nodes left in `PROVISIONING` are never re-checked, and we don't notice when a node goes `DOWN`
 - [x] Also wait for `zane-temporal-node-worker` and `zane-temporal-build-worker` in `wait_for_global_services_to_be_propagated` — today it only waits for the proxy and Vector (only expect the build worker on nodes with the `BUILD_SERVER` role)
 

@@ -52,6 +52,7 @@ from temporal.constants import (
 from temporal.shared import (
     NodeSystemInfo,
     OptionalSwarmNodePair,
+    RemoveSwarmNodeContext,
     SwarmHealthcheckResult,
     SwarmNodeHealthcheckResult,
     SwarmNodePair,
@@ -1317,16 +1318,15 @@ class SwarmNodeActivities:
         raise ApplicationError(message=message, non_retryable=True)
 
     @activity.defn
-    async def remove_swarm_node_from_cluster(
-        self, payload: DeprovisionSwarmNodePayload
-    ):
+    async def remove_swarm_node_from_cluster(self, payload: RemoveSwarmNodeContext):
         node = payload.target_node
+        if payload.is_ssh_reachable:
+            msg = f"➡️ Removing swarm node {Colors.BLUE}{node.swarm_node_id}{Colors.ENDC} from the cluster..."
+        else:
+            msg = f"⚠️ {Colors.YELLOW}Server {Colors.BLUE}{node.private_ip}{Colors.YELLOW} is unreachable over SSH, force removing swarm node {Colors.BLUE}{node.swarm_node_id}{Colors.YELLOW} from the cluster...{Colors.ENDC}"
         await provision_log(
             node,
-            [
-                "",
-                f"➡️ Removing swarm node {Colors.BLUE}{node.swarm_node_id}{Colors.ENDC} from the cluster...",
-            ],
+            ["", msg],
         )
         try:
             swarm_node: DockerSwarmNode = self.docker_client.nodes.get(

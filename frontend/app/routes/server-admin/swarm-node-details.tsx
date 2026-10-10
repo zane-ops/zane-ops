@@ -883,6 +883,28 @@ function SwarmDeprovisionForm(node: FullSwarmNode) {
             keys={targetRootKeys}
             errors={errors.target_ssh_key_id}
           />
+
+          <FieldSet
+            name="force_remove_if_node_unreachable"
+            errors={errors.force_remove_if_node_unreachable}
+            className="flex-1 inline-flex gap-2 flex-col"
+          >
+            <div className="inline-flex gap-2 items-start">
+              <FieldSetCheckbox className="relative top-1 disabled:opacity-60" />
+
+              <div className="flex flex-col gap-0.5">
+                <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
+                  Remove even if unreachable
+                </FieldSetLabel>
+
+                <small className="text-grey text-sm">
+                  If ZaneOps can't connect to this server over SSH, remove it
+                  from the cluster anyway. The server itself won't be cleaned
+                  up.
+                </small>
+              </div>
+            </div>
+          </FieldSet>
         </fetcher.Form>
       }
       trigger={
@@ -1406,7 +1428,9 @@ async function deprovisionServer(serverId: string, formData: FormData) {
   const queryClient = getQueryClient();
 
   const userData = {
-    target_ssh_key_id: Number(formData.get("target_ssh_key_id"))
+    target_ssh_key_id: Number(formData.get("target_ssh_key_id")),
+    force_remove_if_node_unreachable:
+      formData.get("force_remove_if_node_unreachable") == "on"
   } satisfies RequestInput<"put", "/api/swarm/nodes/{id}/deprovision/">;
 
   const { error: errors } = await apiClient.PUT(

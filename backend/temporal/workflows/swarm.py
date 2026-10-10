@@ -16,6 +16,7 @@ with workflow.unsafe.imports_passed_through():
     from swarm.models import SwarmNode
 
 from ..shared import (
+    RemoveSwarmNodeContext,
     SwarmNodePair,
     OptionalSwarmNodePair,
     DeprovisionSwarmNodePayload,
@@ -384,50 +385,67 @@ class DeprovisionSwarmNodeWorkflow:
                 retry_policy=self.retry_policy,
             )
 
-            await workflow.execute_activity_method(
-                SwarmNodeActivities.test_ssh_connection,
-                SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-
-            drain_result = await workflow.execute_activity_method(
-                SwarmNodeActivities.drain_swarm_node_and_remove_labels,
-                payload,
-                start_to_close_timeout=timedelta(minutes=3),
-                retry_policy=self.retry_policy,
-            )
-
-            if drain_result == "NOT_IN_SWARM":
-                # The node is already out of the swarm, nothing left to drain or remove
-                node_deployment_result.status = SwarmNode.Status.REMOVED
-                node_deployment_result.status_message = "The node was not found in the swarm, it may have been removed manually"
-            else:
-                node_deployment_result.status = SwarmNode.Status.DOWN
-
-                all_drained = await workflow.execute_activity_method(
-                    SwarmNodeActivities.wait_for_global_services_to_be_drained,
-                    payload,
-                    start_to_close_timeout=timedelta(minutes=5),
-                    retry_policy=self.retry_policy,
-                )
-                if all_drained:
-                    node_deployment_result.status = SwarmNode.Status.DRAINED
-
+            ssh_reachable = False
+            try:
                 await workflow.execute_activity_method(
-                    SwarmNodeActivities.detach_swarm_node_from_cluster,
+                    SwarmNodeActivities.test_ssh_connection,
                     SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
                 )
-
-                await workflow.execute_activity_method(
-                    SwarmNodeActivities.remove_swarm_node_from_cluster,
+            except ActivityError as e:
+                print(
+                    f"Try ActivityError({e=}) {payload.force_remove_if_node_is_unreachable=} !"
+                )
+                if (
+                    not payload.force_remove_if_node_is_unreachable
+                    or is_cancelled_exception(e)
+                ):
+                    raise
+                ssh_reachable = False
+                pass  # Swallow the error if we force remove anyway
+            else:
+                ssh_reachable = True
+                drain_result = await workflow.execute_activity_method(
+                    SwarmNodeActivities.drain_swarm_node_and_remove_labels,
                     payload,
-                    start_to_close_timeout=timedelta(seconds=30),
+                    start_to_close_timeout=timedelta(minutes=3),
                     retry_policy=self.retry_policy,
                 )
-                node_deployment_result.status = SwarmNode.Status.REMOVED
+
+                if drain_result == "NOT_IN_SWARM":
+                    # The node is already out of the swarm, nothing left to drain or remove
+                    node_deployment_result.status = SwarmNode.Status.REMOVED
+                    node_deployment_result.status_message = "The node was not found in the swarm, it may have been removed manually"
+                else:
+                    node_deployment_result.status = SwarmNode.Status.DOWN
+
+                    all_drained = await workflow.execute_activity_method(
+                        SwarmNodeActivities.wait_for_global_services_to_be_drained,
+                        payload,
+                        start_to_close_timeout=timedelta(minutes=5),
+                        retry_policy=self.retry_policy,
+                    )
+                    if all_drained:
+                        node_deployment_result.status = SwarmNode.Status.DRAINED
+
+                    await workflow.execute_activity_method(
+                        SwarmNodeActivities.detach_swarm_node_from_cluster,
+                        SwarmNodeSSHContext(node=payload.target_node, tmp_dir=tmp_dir),
+                        start_to_close_timeout=timedelta(seconds=30),
+                        retry_policy=self.retry_policy,
+                    )
+
+            await workflow.execute_activity_method(
+                SwarmNodeActivities.remove_swarm_node_from_cluster,
+                RemoveSwarmNodeContext(
+                    target_node=payload.target_node,
+                    is_ssh_reachable=ssh_reachable,
+                ),
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+            node_deployment_result.status = SwarmNode.Status.REMOVED
 
         except ActivityError as e:
             print(f"ActivityError({e=}) !")

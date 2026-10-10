@@ -712,10 +712,16 @@ class CancelProvisionSignalInput:
 
 
 # Frozen dataclass allows us to override the attributes types
-@dataclass(frozen=True)
+@dataclass
 class DeprovisionSwarmNodePayload:
     target_node: ClusterSwarmNodeDetails
     force_remove_if_node_is_unreachable: bool = False
+
+
+@dataclass
+class RemoveSwarmNodeContext:
+    target_node: ClusterSwarmNodeDetails
+    is_ssh_reachable: bool = False
 
 
 @dataclass
