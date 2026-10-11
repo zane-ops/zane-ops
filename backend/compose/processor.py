@@ -701,6 +701,21 @@ class ComposeSpecProcessor:
                     "restart_policy", {"condition": "any"}
                 )
 
+            # Inject safe default placement constraints
+            # All services should be pinned to nodes with `zane.app-server` label
+            app_server_constraint = f"node.labels.{settings.APP_SERVER_LABEL}==true"
+            placement_constraints: set[str] = set(
+                service.deploy.get("placement", {}).get("constraints", [])
+            )
+            if app_server_constraint not in placement_constraints:
+                placement_constraints.add(app_server_constraint)
+                pass
+
+            if not service.deploy.get("placement"):
+                service.deploy["placement"] = {}
+
+            service.deploy["placement"]["constraints"] = list(placement_constraints)
+
             # Add ZaneOps tracking labels
             zane_labels = {
                 "zane-stack": stack.id,
