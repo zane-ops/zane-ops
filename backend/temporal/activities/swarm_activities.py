@@ -1392,9 +1392,10 @@ class SwarmNodeActivities:
             # we only keep the most recent one per node
             latest_task_per_node: dict[str, DockerSwarmTask] = {}
             for task in tasks:
-                current = latest_task_per_node.get(task.NodeID)
-                if current is None or task.Version.Index > current.Version.Index:
-                    latest_task_per_node[task.NodeID] = task
+                if task.NodeID:
+                    current = latest_task_per_node.get(task.NodeID)
+                    if current is None or task.Version.Index > current.Version.Index:
+                        latest_task_per_node[task.NodeID] = task
 
             for node_id, task in latest_task_per_node.items():
                 node_status = nodes_statuses.get(node_id)

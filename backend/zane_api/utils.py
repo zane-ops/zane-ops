@@ -135,7 +135,7 @@ class TaskSpec:
 @dataclass
 class DockerSwarmTask:
     ID: str
-    NodeID: str
+    NodeID: str | None
     Slot: int
     Version: Version
     CreatedAt: str
@@ -193,7 +193,7 @@ class DockerSwarmTask:
         )
         return DockerSwarmTask(
             ID=data["ID"],
-            NodeID=data["NodeID"],
+            NodeID=data.get("NodeID", None),
             Slot=data.get("Slot", 1),
             Version=version,
             CreatedAt=data["CreatedAt"],
