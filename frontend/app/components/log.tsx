@@ -16,13 +16,13 @@ type LogProps = Pick<DeploymentLog, "id" | "level" | "time" | "timestamp"> & {
 export function Log({
   content,
   level,
-  time,
   timestamp,
   id,
   content_text,
   container_id
 }: LogProps) {
-  const date = new Date(time);
+  // timestamp is in nanoseconds, we convert it in milliseconds
+  const date = new Date(timestamp / 1e6);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get("query") ?? "";
