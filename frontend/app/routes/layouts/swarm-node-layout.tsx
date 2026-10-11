@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
+  BoxIcon,
   CrownIcon,
   HammerIcon,
-  ContainerIcon,
   InfoIcon,
   LoaderIcon,
   ServerIcon,
@@ -173,7 +173,7 @@ export default function SwarmNodeLayout({
                 prefetch="viewport"
               >
                 <span>Services</span>
-                <ContainerIcon className="size-4 flex-none" />
+                <BoxIcon className="size-4 flex-none" />
               </HorizontalNavLink>
             </li>
           </ul>
