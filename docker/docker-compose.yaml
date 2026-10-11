@@ -130,20 +130,7 @@ services:
       context: ../backend
       dockerfile: ../backend/Dockerfile
     container_name: zane-temporal-main-worker
-    command: >
-      bash -c "source /opt/.venv/bin/activate &&
-               uv sync --locked --active &&
-               python manage.py run_worker"
-    develop:
-      watch:
-        - action: restart
-          path: ../backend
-          target: /code
-          initial_sync: true
-          ignore:
-            - ../backend/**/tests/**
-        - action: rebuild
-          path: ../backend/uv.lock
+    command: /bin/bash -l -c "/code/scripts/run_dev_worker.sh"
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro
