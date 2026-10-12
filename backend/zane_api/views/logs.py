@@ -114,6 +114,12 @@ def _build_http_log(
         case None:
             log_source = HttpLog.LogSource.UNKNOWN
 
+    request_uuid = log_content.get("uuid")
+    if (
+        not request_uuid or not str(request_uuid).strip()
+    ):  # For either `null` uuid or empty uuid, we need to generate a `UUID`
+        request_uuid = str(uuid.uuid4())
+
     return HttpLog(
         time=log_time,
         request_duration_ns=int(duration_in_seconds * 1_000_000_000),
@@ -126,7 +132,7 @@ def _build_http_log(
         response_headers=log_content["resp_headers"],
         request_user_agent=user_agent[0] if isinstance(user_agent, list) else None,
         request_ip=request_ip,
-        request_uuid=log_content.get("uuid", str(uuid.uuid4())),
+        request_uuid=request_uuid,
         request_method=req["method"],
         source=log_source,
         request_country_code=lookup_country_code(request_ip),
