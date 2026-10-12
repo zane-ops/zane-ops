@@ -318,6 +318,8 @@ class ComposeStackActivities:
                     },
                 )
 
+                print(f"{services=}")
+
                 statuses = await asyncio.gather(
                     *[
                         get_compose_stack_swarm_service_status(
@@ -328,6 +330,7 @@ class ComposeStackActivities:
                         for service in services
                     ]
                 )
+                print(f"{statuses=}")
 
                 service_statuses = {}
                 for service_status in statuses:

@@ -25,7 +25,7 @@ class GitClient:
         """
         try:
             refs = self._git.ls_remote("--heads", url, branch)
-            return bool(refs.strip())
+            return bool(refs.strip())  # type: ignore
         except GitCommandError:
             return False
 
@@ -34,7 +34,7 @@ class GitClient:
         Get the latest commit SHA for a given branch in a remote Git repository.
         """
         try:
-            refs: str = self._git.ls_remote("--heads", url, branch)
+            refs: str = self._git.ls_remote("--heads", url, branch)  # type: ignore
             for line in refs.splitlines():
                 sha, ref = line.split()
                 if ref.endswith(f"refs/heads/{branch}"):
@@ -49,7 +49,7 @@ class GitClient:
         """
         branches: List[str] = []
         try:
-            refs: str = self._git.ls_remote("--heads", url)
+            refs: str = self._git.ls_remote("--heads", url)  # type: ignore
             for line in refs.splitlines():
                 sha, ref = line.split()
                 branches.append(ref.replace("refs/heads/", ""))

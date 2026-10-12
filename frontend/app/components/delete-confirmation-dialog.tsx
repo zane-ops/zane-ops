@@ -71,6 +71,7 @@ type SharedDialogProps = {
   confirmText?: string;
   pendingText?: string;
   variant?: "danger" | "warning";
+  className?: string;
 };
 
 export type DeleteConfirmationDialogProps = SharedDialogProps & {
@@ -89,7 +90,8 @@ export function DeleteConfirmationDialog({
   confirmationFieldName,
   confirmText,
   pendingText,
-  variant = "danger"
+  variant = "danger",
+  className
 }: DeleteConfirmationDialogProps) {
   const { isOpen, setIsOpen, formRef, isPending, errors, close } =
     useConfirmationDialogState({
@@ -107,7 +109,7 @@ export function DeleteConfirmationDialog({
       }}
     >
       {trigger}
-      <DialogContent className="gap-0">
+      <DialogContent className={cn("gap-0", className)}>
         <DialogHeader className="pb-4">
           <DialogTitle>{title}</DialogTitle>
 
@@ -196,6 +198,7 @@ export function SimpleConfirmationDialog({
   extraInfo,
   confirmText,
   pendingText,
+  className,
   variant = "danger"
 }: SimpleConfirmationDialogProps) {
   const { isOpen, setIsOpen, formRef, isPending, errors, close } =
@@ -211,7 +214,7 @@ export function SimpleConfirmationDialog({
       }}
     >
       {trigger}
-      <DialogContent className="gap-0">
+      <DialogContent className={cn("gap-0", className)}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
 

@@ -10,13 +10,48 @@ fi
 
 echo ""
 
-echo "Deleting all user created services..."
-docker service rm $(docker service ls -q --filter label=zane-managed=true)  2>/dev/null
+# always run from the repo root
+cd "$(dirname "${BASH_SOURCE[0]}")" || exit 1
 
-echo "Waiting for all containers related to services to be removed..."
-while [ -n "$(docker ps -a | grep "srv-prj_" | awk '{print $1}')" ]; do \
-  sleep 2; \
-done
+wait_for() {
+  # usage: wait_for "<description>" <command...>
+  local description=$1
+  shift
+  local tries=0
+  until "$@" >/dev/null 2>&1; do
+    tries=$((tries + 1))
+    if [ $tries -ge 90 ]; then
+      echo "❌ Timed out waiting for $description"
+      exit 1
+    fi
+    sleep 2
+  done
+}
+
+no_containers_for_services() {
+  for id in "$@"; do
+    [ -n "$(docker ps -aq --filter "label=com.docker.swarm.service.id=$id")" ] && return 1
+  done
+  return 0
+}
+
+no_zane_stack_left() {
+  [ -z "$(docker service ls -q --filter label=com.docker.stack.namespace=zane)" ] &&
+  [ -z "$(docker ps -aq --filter label=com.docker.stack.namespace=zane)" ] &&
+  [ -z "$(docker network ls -q --filter label=com.docker.stack.namespace=zane)" ]
+}
+
+echo "Deleting all user created services..."
+SERVICE_IDS=$(docker service ls -q --filter label=zane-managed=true)
+if [ -n "$SERVICE_IDS" ]; then
+  docker service rm $SERVICE_IDS >/dev/null
+  echo "Waiting for all containers related to services to be removed..."
+  wait_for "user services containers to be removed" no_containers_for_services $SERVICE_IDS
+fi
+
+echo "Removing the zane stack (proxy, temporal, vector)..."
+docker stack rm zane
+wait_for "the zane stack to be removed" no_zane_stack_left
 
 echo "Deleting volumes..."
 docker volume rm $(docker volume ls -q --filter label=zane-managed=true) 2>/dev/null
@@ -27,29 +62,27 @@ docker network rm $(docker network ls -q --filter label=zane-managed=true) 2>/de
 echo "Running a system prune..."
 docker system prune -f --volumes
 
-echo "Stopping temporal server..."
-docker compose -f ./docker/docker-compose.yaml down temporal-server
-docker stack rm zane
-
 echo "Flushing temporalio database..."
 docker exec -it $(docker ps -qf "name=zane-db") psql -U postgres -c "DROP database temporal;"
 
-echo "Restarting temporal-admin-tools to configure temporal server..."
-docker stack deploy --with-registry-auth --compose-file ./docker/docker-stack.yaml zane
+echo "Redeploying the zane stack..."
+if [ -f ./docker/.env ]; then
+  (set -a; . ./docker/.env; set +a; docker stack deploy --with-registry-auth --detach=true --compose-file ./docker/docker-stack.yaml zane)
+else
+  docker stack deploy --with-registry-auth --detach=true --compose-file ./docker/docker-stack.yaml zane
+fi
 
-echo "Restarting temporalio server..."
-docker compose -f ./docker/docker-compose.yaml up -d temporal-server
+source ./backend/.venv/bin/activate
 
-echo "Resetting caddy config..."
-curl "http://127.0.0.1:2019/load" \
-	-H "Content-Type: application/json" \
-	-d @docker/proxy/default-caddy-config-dev.json
+echo "Unapplying all migrations of the main app database..."
+for app in $(SILENT=true python ./backend/manage.py showmigrations | grep -v '^ '); do
+  SILENT=true python ./backend/manage.py migrate "$app" zero --noinput || exit 1
+done
 
-echo "Flushing the main app database..."
-source ./backend/.venv/bin/activate && echo yes | SILENT=true python ./backend/manage.py flush
+echo "Reapplying all migrations..."
+SILENT=true python ./backend/manage.py migrate --noinput || exit 1
 
+echo "Waiting for temporal to be ready & recreating the automated schedules..."
+wait_for "temporal to be ready" env SILENT=true python ./backend/manage.py setup_automated_schedules
 
-echo "Recreating the superuser..."
-source ./backend/.venv/bin/activate && SILENT=true DJANGO_SUPERUSER_USERNAME=admin DJANGO_SUPERUSER_EMAIL=admin@example.com DJANGO_SUPERUSER_PASSWORD=password python ./backend/manage.py createsuperuser --noinput
-echo -e "Created a superuser with the credentials \x1b[90musername\x1b[0m=\x1b[94madmin\x1b[0m \x1b[90mpassword\x1b[0m=\x1b[94mpassword\x1b[0m..."
 echo "RESET DONE ✅"

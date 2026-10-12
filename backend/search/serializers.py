@@ -55,6 +55,7 @@ class RuntimeLogsQuerySerializer(serializers.Serializer):
     service_id = serializers.CharField(required=False)
     stack_id = serializers.CharField(required=False)
     stack_service_name = serializers.CharField(required=False)
+    swarm_node_id = serializers.CharField(required=False)
     time_before = serializers.DateTimeField(required=False)
     time_after = serializers.DateTimeField(required=False)
     query = serializers.CharField(

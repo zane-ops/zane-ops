@@ -450,6 +450,8 @@ class LokiSearchClient:
             label_selectors.append(f'deployment_id="{search_params["deployment_id"]}"')
         if search_params.get("container_id"):
             label_selectors.append(f'container_id="{search_params["container_id"]}"')
+        if search_params.get("swarm_node_id"):
+            label_selectors.append(f'swarm_node_id="{search_params["swarm_node_id"]}"')
         if search_params.get("level"):
             levels = search_params["level"]
             if isinstance(levels, list):

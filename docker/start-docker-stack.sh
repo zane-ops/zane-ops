@@ -11,6 +11,8 @@ cleanup() {
 trap cleanup SIGINT
 trap cleanup SIGTERM
 
+set -x 
+
 # Deploy the stack
 echo "Deploying the stack..."
 docker compose down --remove-orphans
@@ -33,6 +35,6 @@ docker service ls --filter "label=zane-managed=true" --filter "label=status=acti
 # Wait until Ctrl+C is pressed
 echo -e "Server launched at \x1b[96mhttp://localhost:5173/\x1b[0m"
 echo "Press Ctrl+C to stop everything..."
-while true; do
-  sleep 1
-done
+
+echo -e "Watching docker compose changes"
+docker compose watch --no-up

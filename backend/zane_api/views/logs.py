@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from django.db.models import QuerySet
+from warnings import deprecated
 
 from ..permissions import (
     InternalZaneAppPermission,
@@ -317,6 +318,7 @@ class VectorLogIngestAPIView(APIView):
         return Response(response.data, status=status.HTTP_200_OK)
 
 
+@deprecated("This endpoint isn't used anywhere and is left here for viewing reference")
 @extend_schema(exclude=True)
 class FluentdLogIngestAPIView(APIView):
     """

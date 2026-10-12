@@ -9,6 +9,7 @@ RUN apt update && apt install -y git \
     curl \
     htop \
     openssh-client \
+    wait-for-it \
     iproute2 \
     && rm -rf /var/lib/apt/lists/*
 RUN curl -sSL https://nixpacks.com/install.sh | bash

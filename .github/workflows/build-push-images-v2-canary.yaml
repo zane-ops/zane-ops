@@ -1,0 +1,123 @@
+name: Build and Push Canary Images
+on:
+  push:
+    branches:
+      - v2
+  workflow_dispatch:
+
+jobs:
+  # Build the frontend once per edition (`VITE_BUILD` is inlined at build time)
+  build-frontend:
+    if: ${{ github.repository == 'zane-ops/zane-ops' }}
+    name: Build Frontend (${{ matrix.build }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        build: [oss, ee]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.OS }}-pnpm-cache-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.OS }}-pnpm-cache-
+      - name: Build frontend with node
+        run: |
+          npm install -g pnpm@8.15.9
+          pnpm install --frozen-lockfile
+          COMMIT_SHA=${{ github.sha }} VITE_BUILD=${{ matrix.build }} pnpm --prefix frontend run build
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-${{ matrix.build }}
+          path: frontend/build
+          retention-days: 1
+
+  # Parallel app builds for each architecture
+  build-push-app:
+    if: ${{ github.repository == 'zane-ops/zane-ops' }}
+    name: Build and Push Zane App (v2 Canary) (${{ matrix.build }}, ${{ matrix.arch }})
+    needs: build-frontend
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+    env:
+      PREFIX: ${{ matrix.build == 'ee' && 'ee-' || '' }}
+    strategy:
+      matrix:
+        build: [oss, ee]
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build-${{ matrix.build }}
+          path: frontend/build
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.CONTAINER_REGISTRY_PAT }}
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./docker/app/slim.Dockerfile
+          push: true
+          platforms: ${{ matrix.platform }}
+          tags: ghcr.io/zane-ops/app:${{ env.PREFIX }}v2-canary-${{ matrix.arch }},ghcr.io/zane-ops/app:${{ env.PREFIX }}${{ github.sha }}-${{ matrix.arch }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/app:${{ env.PREFIX }}v2-canary-${{ matrix.arch }}
+          cache-to: type=inline
+          build-args: |
+            COMMIT_SHA=${{ github.sha }}
+            IMAGE_VERSION=v2-canary
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+            BUILD=${{ matrix.build }}
+
+  # Create multi-arch manifests
+  create-manifests:
+    if: ${{ github.repository == 'zane-ops/zane-ops' }}
+    name: Create Multi-arch Manifests
+    needs: [build-push-app]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.CONTAINER_REGISTRY_PAT }}
+      - name: Create and push app manifests
+        run: |
+          for prefix in "" "ee-"; do
+            docker buildx imagetools create -t ghcr.io/zane-ops/app:${prefix}v2-canary \
+              ghcr.io/zane-ops/app:${prefix}v2-canary-amd64 \
+              ghcr.io/zane-ops/app:${prefix}v2-canary-arm64
+
+            docker buildx imagetools create -t ghcr.io/zane-ops/app:${prefix}${{ github.sha }} \
+              ghcr.io/zane-ops/app:${prefix}${{ github.sha }}-amd64 \
+              ghcr.io/zane-ops/app:${prefix}${{ github.sha }}-arm64
+          done

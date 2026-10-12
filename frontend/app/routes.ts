@@ -120,9 +120,19 @@ export default [
             "./routes/server-admin/create-swarm-node-ssh-key.tsx"
           ),
           route("ssh-keys/:keyId", "./routes/server-admin/ssh-key-details.tsx"),
+          route("provision", "./routes/server-admin/provision-swarm-node.tsx"),
+          route(
+            "cancel-provision",
+            "./routes/server-admin/cancel-swarm-node-provision.tsx"
+          ),
           layout("./routes/layouts/swarm-node-layout.tsx", [
             index("./routes/server-admin/swarm-node-details.tsx"),
-            route("console", "./routes/server-admin/swarm-node-console.tsx")
+            route("console", "./routes/server-admin/swarm-node-console.tsx"),
+            route(
+              "deployment-logs",
+              "./routes/server-admin/swarm-node-deployment-logs.tsx"
+            ),
+            route("services", "./routes/server-admin/swarm-node-services.tsx")
           ])
         ])
       ])

@@ -10,3 +10,4 @@ frontend/src/routeTree.gen.ts
 _docs/
 .nixpacks/
 *.mmdb
+core.*

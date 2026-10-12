@@ -102,6 +102,10 @@ services:
       - zane-db
       - zane-tempo
     restart: always
+    develop:
+      watch:
+        - action: rebuild
+          path: ../backend/uv.lock
     environment:
       <<: *env-vars
       OTEL_TRACES_ENABLED: ${OTEL_TRACES_ENABLED:-true}
@@ -126,10 +130,7 @@ services:
       context: ../backend
       dockerfile: ../backend/Dockerfile
     container_name: zane-temporal-main-worker
-    command: >
-      bash -c "source /opt/.venv/bin/activate &&
-               uv sync --locked --active &&
-               watchmedo auto-restart --directory=/code --pattern=*.py --ignore-patterns="/code/zane_api/tests/**" --recursive -- python manage.py run_worker"
+    command: /bin/bash -l -c "/code/scripts/run_dev_worker.sh"
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro

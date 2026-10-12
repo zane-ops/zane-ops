@@ -76,7 +76,7 @@ from temporal.workflows import (
 from ..serializers import ServiceSerializer
 
 from compose.dtos import ComposeStackSpec
-
+from swarm.models import SwarmNode, SSHKey
 from temporal.activities import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
@@ -447,9 +447,22 @@ class AuthAPITestCase(APITestCase):
         self.workflow_schedules: List[WorkflowScheduleHandle] = []
 
     @staticmethod
+    def create_ssh_key(node: SwarmNode, user: str, name: str = "my key"):
+        public_key, private_key = SSHKey.create_key_pair()
+        return SSHKey.objects.create(
+            node=node,
+            user=user,
+            name=name,
+            public_key=public_key,
+            private_key=private_key,
+            fingerprint=SSHKey.generate_fingerprint(public_key),
+        )
+
+    @staticmethod
     def get_error_from_response(response: Any, field: str):
         return find_item_in_sequence(
-            lambda e: e.get("attr") == field, response.json().get("errors", [])
+            lambda e: e.get("attr") == field or e.get("attr").startswith(f"{field}."),
+            response.json().get("errors", []),
         )
 
     def get_workflow_schedule_by_id(self, id: str):
@@ -1733,6 +1746,7 @@ class FakeDockerClient:
                 self.swarm_tasks.append(
                     {
                         "ID": "8qx04v72iovlv7xzjvsj2ngdk",
+                        "NodeID": "ta6y1b5mo2084fzg30tiotcnm",
                         "Version": {"Index": len(self.swarm_tasks) + 1},
                         "CreatedAt": "2024-04-25T20:11:32.736667861Z",
                         "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
@@ -1774,8 +1788,9 @@ class FakeDockerClient:
 
         def get_attached_config(self, config: Config):
             return find_item_in_sequence(
-                lambda c: c["ConfigID"]
-                == get_config_resource_name(config.id, config.version),
+                lambda c: (
+                    c["ConfigID"] == get_config_resource_name(config.id, config.version)
+                ),
                 self.configs,
             )
 

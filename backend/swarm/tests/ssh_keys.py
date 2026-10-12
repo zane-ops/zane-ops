@@ -12,8 +12,8 @@ class CreateSSHKeyForSwarmNodeViewTests(AuthAPITestCase):
         self.node = SwarmNode.objects.create(
             hostname="zane-main",
             private_ip="10.0.0.1",
-            role=SwarmNode.Role.MANAGER,
-            status=SwarmNode.Status.READY,
+            swarm_role=SwarmNode.Role.MANAGER,
+            status=SwarmNode.Status.ACTIVE,
             is_initial_install_server=True,
         )
 
@@ -44,6 +44,18 @@ class CreateSSHKeyForSwarmNodeViewTests(AuthAPITestCase):
         self.assertEqual("my key", data["name"])
         self.assertIn("public_key", data)
         self.assertNotIn("private_key", data)
+
+    def test_can_create_ssh_key_without_name(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("swarm:node.ssh_keys", kwargs={"id": self.node.id}),
+            data={"user": "root"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        data = response.json()
+        jprint(data)
+
+        self.assertIsNotNone(data["name"])
 
     def test_create_ssh_key_is_visible_in_node_details(self):
         self.loginUser()
@@ -112,8 +124,8 @@ class DeleteSSHKeyViewTests(AuthAPITestCase):
         self.node = SwarmNode.objects.create(
             hostname="zane-main",
             private_ip="10.0.0.1",
-            role=SwarmNode.Role.MANAGER,
-            status=SwarmNode.Status.READY,
+            swarm_role=SwarmNode.Role.MANAGER,
+            status=SwarmNode.Status.ACTIVE,
             is_initial_install_server=True,
         )
         public_key, private_key = SSHKey.create_key_pair()
@@ -154,8 +166,8 @@ class DeleteSSHKeyViewTests(AuthAPITestCase):
         other_node = SwarmNode.objects.create(
             hostname="zane-worker",
             private_ip="10.0.0.2",
-            role=SwarmNode.Role.WORKER,
-            status=SwarmNode.Status.READY,
+            swarm_role=SwarmNode.Role.WORKER,
+            status=SwarmNode.Status.ACTIVE,
         )
         response = self.client.delete(
             reverse(

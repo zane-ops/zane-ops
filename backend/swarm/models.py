@@ -8,6 +8,7 @@ from django.db import models
 from shortuuid.django_fields import ShortUUIDField
 from zane_api.models.base import TimestampedModel
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.contrib.postgres.fields import ArrayField
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 
 class SwarmNode(TimestampedModel):
     if TYPE_CHECKING:
-        ssh_keys = RelatedManager["SSHKey"]
+        ssh_keys: RelatedManager["SSHKey"]
 
     ID_PREFIX = "node_"
     ID_LENGTH = 11
@@ -24,13 +25,25 @@ class SwarmNode(TimestampedModel):
         MANAGER = "MANAGER", "Manager"
         WORKER = "WORKER", "Worker"
 
+    class ClusterRole(models.TextChoices):
+        # Can this run builds ?
+        BUILD_SERVER = "BUILD_SERVER", "Build Server"
+        # Can this run user defined apps ?
+        APP_SERVER = "APP_SERVER", "App Server"
+
     class Status(models.TextChoices):
+        # Not in the cluster yet
         CREATED = "CREATED", "Created"
         PROVISIONING = "PROVISIONING", "Provisioning"
-        READY = "READY", "Ready"
-        DOWN = "DOWN", "Down"
-        DRAINED = "DRAINED", "Drained"
         FAILED = "FAILED", "Failed"
+        REMOVED = "REMOVED", "Removed"
+
+        # Active member of the cluster
+        ACTIVE = "ACTIVE", "Active"
+        DOWN = "DOWN", "Down"
+        UNHEALTHY = "UNHEALTHY", "Unhealthy"
+        PAUSED = "PAUSED", "Paused"
+        DRAINED = "DRAINED", "Drained"
 
     id = ShortUUIDField(
         length=ID_LENGTH,
@@ -40,22 +53,27 @@ class SwarmNode(TimestampedModel):
     )  # type: ignore
 
     swarm_node_id = models.CharField(unique=True, null=True)
-    role = models.CharField(choices=Role.choices)
+    swarm_role = models.CharField(choices=Role.choices)
     hostname = models.CharField(
         unique=True, null=True
     )  # == swarm node Description.Hostname
     private_ip = models.GenericIPAddressField(unique=True)  # overlay / VPC address
 
     status = models.CharField(choices=Status.choices, default=Status.CREATED)
-    last_status_update = models.DateTimeField(null=True)
+    last_status_update = models.DateTimeField(null=True, auto_now=True)
+    status_message = models.CharField(null=True)
 
     docker_version = models.CharField(null=True)
-    # Can this run builds ?
-    is_build_server = models.BooleanField(default=False)
-    # Can this run user defined apps ?
-    is_app_server = models.BooleanField(default=True)
+    cluster_roles = ArrayField(
+        base_field=models.CharField(max_length=255, choices=ClusterRole.choices),
+        default=list,
+        blank=True,
+    )
     # The initial server from which ZaneOps was install
     is_initial_install_server = models.BooleanField(default=False)
+
+    # operating_system = models.CharField(null=True)
+    architecture = models.CharField(null=True)
 
     # server limits
     cpus = models.PositiveIntegerField(null=True)
@@ -70,13 +88,35 @@ class SwarmNode(TimestampedModel):
         ],
     )
 
+    # service statuses
+    services = models.JSONField(null=True)
+    # format:
+    # {
+    #   "proxy"|"log_collector": {
+    #     "status": "healthy" | "unhealthy"
+    #     "message": "<anything...>"
+    #   }
+    # }
+
+    @property
+    def provision_swarm_node_workflow_id(self) -> str:
+        return f"provision-{self.id}"
+
+    @property
+    def update_swarm_node_workflow_id(self) -> str:
+        return f"update-{self.id}"
+
+    @property
+    def deprovision_swarm_node_workflow_id(self) -> str:
+        return f"deprovision-{self.id}"
+
     @property
     def build_task_queue(self) -> str:
         """
         Queue name for running builds on this node specifically. Only nodes
         with `is_build_server=True` run a worker on this queue.
         """
-        return f"build-{self.hostname}"
+        return f"build-{self.swarm_node_id}"
 
     @property
     def node_task_queue(self) -> str:
@@ -86,7 +126,7 @@ class SwarmNode(TimestampedModel):
         schedules.
         Every node runs a worker on its own queue, always.
         """
-        return f"node-{self.hostname}"
+        return f"node-{self.swarm_node_id}"
 
     class Meta:  # type: ignore
         constraints = [
@@ -101,7 +141,9 @@ class SwarmNode(TimestampedModel):
 class SSHKey(TimestampedModel):
     id: int
     node = models.ForeignKey(
-        to=SwarmNode, on_delete=models.CASCADE, related_name="ssh_keys"
+        to=SwarmNode,
+        on_delete=models.CASCADE,
+        related_name="ssh_keys",
     )
     user = models.CharField(max_length=255, blank=False)
     public_key = models.TextField(blank=False)

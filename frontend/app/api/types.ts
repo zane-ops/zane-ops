@@ -122,6 +122,8 @@ export type SwarmNode = ApiResponse<
   "/api/swarm/nodes/"
 >["results"][number];
 
+export type FullSwarmNode = ApiResponse<"get", "/api/swarm/nodes/{id}/">;
+
 export type WorkspaceWithOwner = ApiResponse<
   "get",
   "/api/console/workspaces/"

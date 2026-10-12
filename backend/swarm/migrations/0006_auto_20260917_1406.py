@@ -13,9 +13,12 @@ def associate_all_ssh_keys_to_initial_server(apps, schema_editor):
 
 def remove_all_ssh_keys_from_initial_server(apps, schema_editor):
     SwarmNode = apps.get_model("swarm", "SwarmNode")
-    initial_server = SwarmNode.objects.filter(is_initial_install_server=True).get()
-
-    initial_server.ssh_keys.clear()
+    try:
+        initial_server = SwarmNode.objects.filter(is_initial_install_server=True).get()
+    except SwarmNode.DoesNotExist:
+        pass
+    else:
+        initial_server.ssh_keys.clear()
 
 
 class Migration(migrations.Migration):

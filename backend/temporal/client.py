@@ -1,6 +1,6 @@
 from datetime import timedelta
 import traceback
-from typing import Any, Awaitable, Callable, List, Optional, Union
+from typing import Any, Awaitable, Callable, Optional, Union
 
 import temporalio.common
 from temporalio import workflow
@@ -65,10 +65,10 @@ class TemporalClient:
         return cls._client
 
     @classmethod
-    def start_workflow(
+    def start_workflow[T, P](
         cls,
-        workflow: Union[str, Callable[..., Awaitable[Any]]],
-        arg: Any,
+        workflow: Callable[[P, T], Awaitable[Any]],
+        arg: T,
         id: str,
         task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
         execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
