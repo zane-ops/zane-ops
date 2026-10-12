@@ -52,6 +52,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const node = await queryClient.ensureQueryData(
     swarmQueries.singleNode(params.serverId)
   );
+  queryClient.prefetchQuery(swarmQueries.mainNode);
 
   return {
     node
@@ -233,7 +234,7 @@ function ProvisionSwarmNodeForm({ node }: ProvisionSwarmNodeFormProps) {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="gap-0 max-w-xl">
+      <DialogContent className="gap-0 max-w-xl w-xl">
         <DialogHeader className="pb-4">
           <DialogTitle>Provision this server</DialogTitle>
           <DialogDescription>
@@ -257,7 +258,7 @@ function ProvisionSwarmNodeForm({ node }: ProvisionSwarmNodeFormProps) {
             serverId: node.id
           })}
           id="provision-swarm-node-form"
-          className="flex flex-col gap-4 mb-5"
+          className="flex flex-col gap-4 mb-5 w-full min-w-0"
         >
           <RootSSHKeySelect
             name="target_ssh_key_id"

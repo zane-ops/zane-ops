@@ -41,16 +41,10 @@ export function RootSSHKeySelect({
   const selectedKey =
     keys.find((key) => key.id === selectedKeyId) ?? keys[0] ?? null;
 
-  const filteredKeys = keys.filter((key) =>
-    `${key.name} ${key.fingerprint ?? ""}`
-      .toLowerCase()
-      .includes(query.trim().toLowerCase())
-  );
-
   const errorId = `${name}-error`;
 
   return (
-    <fieldset className="flex flex-col gap-1.5 flex-1">
+    <fieldset className="flex flex-col gap-1.5 flex-1 min-w-0 w-full">
       <label htmlFor={name}>{label}</label>
 
       {selectedKey && (
@@ -63,18 +57,21 @@ export function RootSSHKeySelect({
             id={name}
             variant="outline"
             type="button"
-            className="justify-between"
+            className="justify-between w-full min-w-0"
             aria-describedby={errorId}
             aria-invalid={!!errors}
           >
             {selectedKey ? (
-              <span className="inline-flex items-center gap-2 min-w-0">
+              <div className="inline-flex items-center gap-2 min-w-0">
                 <KeyRoundIcon className="size-4 flex-none text-grey" />
-                <span>{selectedKey.name}</span>
-                <span className="text-grey text-xs font-mono truncate">
-                  {selectedKey.fingerprint?.toLowerCase()}
-                </span>
-              </span>
+                <p className="text-grey text-xs font-mono overflow-x-hidden text-ellipsis whitespace-nowrap min-w-0 w-min">
+                  <span className="font-sans text-card-foreground text-sm">
+                    {selectedKey.name}
+                  </span>
+                  &nbsp;
+                  <span>{selectedKey.fingerprint?.toLowerCase()}</span>
+                </p>
+              </div>
             ) : (
               <span className="text-sm">Select a SSH key</span>
             )}
@@ -89,7 +86,7 @@ export function RootSSHKeySelect({
           )}
           align="center"
         >
-          <Command shouldFilter={false} className="w-full">
+          <Command className="w-full">
             <div className="flex px-3 py-3.5 items-center gap-1">
               <SearchIcon className="size-4 flex-none text-grey" />
               <CommandPrimitive.Input
@@ -103,7 +100,7 @@ export function RootSSHKeySelect({
             <CommandList className="flex flex-col gap-2 min-w-32 md:min-w-42 w-full bg-transparent border-none">
               <CommandEmpty>No root SSH keys found.</CommandEmpty>
 
-              {filteredKeys.map((key) => {
+              {keys.map((key) => {
                 const isSelected = key.id === selectedKey?.id;
 
                 return (
@@ -122,9 +119,9 @@ export function RootSSHKeySelect({
                         <KeyRoundIcon className="size-4 flex-none text-grey !relative top-0.5" />
                         <span className="inline-flex flex-col items-start">
                           <span>{key.name}</span>
-                          <span className="text-grey text-xs font-mono truncate">
+                          <p className="text-grey text-xs font-mono truncate">
                             {key.fingerprint?.toLowerCase()}
-                          </span>
+                          </p>
                         </span>
                       </span>
 
