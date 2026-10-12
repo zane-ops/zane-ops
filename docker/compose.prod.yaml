@@ -31,7 +31,7 @@ x-backend-vars: &env-vars
   MAXMIND_DB_PATH: /app/GeoLite2-Country.mmdb
 
 x-internal-envs: &internal-envs
-  API_HOST: zane.api.zaneops.internal:8000
+  API_HOST: zane.api.zaneops.internal:80
   DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
   REDIS_HOST: zane.valkey
   REDIS_PORT: 6379
@@ -74,6 +74,7 @@ services:
       - caddy-config-store:/config
     environment:
       <<: *internal-envs
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
       CADDY_ADMIN: 0.0.0.0:2019
     networks:
       zane:
