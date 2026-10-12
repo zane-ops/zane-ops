@@ -80,6 +80,19 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
         # 1) Open a new local PTY
         master_fd, slave_fd = pty.openpty()
 
+        gateway = self.node.private_ip
+
+        # For backwards compatibility:
+        # When updating to `v2`, the default IP might be `127.0.0.1`
+        # in that case, to still make the terminal work, we will use the host bridge
+        if self.node.is_initial_install_server and gateway == "127.0.0.1":
+            if settings.ENVIRONMENT == settings.PRODUCTION_ENV:
+                docker_bridge_network = self.docker_client.networks.get("bridge")
+                gateway = docker_bridge_network.attrs["IPAM"]["Config"][0]["Gateway"]
+            else:
+                # we use `docker-compose` locally, so we can access the host using `host.docker.internal`
+                gateway = "host.docker.internal"
+
         # 2) Spawn `ssh -i <key-path> <user>@<gateway>` attached to that slave PTY
         cmd = [
             "ssh",
@@ -92,7 +105,7 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
             "StrictHostKeyChecking=no",
             "-o",
             "UserKnownHostsFile=/dev/null",
-            f"{self.ssh_key.user}@{self.node.private_ip}",
+            f"{self.ssh_key.user}@{gateway}",
             "TERM=xterm $SHELL",
         ]
 
