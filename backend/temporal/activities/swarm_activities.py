@@ -338,6 +338,7 @@ class SwarmNodeActivities:
                 svc.service_name: {
                     "message": svc.message,
                     "status": svc.status,
+                    "image": svc.image,
                 }
                 for svc in result.services.values()
             }
@@ -1083,11 +1084,13 @@ class SwarmNodeActivities:
                     service_name=service.name,
                     status=most_recent_swarm_task.Status.State.value,
                     message=most_recent_swarm_task.Status.Message,
+                    image=most_recent_swarm_task.image,
                 )
                 node_object.services = {  # type: ignore
                     svc.service_name: {
                         "message": svc.message,
                         "status": svc.status,
+                        "image": svc.image,
                     }
                     for svc in result.services.values()
                 }
@@ -1405,6 +1408,7 @@ class SwarmNodeActivities:
                     service_name=service.name,
                     status=task.Status.State.value,
                     message=task.Status.Message,
+                    image=task.image,
                 )
 
         return SwarmHealthcheckResult(nodes=nodes_statuses)
@@ -1455,6 +1459,7 @@ class SwarmNodeActivities:
                         svc.service_name: {
                             "message": svc.message,
                             "status": svc.status,
+                            "image": svc.image,
                         }
                         for svc in node_status.services.values()
                     }

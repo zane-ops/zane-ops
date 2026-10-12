@@ -6,6 +6,7 @@ from rest_framework import serializers
 from .models import SSHKey, SwarmNode
 from .validators import validate_unix_username
 from faker import Faker
+from zane_api.utils import DockerSwarmTaskState
 
 
 class SSHKeyFilterSet(django_filters.FilterSet):
@@ -250,8 +251,17 @@ class SwarmNodeSerializer(serializers.ModelSerializer):
         return fields
 
 
+class SwarmNodeServiceSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(
+        choices=[state.value for state in DockerSwarmTaskState]
+    )
+    message = serializers.CharField(allow_null=True)
+    image = serializers.CharField()
+
+
 class FullSwarmNodeSerializer(serializers.ModelSerializer):
     ssh_keys = SSHKeySerializer(many=True, read_only=True)
+    services = serializers.DictField(child=SwarmNodeServiceSerializer())
 
     def validate(self, attrs: dict):
         self.instance: SwarmNode | None

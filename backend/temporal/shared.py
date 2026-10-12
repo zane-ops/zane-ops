@@ -839,6 +839,7 @@ class SwarmNodeServiceHealthcheck:
     service_name: str
     status: str
     message: str
+    image: str
 
 
 @dataclass
