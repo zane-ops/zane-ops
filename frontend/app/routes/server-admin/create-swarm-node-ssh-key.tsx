@@ -16,9 +16,10 @@ export async function clientAction({
   const queryClient = getQueryClient();
   const formData = await request.formData();
 
+  const keyName = formData.get("name")?.toString();
   const userData = {
     user: formData.get("user")?.toString() ?? "",
-    name: formData.get("name")?.toString() ?? ""
+    name: !keyName ? undefined : keyName
   } satisfies RequestInput<"post", "/api/swarm/nodes/{id}/ssh-keys/">;
 
   const { error: errors, data } = await apiClient.POST(

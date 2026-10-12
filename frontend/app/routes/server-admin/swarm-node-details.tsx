@@ -651,7 +651,7 @@ function SSHKeyAddDialog({ serverId }: SSHKeyAddDialogProps) {
             method="post"
             action={href("/admin/servers/:serverId/ssh-keys", { serverId })}
             id="create-ssh-key-form"
-            className="flex flex-col gap-4 mb-5"
+            className="flex flex-col gap-6 mb-5"
           >
             <FieldSet
               errors={errors.user}
@@ -682,10 +682,14 @@ function SSHKeyAddDialog({ serverId }: SSHKeyAddDialogProps) {
             <FieldSet
               errors={errors.name}
               name="name"
-              required
               className="flex flex-col gap-1"
             >
-              <FieldSetLabel>Name</FieldSetLabel>
+              <FieldSetLabel>
+                Name{" "}
+                <span className="text-card-foreground">
+                  (leave empty to generate)
+                </span>
+              </FieldSetLabel>
               <FieldSetInput
                 placeholder="ex: my ssh key"
                 defaultValue={data?.userData?.name}

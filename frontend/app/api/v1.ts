@@ -3107,7 +3107,7 @@ export interface components {
     };
     CreateSSHKeyRequestRequest: {
       user: string;
-      name: string;
+      name?: string;
     };
     CreateSwarmNodeSSHKeyError: components["schemas"]["CreateSwarmNodeSSHKeyNonFieldErrorsErrorComponent"] | components["schemas"]["CreateSwarmNodeSSHKeyUserErrorComponent"] | components["schemas"]["CreateSwarmNodeSSHKeyNameErrorComponent"];
     CreateSwarmNodeSSHKeyErrorResponse400: components["schemas"]["CreateSwarmNodeSSHKeyValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -3123,11 +3123,10 @@ export interface components {
        * * `max_length` - max_length
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateSwarmNodeSSHKeyNonFieldErrorsErrorComponent: {

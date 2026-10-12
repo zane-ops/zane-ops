@@ -23725,7 +23725,6 @@ components:
           minLength: 1
           maxLength: 255
       required:
-      - name
       - user
     CreateSwarmNodeSSHKeyError:
       oneOf:
@@ -23762,7 +23761,6 @@ components:
           - max_length
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
@@ -23771,7 +23769,6 @@ components:
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string

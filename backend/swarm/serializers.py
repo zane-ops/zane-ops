@@ -1,8 +1,11 @@
+import time
+
 import django_filters
 from rest_framework import serializers
 
 from .models import SSHKey, SwarmNode
 from .validators import validate_unix_username
+from faker import Faker
 
 
 class SSHKeyFilterSet(django_filters.FilterSet):
@@ -15,7 +18,14 @@ class SSHKeyFilterSet(django_filters.FilterSet):
 
 class CreateSSHKeyRequestSerializer(serializers.Serializer):
     user = serializers.CharField(validators=[validate_unix_username])
-    name = serializers.CharField(max_length=255)
+    name = serializers.CharField(max_length=255, required=False)
+
+    def validate(self, attrs: dict):
+        fake = Faker()
+        Faker.seed(time.monotonic())
+        attrs["name"] = attrs.get("name", fake.slug()).lower()
+
+        return attrs
 
 
 IN_CLUSTER_STATUSES = [

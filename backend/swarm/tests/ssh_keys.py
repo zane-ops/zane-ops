@@ -45,6 +45,18 @@ class CreateSSHKeyForSwarmNodeViewTests(AuthAPITestCase):
         self.assertIn("public_key", data)
         self.assertNotIn("private_key", data)
 
+    def test_can_create_ssh_key_without_name(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("swarm:node.ssh_keys", kwargs={"id": self.node.id}),
+            data={"user": "root"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        data = response.json()
+        jprint(data)
+
+        self.assertIsNotNone(data["name"])
+
     def test_create_ssh_key_is_visible_in_node_details(self):
         self.loginUser()
         response = self.client.post(
