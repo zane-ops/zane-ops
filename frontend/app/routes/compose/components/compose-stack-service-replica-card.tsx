@@ -35,7 +35,6 @@ import {
 } from "~/components/ui/menubar";
 import {
   cn,
-  formattedDate,
   formattedTime,
   getDockerImageIconURL,
   mergeTimeAgoFormatterAndFormattedDate

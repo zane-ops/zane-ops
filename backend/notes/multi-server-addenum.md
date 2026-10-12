@@ -19,7 +19,6 @@
 - [x] Re-provisioning a node with a different role (e.g. worker → manager) makes it rejoin with a new swarm ID, and the old entry stays in `docker node ls` as `Down` — remove the old one
 - [x] `update_node_labels` overwrites all node labels, so labels a user added by hand get deleted — only add/update the ZaneOps labels
 
-### Later ->>
 - [x] Add an `UpdateSwarmNodeWorkflow` to change a node's role (`docker node promote/demote`) and availability (`docker node update --availability active|pause|drain`), only allowed on `ACTIVE`/paused/drained nodes — so the provision workflow only handles the first setup, and changing a role doesn't require removing and re-adding the node
 - [x] Add a scheduled check of node health (`docker node ls`) — nodes left in `PROVISIONING` are never re-checked, and we don't notice when a node goes `DOWN`
 - [x] Also wait for `zane-temporal-node-worker` and `zane-temporal-build-worker` in `wait_for_global_services_to_be_propagated` — today it only waits for the proxy and Vector (only expect the build worker on nodes with the `BUILD_SERVER` role)
@@ -34,9 +33,13 @@
   5. Start ZaneOps (`make deploy`)
   6. Run job to fix swarm state: `python manage.py fix_swarm_networking`
 
+
+### Later ->>
+
 - Compose Stacks services should have a node constraint with: zane.app-server=true so that they are only deployed to app servers (by default)
 - Check why compose stacks don't seem to run healthcheck correctly
 - The API endpoint that removes a node must first check if any service has a volume on that node, and block (or warn) — once the node is drained, these services can't start anywhere else (they stay `Pending`), and their data is lost when the node is removed. The management commands skip this check, they're only for testing.
 - The node removal endpoint/UI must warn if removing a manager would leave too few managers to keep the cluster working (quorum, see [§14 of the plan](multi-server-plan.md#sec-14)).
 - When removing a manager node: demote it to worker first, refuse to remove the main server (`is_self`) or the last manager
 - In the docs, we can only add servers with the same architecture as the main server, we need to explain that it's so that images & services work between nodes, because some images are single arch
+- We need to add `node_id` to compose service tasks, in `temporal/helpers/get_compose_stack_swarm_service_status` and in `compose/views/serializers/ComposeStackServiceTask`

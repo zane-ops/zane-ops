@@ -25616,7 +25616,9 @@ components:
           maximum: 65535
           minimum: 1
         services:
-          nullable: true
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/SwarmNodeService'
         status:
           $ref: '#/components/schemas/SwarmNodeStatusEnum'
         status_message:
@@ -35825,6 +35827,20 @@ components:
       required:
       - private_ip
       - swarm_role
+    SwarmNodeService:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ServiceTaskStatus'
+        message:
+          type: string
+          nullable: true
+        image:
+          type: string
+      required:
+      - image
+      - message
+      - status
     SwarmNodeStatusEnum:
       enum:
       - CREATED

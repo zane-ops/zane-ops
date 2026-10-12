@@ -3927,7 +3927,9 @@ export interface components {
       swarm_role: components["schemas"]["SwarmRoleEnum"];
       private_ip: string;
       ssh_port: number;
-      services: unknown;
+      services: {
+        [key: string]: components["schemas"]["SwarmNodeService"];
+      };
       status: components["schemas"]["SwarmNodeStatusEnum"];
       status_message: string | null;
       /** Format: date-time */
@@ -8664,6 +8666,11 @@ export interface components {
       private_ip: string;
       ssh_port?: number;
       cluster_roles?: components["schemas"]["ClusterRolesEnum"][];
+    };
+    SwarmNodeService: {
+      status: components["schemas"]["ServiceTaskStatus"];
+      message: string | null;
+      image: string;
     };
     /**
      * @description * `CREATED` - Created
