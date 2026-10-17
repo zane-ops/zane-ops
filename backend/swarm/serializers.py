@@ -257,6 +257,7 @@ class SwarmNodeServiceSerializer(serializers.Serializer):
     )
     message = serializers.CharField(allow_null=True)
     image = serializers.CharField()
+    updated_at = serializers.DateTimeField(allow_null=True, required=False)
 
 
 class FullSwarmNodeSerializer(serializers.ModelSerializer):

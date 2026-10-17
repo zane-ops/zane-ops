@@ -8671,6 +8671,8 @@ export interface components {
       status: components["schemas"]["ServiceTaskStatus"];
       message: string | null;
       image: string;
+      /** Format: date-time */
+      updated_at: string | null;
     };
     /**
      * @description * `CREATED` - Created

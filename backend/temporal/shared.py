@@ -840,6 +840,11 @@ class SwarmNodeServiceHealthcheck:
     status: str
     message: str
     image: str
+    updated_at: str
+
+    @property
+    def updated_at_as_datetime(self):
+        return datetime.fromisoformat(self.updated_at)
 
 
 @dataclass
