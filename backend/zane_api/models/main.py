@@ -811,13 +811,6 @@ class Service(BaseService):
 
     class Meta:
         constraints = [
-            models.CheckConstraint(
-                condition=models.Q(
-                    deployment_strategy="ANY_APP_SERVER",
-                    deployment_server__isnull=True,
-                ),
-                name="any_app_server_reset_server",
-            ),
             models.UniqueConstraint(
                 fields=["slug", "project", "environment"],
                 name="unique_slug_per_env_and_project",
@@ -2197,6 +2190,7 @@ class DeploymentChange(BaseDeploymentChange):
         PORTS = "ports", _("ports")
         RESOURCE_LIMITS = "resource_limits", _("resource limits")
         CONFIGS = "configs", _("configs")
+        DEPLOYMENT_STRATEGY = "deployment_strategy", _("deployment strategy")
 
     field = models.CharField(max_length=255, choices=ChangeField.choices)
     service = models.ForeignKey(

@@ -42,6 +42,7 @@ from .serializers import (
     DockerServiceDeployRequestSerializer,
     ResourceLimitChangeSerializer,
     SharedVolumeItemChangeSerializer,
+    DeploymentStrategyFieldChangeSerializer,
 )
 from ..dtos import (
     ConfigDto,
@@ -105,6 +106,7 @@ from ..permissions import (
     IsWorkspaceViewer,
     request_access,
 )
+from swarm.models import SwarmNode
 
 
 class CreateDockerServiceAPIView(APIView):
@@ -233,6 +235,7 @@ class RequestServiceChangesAPIView(APIView):
                 ConfigItemChangeSerializer,
                 GitSourceFieldChangeSerializer,
                 GitBuilderFieldChangeSerializer,
+                DeploymentStrategyFieldChangeSerializer,
             ],
             resource_type_field_name="field",
         ),
@@ -309,6 +312,7 @@ class RequestServiceChangesAPIView(APIView):
             DeploymentChange.ChangeField.RESOURCE_LIMITS: ResourceLimitChangeSerializer,
             DeploymentChange.ChangeField.CONFIGS: ConfigItemChangeSerializer,
             DeploymentChange.ChangeField.SHARED_VOLUMES: SharedVolumeItemChangeSerializer,
+            DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY: DeploymentStrategyFieldChangeSerializer,
         }
 
         request_serializer = DockerDeploymentFieldChangeRequestSerializer(
@@ -339,6 +343,32 @@ class RequestServiceChangesAPIView(APIView):
                         if new_value is not None and len(new_value) == 0:
                             new_value = None
                         old_value = getattr(service, field)
+                    case DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY:
+                        new_value = cast(dict, new_value)
+                        deployment_server_id: str | None = new_value.get(
+                            "deployment_server_id"
+                        )
+                        if deployment_server_id is not None:
+                            deployment_server = SwarmNode.objects.get(
+                                id=deployment_server_id
+                            )
+                            new_value["deployment_server"] = dict(
+                                id=deployment_server.id,
+                                hostname=deployment_server.hostname,
+                                swarm_node_id=deployment_server.swarm_node_id,
+                            )
+                            new_value.pop("deployment_server_id", None)
+                        old_value = dict(
+                            strategy=service.deployment_strategy,
+                            deployment_server=dict(
+                                id=service.deployment_server.id,
+                                hostname=service.deployment_server.hostname,
+                                swarm_node_id=service.deployment_server.swarm_node_id,
+                            )
+                            if service.deployment_server is not None
+                            else None,
+                        )
+
                     case DeploymentChange.ChangeField.SOURCE:
                         new_value = cast(dict, new_value)
                         if service.type == Service.ServiceType.DOCKER_REGISTRY:

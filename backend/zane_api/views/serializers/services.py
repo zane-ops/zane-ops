@@ -47,6 +47,7 @@ from .common import (
 
 from git_connectors.models import GitRepository
 from container_registry.models import SharedRegistryCredentials
+from swarm.models import SwarmNode
 
 # ==============================
 #    Docker services create    #
@@ -443,7 +444,9 @@ class BaseFieldChangeSerializer(serializers.Serializer):
 
 class URLItemChangeSerializer(BaseChangeItemSerializer):
     new_value = URLRequestSerializer(required=False)
-    field = serializers.ChoiceField(choices=["urls"], required=True)
+    field = serializers.ChoiceField(
+        choices=[DeploymentChange.ChangeField.URLS], required=True
+    )
 
     def validate(self, attrs: dict):
         super().validate(attrs)
@@ -511,7 +514,9 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
 
 class VolumeItemChangeSerializer(BaseChangeItemSerializer):
     new_value = VolumeRequestSerializer(required=False)
-    field = serializers.ChoiceField(choices=["volumes"], required=True)
+    field = serializers.ChoiceField(
+        choices=[DeploymentChange.ChangeField.VOLUMES], required=True
+    )
 
     def validate(self, attrs: dict):
         super().validate(attrs)
@@ -656,7 +661,9 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
 
 class SharedVolumeItemChangeSerializer(BaseChangeItemSerializer):
     new_value = SharedVolumeRequestSerializer(required=False)
-    field = serializers.ChoiceField(choices=["shared_volumes"], required=True)
+    field = serializers.ChoiceField(
+        choices=[DeploymentChange.ChangeField.SHARED_VOLUMES], required=True
+    )
 
     def validate(self, attrs: dict):
         super().validate(attrs)
@@ -728,7 +735,9 @@ class SharedVolumeItemChangeSerializer(BaseChangeItemSerializer):
 
 
 class ConfigItemChangeSerializer(BaseChangeItemSerializer):
-    field = serializers.ChoiceField(choices=["configs"], required=True)
+    field = serializers.ChoiceField(
+        choices=[DeploymentChange.ChangeField.CONFIGS], required=True
+    )
     new_value = ConfigRequestSerializer(required=False)
 
     def validate(self, attrs: dict):
@@ -787,7 +796,9 @@ class ConfigItemChangeSerializer(BaseChangeItemSerializer):
 
 class EnvItemChangeSerializer(BaseChangeItemSerializer):
     new_value = EnvRequestSerializer(required=False)
-    field = serializers.ChoiceField(choices=["env_variables"], required=True)
+    field = serializers.ChoiceField(
+        choices=[DeploymentChange.ChangeField.ENV_VARIABLES], required=True
+    )
 
     def validate(self, attrs: dict):
         super().validate(attrs)
@@ -830,7 +841,9 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
 
 
 class PortItemChangeSerializer(BaseChangeItemSerializer):
-    field = serializers.ChoiceField(choices=["ports"], required=True)
+    field = serializers.ChoiceField(
+        choices=[DeploymentChange.ChangeField.PORTS], required=True
+    )
     new_value = ServicePortsRequestSerializer(required=False)
 
     def validate(self, attrs: dict):
@@ -914,8 +927,44 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
 
 
 class ResourceLimitChangeSerializer(BaseFieldChangeSerializer):
-    field = serializers.ChoiceField(choices=["resource_limits"], required=True)
+    field = serializers.ChoiceField(
+        choices=[DeploymentChange.ChangeField.RESOURCE_LIMITS], required=True
+    )
     new_value = ResourceLimitsRequestSerializer(required=True, allow_null=True)
+
+
+class DeploymentStrategyRequestSerializer(serializers.Serializer):
+    strategy = serializers.ChoiceField(
+        choices=Service.DeploymentStrategy.choices, required=True
+    )
+    deployment_server_id = serializers.CharField(required=False)
+
+    def _get_workspace(self):
+        workspace: Workspace | None = self.context.get("workspace")
+        assert workspace is not None
+        return workspace
+
+    # def validate_deployment_server_id(self, server_id: str):
+    #     if not SwarmNode.objects.filter(
+    #         id=server_id,
+    #         cluster_roles__contains=[SwarmNode.ClusterRole.APP_SERVER],
+    #         swarm_node_id__isnull=False,
+    #     ).exists():
+    #         raise serializers.ValidationError(
+    #             f"An active server with the ID `{server_id}` doesn't exist in the ZaneOps cluster."
+    #         )
+    #     return server_id
+
+    def validate(self, attrs: dict):
+        # ...
+        return attrs
+
+
+class DeploymentStrategyFieldChangeSerializer(BaseFieldChangeSerializer):
+    field = serializers.ChoiceField(
+        choices=[DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY], required=True
+    )
+    new_value = DeploymentStrategyRequestSerializer(required=True)
 
 
 class DockerSourceRequestSerializer(serializers.Serializer):
@@ -971,7 +1020,9 @@ class DockerSourceRequestSerializer(serializers.Serializer):
 
 
 class DockerSourceFieldChangeSerializer(BaseFieldChangeSerializer):
-    field = serializers.ChoiceField(choices=["source"], required=True)
+    field = serializers.ChoiceField(
+        choices=[DeploymentChange.ChangeField.SOURCE], required=True
+    )
     new_value = DockerSourceRequestSerializer(required=True)
 
 
@@ -1066,7 +1117,9 @@ class GitSourceRequestSerializer(serializers.Serializer):
 
 
 class GitSourceFieldChangeSerializer(BaseFieldChangeSerializer):
-    field = serializers.ChoiceField(choices=["git_source"], required=True)
+    field = serializers.ChoiceField(
+        choices=[DeploymentChange.ChangeField.GIT_SOURCE], required=True
+    )
     new_value = GitSourceRequestSerializer(required=True)
 
 
@@ -1095,17 +1148,23 @@ class BuilderRequestSerializer(serializers.Serializer):
 
 
 class GitBuilderFieldChangeSerializer(BaseFieldChangeSerializer):
-    field = serializers.ChoiceField(choices=["builder"], required=True)
+    field = serializers.ChoiceField(
+        choices=[DeploymentChange.ChangeField.BUILDER], required=True
+    )
     new_value = BuilderRequestSerializer(required=True)
 
 
 class DockerCommandFieldChangeSerializer(BaseFieldChangeSerializer):
-    field = serializers.ChoiceField(choices=["command"], required=True)
+    field = serializers.ChoiceField(
+        choices=[DeploymentChange.ChangeField.COMMAND], required=True
+    )
     new_value = serializers.CharField(required=True, allow_null=True)
 
 
 class HealthcheckFieldChangeSerializer(BaseFieldChangeSerializer):
-    field = serializers.ChoiceField(choices=["healthcheck"], required=True)
+    field = serializers.ChoiceField(
+        choices=[DeploymentChange.ChangeField.HEALTHCHECK], required=True
+    )
     new_value = HealthCheckRequestSerializer(required=True, allow_null=True)
 
 
