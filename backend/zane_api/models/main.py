@@ -668,9 +668,9 @@ class Service(BaseService):
         # Pinned By Volume will be computed from the service volumes
         # PINNED_BY_VOLUME = "PINNED_BY_VOLUME", _("Pinned By Volume")
 
-    class DeploymentMode(models.TextChoices):
-        GLOBAL = "GLOBAL", _("Global Service")
-        REPLICATED = "REPLICATED", _("Replicated Service")
+    # class DeploymentMode(models.TextChoices):
+    #     GLOBAL = "GLOBAL", _("Global Service")
+    #     REPLICATED = "REPLICATED", _("Replicated Service")
 
     ID_PREFIX = "srv_dkr_"
     id = ShortUUIDField(
@@ -786,19 +786,38 @@ class Service(BaseService):
         default=DeploymentStrategy.ANY_APP_SERVER,
     )
 
-    replicas = models.PositiveIntegerField(default=1)
-    deployment_mode = models.CharField(
-        choices=DeploymentMode.choices,
-        default=DeploymentMode.REPLICATED,
-    )
+    # replicas = models.PositiveIntegerField(default=1)
+    # deployment_mode = models.CharField(
+    #     choices=DeploymentMode.choices,
+    #     default=DeploymentMode.REPLICATED,
+    # )
 
     def __str__(self):
         return (
             f"Service(slug={self.slug}, id={self.id}, environment={self.environment})"
         )
 
+    @property
+    def effective_deployment_server(self):
+        return (
+            None
+            if self.deployment_strategy == self.DeploymentStrategy.ANY_APP_SERVER
+            else (
+                self.deployment_server
+                or self.environment.deployment_server
+                or self.environment.project.deployment_server
+            )
+        )  # None -> no constraint
+
     class Meta:
         constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    deployment_strategy="ANY_APP_SERVER",
+                    deployment_server__isnull=True,
+                ),
+                name="any_app_server_reset_server",
+            ),
             models.UniqueConstraint(
                 fields=["slug", "project", "environment"],
                 name="unique_slug_per_env_and_project",
