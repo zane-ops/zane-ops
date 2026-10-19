@@ -937,26 +937,40 @@ class DeploymentStrategyRequestSerializer(serializers.Serializer):
     strategy = serializers.ChoiceField(
         choices=Service.DeploymentStrategy.choices, required=True
     )
-    deployment_server_id = serializers.CharField(required=False)
+    deployment_server_id = serializers.CharField(allow_null=True)
 
     def _get_workspace(self):
         workspace: Workspace | None = self.context.get("workspace")
         assert workspace is not None
         return workspace
 
-    def validate_deployment_server_id(self, server_id: str):
-        if not SwarmNode.objects.filter(
-            id=server_id,
-            cluster_roles__contains=[SwarmNode.ClusterRole.APP_SERVER],
-            swarm_node_id__isnull=False,
-        ).exists():
-            raise serializers.ValidationError(
-                f"An active app server with the ID `{server_id}` doesn't exist in the ZaneOps cluster."
-            )
+    def validate_deployment_server_id(self, server_id: str | None):
+        if server_id is not None:
+            if not SwarmNode.objects.filter(
+                id=server_id,
+                cluster_roles__contains=[SwarmNode.ClusterRole.APP_SERVER],
+                swarm_node_id__isnull=False,
+            ).exists():
+                raise serializers.ValidationError(
+                    f"An active app server with the ID `{server_id}` doesn't exist in the ZaneOps cluster."
+                )
         return server_id
 
     def validate(self, attrs: dict):
-        # ...
+        strategy = attrs["strategy"]
+        deployment_server_id = attrs["deployment_server_id"]
+        if (
+            strategy == Service.DeploymentStrategy.SPECIFIC_SERVER
+            and deployment_server_id is None
+        ):
+            raise serializers.ValidationError(
+                {
+                    "deployment_server_id": "The strategy `Specific Server` requires an existing server."
+                }
+            )
+        if strategy == Service.DeploymentStrategy.ANY_APP_SERVER:
+            attrs["deployment_server_id"] = None
+
         return attrs
 
 

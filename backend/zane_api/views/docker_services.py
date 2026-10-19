@@ -348,6 +348,8 @@ class RequestServiceChangesAPIView(APIView):
                         deployment_server_id: str | None = new_value.get(
                             "deployment_server_id"
                         )
+                        new_value.pop("deployment_server_id", None)
+
                         if deployment_server_id is not None:
                             deployment_server = SwarmNode.objects.get(
                                 id=deployment_server_id
@@ -357,7 +359,9 @@ class RequestServiceChangesAPIView(APIView):
                                 hostname=deployment_server.hostname,
                                 swarm_node_id=deployment_server.swarm_node_id,
                             )
-                            new_value.pop("deployment_server_id", None)
+                        else:
+                            new_value["deployment_server"] = None
+
                         old_value = dict(
                             strategy=service.deployment_strategy,
                             deployment_server=dict(

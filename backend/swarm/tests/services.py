@@ -41,7 +41,7 @@ class ServiceDeploymentViewTests(AuthAPITestCase):
             "type": "UPDATE",
             "new_value": {
                 "strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
-                "deployment_server_id": "doesnotexists",
+                "deployment_server_id": "doesnotexist",
             },
         }
 
@@ -166,6 +166,81 @@ class ServiceDeploymentViewTests(AuthAPITestCase):
                     "swarm_node_id": self.node.swarm_node_id,
                     "hostname": self.node.hostname,
                 },
+            },
+            change.new_value,
+        )
+
+    def test_validate_deployment_strategy_specific_require_server_id(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            "type": "UPDATE",
+            "new_value": {
+                "strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                "deployment_server_id": None,
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        jprint(response.json())
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "new_value.deployment_server_id")
+        )
+
+    def test_validate_deployment_strategy_any_ignores_server_id(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+        # Update to make sure the change is computed
+        service.deployment_strategy = Service.DeploymentStrategy.SPECIFIC_SERVER
+        service.deployment_server = self.main_node
+        service.save()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            "type": "UPDATE",
+            "new_value": {
+                "strategy": Service.DeploymentStrategy.ANY_APP_SERVER,
+                "deployment_server_id": self.node.id,
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        jprint(response.json())
+
+        self.assertEqual(1, service.unapplied_changes.count())
+        change: DeploymentChange = cast(
+            DeploymentChange,
+            DeploymentChange.objects.filter(
+                service__slug=service.slug,
+                field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            ).first(),
+        )
+        self.assertEqual(
+            {
+                "strategy": Service.DeploymentStrategy.ANY_APP_SERVER,
+                "deployment_server": None,
             },
             change.new_value,
         )
