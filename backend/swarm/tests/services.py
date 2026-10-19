@@ -33,6 +33,97 @@ class ServiceDeploymentViewTests(AuthAPITestCase):
             cluster_roles=[SwarmNode.ClusterRole.APP_SERVER],
         )
 
+    def test_validate_existing_swarm_node_id(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            "type": "UPDATE",
+            "new_value": {
+                "strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                "deployment_server_id": "doesnotexists",
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        jprint(response.json())
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "new_value.deployment_server_id")
+        )
+
+    def test_validate_server_is_active(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+        self.node.swarm_node_id = None
+        self.node.save()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            "type": "UPDATE",
+            "new_value": {
+                "strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                "deployment_server_id": self.node.id,
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        jprint(response.json())
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "new_value.deployment_server_id")
+        )
+
+    def test_validate_server_is_app_server(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+        self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]  # type: ignore
+        self.node.save()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            "type": "UPDATE",
+            "new_value": {
+                "strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                "deployment_server_id": self.node.id,
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        jprint(response.json())
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "new_value.deployment_server_id")
+        )
+
     def test_update_deployment_strategy_add_change_to_service(self):
         p, service = self.create_and_deploy_caddy_docker_service()
 

@@ -944,16 +944,16 @@ class DeploymentStrategyRequestSerializer(serializers.Serializer):
         assert workspace is not None
         return workspace
 
-    # def validate_deployment_server_id(self, server_id: str):
-    #     if not SwarmNode.objects.filter(
-    #         id=server_id,
-    #         cluster_roles__contains=[SwarmNode.ClusterRole.APP_SERVER],
-    #         swarm_node_id__isnull=False,
-    #     ).exists():
-    #         raise serializers.ValidationError(
-    #             f"An active server with the ID `{server_id}` doesn't exist in the ZaneOps cluster."
-    #         )
-    #     return server_id
+    def validate_deployment_server_id(self, server_id: str):
+        if not SwarmNode.objects.filter(
+            id=server_id,
+            cluster_roles__contains=[SwarmNode.ClusterRole.APP_SERVER],
+            swarm_node_id__isnull=False,
+        ).exists():
+            raise serializers.ValidationError(
+                f"An active app server with the ID `{server_id}` doesn't exist in the ZaneOps cluster."
+            )
+        return server_id
 
     def validate(self, attrs: dict):
         # ...
