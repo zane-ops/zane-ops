@@ -58,6 +58,7 @@ from django.contrib.auth import get_user_model
 
 if TYPE_CHECKING:
     from container_registry.models import SharedRegistryCredentials  # noqa: F401
+    from swarm.models import SwarmNode  # noqa: F401
     from compose.models import ComposeStack
     from django.db.models.manager import RelatedManager
 
@@ -409,6 +410,12 @@ class Project(TimestampedModel):
     )
     description = models.TextField(blank=True, null=True)
 
+    default_deployment_server: models.ForeignKey["SwarmNode"] = models.ForeignKey(
+        to="swarm.SwarmNode",
+        on_delete=models.SET_NULL,
+        null=True,
+    )
+
     @property
     def production_env(self):
         return self.environments.get(name=Environment.PRODUCTION_ENV_NAME)
@@ -655,6 +662,16 @@ class Service(BaseService):
         NIXPACKS = "NIXPACKS", _("Nixpacks")
         RAILPACK = "RAILPACK", _("Railpack")
 
+    class DeploymentStrategy(models.TextChoices):
+        ANY_APP_SERVER = "ANY_APP_SERVER", _("Any App Server")
+        SPECIFIC_SERVER = "SPECIFIC_SERVER", _("Specific Server")
+        # Pinned By Volume will be computed from the service volumes
+        # PINNED_BY_VOLUME = "PINNED_BY_VOLUME", _("Pinned By Volume")
+
+    class DeploymentMode(models.TextChoices):
+        GLOBAL = "GLOBAL", _("Global Service")
+        REPLICATED = "REPLICATED", _("Replicated Service")
+
     ID_PREFIX = "srv_dkr_"
     id = ShortUUIDField(
         length=11,
@@ -757,6 +774,23 @@ class Service(BaseService):
     #    "index_page": "index.html",
     #    "generated_caddyfile": None, <-- cannot pass this -> send to the user though
     # }
+
+    deployment_server: models.ForeignKey["SwarmNode"] = models.ForeignKey(
+        to="swarm.SwarmNode",
+        on_delete=models.SET_NULL,
+        null=True,
+    )
+
+    deployment_strategy = models.CharField(
+        choices=DeploymentStrategy.choices,
+        default=DeploymentStrategy.ANY_APP_SERVER,
+    )
+
+    replicas = models.PositiveIntegerField(default=1)
+    deployment_mode = models.CharField(
+        choices=DeploymentMode.choices,
+        default=DeploymentMode.REPLICATED,
+    )
 
     def __str__(self):
         return (
@@ -2391,6 +2425,12 @@ class Environment(TimestampedModel):
         null=True,
         on_delete=models.SET_NULL,
         related_name="environment",
+    )
+
+    default_deployment_server: models.ForeignKey["SwarmNode"] = models.ForeignKey(
+        to="swarm.SwarmNode",
+        on_delete=models.SET_NULL,
+        null=True,
     )
 
     def __str__(self):
