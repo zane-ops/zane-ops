@@ -934,7 +934,7 @@ class ResourceLimitChangeSerializer(BaseFieldChangeSerializer):
 
 
 class DeploymentStrategyRequestSerializer(serializers.Serializer):
-    strategy = serializers.ChoiceField(
+    deployment_strategy = serializers.ChoiceField(
         choices=Service.DeploymentStrategy.choices, required=True
     )
     deployment_server_id = serializers.CharField(allow_null=True)
@@ -957,7 +957,7 @@ class DeploymentStrategyRequestSerializer(serializers.Serializer):
         return server_id
 
     def validate(self, attrs: dict):
-        strategy = attrs["strategy"]
+        strategy = attrs["deployment_strategy"]
         deployment_server_id = attrs["deployment_server_id"]
         if (
             strategy == Service.DeploymentStrategy.SPECIFIC_SERVER
