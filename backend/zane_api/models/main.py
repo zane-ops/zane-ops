@@ -1352,10 +1352,37 @@ class Service(BaseService):
     def apply_pending_changes(self, deployment: "Deployment"):
         from container_registry.models import SharedRegistryCredentials
 
+        has_volume_changes = self.unapplied_changes.filter(
+            field=DeploymentChange.ChangeField.VOLUMES
+        ).exists()
+        has_deployment_strategy_changes = self.unapplied_changes.filter(
+            field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            new_value__deployment_strategy=self.DeploymentStrategy.SPECIFIC_SERVER,
+        ).exists()
+
+        if (
+            self.deployment_strategy != self.DeploymentStrategy.SPECIFIC_SERVER
+            and has_volume_changes
+            and not has_deployment_strategy_changes
+        ):
+            self.add_change(
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                )
+            )
+
         for change in self.unapplied_changes:
             match (change.field, self.type):
                 case DeploymentChange.ChangeField.COMMAND, __:
                     setattr(self, change.field, change.new_value)
+                case DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY, __:
+                    self.deployment_strategy = change.new_value["deployment_strategy"]
+                    deployment_server = change.new_value.get("deployment_server")
+                    self.deployment_server_id = (
+                        deployment_server["id"]
+                        if deployment_server is not None
+                        else None
+                    )
                 case (
                     DeploymentChange.ChangeField.SOURCE,
                     Service.ServiceType.DOCKER_REGISTRY,

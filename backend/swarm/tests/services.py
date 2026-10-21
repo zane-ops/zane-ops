@@ -332,6 +332,11 @@ class ServiceDeploymentViewTests(AuthAPITestCase):
 
         service.refresh_from_db()
 
+        self.assertIsNotNone(
+            service.changes.filter(
+                field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY, applied=True
+            )
+        )
         self.assertEqual(
             Service.DeploymentStrategy.SPECIFIC_SERVER, service.deployment_strategy
         )
