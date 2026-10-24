@@ -136,6 +136,9 @@ services:
       - SERVICES=history,matching,frontend,worker
       - BIND_ON_IP=0.0.0.0
       - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/config/dynamicconfig/production-sql.yaml
+      # Go soft memory limit, keep it ~80% of the memory limit below so the GC
+      # reclaims memory before the container gets OOM-killed
+      - GOMEMLIMIT=${TEMPORAL_SERVER_GOMEMLIMIT:-800MiB}
     image: temporalio/server:1.32.0
     volumes:
       - "${ZANE_APP_DIRECTORY:-/var/www/zaneops}/temporalio/config/dynamicconfig/production-sql.yaml:/etc/temporal/config/dynamicconfig/production-sql.yaml"
@@ -158,7 +161,7 @@ services:
       resources:
         limits:
           cpus: "0.5"
-          memory: 500M
+          memory: ${TEMPORAL_SERVER_MEMORY_LIMIT:-1G}
     networks:
       zane:
         aliases:
