@@ -524,7 +524,11 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
         change_type = attrs["type"]
         new_value = attrs.get("new_value") or {}
         current_volume: Volume | None = None
-        if change_type in ["DELETE", "UPDATE"]:
+
+        if change_type in [
+            DeploymentChange.ChangeType.UPDATE,
+            DeploymentChange.ChangeType.DELETE,
+        ]:
             item_id = attrs["item_id"]
 
             try:
@@ -567,6 +571,18 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                     )
 
         snapshot = compute_snapshot_including_change(service, attrs)
+
+        # validate that volumes require deployment strategy to be `specific`
+        if (
+            change_type == DeploymentChange.ChangeType.ADD
+            and snapshot.deployment_strategy
+            == Service.DeploymentStrategy.ANY_DEPLOY_SERVER
+        ):
+            raise serializers.ValidationError(
+                {
+                    "new_value": "Volumes must stay on a single server. Switch this service to the `Specific Server` deployment strategy before adding a volume."
+                }
+            )
 
         # validate double container paths
         volumes_with_same_container_path = list(
@@ -979,6 +995,22 @@ class DeploymentStrategyFieldChangeSerializer(BaseFieldChangeSerializer):
         choices=[DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY], required=True
     )
     new_value = DeploymentStrategyRequestSerializer(required=True)
+
+    def validate(self, attrs: dict):
+        service = self.get_service()
+
+        snapshot = compute_snapshot_including_change(service, attrs)
+
+        if snapshot.deployment_strategy == Service.DeploymentStrategy.ANY_DEPLOY_SERVER:
+            if len(snapshot.volumes) > 0:
+                raise serializers.ValidationError(
+                    {
+                        "new_value": {
+                            "deployment_strategy": "This service has volumes, which must stay on a single server. Use the `Specific Server` strategy instead."
+                        }
+                    }
+                )
+        return super().validate(attrs)
 
 
 class DockerSourceRequestSerializer(serializers.Serializer):

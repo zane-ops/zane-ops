@@ -257,7 +257,19 @@ class ServiceDeploymentViewTests(AuthAPITestCase):
                         "container_path": "/data",
                         "mode": Volume.VolumeMode.READ_WRITE,
                     },
-                )
+                ),
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                        "deployment_server": {
+                            "id": self.node.id,
+                            "swarm_node_id": self.node.swarm_node_id,
+                            "hostname": self.node.hostname,
+                        },
+                    },
+                ),
             ]
         )
         self.assertEqual(
@@ -285,13 +297,13 @@ class ServiceDeploymentViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertIsNotNone(
             self.get_error_from_response(response, "new_value.deployment_strategy")
         )
 
-    def test_service_with_volume_also_add_deployment_strategy_change_when_applied(self):
+    def test_cannot_add_volume_change_if_deployment_strategy_is_any_app_server(self):
         p, service = self.create_redis_docker_service()
         changes_payload = {
             "field": DeploymentChange.ChangeField.VOLUMES,
@@ -314,33 +326,15 @@ class ServiceDeploymentViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        # Deploy service
-        response = self.client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
         jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-        service.refresh_from_db()
-
-        self.assertIsNotNone(
-            service.changes.filter(
-                field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY, applied=True
-            )
-        )
         self.assertEqual(
-            Service.DeploymentStrategy.SPECIFIC_SERVER, service.deployment_strategy
+            0,
+            service.changes.filter(
+                field=DeploymentChange.ChangeField.VOLUMES,
+            ).count(),
         )
-        self.assertIsNotNone(service.deployment_server)
 
     def test_apply_deployment_strategy_change_to_service(self):
         p, service = self.create_caddy_docker_service()

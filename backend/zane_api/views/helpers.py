@@ -93,6 +93,21 @@ def apply_changes_to_snapshot(
                     if change.new_value is not None
                     else None
                 )
+            case DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY:
+                change.new_value = cast(dict, change.new_value)
+                service_snapshot.deployment_strategy = change.new_value[
+                    "deployment_strategy"
+                ]
+
+                # New value may have `deployment_server_id` as a string or `deployment_server` directly
+                server_id: str | None = None
+                if change.new_value.get("deployment_server") is not None:
+                    server_id = change.new_value.get("deployment_server", {}).get("id")
+                else:
+                    server_id = change.new_value.get("deployment_server_id")
+
+                service_snapshot.deployment_server_id = server_id
+
             case DeploymentChange.ChangeField.SOURCE:
                 change.new_value = cast(dict, change.new_value)
                 service_snapshot.image = change.new_value["image"]

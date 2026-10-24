@@ -532,6 +532,12 @@ class ServiceSnapshot:
     # git app
     git_app: Optional[GitAppDto] = None
 
+    # deployment strategy
+    deployment_strategy: Literal["ANY_DEPLOY_SERVER", "SPECIFIC_SERVER"] = (
+        "ANY_DEPLOY_SERVER"
+    )
+    deployment_server_id: str | None = None
+
     @property
     def http_ports(self) -> List[PortConfigurationDto]:
         return [
@@ -671,6 +677,8 @@ class ServiceSnapshot:
             slug=data["slug"],
             network_alias=data["network_alias"],
             global_network_alias=data["global_network_alias"],
+            deployment_strategy=data.get("deployment_strategy", "ANY_DEPLOY_SERVER"),
+            deployment_server_id=data.get("deployment_server_id"),
         )
 
     def has_duplicate_volumes(self) -> bool:
