@@ -471,7 +471,7 @@ class ServiceDeploymentViewTests(AuthAPITestCase):
                 },
             ),
         )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
         jprint(response.json())
 
         self.assertEqual(
@@ -524,12 +524,125 @@ class ServiceDeploymentViewTests(AuthAPITestCase):
                 },
             ),
         )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
         jprint(response.json())
 
         self.assertEqual(
             1,
             service.changes.filter(
                 field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            ).count(),
+        )
+
+    def test_can_remove_deployment_strategy_change_if_service_has_no_volumes(
+        self,
+    ):
+        p, service = self.create_redis_docker_service()
+
+        changes = DeploymentChange.objects.bulk_create(
+            [
+                DeploymentChange(
+                    service=service,
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                        "deployment_server": {
+                            "id": self.node.id,
+                            "swarm_node_id": self.node.swarm_node_id,
+                        },
+                    },
+                ),
+            ]
+        )
+
+        # Remoce changes
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.cancel_service_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                    "change_id": changes[0].id,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(
+            0,
+            service.changes.filter(
+                field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            ).count(),
+        )
+
+    def test_cannot_cancel_volume_delete_if_service_deployment_strategy_is_any_deploy_server(
+        self,
+    ):
+        p, service = self.create_and_deploy_redis_docker_service(
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "container_path": "/data",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                    },
+                ),
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                        "deployment_server": {
+                            "id": self.node.id,
+                            "swarm_node_id": self.node.swarm_node_id,
+                        },
+                    },
+                ),
+            ]
+        )
+        volume = cast(Volume, service.volumes.first())
+
+        volume_change, _ = DeploymentChange.objects.bulk_create(
+            [
+                DeploymentChange(
+                    service=service,
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.DELETE,
+                    item_id=volume.id,
+                ),
+                DeploymentChange(
+                    service=service,
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.ANY_DEPLOY_SERVER,
+                        "deployment_server": None,
+                    },
+                ),
+            ]
+        )
+
+        # Cancelling the volume deletion would leave a volume on an unpinned service
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.cancel_service_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                    "change_id": volume_change.id,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(
+            1,
+            service.unapplied_changes.filter(
+                field=DeploymentChange.ChangeField.VOLUMES,
+                type=DeploymentChange.ChangeType.DELETE,
             ).count(),
         )

@@ -824,6 +824,14 @@ class CancelServiceChangesAPIView(APIView):
         else:
             snapshot = compute_snapshot_excluding_change(service, change_id=change_id)
             if (
+                len(snapshot.volumes) > 0
+                and snapshot.deployment_strategy
+                == Service.DeploymentStrategy.ANY_DEPLOY_SERVER
+            ):
+                raise ResourceConflict(
+                    detail="Cannot revert this change because the service would have volumes without being pinned to a single server. Remove the volumes or keep the `Specific Server` deployment strategy."
+                )
+            if (
                 service.type == Service.ServiceType.DOCKER_REGISTRY
                 and snapshot.image is None
             ):
