@@ -16,6 +16,7 @@ from container_registry.serializers import (
     SharedRegistryCredentialsListCreateSerializer,
 )
 from .permissions import has_min_role
+from swarm.serializers import SimpleSwarmNodeSerializer
 
 
 class ErrorCode409Enum(TextChoices):
@@ -647,6 +648,11 @@ class ServiceSerializer(serializers.ModelSerializer):
         allow_null=True
     )
     shared_volumes = SharedVolumeSerializer(read_only=True, many=True, default=[])
+    deployment_strategy = serializers.ChoiceField(
+        choices=models.Service.DeploymentStrategy.choices,
+        default=models.Service.DeploymentStrategy.ANY_DEPLOY_SERVER,
+    )
+    deployment_server = SimpleSwarmNodeSerializer(allow_null=True)
 
     def to_representation(self, instance: models.Service):
         data = dict(super().to_representation(instance))
@@ -721,6 +727,8 @@ class ServiceSerializer(serializers.ModelSerializer):
             "pr_preview_envs_enabled",
             "container_registry_credentials",
             "shared_volumes",
+            "deployment_strategy",
+            "deployment_server",
         ]
 
 

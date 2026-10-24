@@ -703,7 +703,7 @@ class ComposeSpecProcessor:
 
             # Inject safe default placement constraints
             # All services should be pinned to nodes with `zane.app-server` label
-            app_server_constraint = f"node.labels.{settings.APP_SERVER_LABEL}==true"
+            app_server_constraint = f"node.labels.{settings.DEPLOY_SERVER_LABEL}==true"
             placement_constraints: set[str] = set(
                 service.deploy.get("placement", {}).get("constraints", [])
             )

@@ -29,7 +29,7 @@ class SwarmNode(TimestampedModel):
         # Can this run builds ?
         BUILD_SERVER = "BUILD_SERVER", "Build Server"
         # Can this run user defined apps ?
-        APP_SERVER = "APP_SERVER", "App Server"
+        DEPLOY_SERVER = "DEPLOY_SERVER", "Deploy Server"
 
     class Status(models.TextChoices):
         # Not in the cluster yet

@@ -19658,11 +19658,11 @@ components:
     ClusterRolesEnum:
       enum:
       - BUILD_SERVER
-      - APP_SERVER
+      - DEPLOY_SERVER
       type: string
       description: |-
         * `BUILD_SERVER` - Build Server
-        * `APP_SERVER` - App Server
+        * `DEPLOY_SERVER` - Deploy Server
     ComposeConfigVersion:
       type: object
       properties:
@@ -24505,6 +24505,7 @@ components:
       - ports
       - resource_limits
       - configs
+      - deployment_strategy
       type: string
       description: |-
         * `source` - source
@@ -24519,6 +24520,7 @@ components:
         * `ports` - ports
         * `resource_limits` - resource limits
         * `configs` - configs
+        * `deployment_strategy` - deployment strategy
     DeploymentChangeRequest:
       type: object
       properties:
@@ -24556,10 +24558,11 @@ components:
       - $ref: '#/components/schemas/ConfigItemChangeRequest'
       - $ref: '#/components/schemas/GitSourceFieldChangeRequest'
       - $ref: '#/components/schemas/GitBuilderFieldChangeRequest'
+      - $ref: '#/components/schemas/DeploymentStrategyFieldChangeRequest'
       discriminator:
         propertyName: field
         mapping:
-          null: '#/components/schemas/GitBuilderFieldChangeRequest'
+          null: '#/components/schemas/DeploymentStrategyFieldChangeRequest'
     DeploymentChangeTypeEnum:
       enum:
       - UPDATE
@@ -24831,6 +24834,45 @@ components:
         * `UNHEALTHY` - Unhealthy
         * `REMOVED` - Removed
         * `SLEEPING` - Sleeping
+    DeploymentStrategyEnum:
+      enum:
+      - ANY_DEPLOY_SERVER
+      - SPECIFIC_SERVER
+      type: string
+      description: |-
+        * `ANY_DEPLOY_SERVER` - Any Deploy Server
+        * `SPECIFIC_SERVER` - Specific Server
+    DeploymentStrategyFieldChangeFieldEnum:
+      enum:
+      - deployment_strategy
+      type: string
+      description: '* `deployment_strategy` - deployment_strategy'
+    DeploymentStrategyFieldChangeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/FieldChangeTypeEnum'
+          default: UPDATE
+        new_value:
+          $ref: '#/components/schemas/DeploymentStrategyRequestRequest'
+        field:
+          $ref: '#/components/schemas/DeploymentStrategyFieldChangeFieldEnum'
+      required:
+      - field
+      - new_value
+    DeploymentStrategyRequestRequest:
+      type: object
+      properties:
+        deployment_strategy:
+          $ref: '#/components/schemas/DeploymentStrategyEnum'
+        deployment_server_id:
+          type: string
+          nullable: true
+          minLength: 1
+      required:
+      - deployment_server_id
+      - deployment_strategy
     DeprovisionSwarmNodeError:
       oneOf:
       - $ref: '#/components/schemas/DeprovisionSwarmNodeNonFieldErrorsErrorComponent'
@@ -32621,6 +32663,8 @@ components:
       - $ref: '#/components/schemas/RequestServiceChangesNewValueCustomInstallCommandErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueCustomBuildCommandErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueCustomStartCommandErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueDeploymentStrategyErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueDeploymentServerIdErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -32675,6 +32719,8 @@ components:
           new_value.custom_install_command: '#/components/schemas/RequestServiceChangesNewValueCustomInstallCommandErrorComponent'
           new_value.custom_build_command: '#/components/schemas/RequestServiceChangesNewValueCustomBuildCommandErrorComponent'
           new_value.custom_start_command: '#/components/schemas/RequestServiceChangesNewValueCustomStartCommandErrorComponent'
+          new_value.deployment_strategy: '#/components/schemas/RequestServiceChangesNewValueDeploymentStrategyErrorComponent'
+          new_value.deployment_server_id: '#/components/schemas/RequestServiceChangesNewValueDeploymentServerIdErrorComponent'
     RequestServiceChangesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RequestServiceChangesValidationError'
@@ -33140,6 +33186,58 @@ components:
             * `invalid` - invalid
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueDeploymentServerIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.deployment_server_id
+          type: string
+          description: '* `new_value.deployment_server_id` - new_value.deployment_server_id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueDeploymentStrategyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.deployment_strategy
+          type: string
+          description: '* `new_value.deployment_strategy` - new_value.deployment_strategy'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
@@ -35837,10 +35935,15 @@ components:
           nullable: true
         image:
           type: string
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
       required:
       - image
       - message
       - status
+      - updated_at
     SwarmNodeStatusEnum:
       enum:
       - CREATED
