@@ -791,6 +791,7 @@ class CancelServiceChangesAPIView(APIView):
                     "project",
                     "healthcheck",
                     "container_registry_credentials",
+                    "deployment_server",
                 )
                 .prefetch_related(
                     "shared_volumes",

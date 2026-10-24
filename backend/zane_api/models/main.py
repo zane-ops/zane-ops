@@ -898,6 +898,7 @@ class Service(BaseService):
                 "healthcheck",
                 "environment",
                 "git_app",
+                "deployment_server",
                 "git_app__github",
                 "git_app__gitlab",
             )
@@ -938,6 +939,7 @@ class Service(BaseService):
                 "project",
                 "healthcheck",
                 "environment",
+                "deployment_server",
                 "git_app",
                 "git_app__github",
                 "git_app__gitlab",
@@ -1016,6 +1018,7 @@ class Service(BaseService):
             )
             .select_related(
                 "project",
+                "deployment_server",
                 "healthcheck",
                 "environment",
                 "git_app",
@@ -1274,6 +1277,7 @@ class Service(BaseService):
             self.deployments.filter(is_current_production=True)
             .select_related(
                 "service",
+                "service__deployment_server",
                 "service__project",
                 "service__environment",
                 "service__healthcheck",
@@ -1297,6 +1301,7 @@ class Service(BaseService):
             self.deployments.filter(is_current_production=True)
             .select_related(
                 "service",
+                "service__deployment_server",
                 "service__project",
                 "service__healthcheck",
                 "service__environment",
@@ -1334,6 +1339,7 @@ class Service(BaseService):
             )
             .select_related(
                 "service",
+                "service__deployment_server",
                 "service__project",
                 "service__healthcheck",
                 "service__environment",
@@ -2516,6 +2522,7 @@ class Environment(TimestampedModel):
                     "healthcheck",
                     "project",
                     "environment",
+                    "deployment_server",
                 )
                 .prefetch_related(
                     "volumes",
@@ -2538,6 +2545,7 @@ class Environment(TimestampedModel):
                             "healthcheck",
                             "project",
                             "environment",
+                            "deployment_server",
                         )
                         .prefetch_related(
                             "volumes",
@@ -2566,6 +2574,7 @@ class Environment(TimestampedModel):
                             "healthcheck",
                             "project",
                             "environment",
+                            "deployment_server",
                         )
                         .prefetch_related(
                             "volumes",
@@ -2667,9 +2676,18 @@ class Environment(TimestampedModel):
 
         docker_service_list = (
             Service.objects.filter(Q(project=self.project) & Q(environment=self))
-            .select_related("project", "healthcheck", "environment")
+            .select_related(
+                "project",
+                "healthcheck",
+                "environment",
+                "deployment_server",
+            )
             .prefetch_related(
-                "volumes", "ports", "urls", "env_variables", "deployments"
+                "volumes",
+                "ports",
+                "urls",
+                "env_variables",
+                "deployments",
             )
         )
         id_list = []
