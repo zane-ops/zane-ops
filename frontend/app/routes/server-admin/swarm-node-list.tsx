@@ -297,16 +297,16 @@ export function ServerCard({
             <span className="w-px bg-muted h-3" />
 
             <div className="flex items-center gap-1">
-              {cluster_roles.includes("APP_SERVER") && (
+              {cluster_roles.includes("DEPLOY_SERVER") && (
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
                     <Code className="inline-flex items-center gap-1 cursor-help decoration-1 decoration-wavy hover:underline">
-                      app server
+                      deploy server
                     </Code>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-64">
                     <span className="dark:text-card-foreground text-grey">
-                      App server:
+                      Deploy server:
                     </span>{" "}
                     your services can be deployed and run on this server.
                   </TooltipContent>

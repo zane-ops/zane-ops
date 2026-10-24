@@ -26,6 +26,7 @@ import {
   LoaderIcon,
   MessageCircleCode,
   RocketIcon,
+  RouteIcon,
   TagIcon,
   TerminalIcon,
   TrendingUpIcon,
@@ -183,7 +184,8 @@ export default function DeploymentDetailsPage({
     urls: GlobeIcon,
     resource_limits: HourglassIcon,
     healthcheck: ActivityIcon,
-    configs: FileSliders
+    configs: FileSliders,
+    deployment_strategy: RouteIcon
   };
   const [hasCopied, startTransition] = React.useTransition();
 
