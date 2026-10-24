@@ -397,6 +397,7 @@ export default function EnvironmentServiceListPage({
               updatedAt={relativeTimeFormatter(service.updated_at)}
               selected={selectedServiceIds.includes(service.id)}
               lastCommitMessage={service.last_commit_message}
+              volumeNumber={service.volume_number}
               url={service.url}
               git_provider={service.git_provider}
               onToggleSelect={(id) => {
