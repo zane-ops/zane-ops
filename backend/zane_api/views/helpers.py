@@ -22,12 +22,14 @@ from ..dtos import (
     StaticDirectoryBuilderOptions,
     NixpacksBuilderOptions,
     SharedVolumeDto,
+    DeploymentServerDto,
 )
 from ..models import Service, DeploymentChange
 from ..serializers import ServiceSerializer
 from temporal.helpers import generate_caddyfile_for_static_website
 from copy import deepcopy
 from ..utils import generate_random_chars
+from swarm.models import SwarmNode
 
 
 def build_pending_changeset_with_extra(service: Service, change: dict | None = None):
@@ -100,13 +102,22 @@ def apply_changes_to_snapshot(
                 ]
 
                 # New value may have `deployment_server_id` as a string or `deployment_server` directly
-                server_id: str | None = None
                 if change.new_value.get("deployment_server") is not None:
-                    server_id = change.new_value.get("deployment_server", {}).get("id")
+                    service_snapshot.deployment_server = DeploymentServerDto.from_dict(
+                        change.new_value["deployment_server"]
+                    )
+                elif change.new_value.get("deployment_server_id") is not None:
+                    server_id = change.new_value["deployment_server_id"]
+                    deploy_server = SwarmNode.objects.filter(
+                        id=server_id, swarm_node_id__isnull=False
+                    ).first()
+                    if deploy_server is not None:
+                        service_snapshot.deployment_server = DeploymentServerDto(
+                            id=deploy_server.id,
+                            swarm_node_id=cast(str, deploy_server.swarm_node_id),
+                        )
                 else:
-                    server_id = change.new_value.get("deployment_server_id")
-
-                service_snapshot.deployment_server_id = server_id
+                    service_snapshot.deployment_server = None
 
             case DeploymentChange.ChangeField.SOURCE:
                 change.new_value = cast(dict, change.new_value)

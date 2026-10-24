@@ -356,7 +356,6 @@ class RequestServiceChangesAPIView(APIView):
                             )
                             new_value["deployment_server"] = dict(
                                 id=deployment_server.id,
-                                hostname=deployment_server.hostname,
                                 swarm_node_id=deployment_server.swarm_node_id,
                             )
                         else:
@@ -366,7 +365,6 @@ class RequestServiceChangesAPIView(APIView):
                             strategy=service.deployment_strategy,
                             deployment_server=dict(
                                 id=service.deployment_server.id,
-                                hostname=service.deployment_server.hostname,
                                 swarm_node_id=service.deployment_server.swarm_node_id,
                             )
                             if service.deployment_server is not None

@@ -203,6 +203,15 @@ class SSHKeySerializer(serializers.ModelSerializer):
         ]
 
 
+class SimpleSwarmNodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SwarmNode
+        fields = [
+            "id",
+            "swarm_node_id",
+        ]
+
+
 class SwarmNodeSerializer(serializers.ModelSerializer):
     def validate(self, attrs: dict):
         self.instance: SwarmNode | None
