@@ -948,7 +948,7 @@ class DeploymentStrategyRequestSerializer(serializers.Serializer):
         if server_id is not None:
             if not SwarmNode.objects.filter(
                 id=server_id,
-                cluster_roles__contains=[SwarmNode.ClusterRole.APP_SERVER],
+                cluster_roles__contains=[SwarmNode.ClusterRole.DEPLOY_SERVER],
                 swarm_node_id__isnull=False,
             ).exists():
                 raise serializers.ValidationError(
@@ -968,7 +968,7 @@ class DeploymentStrategyRequestSerializer(serializers.Serializer):
                     "deployment_server_id": "The strategy `Specific Server` requires an existing server."
                 }
             )
-        if strategy == Service.DeploymentStrategy.ANY_APP_SERVER:
+        if strategy == Service.DeploymentStrategy.ANY_DEPLOY_SERVER:
             attrs["deployment_server_id"] = None
 
         return attrs

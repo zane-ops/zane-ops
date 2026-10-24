@@ -912,8 +912,8 @@ class SwarmNodeActivities:
             new_spec = deepcopy(original_spec)
 
             labels = new_spec.get("Labels", {})
-            if SwarmNode.ClusterRole.APP_SERVER in node.cluster_roles:
-                labels[settings.APP_SERVER_LABEL] = "true"
+            if SwarmNode.ClusterRole.DEPLOY_SERVER in node.cluster_roles:
+                labels[settings.DEPLOY_SERVER_LABEL] = "true"
             if SwarmNode.ClusterRole.BUILD_SERVER in node.cluster_roles:
                 labels[settings.BUILD_SERVER_LABEL] = "true"
 
@@ -967,11 +967,11 @@ class SwarmNodeActivities:
             labels: dict = new_spec.get("Labels", {})
 
             # Remove labels first before readding
-            labels.pop(settings.APP_SERVER_LABEL, None)
+            labels.pop(settings.DEPLOY_SERVER_LABEL, None)
             labels.pop(settings.BUILD_SERVER_LABEL, None)
 
-            if SwarmNode.ClusterRole.APP_SERVER in node.cluster_roles:
-                labels[settings.APP_SERVER_LABEL] = "true"
+            if SwarmNode.ClusterRole.DEPLOY_SERVER in node.cluster_roles:
+                labels[settings.DEPLOY_SERVER_LABEL] = "true"
             if SwarmNode.ClusterRole.BUILD_SERVER in node.cluster_roles:
                 labels[settings.BUILD_SERVER_LABEL] = "true"
 
@@ -1204,7 +1204,7 @@ class SwarmNodeActivities:
 
         new_spec = deepcopy(swarm_node.attrs["Spec"])
         # Removing ZaneOps labels
-        cast(dict, new_spec["Labels"]).pop(settings.APP_SERVER_LABEL, None)
+        cast(dict, new_spec["Labels"]).pop(settings.DEPLOY_SERVER_LABEL, None)
         cast(dict, new_spec["Labels"]).pop(settings.BUILD_SERVER_LABEL, None)
         new_spec["Availability"] = "drain"
         # Demote swarm node to worker when removing

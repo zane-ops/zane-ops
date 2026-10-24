@@ -20,7 +20,7 @@ class ServiceDeploymentViewTests(AuthAPITestCase):
             status=SwarmNode.Status.ACTIVE,
             is_initial_install_server=True,
             cluster_roles=[
-                SwarmNode.ClusterRole.APP_SERVER,
+                SwarmNode.ClusterRole.DEPLOY_SERVER,
                 SwarmNode.ClusterRole.BUILD_SERVER,
             ],
         )
@@ -30,7 +30,7 @@ class ServiceDeploymentViewTests(AuthAPITestCase):
             swarm_node_id=generate_random_chars(25),
             swarm_role=SwarmNode.Role.WORKER,
             status=SwarmNode.Status.CREATED,
-            cluster_roles=[SwarmNode.ClusterRole.APP_SERVER],
+            cluster_roles=[SwarmNode.ClusterRole.DEPLOY_SERVER],
         )
 
     def test_validate_existing_swarm_node_id(self):
@@ -210,7 +210,7 @@ class ServiceDeploymentViewTests(AuthAPITestCase):
             "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
             "type": "UPDATE",
             "new_value": {
-                "deployment_strategy": Service.DeploymentStrategy.ANY_APP_SERVER,
+                "deployment_strategy": Service.DeploymentStrategy.ANY_DEPLOY_SERVER,
                 "deployment_server_id": self.node.id,
             },
         }
@@ -239,7 +239,7 @@ class ServiceDeploymentViewTests(AuthAPITestCase):
         )
         self.assertEqual(
             {
-                "deployment_strategy": Service.DeploymentStrategy.ANY_APP_SERVER,
+                "deployment_strategy": Service.DeploymentStrategy.ANY_DEPLOY_SERVER,
                 "deployment_server": None,
             },
             change.new_value,
@@ -269,7 +269,7 @@ class ServiceDeploymentViewTests(AuthAPITestCase):
             "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
             "type": DeploymentChange.ChangeType.UPDATE,
             "new_value": {
-                "deployment_strategy": Service.DeploymentStrategy.ANY_APP_SERVER,
+                "deployment_strategy": Service.DeploymentStrategy.ANY_DEPLOY_SERVER,
                 "deployment_server_id": None,
             },
         }

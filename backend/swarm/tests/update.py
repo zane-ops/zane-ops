@@ -17,7 +17,7 @@ class UpdateSwarmNodeRolesViewTests(AuthAPITestCase):
             status=SwarmNode.Status.ACTIVE,
             is_initial_install_server=True,
             cluster_roles=[
-                SwarmNode.ClusterRole.APP_SERVER,
+                SwarmNode.ClusterRole.DEPLOY_SERVER,
                 SwarmNode.ClusterRole.BUILD_SERVER,
             ],
         )
@@ -27,12 +27,12 @@ class UpdateSwarmNodeRolesViewTests(AuthAPITestCase):
             private_ip="10.0.0.2",
             swarm_role=SwarmNode.Role.WORKER,
             status=SwarmNode.Status.ACTIVE,
-            cluster_roles=[SwarmNode.ClusterRole.APP_SERVER],
+            cluster_roles=[SwarmNode.ClusterRole.DEPLOY_SERVER],
         )
         self.VALID_PAYLOAD = {
             "swarm_role": SwarmNode.Role.MANAGER,
             "cluster_roles": [
-                SwarmNode.ClusterRole.APP_SERVER,
+                SwarmNode.ClusterRole.DEPLOY_SERVER,
                 SwarmNode.ClusterRole.BUILD_SERVER,
             ],
         }
@@ -118,7 +118,7 @@ class UpdateSwarmNodeRolesViewTests(AuthAPITestCase):
         self.loginUser()
         # another node keeps both roles
         self.node.cluster_roles = [
-            SwarmNode.ClusterRole.APP_SERVER,
+            SwarmNode.ClusterRole.DEPLOY_SERVER,
             SwarmNode.ClusterRole.BUILD_SERVER,
         ]
         self.node.save()
@@ -155,7 +155,7 @@ class UpdateSwarmNodeRolesViewTests(AuthAPITestCase):
         self.loginUser()
         # another node keeps the build role
         self.node.cluster_roles = [  # type: ignore
-            SwarmNode.ClusterRole.APP_SERVER,
+            SwarmNode.ClusterRole.DEPLOY_SERVER,
             SwarmNode.ClusterRole.BUILD_SERVER,
         ]
         self.node.save()
@@ -163,7 +163,7 @@ class UpdateSwarmNodeRolesViewTests(AuthAPITestCase):
             self.main_node.id,
             {
                 "swarm_role": SwarmNode.Role.MANAGER,
-                "cluster_roles": [SwarmNode.ClusterRole.APP_SERVER],
+                "cluster_roles": [SwarmNode.ClusterRole.DEPLOY_SERVER],
             },
         )
         self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
@@ -213,7 +213,7 @@ class UpdateSwarmNodeRolesViewTests(AuthAPITestCase):
             self.main_node.id,
             {
                 "swarm_role": SwarmNode.Role.MANAGER,
-                "cluster_roles": [SwarmNode.ClusterRole.APP_SERVER],
+                "cluster_roles": [SwarmNode.ClusterRole.DEPLOY_SERVER],
             },
         )
         jprint(response.json())
@@ -243,7 +243,7 @@ class UpdateSwarmNodeRolesViewTests(AuthAPITestCase):
             self.main_node.id,
             {
                 "swarm_role": SwarmNode.Role.MANAGER,
-                "cluster_roles": [SwarmNode.ClusterRole.APP_SERVER],
+                "cluster_roles": [SwarmNode.ClusterRole.DEPLOY_SERVER],
             },
         )
         self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
@@ -269,7 +269,7 @@ class UpdateSwarmNodeRolesViewTests(AuthAPITestCase):
                     self.main_node.id,
                     {
                         "swarm_role": SwarmNode.Role.MANAGER,
-                        "cluster_roles": [SwarmNode.ClusterRole.APP_SERVER],
+                        "cluster_roles": [SwarmNode.ClusterRole.DEPLOY_SERVER],
                     },
                 )
                 jprint(response.json())

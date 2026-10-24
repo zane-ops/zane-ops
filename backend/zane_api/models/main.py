@@ -663,7 +663,7 @@ class Service(BaseService):
         RAILPACK = "RAILPACK", _("Railpack")
 
     class DeploymentStrategy(models.TextChoices):
-        ANY_APP_SERVER = "ANY_APP_SERVER", _("Any App Server")
+        ANY_DEPLOY_SERVER = "ANY_DEPLOY_SERVER", _("Any Deploy Server")
         SPECIFIC_SERVER = "SPECIFIC_SERVER", _("Specific Server")
         # Pinned By Volume will be computed from the service volumes
         # PINNED_BY_VOLUME = "PINNED_BY_VOLUME", _("Pinned By Volume")
@@ -783,7 +783,7 @@ class Service(BaseService):
 
     deployment_strategy = models.CharField(
         choices=DeploymentStrategy.choices,
-        default=DeploymentStrategy.ANY_APP_SERVER,
+        default=DeploymentStrategy.ANY_DEPLOY_SERVER,
     )
 
     # replicas = models.PositiveIntegerField(default=1)
@@ -801,7 +801,7 @@ class Service(BaseService):
     def effective_deployment_server(self):
         return (
             None
-            if self.deployment_strategy == self.DeploymentStrategy.ANY_APP_SERVER
+            if self.deployment_strategy == self.DeploymentStrategy.ANY_DEPLOY_SERVER
             else (
                 self.deployment_server
                 or self.environment.deployment_server
