@@ -11,7 +11,7 @@ from temporal.helpers import get_swarm_service_name_for_deployment
 from django.conf import settings
 
 
-class ServiceDeploymentChangesViewTests(AuthAPITestCase):
+class BaseDeployServerTest(AuthAPITestCase):
     def setUp(self):
         super().setUp()
         self.main_node = SwarmNode.objects.create(
@@ -35,6 +35,8 @@ class ServiceDeploymentChangesViewTests(AuthAPITestCase):
             cluster_roles=[SwarmNode.ClusterRole.DEPLOY_SERVER],
         )
 
+
+class ServiceDeploymentChangesViewTests(BaseDeployServerTest):
     def test_validate_existing_swarm_node_id(self):
         p, service = self.create_and_deploy_caddy_docker_service()
 
@@ -649,31 +651,13 @@ class ServiceDeploymentChangesViewTests(AuthAPITestCase):
             ).count(),
         )
 
+    def test_cannot_add_volume_change_if_deployment_strategy_is_any_even_with_default_deploy_server(
+        self,
+    ):
+        self.fail("Not implemented")
 
-class DeployServicesToServerViewTests(AuthAPITestCase):
-    def setUp(self):
-        super().setUp()
-        self.main_node = SwarmNode.objects.create(
-            hostname="zane-main",
-            private_ip="10.0.0.1",
-            swarm_node_id=generate_random_chars(25),
-            swarm_role=SwarmNode.Role.MANAGER,
-            status=SwarmNode.Status.ACTIVE,
-            is_initial_install_server=True,
-            cluster_roles=[
-                SwarmNode.ClusterRole.DEPLOY_SERVER,
-                SwarmNode.ClusterRole.BUILD_SERVER,
-            ],
-        )
-        self.node = SwarmNode.objects.create(
-            private_ip="10.0.0.2",
-            hostname="zane-another",
-            swarm_node_id=generate_random_chars(25),
-            swarm_role=SwarmNode.Role.WORKER,
-            status=SwarmNode.Status.CREATED,
-            cluster_roles=[SwarmNode.ClusterRole.DEPLOY_SERVER],
-        )
 
+class DeployServicesToServerViewTests(BaseDeployServerTest):
     async def test_service_is_deployed_to_correct_server(self):
         p, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
@@ -856,3 +840,58 @@ class DeployServicesToServerViewTests(AuthAPITestCase):
 
         expected_deploy_server_constraint = [f"node.id=={self.node.swarm_node_id}"]
         self.assertEqual(service.constraints, expected_deploy_server_constraint)
+
+    async def test_create_volume_in_deploy_server(self):
+        self.fail("Not implemented")
+
+    async def test_git_service_is_deployed_to_correct_server(self):
+        self.fail("Not implemented")
+
+    async def test_git_service_use_default_deployment_server(self):
+        self.fail("Not implemented")
+
+
+class UpdateProjectAndEnvDefaultDeployServerViewTests(BaseDeployServerTest):
+    def test_validate_project_deploy_server_update_references_existing_deploy_server(
+        self,
+    ):
+        self.fail("Not implemented")
+
+    def test_validate_env_deploy_server_update_references_existing_deploy_server(self):
+        self.fail("Not implemented")
+
+
+class CloneEnvViewTests(BaseDeployServerTest):
+    def test_clone_environment_clones_default_deploy_server(self):
+        self.fail("Not implemented")
+
+
+class SwarmNodeDeployServerViewTests(BaseDeployServerTest):
+    def test_cannot_deprovision_server_that_is_used_as_a_deploy_server(self):
+        self.fail("Not implemented")
+
+    def test_cannot_deprovision_server_that_is_used_as_a_default_deploy_server(self):
+        self.fail("Not implemented")
+
+    def test_cannot_deprovision_server_that_is_referenced_in_deploy_server_pending_changes(
+        self,
+    ):
+        self.fail("Not implemented")
+
+    def test_cannot_delete_ssh_root_key_if_server_is_used_as_deploy_server(self):
+        self.fail("Not implemented")
+
+    def test_cannot_remove_deploy_server_role_to_server_if_still_used_as_a_deploy_server(
+        self,
+    ):
+        self.fail("Not implemented")
+
+    def test_cannot_remove_deploy_server_role_to_server_if_still_used_as_a_default_deploy_server(
+        self,
+    ):
+        self.fail("Not implemented")
+
+    def test_cannot_remove_deploy_server_role_to_server_if_referenced_in_deploy_server_pending_changes(
+        self,
+    ):
+        self.fail("Not implemented")
