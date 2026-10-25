@@ -1622,6 +1622,7 @@ class FakeDockerClient:
             endpoint: EndpointSpec | None = None,
             resources: Resources | None = None,
             networks: List[NetworkAttachmentConfig] | None = None,
+            constraints: list[str] | None = None,
         ):
             self.name = name
             self.parent = parent
@@ -1634,6 +1635,7 @@ class FakeDockerClient:
             self.resources = resources
             self.id = name
             self.networks = networks or []
+            self.constraints = constraints or []
             self.attrs = {
                 "Spec": {
                     "TaskTemplate": {
@@ -2308,6 +2310,7 @@ class FakeDockerClient:
             resources=resources,
             networks=kwargs.get("networks", []),
             configs=kwargs.get("configs", []),
+            constraints=kwargs.get("constraints", []),
         )
         self.container_map[name] = [FakeDockerClient.FakeContainer()]
 

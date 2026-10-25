@@ -6,10 +6,12 @@ from rest_framework import status
 from swarm.models import SwarmNode
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import jprint, generate_random_chars
-from zane_api.models import DeploymentChange, Service, Volume
+from zane_api.models import DeploymentChange, Service, Volume, Deployment
+from temporal.helpers import get_swarm_service_name_for_deployment
+from django.conf import settings
 
 
-class ServiceDeploymentViewTests(AuthAPITestCase):
+class ServiceDeploymentChangesViewTests(AuthAPITestCase):
     def setUp(self):
         super().setUp()
         self.main_node = SwarmNode.objects.create(
@@ -646,3 +648,74 @@ class ServiceDeploymentViewTests(AuthAPITestCase):
                 type=DeploymentChange.ChangeType.DELETE,
             ).count(),
         )
+
+
+class DeployServicesToServerViewTests(AuthAPITestCase):
+    def setUp(self):
+        super().setUp()
+        self.main_node = SwarmNode.objects.create(
+            hostname="zane-main",
+            private_ip="10.0.0.1",
+            swarm_node_id=generate_random_chars(25),
+            swarm_role=SwarmNode.Role.MANAGER,
+            status=SwarmNode.Status.ACTIVE,
+            is_initial_install_server=True,
+            cluster_roles=[
+                SwarmNode.ClusterRole.DEPLOY_SERVER,
+                SwarmNode.ClusterRole.BUILD_SERVER,
+            ],
+        )
+        self.node = SwarmNode.objects.create(
+            private_ip="10.0.0.2",
+            hostname="zane-another",
+            swarm_node_id=generate_random_chars(25),
+            swarm_role=SwarmNode.Role.WORKER,
+            status=SwarmNode.Status.CREATED,
+            cluster_roles=[SwarmNode.ClusterRole.DEPLOY_SERVER],
+        )
+
+    async def test_service_is_deployed_to_correct_server(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service(
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                        "deployment_server": {
+                            "id": self.node.id,
+                            "swarm_node_id": self.node.swarm_node_id,
+                        },
+                    },
+                ),
+            ]
+        )
+
+        dpl = cast(Deployment, await service.deployments.afirst())
+        service = self.fake_docker_client.services_get(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=dpl.hash,
+                project_id=p.id,
+                service_id=service.id,
+            )
+        )
+        self.assertIsNotNone(service)
+
+        expected_deploy_server_constraint = [f"node.id=={self.node.swarm_node_id}"]
+        self.assertEqual(service.constraints, expected_deploy_server_constraint)
+
+    async def test_service_is_deployed_with_any_server_strategy(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+        dpl = cast(Deployment, await service.deployments.afirst())
+        service = self.fake_docker_client.services_get(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=dpl.hash,
+                project_id=p.id,
+                service_id=service.id,
+            )
+        )
+        self.assertIsNotNone(service)
+        expected_deploy_server_constraint = [
+            f"node.labels.{settings.DEPLOY_SERVER_LABEL}==true"
+        ]
+        self.assertEqual(service.constraints, expected_deploy_server_constraint)

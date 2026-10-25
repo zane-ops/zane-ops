@@ -1397,6 +1397,14 @@ class DockerSwarmActivities:
                 deployment,
                 f"Creating service for the deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
+
+            constraints = [f"node.labels.{settings.DEPLOY_SERVER_LABEL}==true"]
+            if (
+                service.deployment_strategy == "SPECIFIC_SERVER"
+                and service.deployment_server is not None
+            ):
+                constraints = [f"node.id=={service.deployment_server.swarm_node_id}"]
+
             self.docker_client.services.create(
                 image=image_name,
                 command=service.command,
@@ -1405,7 +1413,7 @@ class DockerSwarmActivities:
                     project_id=deployment.service.project_id,
                     service_id=deployment.service.id,
                 ),
-                constraints=[f"node.labels.{settings.DEPLOY_SERVER_LABEL}==true"],
+                constraints=constraints,
                 mounts=mounts,
                 endpoint_spec=endpoint_spec,
                 env=envs,
