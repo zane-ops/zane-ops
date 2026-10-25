@@ -653,6 +653,7 @@ class ServiceSerializer(serializers.ModelSerializer):
         default=models.Service.DeploymentStrategy.ANY_DEPLOY_SERVER,
     )
     deployment_server = SimpleSwarmNodeSerializer(allow_null=True)
+    default_deployment_server = SimpleSwarmNodeSerializer(allow_null=True)
 
     def to_representation(self, instance: models.Service):
         data = dict(super().to_representation(instance))
@@ -729,6 +730,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             "shared_volumes",
             "deployment_strategy",
             "deployment_server",
+            "default_deployment_server",
         ]
 
 

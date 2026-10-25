@@ -1404,6 +1404,13 @@ class DockerSwarmActivities:
                 and service.deployment_server is not None
             ):
                 constraints = [f"node.id=={service.deployment_server.swarm_node_id}"]
+            elif (
+                service.deployment_strategy == "ANY_DEPLOY_SERVER"
+                and service.default_deployment_server is not None
+            ):
+                constraints = [
+                    f"node.id=={service.default_deployment_server.swarm_node_id}"
+                ]
 
             self.docker_client.services.create(
                 image=image_name,

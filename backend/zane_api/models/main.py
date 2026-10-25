@@ -957,6 +957,13 @@ class Service(BaseService):
         )
         return affected_services
 
+    @property
+    def default_deployment_server(self):
+        return (
+            self.environment.default_deployment_server
+            or self.project.default_deployment_server
+        )
+
     @classmethod
     def get_services_triggered_by_push_event(
         self,

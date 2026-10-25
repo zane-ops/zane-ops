@@ -556,6 +556,9 @@ class ServiceSnapshot:
     )
     deployment_server: DeploymentServerDto | None = None
 
+    # computed default deployment
+    default_deployment_server: DeploymentServerDto | None = None
+
     @property
     def http_ports(self) -> List[PortConfigurationDto]:
         return [
@@ -668,6 +671,12 @@ class ServiceSnapshot:
         if data.get("deployment_server") is not None:
             deployment_server = DeploymentServerDto.from_dict(data["deployment_server"])
 
+        default_deployment_server: DeploymentServerDto | None = None
+        if data.get("default_deployment_server") is not None:
+            default_deployment_server = DeploymentServerDto.from_dict(
+                data["default_deployment_server"]
+            )
+
         return cls(
             image=data.get("image"),
             urls=urls,
@@ -701,6 +710,7 @@ class ServiceSnapshot:
             global_network_alias=data["global_network_alias"],
             deployment_strategy=data.get("deployment_strategy", "ANY_DEPLOY_SERVER"),
             deployment_server=deployment_server,
+            default_deployment_server=default_deployment_server,
         )
 
     def has_duplicate_volumes(self) -> bool:

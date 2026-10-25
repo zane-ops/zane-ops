@@ -719,3 +719,68 @@ class DeployServicesToServerViewTests(AuthAPITestCase):
             f"node.labels.{settings.DEPLOY_SERVER_LABEL}==true"
         ]
         self.assertEqual(service.constraints, expected_deploy_server_constraint)
+
+    async def test_service_use_default_project_deployment_server(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+
+        p.default_deployment_server = self.node
+        await p.asave()
+
+        # Redeploy service
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        dpl = cast(Deployment, await service.deployments.afirst())
+        service = self.fake_docker_client.services_get(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=dpl.hash,
+                project_id=p.id,
+                service_id=service.id,
+            )
+        )
+        self.assertIsNotNone(service)
+
+        expected_deploy_server_constraint = [f"node.id=={self.node.swarm_node_id}"]
+        self.assertEqual(service.constraints, expected_deploy_server_constraint)
+
+    async def test_service_use_default_environment_deployment_server(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+
+        env = await p.aproduction_env
+        env.default_deployment_server = self.node
+        await env.asave()
+
+        # Redeploy service
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        dpl = cast(Deployment, await service.deployments.afirst())
+        service = self.fake_docker_client.services_get(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=dpl.hash,
+                project_id=p.id,
+                service_id=service.id,
+            )
+        )
+        self.assertIsNotNone(service)
+
+        expected_deploy_server_constraint = [f"node.id=={self.node.swarm_node_id}"]
+        self.assertEqual(service.constraints, expected_deploy_server_constraint)
