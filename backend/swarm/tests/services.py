@@ -878,9 +878,6 @@ class SwarmNodeDeployServerViewTests(BaseDeployServerTest):
     ):
         self.fail("Not implemented")
 
-    def test_cannot_delete_ssh_root_key_if_server_is_used_as_deploy_server(self):
-        self.fail("Not implemented")
-
     def test_cannot_remove_deploy_server_role_to_server_if_still_used_as_a_deploy_server(
         self,
     ):
