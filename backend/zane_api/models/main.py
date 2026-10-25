@@ -797,18 +797,6 @@ class Service(BaseService):
             f"Service(slug={self.slug}, id={self.id}, environment={self.environment})"
         )
 
-    @property
-    def effective_deployment_server(self):
-        return (
-            None
-            if self.deployment_strategy == self.DeploymentStrategy.ANY_DEPLOY_SERVER
-            else (
-                self.deployment_server
-                or self.environment.deployment_server
-                or self.environment.project.deployment_server
-            )
-        )  # None -> no constraint
-
     class Meta:
         constraints = [
             models.UniqueConstraint(
