@@ -3564,6 +3564,10 @@ export interface components {
       container_registry_credentials: components["schemas"]["WriteableContainerRegistryCredentials"] | null;
       /** @default [] */
       shared_volumes: readonly components["schemas"]["SharedVolume"][];
+      /** @default ANY_DEPLOY_SERVER */
+      deployment_strategy: components["schemas"]["DeploymentStrategyEnum"];
+      deployment_server: components["schemas"]["SimpleSwarmNode"] | null;
+      default_deployment_server: components["schemas"]["SimpleSwarmNode"] | null;
     };
     /**
      * @description * `QUEUED` - Queued
@@ -8385,6 +8389,10 @@ export interface components {
       container_registry_credentials: components["schemas"]["WriteableContainerRegistryCredentials"] | null;
       /** @default [] */
       shared_volumes: readonly components["schemas"]["SharedVolume"][];
+      /** @default ANY_DEPLOY_SERVER */
+      deployment_strategy: components["schemas"]["DeploymentStrategyEnum"];
+      deployment_server: components["schemas"]["SimpleSwarmNode"] | null;
+      default_deployment_server: components["schemas"]["SimpleSwarmNode"] | null;
     };
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
     ServiceDeployment: {
@@ -8638,6 +8646,14 @@ export interface components {
       slug: string;
       project: components["schemas"]["SimpleProject"];
       environment: components["schemas"]["SimpleEnvironment"];
+    };
+    SimpleSwarmNode: {
+      id: string;
+      swarm_node_id: string | null;
+    };
+    SimpleSwarmNodeRequest: {
+      id?: string;
+      swarm_node_id?: string | null;
     };
     SimpleTemplateService: {
       id: string;

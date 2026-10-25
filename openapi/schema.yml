@@ -24765,6 +24765,21 @@ components:
             $ref: '#/components/schemas/SharedVolume'
           readOnly: true
           default: []
+        deployment_strategy:
+          allOf:
+          - $ref: '#/components/schemas/DeploymentStrategyEnum'
+          readOnly: true
+          default: ANY_DEPLOY_SERVER
+        deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/SimpleSwarmNode'
+          readOnly: true
+          nullable: true
+        default_deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/SimpleSwarmNode'
+          readOnly: true
+          nullable: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -24776,7 +24791,10 @@ components:
       - container_registry_credentials
       - created_at
       - credentials
+      - default_deployment_server
       - deploy_token
+      - deployment_server
+      - deployment_strategy
       - dockerfile_builder_options
       - env_variables
       - environment
@@ -34942,6 +34960,21 @@ components:
             $ref: '#/components/schemas/SharedVolume'
           readOnly: true
           default: []
+        deployment_strategy:
+          allOf:
+          - $ref: '#/components/schemas/DeploymentStrategyEnum'
+          readOnly: true
+          default: ANY_DEPLOY_SERVER
+        deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/SimpleSwarmNode'
+          readOnly: true
+          nullable: true
+        default_deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/SimpleSwarmNode'
+          readOnly: true
+          nullable: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -34953,7 +34986,10 @@ components:
       - container_registry_credentials
       - created_at
       - credentials
+      - default_deployment_server
       - deploy_token
+      - deployment_server
+      - deployment_strategy
       - dockerfile_builder_options
       - env_variables
       - environment
@@ -35689,6 +35725,29 @@ components:
       - id
       - project
       - slug
+    SimpleSwarmNode:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        swarm_node_id:
+          type: string
+          nullable: true
+      required:
+      - id
+      - swarm_node_id
+    SimpleSwarmNodeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        swarm_node_id:
+          type: string
+          nullable: true
+          minLength: 1
     SimpleTemplateService:
       type: object
       properties:
