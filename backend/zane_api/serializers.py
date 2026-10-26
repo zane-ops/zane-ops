@@ -858,6 +858,14 @@ class ProjectSerializer(serializers.ModelSerializer):
     healthy_stack_services = serializers.IntegerField(read_only=True)
     environments = SimpleEnvironmentSerializer(many=True, read_only=True)
 
+    def get_fields(self):
+        fields = super().get_fields()
+        writable = {"slug", "description"}
+
+        for field_name, field in fields.items():
+            field.read_only = field_name not in writable
+        return fields
+
     class Meta:
         model = models.Project
         fields = [

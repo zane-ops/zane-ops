@@ -1,4 +1,5 @@
 import time
+from typing import cast
 
 from django.db import IntegrityError, transaction
 from django.db.models import (
@@ -18,13 +19,12 @@ from django.db.models import (
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
     extend_schema,
-    inline_serializer,
     PolymorphicProxySerializer,
 )
 from faker import Faker
 from rest_framework import exceptions
 from rest_framework import status
-from rest_framework.generics import ListCreateAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -33,7 +33,6 @@ from .base import EMPTY_PAGINATED_RESPONSE, ResourceConflict
 from .serializers import (
     ProjectListFilterSet,
     ProjectCreateRequestSerializer,
-    ProjectUpdateRequestSerializer,
     DockerServiceCardSerializer,
     GitServiceCardSerializer,
     ServiceListParamSerializer,
@@ -234,8 +233,12 @@ class ProjectsListAPIView(ListCreateAPIView):
         raise NotImplementedError("should never reach here")
 
 
-class ProjectDetailsAPIView(APIView):
+class ProjectDetailsAPIView(RetrieveUpdateDestroyAPIView):
     serializer_class = ProjectSerializer
+    queryset = Project.objects.all()
+    lookup_field = "slug"
+    lookup_url_kwarg = "slug"
+    http_method_names = ["get", "put", "delete"]
 
     def get_permissions(self):
         if self.request.method == "GET":
@@ -260,49 +263,43 @@ class ProjectDetailsAPIView(APIView):
             )
         return project
 
-    @extend_schema(
-        request=ProjectUpdateRequestSerializer,
-        operation_id="updateProject",
-        summary="Update a project",
-    )
-    def put(self, request: Request, slug: str) -> Response:
+    def perform_update(self, serializer: ProjectSerializer):
         project = self.get_object()
-
-        form = ProjectUpdateRequestSerializer(data=request.data)
-        form.is_valid(raise_exception=True)
-
-        try:
-            project.slug = form.data.get("slug", project.slug).lower()  # type: ignore
-            project.description = form.data.get("description", project.description)  # type: ignore
-            project.save()
-        except IntegrityError:
+        slug = cast(dict, serializer.validated_data)["slug"]
+        if Project.objects.filter(slug=slug).exclude(pk=project.id).exists():
             raise ResourceConflict(
                 detail=f"The slug `{slug}` is already used by another project."
             )
-        else:
-            response = ProjectSerializer(project)
-            return Response(response.data)
+
+        return super().perform_update(serializer)
+
+    @extend_schema(
+        operation_id="updateProject",
+        summary="Update a project",
+    )
+    def put(self, request, *args, **kwargs):
+        return super().put(request, *args, **kwargs)
 
     @extend_schema(operation_id="getSingleProject", summary="Get single project")
-    def get(self, request: Request, slug: str) -> Response:
-        project = self.get_object()
-        response = ProjectSerializer(project)
-        return Response(response.data)
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
     @extend_schema(
         responses={
-            200: inline_serializer("DeleteProjectResponseSerializer", fields={}),
+            204: None,
         },
         operation_id="archiveSingleProject",
         summary="Archive a Project",
     )
+    def delete(self, request, *args, **kwargs):
+        return super().delete(request, *args, **kwargs)
+
     @transaction.atomic()
-    def delete(self, request: Request, slug: str) -> Response:
-        project = self.get_object()
-        archived_version = ArchivedProject.get_or_create_from_project(project)
+    def perform_destroy(self, instance: Project):
+        archived_version = ArchivedProject.get_or_create_from_project(instance)
 
         docker_service_list = (
-            Service.objects.filter(Q(project=project))
+            Service.objects.filter(Q(project=instance))
             .select_related("project", "healthcheck")
             .prefetch_related(
                 "volumes", "ports", "urls", "env_variables", "deployments"
@@ -326,7 +323,7 @@ class ProjectDetailsAPIView(APIView):
                 service.healthcheck.delete()
         # Delete Preview metadata before the services because they hold protected references
         # to the services
-        for env in project.environments.filter().select_related("preview_metadata"):
+        for env in instance.environments.filter().select_related("preview_metadata"):
             if env.preview_metadata is not None:
                 env.preview_metadata.delete()
         docker_service_list.delete()
@@ -344,7 +341,7 @@ class ProjectDetailsAPIView(APIView):
             ],
             compose_stacks=[
                 ComposeStackArchiveDetails(stack=stack.snapshot)
-                for stack in project.compose_stacks.filter(user_content__isnull=False)
+                for stack in instance.compose_stacks.filter(user_content__isnull=False)
                 .prefetch_related("env_overrides")
                 .all()
             ],
@@ -356,8 +353,7 @@ class ProjectDetailsAPIView(APIView):
                 id=archived_version.workflow_id,
             )
         )
-        project.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        instance.delete()
 
 
 class ProjectServiceListAPIView(APIView):
