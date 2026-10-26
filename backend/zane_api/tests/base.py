@@ -1130,6 +1130,8 @@ class AuthAPITestCase(APITestCase):
         builder: Optional[str] = Service.Builder.DOCKERFILE,
         dockerfile: Optional[str] = None,
         git_app_id: Optional[str] = None,
+        other_changes: list[DeploymentChange] | None = None,
+        with_healthcheck: bool = False,
     ):
         await self.aLoginUser()
         response = await self.async_client.post(
@@ -1164,6 +1166,27 @@ class AuthAPITestCase(APITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         service = await Service.objects.aget(slug=slug)
+
+        other_changes = other_changes if other_changes is not None else []
+        if with_healthcheck:
+            other_changes.append(
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "COMMAND",
+                        "value": "valkey-cli validate",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 30,
+                    },
+                    service=service,
+                ),
+            )
+
+        for change in other_changes:
+            change.service = service
+        if len(other_changes) > 0:
+            await DeploymentChange.objects.abulk_create(other_changes)
 
         response = await self.async_client.put(
             reverse(

@@ -654,7 +654,41 @@ class ServiceDeploymentChangesViewTests(BaseDeployServerTest):
     def test_cannot_add_volume_change_if_deployment_strategy_is_any_even_with_default_deploy_server(
         self,
     ):
-        self.fail("Not implemented")
+        p, service = self.create_and_deploy_redis_docker_service()
+
+        p.default_deployment_server = self.main_node
+        p.save()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.VOLUMES,
+            "type": DeploymentChange.ChangeType.ADD,
+            "new_value": {
+                "name": "zane-logs",
+                "container_path": "/etc/logs/zane",
+            },
+        }
+
+        # Add changes
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        self.assertEqual(
+            0,
+            service.changes.filter(
+                field=DeploymentChange.ChangeField.VOLUMES,
+            ).count(),
+        )
 
 
 class DeployServicesToServerViewTests(BaseDeployServerTest):
@@ -841,14 +875,67 @@ class DeployServicesToServerViewTests(BaseDeployServerTest):
         expected_deploy_server_constraint = [f"node.id=={self.node.swarm_node_id}"]
         self.assertEqual(service.constraints, expected_deploy_server_constraint)
 
-    async def test_create_volume_in_deploy_server(self):
-        self.fail("Not implemented")
-
     async def test_git_service_is_deployed_to_correct_server(self):
-        self.fail("Not implemented")
+        p, service = await self.acreate_and_deploy_git_service(
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                        "deployment_server": {
+                            "id": self.node.id,
+                            "swarm_node_id": self.node.swarm_node_id,
+                        },
+                    },
+                ),
+            ]
+        )
+
+        dpl = cast(Deployment, await service.deployments.afirst())
+        service = self.fake_docker_client.services_get(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=dpl.hash,
+                project_id=p.id,
+                service_id=service.id,
+            )
+        )
+        self.assertIsNotNone(service)
+
+        expected_deploy_server_constraint = [f"node.id=={self.node.swarm_node_id}"]
+        self.assertEqual(service.constraints, expected_deploy_server_constraint)
 
     async def test_git_service_use_default_deployment_server(self):
-        self.fail("Not implemented")
+        p, service = await self.acreate_git_service()
+
+        p.default_deployment_server = self.node
+        await p.asave()
+
+        # Deploy service
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.git.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        dpl = cast(Deployment, await service.deployments.afirst())
+        service = self.fake_docker_client.services_get(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=dpl.hash,
+                project_id=p.id,
+                service_id=service.id,
+            )
+        )
+        self.assertIsNotNone(service)
+
+        expected_deploy_server_constraint = [f"node.id=={self.node.swarm_node_id}"]
+        self.assertEqual(service.constraints, expected_deploy_server_constraint)
 
 
 class UpdateProjectAndEnvDefaultDeployServerViewTests(BaseDeployServerTest):
