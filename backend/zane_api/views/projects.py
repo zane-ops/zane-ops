@@ -263,16 +263,6 @@ class ProjectDetailsAPIView(RetrieveUpdateDestroyAPIView):
             )
         return project
 
-    def perform_update(self, serializer: ProjectSerializer):
-        project = self.get_object()
-        slug = cast(dict, serializer.validated_data)["slug"]
-        if Project.objects.filter(slug=slug).exclude(pk=project.id).exists():
-            raise ResourceConflict(
-                detail=f"The slug `{slug}` is already used by another project."
-            )
-
-        return super().perform_update(serializer)
-
     @extend_schema(
         operation_id="updateProject",
         summary="Update a project",
