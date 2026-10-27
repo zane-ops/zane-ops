@@ -848,8 +848,49 @@ class EnvironmentWithVariablesSerializer(EnvironmentSerializer):
 
     preview_metadata = PreviewMetadataSerializer(read_only=True, allow_null=True)
 
+    default_deployment_server = DefaultSwarmNodeSerializer(
+        read_only=True, allow_null=True
+    )
+    default_deployment_server_id = serializers.PrimaryKeyRelatedField(
+        source="default_deployment_server",
+        queryset=SwarmNode.objects.all(),
+        write_only=True,
+        required=False,
+    )
+
+    def validate_default_deployment_server_id(self, server: SwarmNode):
+        server_name = server.hostname or server.private_ip
+        if SwarmNode.ClusterRole.DEPLOY_SERVER not in server.cluster_roles:
+            raise serializers.ValidationError(
+                f"Server `{server_name}` cannot receive deployments because it doesn't have the `Deploy Server` role. "
+                "Add this role to the server or select a different server."
+            )
+        if server.swarm_node_id is None:
+            raise serializers.ValidationError(
+                f"Server `{server_name}` cannot receive deployments because it hasn't joined the cluster yet. "
+                "Wait for it to finish joining or select a different server."
+            )
+        return server
+
+    def update(self, instance: models.Project, validated_data: dict):
+        instance.default_deployment_server = validated_data.get(
+            "default_deployment_server_id", instance.default_deployment_server
+        )
+        return super().update(instance, validated_data)
+
+    def get_fields(self):
+        fields = super().get_fields()
+        writable = {"name", "default_deployment_server_id"}
+
+        for field_name, field in fields.items():
+            field.read_only = field_name not in writable
+        return fields
+
     class Meta(EnvironmentSerializer.Meta):
-        pass
+        fields = EnvironmentSerializer.Meta.fields + [
+            "default_deployment_server",
+            "default_deployment_server_id",
+        ]
 
 
 class ProjectSerializer(serializers.ModelSerializer):
