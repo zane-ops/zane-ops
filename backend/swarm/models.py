@@ -99,6 +99,10 @@ class SwarmNode(TimestampedModel):
     # }
 
     @property
+    def display_name(self):
+        return self.hostname or self.private_ip
+
+    @property
     def provision_swarm_node_workflow_id(self) -> str:
         return f"provision-{self.id}"
 

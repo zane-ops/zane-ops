@@ -31,9 +31,51 @@ class BaseDeployServerTest(AuthAPITestCase):
             hostname="zane-another",
             swarm_node_id=generate_random_chars(25),
             swarm_role=SwarmNode.Role.WORKER,
-            status=SwarmNode.Status.CREATED,
+            status=SwarmNode.Status.ACTIVE,
             cluster_roles=[SwarmNode.ClusterRole.DEPLOY_SERVER],
         )
+        self.main_key = self.create_ssh_key(self.main_node, user="root")
+        self.node_key = self.create_ssh_key(self.node, user="root")
+        self.VALID_PAYLOAD = {"target_ssh_key_id": self.node_key.id}
+        self.REMOVE_DEPLOY_ROLE_PAYLOAD = {
+            "swarm_role": SwarmNode.Role.WORKER,
+            "cluster_roles": [SwarmNode.ClusterRole.BUILD_SERVER],
+        }
+
+    def deprovision(self, node_id: str, data: dict):
+        return self.client.put(
+            reverse("swarm:node.deprovision", kwargs={"id": node_id}),
+            data=data,
+        )
+
+    def update_roles(self, node_id: str, data: dict):
+        return self.client.put(
+            reverse("swarm:node.update_roles", kwargs={"id": node_id}),
+            data=data,
+            content_type="application/json",
+        )
+
+    def request_deploy_server_change(self, project_slug: str, service_slug: str):
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            "type": DeploymentChange.ChangeType.UPDATE,
+            "new_value": {
+                "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                "deployment_server_id": self.node.id,
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": project_slug,
+                    "env_slug": "production",
+                    "service_slug": service_slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
 
 class ServiceDeploymentChangesViewTests(BaseDeployServerTest):
@@ -1115,27 +1157,89 @@ class CloneEnvViewTests(BaseDeployServerTest):
 
 class SwarmNodeDeployServerViewTests(BaseDeployServerTest):
     def test_cannot_deprovision_server_that_is_used_as_a_deploy_server(self):
-        self.fail("Not implemented")
+        _, service = self.create_redis_docker_service()
+        service.deployment_strategy = Service.DeploymentStrategy.SPECIFIC_SERVER
+        service.deployment_server = self.node
+        service.save()
 
-    def test_cannot_deprovision_server_that_is_used_as_a_default_deploy_server(self):
-        self.fail("Not implemented")
+        response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+    def test_cannot_deprovision_server_that_is_used_as_a_project_default_deploy_server(
+        self,
+    ):
+        project, _ = self.create_redis_docker_service()
+        project.default_deployment_server = self.node
+        project.save()
+
+        response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+    def test_cannot_deprovision_server_that_is_used_as_an_env_default_deploy_server(
+        self,
+    ):
+        project, _ = self.create_redis_docker_service()
+        env = project.production_env
+        env.default_deployment_server = self.node
+        env.save()
+
+        response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
 
     def test_cannot_deprovision_server_that_is_referenced_in_deploy_server_pending_changes(
         self,
     ):
-        self.fail("Not implemented")
+        project, service = self.create_redis_docker_service()
+        self.request_deploy_server_change(project.slug, service.slug)
+
+        response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
 
     def test_cannot_remove_deploy_server_role_to_server_if_still_used_as_a_deploy_server(
         self,
     ):
-        self.fail("Not implemented")
+        _, service = self.create_redis_docker_service()
+        service.deployment_strategy = Service.DeploymentStrategy.SPECIFIC_SERVER
+        service.deployment_server = self.node
+        service.save()
 
-    def test_cannot_remove_deploy_server_role_to_server_if_still_used_as_a_default_deploy_server(
+        response = self.update_roles(self.node.id, self.REMOVE_DEPLOY_ROLE_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+    def test_cannot_remove_deploy_server_role_to_server_if_still_used_as_a_project_default_deploy_server(
         self,
     ):
-        self.fail("Not implemented")
+        project, _ = self.create_redis_docker_service()
+        project.default_deployment_server = self.node
+        project.save()
+
+        response = self.update_roles(self.node.id, self.REMOVE_DEPLOY_ROLE_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+    def test_cannot_remove_deploy_server_role_to_server_if_still_used_as_an_env_default_deploy_server(
+        self,
+    ):
+        project, _ = self.create_redis_docker_service()
+        env = project.production_env
+        env.default_deployment_server = self.node
+        env.save()
+
+        response = self.update_roles(self.node.id, self.REMOVE_DEPLOY_ROLE_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
 
     def test_cannot_remove_deploy_server_role_to_server_if_referenced_in_deploy_server_pending_changes(
         self,
     ):
-        self.fail("Not implemented")
+        project, service = self.create_redis_docker_service()
+        self.request_deploy_server_change(project.slug, service.slug)
+
+        response = self.update_roles(self.node.id, self.REMOVE_DEPLOY_ROLE_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
