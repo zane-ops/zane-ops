@@ -300,7 +300,10 @@ class DeprovisionSwarmNodeAPIView(APIView):
             node = SwarmNode.objects.get(id=id)
         except SwarmNode.DoesNotExist:
             raise exceptions.NotFound(f"A server with the id `{id}` does not exist")
-        if Service.objects.filter(deployment_server=node).exists():
+        if Service.objects.filter(
+            deployment_server=node,
+            deployment_strategy=Service.DeploymentStrategy.SPECIFIC_SERVER,
+        ).exists():
             raise ResourceConflict(
                 f"Server `{node.display_name}` cannot be deprovisioned because some services are still deployed on it. "
                 "Move those services to another server before removing this one."
@@ -394,7 +397,10 @@ class UpdateSwarmNodeRolesAPIView(APIView):
             SwarmNode.ClusterRole.DEPLOY_SERVER in node.cluster_roles
             and SwarmNode.ClusterRole.DEPLOY_SERVER not in cluster_roles
         ):
-            if Service.objects.filter(deployment_server=node).exists():
+            if Service.objects.filter(
+                deployment_server=node,
+                deployment_strategy=Service.DeploymentStrategy.SPECIFIC_SERVER,
+            ).exists():
                 raise ResourceConflict(
                     f"Server `{node.display_name}` cannot lose the `Deploy Server` role because some services are still deployed on it. "
                     "Move those services to another server before removing this role."
