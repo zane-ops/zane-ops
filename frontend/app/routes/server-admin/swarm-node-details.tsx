@@ -879,7 +879,10 @@ function SwarmDeprovisionForm(node: FullSwarmNode) {
       confirmText="Deprovision"
       pendingText="Deprovisioning..."
       form={
-        <fetcher.Form method="post" className="flex flex-col gap-4 mb-5">
+        <fetcher.Form
+          method="post"
+          className="flex flex-col gap-4 mb-5 min-w-0"
+        >
           <input type="hidden" name="intent" value="deprovision-server" />
           <RootSSHKeySelect
             name="target_ssh_key_id"
