@@ -274,11 +274,47 @@ def diff_service_snapshots(
                     changes.append(
                         DeploymentChange(
                             type=DeploymentChange.ChangeType.UPDATE,
-                            field=service_field.name,
+                            field=DeploymentChange.ChangeField.COMMAND,
                             new_value=target_value,
                             old_value=current_value,
                         )
                     )
+            case "deployment_strategy" | "deployment_server":
+                if current_value != target_value:
+                    existing_change = next(
+                        (
+                            change
+                            for change in changes
+                            if change.field
+                            == DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY
+                        ),
+                        None,
+                    )
+                    if existing_change is None:
+                        changes.append(
+                            DeploymentChange(
+                                type=DeploymentChange.ChangeType.UPDATE,
+                                field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                                new_value=dict(
+                                    deployment_strategy=target_snapshot.deployment_strategy,
+                                    deployment_server=dict(
+                                        id=target_snapshot.deployment_server.id,
+                                        swarm_node_id=target_snapshot.deployment_server.swarm_node_id,
+                                    )
+                                    if target_snapshot.deployment_server is not None
+                                    else None,
+                                ),
+                                old_value=dict(
+                                    deployment_strategy=current_snapshot.deployment_strategy,
+                                    deployment_server=dict(
+                                        id=current_snapshot.deployment_server.id,
+                                        swarm_node_id=current_snapshot.deployment_server.swarm_node_id,
+                                    )
+                                    if current_snapshot.deployment_server is not None
+                                    else None,
+                                ),
+                            )
+                        )
             case "repository_url" | "branch_name" | "commit_sha" | "git_app":
                 if current_value != target_value:
                     existing_change = next(

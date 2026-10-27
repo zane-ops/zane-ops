@@ -1243,3 +1243,114 @@ class SwarmNodeDeployServerViewTests(BaseDeployServerTest):
         response = self.update_roles(self.node.id, self.REMOVE_DEPLOY_ROLE_PAYLOAD)
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
         jprint(response.json())
+
+
+class RedeployServiceToDeployServerViewTests(BaseDeployServerTest):
+    def create_service_deployed_on_node_then_moved_away(self):
+        """
+        Deploy the service on `self.node`, then redeploy it with the
+        `ANY_DEPLOY_SERVER` strategy, so that only the first deployment
+        references `self.node`.
+        """
+        project, service = self.create_and_deploy_redis_docker_service(
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                        "deployment_server": {
+                            "id": self.node.id,
+                            "swarm_node_id": self.node.swarm_node_id,
+                        },
+                    },
+                ),
+            ]
+        )
+        self.assertIsNotNone(service.deployment_server_id)
+        initial_deployment = cast(Deployment, service.deployments.earliest("queued_at"))
+
+        DeploymentChange.objects.create(
+            field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            type=DeploymentChange.ChangeType.UPDATE,
+            new_value={
+                "deployment_strategy": Service.DeploymentStrategy.ANY_DEPLOY_SERVER,
+                "deployment_server": None,
+            },
+            service=service,
+        )
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        service.refresh_from_db()
+        self.assertIsNone(service.deployment_server_id)
+        return project, service, initial_deployment
+
+    def redeploy(self, project_slug: str, service_slug: str, hash: str):
+        return self.client.put(
+            reverse(
+                "zane_api:services.docker.redeploy_service",
+                kwargs={
+                    "project_slug": project_slug,
+                    "env_slug": "production",
+                    "service_slug": service_slug,
+                    "deployment_hash": hash,
+                },
+            ),
+        )
+
+    def test_can_redeploy_to_deployment_referencing_valid_deploy_server(self):
+        project, service, initial_deployment = (
+            self.create_service_deployed_on_node_then_moved_away()
+        )
+
+        response = self.redeploy(project.slug, service.slug, initial_deployment.hash)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(3, service.deployments.count())
+
+    def test_cannot_redeploy_to_deployment_referencing_deleted_server(self):
+        project, service, initial_deployment = (
+            self.create_service_deployed_on_node_then_moved_away()
+        )
+        self.node.delete()
+
+        response = self.redeploy(project.slug, service.slug, initial_deployment.hash)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(2, service.deployments.count())
+
+    def test_cannot_redeploy_to_deployment_referencing_server_without_deploy_server_role(
+        self,
+    ):
+        project, service, initial_deployment = (
+            self.create_service_deployed_on_node_then_moved_away()
+        )
+        self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]  # type: ignore
+        self.node.save()
+
+        response = self.redeploy(project.slug, service.slug, initial_deployment.hash)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(2, service.deployments.count())
+
+    def test_cannot_redeploy_to_deployment_referencing_unprovisioned_server(
+        self,
+    ):
+        project, service, initial_deployment = (
+            self.create_service_deployed_on_node_then_moved_away()
+        )
+        self.node.swarm_node_id = None  # type: ignore
+        self.node.save()
+
+        response = self.redeploy(project.slug, service.slug, initial_deployment.hash)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(2, service.deployments.count())

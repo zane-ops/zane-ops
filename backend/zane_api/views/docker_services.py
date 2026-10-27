@@ -1099,6 +1099,21 @@ class RedeployDockerServiceAPIView(APIView):
             changes=changes,
         )
 
+        # Check that if we rollback the server, it would reference deleted servers
+        # or servers without the deploy role
+        if (
+            new_snapshot.deployment_strategy == "SPECIFIC_SERVER"
+            and new_snapshot.deployment_server is not None
+        ):
+            if not SwarmNode.objects.filter(
+                id=new_snapshot.deployment_server.id,
+                cluster_roles__contains=[SwarmNode.ClusterRole.DEPLOY_SERVER],
+                swarm_node_id__isnull=False,
+            ).exists():
+                raise ResourceConflict(
+                    "Cannot redeploy to this deployment because it references a deleted server"
+                )
+
         # Check that if we rollback the service, it would not reference deleted volumes in
         # shared volumes
         existing_volumes = Volume.objects.filter(
