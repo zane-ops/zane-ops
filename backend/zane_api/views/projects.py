@@ -254,7 +254,7 @@ class ProjectDetailsAPIView(RetrieveUpdateDestroyAPIView):
                     id__in=request_access(self.request).accessible_project_ids(),
                 )
                 .prefetch_related("environments")
-                .select_related("archived_version")
+                .select_related("archived_version", "default_deployment_server")
                 .get()
             )
         except Project.DoesNotExist:

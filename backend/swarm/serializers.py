@@ -212,6 +212,15 @@ class SimpleSwarmNodeSerializer(serializers.ModelSerializer):
         ]
 
 
+class DefaultSwarmNodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SwarmNode
+        fields = [
+            "id",
+            "hostname",
+        ]
+
+
 class SwarmNodeSerializer(serializers.ModelSerializer):
     def validate(self, attrs: dict):
         self.instance: SwarmNode | None

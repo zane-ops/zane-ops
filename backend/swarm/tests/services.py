@@ -939,13 +939,165 @@ class DeployServicesToServerViewTests(BaseDeployServerTest):
 
 
 class UpdateProjectAndEnvDefaultDeployServerViewTests(BaseDeployServerTest):
-    def test_validate_project_deploy_server_update_references_existing_deploy_server(
+    def test_update_project_default_deploy_server(
         self,
     ):
-        self.fail("Not implemented")
+        project, _ = self.create_redis_docker_service()
+        response = self.client.put(
+            reverse("zane_api:projects.details", kwargs={"slug": project.slug}),
+            data={
+                "slug": project.slug,
+                "default_deployment_server_id": self.node.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-    def test_validate_env_deploy_server_update_references_existing_deploy_server(self):
-        self.fail("Not implemented")
+        project.refresh_from_db()
+        self.assertEqual(self.node, project.default_deployment_server)
+
+    def test_validate_project_deploy_server_update_references_existing_server(
+        self,
+    ):
+        project, _ = self.create_redis_docker_service()
+        response = self.client.put(
+            reverse("zane_api:projects.details", kwargs={"slug": project.slug}),
+            data={
+                "slug": project.slug,
+                "default_deployment_server_id": "node_id",
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        project.refresh_from_db()
+        self.assertIsNone(project.default_deployment_server)
+
+    def test_validate_project_deploy_server_update_references_server_with_correct_cluster_roles(
+        self,
+    ):
+        self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]  # type: ignore
+        self.node.save()
+
+        project, _ = self.create_redis_docker_service()
+        response = self.client.put(
+            reverse("zane_api:projects.details", kwargs={"slug": project.slug}),
+            data={
+                "slug": project.slug,
+                "default_deployment_server_id": self.node.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        project.refresh_from_db()
+        self.assertIsNone(project.default_deployment_server)
+
+    def test_validate_project_deploy_server_update_references_provisioned_deploy_server(
+        self,
+    ):
+        self.node.swarm_node_id = None  # type: ignore
+        self.node.save()
+
+        project, _ = self.create_redis_docker_service()
+        response = self.client.put(
+            reverse("zane_api:projects.details", kwargs={"slug": project.slug}),
+            data={
+                "slug": project.slug,
+                "default_deployment_server_id": self.node.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        project.refresh_from_db()
+        self.assertIsNone(project.default_deployment_server)
+
+    def test_update_env_default_deploy_server(
+        self,
+    ):
+        project, _ = self.create_redis_docker_service()
+        response = self.client.patch(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": "production"},
+            ),
+            data={
+                "default_deployment_server_id": self.node.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        env = project.production_env
+        env.refresh_from_db()
+        self.assertEqual(self.node, env.default_deployment_server)
+
+    def test_validate_env_deploy_server_update_references_existing_server(
+        self,
+    ):
+        project, _ = self.create_redis_docker_service()
+        response = self.client.patch(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": "production"},
+            ),
+            data={
+                "default_deployment_server_id": "node_id",
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        env = project.production_env
+        env.refresh_from_db()
+        self.assertIsNone(env.default_deployment_server)
+
+    def test_validate_env_deploy_server_update_references_server_with_correct_cluster_roles(
+        self,
+    ):
+        self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]  # type: ignore
+        self.node.save()
+
+        project, _ = self.create_redis_docker_service()
+        response = self.client.patch(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": "production"},
+            ),
+            data={
+                "default_deployment_server_id": self.node.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        env = project.production_env
+        env.refresh_from_db()
+        self.assertIsNone(env.default_deployment_server)
+
+    def test_validate_env_deploy_server_update_references_provisioned_deploy_server(
+        self,
+    ):
+        self.node.swarm_node_id = None  # type: ignore
+        self.node.save()
+
+        project, _ = self.create_redis_docker_service()
+        response = self.client.patch(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": "production"},
+            ),
+            data={
+                "default_deployment_server_id": self.node.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        env = project.production_env
+        env.refresh_from_db()
+        self.assertIsNone(env.default_deployment_server)
 
 
 class CloneEnvViewTests(BaseDeployServerTest):
