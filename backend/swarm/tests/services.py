@@ -1102,7 +1102,15 @@ class UpdateProjectAndEnvDefaultDeployServerViewTests(BaseDeployServerTest):
 
 class CloneEnvViewTests(BaseDeployServerTest):
     def test_clone_environment_clones_default_deploy_server(self):
-        self.fail("Not implemented")
+        project, _ = self.create_redis_docker_service()
+
+        env = project.production_env
+        env.default_deployment_server = self.node
+        env.save()
+
+        cloned = env.clone(env_name="staging")
+        self.assertIsNotNone(cloned.default_deployment_server)
+        self.assertEqual(self.node, cloned.default_deployment_server)
 
 
 class SwarmNodeDeployServerViewTests(BaseDeployServerTest):

@@ -2501,6 +2501,7 @@ class Environment(TimestampedModel):
             preview_metadata=(
                 preview_data.metadata if preview_data is not None else None
             ),
+            default_deployment_server=self.default_deployment_server,
         )
 
         # Step 1: copy variables
