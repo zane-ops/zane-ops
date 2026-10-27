@@ -1099,19 +1099,29 @@ class RedeployDockerServiceAPIView(APIView):
             changes=changes,
         )
 
-        # Check that if we rollback the server, it would reference deleted servers
-        # or servers without the deploy role
+        # Check that if we rollback the service, it would not reference deleted servers,
+        # servers without the deploy role or servers that are not part of the cluster
         if (
             new_snapshot.deployment_strategy == "SPECIFIC_SERVER"
             and new_snapshot.deployment_server is not None
         ):
-            if not SwarmNode.objects.filter(
-                id=new_snapshot.deployment_server.id,
-                cluster_roles__contains=[SwarmNode.ClusterRole.DEPLOY_SERVER],
-                swarm_node_id__isnull=False,
-            ).exists():
+            server = SwarmNode.objects.filter(
+                id=new_snapshot.deployment_server.id
+            ).first()
+            if server is None:
                 raise ResourceConflict(
-                    "Cannot redeploy to this deployment because it references a deleted server"
+                    "Cannot redeploy to this deployment because the server it was deployed on no longer exists. "
+                    "Change the service's deployment server, then deploy again."
+                )
+            if SwarmNode.ClusterRole.DEPLOY_SERVER not in server.cluster_roles:
+                raise ResourceConflict(
+                    f"Cannot redeploy to this deployment because server `{server.display_name}` no longer has the `Deploy Server` role. "
+                    "Add this role back to the server, or change the service's deployment server, then deploy again."
+                )
+            if server.swarm_node_id is None:
+                raise ResourceConflict(
+                    f"Cannot redeploy to this deployment because server `{server.display_name}` is not part of the cluster. "
+                    "Wait for the server to join the cluster, or change the service's deployment server, then deploy again."
                 )
 
         # Check that if we rollback the service, it would not reference deleted volumes in
