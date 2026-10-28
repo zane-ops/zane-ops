@@ -9,6 +9,9 @@ from zane_api.utils import jprint, generate_random_chars
 from zane_api.models import DeploymentChange, Service, Volume, Deployment
 from temporal.helpers import get_swarm_service_name_for_deployment
 from django.conf import settings
+from compose.tests.fixtures import DOCKER_COMPOSE_SIMPLE_DB
+from compose.tests.stacks import ComposeStackAPITestBase
+from compose.views import ComposeSpecProcessor
 
 
 class BaseDeployServerTest(AuthAPITestCase):
@@ -1354,3 +1357,70 @@ class RedeployServiceToDeployServerViewTests(BaseDeployServerTest):
         jprint(response.json())
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
         self.assertEqual(2, service.deployments.count())
+
+
+class ComposeStackDefaultDeployServerViewTests(
+    BaseDeployServerTest, ComposeStackAPITestBase
+):
+    def test_compose_stack_uses_project_default_server_as_constraint(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+        project.default_deployment_server = self.node
+        project.save()
+
+        spec = ComposeSpecProcessor.process_compose_spec(
+            user_content=DOCKER_COMPOSE_SIMPLE_DB,
+            stack=stack,
+        )
+
+        pg = spec.services[stack.get_stack_service_name("postgres")]
+
+        # Placement constraint added for specific server
+        self.assertIn("placement", pg.deploy)
+        placement = pg.deploy.get("placement", {})
+        self.assertIn(
+            f"node.id=={self.node.swarm_node_id}", placement.get("constraints", [])
+        )
+
+    def test_compose_stack_uses_env_default_server_as_constraint(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+        env = project.production_env
+        env.default_deployment_server = self.node
+        env.save()
+
+        spec = ComposeSpecProcessor.process_compose_spec(
+            user_content=DOCKER_COMPOSE_SIMPLE_DB,
+            stack=stack,
+        )
+
+        pg = spec.services[stack.get_stack_service_name("postgres")]
+
+        # Placement constraint added for specific server
+        self.assertIn("placement", pg.deploy)
+        placement = pg.deploy.get("placement", {})
+        self.assertIn(
+            f"node.id=={self.node.swarm_node_id}", placement.get("constraints", [])
+        )
+
+    def test_compose_stack_do_not_insert_constraint_if_no_default_server(self):
+        _, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+
+        spec = ComposeSpecProcessor.process_compose_spec(
+            user_content=DOCKER_COMPOSE_SIMPLE_DB,
+            stack=stack,
+        )
+
+        pg = spec.services[stack.get_stack_service_name("postgres")]
+
+        # No placement constraints added for specific server
+        self.assertIn("placement", pg.deploy)
+        placement = pg.deploy.get("placement", {})
+        self.assertIn(
+            f"node.labels.{settings.DEPLOY_SERVER_LABEL}==true",
+            placement.get("constraints", []),
+        )
