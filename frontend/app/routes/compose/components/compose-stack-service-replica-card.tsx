@@ -10,6 +10,7 @@ import {
   LogOutIcon,
   MessageCircleMoreIcon,
   ScanTextIcon,
+  ServerIcon,
   TerminalIcon
 } from "lucide-react";
 import React from "react";
@@ -379,13 +380,35 @@ export function ComposeStackServiceReplicaCard({
                 </div>
 
                 <div className="flex flex-col relative top-0.5">
-                  <span>Replica ID</span>
+                  <span>Swarm Task ID</span>
                   <CopyButton
                     className="text-grey p-0 inline-flex w-fit bg-inherit hover:bg-inherit"
                     label={task.id}
                     value={task.id}
                     showLabel
                   />
+                </div>
+              </div>
+
+              {/* Node ID */}
+              <div className="text-sm inline-grid items-start gap-2 grid-cols-[auto_1fr]">
+                <div className="w-4 hidden md:flex flex-col items-center gap-2 relative top-1 h-full self-stretch">
+                  <ServerIcon className="size-4 flex-none text-grey" />
+                  <div className="min-h-5 h-full bg-grey/50 w-px mb-2"></div>
+                </div>
+
+                <div className="flex flex-col relative top-0.5">
+                  <span>Swarm Node ID</span>
+                  {task.node_id === null ? (
+                    <pre className="font-mono">{`<empty>`}</pre>
+                  ) : (
+                    <CopyButton
+                      className="text-grey p-0 inline-flex w-fit bg-inherit hover:bg-inherit"
+                      label={task.node_id}
+                      value={task.node_id}
+                      showLabel
+                    />
+                  )}
                 </div>
               </div>
 
