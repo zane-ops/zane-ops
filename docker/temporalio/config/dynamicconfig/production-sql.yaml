@@ -22,3 +22,12 @@ system.visibilityPersistenceMaxReadQPS:
 system.visibilityPersistenceMaxWriteQPS:
   - constraints: { }
     value: 100000
+# Evict expired (cacheTTL, 1h) workflows from the history cache in the background; without it closed
+# workflows stay cached until the entry limit is reached and the server gets OOM-killed
+history.cacheBackgroundEvict:
+  - constraints: { }
+    value:
+      Enabled: true
+history.hostLevelCacheMaxSize:
+  - constraints: { }
+    value: 16000
