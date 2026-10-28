@@ -76,6 +76,7 @@ class ComposeStackServiceTask(serializers.Serializer):
     slot = serializers.IntegerField()
     name = serializers.CharField()
     container_id = serializers.CharField(required=False, allow_null=True)
+    node_id = serializers.CharField(required=False, allow_null=True)
     image = serializers.CharField()
     message = serializers.CharField()
     created_at = serializers.DateTimeField()
