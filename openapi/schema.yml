@@ -20365,6 +20365,9 @@ components:
         container_id:
           type: string
           nullable: true
+        node_id:
+          type: string
+          nullable: true
         image:
           type: string
         message:
@@ -20387,6 +20390,7 @@ components:
       - image
       - message
       - name
+      - node_id
       - slot
       - status
       - updated_at
@@ -20409,6 +20413,10 @@ components:
           type: string
           minLength: 1
         container_id:
+          type: string
+          nullable: true
+          minLength: 1
+        node_id:
           type: string
           nullable: true
           minLength: 1

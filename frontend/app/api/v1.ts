@@ -1535,6 +1535,7 @@ export interface components {
       slot: number;
       name: string;
       container_id: string | null;
+      node_id: string | null;
       image: string;
       message: string;
       /** Format: date-time */
@@ -1551,6 +1552,7 @@ export interface components {
       slot: number;
       name: string;
       container_id?: string | null;
+      node_id?: string | null;
       image: string;
       message: string;
       /** Format: date-time */
