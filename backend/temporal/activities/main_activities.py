@@ -44,6 +44,7 @@ with workflow.unsafe.imports_passed_through():
         UpdateConfig,
         ConfigReference,
         Healthcheck as DockerHealthcheckType,
+        Mount,
     )
     from django.conf import settings
     from django.utils import timezone
@@ -992,6 +993,27 @@ class DockerSwarmActivities:
         return created_volumes
 
     @activity.defn
+    async def delete_created_volumes(self, deployment: DeploymentCreateVolumesResult):
+        await deployment_log(
+            deployment,
+            f"Deleting created volumes for deployment {Colors.ORANGE}{deployment.deployment_hash}{Colors.ENDC}...",
+        )
+        for volume in deployment.created_volumes:
+            try:
+                docker_volume = self.docker_client.volumes.get(
+                    get_volume_resource_name(volume.id)  # type: ignore
+                )
+            except docker.errors.NotFound:
+                pass
+            else:
+                docker_volume.remove(force=True)
+
+        await deployment_log(
+            deployment,
+            f"Volumes deleted succesfully for deployment {Colors.ORANGE}{deployment.deployment_hash}{Colors.ENDC}  ✅",
+        )
+
+    @activity.defn
     async def create_docker_configs_for_service(
         self, deployment: DeploymentDetails
     ) -> List[ConfigDto]:
@@ -1020,27 +1042,6 @@ class DockerSwarmActivities:
         )
 
         return created_configs
-
-    @activity.defn
-    async def delete_created_volumes(self, deployment: DeploymentCreateVolumesResult):
-        await deployment_log(
-            deployment,
-            f"Deleting created volumes for deployment {Colors.ORANGE}{deployment.deployment_hash}{Colors.ENDC}...",
-        )
-        for volume in deployment.created_volumes:
-            try:
-                docker_volume = self.docker_client.volumes.get(
-                    get_volume_resource_name(volume.id)  # type: ignore
-                )
-            except docker.errors.NotFound:
-                pass
-            else:
-                docker_volume.remove(force=True)
-
-        await deployment_log(
-            deployment,
-            f"Volumes deleted succesfully for deployment {Colors.ORANGE}{deployment.deployment_hash}{Colors.ENDC}  ✅",
-        )
 
     @activity.defn
     async def delete_created_configs(self, deployment: DeploymentCreateConfigsResult):
@@ -1289,41 +1290,44 @@ class DockerSwarmActivities:
                 )
                 envs.append(f"{env.key}={value}")
 
-            # Volumes
-            mounts: list[str] = []
-            docker_volume_list = self.docker_client.volumes.list(
-                filters={
-                    "label": [
-                        f"{key}={value}"
-                        for key, value in get_resource_labels(
-                            service.project_id, parent=service.id
-                        ).items()
-                    ]
-                }
-            )
-            access_mode_map = {
-                "READ_WRITE": "rw",
-                "READ_ONLY": "ro",
-            }
-
+            # add all volumes/bind mounts
+            mounts: list[Mount] = []
             for volume in service.docker_volumes:
-                # Only include volumes that will not be deleted
-                docker_volume = find_item_in_sequence(
-                    lambda v: v.name == get_volume_resource_name(volume.id),  # type: ignore
-                    docker_volume_list,
-                )
-                if docker_volume is not None:
-                    mounts.append(
-                        f"{docker_volume.name}:{volume.container_path}:{access_mode_map[volume.mode]}"
+                mounts.append(
+                    Mount(
+                        target=volume.container_path,
+                        source=get_volume_resource_name(cast(str, volume.id)),
+                        type="volume",
+                        read_only=volume.mode == "READ_ONLY",
+                        labels=get_resource_labels(
+                            service.project_id,
+                            parent=service.id,
+                        ),
                     )
+                )
             for shared in service.shared_volumes:
                 mounts.append(
-                    f"{get_volume_resource_name(shared.volume_id)}:{shared.container_path}:{access_mode_map['READ_ONLY']}"
+                    Mount(
+                        target=shared.container_path,
+                        source=get_volume_resource_name(shared.volume_id),
+                        type="volume",
+                        read_only=True,
+                    )
                 )
             for volume in service.host_volumes:
                 mounts.append(
-                    f"{volume.host_path}:{volume.container_path}:{access_mode_map[volume.mode]}"
+                    Mount(
+                        target=volume.container_path,
+                        source=volume.host_path,
+                        type="bind",
+                        read_only=volume.mode == "READ_ONLY",
+                    )
                 )
+
+            print(f"{mounts=}")
+            print(f"{service.host_volumes=}")
+            print(f"{service.docker_volumes=}")
+            print(f"{service.shared_volumes=}")
 
             # configs
             configs: list[ConfigReference] = []
