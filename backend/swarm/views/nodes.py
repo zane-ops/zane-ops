@@ -50,8 +50,11 @@ from swarm.serializers import (
     UpdateSwarmNodeRolesRequestSerializer,
     UpdateSwarmNodeSSHPortSerializer,
     SwarmNodeSerializer,
+    SwarmNodeListFilterSet,
 )
 from zane_api.models import Service, Project, Environment, DeploymentChange
+from compose.models import ComposeStack, ComposeStackChange
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class SwarmNodeListAPIView(ListCreateAPIView):
@@ -59,6 +62,8 @@ class SwarmNodeListAPIView(ListCreateAPIView):
     serializer_class = SwarmNodeSerializer
     queryset = SwarmNode.objects.all().order_by("created_at")
     pagination_class = DefaultPageNumberPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = SwarmNodeListFilterSet
 
     @extend_schema(
         summary="Add new Swarm node to ZaneOps cluster",
