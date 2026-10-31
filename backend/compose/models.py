@@ -134,6 +134,9 @@ class ComposeStack(TimestampedModel):
     def get_full_computed_service_name(self, service_name: str):
         return f"{self.name}_{self.hash_prefix}_{service_name}"
 
+    def get_stack_service_name(self, service_name: str):
+        return f"{self.hash_prefix}_{service_name}"
+
     @property
     def name(self) -> str:
         return f"zn-{self.id}"

@@ -58,6 +58,7 @@ from django.contrib.auth import get_user_model
 
 if TYPE_CHECKING:
     from container_registry.models import SharedRegistryCredentials  # noqa: F401
+    from swarm.models import SwarmNode  # noqa: F401
     from compose.models import ComposeStack
     from django.db.models.manager import RelatedManager
 
@@ -409,6 +410,12 @@ class Project(TimestampedModel):
     )
     description = models.TextField(blank=True, null=True)
 
+    default_deployment_server: models.ForeignKey["SwarmNode"] = models.ForeignKey(
+        to="swarm.SwarmNode",
+        on_delete=models.SET_NULL,
+        null=True,
+    )
+
     @property
     def production_env(self):
         return self.environments.get(name=Environment.PRODUCTION_ENV_NAME)
@@ -655,6 +662,16 @@ class Service(BaseService):
         NIXPACKS = "NIXPACKS", _("Nixpacks")
         RAILPACK = "RAILPACK", _("Railpack")
 
+    class DeploymentStrategy(models.TextChoices):
+        ANY_DEPLOY_SERVER = "ANY_DEPLOY_SERVER", _("Any Deploy Server")
+        SPECIFIC_SERVER = "SPECIFIC_SERVER", _("Specific Server")
+        # Pinned By Volume will be computed from the service volumes
+        # PINNED_BY_VOLUME = "PINNED_BY_VOLUME", _("Pinned By Volume")
+
+    # class DeploymentMode(models.TextChoices):
+    #     GLOBAL = "GLOBAL", _("Global Service")
+    #     REPLICATED = "REPLICATED", _("Replicated Service")
+
     ID_PREFIX = "srv_dkr_"
     id = ShortUUIDField(
         length=11,
@@ -758,6 +775,23 @@ class Service(BaseService):
     #    "generated_caddyfile": None, <-- cannot pass this -> send to the user though
     # }
 
+    deployment_server: models.ForeignKey["SwarmNode"] = models.ForeignKey(
+        to="swarm.SwarmNode",
+        on_delete=models.SET_NULL,
+        null=True,
+    )
+
+    deployment_strategy = models.CharField(
+        choices=DeploymentStrategy.choices,
+        default=DeploymentStrategy.ANY_DEPLOY_SERVER,
+    )
+
+    # replicas = models.PositiveIntegerField(default=1)
+    # deployment_mode = models.CharField(
+    #     choices=DeploymentMode.choices,
+    #     default=DeploymentMode.REPLICATED,
+    # )
+
     def __str__(self):
         return (
             f"Service(slug={self.slug}, id={self.id}, environment={self.environment})"
@@ -852,6 +886,9 @@ class Service(BaseService):
                 "healthcheck",
                 "environment",
                 "git_app",
+                "deployment_server",
+                "project__default_deployment_server",
+                "environment__default_deployment_server",
                 "git_app__github",
                 "git_app__gitlab",
             )
@@ -892,6 +929,9 @@ class Service(BaseService):
                 "project",
                 "healthcheck",
                 "environment",
+                "deployment_server",
+                "project__default_deployment_server",
+                "environment__default_deployment_server",
                 "git_app",
                 "git_app__github",
                 "git_app__gitlab",
@@ -908,6 +948,13 @@ class Service(BaseService):
             .all()
         )
         return affected_services
+
+    @property
+    def default_deployment_server(self):
+        return (
+            self.environment.default_deployment_server
+            or self.project.default_deployment_server
+        )
 
     @classmethod
     def get_services_triggered_by_push_event(
@@ -970,6 +1017,9 @@ class Service(BaseService):
             )
             .select_related(
                 "project",
+                "deployment_server",
+                "project__default_deployment_server",
+                "environment__default_deployment_server",
                 "healthcheck",
                 "environment",
                 "git_app",
@@ -1228,6 +1278,9 @@ class Service(BaseService):
             self.deployments.filter(is_current_production=True)
             .select_related(
                 "service",
+                "service__deployment_server",
+                "service__project__default_deployment_server",
+                "service__environment__default_deployment_server",
                 "service__project",
                 "service__environment",
                 "service__healthcheck",
@@ -1251,6 +1304,9 @@ class Service(BaseService):
             self.deployments.filter(is_current_production=True)
             .select_related(
                 "service",
+                "service__deployment_server",
+                "service__project__default_deployment_server",
+                "service__environment__default_deployment_server",
                 "service__project",
                 "service__healthcheck",
                 "service__environment",
@@ -1288,6 +1344,9 @@ class Service(BaseService):
             )
             .select_related(
                 "service",
+                "service__deployment_server",
+                "service__project__default_deployment_server",
+                "service__environment__default_deployment_server",
                 "service__project",
                 "service__healthcheck",
                 "service__environment",
@@ -1310,6 +1369,14 @@ class Service(BaseService):
             match (change.field, self.type):
                 case DeploymentChange.ChangeField.COMMAND, __:
                     setattr(self, change.field, change.new_value)
+                case DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY, __:
+                    self.deployment_strategy = change.new_value["deployment_strategy"]
+                    deployment_server = change.new_value.get("deployment_server")
+                    self.deployment_server_id = (
+                        deployment_server["id"]
+                        if deployment_server is not None
+                        else None
+                    )
                 case (
                     DeploymentChange.ChangeField.SOURCE,
                     Service.ServiceType.DOCKER_REGISTRY,
@@ -2144,6 +2211,7 @@ class DeploymentChange(BaseDeploymentChange):
         PORTS = "ports", _("ports")
         RESOURCE_LIMITS = "resource_limits", _("resource limits")
         CONFIGS = "configs", _("configs")
+        DEPLOYMENT_STRATEGY = "deployment_strategy", _("deployment strategy")
 
     field = models.CharField(max_length=255, choices=ChangeField.choices)
     service = models.ForeignKey(
@@ -2393,6 +2461,12 @@ class Environment(TimestampedModel):
         related_name="environment",
     )
 
+    default_deployment_server: models.ForeignKey["SwarmNode"] = models.ForeignKey(
+        to="swarm.SwarmNode",
+        on_delete=models.SET_NULL,
+        null=True,
+    )
+
     def __str__(self):
         return f"Environment(project={self.project.slug}, name={self.name}, is_preview={self.is_preview})"
 
@@ -2427,6 +2501,7 @@ class Environment(TimestampedModel):
             preview_metadata=(
                 preview_data.metadata if preview_data is not None else None
             ),
+            default_deployment_server=self.default_deployment_server,
         )
 
         # Step 1: copy variables
@@ -2455,6 +2530,9 @@ class Environment(TimestampedModel):
                     "healthcheck",
                     "project",
                     "environment",
+                    "deployment_server",
+                    "project__default_deployment_server",
+                    "environment__default_deployment_server",
                 )
                 .prefetch_related(
                     "volumes",
@@ -2477,6 +2555,9 @@ class Environment(TimestampedModel):
                             "healthcheck",
                             "project",
                             "environment",
+                            "deployment_server",
+                            "project__default_deployment_server",
+                            "environment__default_deployment_server",
                         )
                         .prefetch_related(
                             "volumes",
@@ -2505,6 +2586,9 @@ class Environment(TimestampedModel):
                             "healthcheck",
                             "project",
                             "environment",
+                            "deployment_server",
+                            "project__default_deployment_server",
+                            "environment__default_deployment_server",
                         )
                         .prefetch_related(
                             "volumes",
@@ -2606,9 +2690,20 @@ class Environment(TimestampedModel):
 
         docker_service_list = (
             Service.objects.filter(Q(project=self.project) & Q(environment=self))
-            .select_related("project", "healthcheck", "environment")
+            .select_related(
+                "project",
+                "healthcheck",
+                "environment",
+                "deployment_server",
+                "project__default_deployment_server",
+                "environment__default_deployment_server",
+            )
             .prefetch_related(
-                "volumes", "ports", "urls", "env_variables", "deployments"
+                "volumes",
+                "ports",
+                "urls",
+                "env_variables",
+                "deployments",
             )
         )
         id_list = []

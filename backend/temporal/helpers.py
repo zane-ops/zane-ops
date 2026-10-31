@@ -784,6 +784,7 @@ async def get_compose_stack_swarm_service_status(
                 "desired_status": task.DesiredState.value,
                 "status": task.state.value,
                 "image": task.image,
+                "node_id": task.NodeID,
                 "message": task.message,
                 "exit_code": task.exit_code,
                 "created_at": task.CreatedAt,

@@ -441,131 +441,108 @@ class ReviewPreviewEnvDeployAPIView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class EnvironmentDetailsAPIView(APIView):
-    serializer_class = EnvironmentSerializer
+class EnvironmentDetailsAPIView(RetrieveUpdateDestroyAPIView):
+    serializer_class = EnvironmentWithVariablesSerializer
+    queryset = Environment.objects.all()
+    http_method_names = ["get", "patch", "delete"]
 
     def get_permissions(self):
         if self.request.method == "GET":
             return [HasWorkspace(), IsWorkspaceViewer()]
         return [HasWorkspace(), IsWorkspaceAdmin()]
 
+    def get_serializer_context(self):
+        return dict(request=self.request)
+
+    def get_object(self) -> Environment:  # type: ignore
+        project_slug = self.kwargs["slug"]
+        env_slug = self.kwargs["env_slug"]
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                id__in=request_access(self.request).accessible_project_ids(),
+            )
+            environment = (
+                Environment.objects.filter(name=env_slug.lower(), project=project)
+                .select_related("preview_metadata", "default_deployment_server")
+                .prefetch_related("variables")
+                .get()
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A env with the slug `{env_slug}` does not exist in this project"
+            )
+        return environment
+
     @extend_schema(
-        responses={200: EnvironmentWithVariablesSerializer},
         operation_id="getEnvironment",
         summary="Get a single environment",
     )
-    def get(self, request: Request, slug: str, env_slug: str) -> Response:
-        try:
-            project = Project.objects.get(
-                slug=slug.lower(),
-                id__in=request_access(self.request).accessible_project_ids(),
-            )
-            environment = (
-                Environment.objects.filter(name=env_slug.lower(), project=project)
-                .select_related("preview_metadata")
-                .prefetch_related("variables")
-                .get()
-            )
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{slug}` does not exist"
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A env with the slug `{env_slug}` does not exist in this project"
-            )
-        serializer = EnvironmentWithVariablesSerializer(
-            environment, context={"request": request}
-        )
-        return Response(data=serializer.data)
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
     @extend_schema(
-        request=UpdateEnvironmentRequestSerializer,
         operation_id="updateEnvironment",
         summary="Update an environment",
     )
-    def patch(self, request: Request, slug: str, env_slug: str) -> Response:
-        try:
-            project = Project.objects.get(
-                slug=slug.lower(),
-                id__in=request_access(self.request).accessible_project_ids(),
-            )
-            environment = (
-                Environment.objects.filter(name=env_slug.lower(), project=project)
-                .select_related("preview_metadata")
-                .prefetch_related("variables")
-                .get()
-            )
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{slug}` does not exist"
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A env with the slug `{env_slug}` does not exist in this project"
-            )
-        if environment.name == Environment.PRODUCTION_ENV_NAME:
-            raise exceptions.PermissionDenied(
-                "Cannot rename the production environment."
-            )
-        elif environment.is_preview:
-            raise exceptions.PermissionDenied("Cannot rename a preview environment.")
+    def patch(self, request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)
 
-        form = UpdateEnvironmentRequestSerializer(data=request.data)
-        form.is_valid(raise_exception=True)
-        name = form.data["name"].lower()  # type: ignore
+    def perform_update(self, serializer: EnvironmentWithVariablesSerializer):
+        environment: Environment = cast(Environment, serializer.instance)
+        env_name = cast(dict, serializer.validated_data).get("name", environment.name)
 
-        try:
-            environment.name = name
-            environment.save()
-        except IntegrityError:
+        if env_name != environment.name:
+            if environment.name == Environment.PRODUCTION_ENV_NAME:
+                raise exceptions.PermissionDenied(
+                    "Cannot rename the production environment."
+                )
+            elif environment.is_preview:
+                raise exceptions.PermissionDenied(
+                    "Cannot rename a preview environment."
+                )
+
+        if (
+            Environment.objects.filter(
+                name=env_name,
+                project__id=environment.project_id,
+            )
+            .exclude(pk=environment.id)
+            .exists()
+        ):
             raise ResourceConflict(
-                f"An environment with the name `{name}` already exists in this project"
+                f"An environment with the name `{env_name}` already exists in this project"
             )
-        serializer = EnvironmentSerializer(environment)
-        return Response(data=serializer.data)
+
+        return super().perform_update(serializer)
 
     @extend_schema(
-        responses={204: None},
         operation_id="archiveEnvironment",
         summary="Archive environment",
         description="Archive environment with the services inside of it",
     )
-    @transaction.atomic()
-    def delete(self, request: Request, slug: str, env_slug: str) -> Response:
-        try:
-            project = Project.objects.get(
-                slug=slug.lower(),
-                id__in=request_access(self.request).accessible_project_ids(),
-            )
-            environment = (
-                Environment.objects.filter(name=env_slug.lower(), project=project)
-                .select_related("preview_metadata")
-                .prefetch_related("variables", "services")
-                .get()
-            )
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{slug}` does not exist"
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A env with the slug `{env_slug}` does not exist in this project"
-            )
+    def delete(self, request, *args, **kwargs):
+        return super().delete(request, *args, **kwargs)
 
-        if environment.name == Environment.PRODUCTION_ENV_NAME:
+    @transaction.atomic()
+    def perform_destroy(self, instance: Environment):
+        if instance.name == Environment.PRODUCTION_ENV_NAME:
             raise exceptions.PermissionDenied(
                 "Cannot delete the production environment"
             )
-        if PreviewEnvTemplate.objects.filter(base_environment=environment).count() > 0:
+        if PreviewEnvTemplate.objects.filter(base_environment=instance).count() > 0:
             raise ResourceConflict(
                 "Cannot delete this environment as it is used as a base for a preview template, please delete the template first."
             )
 
-        environment.delete_resources()
+        instance.delete_resources()
 
-        details = EnvironmentDetails.from_environment(environment)
-        workflow_id = environment.archive_workflow_id
+        details = EnvironmentDetails.from_environment(instance)
+        workflow_id = instance.archive_workflow_id
         transaction.on_commit(
             lambda: TemporalClient.start_workflow(
                 ArchiveEnvWorkflow.run,
@@ -574,8 +551,7 @@ class EnvironmentDetailsAPIView(APIView):
             )
         )
 
-        environment.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        instance.delete()
 
 
 class SharedEnvVariablesViewSet(viewsets.ModelViewSet):
@@ -696,9 +672,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                 detail=f"A service with a deploy_token `{deploy_token}` does not exists in this ZaneOps instance."
             )
 
-        if not request_access(request).can_access_project(
-            current_service.project_id
-        ):
+        if not request_access(request).can_access_project(current_service.project_id):
             raise exceptions.PermissionDenied(
                 "This API token does not have access to this service's project."
             )

@@ -20,7 +20,7 @@ class ProvisionSwarmNodeViewTests(AuthAPITestCase):
             private_ip="10.0.0.2",
             swarm_role=SwarmNode.Role.WORKER,
             status=SwarmNode.Status.CREATED,
-            cluster_roles=[SwarmNode.ClusterRole.APP_SERVER],
+            cluster_roles=[SwarmNode.ClusterRole.DEPLOY_SERVER],
         )
         self.main_key = self.create_ssh_key(self.main_node, user="root")
         self.node_key = self.create_ssh_key(self.node, user="root")

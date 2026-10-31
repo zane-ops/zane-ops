@@ -20,7 +20,12 @@ from search.loki_client import LokiSearchClient
 from search.serializers import RuntimeLogsSearchSerializer
 from zane_api.permissions import IsInstanceOwner
 from zane_api.views.serializers import DeploymentBuildLogsQuerySerializer
-from zane_api.views.base import DefaultPageNumberPagination, EMPTY_PAGINATED_RESPONSE
+from zane_api.views.base import (
+    DefaultPageNumberPagination,
+    EMPTY_PAGINATED_RESPONSE,
+    BadRequest,
+    ResourceConflict,
+)
 
 from swarm.models import SSHKey, SwarmNode
 from temporal.client import TemporalClient
@@ -46,7 +51,7 @@ from swarm.serializers import (
     UpdateSwarmNodeSSHPortSerializer,
     SwarmNodeSerializer,
 )
-from zane_api.views.base import BadRequest
+from zane_api.models import Service, Project, Environment, DeploymentChange
 
 
 class SwarmNodeListAPIView(ListCreateAPIView):
@@ -295,6 +300,35 @@ class DeprovisionSwarmNodeAPIView(APIView):
             node = SwarmNode.objects.get(id=id)
         except SwarmNode.DoesNotExist:
             raise exceptions.NotFound(f"A server with the id `{id}` does not exist")
+        if Service.objects.filter(
+            deployment_server=node,
+            deployment_strategy=Service.DeploymentStrategy.SPECIFIC_SERVER,
+        ).exists():
+            raise ResourceConflict(
+                f"Server `{node.display_name}` cannot be deprovisioned because some services are still deployed on it. "
+                "Move those services to another server before removing this one."
+            )
+
+        if Project.objects.filter(default_deployment_server=node).exists():
+            raise ResourceConflict(
+                f"Server `{node.display_name}` cannot be deprovisioned because it is the default deploy server of some projects. "
+                "Change the default deploy server of those projects before removing this one."
+            )
+
+        if Environment.objects.filter(default_deployment_server=node).exists():
+            raise ResourceConflict(
+                f"Server `{node.display_name}` cannot be deprovisioned because it is the default deploy server of some environments. "
+                "Change the default deploy server of those environments before removing this one."
+            )
+        if DeploymentChange.objects.filter(
+            field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            new_value__deployment_server__id=node.id,
+            applied=False,
+        ).exists():
+            raise ResourceConflict(
+                f"Server `{node.display_name}` cannot be deprovisioned because some services have pending changes that would deploy them to it. "
+                "Discard or update those pending changes before removing this one."
+            )
 
         main_node = SwarmNode.objects.filter(is_initial_install_server=True).first()
 
@@ -354,8 +388,44 @@ class UpdateSwarmNodeRolesAPIView(APIView):
             data=request.data, context={"node": node}
         )
         form.is_valid(raise_exception=True)
-
         data = cast(ReturnDict, form.validated_data)
+
+        cluster_roles = data["cluster_roles"]
+        # Prevent removing `DEPLOY_SERVER` role
+        # if there are services/projects/env that reference this server as their deploy server
+        if (
+            SwarmNode.ClusterRole.DEPLOY_SERVER in node.cluster_roles
+            and SwarmNode.ClusterRole.DEPLOY_SERVER not in cluster_roles
+        ):
+            if Service.objects.filter(
+                deployment_server=node,
+                deployment_strategy=Service.DeploymentStrategy.SPECIFIC_SERVER,
+            ).exists():
+                raise ResourceConflict(
+                    f"Server `{node.display_name}` cannot lose the `Deploy Server` role because some services are still deployed on it. "
+                    "Move those services to another server before removing this role."
+                )
+            if Project.objects.filter(default_deployment_server=node).exists():
+                raise ResourceConflict(
+                    f"Server `{node.display_name}` cannot lose the `Deploy Server` role because it is the default deploy server of some projects. "
+                    "Change the default deploy server of those projects before removing this role."
+                )
+
+            if Environment.objects.filter(default_deployment_server=node).exists():
+                raise ResourceConflict(
+                    f"Server `{node.display_name}` cannot lose the `Deploy Server` role because it is the default deploy server of some environments. "
+                    "Change the default deploy server of those environments before removing this role."
+                )
+            if DeploymentChange.objects.filter(
+                field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                new_value__deployment_server__id=node.id,
+                applied=False,
+            ).exists():
+                raise ResourceConflict(
+                    f"Server `{node.display_name}` cannot lose the `Deploy Server` role because some services have pending changes that would deploy them to it. "
+                    "Discard or update those pending changes before removing this role."
+                )
+
         payload = SimpleClusterSwarmNodeDetails(
             id=node.id,
             private_ip=node.private_ip,

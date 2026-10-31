@@ -488,6 +488,24 @@ class GitAppDto:
 
 
 @dataclass
+class DeploymentServerDto:
+    id: str
+    swarm_node_id: str
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        return cls(
+            id=data["id"],
+            swarm_node_id=data["swarm_node_id"],
+        )
+
+    def to_dict(self, data: Dict[str, Any]):
+        return dict(
+            swarm_node_id=self.swarm_node_id,
+        )
+
+
+@dataclass
 class ServiceSnapshot:
     project_id: str
     id: str
@@ -531,6 +549,15 @@ class ServiceSnapshot:
 
     # git app
     git_app: Optional[GitAppDto] = None
+
+    # deployment strategy
+    deployment_strategy: Literal["ANY_DEPLOY_SERVER", "SPECIFIC_SERVER"] = (
+        "ANY_DEPLOY_SERVER"
+    )
+    deployment_server: DeploymentServerDto | None = None
+
+    # computed default deployment
+    default_deployment_server: DeploymentServerDto | None = None
 
     @property
     def http_ports(self) -> List[PortConfigurationDto]:
@@ -640,6 +667,16 @@ class ServiceSnapshot:
             else None
         )
 
+        deployment_server: DeploymentServerDto | None = None
+        if data.get("deployment_server") is not None:
+            deployment_server = DeploymentServerDto.from_dict(data["deployment_server"])
+
+        default_deployment_server: DeploymentServerDto | None = None
+        if data.get("default_deployment_server") is not None:
+            default_deployment_server = DeploymentServerDto.from_dict(
+                data["default_deployment_server"]
+            )
+
         return cls(
             image=data.get("image"),
             urls=urls,
@@ -671,6 +708,9 @@ class ServiceSnapshot:
             slug=data["slug"],
             network_alias=data["network_alias"],
             global_network_alias=data["global_network_alias"],
+            deployment_strategy=data.get("deployment_strategy", "ANY_DEPLOY_SERVER"),
+            deployment_server=deployment_server,
+            default_deployment_server=default_deployment_server,
         )
 
     def has_duplicate_volumes(self) -> bool:

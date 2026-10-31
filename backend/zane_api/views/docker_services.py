@@ -42,6 +42,7 @@ from .serializers import (
     DockerServiceDeployRequestSerializer,
     ResourceLimitChangeSerializer,
     SharedVolumeItemChangeSerializer,
+    DeploymentStrategyFieldChangeSerializer,
 )
 from ..dtos import (
     ConfigDto,
@@ -105,6 +106,7 @@ from ..permissions import (
     IsWorkspaceViewer,
     request_access,
 )
+from swarm.models import SwarmNode
 
 
 class CreateDockerServiceAPIView(APIView):
@@ -233,6 +235,7 @@ class RequestServiceChangesAPIView(APIView):
                 ConfigItemChangeSerializer,
                 GitSourceFieldChangeSerializer,
                 GitBuilderFieldChangeSerializer,
+                DeploymentStrategyFieldChangeSerializer,
             ],
             resource_type_field_name="field",
         ),
@@ -309,6 +312,7 @@ class RequestServiceChangesAPIView(APIView):
             DeploymentChange.ChangeField.RESOURCE_LIMITS: ResourceLimitChangeSerializer,
             DeploymentChange.ChangeField.CONFIGS: ConfigItemChangeSerializer,
             DeploymentChange.ChangeField.SHARED_VOLUMES: SharedVolumeItemChangeSerializer,
+            DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY: DeploymentStrategyFieldChangeSerializer,
         }
 
         request_serializer = DockerDeploymentFieldChangeRequestSerializer(
@@ -339,6 +343,34 @@ class RequestServiceChangesAPIView(APIView):
                         if new_value is not None and len(new_value) == 0:
                             new_value = None
                         old_value = getattr(service, field)
+                    case DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY:
+                        new_value = cast(dict, new_value)
+                        deployment_server_id: str | None = new_value.get(
+                            "deployment_server_id"
+                        )
+                        new_value.pop("deployment_server_id", None)
+
+                        if deployment_server_id is not None:
+                            deployment_server = SwarmNode.objects.get(
+                                id=deployment_server_id
+                            )
+                            new_value["deployment_server"] = dict(
+                                id=deployment_server.id,
+                                swarm_node_id=deployment_server.swarm_node_id,
+                            )
+                        else:
+                            new_value["deployment_server"] = None
+
+                        old_value = dict(
+                            strategy=service.deployment_strategy,
+                            deployment_server=dict(
+                                id=service.deployment_server.id,
+                                swarm_node_id=service.deployment_server.swarm_node_id,
+                            )
+                            if service.deployment_server is not None
+                            else None,
+                        )
+
                     case DeploymentChange.ChangeField.SOURCE:
                         new_value = cast(dict, new_value)
                         if service.type == Service.ServiceType.DOCKER_REGISTRY:
@@ -759,6 +791,7 @@ class CancelServiceChangesAPIView(APIView):
                     "project",
                     "healthcheck",
                     "container_registry_credentials",
+                    "deployment_server",
                 )
                 .prefetch_related(
                     "shared_volumes",
@@ -790,6 +823,14 @@ class CancelServiceChangesAPIView(APIView):
             )
         else:
             snapshot = compute_snapshot_excluding_change(service, change_id=change_id)
+            if (
+                len(snapshot.volumes) > 0
+                and snapshot.deployment_strategy
+                == Service.DeploymentStrategy.ANY_DEPLOY_SERVER
+            ):
+                raise ResourceConflict(
+                    detail="Cannot revert this change because the service would have volumes without being pinned to a single server. Remove the volumes or keep the `Specific Server` deployment strategy."
+                )
             if (
                 service.type == Service.ServiceType.DOCKER_REGISTRY
                 and snapshot.image is None
@@ -1057,6 +1098,31 @@ class RedeployDockerServiceAPIView(APIView):
             service_snapshot=ServiceSnapshot.from_dict(current_snapshot),  # type: ignore
             changes=changes,
         )
+
+        # Check that if we rollback the service, it would not reference deleted servers,
+        # servers without the deploy role or servers that are not part of the cluster
+        if (
+            new_snapshot.deployment_strategy == "SPECIFIC_SERVER"
+            and new_snapshot.deployment_server is not None
+        ):
+            server = SwarmNode.objects.filter(
+                id=new_snapshot.deployment_server.id
+            ).first()
+            if server is None:
+                raise ResourceConflict(
+                    "Cannot redeploy to this deployment because the server it was deployed on no longer exists. "
+                    "Change the service's deployment server, then deploy again."
+                )
+            if SwarmNode.ClusterRole.DEPLOY_SERVER not in server.cluster_roles:
+                raise ResourceConflict(
+                    f"Cannot redeploy to this deployment because server `{server.display_name}` no longer has the `Deploy Server` role. "
+                    "Add this role back to the server, or change the service's deployment server, then deploy again."
+                )
+            if server.swarm_node_id is None:
+                raise ResourceConflict(
+                    f"Cannot redeploy to this deployment because server `{server.display_name}` is not part of the cluster. "
+                    "Wait for the server to join the cluster, or change the service's deployment server, then deploy again."
+                )
 
         # Check that if we rollback the service, it would not reference deleted volumes in
         # shared volumes

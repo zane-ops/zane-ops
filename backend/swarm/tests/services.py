@@ -1,0 +1,1426 @@
+from typing import cast
+
+from django.urls import reverse
+from rest_framework import status
+
+from swarm.models import SwarmNode
+from zane_api.tests.base import AuthAPITestCase
+from zane_api.utils import jprint, generate_random_chars
+from zane_api.models import DeploymentChange, Service, Volume, Deployment
+from temporal.helpers import get_swarm_service_name_for_deployment
+from django.conf import settings
+from compose.tests.fixtures import DOCKER_COMPOSE_SIMPLE_DB
+from compose.tests.stacks import ComposeStackAPITestBase
+from compose.views import ComposeSpecProcessor
+
+
+class BaseDeployServerTest(AuthAPITestCase):
+    def setUp(self):
+        super().setUp()
+        self.main_node = SwarmNode.objects.create(
+            hostname="zane-main",
+            private_ip="10.0.0.1",
+            swarm_node_id=generate_random_chars(25),
+            swarm_role=SwarmNode.Role.MANAGER,
+            status=SwarmNode.Status.ACTIVE,
+            is_initial_install_server=True,
+            cluster_roles=[
+                SwarmNode.ClusterRole.DEPLOY_SERVER,
+                SwarmNode.ClusterRole.BUILD_SERVER,
+            ],
+        )
+        self.node = SwarmNode.objects.create(
+            private_ip="10.0.0.2",
+            hostname="zane-another",
+            swarm_node_id=generate_random_chars(25),
+            swarm_role=SwarmNode.Role.WORKER,
+            status=SwarmNode.Status.ACTIVE,
+            cluster_roles=[SwarmNode.ClusterRole.DEPLOY_SERVER],
+        )
+        self.main_key = self.create_ssh_key(self.main_node, user="root")
+        self.node_key = self.create_ssh_key(self.node, user="root")
+        self.VALID_PAYLOAD = {"target_ssh_key_id": self.node_key.id}
+        self.REMOVE_DEPLOY_ROLE_PAYLOAD = {
+            "swarm_role": SwarmNode.Role.WORKER,
+            "cluster_roles": [SwarmNode.ClusterRole.BUILD_SERVER],
+        }
+
+    def deprovision(self, node_id: str, data: dict):
+        return self.client.put(
+            reverse("swarm:node.deprovision", kwargs={"id": node_id}),
+            data=data,
+        )
+
+    def update_roles(self, node_id: str, data: dict):
+        return self.client.put(
+            reverse("swarm:node.update_roles", kwargs={"id": node_id}),
+            data=data,
+            content_type="application/json",
+        )
+
+    def request_deploy_server_change(self, project_slug: str, service_slug: str):
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            "type": DeploymentChange.ChangeType.UPDATE,
+            "new_value": {
+                "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                "deployment_server_id": self.node.id,
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": project_slug,
+                    "env_slug": "production",
+                    "service_slug": service_slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+
+class ServiceDeploymentChangesViewTests(BaseDeployServerTest):
+    def test_validate_existing_swarm_node_id(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            "type": "UPDATE",
+            "new_value": {
+                "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                "deployment_server_id": "doesnotexist",
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        jprint(response.json())
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "new_value.deployment_server_id")
+        )
+
+    def test_validate_server_is_active(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+        self.node.swarm_node_id = None
+        self.node.save()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            "type": "UPDATE",
+            "new_value": {
+                "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                "deployment_server_id": self.node.id,
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        jprint(response.json())
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "new_value.deployment_server_id")
+        )
+
+    def test_validate_server_is_app_server(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+        self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]  # type: ignore
+        self.node.save()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            "type": "UPDATE",
+            "new_value": {
+                "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                "deployment_server_id": self.node.id,
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        jprint(response.json())
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "new_value.deployment_server_id")
+        )
+
+    def test_update_deployment_strategy_add_change_to_service(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            "type": DeploymentChange.ChangeType.UPDATE,
+            "new_value": {
+                "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                "deployment_server_id": self.node.id,
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        jprint(response.json())
+
+        self.assertEqual(1, service.unapplied_changes.count())
+        change: DeploymentChange = cast(
+            DeploymentChange,
+            DeploymentChange.objects.filter(
+                service__slug=service.slug,
+                field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            ).first(),
+        )
+        self.assertEqual(
+            {
+                "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                "deployment_server": {
+                    "id": self.node.id,
+                    "swarm_node_id": self.node.swarm_node_id,
+                },
+            },
+            change.new_value,
+        )
+
+    def test_apply_deployment_strategy_change_to_service(self):
+        p, service = self.create_caddy_docker_service()
+
+        # Add changes
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            "type": DeploymentChange.ChangeType.UPDATE,
+            "new_value": {
+                "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                "deployment_server_id": self.node.id,
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        jprint(response.json())
+
+        # Deploy service
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        jprint(response.json())
+
+        service.refresh_from_db()
+
+        self.assertEqual(
+            Service.DeploymentStrategy.SPECIFIC_SERVER, service.deployment_strategy
+        )
+        self.assertEqual(self.node, service.deployment_server)
+
+    def test_validate_deployment_strategy_specific_require_server_id(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            "type": "UPDATE",
+            "new_value": {
+                "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                "deployment_server_id": None,
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        jprint(response.json())
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "new_value.deployment_server_id")
+        )
+
+    def test_validate_deployment_strategy_any_ignores_server_id(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+        # Update to make sure the change is computed
+        service.deployment_strategy = Service.DeploymentStrategy.SPECIFIC_SERVER
+        service.deployment_server = self.main_node
+        service.save()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            "type": "UPDATE",
+            "new_value": {
+                "deployment_strategy": Service.DeploymentStrategy.ANY_DEPLOY_SERVER,
+                "deployment_server_id": self.node.id,
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        jprint(response.json())
+
+        self.assertEqual(1, service.unapplied_changes.count())
+        change: DeploymentChange = cast(
+            DeploymentChange,
+            DeploymentChange.objects.filter(
+                service__slug=service.slug,
+                field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            ).first(),
+        )
+        self.assertEqual(
+            {
+                "deployment_strategy": Service.DeploymentStrategy.ANY_DEPLOY_SERVER,
+                "deployment_server": None,
+            },
+            change.new_value,
+        )
+
+    def test_validate_deployment_strategy_cannot_be_changed_to_any_if_service_has_a_volume(
+        self,
+    ):
+        p, service = self.create_and_deploy_redis_docker_service(
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "container_path": "/data",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                    },
+                ),
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                        "deployment_server": {
+                            "id": self.node.id,
+                            "swarm_node_id": self.node.swarm_node_id,
+                        },
+                    },
+                ),
+            ]
+        )
+        self.assertEqual(
+            Service.DeploymentStrategy.SPECIFIC_SERVER, service.deployment_strategy
+        )
+        self.assertIsNotNone(service.deployment_server)
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            "type": DeploymentChange.ChangeType.UPDATE,
+            "new_value": {
+                "deployment_strategy": Service.DeploymentStrategy.ANY_DEPLOY_SERVER,
+                "deployment_server_id": None,
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "new_value.deployment_strategy")
+        )
+
+    def test_cannot_add_volume_change_if_deployment_strategy_is_any_app_server(self):
+        p, service = self.create_redis_docker_service()
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.VOLUMES,
+            "type": DeploymentChange.ChangeType.ADD,
+            "new_value": {
+                "name": "zane-logs",
+                "container_path": "/etc/logs/zane",
+            },
+        }
+
+        # Add changes
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        self.assertEqual(
+            0,
+            service.changes.filter(
+                field=DeploymentChange.ChangeField.VOLUMES,
+            ).count(),
+        )
+
+    def test_can_add_volume_changes_if_deployment_strategy_is_specific_server(
+        self,
+    ):
+        p, service = self.create_and_deploy_redis_docker_service(
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                        "deployment_server": {
+                            "id": self.node.id,
+                            "swarm_node_id": self.node.swarm_node_id,
+                        },
+                    },
+                ),
+            ]
+        )
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.VOLUMES,
+            "type": DeploymentChange.ChangeType.ADD,
+            "new_value": {
+                "name": "zane-logs",
+                "container_path": "/etc/logs/zane",
+            },
+        }
+
+        # Add changes
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(
+            1,
+            service.changes.filter(
+                field=DeploymentChange.ChangeField.VOLUMES,
+            ).count(),
+        )
+
+    def test_cannot_remove_deployment_strategy_change_if_service_still_has_volumes(
+        self,
+    ):
+        p, service = self.create_and_deploy_redis_docker_service(
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "container_path": "/data",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                    },
+                ),
+            ]
+        )
+        change = DeploymentChange.objects.create(
+            service=service,
+            field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            type=DeploymentChange.ChangeType.UPDATE,
+            new_value={
+                "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                "deployment_server": {
+                    "id": self.node.id,
+                    "swarm_node_id": self.node.swarm_node_id,
+                },
+            },
+        )
+
+        # Remoce changes
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.cancel_service_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                    "change_id": change.id,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+        self.assertEqual(
+            1,
+            service.changes.filter(
+                field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            ).count(),
+        )
+
+    def test_cannot_remove_deployment_strategy_change_if_service_still_has_volume_changes(
+        self,
+    ):
+        p, service = self.create_redis_docker_service()
+
+        changes = DeploymentChange.objects.bulk_create(
+            [
+                DeploymentChange(
+                    service=service,
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "container_path": "/data",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                    },
+                ),
+                DeploymentChange(
+                    service=service,
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                        "deployment_server": {
+                            "id": self.node.id,
+                            "swarm_node_id": self.node.swarm_node_id,
+                        },
+                    },
+                ),
+            ]
+        )
+
+        # Remoce changes
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.cancel_service_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                    "change_id": changes[1].id,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+        self.assertEqual(
+            1,
+            service.changes.filter(
+                field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            ).count(),
+        )
+
+    def test_can_remove_deployment_strategy_change_if_service_has_no_volumes(
+        self,
+    ):
+        p, service = self.create_redis_docker_service()
+
+        changes = DeploymentChange.objects.bulk_create(
+            [
+                DeploymentChange(
+                    service=service,
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                        "deployment_server": {
+                            "id": self.node.id,
+                            "swarm_node_id": self.node.swarm_node_id,
+                        },
+                    },
+                ),
+            ]
+        )
+
+        # Remoce changes
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.cancel_service_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                    "change_id": changes[0].id,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(
+            0,
+            service.changes.filter(
+                field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            ).count(),
+        )
+
+    def test_cannot_cancel_volume_delete_if_service_deployment_strategy_is_any_deploy_server(
+        self,
+    ):
+        p, service = self.create_and_deploy_redis_docker_service(
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "container_path": "/data",
+                        "mode": Volume.VolumeMode.READ_WRITE,
+                    },
+                ),
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                        "deployment_server": {
+                            "id": self.node.id,
+                            "swarm_node_id": self.node.swarm_node_id,
+                        },
+                    },
+                ),
+            ]
+        )
+        volume = cast(Volume, service.volumes.first())
+
+        volume_change, _ = DeploymentChange.objects.bulk_create(
+            [
+                DeploymentChange(
+                    service=service,
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.DELETE,
+                    item_id=volume.id,
+                ),
+                DeploymentChange(
+                    service=service,
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.ANY_DEPLOY_SERVER,
+                        "deployment_server": None,
+                    },
+                ),
+            ]
+        )
+
+        # Cancelling the volume deletion would leave a volume on an unpinned service
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.cancel_service_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                    "change_id": volume_change.id,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(
+            1,
+            service.unapplied_changes.filter(
+                field=DeploymentChange.ChangeField.VOLUMES,
+                type=DeploymentChange.ChangeType.DELETE,
+            ).count(),
+        )
+
+    def test_cannot_add_volume_change_if_deployment_strategy_is_any_even_with_default_deploy_server(
+        self,
+    ):
+        p, service = self.create_and_deploy_redis_docker_service()
+
+        p.default_deployment_server = self.main_node
+        p.save()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.VOLUMES,
+            "type": DeploymentChange.ChangeType.ADD,
+            "new_value": {
+                "name": "zane-logs",
+                "container_path": "/etc/logs/zane",
+            },
+        }
+
+        # Add changes
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        self.assertEqual(
+            0,
+            service.changes.filter(
+                field=DeploymentChange.ChangeField.VOLUMES,
+            ).count(),
+        )
+
+
+class DeployServicesToServerViewTests(BaseDeployServerTest):
+    async def test_service_is_deployed_to_correct_server(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service(
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                        "deployment_server": {
+                            "id": self.node.id,
+                            "swarm_node_id": self.node.swarm_node_id,
+                        },
+                    },
+                ),
+            ]
+        )
+
+        dpl = cast(Deployment, await service.deployments.afirst())
+        service = self.fake_docker_client.services_get(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=dpl.hash,
+                project_id=p.id,
+                service_id=service.id,
+            )
+        )
+        self.assertIsNotNone(service)
+
+        expected_deploy_server_constraint = [f"node.id=={self.node.swarm_node_id}"]
+        self.assertEqual(service.constraints, expected_deploy_server_constraint)
+
+    async def test_service_is_deployed_with_any_server_strategy(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+        dpl = cast(Deployment, await service.deployments.afirst())
+        service = self.fake_docker_client.services_get(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=dpl.hash,
+                project_id=p.id,
+                service_id=service.id,
+            )
+        )
+        self.assertIsNotNone(service)
+        expected_deploy_server_constraint = [
+            f"node.labels.{settings.DEPLOY_SERVER_LABEL}==true"
+        ]
+        self.assertEqual(service.constraints, expected_deploy_server_constraint)
+
+    async def test_service_use_default_project_deployment_server(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+
+        p.default_deployment_server = self.node
+        await p.asave()
+
+        # Redeploy service
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        dpl = cast(Deployment, await service.deployments.afirst())
+        service = self.fake_docker_client.services_get(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=dpl.hash,
+                project_id=p.id,
+                service_id=service.id,
+            )
+        )
+        self.assertIsNotNone(service)
+
+        expected_deploy_server_constraint = [f"node.id=={self.node.swarm_node_id}"]
+        self.assertEqual(service.constraints, expected_deploy_server_constraint)
+
+    async def test_service_use_default_environment_deployment_server(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+
+        env = await p.aproduction_env
+        env.default_deployment_server = self.node
+        await env.asave()
+
+        # Redeploy service
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        dpl = cast(Deployment, await service.deployments.afirst())
+        service = self.fake_docker_client.services_get(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=dpl.hash,
+                project_id=p.id,
+                service_id=service.id,
+            )
+        )
+        self.assertIsNotNone(service)
+
+        expected_deploy_server_constraint = [f"node.id=={self.node.swarm_node_id}"]
+        self.assertEqual(service.constraints, expected_deploy_server_constraint)
+
+    async def test_prefer_environment_server_over_project_default_server(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+
+        p.default_deployment_server = self.main_node
+        await p.asave()
+
+        env = await p.aproduction_env
+        env.default_deployment_server = self.node
+        await env.asave()
+
+        # Redeploy service
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        dpl = cast(Deployment, await service.deployments.afirst())
+        service = self.fake_docker_client.services_get(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=dpl.hash,
+                project_id=p.id,
+                service_id=service.id,
+            )
+        )
+        self.assertIsNotNone(service)
+
+        expected_deploy_server_constraint = [f"node.id=={self.node.swarm_node_id}"]
+        self.assertEqual(service.constraints, expected_deploy_server_constraint)
+
+    async def test_prefer_service_default_server_over_default_deploy_server(self):
+        p, service = await self.acreate_and_deploy_redis_docker_service()
+
+        p.default_deployment_server = self.main_node
+        await p.asave()
+
+        service.deployment_strategy = Service.DeploymentStrategy.SPECIFIC_SERVER
+        service.deployment_server = self.node
+        await service.asave()
+
+        # Redeploy service
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        dpl = cast(Deployment, await service.deployments.afirst())
+        service = self.fake_docker_client.services_get(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=dpl.hash,
+                project_id=p.id,
+                service_id=service.id,
+            )
+        )
+        self.assertIsNotNone(service)
+
+        expected_deploy_server_constraint = [f"node.id=={self.node.swarm_node_id}"]
+        self.assertEqual(service.constraints, expected_deploy_server_constraint)
+
+    async def test_git_service_is_deployed_to_correct_server(self):
+        p, service = await self.acreate_and_deploy_git_service(
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                        "deployment_server": {
+                            "id": self.node.id,
+                            "swarm_node_id": self.node.swarm_node_id,
+                        },
+                    },
+                ),
+            ]
+        )
+
+        dpl = cast(Deployment, await service.deployments.afirst())
+        service = self.fake_docker_client.services_get(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=dpl.hash,
+                project_id=p.id,
+                service_id=service.id,
+            )
+        )
+        self.assertIsNotNone(service)
+
+        expected_deploy_server_constraint = [f"node.id=={self.node.swarm_node_id}"]
+        self.assertEqual(service.constraints, expected_deploy_server_constraint)
+
+    async def test_git_service_use_default_deployment_server(self):
+        p, service = await self.acreate_git_service()
+
+        p.default_deployment_server = self.node
+        await p.asave()
+
+        # Deploy service
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.git.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        dpl = cast(Deployment, await service.deployments.afirst())
+        service = self.fake_docker_client.services_get(
+            get_swarm_service_name_for_deployment(
+                deployment_hash=dpl.hash,
+                project_id=p.id,
+                service_id=service.id,
+            )
+        )
+        self.assertIsNotNone(service)
+
+        expected_deploy_server_constraint = [f"node.id=={self.node.swarm_node_id}"]
+        self.assertEqual(service.constraints, expected_deploy_server_constraint)
+
+
+class UpdateProjectAndEnvDefaultDeployServerViewTests(BaseDeployServerTest):
+    def test_update_project_default_deploy_server(
+        self,
+    ):
+        project, _ = self.create_redis_docker_service()
+        response = self.client.put(
+            reverse("zane_api:projects.details", kwargs={"slug": project.slug}),
+            data={
+                "slug": project.slug,
+                "default_deployment_server_id": self.node.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        project.refresh_from_db()
+        self.assertEqual(self.node, project.default_deployment_server)
+
+    def test_validate_project_deploy_server_update_references_existing_server(
+        self,
+    ):
+        project, _ = self.create_redis_docker_service()
+        response = self.client.put(
+            reverse("zane_api:projects.details", kwargs={"slug": project.slug}),
+            data={
+                "slug": project.slug,
+                "default_deployment_server_id": "node_id",
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        project.refresh_from_db()
+        self.assertIsNone(project.default_deployment_server)
+
+    def test_validate_project_deploy_server_update_references_server_with_correct_cluster_roles(
+        self,
+    ):
+        self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]  # type: ignore
+        self.node.save()
+
+        project, _ = self.create_redis_docker_service()
+        response = self.client.put(
+            reverse("zane_api:projects.details", kwargs={"slug": project.slug}),
+            data={
+                "slug": project.slug,
+                "default_deployment_server_id": self.node.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        project.refresh_from_db()
+        self.assertIsNone(project.default_deployment_server)
+
+    def test_validate_project_deploy_server_update_references_provisioned_deploy_server(
+        self,
+    ):
+        self.node.swarm_node_id = None  # type: ignore
+        self.node.save()
+
+        project, _ = self.create_redis_docker_service()
+        response = self.client.put(
+            reverse("zane_api:projects.details", kwargs={"slug": project.slug}),
+            data={
+                "slug": project.slug,
+                "default_deployment_server_id": self.node.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        project.refresh_from_db()
+        self.assertIsNone(project.default_deployment_server)
+
+    def test_update_env_default_deploy_server(
+        self,
+    ):
+        project, _ = self.create_redis_docker_service()
+        response = self.client.patch(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": "production"},
+            ),
+            data={
+                "default_deployment_server_id": self.node.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        env = project.production_env
+        env.refresh_from_db()
+        self.assertEqual(self.node, env.default_deployment_server)
+
+    def test_validate_env_deploy_server_update_references_existing_server(
+        self,
+    ):
+        project, _ = self.create_redis_docker_service()
+        response = self.client.patch(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": "production"},
+            ),
+            data={
+                "default_deployment_server_id": "node_id",
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        env = project.production_env
+        env.refresh_from_db()
+        self.assertIsNone(env.default_deployment_server)
+
+    def test_validate_env_deploy_server_update_references_server_with_correct_cluster_roles(
+        self,
+    ):
+        self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]  # type: ignore
+        self.node.save()
+
+        project, _ = self.create_redis_docker_service()
+        response = self.client.patch(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": "production"},
+            ),
+            data={
+                "default_deployment_server_id": self.node.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        env = project.production_env
+        env.refresh_from_db()
+        self.assertIsNone(env.default_deployment_server)
+
+    def test_validate_env_deploy_server_update_references_provisioned_deploy_server(
+        self,
+    ):
+        self.node.swarm_node_id = None  # type: ignore
+        self.node.save()
+
+        project, _ = self.create_redis_docker_service()
+        response = self.client.patch(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": project.slug, "env_slug": "production"},
+            ),
+            data={
+                "default_deployment_server_id": self.node.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+        env = project.production_env
+        env.refresh_from_db()
+        self.assertIsNone(env.default_deployment_server)
+
+
+class CloneEnvViewTests(BaseDeployServerTest):
+    def test_clone_environment_clones_default_deploy_server(self):
+        project, _ = self.create_redis_docker_service()
+
+        env = project.production_env
+        env.default_deployment_server = self.node
+        env.save()
+
+        cloned = env.clone(env_name="staging")
+        self.assertIsNotNone(cloned.default_deployment_server)
+        self.assertEqual(self.node, cloned.default_deployment_server)
+
+
+class SwarmNodeDeployServerViewTests(BaseDeployServerTest):
+    def test_cannot_deprovision_server_that_is_used_as_a_deploy_server(self):
+        _, service = self.create_redis_docker_service()
+        service.deployment_strategy = Service.DeploymentStrategy.SPECIFIC_SERVER
+        service.deployment_server = self.node
+        service.save()
+
+        response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+    def test_cannot_deprovision_server_that_is_used_as_a_project_default_deploy_server(
+        self,
+    ):
+        project, _ = self.create_redis_docker_service()
+        project.default_deployment_server = self.node
+        project.save()
+
+        response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+    def test_cannot_deprovision_server_that_is_used_as_an_env_default_deploy_server(
+        self,
+    ):
+        project, _ = self.create_redis_docker_service()
+        env = project.production_env
+        env.default_deployment_server = self.node
+        env.save()
+
+        response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+    def test_cannot_deprovision_server_that_is_referenced_in_deploy_server_pending_changes(
+        self,
+    ):
+        project, service = self.create_redis_docker_service()
+        self.request_deploy_server_change(project.slug, service.slug)
+
+        response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+    def test_cannot_remove_deploy_server_role_to_server_if_still_used_as_a_deploy_server(
+        self,
+    ):
+        _, service = self.create_redis_docker_service()
+        service.deployment_strategy = Service.DeploymentStrategy.SPECIFIC_SERVER
+        service.deployment_server = self.node
+        service.save()
+
+        response = self.update_roles(self.node.id, self.REMOVE_DEPLOY_ROLE_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+    def test_cannot_remove_deploy_server_role_to_server_if_still_used_as_a_project_default_deploy_server(
+        self,
+    ):
+        project, _ = self.create_redis_docker_service()
+        project.default_deployment_server = self.node
+        project.save()
+
+        response = self.update_roles(self.node.id, self.REMOVE_DEPLOY_ROLE_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+    def test_cannot_remove_deploy_server_role_to_server_if_still_used_as_an_env_default_deploy_server(
+        self,
+    ):
+        project, _ = self.create_redis_docker_service()
+        env = project.production_env
+        env.default_deployment_server = self.node
+        env.save()
+
+        response = self.update_roles(self.node.id, self.REMOVE_DEPLOY_ROLE_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+    def test_cannot_remove_deploy_server_role_to_server_if_referenced_in_deploy_server_pending_changes(
+        self,
+    ):
+        project, service = self.create_redis_docker_service()
+        self.request_deploy_server_change(project.slug, service.slug)
+
+        response = self.update_roles(self.node.id, self.REMOVE_DEPLOY_ROLE_PAYLOAD)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+
+class RedeployServiceToDeployServerViewTests(BaseDeployServerTest):
+    def create_service_deployed_on_node_then_moved_away(self):
+        """
+        Deploy the service on `self.node`, then redeploy it with the
+        `ANY_DEPLOY_SERVER` strategy, so that only the first deployment
+        references `self.node`.
+        """
+        project, service = self.create_and_deploy_redis_docker_service(
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "deployment_strategy": Service.DeploymentStrategy.SPECIFIC_SERVER,
+                        "deployment_server": {
+                            "id": self.node.id,
+                            "swarm_node_id": self.node.swarm_node_id,
+                        },
+                    },
+                ),
+            ]
+        )
+        self.assertIsNotNone(service.deployment_server_id)
+        initial_deployment = cast(Deployment, service.deployments.earliest("queued_at"))
+
+        DeploymentChange.objects.create(
+            field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+            type=DeploymentChange.ChangeType.UPDATE,
+            new_value={
+                "deployment_strategy": Service.DeploymentStrategy.ANY_DEPLOY_SERVER,
+                "deployment_server": None,
+            },
+            service=service,
+        )
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        service.refresh_from_db()
+        self.assertIsNone(service.deployment_server_id)
+        return project, service, initial_deployment
+
+    def redeploy(self, project_slug: str, service_slug: str, hash: str):
+        return self.client.put(
+            reverse(
+                "zane_api:services.docker.redeploy_service",
+                kwargs={
+                    "project_slug": project_slug,
+                    "env_slug": "production",
+                    "service_slug": service_slug,
+                    "deployment_hash": hash,
+                },
+            ),
+        )
+
+    def test_can_redeploy_to_deployment_referencing_valid_deploy_server(self):
+        project, service, initial_deployment = (
+            self.create_service_deployed_on_node_then_moved_away()
+        )
+
+        response = self.redeploy(project.slug, service.slug, initial_deployment.hash)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(3, service.deployments.count())
+
+    def test_cannot_redeploy_to_deployment_referencing_deleted_server(self):
+        project, service, initial_deployment = (
+            self.create_service_deployed_on_node_then_moved_away()
+        )
+        self.node.delete()
+
+        response = self.redeploy(project.slug, service.slug, initial_deployment.hash)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(2, service.deployments.count())
+
+    def test_cannot_redeploy_to_deployment_referencing_server_without_deploy_server_role(
+        self,
+    ):
+        project, service, initial_deployment = (
+            self.create_service_deployed_on_node_then_moved_away()
+        )
+        self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]  # type: ignore
+        self.node.save()
+
+        response = self.redeploy(project.slug, service.slug, initial_deployment.hash)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(2, service.deployments.count())
+
+    def test_cannot_redeploy_to_deployment_referencing_unprovisioned_server(
+        self,
+    ):
+        project, service, initial_deployment = (
+            self.create_service_deployed_on_node_then_moved_away()
+        )
+        self.node.swarm_node_id = None  # type: ignore
+        self.node.save()
+
+        response = self.redeploy(project.slug, service.slug, initial_deployment.hash)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(2, service.deployments.count())
+
+
+class ComposeStackDefaultDeployServerViewTests(
+    BaseDeployServerTest, ComposeStackAPITestBase
+):
+    def test_compose_stack_uses_project_default_server_as_constraint(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+        project.default_deployment_server = self.node
+        project.save()
+
+        spec = ComposeSpecProcessor.process_compose_spec(
+            user_content=DOCKER_COMPOSE_SIMPLE_DB,
+            stack=stack,
+        )
+
+        pg = spec.services[stack.get_stack_service_name("postgres")]
+
+        # Placement constraint added for specific server
+        self.assertIn("placement", pg.deploy)
+        placement = pg.deploy.get("placement", {})
+        self.assertIn(
+            f"node.id=={self.node.swarm_node_id}", placement.get("constraints", [])
+        )
+
+    def test_compose_stack_uses_env_default_server_as_constraint(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+        env = project.production_env
+        env.default_deployment_server = self.node
+        env.save()
+
+        spec = ComposeSpecProcessor.process_compose_spec(
+            user_content=DOCKER_COMPOSE_SIMPLE_DB,
+            stack=stack,
+        )
+
+        pg = spec.services[stack.get_stack_service_name("postgres")]
+
+        # Placement constraint added for specific server
+        self.assertIn("placement", pg.deploy)
+        placement = pg.deploy.get("placement", {})
+        self.assertIn(
+            f"node.id=={self.node.swarm_node_id}", placement.get("constraints", [])
+        )
+
+    def test_compose_stack_do_not_insert_constraint_if_no_default_server(self):
+        _, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+
+        spec = ComposeSpecProcessor.process_compose_spec(
+            user_content=DOCKER_COMPOSE_SIMPLE_DB,
+            stack=stack,
+        )
+
+        pg = spec.services[stack.get_stack_service_name("postgres")]
+
+        # No placement constraints added for specific server
+        self.assertIn("placement", pg.deploy)
+        placement = pg.deploy.get("placement", {})
+        self.assertIn(
+            f"node.labels.{settings.DEPLOY_SERVER_LABEL}==true",
+            placement.get("constraints", []),
+        )

@@ -203,6 +203,24 @@ class SSHKeySerializer(serializers.ModelSerializer):
         ]
 
 
+class SimpleSwarmNodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SwarmNode
+        fields = [
+            "id",
+            "swarm_node_id",
+        ]
+
+
+class DefaultSwarmNodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SwarmNode
+        fields = [
+            "id",
+            "hostname",
+        ]
+
+
 class SwarmNodeSerializer(serializers.ModelSerializer):
     def validate(self, attrs: dict):
         self.instance: SwarmNode | None
@@ -257,6 +275,7 @@ class SwarmNodeServiceSerializer(serializers.Serializer):
     )
     message = serializers.CharField(allow_null=True)
     image = serializers.CharField()
+    updated_at = serializers.DateTimeField(allow_null=True, required=False)
 
 
 class FullSwarmNodeSerializer(serializers.ModelSerializer):

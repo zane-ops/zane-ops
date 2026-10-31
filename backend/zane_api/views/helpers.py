@@ -22,12 +22,14 @@ from ..dtos import (
     StaticDirectoryBuilderOptions,
     NixpacksBuilderOptions,
     SharedVolumeDto,
+    DeploymentServerDto,
 )
 from ..models import Service, DeploymentChange
 from ..serializers import ServiceSerializer
 from temporal.helpers import generate_caddyfile_for_static_website
 from copy import deepcopy
 from ..utils import generate_random_chars
+from swarm.models import SwarmNode
 
 
 def build_pending_changeset_with_extra(service: Service, change: dict | None = None):
@@ -93,6 +95,30 @@ def apply_changes_to_snapshot(
                     if change.new_value is not None
                     else None
                 )
+            case DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY:
+                change.new_value = cast(dict, change.new_value)
+                service_snapshot.deployment_strategy = change.new_value[
+                    "deployment_strategy"
+                ]
+
+                # New value may have `deployment_server_id` as a string or `deployment_server` directly
+                if change.new_value.get("deployment_server") is not None:
+                    service_snapshot.deployment_server = DeploymentServerDto.from_dict(
+                        change.new_value["deployment_server"]
+                    )
+                elif change.new_value.get("deployment_server_id") is not None:
+                    server_id = change.new_value["deployment_server_id"]
+                    deploy_server = SwarmNode.objects.filter(
+                        id=server_id, swarm_node_id__isnull=False
+                    ).first()
+                    if deploy_server is not None:
+                        service_snapshot.deployment_server = DeploymentServerDto(
+                            id=deploy_server.id,
+                            swarm_node_id=cast(str, deploy_server.swarm_node_id),
+                        )
+                else:
+                    service_snapshot.deployment_server = None
+
             case DeploymentChange.ChangeField.SOURCE:
                 change.new_value = cast(dict, change.new_value)
                 service_snapshot.image = change.new_value["image"]
@@ -248,11 +274,47 @@ def diff_service_snapshots(
                     changes.append(
                         DeploymentChange(
                             type=DeploymentChange.ChangeType.UPDATE,
-                            field=service_field.name,
+                            field=DeploymentChange.ChangeField.COMMAND,
                             new_value=target_value,
                             old_value=current_value,
                         )
                     )
+            case "deployment_strategy" | "deployment_server":
+                if current_value != target_value:
+                    existing_change = next(
+                        (
+                            change
+                            for change in changes
+                            if change.field
+                            == DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY
+                        ),
+                        None,
+                    )
+                    if existing_change is None:
+                        changes.append(
+                            DeploymentChange(
+                                type=DeploymentChange.ChangeType.UPDATE,
+                                field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
+                                new_value=dict(
+                                    deployment_strategy=target_snapshot.deployment_strategy,
+                                    deployment_server=dict(
+                                        id=target_snapshot.deployment_server.id,
+                                        swarm_node_id=target_snapshot.deployment_server.swarm_node_id,
+                                    )
+                                    if target_snapshot.deployment_server is not None
+                                    else None,
+                                ),
+                                old_value=dict(
+                                    deployment_strategy=current_snapshot.deployment_strategy,
+                                    deployment_server=dict(
+                                        id=current_snapshot.deployment_server.id,
+                                        swarm_node_id=current_snapshot.deployment_server.swarm_node_id,
+                                    )
+                                    if current_snapshot.deployment_server is not None
+                                    else None,
+                                ),
+                            )
+                        )
             case "repository_url" | "branch_name" | "commit_sha" | "git_app":
                 if current_value != target_value:
                     existing_change = next(
