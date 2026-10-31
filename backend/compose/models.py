@@ -13,6 +13,7 @@ from .dtos import (
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
+    from swarm.models import SwarmNode
 
 
 class ComposeStack(TimestampedModel):
@@ -103,6 +104,11 @@ class ComposeStack(TimestampedModel):
     #     },
     #     "db": {...}
     # }
+    deployment_server: models.ForeignKey["SwarmNode"] = models.ForeignKey(
+        to="swarm.SwarmNode",
+        on_delete=models.SET_NULL,
+        null=True,
+    )  # type: ignore
 
     @staticmethod
     def get_sensitive_fields():
@@ -434,6 +440,7 @@ class ComposeStackChange(TimestampedModel):
     class ChangeField(models.TextChoices):
         COMPOSE_CONTENT = "compose_content"
         ENV_OVERRIDES = "env_overrides"
+        DEPLOY_SERVER = "deploy_server"
 
     class ChangeType(models.TextChoices):
         ADD = "ADD"
