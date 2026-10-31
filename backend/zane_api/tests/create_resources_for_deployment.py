@@ -216,7 +216,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
             )
         )
 
-    async def test_deploy_service_with_volumes(self):
+    async def test_deploy_service_with_volumes_creates_docker_volumes(self):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[

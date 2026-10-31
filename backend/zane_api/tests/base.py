@@ -2294,7 +2294,7 @@ class FakeDockerClient:
         **kwargs,
     ):
         image: str = kwargs["image"]
-        mounts: list[str | Mount] = kwargs.get("mounts", [])
+        mounts: list[Mount] = kwargs.get("mounts", [])
         env: list[str] = kwargs.get("env", [])
         endpoint_spec = kwargs.get("endpoint_spec", None)
         resources = kwargs.get("resources", None)
@@ -2302,16 +2302,16 @@ class FakeDockerClient:
             raise docker.errors.NotFound(f"image `{image}` has not been not pulled yet")
         volumes: dict[str, dict[str, str]] = {}
         for mount in mounts:
-            if isinstance(mount, str):
-                volume_name, mount_path, mode = mount.split(":")
-            else:
-                volume_name, mount_path, mode = (
-                    mount["Source"],
-                    mount["Target"],
-                    "ro" if mount["ReadOnly"] else "rw",
-                )
+            volume_name, mount_path, mode, volume_labels = (
+                mount["Source"],
+                mount["Target"],
+                "ro" if mount["ReadOnly"] else "rw",
+                mount.get("VolumeOptions", {}).get("Labels", {}),
+            )
             if not volume_name.startswith("/") and volume_name not in self.volume_map:
-                raise docker.errors.NotFound("Volume not created")
+                self.volume_map[volume_name] = FakeDockerClient.FakeVolume(
+                    parent=self, name=volume_name, labels=volume_labels
+                )
             volumes[volume_name] = {
                 "mount_path": mount_path,
                 "mode": mode,
