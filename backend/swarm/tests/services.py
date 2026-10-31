@@ -6,9 +6,16 @@ from rest_framework import status
 from swarm.models import SwarmNode
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import jprint, generate_random_chars
-from zane_api.models import DeploymentChange, Service, Volume, Deployment
+from zane_api.models import (
+    DeploymentChange,
+    Service,
+    Volume,
+    Deployment,
+    Environment,
+)
 from temporal.helpers import get_swarm_service_name_for_deployment
 from django.conf import settings
+from compose.models import ComposeStack, ComposeStackChange, ComposeStackDeployment
 from compose.tests.fixtures import DOCKER_COMPOSE_SIMPLE_DB
 from compose.tests.stacks import ComposeStackAPITestBase
 from compose.views import ComposeSpecProcessor
@@ -1424,3 +1431,495 @@ class ComposeStackDefaultDeployServerViewTests(
             f"node.labels.{settings.DEPLOY_SERVER_LABEL}==true",
             placement.get("constraints", []),
         )
+
+    def test_compose_stack_prefer_env_default_server_over_project_default_server(
+        self,
+    ):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+        project.default_deployment_server = self.main_node
+        project.save()
+
+        env = project.production_env
+        env.default_deployment_server = self.node
+        env.save()
+
+        spec = ComposeSpecProcessor.process_compose_spec(
+            user_content=DOCKER_COMPOSE_SIMPLE_DB,
+            stack=stack,
+        )
+
+        pg = spec.services[stack.get_stack_service_name("postgres")]
+        placement = pg.deploy.get("placement", {})
+        self.assertIn(
+            f"node.id=={self.node.swarm_node_id}", placement.get("constraints", [])
+        )
+        self.assertNotIn(
+            f"node.id=={self.main_node.swarm_node_id}",
+            placement.get("constraints", []),
+        )
+
+
+class ComposeStackDeployServerViewTests(BaseDeployServerTest, ComposeStackAPITestBase):
+    def request_stack_deploy_server_change(
+        self, project_slug: str, stack_slug: str, server_id: str | None
+    ):
+        return self.client.put(
+            reverse(
+                "compose:stacks.request_changes",
+                kwargs={
+                    "project_slug": project_slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack_slug,
+                },
+            ),
+            data={
+                "field": ComposeStackChange.ChangeField.DEPLOY_SERVER,
+                "type": ComposeStackChange.ChangeType.UPDATE,
+                "new_value": {"deployment_server_id": server_id},
+            },
+            content_type="application/json",
+        )
+
+    def deploy_stack(self, project_slug: str, stack_slug: str):
+        response = self.client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project_slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack_slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+    def create_stack_deployed_on_node(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+        response = self.request_stack_deploy_server_change(
+            project.slug, stack.slug, self.node.id
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.deploy_stack(project.slug, stack.slug)
+        stack.refresh_from_db()
+        self.assertEqual(self.node, stack.deployment_server)
+        return project, stack
+
+    def test_set_compose_stack_deploy_server(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+
+        response = self.request_stack_deploy_server_change(
+            project.slug, stack.slug, self.node.id
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        change = cast(
+            ComposeStackChange,
+            stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.DEPLOY_SERVER
+            ).first(),
+        )
+        self.assertIsNotNone(change)
+        self.assertEqual(ComposeStackChange.ChangeType.UPDATE, change.type)
+        self.assertEqual(
+            {"id": self.node.id, "swarm_node_id": self.node.swarm_node_id},
+            change.new_value,
+        )
+
+    def test_set_compose_stack_deploy_server_replaces_existing_pending_change(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+
+        response = self.request_stack_deploy_server_change(
+            project.slug, stack.slug, self.main_node.id
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        response = self.request_stack_deploy_server_change(
+            project.slug, stack.slug, self.node.id
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        changes = stack.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.DEPLOY_SERVER
+        )
+        self.assertEqual(1, changes.count())
+        change = cast(ComposeStackChange, changes.first())
+        self.assertEqual(
+            {"id": self.node.id, "swarm_node_id": self.node.swarm_node_id},
+            change.new_value,
+        )
+
+    def test_validate_compose_stack_deploy_server_references_existing_server(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+
+        response = self.request_stack_deploy_server_change(
+            project.slug, stack.slug, "doesnotexist"
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "new_value.deployment_server_id")
+        )
+        self.assertEqual(
+            0,
+            stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.DEPLOY_SERVER
+            ).count(),
+        )
+
+    def test_validate_compose_stack_deploy_server_is_active(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+        self.node.swarm_node_id = None  # type: ignore
+        self.node.save()
+
+        response = self.request_stack_deploy_server_change(
+            project.slug, stack.slug, self.node.id
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "new_value.deployment_server_id")
+        )
+
+    def test_validate_compose_stack_deploy_server_is_app_server(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+        self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]  # type: ignore
+        self.node.save()
+
+        response = self.request_stack_deploy_server_change(
+            project.slug, stack.slug, self.node.id
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "new_value.deployment_server_id")
+        )
+
+    def test_apply_deploy_server_change_to_compose_stack(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+        response = self.request_stack_deploy_server_change(
+            project.slug, stack.slug, self.node.id
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.deploy_stack(project.slug, stack.slug)
+
+        stack.refresh_from_db()
+        self.assertEqual(self.node, stack.deployment_server)
+        self.assertEqual(
+            0,
+            stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.DEPLOY_SERVER
+            ).count(),
+        )
+
+    def test_unset_compose_stack_deploy_server(self):
+        project, stack = self.create_stack_deployed_on_node()
+
+        response = self.request_stack_deploy_server_change(
+            project.slug, stack.slug, None
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        change = cast(
+            ComposeStackChange,
+            stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.DEPLOY_SERVER
+            ).first(),
+        )
+        self.assertIsNotNone(change)
+        self.assertIsNone(change.new_value)
+
+        self.deploy_stack(project.slug, stack.slug)
+
+        stack.refresh_from_db()
+        self.assertIsNone(stack.deployment_server)
+
+    def test_cancel_compose_stack_deploy_server_change(self):
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+        response = self.request_stack_deploy_server_change(
+            project.slug, stack.slug, self.node.id
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        change = cast(
+            ComposeStackChange,
+            stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.DEPLOY_SERVER
+            ).first(),
+        )
+
+        response = self.client.delete(
+            reverse(
+                "compose:stacks.cancel_request_changes",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                    "change_id": change.id,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        self.assertEqual(
+            0,
+            stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.DEPLOY_SERVER
+            ).count(),
+        )
+
+    def test_compose_stack_uses_its_deploy_server_as_constraint(self):
+        _, stack = self.create_stack_deployed_on_node()
+
+        spec = ComposeSpecProcessor.process_compose_spec(
+            user_content=DOCKER_COMPOSE_SIMPLE_DB,
+            stack=stack,
+        )
+
+        pg = spec.services[stack.get_stack_service_name("postgres")]
+        placement = pg.deploy.get("placement", {})
+        self.assertIn(
+            f"node.id=={self.node.swarm_node_id}", placement.get("constraints", [])
+        )
+        self.assertNotIn(
+            f"node.labels.{settings.DEPLOY_SERVER_LABEL}==true",
+            placement.get("constraints", []),
+        )
+
+    def test_compose_stack_prefer_its_deploy_server_over_default_deploy_servers(
+        self,
+    ):
+        project, stack = self.create_stack_deployed_on_node()
+        project.default_deployment_server = self.main_node
+        project.save()
+        env = project.production_env
+        env.default_deployment_server = self.main_node
+        env.save()
+
+        spec = ComposeSpecProcessor.process_compose_spec(
+            user_content=DOCKER_COMPOSE_SIMPLE_DB,
+            stack=stack,
+        )
+
+        pg = spec.services[stack.get_stack_service_name("postgres")]
+        placement = pg.deploy.get("placement", {})
+        self.assertIn(
+            f"node.id=={self.node.swarm_node_id}", placement.get("constraints", [])
+        )
+        self.assertNotIn(
+            f"node.id=={self.main_node.swarm_node_id}",
+            placement.get("constraints", []),
+        )
+
+    def test_deployed_compose_stack_computed_content_contains_deploy_server_constraint(
+        self,
+    ):
+        _, stack = self.create_stack_deployed_on_node()
+        self.assertIn(
+            f"node.id=={self.node.swarm_node_id}", cast(str, stack.computed_content)
+        )
+
+    def test_clone_compose_stack_clones_deploy_server(self):
+        project, stack = self.create_stack_deployed_on_node()
+
+        staging = Environment.objects.create(name="staging", project=project)
+        cloned = stack.clone(environment=staging)
+
+        change = cast(
+            ComposeStackChange,
+            cloned.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.DEPLOY_SERVER
+            ).first(),
+        )
+        self.assertIsNotNone(change)
+        self.assertEqual(
+            {"id": self.node.id, "swarm_node_id": self.node.swarm_node_id},
+            change.new_value,
+        )
+
+
+class ComposeStackSwarmNodeDeployServerViewTests(
+    BaseDeployServerTest, ComposeStackAPITestBase
+):
+    def set_stack_deploy_server(self, stack: ComposeStack):
+        stack.deployment_server = self.node
+        stack.save()
+
+    def add_pending_stack_deploy_server_change(self, stack: ComposeStack):
+        ComposeStackChange.objects.create(
+            stack=stack,
+            field=ComposeStackChange.ChangeField.DEPLOY_SERVER,
+            type=ComposeStackChange.ChangeType.UPDATE,
+            new_value={"id": self.node.id, "swarm_node_id": self.node.swarm_node_id},
+        )
+
+    def test_cannot_deprovision_server_that_is_used_as_a_compose_stack_deploy_server(
+        self,
+    ):
+        _, stack = self.create_compose_stack(content=DOCKER_COMPOSE_SIMPLE_DB)
+        self.set_stack_deploy_server(stack)
+
+        response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    def test_cannot_deprovision_server_that_is_referenced_in_compose_stack_deploy_server_pending_changes(
+        self,
+    ):
+        _, stack = self.create_compose_stack(content=DOCKER_COMPOSE_SIMPLE_DB)
+        self.add_pending_stack_deploy_server_change(stack)
+
+        response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    def test_cannot_remove_deploy_server_role_to_server_if_still_used_as_a_compose_stack_deploy_server(
+        self,
+    ):
+        _, stack = self.create_compose_stack(content=DOCKER_COMPOSE_SIMPLE_DB)
+        self.set_stack_deploy_server(stack)
+
+        response = self.update_roles(self.node.id, self.REMOVE_DEPLOY_ROLE_PAYLOAD)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    def test_cannot_remove_deploy_server_role_to_server_if_referenced_in_compose_stack_deploy_server_pending_changes(
+        self,
+    ):
+        _, stack = self.create_compose_stack(content=DOCKER_COMPOSE_SIMPLE_DB)
+        self.add_pending_stack_deploy_server_change(stack)
+
+        response = self.update_roles(self.node.id, self.REMOVE_DEPLOY_ROLE_PAYLOAD)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+
+class RedeployComposeStackToDeployServerViewTests(
+    BaseDeployServerTest, ComposeStackAPITestBase
+):
+    def create_stack_deployed_on_node_then_moved_away(self):
+        """
+        Deploy the stack on `self.node`, then redeploy it without a deploy server,
+        so that only the second deployment references `self.node`.
+        (the first deployment is the initial one without any deploy server)
+        """
+        project, stack = self.create_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_SIMPLE_DB
+        )
+        ComposeStackChange.objects.create(
+            stack=stack,
+            field=ComposeStackChange.ChangeField.DEPLOY_SERVER,
+            type=ComposeStackChange.ChangeType.UPDATE,
+            new_value={"id": self.node.id, "swarm_node_id": self.node.swarm_node_id},
+        )
+        self.deploy(project.slug, stack.slug)
+        stack.refresh_from_db()
+        self.assertEqual(self.node, stack.deployment_server)
+        node_deployment = cast(
+            ComposeStackDeployment, stack.deployments.latest("queued_at")
+        )
+
+        ComposeStackChange.objects.create(
+            stack=stack,
+            field=ComposeStackChange.ChangeField.DEPLOY_SERVER,
+            type=ComposeStackChange.ChangeType.UPDATE,
+            new_value=None,
+        )
+        self.deploy(project.slug, stack.slug)
+        stack.refresh_from_db()
+        self.assertIsNone(stack.deployment_server)
+        return project, stack, node_deployment
+
+    def deploy(self, project_slug: str, stack_slug: str):
+        response = self.client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project_slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack_slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+    def redeploy(self, project_slug: str, stack_slug: str, hash: str):
+        return self.client.put(
+            reverse(
+                "compose:stacks.redeploy",
+                kwargs={
+                    "project_slug": project_slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack_slug,
+                    "hash": hash,
+                },
+            ),
+        )
+
+    def test_can_redeploy_to_deployment_referencing_valid_deploy_server(self):
+        project, stack, node_deployment = (
+            self.create_stack_deployed_on_node_then_moved_away()
+        )
+
+        response = self.redeploy(project.slug, stack.slug, node_deployment.hash)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(4, stack.deployments.count())
+
+        stack.refresh_from_db()
+        self.assertEqual(self.node, stack.deployment_server)
+
+    def test_cannot_redeploy_to_deployment_referencing_deleted_server(self):
+        project, stack, node_deployment = (
+            self.create_stack_deployed_on_node_then_moved_away()
+        )
+        self.node.delete()
+
+        response = self.redeploy(project.slug, stack.slug, node_deployment.hash)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(3, stack.deployments.count())
+
+    def test_cannot_redeploy_to_deployment_referencing_server_without_deploy_server_role(
+        self,
+    ):
+        project, stack, node_deployment = (
+            self.create_stack_deployed_on_node_then_moved_away()
+        )
+        self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]  # type: ignore
+        self.node.save()
+
+        response = self.redeploy(project.slug, stack.slug, node_deployment.hash)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(3, stack.deployments.count())
+
+    def test_cannot_redeploy_to_deployment_referencing_unprovisioned_server(self):
+        project, stack, node_deployment = (
+            self.create_stack_deployed_on_node_then_moved_away()
+        )
+        self.node.swarm_node_id = None  # type: ignore
+        self.node.save()
+
+        response = self.redeploy(project.slug, stack.slug, node_deployment.hash)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(3, stack.deployments.count())
