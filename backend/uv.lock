@@ -339,11 +339,11 @@ wheels = [
 
 [[package]]
 name = "certifi"
-version = "2024.2.2"
+version = "2026.10.19"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/71/da/e94e26401b62acd6d91df2b52954aceb7f561743aa5ccc32152886c76c96/certifi-2024.2.2.tar.gz", hash = "sha256:0569859f95fc761b18b45ef421b1290a0f65f147e92a1e5eb3e635f9a5e4e66f", size = 164886, upload-time = "2024-02-02T01:22:17.364Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a6/bd/1436c50cc46699de0230fbaacc1d1de7bfec413176099949e9d5112e88f2/certifi-2026.10.19.tar.gz", hash = "sha256:035c1e85572b141bf1c3a3eff0e33a8eb74917522f2559075ff8d2fea780a1ae", size = 137598, upload-time = "2026-10-20T02:24:16.604Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ba/06/a07f096c664aeb9f01624f858c3add0a4e913d6c96257acb4fce61e7de14/certifi-2024.2.2-py3-none-any.whl", hash = "sha256:dc383c07b76109f368f6106eee2b593b04a011ea4d55f652c6ca24a754d1cdd1", size = 163774, upload-time = "2024-02-02T01:22:14.86Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/51/29046e48f693c54e5b7412216d447a1d8362c9653148d98c02cdf65fa733/certifi-2026.10.19-py3-none-any.whl", hash = "sha256:42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b", size = 136464, upload-time = "2026-10-20T02:24:15.072Z" },
 ]
 
 [[package]]
@@ -2920,7 +2920,7 @@ requires-dist = [
     { name = "black", specifier = "==24.3.0" },
     { name = "boto3", specifier = ">=1.41.2" },
     { name = "celery", specifier = "==5.4.0" },
-    { name = "certifi", specifier = "==2024.2.2" },
+    { name = "certifi", specifier = "==2026.10.19" },
     { name = "cffi", specifier = "==1.17.1" },
     { name = "channels", specifier = "==4.2.2" },
     { name = "charset-normalizer", specifier = "==3.3.2" },
@@ -3045,7 +3045,7 @@ dev = [
     { name = "billiard", specifier = "==4.2.1" },
     { name = "black", specifier = "==24.3.0" },
     { name = "celery", specifier = "==5.4.0" },
-    { name = "certifi", specifier = "==2024.2.2" },
+    { name = "certifi", specifier = "==2026.10.19" },
     { name = "cffi", specifier = "==1.17.1" },
     { name = "channels", specifier = "==4.2.2" },
     { name = "charset-normalizer", specifier = "==3.3.2" },
