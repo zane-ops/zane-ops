@@ -14957,6 +14957,20 @@ paths:
       operationId: swarm_nodes_list
       summary: List all swarm nodes in ZaneOps installation
       parameters:
+      - in: query
+        name: cluster_role
+        schema:
+          type: string
+          enum:
+          - BUILD_SERVER
+          - DEPLOY_SERVER
+        description: |-
+          * `BUILD_SERVER` - Build Server
+          * `DEPLOY_SERVER` - Deploy Server
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
       - name: page
         required: false
         in: query
@@ -19706,6 +19720,34 @@ components:
       required:
       - field
       - new_value
+    ComposeDeployServerFieldChangeFieldEnum:
+      enum:
+      - deploy_server
+      type: string
+      description: '* `deploy_server` - deploy_server'
+    ComposeDeployServerFieldChangeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/FieldChangeTypeEnum'
+          default: UPDATE
+        new_value:
+          $ref: '#/components/schemas/ComposeDeployServerRequestRequest'
+        field:
+          $ref: '#/components/schemas/ComposeDeployServerFieldChangeFieldEnum'
+      required:
+      - field
+      - new_value
+    ComposeDeployServerRequestRequest:
+      type: object
+      properties:
+        deployment_server_id:
+          type: string
+          nullable: true
+          minLength: 1
+      required:
+      - deployment_server_id
     ComposeEnvOverrideItemChangeFieldEnum:
       enum:
       - env_overrides
@@ -19796,11 +19838,17 @@ components:
         hash_prefix:
           type: string
           readOnly: true
+        deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/SimpleSwarmNode'
+          readOnly: true
+          nullable: true
       required:
       - computed_content
       - configs
       - created_at
       - deploy_token
+      - deployment_server
       - env_overrides
       - hash_prefix
       - id
@@ -19840,10 +19888,12 @@ components:
       enum:
       - compose_content
       - env_overrides
+      - deploy_server
       type: string
       description: |-
         * `compose_content` - Compose Content
         * `env_overrides` - Env Overrides
+        * `deploy_server` - Deploy Server
     ComposeStackChangeRequest:
       type: object
       properties:
@@ -19938,10 +19988,11 @@ components:
       oneOf:
       - $ref: '#/components/schemas/ComposeContentFieldChangeRequest'
       - $ref: '#/components/schemas/ComposeEnvOverrideItemChangeRequest'
+      - $ref: '#/components/schemas/ComposeDeployServerFieldChangeRequest'
       discriminator:
         propertyName: field
         mapping:
-          null: '#/components/schemas/ComposeEnvOverrideItemChangeRequest'
+          null: '#/components/schemas/ComposeDeployServerFieldChangeRequest'
     ComposeStackDeploymentStatusEnum:
       enum:
       - QUEUED
@@ -20540,9 +20591,15 @@ components:
             $ref: '#/components/schemas/ComposeStackEnvOverride'
           readOnly: true
           nullable: true
+        deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/SimpleSwarmNode'
+          readOnly: true
+          nullable: true
       required:
       - computed_content
       - configs
+      - deployment_server
       - env_overrides
       - hash_prefix
       - id
@@ -20632,11 +20689,17 @@ components:
         hash_prefix:
           type: string
           readOnly: true
+        deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/SimpleSwarmNode'
+          readOnly: true
+          nullable: true
       required:
       - computed_content
       - configs
       - created_at
       - deploy_token
+      - deployment_server
       - env_overrides
       - hash_prefix
       - id
@@ -32415,6 +32478,7 @@ components:
       - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueKeyErrorComponent'
       - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueValueErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueDeploymentServerIdErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -32426,6 +32490,7 @@ components:
           new_value.non_field_errors: '#/components/schemas/RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent'
           new_value.key: '#/components/schemas/RequestComposeStackUpdateNewValueKeyErrorComponent'
           new_value.value: '#/components/schemas/RequestComposeStackUpdateNewValueValueErrorComponent'
+          new_value.deployment_server_id: '#/components/schemas/RequestComposeStackUpdateNewValueDeploymentServerIdErrorComponent'
     RequestComposeStackUpdateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RequestComposeStackUpdateValidationError'
@@ -32482,6 +32547,34 @@ components:
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateNewValueDeploymentServerIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.deployment_server_id
+          type: string
+          description: '* `new_value.deployment_server_id` - new_value.deployment_server_id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -32559,10 +32652,12 @@ components:
           enum:
           - invalid
           - 'null'
+          - required
           type: string
           description: |-
             * `invalid` - invalid
             * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
@@ -36387,13 +36482,53 @@ components:
       required:
       - errors
       - type
+    SwarmNodesListClusterRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - cluster_role
+          type: string
+          description: '* `cluster_role` - cluster_role'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    SwarmNodesListError:
+      oneOf:
+      - $ref: '#/components/schemas/SwarmNodesListClusterRoleErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          cluster_role: '#/components/schemas/SwarmNodesListClusterRoleErrorComponent'
     SwarmNodesListErrorResponse400:
       oneOf:
+      - $ref: '#/components/schemas/SwarmNodesListValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
+          validation_error: '#/components/schemas/SwarmNodesListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    SwarmNodesListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/SwarmNodesListError'
+      required:
+      - errors
+      - type
     SwarmNodesRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'

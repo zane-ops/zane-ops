@@ -1296,6 +1296,20 @@ export interface components {
       field: components["schemas"]["ComposeContentFieldChangeFieldEnum"];
     };
     /**
+     * @description * `deploy_server` - deploy_server
+     * @enum {string}
+     */
+    ComposeDeployServerFieldChangeFieldEnum: "deploy_server";
+    ComposeDeployServerFieldChangeRequest: {
+      /** @default UPDATE */
+      type?: components["schemas"]["FieldChangeTypeEnum"];
+      new_value: components["schemas"]["ComposeDeployServerRequestRequest"];
+      field: components["schemas"]["ComposeDeployServerFieldChangeFieldEnum"];
+    };
+    ComposeDeployServerRequestRequest: {
+      deployment_server_id: string | null;
+    };
+    /**
      * @description * `env_overrides` - env_overrides
      * @enum {string}
      */
@@ -1329,6 +1343,7 @@ export interface components {
       created_at: string;
       name: string;
       hash_prefix: string;
+      deployment_server: components["schemas"]["SimpleSwarmNode"] | null;
     };
     ComposeStackChange: {
       id: string;
@@ -1341,9 +1356,10 @@ export interface components {
     /**
      * @description * `compose_content` - Compose Content
      * * `env_overrides` - Env Overrides
+     * * `deploy_server` - Deploy Server
      * @enum {string}
      */
-    ComposeStackChangeFieldEnum: "compose_content" | "env_overrides";
+    ComposeStackChangeFieldEnum: "compose_content" | "env_overrides" | "deploy_server";
     ComposeStackChangeRequest: {
       id?: string;
       type: components["schemas"]["ComposeStackChangeTypeEnum"];
@@ -1378,7 +1394,7 @@ export interface components {
       finished_at: string | null;
       redeploy_hash: string | null;
     };
-    ComposeStackDeploymentChangeRequestRequest: components["schemas"]["ComposeContentFieldChangeRequest"] | components["schemas"]["ComposeEnvOverrideItemChangeRequest"];
+    ComposeStackDeploymentChangeRequestRequest: components["schemas"]["ComposeContentFieldChangeRequest"] | components["schemas"]["ComposeEnvOverrideItemChangeRequest"] | components["schemas"]["ComposeDeployServerFieldChangeRequest"];
     /**
      * @description * `QUEUED` - Queued
      * * `DEPLOYING` - Deploying
@@ -1596,6 +1612,7 @@ export interface components {
         [key: string]: components["schemas"]["ComposeConfigVersion"];
       } | null;
       env_overrides: (readonly components["schemas"]["ComposeStackEnvOverride"][]) | null;
+      deployment_server: components["schemas"]["SimpleSwarmNode"] | null;
     };
     ComposeStackToggleRequestRequest: {
       desired_state: components["schemas"]["DesiredStateEnum"];
@@ -1624,6 +1641,7 @@ export interface components {
       created_at: string;
       name: string;
       hash_prefix: string;
+      deployment_server: components["schemas"]["SimpleSwarmNode"] | null;
     };
     ComposeStackUpdateRequest: {
       slug?: string;
@@ -7069,7 +7087,7 @@ export interface components {
      * @enum {string}
      */
     RegistryTypeEnum: "DOCKER_HUB" | "GITHUB" | "GITLAB" | "GOOGLE_ARTIFACT" | "AWS_ECR" | "GENERIC";
-    RequestComposeStackUpdateError: components["schemas"]["RequestComposeStackUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RequestComposeStackUpdateTypeErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueErrorComponent"] | components["schemas"]["RequestComposeStackUpdateFieldErrorComponent"] | components["schemas"]["RequestComposeStackUpdateItemIdErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueKeyErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueValueErrorComponent"];
+    RequestComposeStackUpdateError: components["schemas"]["RequestComposeStackUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RequestComposeStackUpdateTypeErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueErrorComponent"] | components["schemas"]["RequestComposeStackUpdateFieldErrorComponent"] | components["schemas"]["RequestComposeStackUpdateItemIdErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueKeyErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueValueErrorComponent"] | components["schemas"]["RequestComposeStackUpdateNewValueDeploymentServerIdErrorComponent"];
     RequestComposeStackUpdateErrorResponse400: components["schemas"]["RequestComposeStackUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestComposeStackUpdateFieldErrorComponent: {
       /**
@@ -7102,6 +7120,23 @@ export interface components {
        * @enum {string}
        */
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestComposeStackUpdateNewValueDeploymentServerIdErrorComponent: {
+      /**
+       * @description * `new_value.deployment_server_id` - new_value.deployment_server_id
+       * @enum {string}
+       */
+      attr: "new_value.deployment_server_id";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestComposeStackUpdateNewValueErrorComponent: {
@@ -7148,9 +7183,10 @@ export interface components {
       /**
        * @description * `invalid` - invalid
        * * `null` - null
+       * * `required` - required
        * @enum {string}
        */
-      code: "invalid" | "null";
+      code: "invalid" | "null" | "required";
       detail: string;
     };
     RequestComposeStackUpdateNewValueValueErrorComponent: {
@@ -8909,7 +8945,25 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["SwarmNodesCreateError"][];
     };
-    SwarmNodesListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    SwarmNodesListClusterRoleErrorComponent: {
+      /**
+       * @description * `cluster_role` - cluster_role
+       * @enum {string}
+       */
+      attr: "cluster_role";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * @enum {string}
+       */
+      code: "invalid_choice";
+      detail: string;
+    };
+    SwarmNodesListError: components["schemas"]["SwarmNodesListClusterRoleErrorComponent"];
+    SwarmNodesListErrorResponse400: components["schemas"]["SwarmNodesListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    SwarmNodesListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["SwarmNodesListError"][];
+    };
     SwarmNodesRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SwarmNodesSshKeysDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     /**
@@ -16846,6 +16900,12 @@ export interface operations {
   swarm_nodes_list: {
     parameters: {
       query?: {
+        /**
+         * @description * `BUILD_SERVER` - Build Server
+         * * `DEPLOY_SERVER` - Deploy Server
+         */
+        cluster_role?: "BUILD_SERVER" | "DEPLOY_SERVER";
+        is_active?: boolean;
         /** @description A page number within the paginated result set. */
         page?: number;
         /** @description Number of results to return per page. */
