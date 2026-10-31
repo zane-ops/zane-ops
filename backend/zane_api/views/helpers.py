@@ -297,19 +297,13 @@ def diff_service_snapshots(
                                 field=DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY,
                                 new_value=dict(
                                     deployment_strategy=target_snapshot.deployment_strategy,
-                                    deployment_server=dict(
-                                        id=target_snapshot.deployment_server.id,
-                                        swarm_node_id=target_snapshot.deployment_server.swarm_node_id,
-                                    )
+                                    deployment_server=target_snapshot.deployment_server.to_dict()
                                     if target_snapshot.deployment_server is not None
                                     else None,
                                 ),
                                 old_value=dict(
                                     deployment_strategy=current_snapshot.deployment_strategy,
-                                    deployment_server=dict(
-                                        id=current_snapshot.deployment_server.id,
-                                        swarm_node_id=current_snapshot.deployment_server.swarm_node_id,
-                                    )
+                                    deployment_server=current_snapshot.deployment_server.to_dict()
                                     if current_snapshot.deployment_server is not None
                                     else None,
                                 ),

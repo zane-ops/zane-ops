@@ -701,17 +701,18 @@ class ComposeSpecProcessor:
                     "restart_policy", {"condition": "any"}
                 )
 
-            default_server = (
-                stack.project.default_deployment_server
+            deployment_server = (
+                stack.deployment_server
                 or stack.environment.default_deployment_server
+                or stack.project.default_deployment_server
             )
 
             # Inject safe default placement constraints
             # All services should be pinned to nodes with `zane.app-server` label
             server_constraint = (
                 f"node.labels.{settings.DEPLOY_SERVER_LABEL}==true"
-                if default_server is None
-                else f"node.id=={default_server.swarm_node_id}"
+                if deployment_server is None
+                else f"node.id=={deployment_server.swarm_node_id}"
             )
             placement_constraints: set[str] = set(
                 service.deploy.get("placement", {}).get("constraints", [])

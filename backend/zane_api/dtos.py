@@ -499,8 +499,9 @@ class DeploymentServerDto:
             swarm_node_id=data["swarm_node_id"],
         )
 
-    def to_dict(self, data: Dict[str, Any]):
+    def to_dict(self):
         return dict(
+            id=self.id,
             swarm_node_id=self.swarm_node_id,
         )
 

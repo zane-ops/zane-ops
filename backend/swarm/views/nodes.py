@@ -334,6 +334,20 @@ class DeprovisionSwarmNodeAPIView(APIView):
                 f"Server `{node.display_name}` cannot be deprovisioned because some services have pending changes that would deploy them to it. "
                 "Discard or update those pending changes before removing this one."
             )
+        if ComposeStack.objects.filter(deployment_server=node).exists():
+            raise ResourceConflict(
+                f"Server `{node.display_name}` cannot be deprovisioned because some compose stacks are still deployed on it. "
+                "Move those compose stacks to another server before removing this one."
+            )
+        if ComposeStackChange.objects.filter(
+            field=ComposeStackChange.ChangeField.DEPLOY_SERVER,
+            new_value__id=node.id,
+            applied=False,
+        ).exists():
+            raise ResourceConflict(
+                f"Server `{node.display_name}` cannot be deprovisioned because some compose stacks have pending changes that would deploy them to it. "
+                "Discard or update those pending changes before removing this one."
+            )
 
         main_node = SwarmNode.objects.filter(is_initial_install_server=True).first()
 
@@ -428,6 +442,20 @@ class UpdateSwarmNodeRolesAPIView(APIView):
             ).exists():
                 raise ResourceConflict(
                     f"Server `{node.display_name}` cannot lose the `Deploy Server` role because some services have pending changes that would deploy them to it. "
+                    "Discard or update those pending changes before removing this role."
+                )
+            if ComposeStack.objects.filter(deployment_server=node).exists():
+                raise ResourceConflict(
+                    f"Server `{node.display_name}` cannot lose the `Deploy Server` role because some compose stacks are still deployed on it. "
+                    "Move those compose stacks to another server before removing this role."
+                )
+            if ComposeStackChange.objects.filter(
+                field=ComposeStackChange.ChangeField.DEPLOY_SERVER,
+                new_value__id=node.id,
+                applied=False,
+            ).exists():
+                raise ResourceConflict(
+                    f"Server `{node.display_name}` cannot lose the `Deploy Server` role because some compose stacks have pending changes that would deploy them to it. "
                     "Discard or update those pending changes before removing this role."
                 )
 

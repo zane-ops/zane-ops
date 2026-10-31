@@ -10,6 +10,7 @@ from .dtos import (
     ComposeStackUrlRouteDto,
     ComposeStackEnvOverrideDto,
 )
+from zane_api.dtos import DeploymentServerDto
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -22,6 +23,7 @@ class ComposeStack(TimestampedModel):
     ID_PREFIX = "compose_stk_"
     project_id: str
     environment_id: str
+    deployment_server_id: str | None
 
     if TYPE_CHECKING:
         changes: RelatedManager["ComposeStackChange"]
@@ -175,6 +177,14 @@ class ComposeStack(TimestampedModel):
                 )
                 for env in self.env_overrides.all()
             ],
+            deployment_server=(
+                DeploymentServerDto(
+                    id=self.deployment_server.id,
+                    swarm_node_id=cast(str, self.deployment_server.swarm_node_id),
+                )
+                if self.deployment_server is not None
+                else None
+            ),
         )
 
     @property
@@ -200,7 +210,10 @@ class ComposeStack(TimestampedModel):
     def add_change(self, change: "ComposeStackChange"):
         change.stack = self
         match change.field:
-            case ComposeStackChange.ChangeField.COMPOSE_CONTENT:
+            case (
+                ComposeStackChange.ChangeField.COMPOSE_CONTENT
+                | ComposeStackChange.ChangeField.DEPLOY_SERVER
+            ):
                 change_for_field = self.unapplied_changes.filter(
                     field=change.field
                 ).first()
@@ -237,6 +250,14 @@ class ComposeStack(TimestampedModel):
             elif change.type == ComposeStackChange.ChangeType.DELETE:
                 item_id = cast(str, change.item_id)
                 self.env_overrides.filter(id=item_id).delete()
+
+        # apply deploy server before compiling, so that the placement constraints use it
+        deploy_server_change = self.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.DEPLOY_SERVER
+        ).first()
+        if deploy_server_change is not None:
+            server = cast(dict | None, deploy_server_change.new_value)
+            self.deployment_server_id = server["id"] if server is not None else None
 
         change = self.unapplied_changes.filter(
             field=ComposeStackChange.ChangeField.COMPOSE_CONTENT
@@ -323,6 +344,31 @@ class ComposeStack(TimestampedModel):
                 stack=cloned_stack,
             )
         )
+
+        # Copy deploy server
+        deploy_server: dict | None = (
+            dict(
+                id=self.deployment_server.id,
+                swarm_node_id=self.deployment_server.swarm_node_id,
+            )
+            if self.deployment_server is not None
+            else None
+        )
+        deploy_server_change = self.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.DEPLOY_SERVER,
+        ).first()
+        if deploy_server_change is not None:
+            deploy_server = cast(dict | None, deploy_server_change.new_value)
+
+        if deploy_server is not None:
+            new_stack_changes.append(
+                ComposeStackChange(
+                    field=ComposeStackChange.ChangeField.DEPLOY_SERVER,
+                    type=ComposeStackChange.ChangeType.UPDATE,
+                    new_value=deploy_server,
+                    stack=cloned_stack,
+                )
+            )
 
         # Copy env variables
         target_snapshot = self.snapshot
