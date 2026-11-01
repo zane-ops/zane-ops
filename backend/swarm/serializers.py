@@ -15,6 +15,7 @@ class SwarmNodeListFilterSet(django_filters.FilterSet):
         method="filter_cluster_role", choices=SwarmNode.ClusterRole.choices
     )
     is_active = django_filters.BooleanFilter(method="filter_is_active")
+    hostname = django_filters.CharFilter(lookup_expr="icontains")
 
     def filter_cluster_role(self, qs: QuerySet, name: str, value: str):
         return qs.filter(Q(cluster_roles__contains=[value]))
@@ -32,6 +33,7 @@ class SwarmNodeListFilterSet(django_filters.FilterSet):
         fields = [
             "cluster_role",
             "is_active",
+            "hostname",
         ]
 
 

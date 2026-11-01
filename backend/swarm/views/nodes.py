@@ -61,7 +61,7 @@ class SwarmNodeListAPIView(ListCreateAPIView):
     permission_classes = [IsInstanceOwner]
     serializer_class = SwarmNodeSerializer
     queryset = SwarmNode.objects.all().order_by("created_at")
-    pagination_class = DefaultPageNumberPagination
+    pagination_class = None
     filter_backends = [DjangoFilterBackend]
     filterset_class = SwarmNodeListFilterSet
 
@@ -75,12 +75,7 @@ class SwarmNodeListAPIView(ListCreateAPIView):
         summary="List all swarm nodes in ZaneOps installation",
     )
     def get(self, request, *args, **kwargs):
-        try:
-            return super().get(request, *args, **kwargs)
-        except exceptions.NotFound as e:
-            if "Invalid page" in str(e.detail):
-                return Response(EMPTY_PAGINATED_RESPONSE)
-            raise e
+        return super().get(request, *args, **kwargs)
 
 
 class SwarmNodeDetailsAPIView(RetrieveUpdateDestroyAPIView):
