@@ -856,20 +856,21 @@ class EnvironmentWithVariablesSerializer(EnvironmentSerializer):
         queryset=SwarmNode.objects.all(),
         write_only=True,
         required=False,
+        allow_null=True,
     )
 
-    def validate_default_deployment_server_id(self, server: SwarmNode):
-        server_name = server.hostname or server.private_ip
-        if SwarmNode.ClusterRole.DEPLOY_SERVER not in server.cluster_roles:
-            raise serializers.ValidationError(
-                f"Server `{server_name}` cannot receive deployments because it doesn't have the `Deploy Server` role. "
-                "Add this role to the server or select a different server."
-            )
-        if server.swarm_node_id is None:
-            raise serializers.ValidationError(
-                f"Server `{server_name}` cannot receive deployments because it hasn't joined the cluster yet. "
-                "Wait for it to finish joining or select a different server."
-            )
+    def validate_default_deployment_server_id(self, server: SwarmNode | None):
+        if server is not None:
+            if SwarmNode.ClusterRole.DEPLOY_SERVER not in server.cluster_roles:
+                raise serializers.ValidationError(
+                    f"Server `{server.display_name}` cannot receive deployments because it doesn't have the `Deploy Server` role. "
+                    "Add this role to the server or select a different server."
+                )
+            if server.swarm_node_id is None:
+                raise serializers.ValidationError(
+                    f"Server `{server.display_name}` cannot receive deployments because it hasn't joined the cluster yet. "
+                    "Wait for it to finish joining or select a different server."
+                )
         return server
 
     def update(self, instance: models.Project, validated_data: dict):

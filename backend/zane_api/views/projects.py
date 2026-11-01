@@ -238,7 +238,7 @@ class ProjectDetailsAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Project.objects.all()
     lookup_field = "slug"
     lookup_url_kwarg = "slug"
-    http_method_names = ["get", "put", "delete"]
+    http_method_names = ["get", "patch", "put", "delete"]
 
     def get_permissions(self):
         if self.request.method == "GET":
