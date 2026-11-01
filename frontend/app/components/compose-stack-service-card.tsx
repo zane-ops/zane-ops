@@ -43,10 +43,14 @@ import {
   durationToMs,
   formatURL,
   getDockerImageIconURL,
+  hasMinRole,
   stripSlashIfExists,
   wait
 } from "~/lib/utils";
-import { useCurrentWorkspace } from "~/lib/workspace-store";
+import {
+  useCurrentWorkspace,
+  useCurrentWorkspaceMembership
+} from "~/lib/workspace-store";
 import type { ToggleStackState } from "~/routes/compose/toggle-compose-stack";
 
 export type ComposeStackServiceCardProps = {
@@ -83,6 +87,8 @@ export function ComposeStackServiceCard({
   }
 
   const navigate = useNavigate();
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
 
   const formRef = React.useRef<SubmitServiceFormHandle>(null);
 
@@ -206,24 +212,28 @@ export function ComposeStackServiceCard({
           "absolute top-3 right-4 z-10"
         )}
       >
-        <Button
-          asChild
-          variant="ghost"
-          className={cn(
-            "!border border-card/20 dark:border-grey/20",
-            "bg-muted text-sm text-card-foreground hidden md:inline-flex"
-          )}
-          size="sm"
-        >
-          <Link to={`./services/${name}/runtime-logs`}>View logs</Link>
-        </Button>
+        {isMember && (
+          <>
+            <Button
+              asChild
+              variant="ghost"
+              className={cn(
+                "!border border-card/20 dark:border-grey/20",
+                "bg-muted text-sm text-card-foreground hidden md:inline-flex"
+              )}
+              size="sm"
+            >
+              <Link to={`./services/${name}/runtime-logs`}>View logs</Link>
+            </Button>
 
-        <ToggleServiceForm
-          ref={formRef}
-          serviceSlug={name}
-          {...params}
-          current_state={service.status}
-        />
+            <ToggleServiceForm
+              ref={formRef}
+              serviceSlug={name}
+              {...params}
+              current_state={service.status}
+            />
+          </>
+        )}
 
         <Menubar className="border-none h-auto w-fit">
           <MenubarMenu>
@@ -245,25 +255,27 @@ export function ComposeStackServiceCard({
                 text="Replicas"
                 onClick={() => navigate(`./services/${name}`)}
               />
-              <MenubarContentItem
-                icon={ScrollText}
-                text="View runtime logs"
-                onClick={() => navigate(`./services/${name}/runtime-logs`)}
-              />
-
-              <MenubarContentItem
-                icon={TerminalIcon}
-                text="Terminal"
-                onClick={() => navigate(`./services/${name}/terminal`)}
-              />
-
-              {urls?.length > 0 && (
+              {isMember && (
                 <>
                   <MenubarContentItem
-                    icon={GlobeIcon}
-                    text="View http logs"
-                    onClick={() => navigate(`./services/${name}/http-logs`)}
+                    icon={ScrollText}
+                    text="View runtime logs"
+                    onClick={() => navigate(`./services/${name}/runtime-logs`)}
                   />
+
+                  <MenubarContentItem
+                    icon={TerminalIcon}
+                    text="Terminal"
+                    onClick={() => navigate(`./services/${name}/terminal`)}
+                  />
+
+                  {urls?.length > 0 && (
+                    <MenubarContentItem
+                      icon={GlobeIcon}
+                      text="View http logs"
+                      onClick={() => navigate(`./services/${name}/http-logs`)}
+                    />
+                  )}
                 </>
               )}
               <MenubarContentItem
@@ -278,7 +290,7 @@ export function ComposeStackServiceCard({
                 onClick={() => navigate(`./services/${name}/details`)}
               />
 
-              {!is_job && (
+              {isMember && !is_job && (
                 <MenubarContentItem
                   icon={
                     service.status === "SLEEPING" ? RotateCcwIcon : MoonIcon
