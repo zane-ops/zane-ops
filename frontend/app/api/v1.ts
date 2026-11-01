@@ -526,6 +526,7 @@ export interface paths {
     put: operations["updateProject"];
     /** Archive a Project */
     delete: operations["archiveSingleProject"];
+    patch: operations["projects_partial_update"];
   };
   "/api/projects/{slug}/{env_slug}/service-list/": {
     /**
@@ -5123,7 +5124,7 @@ export interface components {
      */
     PatchedEnvironmentWithVariablesRequest: {
       name?: string;
-      default_deployment_server_id?: string;
+      default_deployment_server_id?: string | null;
     };
     PatchedGithubAppRequest: {
       name?: string;
@@ -5152,6 +5153,11 @@ export interface components {
       auth_user?: string | null;
       auth_password?: string | null;
       env_variables?: string;
+    };
+    PatchedProjectRequest: {
+      description?: string | null;
+      slug?: string;
+      default_deployment_server_id?: string | null;
     };
     PatchedServiceRequest: {
       slug?: string;
@@ -5351,6 +5357,74 @@ export interface components {
      * @enum {string}
      */
     ProjectSearchResponseTypeEnum: "project";
+    ProjectsPartialUpdateDefaultDeploymentServerIdErrorComponent: {
+      /**
+       * @description * `default_deployment_server_id` - default_deployment_server_id
+       * @enum {string}
+       */
+      attr: "default_deployment_server_id";
+      /**
+       * @description * `does_not_exist` - does_not_exist
+       * * `incorrect_type` - incorrect_type
+       * @enum {string}
+       */
+      code: "does_not_exist" | "incorrect_type";
+      detail: string;
+    };
+    ProjectsPartialUpdateDescriptionErrorComponent: {
+      /**
+       * @description * `description` - description
+       * @enum {string}
+       */
+      attr: "description";
+      /**
+       * @description * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsPartialUpdateError: components["schemas"]["ProjectsPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPartialUpdateDescriptionErrorComponent"] | components["schemas"]["ProjectsPartialUpdateSlugErrorComponent"] | components["schemas"]["ProjectsPartialUpdateDefaultDeploymentServerIdErrorComponent"];
+    ProjectsPartialUpdateErrorResponse400: components["schemas"]["ProjectsPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProjectsPartialUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ProjectsPartialUpdateSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * * `unique` - unique
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
+      detail: string;
+    };
+    ProjectsPartialUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ProjectsPartialUpdateError"][];
+    };
     ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent: {
       /**
        * @description * `auth_enabled` - auth_enabled
@@ -9314,10 +9388,9 @@ export interface components {
       /**
        * @description * `does_not_exist` - does_not_exist
        * * `incorrect_type` - incorrect_type
-       * * `null` - null
        * @enum {string}
        */
-      code: "does_not_exist" | "incorrect_type" | "null";
+      code: "does_not_exist" | "incorrect_type";
       detail: string;
     };
     UpdateEnvironmentError: components["schemas"]["UpdateEnvironmentNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateEnvironmentNameErrorComponent"] | components["schemas"]["UpdateEnvironmentDefaultDeploymentServerIdErrorComponent"];
@@ -15780,6 +15853,52 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ArchiveSingleProjectErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  projects_partial_update: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedProjectRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedProjectRequest"];
+        "multipart/form-data": components["schemas"]["PatchedProjectRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Project"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsPartialUpdateErrorResponse400"];
         };
       };
       401: {

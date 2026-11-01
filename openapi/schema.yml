@@ -12425,6 +12425,107 @@ paths:
               schema:
                 $ref: '#/components/schemas/Project'
           description: ''
+    patch:
+      operationId: projects_partial_update
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectRequest'
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsPartialUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
     delete:
       operationId: archiveSingleProject
       summary: Archive a Project
@@ -28339,6 +28440,7 @@ components:
           type: string
           minLength: 1
           writeOnly: true
+          nullable: true
     PatchedGithubAppRequest:
       type: object
       properties:
@@ -28417,6 +28519,22 @@ components:
         env_variables:
           type: string
           writeOnly: true
+    PatchedProjectRequest:
+      type: object
+      properties:
+        description:
+          type: string
+          nullable: true
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        default_deployment_server_id:
+          type: string
+          minLength: 1
+          writeOnly: true
+          nullable: true
     PatchedServiceRequest:
       type: object
       properties:
@@ -29040,6 +29158,139 @@ components:
       - project
       type: string
       description: '* `project` - project'
+    ProjectsPartialUpdateDefaultDeploymentServerIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - default_deployment_server_id
+          type: string
+          description: '* `default_deployment_server_id` - default_deployment_server_id'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPartialUpdateDescriptionErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - description
+          type: string
+          description: '* `description` - description'
+        code:
+          enum:
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPartialUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPartialUpdateDescriptionErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPartialUpdateSlugErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPartialUpdateDefaultDeploymentServerIdErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsPartialUpdateNonFieldErrorsErrorComponent'
+          description: '#/components/schemas/ProjectsPartialUpdateDescriptionErrorComponent'
+          slug: '#/components/schemas/ProjectsPartialUpdateSlugErrorComponent'
+          default_deployment_server_id: '#/components/schemas/ProjectsPartialUpdateDefaultDeploymentServerIdErrorComponent'
+    ProjectsPartialUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsPartialUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsPartialUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsPartialUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPartialUpdateSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPartialUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsPartialUpdateError'
+      required:
+      - errors
+      - type
     ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent:
       type: object
       properties:
@@ -37304,12 +37555,10 @@ components:
           enum:
           - does_not_exist
           - incorrect_type
-          - 'null'
           type: string
           description: |-
             * `does_not_exist` - does_not_exist
             * `incorrect_type` - incorrect_type
-            * `null` - null
         detail:
           type: string
       required:

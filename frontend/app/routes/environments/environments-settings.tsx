@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
+  BanIcon,
   CheckIcon,
   ExternalLinkIcon,
   FlameIcon,
@@ -8,8 +9,10 @@ import {
   GitPullRequestArrowIcon,
   GithubIcon,
   GitlabIcon,
+  HammerIcon,
   InfoIcon,
   LoaderIcon,
+  ServerIcon,
   Trash2Icon,
   WebhookIcon
 } from "lucide-react";
@@ -22,7 +25,8 @@ import {
   useParams
 } from "react-router";
 import { toast } from "sonner";
-import { apiClient } from "~/api/client";
+import { type RequestInput, apiClient } from "~/api/client";
+import type { Environment } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
@@ -39,20 +43,30 @@ import {
   FieldSet,
   FieldSetCheckbox,
   FieldSetInput,
-  FieldSetLabel
+  FieldSetLabel,
+  FieldSetSelect
 } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
 import { PasswordToggleInput } from "~/components/ui/password-toggle-input";
 import {
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "~/components/ui/select";
+import { createDevLogger } from "~/lib/logger";
+import {
   ensureMinRole,
   environmentQueries,
   projectQueries,
-  resourceQueries
+  resourceQueries,
+  swarmQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   type ErrorResponseFromAPI,
   cn,
+  formatStorageValue,
   getCsrfTokenHeader,
   getFormErrorsFromResponseData,
   hasMinRole
@@ -63,6 +77,8 @@ import {
   useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import type { Route } from "./+types/environments-settings";
+
+const logger = createDevLogger(import.meta.url);
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
   await ensureMinRole(getQueryClient(), "Viewer");
@@ -106,10 +122,6 @@ export default function EnvironmentSettingsPage({
                 <InfoIcon size={15} className="flex-none text-grey" />
               </div>
               <div className="h-full border border-grey/50"></div>
-              {!env.preview_metadata &&
-                (env.name === "production" || !isAdmin) && (
-                  <div className="bg-grey/50 rounded-md size-2" />
-                )}
             </div>
             <div
               className={cn(
@@ -510,6 +522,32 @@ export default function EnvironmentSettingsPage({
             </section>
           )}
 
+          <section id="deploy" className="flex gap-1 scroll-mt-20">
+            <div className="w-16 hidden md:flex flex-col items-center">
+              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                <HammerIcon size={15} className="flex-none text-grey" />
+              </div>
+              <div className="h-full border border-grey/50"></div>
+              {!env.preview_metadata &&
+                (env.name === "production" || !isAdmin) && (
+                  <div className="bg-grey/50 rounded-md size-2" />
+                )}
+            </div>
+            <div
+              className={cn(
+                "w-full flex flex-col gap-5 pt-1",
+                isAdmin ? "pb-8" : "pb-4"
+              )}
+            >
+              <h2 className="text-lg text-grey">Deploy</h2>
+
+              <EnvDeployForm
+                isAdmin={isAdmin}
+                default_deployment_server={env.default_deployment_server}
+              />
+            </div>
+          </section>
+
           {env.name !== "production" && isAdmin && (
             <section id="danger" className="flex gap-1 scroll-mt-20">
               <div className="w-16 hidden md:flex flex-col items-center">
@@ -595,17 +633,169 @@ function EnvironmentNameForm({
           >
             {fetcher.state !== "idle" ? (
               <>
-                <span>Updating...</span>
                 <LoaderIcon className="animate-spin" size={15} />
+                <span>Updating...</span>
               </>
             ) : (
               <>
-                Update
                 <CheckIcon size={15} />
+                <span>Update</span>
               </>
             )}
           </SubmitButton>
         </div>
+      )}
+    </fetcher.Form>
+  );
+}
+
+type EnvDeployFormProps = {
+  isAdmin?: boolean;
+  default_deployment_server: Environment["default_deployment_server"];
+};
+
+function EnvDeployForm({
+  default_deployment_server,
+  isAdmin = false
+}: EnvDeployFormProps) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const isPending = fetcher.state !== "idle";
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+
+  const nodeListQuery = useQuery(
+    swarmQueries.nodeList({
+      cluster_role: "DEPLOY_SERVER",
+      is_active: true
+    })
+  );
+  const servers = nodeListQuery.data ?? [];
+
+  const [selectedDeployServerId, setSelectedDeployServerId] = React.useState<
+    string | null
+  >(default_deployment_server?.id ?? null);
+
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
+  const SelectTriggerRef =
+    React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
+
+  React.useEffect(() => {
+    const key = Object.keys(errors ?? {})[0] as keyof typeof errors;
+
+    if (key === "default_deployment_server_id") {
+      SelectTriggerRef.current?.focus();
+      return;
+    }
+    const field = formRef.current?.elements.namedItem(key) as HTMLInputElement;
+    field?.focus();
+  }, [errors]);
+
+  logger.info({
+    selectedDeployServerId
+  });
+
+  return (
+    <fetcher.Form method="post" className="flex flex-col gap-4" ref={formRef}>
+      {errors.non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errors.non_field_errors}</AlertDescription>
+        </Alert>
+      )}
+
+      <FieldSet
+        className="flex flex-col gap-1"
+        name="default_deployment_server_id"
+        errors={errors.default_deployment_server_id}
+      >
+        <FieldSetLabel>Default Deployment Server</FieldSetLabel>
+
+        <FieldSetSelect
+          value={selectedDeployServerId ?? "<none>"}
+          onValueChange={(value) => {
+            logger.scope("ProjectDetailsForm").info({ value });
+            if (value === "<none>") {
+              setSelectedDeployServerId(null);
+              return;
+            }
+            setSelectedDeployServerId(value);
+          }}
+          disabled={!isAdmin}
+        >
+          <SelectTrigger
+            ref={SelectTriggerRef}
+            className={cn(
+              "[&_[data-item]_.flex]:flex-row [&_[data-item]_.flex]:gap-1",
+              "[&_[data-item]]:items-center [&_[data-item]_:first-child]:top-0"
+            )}
+          >
+            <SelectValue placeholder="select a server" className="text-grey" />
+          </SelectTrigger>
+          <SelectContent className="border border-border text-sm">
+            <SelectItem
+              value="<none>"
+              className="items-start [&_[data-indicator]]:relative [&_[data-indicator]]:top-0.5"
+            >
+              <div data-item className="inline-flex items-center gap-2">
+                <BanIcon className="relative flex-none size-4 text-grey" />
+                None
+              </div>
+            </SelectItem>
+            {servers.map((server) => {
+              const memory =
+                server.memory_bytes !== null
+                  ? formatStorageValue(server.memory_bytes)
+                  : null;
+
+              return (
+                <SelectItem
+                  value={server.id}
+                  key={server.id}
+                  className="items-start [&_[data-indicator]]:relative [&_[data-indicator]]:top-0.5"
+                >
+                  <div data-item className="inline-flex items-start gap-2">
+                    <ServerIcon className="relative flex-none size-4 top-1" />
+                    <div className="flex flex-col items-start gap-0">
+                      <span>{server.hostname}</span>
+                      <span className="text-grey">
+                        {memory && (
+                          <span>
+                            {memory.value} {memory.unit}&nbsp;
+                          </span>
+                        )}
+                        {server.cpus && (
+                          <span>&middot; {server.cpus} CPUs</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </FieldSetSelect>
+      </FieldSet>
+
+      {isAdmin && (
+        <SubmitButton
+          isPending={isPending}
+          variant="secondary"
+          className="self-start"
+          name="intent"
+          value="update_environment_deploy_server"
+        >
+          {isPending ? (
+            <>
+              <LoaderIcon className="animate-spin" size={15} />
+              <span>Updating ...</span>
+            </>
+          ) : (
+            <>
+              <CheckIcon size={15} className="flex-none" />
+              <span>Update</span>
+            </>
+          )}
+        </SubmitButton>
       )}
     </fetcher.Form>
   );
@@ -623,6 +813,14 @@ export async function clientAction({
   switch (intent) {
     case "rename_environment": {
       return renameEnvironment(
+        workspaceId,
+        params.projectSlug,
+        params.envSlug,
+        formData
+      );
+    }
+    case "update_environment_deploy_server": {
+      return updateEnvironmentDeployServer(
         workspaceId,
         params.projectSlug,
         params.envSlug,
@@ -694,6 +892,60 @@ async function renameEnvironment(
   }
 
   toast.success("Environment renamed successfully!", { closeButton: true });
+
+  if (data.name !== env_slug) {
+    await Promise.all([
+      queryClient.invalidateQueries(
+        projectQueries.single(workspaceId, project_slug)
+      ),
+      queryClient.invalidateQueries(
+        environmentQueries.serviceList(workspaceId, project_slug, env_slug)
+      )
+    ]);
+  }
+
+  return { data };
+}
+
+async function updateEnvironmentDeployServer(
+  workspaceId: string,
+  project_slug: string,
+  env_slug: string,
+  formData: FormData
+) {
+  const queryClient = getQueryClient();
+  const server_id = formData.get("default_deployment_server_id")?.toString();
+  const userData = {
+    default_deployment_server_id: server_id === "<none>" ? null : server_id
+  } satisfies RequestInput<
+    "patch",
+    "/api/projects/{slug}/environment-details/{env_slug}/"
+  >;
+
+  const { error, data } = await apiClient.PATCH(
+    "/api/projects/{slug}/environment-details/{env_slug}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          slug: project_slug,
+          env_slug
+        }
+      },
+      body: userData
+    }
+  );
+
+  if (error) {
+    return {
+      userData,
+      errors: error
+    };
+  }
+
+  toast.success("Environment updated successfully!", { closeButton: true });
 
   if (data.name !== env_slug) {
     await Promise.all([

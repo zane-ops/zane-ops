@@ -4,6 +4,7 @@ import {
   BanIcon,
   CheckIcon,
   FlameIcon,
+  HammerIcon,
   InfoIcon,
   LoaderIcon,
   ServerIcon,
@@ -12,7 +13,6 @@ import {
 import * as React from "react";
 import { href, redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
-import { formData } from "zod-form-data";
 import { type RequestInput, apiClient } from "~/api/client";
 import type { Project } from "~/api/types";
 import { DeleteConfirmationDialog } from "~/components/delete-confirmation-dialog";
@@ -82,7 +82,6 @@ export default function ProjectSettingsPage({
                 <InfoIcon size={15} className="flex-none text-grey" />
               </div>
               <div className="h-full border border-grey/50"></div>
-              {!isAdmin && <div className="bg-grey/50 rounded-md size-2" />}
             </div>
             <div
               className={cn(
@@ -95,6 +94,28 @@ export default function ProjectSettingsPage({
               <ProjectDetailsForm
                 project_slug={params.projectSlug}
                 description={project.description ?? ""}
+                isAdmin={isAdmin}
+              />
+            </div>
+          </section>
+
+          <section id="deploy" className="flex gap-1 scroll-mt-20">
+            <div className="w-16 hidden md:flex flex-col items-center">
+              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                <HammerIcon size={15} className="flex-none text-grey" />
+              </div>
+              <div className="h-full border border-grey/50"></div>
+              {!isAdmin && <div className="bg-grey/50 rounded-md size-2" />}
+            </div>
+            <div
+              className={cn(
+                "w-full flex flex-col gap-5 pt-1",
+                isAdmin ? "pb-8" : "pb-4"
+              )}
+            >
+              <h2 className="text-lg text-grey">Deploy</h2>
+
+              <ProjectDeploymentForm
                 isAdmin={isAdmin}
                 default_deployment_server={project.default_deployment_server}
               />
@@ -135,15 +156,88 @@ type ProjectDetailsFormProps = {
   description: string;
   project_slug: string;
   isAdmin?: boolean;
-  default_deployment_server: Project["default_deployment_server"];
 };
 
 function ProjectDetailsForm({
   description,
   project_slug,
-  default_deployment_server,
   isAdmin = false
 }: ProjectDetailsFormProps) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const isPending = fetcher.state !== "idle";
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+
+  return (
+    <fetcher.Form method="post" className="flex flex-col gap-4">
+      {errors.non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errors.non_field_errors}</AlertDescription>
+        </Alert>
+      )}
+
+      <FieldSet
+        errors={errors.slug}
+        name="slug"
+        className="flex flex-col gap-1.5 flex-1"
+      >
+        <FieldSetLabel>Project slug</FieldSetLabel>
+        <FieldSetInput
+          placeholder="project slug"
+          defaultValue={project_slug}
+          disabled={!isAdmin}
+        />
+      </FieldSet>
+
+      <FieldSet
+        name="description"
+        errors={errors.description}
+        className="my-2 flex flex-col gap-1"
+      >
+        <FieldSetLabel>Description</FieldSetLabel>
+        <FieldSetTextarea
+          className="placeholder:text-gray-400"
+          placeholder="Ex: A self hosted PaaS"
+          defaultValue={description}
+          disabled={!isAdmin}
+        />
+      </FieldSet>
+
+      {isAdmin && (
+        <SubmitButton
+          isPending={isPending}
+          variant="secondary"
+          className="self-start"
+          name="intent"
+          value="update_project"
+        >
+          {isPending ? (
+            <>
+              <LoaderIcon className="animate-spin" size={15} />
+              <span>Updating ...</span>
+            </>
+          ) : (
+            <>
+              <CheckIcon size={15} className="flex-none" />
+              <span>Update</span>
+            </>
+          )}
+        </SubmitButton>
+      )}
+    </fetcher.Form>
+  );
+}
+
+type ProjectDeploymentFormProps = {
+  isAdmin?: boolean;
+  default_deployment_server: Project["default_deployment_server"];
+};
+
+function ProjectDeploymentForm({
+  default_deployment_server,
+  isAdmin = false
+}: ProjectDeploymentFormProps) {
   const fetcher = useFetcher<typeof clientAction>();
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
@@ -262,40 +356,13 @@ function ProjectDetailsForm({
         </FieldSetSelect>
       </FieldSet>
 
-      <FieldSet
-        errors={errors.slug}
-        name="slug"
-        className="flex flex-col gap-1.5 flex-1"
-      >
-        <FieldSetLabel>Project slug</FieldSetLabel>
-        <FieldSetInput
-          placeholder="project slug"
-          defaultValue={project_slug}
-          disabled={!isAdmin}
-        />
-      </FieldSet>
-
-      <FieldSet
-        name="description"
-        errors={errors.description}
-        className="my-2 flex flex-col gap-1"
-      >
-        <FieldSetLabel>Description</FieldSetLabel>
-        <FieldSetTextarea
-          className="placeholder:text-gray-400"
-          placeholder="Ex: A self hosted PaaS"
-          defaultValue={description}
-          disabled={!isAdmin}
-        />
-      </FieldSet>
-
       {isAdmin && (
         <SubmitButton
           isPending={isPending}
           variant="secondary"
           className="self-start"
           name="intent"
-          value="update_project"
+          value="update_project_deployment"
         >
           {isPending ? (
             <>
@@ -364,6 +431,9 @@ export async function clientAction({
     case "update_project": {
       return updateProject(workspaceId, params, formData);
     }
+    case "update_project_deployment": {
+      return updateProjectDeployment(workspaceId, params, formData);
+    }
     case "archive_project": {
       if (
         formData.get("project_slug")?.toString().trim() !== params.projectSlug
@@ -398,8 +468,7 @@ async function updateProject(
   const server_id = formData.get("default_deployment_server_id")?.toString();
   const userData = {
     slug: formData.get("slug")?.toString() ?? "",
-    description: formData.get("description")?.toString(),
-    default_deployment_server_id: server_id === "<none>" ? null : server_id
+    description: formData.get("description")?.toString()
   } satisfies RequestInput<"put", "/api/projects/{slug}/">;
   const apiResponse = await apiClient.PUT("/api/projects/{slug}/", {
     headers: {
@@ -436,6 +505,41 @@ async function updateProject(
       })
     );
   }
+}
+
+async function updateProjectDeployment(
+  workspaceId: string,
+  params: Route.ClientActionArgs["params"],
+  formData: FormData
+) {
+  const queryClient = getQueryClient();
+  const server_id = formData.get("default_deployment_server_id")?.toString();
+  const userData = {
+    default_deployment_server_id: server_id === "<none>" ? null : server_id
+  } satisfies RequestInput<"patch", "/api/projects/{slug}/">;
+  const apiResponse = await apiClient.PATCH("/api/projects/{slug}/", {
+    headers: {
+      ...(await getCsrfTokenHeader())
+    },
+    params: {
+      path: {
+        slug: params.projectSlug
+      }
+    },
+    body: userData
+  });
+
+  if (apiResponse.error) {
+    return {
+      userData,
+      errors: apiResponse.error
+    };
+  }
+
+  queryClient.invalidateQueries(
+    projectQueries.single(workspaceId, params.projectSlug)
+  );
+  toast.success("Project updated successfully!", { closeButton: true });
 }
 
 async function archiveProject(
