@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircleIcon,
   CheckIcon,
   LoaderIcon,
   PencilLineIcon,
   PinIcon,
   ServerIcon,
   ShuffleIcon,
+  TriangleAlertIcon,
   Undo2Icon,
   XIcon
 } from "lucide-react";
@@ -14,6 +16,7 @@ import { flushSync } from "react-dom";
 import { useFetcher } from "react-router";
 import { toast } from "sonner";
 import type { Service } from "~/api/types";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
@@ -31,8 +34,10 @@ import { swarmQueries } from "~/lib/queries";
 import {
   cn,
   formatStorageValue,
-  getFormErrorsFromResponseData
+  getFormErrorsFromResponseData,
+  hasMinRole
 } from "~/lib/utils";
+import { useCurrentWorkspaceMembership } from "~/lib/workspace-store";
 import {
   type clientAction,
   useServiceQuery
@@ -102,6 +107,9 @@ export function ServiceDeployStrategyForm({
   // locked until that change is applied or discarded
   const isNotEditable = deployStrategyChange !== undefined;
 
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
+
   React.useEffect(() => {
     if (errors.non_field_errors && errors.non_field_errors.length > 0) {
       const fullErrorMessages = errors.non_field_errors.join("\n");
@@ -143,6 +151,28 @@ export function ServiceDeployStrategyForm({
           name="change_id"
           value={deployStrategyChange?.id}
         />
+
+        {isMember && (
+          <Alert variant="warning">
+            <TriangleAlertIcon size={15} />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              Changing servers might move this service to another node. Volumes
+              are local to each node, so they will be recreated empty on the new
+              server, which may result in data loss.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {errors.new_value?.non_field_errors && (
+          <Alert variant="destructive">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              {errors.new_value.non_field_errors}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <FieldSet
           required
