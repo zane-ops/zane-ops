@@ -414,8 +414,14 @@ export const licenseQueries = {
 };
 
 export const swarmNodeListFilters = zfd.formData({
-  page: zfd.numeric().optional().catch(1).optional(),
-  per_page: zfd.numeric().optional().catch(10).optional()
+  hostname: z.string().optional(),
+  cluster_role: z.enum(["BUILD_SERVER", "DEPLOY_SERVER"]).optional(),
+  is_active: z
+    .preprocess(
+      (arg) => arg === "true",
+      z.coerce.boolean().optional().catch(undefined)
+    )
+    .optional()
 });
 
 export const swarmQueries = {
@@ -426,7 +432,13 @@ export const swarmQueries = {
         const { data } = await apiClient.GET("/api/swarm/nodes/", {
           signal,
           params: {
-            query: filters
+            query: {
+              ...filters,
+              // do not pass hostname if empty
+              hostname: filters.hostname?.trim()
+                ? filters.hostname.trim()
+                : undefined
+            }
           }
         });
         if (!data) throw notFound("Not found");

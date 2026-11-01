@@ -58,40 +58,19 @@ export function meta() {
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-
-  const searchParams = new URL(request.url).searchParams;
-  const search = swarmNodeListFilters.parse(searchParams);
-  const filters = {
-    page: search.page ?? 1,
-    per_page: search.per_page ?? 10,
-    ...search
-  };
-
-  const nodes = await queryClient.ensureQueryData(
-    swarmQueries.nodeList(filters)
-  );
+  const nodes = await queryClient.ensureQueryData(swarmQueries.nodeList());
   return { nodes };
 }
 
 export default function SwarmNodeListPage({
   loaderData
 }: Route.ComponentProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const search = swarmNodeListFilters.parse(searchParams);
-
-  const filters = {
-    page: search.page ?? 1,
-    per_page: search.per_page ?? 10,
-    ...search
-  };
-
   const { data } = useQuery({
-    ...swarmQueries.nodeList(filters),
+    ...swarmQueries.nodeList(),
     initialData: loaderData.nodes
   });
 
-  const nodes = data.results;
-  const totalPages = Math.ceil(data.count / filters.per_page);
+  const nodes = data;
 
   return (
     <section className="flex flex-col gap-4">
@@ -114,29 +93,6 @@ export default function SwarmNodeListPage({
           <ServerCard key={node.id} {...node} />
         ))}
       </ul>
-
-      <div className="my-4 block">
-        {nodes.length > 0 && data.count > 10 && (
-          <Pagination
-            totalPages={totalPages}
-            currentPage={filters.page}
-            perPage={filters.per_page}
-            onChangePage={(newPage) => {
-              searchParams.set("page", newPage.toString());
-              setSearchParams(searchParams, {
-                replace: true
-              });
-            }}
-            onChangePerPage={(newPerPage) => {
-              searchParams.set("page", "1");
-              searchParams.set("per_page", newPerPage.toString());
-              setSearchParams(searchParams, {
-                replace: true
-              });
-            }}
-          />
-        )}
-      </div>
     </section>
   );
 }

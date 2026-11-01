@@ -14968,21 +14968,13 @@ paths:
           * `BUILD_SERVER` - Build Server
           * `DEPLOY_SERVER` - Deploy Server
       - in: query
+        name: hostname
+        schema:
+          type: string
+      - in: query
         name: is_active
         schema:
           type: boolean
-      - name: page
-        required: false
-        in: query
-        description: A page number within the paginated result set.
-        schema:
-          type: integer
-      - name: per_page
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
       tags:
       - swarm
       security:
@@ -15030,20 +15022,6 @@ paths:
                       detail: You do not have permission to perform this action.
                       attr: null
           description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -15062,7 +15040,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedSwarmNodeList'
+                type: array
+                items:
+                  $ref: '#/components/schemas/SwarmNode'
           description: ''
     post:
       operationId: swarm_nodes_create
@@ -15124,20 +15104,6 @@ paths:
                     errors:
                     - code: permission_denied
                       detail: You do not have permission to perform this action.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
                       attr: null
           description: ''
         '429':
@@ -28190,31 +28156,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ServiceDeployment'
-    PaginatedSwarmNodeList:
-      type: object
-      required:
-      - count
-      - next
-      - previous
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/SwarmNode'
     PaginatedWorkspaceInvitationList:
       type: object
       required:
@@ -29071,6 +29012,7 @@ components:
           type: string
           minLength: 1
           writeOnly: true
+          nullable: true
       required:
       - slug
     ProjectSearchResponse:
@@ -36504,10 +36446,12 @@ components:
     SwarmNodesListError:
       oneOf:
       - $ref: '#/components/schemas/SwarmNodesListClusterRoleErrorComponent'
+      - $ref: '#/components/schemas/SwarmNodesListHostnameErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           cluster_role: '#/components/schemas/SwarmNodesListClusterRoleErrorComponent'
+          hostname: '#/components/schemas/SwarmNodesListHostnameErrorComponent'
     SwarmNodesListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/SwarmNodesListValidationError'
@@ -36517,6 +36461,25 @@ components:
         mapping:
           validation_error: '#/components/schemas/SwarmNodesListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    SwarmNodesListHostnameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - hostname
+          type: string
+          description: '* `hostname` - hostname'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     SwarmNodesListValidationError:
       type: object
       properties:
@@ -37606,12 +37569,10 @@ components:
           enum:
           - does_not_exist
           - incorrect_type
-          - 'null'
           type: string
           description: |-
             * `does_not_exist` - does_not_exist
             * `incorrect_type` - incorrect_type
-            * `null` - null
         detail:
           type: string
       required:

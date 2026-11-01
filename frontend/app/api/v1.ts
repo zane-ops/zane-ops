@@ -5037,21 +5037,6 @@ export interface components {
       previous: string | null;
       results: components["schemas"]["ServiceDeployment"][];
     };
-    PaginatedSwarmNodeList: {
-      /** @example 123 */
-      count: number;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=4
-       */
-      next: string | null;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=2
-       */
-      previous: string | null;
-      results: components["schemas"]["SwarmNode"][];
-    };
     PaginatedWorkspaceInvitationList: {
       /** @example 123 */
       count: number;
@@ -5351,7 +5336,7 @@ export interface components {
     ProjectRequest: {
       description?: string | null;
       slug: string;
-      default_deployment_server_id?: string;
+      default_deployment_server_id?: string | null;
     };
     ProjectSearchResponse: {
       id: string;
@@ -8958,8 +8943,21 @@ export interface components {
       code: "invalid_choice";
       detail: string;
     };
-    SwarmNodesListError: components["schemas"]["SwarmNodesListClusterRoleErrorComponent"];
+    SwarmNodesListError: components["schemas"]["SwarmNodesListClusterRoleErrorComponent"] | components["schemas"]["SwarmNodesListHostnameErrorComponent"];
     SwarmNodesListErrorResponse400: components["schemas"]["SwarmNodesListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    SwarmNodesListHostnameErrorComponent: {
+      /**
+       * @description * `hostname` - hostname
+       * @enum {string}
+       */
+      attr: "hostname";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
     SwarmNodesListValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["SwarmNodesListError"][];
@@ -9446,10 +9444,9 @@ export interface components {
       /**
        * @description * `does_not_exist` - does_not_exist
        * * `incorrect_type` - incorrect_type
-       * * `null` - null
        * @enum {string}
        */
-      code: "does_not_exist" | "incorrect_type" | "null";
+      code: "does_not_exist" | "incorrect_type";
       detail: string;
     };
     UpdateProjectDescriptionErrorComponent: {
@@ -16905,17 +16902,14 @@ export interface operations {
          * * `DEPLOY_SERVER` - Deploy Server
          */
         cluster_role?: "BUILD_SERVER" | "DEPLOY_SERVER";
+        hostname?: string;
         is_active?: boolean;
-        /** @description A page number within the paginated result set. */
-        page?: number;
-        /** @description Number of results to return per page. */
-        per_page?: number;
       };
     };
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["PaginatedSwarmNodeList"];
+          "application/json": components["schemas"]["SwarmNode"][];
         };
       };
       400: {
@@ -16931,11 +16925,6 @@ export interface operations {
       403: {
         content: {
           "application/json": components["schemas"]["ErrorResponse403"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {
@@ -16973,11 +16962,6 @@ export interface operations {
       403: {
         content: {
           "application/json": components["schemas"]["ErrorResponse403"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {
