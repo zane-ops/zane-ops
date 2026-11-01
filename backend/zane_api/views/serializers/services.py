@@ -580,7 +580,9 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
         ):
             raise serializers.ValidationError(
                 {
-                    "new_value": "Volumes must stay on a single server. Switch this service to the `Specific Server` deployment strategy before adding a volume."
+                    "new_value": {
+                        "non_field_errors": "Volumes must stay on a single server. Switch this service to the `Specific Server` deployment strategy before adding a volume."
+                    }
                 }
             )
 
