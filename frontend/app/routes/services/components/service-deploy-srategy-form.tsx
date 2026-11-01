@@ -191,7 +191,8 @@ export function ServiceDeployStrategyForm({
                   <div className="flex flex-col items-start gap-0">
                     <span>Any Deploy server</span>
                     <span className="text-grey">
-                      Use the default server, or any available deploy server
+                      Use the project/environment default server, or any
+                      available deploy server
                     </span>
                   </div>
                 </div>

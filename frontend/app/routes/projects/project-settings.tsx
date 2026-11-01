@@ -61,6 +61,7 @@ export default function ProjectSettingsPage({
 }: Route.ComponentProps) {
   const membership = useCurrentWorkspaceMembership();
   const isAdmin = hasMinRole(membership, "Admin");
+  const isMember = hasMinRole(membership, "Member");
   const workspaceId = useCurrentWorkspace().id;
   const { data: project } = useQuery({
     ...projectQueries.single(workspaceId, params.projectSlug),
@@ -82,6 +83,7 @@ export default function ProjectSettingsPage({
                 <InfoIcon size={15} className="flex-none text-grey" />
               </div>
               <div className="h-full border border-grey/50"></div>
+              {!isMember && <div className="bg-grey/50 rounded-md size-2" />}
             </div>
             <div
               className={cn(
@@ -99,28 +101,30 @@ export default function ProjectSettingsPage({
             </div>
           </section>
 
-          <section id="deploy" className="flex gap-1 scroll-mt-20">
-            <div className="w-16 hidden md:flex flex-col items-center">
-              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
-                <HammerIcon size={15} className="flex-none text-grey" />
+          {isMember && (
+            <section id="deploy" className="flex gap-1 scroll-mt-20">
+              <div className="w-16 hidden md:flex flex-col items-center">
+                <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                  <HammerIcon size={15} className="flex-none text-grey" />
+                </div>
+                <div className="h-full border border-grey/50"></div>
+                {!isAdmin && <div className="bg-grey/50 rounded-md size-2" />}
               </div>
-              <div className="h-full border border-grey/50"></div>
-              {!isAdmin && <div className="bg-grey/50 rounded-md size-2" />}
-            </div>
-            <div
-              className={cn(
-                "w-full flex flex-col gap-5 pt-1",
-                isAdmin ? "pb-8" : "pb-4"
-              )}
-            >
-              <h2 className="text-lg text-grey">Deploy</h2>
+              <div
+                className={cn(
+                  "w-full flex flex-col gap-5 pt-1",
+                  isAdmin ? "pb-8" : "pb-4"
+                )}
+              >
+                <h2 className="text-lg text-grey">Deploy</h2>
 
-              <ProjectDeploymentForm
-                isAdmin={isAdmin}
-                default_deployment_server={project.default_deployment_server}
-              />
-            </div>
-          </section>
+                <ProjectDeploymentForm
+                  isAdmin={isAdmin}
+                  default_deployment_server={project.default_deployment_server}
+                />
+              </div>
+            </section>
+          )}
 
           {isAdmin && (
             <section id="danger" className="flex gap-1 scroll-mt-20">
