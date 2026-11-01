@@ -12,6 +12,7 @@ import {
   BuilderChangeField,
   CommandChangeField,
   ConfigChangeItem,
+  DeploymentStrategyChangeField,
   EnvVariableChangeItem,
   GitSourceChangeField,
   HealthcheckChangeField,
@@ -188,6 +189,15 @@ export function ServiceChangesModal({
                         changes.map((change) => (
                           <ChangeForm key={change.id} change_id={change.id}>
                             <SourceChangeField unapplied change={change} />
+                          </ChangeForm>
+                        ))}
+                      {field === "deployment_strategy" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <DeploymentStrategyChangeField
+                              unapplied
+                              change={change}
+                            />
                           </ChangeForm>
                         ))}
                       {field === "git_source" &&

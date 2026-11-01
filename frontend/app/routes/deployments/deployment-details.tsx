@@ -48,6 +48,7 @@ import type { Deployment, Service } from "~/api/types";
 import {
   BuilderChangeField,
   CommandChangeField,
+  DeploymentStrategyChangeField,
   ConfigChangeItem,
   EnvVariableChangeItem,
   GitSourceChangeField,
@@ -441,6 +442,13 @@ export default function DeploymentDetailsPage({
                     changes.map((change) => (
                       <React.Fragment key={change.id}>
                         <SourceChangeField change={change} />
+                        <hr className="border border-dashed border-border" />
+                      </React.Fragment>
+                    ))}
+                  {field === "deployment_strategy" &&
+                    changes.map((change) => (
+                      <React.Fragment key={change.id}>
+                        <DeploymentStrategyChangeField change={change} />
                         <hr className="border border-dashed border-border" />
                       </React.Fragment>
                     ))}

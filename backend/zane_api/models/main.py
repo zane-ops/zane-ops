@@ -650,6 +650,7 @@ class Service(BaseService):
             "credentials",
             "container_registry_credentials",
             "unapplied_changes",
+            "deployment_server",
         ]
 
     class ServiceType(models.TextChoices):

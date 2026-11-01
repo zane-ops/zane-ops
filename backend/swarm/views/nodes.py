@@ -4,6 +4,7 @@ from drf_spectacular.utils import extend_schema
 
 from rest_framework import exceptions, status
 from rest_framework.generics import (
+    ListAPIView,
     ListCreateAPIView,
     RetrieveUpdateDestroyAPIView,
     DestroyAPIView,
@@ -18,11 +19,9 @@ from django.conf import settings
 from search.dtos import RuntimeLogSource
 from search.loki_client import LokiSearchClient
 from search.serializers import RuntimeLogsSearchSerializer
-from zane_api.permissions import IsInstanceOwner
+from zane_api.permissions import HasWorkspace, IsInstanceOwner, IsWorkspaceMember
 from zane_api.views.serializers import DeploymentBuildLogsQuerySerializer
 from zane_api.views.base import (
-    DefaultPageNumberPagination,
-    EMPTY_PAGINATED_RESPONSE,
     BadRequest,
     ResourceConflict,
 )
@@ -43,6 +42,7 @@ from temporal.workflows import (
 )
 from swarm.serializers import (
     CreateSSHKeyRequestSerializer,
+    DeployServerSerializer,
     DeprovisionSwarmNodeRequestSerializer,
     ProvisionSwarmNodeRequestSerializer,
     SSHKeySerializer,
@@ -51,6 +51,7 @@ from swarm.serializers import (
     UpdateSwarmNodeSSHPortSerializer,
     SwarmNodeSerializer,
     SwarmNodeListFilterSet,
+    IN_CLUSTER_STATUSES,
 )
 from zane_api.models import Service, Project, Environment, DeploymentChange
 from compose.models import ComposeStack, ComposeStackChange
@@ -73,6 +74,23 @@ class SwarmNodeListAPIView(ListCreateAPIView):
 
     @extend_schema(
         summary="List all swarm nodes in ZaneOps installation",
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+
+class DeployServerListAPIView(ListAPIView):
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
+    serializer_class = DeployServerSerializer
+    queryset = SwarmNode.objects.filter(
+        cluster_roles__contains=[SwarmNode.ClusterRole.DEPLOY_SERVER],
+        status__in=IN_CLUSTER_STATUSES,
+        swarm_node_id__isnull=False,
+    ).order_by("created_at")
+    pagination_class = None
+
+    @extend_schema(
+        summary="List all active deploy servers",
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)

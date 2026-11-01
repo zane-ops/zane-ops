@@ -15053,6 +15053,79 @@ paths:
               schema:
                 $ref: '#/components/schemas/Settings'
           description: ''
+  /api/swarm/deploy-servers/:
+    get:
+      operationId: swarm_deploy_servers_list
+      summary: List all active deploy servers
+      tags:
+      - swarm
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwarmDeployServersListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeployServer'
+          description: ''
   /api/swarm/nodes/:
     get:
       operationId: swarm_nodes_list
@@ -24620,6 +24693,31 @@ components:
       required:
       - errors
       - type
+    DeployServer:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        hostname:
+          type: string
+          nullable: true
+        cpus:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        memory_bytes:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+      required:
+      - cpus
+      - hostname
+      - id
+      - memory_bytes
     DeployStateEnum:
       enum:
       - APPROVED
@@ -36354,6 +36452,13 @@ components:
       description: |-
         * `LOCAL` - Local Disk
         * `S3` - S3
+    SwarmDeployServersListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     SwarmNode:
       type: object
       properties:

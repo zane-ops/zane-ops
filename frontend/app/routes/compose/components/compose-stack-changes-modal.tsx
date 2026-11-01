@@ -132,7 +132,8 @@ export function ComposeStackChangesModal({
               const fieldNames: Record<keyof typeof stackChangeGroups, string> =
                 {
                   compose_content: "Compose stack file contents",
-                  env_overrides: "Environment overrides"
+                  env_overrides: "Environment overrides",
+                  deploy_server: "Deployment Server"
                 };
               return (
                 <div className="relative" key={field}>

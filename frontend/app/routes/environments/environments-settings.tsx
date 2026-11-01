@@ -662,12 +662,7 @@ function EnvDeployForm({
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
 
-  const nodeListQuery = useQuery(
-    swarmQueries.nodeList({
-      cluster_role: "DEPLOY_SERVER",
-      is_active: true
-    })
-  );
+  const nodeListQuery = useQuery(swarmQueries.deployServerList);
   const servers = nodeListQuery.data ?? [];
 
   const [selectedDeployServerId, setSelectedDeployServerId] = React.useState<

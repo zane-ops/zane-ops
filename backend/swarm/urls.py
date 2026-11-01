@@ -11,6 +11,11 @@ urlpatterns = [
         name="nodes.list",
     ),
     re_path(
+        r"^deploy-servers/?$",
+        views.DeployServerListAPIView.as_view(),
+        name="deploy_servers.list",
+    ),
+    re_path(
         r"^nodes/main/?$",
         views.MainSwarmNodeAPIView.as_view(),
         name="node.main",

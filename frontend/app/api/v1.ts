@@ -625,6 +625,10 @@ export interface paths {
      */
     get: operations["getAPISettings"];
   };
+  "/api/swarm/deploy-servers/": {
+    /** List all active deploy servers */
+    get: operations["swarm_deploy_servers_list"];
+  };
   "/api/swarm/nodes/": {
     /** List all swarm nodes in ZaneOps installation */
     get: operations["swarm_nodes_list"];
@@ -3496,6 +3500,13 @@ export interface components {
     DeployGitServiceValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["DeployGitServiceError"][];
+    };
+    DeployServer: {
+      id: string;
+      hostname: string | null;
+      cpus: number | null;
+      /** Format: int64 */
+      memory_bytes: number | null;
     };
     /**
      * @description * `APPROVED` - Approved
@@ -8860,6 +8871,7 @@ export interface components {
      * @enum {string}
      */
     StorageBackendEnum: "LOCAL" | "S3";
+    SwarmDeployServersListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SwarmNode: {
       id: string;
       hostname: string | null;
@@ -16993,6 +17005,36 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["GetAPISettingsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse403"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** List all active deploy servers */
+  swarm_deploy_servers_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["DeployServer"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["SwarmDeployServersListErrorResponse400"];
         };
       };
       401: {

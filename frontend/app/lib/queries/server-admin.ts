@@ -452,6 +452,16 @@ export const swarmQueries = {
       },
       placeholderData: keepPreviousData
     }),
+  deployServerList: queryOptions({
+    queryKey: ["SWARM_NODES", "DEPLOY_SERVERS"] as const,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.GET("/api/swarm/deploy-servers/", {
+        signal
+      });
+      if (!data) throw notFound("Not found");
+      return data;
+    }
+  }),
   singleNode: (id: string) =>
     queryOptions({
       queryKey: ["SWARM_NODES", "SINGLE", id] as const,

@@ -1,5 +1,9 @@
 ## TODO:
 
+- [ ] Update HTTP deployment healthcheck to use the container's IP instead of the container's ID
+      Or run the healthcheck in the correct temporal-node worker (on the correct server)
+      Remember that for services that aren't pinned to one server, the healthcheck will need to run on 
+      all servers... or smth
 - [x] Wire `deploy-scripts/install.sh`/`Makefile` to `compose.prod.yaml` instead of `docker-stack.prod.yaml` — deliberately not done yet. Existing installs are all on `docker-stack.prod.yaml` (single-node: `node.role==manager` placement, no global services); switching the installer's target file is a breaking change for them, so it should ship as a major version bump, not a silent swap.
 
 ### Swarm node workflows — safety

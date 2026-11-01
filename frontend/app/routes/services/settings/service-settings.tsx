@@ -48,6 +48,7 @@ import { ServiceBuilderForm } from "~/routes/services/components/service-builder
 import { ServiceCommandForm } from "~/routes/services/components/service-command-form";
 import { ServiceConfigsForm } from "~/routes/services/components/service-configs-form";
 import { ServiceDangerZoneForm } from "~/routes/services/components/service-danger-zone-form";
+import { ServiceDeployStrategyForm } from "~/routes/services/components/service-deploy-srategy-form";
 import {
   ServiceDeployURLForm,
   ServicePreviewDeployURLForm
@@ -220,6 +221,13 @@ export default function ServiceSettingsPage({
           </div>
           <div className="w-full flex flex-col gap-12 pt-1 pb-14">
             <h2 className="text-lg text-grey">Deploy</h2>
+            {isMember && (
+              <ServiceDeployStrategyForm
+                project_slug={project_slug}
+                service_slug={service_slug}
+                env_slug={env_slug}
+              />
+            )}
             <ServiceCommandForm
               project_slug={project_slug}
               service_slug={service_slug}
@@ -1074,6 +1082,17 @@ async function requestServiceChange({
         branch_name: formData.get("branch_name")?.toString() ?? "",
         commit_sha: formData.get("commit_sha")?.toString() ?? "",
         git_app_id: !app_id ? null : app_id
+      } satisfies BodyOf<typeof field>["new_value"];
+      break;
+    }
+    case "deployment_strategy": {
+      const deployment_server_id =
+        formData.get("deployment_server_id")?.toString() ?? null;
+      userData = {
+        deployment_server_id,
+        deployment_strategy: formData
+          .get("deployment_strategy")
+          ?.toString() as Service["deployment_strategy"]
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }

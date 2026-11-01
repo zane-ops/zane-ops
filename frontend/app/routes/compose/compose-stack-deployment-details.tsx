@@ -14,6 +14,7 @@ import {
   LoaderIcon,
   type LucideIcon,
   MessageCircleCodeIcon,
+  ServerIcon,
   TrendingUpIcon
 } from "lucide-react";
 import * as React from "react";
@@ -104,7 +105,8 @@ export default function ComposeStackDeploymentDetailsPage({
     LucideIcon
   > = {
     compose_content: FileTextIcon,
-    env_overrides: KeyRoundIcon
+    env_overrides: KeyRoundIcon,
+    deploy_server: ServerIcon
   };
 
   const isMember = hasMinRole(membership, "Member");
@@ -235,7 +237,8 @@ export default function ComposeStackDeploymentDetailsPage({
                 string
               > = {
                 compose_content: "Compose stack file contents",
-                env_overrides: "Environment overrides"
+                env_overrides: "Environment overrides",
+                deploy_server: "Deployment Server"
               };
 
               return (
