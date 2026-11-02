@@ -154,6 +154,25 @@ export default function DeploymentDetailsPage({
   const tag = imageParts.length > 1 ? imageParts.pop() : "latest";
   const image = imageParts.join(":");
 
+  const snapshotRepoUrl = deployment.service_snapshot.repository_url
+    ?.replace(/\/+$/, "")
+    .replace(/\.git$/, "");
+  const isGithub =
+    snapshotRepoUrl?.startsWith("https://github.com") ||
+    Boolean(deployment.service_snapshot.git_app?.github);
+  const isGitlab =
+    snapshotRepoUrl?.startsWith("https://gitlab.com") ||
+    Boolean(deployment.service_snapshot.git_app?.gitlab);
+
+  let commitURL: string | null = null;
+  if (snapshotRepoUrl && deployment.commit_sha) {
+    if (isGithub) {
+      commitURL = `${snapshotRepoUrl}/commit/${deployment.commit_sha}`;
+    } else if (isGitlab) {
+      commitURL = `${snapshotRepoUrl}/-/commit/${deployment.commit_sha}`;
+    }
+  }
+
   React.useEffect(() => {
     if (deployment.started_at && !deployment.finished_at) {
       const timer = setInterval(() => {
@@ -352,7 +371,19 @@ export default function DeploymentDetailsPage({
                 <dt className="flex gap-1 items-center text-grey">
                   <GitCommitIcon size={15} /> <span>Git commit SHA:</span>
                 </dt>
-                <dd>{deployment.commit_sha}</dd>
+                <dd>
+                  {commitURL ? (
+                    <a
+                      href={commitURL}
+                      target="_blank"
+                      className="underline text-link inline-flex gap-1 items-center"
+                    >
+                      {deployment.commit_sha} <ExternalLinkIcon size={15} />
+                    </a>
+                  ) : (
+                    deployment.commit_sha
+                  )}
+                </dd>
               </div>
             )}
 
