@@ -29,7 +29,7 @@ import {
 } from "~/components/ui/tooltip";
 import { BUILDER_DESCRIPTION_MAP, DEFAULT_REGISTRIES } from "~/lib/constants";
 import { swarmQueries } from "~/lib/queries";
-import { cn } from "~/lib/utils";
+import { cn, formatStorageValue } from "~/lib/utils";
 
 export type ChangeItemProps = {
   change:
@@ -2340,6 +2340,13 @@ export function DeploymentStrategyChangeField({
     (server) => server.id === new_value?.deployment_server?.id
   );
 
+  const oldMemory = oldServer?.memory_bytes
+    ? formatStorageValue(oldServer.memory_bytes)
+    : null;
+  const newMemory = newServer?.memory_bytes
+    ? formatStorageValue(newServer.memory_bytes)
+    : null;
+
   return (
     <div className="flex flex-col md:flex-row gap-4 items-start">
       <div className="flex flex-col gap-4 w-full">
@@ -2394,6 +2401,16 @@ export function DeploymentStrategyChangeField({
                 {oldServer?.hostname ?? (
                   <span className="text-grey">[Deleted Server]</span>
                 )}
+                <span className="text-grey">
+                  {oldMemory && (
+                    <span>
+                      {oldMemory.value} {oldMemory.unit}&nbsp;
+                    </span>
+                  )}
+                  {oldServer?.cpus && (
+                    <span>&middot; {oldServer.cpus} CPUs</span>
+                  )}
+                </span>
               </span>
             ) : (
               <span className="absolute inset-y-0 left-3 flex items-center gap-2 pr-2 text-sm text-grey">
@@ -2476,6 +2493,16 @@ export function DeploymentStrategyChangeField({
                 {newServer?.hostname ?? (
                   <span className="text-grey">[Deleted Server]</span>
                 )}
+                <span className="text-grey">
+                  {newMemory && (
+                    <span>
+                      {newMemory.value} {newMemory.unit}&nbsp;
+                    </span>
+                  )}
+                  {newServer?.cpus && (
+                    <span>&middot; {newServer.cpus} CPUs</span>
+                  )}
+                </span>
               </span>
             ) : (
               <span className="absolute inset-y-0 left-3 flex items-center gap-2 pr-2 text-sm text-grey">
@@ -2503,6 +2530,13 @@ export function DeploymentServerChangeField({
   const oldServer = servers.find((server) => server.id === old_value?.id);
   const newServer = servers.find((server) => server.id === new_value?.id);
 
+  const oldMemory = oldServer?.memory_bytes
+    ? formatStorageValue(oldServer.memory_bytes)
+    : null;
+  const newMemory = newServer?.memory_bytes
+    ? formatStorageValue(newServer.memory_bytes)
+    : null;
+
   return (
     <div className="flex flex-col md:flex-row gap-4 items-start">
       <div className="flex flex-col gap-4 w-full">
@@ -2526,6 +2560,16 @@ export function DeploymentServerChangeField({
                 {oldServer?.hostname ?? (
                   <span className="text-grey">[Deleted Server]</span>
                 )}
+                <span className="text-grey">
+                  {oldMemory && (
+                    <span>
+                      {oldMemory.value} {oldMemory.unit}&nbsp;
+                    </span>
+                  )}
+                  {oldServer?.cpus && (
+                    <span>&middot; {oldServer.cpus} CPUs</span>
+                  )}
+                </span>
               </span>
             ) : (
               <span className="absolute inset-y-0 left-3 flex items-center gap-2 pr-2 text-sm text-grey">
@@ -2570,6 +2614,16 @@ export function DeploymentServerChangeField({
                 {newServer?.hostname ?? (
                   <span className="text-grey">[Deleted Server]</span>
                 )}
+                <span className="text-grey">
+                  {newMemory && (
+                    <span>
+                      {newMemory.value} {newMemory.unit}&nbsp;
+                    </span>
+                  )}
+                  {newServer?.cpus && (
+                    <span>&middot; {newServer.cpus} CPUs</span>
+                  )}
+                </span>
               </span>
             ) : (
               <span className="absolute inset-y-0 left-3 flex items-center gap-2 pr-2 text-sm text-grey">
