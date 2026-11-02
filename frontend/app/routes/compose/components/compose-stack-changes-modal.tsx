@@ -8,7 +8,11 @@ import {
 import React from "react";
 import { href, useFetcher, useNavigate } from "react-router";
 import type { ComposeStack } from "~/api/types";
-import { EnvVariableChangeItem } from "~/components/change-fields";
+import {
+  DeploymentServerChangeField,
+  DeploymentStrategyChangeField,
+  EnvVariableChangeItem
+} from "~/components/change-fields";
 import {
   Accordion,
   AccordionContent,
@@ -170,6 +174,15 @@ export function ComposeStackChangesModal({
                             original={(changes[0].old_value as string) ?? ""}
                             modified={changes[0].new_value as string}
                             filename="docker-compose.yml"
+                          />
+                        </ChangeForm>
+                      )}
+                      {field === "deploy_server" && (
+                        <ChangeForm change_id={changes[0].id}>
+                          <DeploymentServerChangeField
+                            change={changes[0]}
+                            key={changes[0].id}
+                            unapplied
                           />
                         </ChangeForm>
                       )}

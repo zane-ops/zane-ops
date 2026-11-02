@@ -2490,6 +2490,100 @@ export function DeploymentStrategyChangeField({
   );
 }
 
+export function DeploymentServerChangeField({
+  change,
+  unapplied = false
+}: ChangeItemProps) {
+  const new_value = change.new_value as ComposeStack["deployment_server"];
+  const old_value = change.old_value as ComposeStack["deployment_server"];
+
+  const nodeListQuery = useQuery(swarmQueries.deployServerList);
+  const servers = nodeListQuery.data ?? [];
+
+  const oldServer = servers.find((server) => server.id === old_value?.id);
+  const newServer = servers.find((server) => server.id === new_value?.id);
+
+  return (
+    <div className="flex flex-col md:flex-row gap-4 items-start">
+      <div className="flex flex-col gap-4 w-full">
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label className="text-muted-foreground">Deployment Server</label>
+          <div className="relative">
+            <Input
+              disabled
+              readOnly
+              placeholder="<empty>"
+              value={old_value?.id ?? "None"}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                "disabled:border-transparent disabled:opacity-100 disabled:select-none",
+                "disabled:text-transparent"
+              )}
+            />
+            {old_value ? (
+              <span className="absolute inset-y-0 left-3 flex items-center gap-2 pr-2 text-sm">
+                <ServerIcon className="flex-none size-4" />
+                {oldServer?.hostname ?? (
+                  <span className="text-grey">[Deleted Server]</span>
+                )}
+              </span>
+            ) : (
+              <span className="absolute inset-y-0 left-3 flex items-center gap-2 pr-2 text-sm text-grey">
+                <BanIcon className="flex-none size-4" />
+                None
+              </span>
+            )}
+          </div>
+        </fieldset>
+      </div>
+
+      <ArrowDownIcon
+        size={24}
+        className="text-grey md:-rotate-90 flex-none self-center"
+      />
+
+      <div className="flex flex-col gap-4 w-full">
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label className="text-muted-foreground">
+            Deployment Server&nbsp;
+            <span className="text-blue-500">
+              {unapplied && "will be"} updated
+            </span>
+          </label>
+          <div className="relative">
+            <Input
+              disabled
+              readOnly
+              data-edited
+              placeholder="<empty>"
+              value={new_value?.id ?? "None"}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100 disabled:select-none",
+                "disabled:text-transparent"
+              )}
+            />
+            {new_value ? (
+              <span className="absolute inset-y-0 left-3 flex items-center gap-2 pr-2 text-sm">
+                <ServerIcon className="flex-none size-4" />
+                {newServer?.hostname ?? (
+                  <span className="text-grey">[Deleted Server]</span>
+                )}
+              </span>
+            ) : (
+              <span className="absolute inset-y-0 left-3 flex items-center gap-2 pr-2 text-sm text-grey">
+                <BanIcon className="flex-none size-4" />
+                None
+              </span>
+            )}
+          </div>
+        </fieldset>
+      </div>
+    </div>
+  );
+}
+
 export function HealthcheckChangeField({
   change,
   unapplied = false
