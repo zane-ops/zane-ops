@@ -103,8 +103,6 @@ export function ServiceDeployStrategyForm({
   const [deploymentStrategy, setDeploymentStrategy] =
     React.useState(deploy_strategy);
 
-  // a viewer cannot edit anything, and a field with a pending change is
-  // locked until that change is applied or discarded
   const isNotEditable = deployStrategyChange !== undefined;
 
   const membership = useCurrentWorkspaceMembership();
