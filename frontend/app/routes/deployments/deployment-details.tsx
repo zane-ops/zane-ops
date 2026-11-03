@@ -55,7 +55,7 @@ import {
   HealthcheckChangeField,
   PortChangeItem,
   ResourceLimitChangeField,
-  SharedVolumeChangeItem,
+  // SharedVolumeChangeItem,
   SourceChangeField,
   UrlChangeItem,
   VolumeChangeItem
@@ -147,7 +147,11 @@ export default function DeploymentDetailsPage({
     return ch;
   });
 
-  const deploymentChanges = Object.groupBy(changes, ({ field }) => field);
+  const deploymentChanges = Object.groupBy(
+    // Shared volumes are disabled
+    changes.filter((ch) => ch.field !== "shared_volumes"),
+    ({ field }) => field
+  );
 
   const serviceImage = deployment.service_snapshot.image;
   const imageParts = serviceImage?.split(":") ?? [];
@@ -462,6 +466,7 @@ export default function DeploymentDetailsPage({
                             <hr className="border border-dashed border-border" />
                           </React.Fragment>
                         ))}
+                      {/* Shared volumes are disabled
                       {field === "shared_volumes" &&
                         changes.map((change) => (
                           <React.Fragment key={change.id}>
@@ -469,6 +474,7 @@ export default function DeploymentDetailsPage({
                             <hr className="border border-dashed border-border" />
                           </React.Fragment>
                         ))}
+                      */}
                       {field === "configs" &&
                         changes.map((change) => (
                           <React.Fragment key={change.id}>

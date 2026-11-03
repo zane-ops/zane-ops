@@ -18,7 +18,7 @@ import {
   HealthcheckChangeField,
   PortChangeItem,
   ResourceLimitChangeField,
-  SharedVolumeChangeItem,
+  // SharedVolumeChangeItem,
   SourceChangeField,
   UrlChangeItem,
   VolumeChangeItem
@@ -85,7 +85,10 @@ export function ServiceChangesModal({
     }
   }, [fetcher.data, fetcher.state]);
 
-  const serviceChanges = service.unapplied_changes ?? [];
+  // Shared volumes are disabled
+  const serviceChanges = (service.unapplied_changes ?? []).filter(
+    (change) => change.field !== "shared_volumes"
+  );
   const serviceChangeGroups = Object.groupBy(
     serviceChanges,
     ({ field }) => field
@@ -173,12 +176,14 @@ export function ServiceChangesModal({
                             <VolumeChangeItem unapplied change={change} />
                           </ChangeForm>
                         ))}
+                      {/* Shared volumes are disabled
                       {field === "shared_volumes" &&
                         changes.map((change) => (
                           <ChangeForm key={change.id} change_id={change.id}>
                             <SharedVolumeChangeItem unapplied change={change} />
                           </ChangeForm>
                         ))}
+                      */}
                       {field === "configs" &&
                         changes.map((change) => (
                           <ChangeForm key={change.id} change_id={change.id}>

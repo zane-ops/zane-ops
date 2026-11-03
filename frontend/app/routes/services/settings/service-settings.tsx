@@ -7,7 +7,7 @@ import {
   GitBranchIcon,
   GlobeLockIcon,
   HammerIcon,
-  HardDriveDownloadIcon,
+  // HardDriveDownloadIcon,
   HardDriveIcon,
   InfoIcon
 } from "lucide-react";
@@ -57,7 +57,7 @@ import { ServiceGitSourceForm } from "~/routes/services/components/service-git-s
 import { ServiceHealthcheckForm } from "~/routes/services/components/service-healthcheck-form";
 import { ServicePortsForm } from "~/routes/services/components/service-ports-form";
 import { ServiceResourceLimits } from "~/routes/services/components/service-resource-limits-form";
-import { ServiceSharedVolumesForm } from "~/routes/services/components/service-shared-volumes-form";
+// import { ServiceSharedVolumesForm } from "~/routes/services/components/service-shared-volumes-form";
 import { ServiceSlugForm } from "~/routes/services/components/service-slug-form";
 import { ServiceSourceForm } from "~/routes/services/components/service-source-form";
 import { ServiceURLsForm } from "~/routes/services/components/service-urls-form";
@@ -280,6 +280,7 @@ export default function ServiceSettingsPage({
           </div>
         </section>
 
+        {/* Shared volumes are disabled
         <section id="shared-volumes" className="flex gap-1 scroll-mt-24">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
@@ -300,6 +301,7 @@ export default function ServiceSettingsPage({
           </div>
         </section>
 
+        */}
         <section id="configs" className="flex gap-1 scroll-mt-24 max-w-full">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
@@ -424,6 +426,7 @@ function ServiceSettingsSideNav({
               Volumes
             </Link>
           </li>
+          {/* Shared volumes are disabled
           <li>
             <Link
               to={{
@@ -433,6 +436,7 @@ function ServiceSettingsSideNav({
               Shared volumes
             </Link>
           </li>
+          */}
           <li>
             <Link
               to={{
@@ -1058,13 +1062,14 @@ async function requestServiceChange({
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }
-    case "shared_volumes": {
-      userData = {
-        container_path: formData.get("container_path")?.toString() ?? "",
-        volume_id: formData.get("volume_id")?.toString() ?? ""
-      } satisfies BodyOf<typeof field>["new_value"];
-      break;
-    }
+    // Shared volumes are disabled
+    // case "shared_volumes": {
+    //   userData = {
+    //     container_path: formData.get("container_path")?.toString() ?? "",
+    //     volume_id: formData.get("volume_id")?.toString() ?? ""
+    //   } satisfies BodyOf<typeof field>["new_value"];
+    //   break;
+    // }
     case "configs": {
       const name = formData.get("name")?.toString();
       userData = {
