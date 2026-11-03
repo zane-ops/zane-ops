@@ -1,3 +1,4 @@
+import shlex
 from typing import Callable, List, Optional
 from git import Git, GitCommandError, RemoteProgress, Repo, Commit
 import asyncio
@@ -93,7 +94,18 @@ class GitClient:
             f"Running {Colors.YELLOW}{git_clone_command_obfuscated}{Colors.ENDC}"
         )
 
-        git_clone_command = f"/usr/bin/git clone --progress --single-branch --branch {branch} {url} {dest_path}"
+        cmd_args = [
+            "/usr/bin/git",
+            "clone",
+            "--progress",
+            "--single-branch",
+            "--branch",
+            branch,
+            url,
+            dest_path,
+        ]
+
+        git_clone_command = " ".join([shlex.quote(arg) for arg in cmd_args])
         runner = AyncSubProcessRunner(
             command=git_clone_command,
             cancel_event=cancel_event,
