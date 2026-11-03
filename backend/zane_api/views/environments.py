@@ -245,7 +245,10 @@ class ReviewPreviewEnvDeployAPIView(APIView):
     )
     def get(self, request: Request, slug: str, env_slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug.lower())
+            project = Project.objects.get(
+                slug=slug.lower(),
+                id__in=request_access(self.request).accessible_project_ids(),
+            )
             environment = (
                 Environment.objects.filter(
                     name=env_slug.lower(),
@@ -696,9 +699,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                 detail=f"A service with a deploy_token `{deploy_token}` does not exists in this ZaneOps instance."
             )
 
-        if not request_access(request).can_access_project(
-            current_service.project_id
-        ):
+        if not request_access(request).can_access_project(current_service.project_id):
             raise exceptions.PermissionDenied(
                 "This API token does not have access to this service's project."
             )
