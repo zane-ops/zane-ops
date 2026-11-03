@@ -1305,15 +1305,16 @@ class DockerSwarmActivities:
                         ),
                     )
                 )
-            for shared in service.shared_volumes:
-                mounts.append(
-                    Mount(
-                        target=shared.container_path,
-                        source=get_volume_resource_name(shared.volume_id),
-                        type="volume",
-                        read_only=True,
-                    )
-                )
+            # Shared volumes are disabled
+            # for shared in service.shared_volumes:
+            #     mounts.append(
+            #         Mount(
+            #             target=shared.container_path,
+            #             source=get_volume_resource_name(shared.volume_id),
+            #             type="volume",
+            #             read_only=True,
+            #         )
+            #     )
             for volume in service.host_volumes:
                 mounts.append(
                     Mount(
@@ -1327,7 +1328,7 @@ class DockerSwarmActivities:
             print(f"{mounts=}")
             print(f"{service.host_volumes=}")
             print(f"{service.docker_volumes=}")
-            print(f"{service.shared_volumes=}")
+            # print(f"{service.shared_volumes=}")
 
             # configs
             configs: list[ConfigReference] = []

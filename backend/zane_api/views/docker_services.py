@@ -41,7 +41,7 @@ from .serializers import (
     DockerDeploymentFieldChangeRequestSerializer,
     DockerServiceDeployRequestSerializer,
     ResourceLimitChangeSerializer,
-    SharedVolumeItemChangeSerializer,
+    # SharedVolumeItemChangeSerializer,
     DeploymentStrategyFieldChangeSerializer,
 )
 from ..dtos import (
@@ -52,7 +52,7 @@ from ..dtos import (
     StaticDirectoryBuilderOptions,
     NixpacksBuilderOptions,
 )
-from ..utils import pluralize
+# from ..utils import pluralize
 from ..models import (
     Project,
     Service,
@@ -62,8 +62,8 @@ from ..models import (
     DeploymentChange,
     Environment,
     GitApp,
-    SharedVolume,
-    Volume,
+    # SharedVolume,
+    # Volume,
 )
 from ..serializers import (
     ConfigSerializer,
@@ -76,8 +76,8 @@ from ..serializers import (
     EnvVariableSerializer,
     ErrorResponse409Serializer,
     EnvironmentSerializer,
-    SharedVolumeSerializer,
-    VolumeWithServiceSerializer,
+    # SharedVolumeSerializer,
+    # VolumeWithServiceSerializer,
 )
 from temporal.client import TemporalClient
 from temporal.shared import (
@@ -225,7 +225,7 @@ class RequestServiceChangesAPIView(APIView):
             serializers=[
                 URLItemChangeSerializer,
                 VolumeItemChangeSerializer,
-                SharedVolumeItemChangeSerializer,
+                # SharedVolumeItemChangeSerializer,
                 EnvItemChangeSerializer,
                 PortItemChangeSerializer,
                 DockerSourceFieldChangeSerializer,
@@ -311,7 +311,7 @@ class RequestServiceChangesAPIView(APIView):
             DeploymentChange.ChangeField.HEALTHCHECK: HealthcheckFieldChangeSerializer,
             DeploymentChange.ChangeField.RESOURCE_LIMITS: ResourceLimitChangeSerializer,
             DeploymentChange.ChangeField.CONFIGS: ConfigItemChangeSerializer,
-            DeploymentChange.ChangeField.SHARED_VOLUMES: SharedVolumeItemChangeSerializer,
+            # DeploymentChange.ChangeField.SHARED_VOLUMES: SharedVolumeItemChangeSerializer,
             DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY: DeploymentStrategyFieldChangeSerializer,
         }
 
@@ -319,8 +319,13 @@ class RequestServiceChangesAPIView(APIView):
             data=request.data
         )
         if request_serializer.is_valid(raise_exception=True):
+            requested_field = cast(ReturnDict, request_serializer.data)["field"]
+            if requested_field not in field_serializer_map:
+                raise exceptions.ValidationError(
+                    {"field": [f"Changes to `{requested_field}` are not supported."]}
+                )
             form_serializer_class: type[Serializer] = field_serializer_map[
-                cast(ReturnDict, request_serializer.data)["field"]
+                requested_field
             ]
             form = form_serializer_class(
                 data=request.data,
@@ -618,23 +623,24 @@ class RequestServiceChangesAPIView(APIView):
                             old_value = VolumeSerializer(
                                 service.volumes.get(id=item_id)
                             ).data
-                    case DeploymentChange.ChangeField.SHARED_VOLUMES:
-                        if change_type in ["UPDATE", "DELETE"]:
-                            old_value = SharedVolumeSerializer(
-                                service.shared_volumes.filter(id=item_id)
-                                .select_related("volume", "volume__service")
-                                .get()
-                            ).data
-                        if change_type in [
-                            DeploymentChange.ChangeType.ADD,
-                            DeploymentChange.ChangeType.UPDATE,
-                        ]:
-                            new_value = cast(dict, new_value)
-                            new_value["volume"] = VolumeWithServiceSerializer(
-                                Volume.objects.filter(id=new_value["volume_id"])
-                                .select_related("service")
-                                .get()
-                            ).data
+                    # Shared volumes are disabled
+                    # case DeploymentChange.ChangeField.SHARED_VOLUMES:
+                    #     if change_type in ["UPDATE", "DELETE"]:
+                    #         old_value = SharedVolumeSerializer(
+                    #             service.shared_volumes.filter(id=item_id)
+                    #             .select_related("volume", "volume__service")
+                    #             .get()
+                    #         ).data
+                    #     if change_type in [
+                    #         DeploymentChange.ChangeType.ADD,
+                    #         DeploymentChange.ChangeType.UPDATE,
+                    #     ]:
+                    #         new_value = cast(dict, new_value)
+                    #         new_value["volume"] = VolumeWithServiceSerializer(
+                    #             Volume.objects.filter(id=new_value["volume_id"])
+                    #             .select_related("service")
+                    #             .get()
+                    #         ).data
                     case DeploymentChange.ChangeField.CONFIGS:
                         if change_type in ["UPDATE", "DELETE"]:
                             old_value = ConfigSerializer(
@@ -1124,72 +1130,73 @@ class RedeployDockerServiceAPIView(APIView):
                     "Wait for the server to join the cluster, or change the service's deployment server, then deploy again."
                 )
 
-        # Check that if we rollback the service, it would not reference deleted volumes in
-        # shared volumes
-        existing_volumes = Volume.objects.filter(
-            id__in=[shared.volume_id for shared in new_snapshot.shared_volumes]
-        )
-        if existing_volumes.count() < len(new_snapshot.shared_volumes):
-            missing_volume_count = (
-                len(new_snapshot.shared_volumes) - existing_volumes.count()
-            )
-            raise ResourceConflict(
-                f"Cannot redeploy to this deployment because it references {missing_volume_count} "
-                f"shared {pluralize('volume', missing_volume_count)} that no longer {'exists' if missing_volume_count == 1 else 'exist'}. "
-                f"The referenced {pluralize('volume', missing_volume_count)} may have been deleted from the source service."
-            )
+        # Shared volumes are disabled
+        # # Check that if we rollback the service, it would not reference deleted volumes in
+        # # shared volumes
+        # existing_volumes = Volume.objects.filter(
+        #     id__in=[shared.volume_id for shared in new_snapshot.shared_volumes]
+        # )
+        # if existing_volumes.count() < len(new_snapshot.shared_volumes):
+        #     missing_volume_count = (
+        #         len(new_snapshot.shared_volumes) - existing_volumes.count()
+        #     )
+        #     raise ResourceConflict(
+        #         f"Cannot redeploy to this deployment because it references {missing_volume_count} "
+        #         f"shared {pluralize('volume', missing_volume_count)} that no longer {'exists' if missing_volume_count == 1 else 'exist'}. "
+        #         f"The referenced {pluralize('volume', missing_volume_count)} may have been deleted from the source service."
+        #     )
 
-        # Check that if we rollback the service, one of it's deleted volumes is
-        # not referenced by another shared volume
-        existing_shared_volumes = SharedVolume.objects.filter(
-            volume__service=service,
-            volume_id__in=[
-                ch.item_id
-                for ch in changes
-                if ch.type == DeploymentChange.ChangeType.DELETE
-                and ch.field == DeploymentChange.ChangeField.VOLUMES
-            ],
-        )
-        if existing_shared_volumes.exists():
-            shared_volume_count = existing_shared_volumes.count()
-            consumer_services = existing_shared_volumes.values_list(
-                "reader__slug", flat=True
-            ).distinct()
-            consumer_list = ", ".join(f"'{slug}'" for slug in consumer_services)
-            raise ResourceConflict(
-                f"Cannot redeploy to this deployment because it would remove "
-                f"{shared_volume_count} {pluralize('volume', shared_volume_count)} currently shared with "
-                f"{len(consumer_services)} other {pluralize('service', len(consumer_services))} ({consumer_list}). "
-                f"Remove the shared volume references from these services before redeploying."
-            )
+        # # Check that if we rollback the service, one of it's deleted volumes is
+        # # not referenced by another shared volume
+        # existing_shared_volumes = SharedVolume.objects.filter(
+        #     volume__service=service,
+        #     volume_id__in=[
+        #         ch.item_id
+        #         for ch in changes
+        #         if ch.type == DeploymentChange.ChangeType.DELETE
+        #         and ch.field == DeploymentChange.ChangeField.VOLUMES
+        #     ],
+        # )
+        # if existing_shared_volumes.exists():
+        #     shared_volume_count = existing_shared_volumes.count()
+        #     consumer_services = existing_shared_volumes.values_list(
+        #         "reader__slug", flat=True
+        #     ).distinct()
+        #     consumer_list = ", ".join(f"'{slug}'" for slug in consumer_services)
+        #     raise ResourceConflict(
+        #         f"Cannot redeploy to this deployment because it would remove "
+        #         f"{shared_volume_count} {pluralize('volume', shared_volume_count)} currently shared with "
+        #         f"{len(consumer_services)} other {pluralize('service', len(consumer_services))} ({consumer_list}). "
+        #         f"Remove the shared volume references from these services before redeploying."
+        #     )
 
-        # Check that if we rollback the service, one of it's deleted volumes is
-        # not referenced by another pending shared volume
-        existing_pending_shared_volume_changes = DeploymentChange.objects.filter(
-            field=DeploymentChange.ChangeField.SHARED_VOLUMES,
-            new_value__volume_id__in=[
-                ch.item_id
-                for ch in changes
-                if ch.type == DeploymentChange.ChangeType.DELETE
-                and ch.field == DeploymentChange.ChangeField.VOLUMES
-            ],
-            applied=False,
-        )
+        # # Check that if we rollback the service, one of it's deleted volumes is
+        # # not referenced by another pending shared volume
+        # existing_pending_shared_volume_changes = DeploymentChange.objects.filter(
+        #     field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+        #     new_value__volume_id__in=[
+        #         ch.item_id
+        #         for ch in changes
+        #         if ch.type == DeploymentChange.ChangeType.DELETE
+        #         and ch.field == DeploymentChange.ChangeField.VOLUMES
+        #     ],
+        #     applied=False,
+        # )
 
-        if existing_pending_shared_volume_changes.exists():
-            shared_volume_count = existing_pending_shared_volume_changes.count()
-            consumer_services = existing_pending_shared_volume_changes.values_list(
-                "service__slug", flat=True
-            ).distinct()
-            consumer_list = ", ".join(f"'{slug}'" for slug in consumer_services)
-            raise ResourceConflict(
-                f"Cannot redeploy to this deployment because it would remove "
-                f"{shared_volume_count} {pluralize('volume', shared_volume_count)} that "
-                f"{'has' if shared_volume_count == 1 else 'have'} pending shared volume "
-                f"{pluralize('change', shared_volume_count)} in {len(consumer_services)} other "
-                f"{pluralize('service', len(consumer_services))} ({consumer_list}). "
-                f"Cancel or deploy the pending changes in these services before redeploying."
-            )
+        # if existing_pending_shared_volume_changes.exists():
+        #     shared_volume_count = existing_pending_shared_volume_changes.count()
+        #     consumer_services = existing_pending_shared_volume_changes.values_list(
+        #         "service__slug", flat=True
+        #     ).distinct()
+        #     consumer_list = ", ".join(f"'{slug}'" for slug in consumer_services)
+        #     raise ResourceConflict(
+        #         f"Cannot redeploy to this deployment because it would remove "
+        #         f"{shared_volume_count} {pluralize('volume', shared_volume_count)} that "
+        #         f"{'has' if shared_volume_count == 1 else 'have'} pending shared volume "
+        #         f"{pluralize('change', shared_volume_count)} in {len(consumer_services)} other "
+        #         f"{pluralize('service', len(consumer_services))} ({consumer_list}). "
+        #         f"Cancel or deploy the pending changes in these services before redeploying."
+        #     )
 
         for change in changes:
             service.add_change(change)
@@ -1341,18 +1348,19 @@ class ArchiveDockerServiceAPIView(APIView):
                 detail=f"A service with the slug `{service_slug}` does not exist in this environment."
             )
 
-        existing_shared_volumes = SharedVolume.objects.filter(volume__service=service)
-        pending_shared_volume_changes = DeploymentChange.objects.filter(
-            field=DeploymentChange.ChangeField.SHARED_VOLUMES,
-            new_value__volume__service__id=service.id,
-            applied=False,
-        ).exclude(service=service)
+        # Shared volumes are disabled
+        # existing_shared_volumes = SharedVolume.objects.filter(volume__service=service)
+        # pending_shared_volume_changes = DeploymentChange.objects.filter(
+        #     field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+        #     new_value__volume__service__id=service.id,
+        #     applied=False,
+        # ).exclude(service=service)
 
-        if existing_shared_volumes.exists() or pending_shared_volume_changes.exists():
-            raise ResourceConflict(
-                "Cannot delete this service as at least one of its volumes are referenced by a shared volume in other services. "
-                "Detach the shared volumes in those services before deleting this service."
-            )
+        # if existing_shared_volumes.exists() or pending_shared_volume_changes.exists():
+        #     raise ResourceConflict(
+        #         "Cannot delete this service as at least one of its volumes are referenced by a shared volume in other services. "
+        #         "Detach the shared volumes in those services before deleting this service."
+        #     )
 
         if service.deployments.count() > 0:  # type: ignore
             archived_project: ArchivedProject | None = (
