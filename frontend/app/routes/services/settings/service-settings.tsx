@@ -7,7 +7,7 @@ import {
   GitBranchIcon,
   GlobeLockIcon,
   HammerIcon,
-  HardDriveDownloadIcon,
+  // HardDriveDownloadIcon,
   HardDriveIcon,
   InfoIcon
 } from "lucide-react";
@@ -48,6 +48,7 @@ import { ServiceBuilderForm } from "~/routes/services/components/service-builder
 import { ServiceCommandForm } from "~/routes/services/components/service-command-form";
 import { ServiceConfigsForm } from "~/routes/services/components/service-configs-form";
 import { ServiceDangerZoneForm } from "~/routes/services/components/service-danger-zone-form";
+import { ServiceDeployStrategyForm } from "~/routes/services/components/service-deploy-srategy-form";
 import {
   ServiceDeployURLForm,
   ServicePreviewDeployURLForm
@@ -56,7 +57,7 @@ import { ServiceGitSourceForm } from "~/routes/services/components/service-git-s
 import { ServiceHealthcheckForm } from "~/routes/services/components/service-healthcheck-form";
 import { ServicePortsForm } from "~/routes/services/components/service-ports-form";
 import { ServiceResourceLimits } from "~/routes/services/components/service-resource-limits-form";
-import { ServiceSharedVolumesForm } from "~/routes/services/components/service-shared-volumes-form";
+// import { ServiceSharedVolumesForm } from "~/routes/services/components/service-shared-volumes-form";
 import { ServiceSlugForm } from "~/routes/services/components/service-slug-form";
 import { ServiceSourceForm } from "~/routes/services/components/service-source-form";
 import { ServiceURLsForm } from "~/routes/services/components/service-urls-form";
@@ -220,6 +221,13 @@ export default function ServiceSettingsPage({
           </div>
           <div className="w-full flex flex-col gap-12 pt-1 pb-14">
             <h2 className="text-lg text-grey">Deploy</h2>
+            {isMember && (
+              <ServiceDeployStrategyForm
+                project_slug={project_slug}
+                service_slug={service_slug}
+                env_slug={env_slug}
+              />
+            )}
             <ServiceCommandForm
               project_slug={project_slug}
               service_slug={service_slug}
@@ -272,6 +280,7 @@ export default function ServiceSettingsPage({
           </div>
         </section>
 
+        {/* Shared volumes are disabled
         <section id="shared-volumes" className="flex gap-1 scroll-mt-24">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
@@ -292,6 +301,7 @@ export default function ServiceSettingsPage({
           </div>
         </section>
 
+        */}
         <section id="configs" className="flex gap-1 scroll-mt-24 max-w-full">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
@@ -416,6 +426,7 @@ function ServiceSettingsSideNav({
               Volumes
             </Link>
           </li>
+          {/* Shared volumes are disabled
           <li>
             <Link
               to={{
@@ -425,6 +436,7 @@ function ServiceSettingsSideNav({
               Shared volumes
             </Link>
           </li>
+          */}
           <li>
             <Link
               to={{
@@ -1050,13 +1062,14 @@ async function requestServiceChange({
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }
-    case "shared_volumes": {
-      userData = {
-        container_path: formData.get("container_path")?.toString() ?? "",
-        volume_id: formData.get("volume_id")?.toString() ?? ""
-      } satisfies BodyOf<typeof field>["new_value"];
-      break;
-    }
+    // Shared volumes are disabled
+    // case "shared_volumes": {
+    //   userData = {
+    //     container_path: formData.get("container_path")?.toString() ?? "",
+    //     volume_id: formData.get("volume_id")?.toString() ?? ""
+    //   } satisfies BodyOf<typeof field>["new_value"];
+    //   break;
+    // }
     case "configs": {
       const name = formData.get("name")?.toString();
       userData = {
@@ -1074,6 +1087,17 @@ async function requestServiceChange({
         branch_name: formData.get("branch_name")?.toString() ?? "",
         commit_sha: formData.get("commit_sha")?.toString() ?? "",
         git_app_id: !app_id ? null : app_id
+      } satisfies BodyOf<typeof field>["new_value"];
+      break;
+    }
+    case "deployment_strategy": {
+      const deployment_server_id =
+        formData.get("deployment_server_id")?.toString() ?? null;
+      userData = {
+        deployment_server_id,
+        deployment_strategy: formData
+          .get("deployment_strategy")
+          ?.toString() as Service["deployment_strategy"]
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }

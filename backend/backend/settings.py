@@ -103,7 +103,7 @@ if ENVIRONMENT == PRODUCTION_ENV:
     else:
         SESSION_COOKIE_DOMAIN = ZANE_APP_DOMAIN
 
-APP_SERVER_LABEL = "zane.app-server"
+DEPLOY_SERVER_LABEL = "zane.app-server"
 BUILD_SERVER_LABEL = "zane.build-server"
 MAIN_SERVER_LABEL = "zane.main-server"
 

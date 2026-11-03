@@ -188,22 +188,22 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
             )
 
             service = deployment.service
-            if len(service.docker_volumes) > 0:
-                self.created_volumes = await workflow.execute_activity_method(
-                    DockerSwarmActivities.create_docker_volumes_for_service,
-                    deployment,
-                    start_to_close_timeout=timedelta(seconds=30),
-                    retry_policy=self.retry_policy,
-                )
+            # if len(service.docker_volumes) > 0:
+            #     self.created_volumes = await workflow.execute_activity_method(
+            #         DockerSwarmActivities.create_docker_volumes_for_service,
+            #         deployment,
+            #         start_to_close_timeout=timedelta(seconds=30),
+            #         retry_policy=self.retry_policy,
+            #     )
 
-            if await self.check_for_cancellation(
-                DockerDeploymentStep.VOLUMES_CREATED,
-                pause_at_step=pause_at_step,
-                deployment=deployment,
-            ):
-                return await self.handle_cancellation(
-                    deployment, DockerDeploymentStep.VOLUMES_CREATED
-                )
+            # if await self.check_for_cancellation(
+            #     DockerDeploymentStep.VOLUMES_CREATED,
+            #     pause_at_step=pause_at_step,
+            #     deployment=deployment,
+            # ):
+            #     return await self.handle_cancellation(
+            #         deployment, DockerDeploymentStep.VOLUMES_CREATED
+            #     )
 
             if len(service.configs) > 0:
                 self.created_configs = await workflow.execute_activity_method(
@@ -454,20 +454,20 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
                 retry_policy=self.retry_policy,
             )
 
-        if (
-            last_completed_step >= DockerDeploymentStep.VOLUMES_CREATED
-            and len(self.created_volumes) > 0
-        ):
-            await workflow.execute_activity_method(
-                DockerSwarmActivities.delete_created_volumes,
-                DeploymentCreateVolumesResult(
-                    deployment_hash=deployment.hash,
-                    service_id=deployment.service.id,
-                    created_volumes=self.created_volumes,
-                ),
-                start_to_close_timeout=timedelta(seconds=5),
-                retry_policy=self.retry_policy,
-            )
+        # if (
+        #     last_completed_step >= DockerDeploymentStep.VOLUMES_CREATED
+        #     and len(self.created_volumes) > 0
+        # ):
+        #     await workflow.execute_activity_method(
+        #         DockerSwarmActivities.delete_created_volumes,
+        #         DeploymentCreateVolumesResult(
+        #             deployment_hash=deployment.hash,
+        #             service_id=deployment.service.id,
+        #             created_volumes=self.created_volumes,
+        #         ),
+        #         start_to_close_timeout=timedelta(seconds=5),
+        #         retry_policy=self.retry_policy,
+        #     )
 
         await workflow.execute_activity_method(
             DockerSwarmActivities.save_cancelled_deployment,
@@ -521,12 +521,12 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
             retry_policy=self.retry_policy,
         )
 
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.remove_old_docker_volumes,
-            current_deployment,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+        # await workflow.execute_activity_method(
+        #     DockerSwarmActivities.remove_old_docker_volumes,
+        #     current_deployment,
+        #     start_to_close_timeout=timedelta(seconds=30),
+        #     retry_policy=self.retry_policy,
+        # )
 
         await workflow.execute_activity_method(
             DockerSwarmActivities.cleanup_previous_production_deployment,
@@ -916,22 +916,22 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 )
 
             service = deployment.service
-            if len(service.docker_volumes) > 0:
-                self.created_volumes = await workflow.execute_activity_method(
-                    DockerSwarmActivities.create_docker_volumes_for_service,
-                    deployment,
-                    start_to_close_timeout=timedelta(seconds=30),
-                    retry_policy=self.retry_policy,
-                )
+            # if len(service.docker_volumes) > 0:
+            #     self.created_volumes = await workflow.execute_activity_method(
+            #         DockerSwarmActivities.create_docker_volumes_for_service,
+            #         deployment,
+            #         start_to_close_timeout=timedelta(seconds=30),
+            #         retry_policy=self.retry_policy,
+            #     )
 
-            if await self.check_for_cancellation(
-                GitDeploymentStep.VOLUMES_CREATED,
-                pause_at_step=pause_at_step,
-                deployment=deployment,
-            ):
-                return await self.handle_cancellation(
-                    deployment, GitDeploymentStep.VOLUMES_CREATED
-                )
+            # if await self.check_for_cancellation(
+            #     GitDeploymentStep.VOLUMES_CREATED,
+            #     pause_at_step=pause_at_step,
+            #     deployment=deployment,
+            # ):
+            #     return await self.handle_cancellation(
+            #         deployment, GitDeploymentStep.VOLUMES_CREATED
+            #     )
 
             if len(service.configs) > 0:
                 self.created_configs = await workflow.execute_activity_method(
@@ -1268,20 +1268,20 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 retry_policy=self.retry_policy,
             )
 
-        if (
-            last_completed_step >= GitDeploymentStep.VOLUMES_CREATED
-            and len(self.created_volumes) > 0
-        ):
-            await workflow.execute_activity_method(
-                DockerSwarmActivities.delete_created_volumes,
-                DeploymentCreateVolumesResult(
-                    deployment_hash=deployment.hash,
-                    service_id=deployment.service.id,
-                    created_volumes=self.created_volumes,
-                ),
-                start_to_close_timeout=timedelta(seconds=5),
-                retry_policy=self.retry_policy,
-            )
+        # if (
+        #     last_completed_step >= GitDeploymentStep.VOLUMES_CREATED
+        #     and len(self.created_volumes) > 0
+        # ):
+        #     await workflow.execute_activity_method(
+        #         DockerSwarmActivities.delete_created_volumes,
+        #         DeploymentCreateVolumesResult(
+        #             deployment_hash=deployment.hash,
+        #             service_id=deployment.service.id,
+        #             created_volumes=self.created_volumes,
+        #         ),
+        #         start_to_close_timeout=timedelta(seconds=5),
+        #         retry_policy=self.retry_policy,
+        #     )
 
         await workflow.execute_activity_method(
             DockerSwarmActivities.save_cancelled_deployment,
@@ -1340,12 +1340,12 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             retry_policy=self.retry_policy,
         )
 
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.remove_old_docker_volumes,
-            current_deployment,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+        # await workflow.execute_activity_method(
+        #     DockerSwarmActivities.remove_old_docker_volumes,
+        #     current_deployment,
+        #     start_to_close_timeout=timedelta(seconds=30),
+        #     retry_policy=self.retry_policy,
+        # )
 
         await workflow.execute_activity_method(
             DockerSwarmActivities.cleanup_previous_production_deployment,

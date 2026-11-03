@@ -18,7 +18,7 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
             status=SwarmNode.Status.ACTIVE,
             is_initial_install_server=True,
             cluster_roles=[
-                SwarmNode.ClusterRole.APP_SERVER,
+                SwarmNode.ClusterRole.DEPLOY_SERVER,
                 SwarmNode.ClusterRole.BUILD_SERVER,
             ],
         )
@@ -28,7 +28,7 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
             private_ip="10.0.0.2",
             swarm_role=SwarmNode.Role.WORKER,
             status=SwarmNode.Status.ACTIVE,
-            cluster_roles=[SwarmNode.ClusterRole.APP_SERVER],
+            cluster_roles=[SwarmNode.ClusterRole.DEPLOY_SERVER],
         )
         self.main_key = self.create_ssh_key(self.main_node, user="root")
         self.node_key = self.create_ssh_key(self.node, user="root")
@@ -148,7 +148,7 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
 
     def test_cannot_deprovision_the_last_build_server(self):
         self.loginUser()
-        self.main_node.cluster_roles = [SwarmNode.ClusterRole.APP_SERVER]  # type: ignore
+        self.main_node.cluster_roles = [SwarmNode.ClusterRole.DEPLOY_SERVER]  # type: ignore
         self.main_node.save()
         self.node.cluster_roles = [SwarmNode.ClusterRole.BUILD_SERVER]  # type: ignore
         self.node.save()
@@ -177,7 +177,7 @@ class DeprovisionSwarmNodeViewTests(AuthAPITestCase):
                     private_ip=f"10.0.1.{index + 1}",
                     swarm_role=SwarmNode.Role.WORKER,
                     status=node_status,
-                    cluster_roles=[SwarmNode.ClusterRole.APP_SERVER],
+                    cluster_roles=[SwarmNode.ClusterRole.DEPLOY_SERVER],
                 )
                 response = self.deprovision(self.node.id, self.VALID_PAYLOAD)
                 jprint(response.json())
@@ -199,7 +199,7 @@ class DeleteSwarmNodeViewTests(AuthAPITestCase):
             private_ip="10.0.0.2",
             swarm_role=SwarmNode.Role.WORKER,
             status=SwarmNode.Status.CREATED,
-            cluster_roles=[SwarmNode.ClusterRole.APP_SERVER],
+            cluster_roles=[SwarmNode.ClusterRole.DEPLOY_SERVER],
         )
         self.node_key = self.create_ssh_key(self.node, user="root")
 

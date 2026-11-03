@@ -202,7 +202,7 @@ function CreateSwarmNodeForm() {
         >
           <div className="inline-flex gap-2 items-start">
             <FieldSetCheckbox
-              value="APP_SERVER"
+              value="DEPLOY_SERVER"
               defaultChecked
               className="relative top-1"
             />
@@ -210,7 +210,7 @@ function CreateSwarmNodeForm() {
             <div className="flex flex-col gap-0.5">
               <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
                 <PackageIcon className="size-4 flex-none" />
-                App Server
+                Deploy Server
               </FieldSetLabel>
 
               <small className="text-grey text-sm">

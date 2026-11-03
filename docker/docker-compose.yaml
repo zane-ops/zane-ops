@@ -146,10 +146,7 @@ services:
       context: ../backend
       dockerfile: ../backend/Dockerfile
     container_name: zane-temporal-schedule-worker
-    command: >
-      bash -c "source /opt/.venv/bin/activate &&
-               uv sync --locked --active &&
-               watchmedo auto-restart --directory=/code --pattern=*.py --ignore-patterns="/code/zane_api/tests/**" --recursive -- python manage.py run_worker"
+    command: /bin/bash -l -c "/code/scripts/run_dev_worker.sh"
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro

@@ -22,14 +22,6 @@ import {
 import { useDebounce } from "use-debounce";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "~/components/ui/breadcrumb";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Command,
@@ -53,8 +45,7 @@ import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import {
   dockerHubQueries,
   ensureMinRole,
-  sharedRegistryCredentialsQueries,
-  userQueries
+  sharedRegistryCredentialsQueries
 } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {

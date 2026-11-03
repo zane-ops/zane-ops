@@ -3,3 +3,4 @@ from .nodes import *
 from .provision import *
 from .deprovision import *
 from .update import *
+from .services import *

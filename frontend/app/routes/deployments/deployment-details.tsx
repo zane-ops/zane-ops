@@ -26,6 +26,7 @@ import {
   LoaderIcon,
   MessageCircleCode,
   RocketIcon,
+  RouteIcon,
   TagIcon,
   TerminalIcon,
   TrendingUpIcon,
@@ -48,12 +49,13 @@ import {
   BuilderChangeField,
   CommandChangeField,
   ConfigChangeItem,
+  DeploymentStrategyChangeField,
   EnvVariableChangeItem,
   GitSourceChangeField,
   HealthcheckChangeField,
   PortChangeItem,
   ResourceLimitChangeField,
-  SharedVolumeChangeItem,
+  // SharedVolumeChangeItem,
   SourceChangeField,
   UrlChangeItem,
   VolumeChangeItem
@@ -145,12 +147,35 @@ export default function DeploymentDetailsPage({
     return ch;
   });
 
-  const deploymentChanges = Object.groupBy(changes, ({ field }) => field);
+  const deploymentChanges = Object.groupBy(
+    // Shared volumes are disabled
+    changes.filter((ch) => ch.field !== "shared_volumes"),
+    ({ field }) => field
+  );
 
   const serviceImage = deployment.service_snapshot.image;
   const imageParts = serviceImage?.split(":") ?? [];
   const tag = imageParts.length > 1 ? imageParts.pop() : "latest";
   const image = imageParts.join(":");
+
+  const snapshotRepoUrl = deployment.service_snapshot.repository_url
+    ?.replace(/\/+$/, "")
+    .replace(/\.git$/, "");
+  const isGithub =
+    snapshotRepoUrl?.startsWith("https://github.com") ||
+    Boolean(deployment.service_snapshot.git_app?.github);
+  const isGitlab =
+    snapshotRepoUrl?.startsWith("https://gitlab.com") ||
+    Boolean(deployment.service_snapshot.git_app?.gitlab);
+
+  let commitURL: string | null = null;
+  if (snapshotRepoUrl && deployment.commit_sha) {
+    if (isGithub) {
+      commitURL = `${snapshotRepoUrl}/commit/${deployment.commit_sha}`;
+    } else if (isGitlab) {
+      commitURL = `${snapshotRepoUrl}/-/commit/${deployment.commit_sha}`;
+    }
+  }
 
   React.useEffect(() => {
     if (deployment.started_at && !deployment.finished_at) {
@@ -183,7 +208,8 @@ export default function DeploymentDetailsPage({
     urls: GlobeIcon,
     resource_limits: HourglassIcon,
     healthcheck: ActivityIcon,
-    configs: FileSliders
+    configs: FileSliders,
+    deployment_strategy: RouteIcon
   };
   const [hasCopied, startTransition] = React.useTransition();
 
@@ -203,6 +229,7 @@ export default function DeploymentDetailsPage({
             <InfoIcon size={15} className="flex-none text-grey" />
           </div>
           <div className="h-full border border-grey/50"></div>
+          {!isMember && <div className="bg-grey/50 rounded-md size-2" />}
         </div>
 
         <div className="w-full flex flex-col gap-5 pt-1 pb-8">
@@ -348,7 +375,19 @@ export default function DeploymentDetailsPage({
                 <dt className="flex gap-1 items-center text-grey">
                   <GitCommitIcon size={15} /> <span>Git commit SHA:</span>
                 </dt>
-                <dd>{deployment.commit_sha}</dd>
+                <dd>
+                  {commitURL ? (
+                    <a
+                      href={commitURL}
+                      target="_blank"
+                      className="underline text-link inline-flex gap-1 items-center"
+                    >
+                      {deployment.commit_sha} <ExternalLinkIcon size={15} />
+                    </a>
+                  ) : (
+                    deployment.commit_sha
+                  )}
+                </dd>
               </div>
             )}
 
@@ -375,216 +414,230 @@ export default function DeploymentDetailsPage({
         </div>
       </section>
 
-      <section id="changes" className="flex gap-1 scroll-mt-20">
-        <div className="w-16 hidden md:flex flex-col items-center">
-          <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
-            <GitCompareArrowsIcon size={15} className="flex-none text-grey" />
-          </div>
-          <div className="h-full border border-grey/50"></div>
-          {!isMember && <div className="bg-grey/50 rounded-md size-2" />}
-        </div>
-
-        <div className="w-full flex flex-col gap-5 pt-1 pb-8">
-          <h2 className="text-lg text-grey">Changes</h2>
-          <p className="text-gray-400">
-            All the changes applied by this deployment.
-          </p>
-
-          {changes.length === 0 && (
-            <div
-              className={cn(
-                "flex flex-col gap-2 items-center py-8 bg-muted/20",
-                "border-border border-dashed rounded-md border-1"
-              )}
-            >
-              No changes made in this deployment
-            </div>
-          )}
-          {Object.entries(deploymentChanges).map((item) => {
-            const field = item[0] as keyof typeof deploymentChanges;
-            const changes = item[1] as NonNullable<
-              (typeof deploymentChanges)[typeof field]
-            >;
-            const Icon = IconFieldMap[field];
-            const fieldName = field === "configs" ? "Config files" : field;
-            return (
-              <div key={field} className="flex flex-col gap-1.5 flex-1">
-                <h3 className="text-lg flex gap-2 items-center border-b py-2 border-border">
-                  <Icon size={15} className="flex-none text-grey" />
-                  <span>{capitalizeText(fieldName.replaceAll("_", " "))}</span>
-                </h3>
-                <div className="pl-4 py-2 flex flex-col gap-2">
-                  {field === "volumes" &&
-                    changes.map((change) => (
-                      <React.Fragment key={change.id}>
-                        <VolumeChangeItem change={change} />
-                        <hr className="border border-dashed border-border" />
-                      </React.Fragment>
-                    ))}
-                  {field === "shared_volumes" &&
-                    changes.map((change) => (
-                      <React.Fragment key={change.id}>
-                        <SharedVolumeChangeItem change={change} />
-                        <hr className="border border-dashed border-border" />
-                      </React.Fragment>
-                    ))}
-                  {field === "configs" &&
-                    changes.map((change) => (
-                      <React.Fragment key={change.id}>
-                        <ConfigChangeItem change={change} />
-                        <hr className="border border-dashed border-border" />
-                      </React.Fragment>
-                    ))}
-                  {field === "source" &&
-                    changes.map((change) => (
-                      <React.Fragment key={change.id}>
-                        <SourceChangeField change={change} />
-                        <hr className="border border-dashed border-border" />
-                      </React.Fragment>
-                    ))}
-                  {field === "git_source" &&
-                    changes.map((change) => (
-                      <React.Fragment key={change.id}>
-                        <GitSourceChangeField change={change} />
-                        <hr className="border border-dashed border-border" />
-                      </React.Fragment>
-                    ))}
-                  {field === "builder" &&
-                    changes.map((change) => (
-                      <React.Fragment key={change.id}>
-                        <BuilderChangeField change={change} />
-                        <hr className="border border-dashed border-border" />
-                      </React.Fragment>
-                    ))}
-                  {field === "command" &&
-                    changes.map((change) => (
-                      <React.Fragment key={change.id}>
-                        <CommandChangeField change={change} />
-                        <hr className="border border-dashed border-border" />
-                      </React.Fragment>
-                    ))}
-                  {field === "ports" &&
-                    changes.map((change) => (
-                      <React.Fragment key={change.id}>
-                        <PortChangeItem change={change} />
-                        <hr className="border border-dashed border-border" />
-                      </React.Fragment>
-                    ))}
-                  {field === "env_variables" &&
-                    changes.map((change) => (
-                      <React.Fragment key={change.id}>
-                        <EnvVariableChangeItem
-                          change={change}
-                          key={change.id}
-                        />
-                        <hr className="border border-dashed border-border" />
-                      </React.Fragment>
-                    ))}
-                  {field === "urls" &&
-                    changes.map((change) => (
-                      <React.Fragment key={change.id}>
-                        <UrlChangeItem change={change} key={change.id} />
-                        <hr className="border border-dashed border-border" />
-                      </React.Fragment>
-                    ))}
-                  {field === "healthcheck" &&
-                    changes.map((change) => (
-                      <React.Fragment key={change.id}>
-                        <HealthcheckChangeField
-                          change={change}
-                          key={change.id}
-                        />
-                        <hr className="border border-dashed border-border" />
-                      </React.Fragment>
-                    ))}
-                  {field === "resource_limits" &&
-                    changes.map((change) => (
-                      <React.Fragment key={change.id}>
-                        <ResourceLimitChangeField
-                          change={change}
-                          key={change.id}
-                        />
-                        <hr className="border border-dashed border-border" />
-                      </React.Fragment>
-                    ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
       {isMember && (
-        <section id="snapshot" className="flex gap-1 scroll-mt-20">
-          <div className="w-16 hidden md:flex flex-col items-center">
-            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
-              <FilmIcon size={15} className="flex-none text-grey" />
+        <>
+          <section id="changes" className="flex gap-1 scroll-mt-20">
+            <div className="w-16 hidden md:flex flex-col items-center">
+              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                <GitCompareArrowsIcon
+                  size={15}
+                  className="flex-none text-grey"
+                />
+              </div>
+              <div className="h-full border border-grey/50"></div>
             </div>
-          </div>
 
-          <div className="shrink min-w-0 flex flex-col gap-5 pt-1 pb-14 w-full">
-            <h2 className="text-lg text-grey">Snapshot</h2>
-            <p className="text-gray-400">
-              The status of the service at the time of the deployment.
-            </p>
-            <Accordion
-              type="single"
-              collapsible
-              className="border-y border-border w-full"
-            >
-              <AccordionItem value="system">
-                <AccordionTrigger className="text-muted-foreground font-normal text-sm hover:underline">
-                  <ChevronRightIcon className="h-4 w-4 shrink-0 transition-transform duration-200" />
-                  JSON structure
-                </AccordionTrigger>
-                <AccordionContent className="flex flex-col gap-2">
-                  <div className="overflow-x-auto max-w-full shrink min-w-0 bg-card rounded-md p-2 grow relative">
-                    <TooltipProvider>
-                      <Tooltip delayDuration={0}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            className="px-2.5 py-0.5 absolute top-2 right-2"
-                            onClick={() => {
-                              const copyString = JSON.stringify(
-                                deployment.service_snapshot,
-                                null,
-                                2
-                              );
-                              navigator.clipboard
-                                .writeText(copyString)
-                                .then(() => {
-                                  logger
-                                    .scope("copyServiceSnapshot")
-                                    .info("copied !", { copyString });
-                                  // show pending state (which is success state), until the user has stopped clicking the button
-                                  startTransition(() => wait(1000));
-                                });
-                            }}
-                          >
-                            {hasCopied ? (
-                              <CheckIcon size={15} className="flex-none" />
-                            ) : (
-                              <CopyIcon size={15} className="flex-none" />
-                            )}
-                            <span className="sr-only">Copy</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Copy</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <pre
-                      className="text-sm [&_.hljs-punctuation]:text-white dark:[&_.hljs-punctuation]:text-foreground"
-                      dangerouslySetInnerHTML={{
-                        __html: highlightedCode
-                      }}
-                    />
+            <div className="w-full flex flex-col gap-5 pt-1 pb-8">
+              <h2 className="text-lg text-grey">Changes</h2>
+              <p className="text-gray-400">
+                All the changes applied by this deployment.
+              </p>
+
+              {changes.length === 0 && (
+                <div
+                  className={cn(
+                    "flex flex-col gap-2 items-center py-8 bg-muted/20",
+                    "border-border border-dashed rounded-md border-1"
+                  )}
+                >
+                  No changes made in this deployment
+                </div>
+              )}
+              {Object.entries(deploymentChanges).map((item) => {
+                const field = item[0] as keyof typeof deploymentChanges;
+                const changes = item[1] as NonNullable<
+                  (typeof deploymentChanges)[typeof field]
+                >;
+                const Icon = IconFieldMap[field];
+                const fieldName = field === "configs" ? "Config files" : field;
+                return (
+                  <div key={field} className="flex flex-col gap-1.5 flex-1">
+                    <h3 className="text-lg flex gap-2 items-center border-b py-2 border-border">
+                      <Icon size={15} className="flex-none text-grey" />
+                      <span>
+                        {capitalizeText(fieldName.replaceAll("_", " "))}
+                      </span>
+                    </h3>
+                    <div className="pl-4 py-2 flex flex-col gap-2">
+                      {field === "volumes" &&
+                        changes.map((change) => (
+                          <React.Fragment key={change.id}>
+                            <VolumeChangeItem change={change} />
+                            <hr className="border border-dashed border-border" />
+                          </React.Fragment>
+                        ))}
+                      {/* Shared volumes are disabled
+                      {field === "shared_volumes" &&
+                        changes.map((change) => (
+                          <React.Fragment key={change.id}>
+                            <SharedVolumeChangeItem change={change} />
+                            <hr className="border border-dashed border-border" />
+                          </React.Fragment>
+                        ))}
+                      */}
+                      {field === "configs" &&
+                        changes.map((change) => (
+                          <React.Fragment key={change.id}>
+                            <ConfigChangeItem change={change} />
+                            <hr className="border border-dashed border-border" />
+                          </React.Fragment>
+                        ))}
+                      {field === "source" &&
+                        changes.map((change) => (
+                          <React.Fragment key={change.id}>
+                            <SourceChangeField change={change} />
+                            <hr className="border border-dashed border-border" />
+                          </React.Fragment>
+                        ))}
+                      {field === "deployment_strategy" &&
+                        changes.map((change) => (
+                          <React.Fragment key={change.id}>
+                            <DeploymentStrategyChangeField change={change} />
+                            <hr className="border border-dashed border-border" />
+                          </React.Fragment>
+                        ))}
+                      {field === "git_source" &&
+                        changes.map((change) => (
+                          <React.Fragment key={change.id}>
+                            <GitSourceChangeField change={change} />
+                            <hr className="border border-dashed border-border" />
+                          </React.Fragment>
+                        ))}
+                      {field === "builder" &&
+                        changes.map((change) => (
+                          <React.Fragment key={change.id}>
+                            <BuilderChangeField change={change} />
+                            <hr className="border border-dashed border-border" />
+                          </React.Fragment>
+                        ))}
+                      {field === "command" &&
+                        changes.map((change) => (
+                          <React.Fragment key={change.id}>
+                            <CommandChangeField change={change} />
+                            <hr className="border border-dashed border-border" />
+                          </React.Fragment>
+                        ))}
+                      {field === "ports" &&
+                        changes.map((change) => (
+                          <React.Fragment key={change.id}>
+                            <PortChangeItem change={change} />
+                            <hr className="border border-dashed border-border" />
+                          </React.Fragment>
+                        ))}
+                      {field === "env_variables" &&
+                        changes.map((change) => (
+                          <React.Fragment key={change.id}>
+                            <EnvVariableChangeItem
+                              change={change}
+                              key={change.id}
+                            />
+                            <hr className="border border-dashed border-border" />
+                          </React.Fragment>
+                        ))}
+                      {field === "urls" &&
+                        changes.map((change) => (
+                          <React.Fragment key={change.id}>
+                            <UrlChangeItem change={change} key={change.id} />
+                            <hr className="border border-dashed border-border" />
+                          </React.Fragment>
+                        ))}
+                      {field === "healthcheck" &&
+                        changes.map((change) => (
+                          <React.Fragment key={change.id}>
+                            <HealthcheckChangeField
+                              change={change}
+                              key={change.id}
+                            />
+                            <hr className="border border-dashed border-border" />
+                          </React.Fragment>
+                        ))}
+                      {field === "resource_limits" &&
+                        changes.map((change) => (
+                          <React.Fragment key={change.id}>
+                            <ResourceLimitChangeField
+                              change={change}
+                              key={change.id}
+                            />
+                            <hr className="border border-dashed border-border" />
+                          </React.Fragment>
+                        ))}
+                    </div>
                   </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
-        </section>
+                );
+              })}
+            </div>
+          </section>
+          <section id="snapshot" className="flex gap-1 scroll-mt-20">
+            <div className="w-16 hidden md:flex flex-col items-center">
+              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                <FilmIcon size={15} className="flex-none text-grey" />
+              </div>
+            </div>
+
+            <div className="shrink min-w-0 flex flex-col gap-5 pt-1 pb-14 w-full">
+              <h2 className="text-lg text-grey">Snapshot</h2>
+              <p className="text-gray-400">
+                The status of the service at the time of the deployment.
+              </p>
+              <Accordion
+                type="single"
+                collapsible
+                className="border-y border-border w-full"
+              >
+                <AccordionItem value="system">
+                  <AccordionTrigger className="text-muted-foreground font-normal text-sm hover:underline">
+                    <ChevronRightIcon className="h-4 w-4 shrink-0 transition-transform duration-200" />
+                    JSON structure
+                  </AccordionTrigger>
+                  <AccordionContent className="flex flex-col gap-2">
+                    <div className="overflow-x-auto max-w-full shrink min-w-0 bg-card rounded-md p-2 grow relative">
+                      <TooltipProvider>
+                        <Tooltip delayDuration={0}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              className="px-2.5 py-0.5 absolute top-2 right-2"
+                              onClick={() => {
+                                const copyString = JSON.stringify(
+                                  deployment.service_snapshot,
+                                  null,
+                                  2
+                                );
+                                navigator.clipboard
+                                  .writeText(copyString)
+                                  .then(() => {
+                                    logger
+                                      .scope("copyServiceSnapshot")
+                                      .info("copied !", { copyString });
+                                    // show pending state (which is success state), until the user has stopped clicking the button
+                                    startTransition(() => wait(1000));
+                                  });
+                              }}
+                            >
+                              {hasCopied ? (
+                                <CheckIcon size={15} className="flex-none" />
+                              ) : (
+                                <CopyIcon size={15} className="flex-none" />
+                              )}
+                              <span className="sr-only">Copy</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Copy</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <pre
+                        className="text-sm [&_.hljs-punctuation]:text-white dark:[&_.hljs-punctuation]:text-foreground"
+                        dangerouslySetInnerHTML={{
+                          __html: highlightedCode
+                        }}
+                      />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+          </section>
+        </>
       )}
     </div>
   );

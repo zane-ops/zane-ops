@@ -1,4 +1,5 @@
 import secrets
+from dataclasses import asdict
 from typing import Any, cast
 
 from django.db import transaction
@@ -42,6 +43,7 @@ from zane_api.permissions import (
 )
 from zane_api.serializers import ErrorResponse409Serializer
 from zane_api.views.base import ResourceConflict
+from swarm.models import SwarmNode
 
 from ..adapters import DokployComposeAdapter
 from ..dtos import ComposeStackEnvOverrideDto, ComposeStackSnapshot, DokployTemplate
@@ -49,6 +51,7 @@ from ..models import ComposeStack, ComposeStackChange, ComposeStackDeployment
 from ..processor import ComposeSpecProcessor
 from .serializers import (
     ComposeContentFieldChangeSerializer,
+    ComposeDeployServerFieldChangeSerializer,
     ComposeEnvOverrideItemChangeSerializer,
     ComposeStackChangeSerializer,
     ComposeStackDeploymentListFilterSet,
@@ -703,6 +706,47 @@ class ComposeStackReDeployAPIView(APIView):
                     )
                 )
 
+        if current_snapshot.deployment_server != target_snapshot.deployment_server:
+            # Check that if we rollback the stack, it would not reference deleted servers,
+            # servers without the deploy role or servers that are not part of the cluster
+            if target_snapshot.deployment_server is not None:
+                server = SwarmNode.objects.filter(
+                    id=target_snapshot.deployment_server.id
+                ).first()
+                if server is None:
+                    raise ResourceConflict(
+                        "Cannot redeploy to this deployment because the server it was deployed on no longer exists. "
+                        "Change the stack's deployment server, then deploy again."
+                    )
+                if SwarmNode.ClusterRole.DEPLOY_SERVER not in server.cluster_roles:
+                    raise ResourceConflict(
+                        f"Cannot redeploy to this deployment because server `{server.display_name}` no longer has the `Deploy Server` role. "
+                        "Add this role back to the server, or change the stack's deployment server, then deploy again."
+                    )
+                if server.swarm_node_id is None:
+                    raise ResourceConflict(
+                        f"Cannot redeploy to this deployment because server `{server.display_name}` is not part of the cluster. "
+                        "Wait for the server to join the cluster, or change the stack's deployment server, then deploy again."
+                    )
+
+            new_changes.append(
+                ComposeStackChange(
+                    field=ComposeStackChange.ChangeField.DEPLOY_SERVER,
+                    type=ComposeStackChange.ChangeType.UPDATE,
+                    new_value=(
+                        target_snapshot.deployment_server.to_dict()
+                        if target_snapshot.deployment_server is not None
+                        else None
+                    ),
+                    old_value=(
+                        current_snapshot.deployment_server.to_dict()
+                        if current_snapshot.deployment_server is not None
+                        else None
+                    ),
+                    stack=stack,
+                )
+            )
+
         if len(new_changes) > 0:
             stack.changes.bulk_create(new_changes)
 
@@ -964,6 +1008,7 @@ class ComposeStackRequestChangesAPIView(APIView):
             serializers=[
                 ComposeContentFieldChangeSerializer,
                 ComposeEnvOverrideItemChangeSerializer,
+                ComposeDeployServerFieldChangeSerializer,
             ],
         ),
         operation_id="requestComposeStackUpdate",
@@ -1003,6 +1048,7 @@ class ComposeStackRequestChangesAPIView(APIView):
         field_serializer_map = {
             ComposeStackChange.ChangeField.ENV_OVERRIDES: ComposeEnvOverrideItemChangeSerializer,
             ComposeStackChange.ChangeField.COMPOSE_CONTENT: ComposeContentFieldChangeSerializer,
+            ComposeStackChange.ChangeField.DEPLOY_SERVER: ComposeDeployServerFieldChangeSerializer,
         }
 
         request_serializer = ComposeStackFieldChangeRequestSerializer(data=request.data)
@@ -1028,6 +1074,25 @@ class ComposeStackRequestChangesAPIView(APIView):
                     old_value = ComposeStackEnvOverrideSerializer(
                         stack.env_overrides.get(id=item_id)
                     ).data
+            case ComposeStackChange.ChangeField.DEPLOY_SERVER:
+                deployment_server_id: str | None = cast(dict, new_value)[
+                    "deployment_server_id"
+                ]
+                new_value = None
+                if deployment_server_id is not None:
+                    server = SwarmNode.objects.get(id=deployment_server_id)
+                    new_value = dict(
+                        id=server.id,
+                        swarm_node_id=server.swarm_node_id,
+                    )
+                old_value = (
+                    dict(
+                        id=stack.deployment_server.id,
+                        swarm_node_id=stack.deployment_server.swarm_node_id,
+                    )
+                    if stack.deployment_server is not None
+                    else None
+                )
 
         change = ComposeStackChange(
             type=change_type,

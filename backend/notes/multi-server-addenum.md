@@ -1,6 +1,18 @@
 ## TODO:
 
-- [ ] Wire `deploy-scripts/install.sh`/`Makefile` to `compose.prod.yaml` instead of `docker-stack.prod.yaml` — deliberately not done yet. Existing installs are all on `docker-stack.prod.yaml` (single-node: `node.role==manager` placement, no global services); switching the installer's target file is a breaking change for them, so it should ship as a major version bump, not a silent swap.
+- [x] Wire `deploy-scripts/install.sh`/`Makefile` to `compose.prod.yaml` instead of `docker-stack.prod.yaml` — deliberately not done yet. Existing installs are all on `docker-stack.prod.yaml` (single-node: `node.role==manager` placement, no global services); switching the installer's target file is a breaking change for them, so it should ship as a major version bump, not a silent swap.
+
+### Build/Deploy routing
+
+- [ ] Update service healthchecks (http/cmd) to use the container's IP instead of the container's ID
+      Or run the healthcheck in the correct temporal-node worker (on the correct server)
+      Remember that for services that aren't pinned to one server, the healthcheck will need to run on 
+      all servers... or smth
+- [ ] Delete volumes should delete the volumes in the correct nodes (or all nodes ?) since a service can migrate
+      accross nodes, volumes may have been created/leftover
+- [ ] How to Handle healthcheck for services with multiple replicas ?
+- [ ] A service deployed with `ANY_DEPLOY_SERVER` will migrate if a node is unhealthy, will need to somehow migrate
+      the healthcheck, or run the healthcheck everywhere ? 
 
 ### Swarm node workflows — safety
 

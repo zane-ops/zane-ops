@@ -58,40 +58,19 @@ export function meta() {
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
-
-  const searchParams = new URL(request.url).searchParams;
-  const search = swarmNodeListFilters.parse(searchParams);
-  const filters = {
-    page: search.page ?? 1,
-    per_page: search.per_page ?? 10,
-    ...search
-  };
-
-  const nodes = await queryClient.ensureQueryData(
-    swarmQueries.nodeList(filters)
-  );
+  const nodes = await queryClient.ensureQueryData(swarmQueries.nodeList());
   return { nodes };
 }
 
 export default function SwarmNodeListPage({
   loaderData
 }: Route.ComponentProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const search = swarmNodeListFilters.parse(searchParams);
-
-  const filters = {
-    page: search.page ?? 1,
-    per_page: search.per_page ?? 10,
-    ...search
-  };
-
   const { data } = useQuery({
-    ...swarmQueries.nodeList(filters),
+    ...swarmQueries.nodeList(),
     initialData: loaderData.nodes
   });
 
-  const nodes = data.results;
-  const totalPages = Math.ceil(data.count / filters.per_page);
+  const nodes = data;
 
   return (
     <section className="flex flex-col gap-4">
@@ -114,29 +93,6 @@ export default function SwarmNodeListPage({
           <ServerCard key={node.id} {...node} />
         ))}
       </ul>
-
-      <div className="my-4 block">
-        {nodes.length > 0 && data.count > 10 && (
-          <Pagination
-            totalPages={totalPages}
-            currentPage={filters.page}
-            perPage={filters.per_page}
-            onChangePage={(newPage) => {
-              searchParams.set("page", newPage.toString());
-              setSearchParams(searchParams, {
-                replace: true
-              });
-            }}
-            onChangePerPage={(newPerPage) => {
-              searchParams.set("page", "1");
-              searchParams.set("per_page", newPerPage.toString());
-              setSearchParams(searchParams, {
-                replace: true
-              });
-            }}
-          />
-        )}
-      </div>
     </section>
   );
 }
@@ -297,16 +253,16 @@ export function ServerCard({
             <span className="w-px bg-muted h-3" />
 
             <div className="flex items-center gap-1">
-              {cluster_roles.includes("APP_SERVER") && (
+              {cluster_roles.includes("DEPLOY_SERVER") && (
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
                     <Code className="inline-flex items-center gap-1 cursor-help decoration-1 decoration-wavy hover:underline">
-                      app server
+                      deploy server
                     </Code>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-64">
                     <span className="dark:text-card-foreground text-grey">
-                      App server:
+                      Deploy server:
                     </span>{" "}
                     your services can be deployed and run on this server.
                   </TooltipContent>

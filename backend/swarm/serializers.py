@@ -7,14 +7,34 @@ from .models import SSHKey, SwarmNode
 from .validators import validate_unix_username
 from faker import Faker
 from zane_api.utils import DockerSwarmTaskState
+from django.db.models import QuerySet, Q
 
 
-class SSHKeyFilterSet(django_filters.FilterSet):
-    user = django_filters.CharFilter(lookup_expr="icontains")
+class SwarmNodeListFilterSet(django_filters.FilterSet):
+    cluster_role = django_filters.ChoiceFilter(
+        method="filter_cluster_role", choices=SwarmNode.ClusterRole.choices
+    )
+    is_active = django_filters.BooleanFilter(method="filter_is_active")
+    hostname = django_filters.CharFilter(lookup_expr="icontains")
+
+    def filter_cluster_role(self, qs: QuerySet, name: str, value: str):
+        return qs.filter(Q(cluster_roles__contains=[value]))
+
+    def filter_is_active(self, qs: QuerySet, name: str, is_active: bool):
+        active_query = Q(
+            status__in=IN_CLUSTER_STATUSES,
+        ) & Q(swarm_node_id__isnull=False)
+        inactive_query = Q(swarm_node_id__isnull=True)
+
+        return qs.filter(active_query if is_active else inactive_query)
 
     class Meta:
-        model = SSHKey
-        fields = ["user"]
+        model = SwarmNode
+        fields = [
+            "cluster_role",
+            "is_active",
+            "hostname",
+        ]
 
 
 class CreateSSHKeyRequestSerializer(serializers.Serializer):
@@ -203,6 +223,35 @@ class SSHKeySerializer(serializers.ModelSerializer):
         ]
 
 
+class SimpleSwarmNodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SwarmNode
+        fields = [
+            "id",
+            "swarm_node_id",
+        ]
+
+
+class DefaultSwarmNodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SwarmNode
+        fields = [
+            "id",
+            "hostname",
+        ]
+
+
+class DeployServerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SwarmNode
+        fields = [
+            "id",
+            "hostname",
+            "cpus",
+            "memory_bytes",
+        ]
+
+
 class SwarmNodeSerializer(serializers.ModelSerializer):
     def validate(self, attrs: dict):
         self.instance: SwarmNode | None
@@ -257,6 +306,7 @@ class SwarmNodeServiceSerializer(serializers.Serializer):
     )
     message = serializers.CharField(allow_null=True)
     image = serializers.CharField()
+    updated_at = serializers.DateTimeField(allow_null=True, required=False)
 
 
 class FullSwarmNodeSerializer(serializers.ModelSerializer):

@@ -17,7 +17,11 @@ import {
 } from "~/components/ui/accordion";
 import { Card } from "~/components/ui/card";
 import { swarmQueries } from "~/lib/queries";
-import { cn, getDockerImageIconURL } from "~/lib/utils";
+import {
+  cn,
+  getDockerImageIconURL,
+  mergeTimeAgoFormatterAndFormattedDate
+} from "~/lib/utils";
 import type { Route } from "./+types/swarm-node-services";
 
 type SwarmService = FullSwarmNode["services"][string];
@@ -144,6 +148,11 @@ function SwarmNodeService({ service, name, className }: SwarmNodeServiceProps) {
               <LoaderIcon className="animate-spin flex-none" size={15} />
             )}
           </div>
+          {service.updated_at && (
+            <time dateTime={service.updated_at} className="text-grey text-sm">
+              {mergeTimeAgoFormatterAndFormattedDate(service.updated_at)}
+            </time>
+          )}
         </div>
 
         {/* Name & image */}

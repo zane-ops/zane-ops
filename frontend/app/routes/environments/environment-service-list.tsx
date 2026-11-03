@@ -299,7 +299,7 @@ export default function EnvironmentServiceListPage({
                 </>
               ) : (
                 <>
-                  <h1 className="text-2xl font-bold">
+                  <h1 className="text-2xl font-semibold">
                     No services or compose stacks found in this environment
                   </h1>
                   <h2 className="text-lg">

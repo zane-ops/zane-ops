@@ -21,7 +21,7 @@ class ProcessorEnvPrefixTests(ComposeStackAPITestBase):
         Prefixed vars (__KEY) have is_exposed=True, plain vars have is_exposed=False.
         Keys retain their double underscore prefix.
         """
-        project, stack = self.create_and_deploy_compose_stack(
+        _, stack = self.create_and_deploy_compose_stack(
             content=DOCKER_COMPOSE_WITH_PREFIXED_ENV_OVERRIDE
         )
         stack.env_overrides.all().delete()
@@ -62,7 +62,7 @@ class ProcessorEnvPrefixTests(ComposeStackAPITestBase):
 
     def test_variable_expansion(self):
         """${__DATABASE_URL} resolves correctly."""
-        project, stack = self.create_and_deploy_compose_stack(
+        _, stack = self.create_and_deploy_compose_stack(
             content=DOCKER_COMPOSE_WITH_PREFIXED_ENV_EXPANSION
         )
 

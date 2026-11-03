@@ -879,7 +879,10 @@ function SwarmDeprovisionForm(node: FullSwarmNode) {
       confirmText="Deprovision"
       pendingText="Deprovisioning..."
       form={
-        <fetcher.Form method="post" className="flex flex-col gap-4 mb-5">
+        <fetcher.Form
+          method="post"
+          className="flex flex-col gap-4 mb-5 min-w-0"
+        >
           <input type="hidden" name="intent" value="deprovision-server" />
           <RootSSHKeySelect
             name="target_ssh_key_id"
@@ -1041,11 +1044,11 @@ function SwarmNodeDetailsForm({ node }: SwarmNodeFormProps) {
           >
             <div className="inline-flex gap-2 items-start">
               <FieldSetCheckbox
-                value="APP_SERVER"
+                value="DEPLOY_SERVER"
                 disabled={!isEditing}
-                checked={clusterRoles.includes("APP_SERVER")}
+                checked={clusterRoles.includes("DEPLOY_SERVER")}
                 onCheckedChange={(checked) =>
-                  toggleClusterRole("APP_SERVER", checked === true)
+                  toggleClusterRole("DEPLOY_SERVER", checked === true)
                 }
                 className="relative top-1 disabled:opacity-60"
               />
@@ -1053,7 +1056,7 @@ function SwarmNodeDetailsForm({ node }: SwarmNodeFormProps) {
               <div className="flex flex-col gap-0.5">
                 <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
                   <PackageIcon className="size-4 flex-none" />
-                  App Server
+                  Deploy Server
                 </FieldSetLabel>
 
                 <small className="text-grey text-sm">

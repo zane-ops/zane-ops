@@ -4,6 +4,7 @@ from datetime import datetime
 import json
 import re
 from typing import Dict, Literal, Optional, List, Any, Self, cast
+from zane_api.dtos import DeploymentServerDto
 
 
 class ComposeStackServiceStatus:
@@ -535,6 +536,7 @@ class ComposeStackSnapshot:
     urls: Dict[str, List[ComposeStackUrlRouteDto]] = field(default_factory=dict)
     configs: Dict[str, ComposeVersionedConfig] = field(default_factory=dict)
     env_overrides: List[ComposeStackEnvOverrideDto] = field(default_factory=list)
+    deployment_server: Optional[DeploymentServerDto] = None
 
     @property
     def monitor_schedule_id(self) -> str:
@@ -573,6 +575,11 @@ class ComposeStackSnapshot:
                 ComposeStackEnvOverrideDto.from_dict(env)
                 for env in data.get("env_overrides", [])
             ],
+            deployment_server=(
+                DeploymentServerDto.from_dict(data["deployment_server"])
+                if data.get("deployment_server") is not None
+                else None
+            ),
         )
 
     def to_dict(self):
@@ -592,6 +599,11 @@ class ComposeStackSnapshot:
                 name: config.to_dict() for name, config in self.configs.items()
             },
             "env_overrides": [env.to_dict() for env in self.env_overrides],
+            "deployment_server": (
+                self.deployment_server.to_dict()
+                if self.deployment_server is not None
+                else None
+            ),
         }
 
 
@@ -609,6 +621,7 @@ class ComposeStackServiceTaskDto:
     updated_at: str
     exit_code: Optional[int] = None
     container_id: Optional[str] = None
+    node_id: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> Self:
@@ -625,6 +638,7 @@ class ComposeStackServiceTaskDto:
             message=data["message"],
             exit_code=data.get("exit_code"),
             container_id=data.get("container_id"),
+            node_id=data.get("node_id"),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -644,6 +658,8 @@ class ComposeStackServiceTaskDto:
             result["exit_code"] = self.exit_code
         if self.container_id is not None:
             result["container_id"] = self.container_id
+        if self.node_id is not None:
+            result["node_id"] = self.node_id
         return result
 
 

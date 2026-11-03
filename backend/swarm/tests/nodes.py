@@ -22,7 +22,7 @@ class CreateSwarmNodeViewTests(AuthAPITestCase):
             {
                 "private_ip": DUMMY_PRIVATE_IP,
                 "swarm_role": SwarmNode.Role.WORKER,
-                "cluster_roles": [SwarmNode.ClusterRole.APP_SERVER],
+                "cluster_roles": [SwarmNode.ClusterRole.DEPLOY_SERVER],
                 "ssh_port": 2222,
             }
         )
@@ -35,7 +35,9 @@ class CreateSwarmNodeViewTests(AuthAPITestCase):
         self.assertIsNotNone(created_node)
         self.assertEqual(SwarmNode.Status.CREATED, created_node.status)
         self.assertEqual(SwarmNode.Role.WORKER, created_node.swarm_role)
-        self.assertEqual([SwarmNode.ClusterRole.APP_SERVER], created_node.cluster_roles)
+        self.assertEqual(
+            [SwarmNode.ClusterRole.DEPLOY_SERVER], created_node.cluster_roles
+        )
         self.assertEqual(2222, created_node.ssh_port)
         self.assertFalse(created_node.is_initial_install_server)
 
@@ -46,16 +48,16 @@ class CreateSwarmNodeViewTests(AuthAPITestCase):
                 "private_ip": DUMMY_PRIVATE_IP,
                 "swarm_role": SwarmNode.Role.WORKER,
                 "cluster_roles": [
-                    SwarmNode.ClusterRole.APP_SERVER,
+                    SwarmNode.ClusterRole.DEPLOY_SERVER,
                     SwarmNode.ClusterRole.BUILD_SERVER,
-                    SwarmNode.ClusterRole.APP_SERVER,
+                    SwarmNode.ClusterRole.DEPLOY_SERVER,
                 ],
             }
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_node = SwarmNode.objects.get(private_ip=DUMMY_PRIVATE_IP)
         self.assertEqual(
-            {SwarmNode.ClusterRole.APP_SERVER, SwarmNode.ClusterRole.BUILD_SERVER},
+            {SwarmNode.ClusterRole.DEPLOY_SERVER, SwarmNode.ClusterRole.BUILD_SERVER},
             set(created_node.cluster_roles),
         )
         self.assertEqual(2, len(created_node.cluster_roles))
@@ -91,7 +93,7 @@ class CreateSwarmNodeViewTests(AuthAPITestCase):
             {
                 "private_ip": DUMMY_PRIVATE_IP,
                 "swarm_role": SwarmNode.Role.WORKER,
-                "cluster_roles": [SwarmNode.ClusterRole.APP_SERVER],
+                "cluster_roles": [SwarmNode.ClusterRole.DEPLOY_SERVER],
                 "status": SwarmNode.Status.ACTIVE,
                 "is_initial_install_server": True,
                 "swarm_node_id": "swarm-fake",

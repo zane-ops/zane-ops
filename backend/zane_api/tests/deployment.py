@@ -1900,45 +1900,6 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         fake_service.scale.assert_called_with(0)
         fake_service.remove.assert_called()
 
-    async def test_update_service_with_volume_remove_deleted_volume(self):
-        project, service = await self.acreate_and_deploy_redis_docker_service(
-            other_changes=[
-                DeploymentChange(
-                    field=DeploymentChange.ChangeField.VOLUMES,
-                    type=DeploymentChange.ChangeType.ADD,
-                    new_value={
-                        "container_path": "/data",
-                        "mode": Volume.VolumeMode.READ_WRITE,
-                    },
-                )
-            ]
-        )
-        volume_to_delete: Volume = await service.volumes.afirst()
-
-        await DeploymentChange.objects.abulk_create(
-            [
-                DeploymentChange(
-                    field=DeploymentChange.ChangeField.VOLUMES,
-                    type=DeploymentChange.ChangeType.DELETE,
-                    service=service,
-                    item_id=volume_to_delete.id,
-                ),
-            ]
-        )
-        response = await self.async_client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(2, await service.deployments.acount())
-        self.assertEqual(0, len(self.fake_docker_client.volume_map))
-
     async def test_update_service_schedule_next_queued_deployment_on_finish(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
 

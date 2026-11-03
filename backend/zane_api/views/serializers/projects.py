@@ -36,23 +36,6 @@ class ProjectCreateRequestSerializer(serializers.Serializer):
 
 
 # ==============================
-#       Projects Update        #
-# ==============================
-
-
-class ProjectUpdateRequestSerializer(serializers.Serializer):
-    slug = serializers.SlugField(max_length=255, required=False)
-    description = serializers.CharField(required=False, allow_blank=True)
-
-    def validate(self, attrs: dict[str, str]):
-        if not bool(attrs):
-            raise serializers.ValidationError(
-                "one of `slug` or `description` should be provided"
-            )
-        return attrs
-
-
-# ==============================
 #       Projects Search        #
 # ==============================
 

@@ -12338,13 +12338,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectUpdateRequestRequest'
+              $ref: '#/components/schemas/ProjectRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ProjectUpdateRequestRequest'
+              $ref: '#/components/schemas/ProjectRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ProjectUpdateRequestRequest'
+              $ref: '#/components/schemas/ProjectRequest'
+        required: true
       security:
       - cookieAuth: []
       - workspaceApiToken: []
@@ -12354,6 +12355,107 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UpdateProjectErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+    patch:
+      operationId: projects_partial_update
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectRequest'
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsPartialUpdateErrorResponse400'
           description: ''
         '401':
           content:
@@ -12509,7 +12611,7 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '200':
+        '204':
           description: No response body
   /api/projects/{slug}/{env_slug}/service-list/:
     get:
@@ -12965,13 +13067,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedUpdateEnvironmentRequestRequest'
+              $ref: '#/components/schemas/PatchedEnvironmentWithVariablesRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedUpdateEnvironmentRequestRequest'
+              $ref: '#/components/schemas/PatchedEnvironmentWithVariablesRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedUpdateEnvironmentRequestRequest'
+              $ref: '#/components/schemas/PatchedEnvironmentWithVariablesRequest'
       security:
       - cookieAuth: []
       - workspaceApiToken: []
@@ -13049,7 +13151,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Environment'
+                $ref: '#/components/schemas/EnvironmentWithVariables'
           description: ''
     delete:
       operationId: archiveEnvironment
@@ -14951,23 +15053,102 @@ paths:
               schema:
                 $ref: '#/components/schemas/Settings'
           description: ''
+  /api/swarm/deploy-servers/:
+    get:
+      operationId: swarm_deploy_servers_list
+      summary: List all active deploy servers
+      tags:
+      - swarm
+      security:
+      - cookieAuth: []
+      - workspaceApiToken: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwarmDeployServersListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeployServer'
+          description: ''
   /api/swarm/nodes/:
     get:
       operationId: swarm_nodes_list
       summary: List all swarm nodes in ZaneOps installation
       parameters:
-      - name: page
-        required: false
-        in: query
-        description: A page number within the paginated result set.
+      - in: query
+        name: cluster_role
         schema:
-          type: integer
-      - name: per_page
-        required: false
-        in: query
-        description: Number of results to return per page.
+          type: string
+          enum:
+          - BUILD_SERVER
+          - DEPLOY_SERVER
+        description: |-
+          * `BUILD_SERVER` - Build Server
+          * `DEPLOY_SERVER` - Deploy Server
+      - in: query
+        name: hostname
         schema:
-          type: integer
+          type: string
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
       tags:
       - swarm
       security:
@@ -15015,20 +15196,6 @@ paths:
                       detail: You do not have permission to perform this action.
                       attr: null
           description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -15047,7 +15214,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedSwarmNodeList'
+                type: array
+                items:
+                  $ref: '#/components/schemas/SwarmNode'
           description: ''
     post:
       operationId: swarm_nodes_create
@@ -15109,20 +15278,6 @@ paths:
                     errors:
                     - code: permission_denied
                       detail: You do not have permission to perform this action.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
                       attr: null
           description: ''
         '429':
@@ -19658,11 +19813,11 @@ components:
     ClusterRolesEnum:
       enum:
       - BUILD_SERVER
-      - APP_SERVER
+      - DEPLOY_SERVER
       type: string
       description: |-
         * `BUILD_SERVER` - Build Server
-        * `APP_SERVER` - App Server
+        * `DEPLOY_SERVER` - Deploy Server
     ComposeConfigVersion:
       type: object
       properties:
@@ -19705,6 +19860,34 @@ components:
       required:
       - field
       - new_value
+    ComposeDeployServerFieldChangeFieldEnum:
+      enum:
+      - deploy_server
+      type: string
+      description: '* `deploy_server` - deploy_server'
+    ComposeDeployServerFieldChangeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/FieldChangeTypeEnum'
+          default: UPDATE
+        new_value:
+          $ref: '#/components/schemas/ComposeDeployServerRequestRequest'
+        field:
+          $ref: '#/components/schemas/ComposeDeployServerFieldChangeFieldEnum'
+      required:
+      - field
+      - new_value
+    ComposeDeployServerRequestRequest:
+      type: object
+      properties:
+        deployment_server_id:
+          type: string
+          nullable: true
+          minLength: 1
+      required:
+      - deployment_server_id
     ComposeEnvOverrideItemChangeFieldEnum:
       enum:
       - env_overrides
@@ -19795,11 +19978,17 @@ components:
         hash_prefix:
           type: string
           readOnly: true
+        deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/SimpleSwarmNode'
+          readOnly: true
+          nullable: true
       required:
       - computed_content
       - configs
       - created_at
       - deploy_token
+      - deployment_server
       - env_overrides
       - hash_prefix
       - id
@@ -19839,10 +20028,12 @@ components:
       enum:
       - compose_content
       - env_overrides
+      - deploy_server
       type: string
       description: |-
         * `compose_content` - Compose Content
         * `env_overrides` - Env Overrides
+        * `deploy_server` - Deploy Server
     ComposeStackChangeRequest:
       type: object
       properties:
@@ -19937,10 +20128,11 @@ components:
       oneOf:
       - $ref: '#/components/schemas/ComposeContentFieldChangeRequest'
       - $ref: '#/components/schemas/ComposeEnvOverrideItemChangeRequest'
+      - $ref: '#/components/schemas/ComposeDeployServerFieldChangeRequest'
       discriminator:
         propertyName: field
         mapping:
-          null: '#/components/schemas/ComposeEnvOverrideItemChangeRequest'
+          null: '#/components/schemas/ComposeDeployServerFieldChangeRequest'
     ComposeStackDeploymentStatusEnum:
       enum:
       - QUEUED
@@ -20364,6 +20556,9 @@ components:
         container_id:
           type: string
           nullable: true
+        node_id:
+          type: string
+          nullable: true
         image:
           type: string
         message:
@@ -20386,6 +20581,7 @@ components:
       - image
       - message
       - name
+      - node_id
       - slot
       - status
       - updated_at
@@ -20408,6 +20604,10 @@ components:
           type: string
           minLength: 1
         container_id:
+          type: string
+          nullable: true
+          minLength: 1
+        node_id:
           type: string
           nullable: true
           minLength: 1
@@ -20531,9 +20731,15 @@ components:
             $ref: '#/components/schemas/ComposeStackEnvOverride'
           readOnly: true
           nullable: true
+        deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/SimpleSwarmNode'
+          readOnly: true
+          nullable: true
       required:
       - computed_content
       - configs
+      - deployment_server
       - env_overrides
       - hash_prefix
       - id
@@ -20623,11 +20829,17 @@ components:
         hash_prefix:
           type: string
           readOnly: true
+        deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/SimpleSwarmNode'
+          readOnly: true
+          nullable: true
       required:
       - computed_content
       - configs
       - created_at
       - deploy_token
+      - deployment_server
       - env_overrides
       - hash_prefix
       - id
@@ -24166,6 +24378,29 @@ components:
       required:
       - errors
       - type
+    DefaultSwarmNode:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        hostname:
+          type: string
+          nullable: true
+      required:
+      - hostname
+      - id
+    DefaultSwarmNodeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        hostname:
+          type: string
+          nullable: true
+          minLength: 1
     DeleteBuildRegistryErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -24458,6 +24693,31 @@ components:
       required:
       - errors
       - type
+    DeployServer:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        hostname:
+          type: string
+          nullable: true
+        cpus:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        memory_bytes:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+      required:
+      - cpus
+      - hostname
+      - id
+      - memory_bytes
     DeployStateEnum:
       enum:
       - APPROVED
@@ -24505,6 +24765,7 @@ components:
       - ports
       - resource_limits
       - configs
+      - deployment_strategy
       type: string
       description: |-
         * `source` - source
@@ -24519,6 +24780,7 @@ components:
         * `ports` - ports
         * `resource_limits` - resource limits
         * `configs` - configs
+        * `deployment_strategy` - deployment strategy
     DeploymentChangeRequest:
       type: object
       properties:
@@ -24546,7 +24808,6 @@ components:
       oneOf:
       - $ref: '#/components/schemas/URLItemChangeRequest'
       - $ref: '#/components/schemas/VolumeItemChangeRequest'
-      - $ref: '#/components/schemas/SharedVolumeItemChangeRequest'
       - $ref: '#/components/schemas/EnvItemChangeRequest'
       - $ref: '#/components/schemas/PortItemChangeRequest'
       - $ref: '#/components/schemas/DockerSourceFieldChangeRequest'
@@ -24556,10 +24817,11 @@ components:
       - $ref: '#/components/schemas/ConfigItemChangeRequest'
       - $ref: '#/components/schemas/GitSourceFieldChangeRequest'
       - $ref: '#/components/schemas/GitBuilderFieldChangeRequest'
+      - $ref: '#/components/schemas/DeploymentStrategyFieldChangeRequest'
       discriminator:
         propertyName: field
         mapping:
-          null: '#/components/schemas/GitBuilderFieldChangeRequest'
+          null: '#/components/schemas/DeploymentStrategyFieldChangeRequest'
     DeploymentChangeTypeEnum:
       enum:
       - UPDATE
@@ -24762,6 +25024,21 @@ components:
             $ref: '#/components/schemas/SharedVolume'
           readOnly: true
           default: []
+        deployment_strategy:
+          allOf:
+          - $ref: '#/components/schemas/DeploymentStrategyEnum'
+          readOnly: true
+          default: ANY_DEPLOY_SERVER
+        deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/SimpleSwarmNode'
+          readOnly: true
+          nullable: true
+        default_deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/SimpleSwarmNode'
+          readOnly: true
+          nullable: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -24773,7 +25050,10 @@ components:
       - container_registry_credentials
       - created_at
       - credentials
+      - default_deployment_server
       - deploy_token
+      - deployment_server
+      - deployment_strategy
       - dockerfile_builder_options
       - env_variables
       - environment
@@ -24831,6 +25111,45 @@ components:
         * `UNHEALTHY` - Unhealthy
         * `REMOVED` - Removed
         * `SLEEPING` - Sleeping
+    DeploymentStrategyEnum:
+      enum:
+      - ANY_DEPLOY_SERVER
+      - SPECIFIC_SERVER
+      type: string
+      description: |-
+        * `ANY_DEPLOY_SERVER` - Any Deploy Server
+        * `SPECIFIC_SERVER` - Specific Server
+    DeploymentStrategyFieldChangeFieldEnum:
+      enum:
+      - deployment_strategy
+      type: string
+      description: '* `deployment_strategy` - deployment_strategy'
+    DeploymentStrategyFieldChangeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/FieldChangeTypeEnum'
+          default: UPDATE
+        new_value:
+          $ref: '#/components/schemas/DeploymentStrategyRequestRequest'
+        field:
+          $ref: '#/components/schemas/DeploymentStrategyFieldChangeFieldEnum'
+      required:
+      - field
+      - new_value
+    DeploymentStrategyRequestRequest:
+      type: object
+      properties:
+        deployment_strategy:
+          $ref: '#/components/schemas/DeploymentStrategyEnum'
+        deployment_server_id:
+          type: string
+          nullable: true
+          minLength: 1
+      required:
+      - deployment_server_id
+      - deployment_strategy
     DeprovisionSwarmNodeError:
       oneOf:
       - $ref: '#/components/schemas/DeprovisionSwarmNodeNonFieldErrorsErrorComponent'
@@ -25403,9 +25722,11 @@ components:
       properties:
         id:
           type: string
+          readOnly: true
           maxLength: 255
         is_preview:
           type: boolean
+          readOnly: true
         name:
           type: string
           maxLength: 255
@@ -25425,8 +25746,14 @@ components:
           type: string
           format: date-time
           readOnly: true
+        default_deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/DefaultSwarmNode'
+          readOnly: true
+          nullable: true
       required:
       - created_at
+      - default_deployment_server
       - id
       - is_preview
       - name
@@ -28027,31 +28354,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ServiceDeployment'
-    PaginatedSwarmNodeList:
-      type: object
-      required:
-      - count
-      - next
-      - previous
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/SwarmNode'
     PaginatedWorkspaceInvitationList:
       type: object
       required:
@@ -28220,6 +28522,22 @@ components:
           allOf:
           - $ref: '#/components/schemas/S3CredentialsRequest'
           nullable: true
+    PatchedEnvironmentWithVariablesRequest:
+      type: object
+      description: |-
+        Same fields as `EnvironmentSerializer`, but `preview_metadata` is serialized
+        in full (branch, commit, PR details, git app) instead of the trimmed form.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        default_deployment_server_id:
+          type: string
+          minLength: 1
+          writeOnly: true
+          nullable: true
     PatchedGithubAppRequest:
       type: object
       properties:
@@ -28298,6 +28616,22 @@ components:
         env_variables:
           type: string
           writeOnly: true
+    PatchedProjectRequest:
+      type: object
+      properties:
+        description:
+          type: string
+          nullable: true
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        default_deployment_server_id:
+          type: string
+          minLength: 1
+          writeOnly: true
+          nullable: true
     PatchedServiceRequest:
       type: object
       properties:
@@ -28379,14 +28713,6 @@ components:
           type: boolean
         prune_networks:
           type: boolean
-    PatchedUpdateEnvironmentRequestRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
     PatchedUpdateProfileRequest:
       type: object
       properties:
@@ -28712,6 +29038,76 @@ components:
       - service
       - source_trigger
       - ttl_seconds
+    PreviewMetadataRequest:
+      type: object
+      properties:
+        auth_enabled:
+          type: boolean
+        auth_user:
+          type: string
+          nullable: true
+          minLength: 1
+        auth_password:
+          type: string
+          nullable: true
+          minLength: 1
+        source_trigger:
+          $ref: '#/components/schemas/SourceTriggerEnum'
+        head_repository_url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
+        branch_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        commit_sha:
+          type: string
+          minLength: 1
+          maxLength: 255
+        external_url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
+        pr_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
+        pr_title:
+          type: string
+          nullable: true
+          maxLength: 1000
+        pr_author:
+          type: string
+          nullable: true
+          maxLength: 1000
+        pr_base_repo_url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        pr_base_branch_name:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        ttl_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        auto_teardown:
+          type: boolean
+        deploy_state:
+          $ref: '#/components/schemas/DeployStateEnum'
+      required:
+      - branch_name
+      - external_url
+      - head_repository_url
+      - source_trigger
     PreviewService:
       type: object
       properties:
@@ -28762,6 +29158,7 @@ components:
           nullable: true
         id:
           type: string
+          readOnly: true
           maxLength: 255
         slug:
           type: string
@@ -28787,8 +29184,14 @@ components:
         healthy_stack_services:
           type: integer
           readOnly: true
+        default_deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/DefaultSwarmNode'
+          readOnly: true
+          nullable: true
       required:
       - created_at
+      - default_deployment_server
       - description
       - environments
       - healthy_services
@@ -28809,6 +29212,24 @@ components:
         description:
           type: string
           minLength: 1
+    ProjectRequest:
+      type: object
+      properties:
+        description:
+          type: string
+          nullable: true
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        default_deployment_server_id:
+          type: string
+          minLength: 1
+          writeOnly: true
+          nullable: true
+      required:
+      - slug
     ProjectSearchResponse:
       type: object
       properties:
@@ -28834,16 +29255,139 @@ components:
       - project
       type: string
       description: '* `project` - project'
-    ProjectUpdateRequestRequest:
+    ProjectsPartialUpdateDefaultDeploymentServerIdErrorComponent:
       type: object
       properties:
-        slug:
+        attr:
+          enum:
+          - default_deployment_server_id
           type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-        description:
+          description: '* `default_deployment_server_id` - default_deployment_server_id'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
           type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPartialUpdateDescriptionErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - description
+          type: string
+          description: '* `description` - description'
+        code:
+          enum:
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPartialUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPartialUpdateDescriptionErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPartialUpdateSlugErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPartialUpdateDefaultDeploymentServerIdErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsPartialUpdateNonFieldErrorsErrorComponent'
+          description: '#/components/schemas/ProjectsPartialUpdateDescriptionErrorComponent'
+          slug: '#/components/schemas/ProjectsPartialUpdateSlugErrorComponent'
+          default_deployment_server_id: '#/components/schemas/ProjectsPartialUpdateDefaultDeploymentServerIdErrorComponent'
+    ProjectsPartialUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsPartialUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsPartialUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsPartialUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPartialUpdateSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPartialUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsPartialUpdateError'
+      required:
+      - errors
+      - type
     ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent:
       type: object
       properties:
@@ -32224,6 +32768,7 @@ components:
       - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueKeyErrorComponent'
       - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueValueErrorComponent'
+      - $ref: '#/components/schemas/RequestComposeStackUpdateNewValueDeploymentServerIdErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -32235,6 +32780,7 @@ components:
           new_value.non_field_errors: '#/components/schemas/RequestComposeStackUpdateNewValueNonFieldErrorsErrorComponent'
           new_value.key: '#/components/schemas/RequestComposeStackUpdateNewValueKeyErrorComponent'
           new_value.value: '#/components/schemas/RequestComposeStackUpdateNewValueValueErrorComponent'
+          new_value.deployment_server_id: '#/components/schemas/RequestComposeStackUpdateNewValueDeploymentServerIdErrorComponent'
     RequestComposeStackUpdateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RequestComposeStackUpdateValidationError'
@@ -32291,6 +32837,34 @@ components:
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestComposeStackUpdateNewValueDeploymentServerIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.deployment_server_id
+          type: string
+          description: '* `new_value.deployment_server_id` - new_value.deployment_server_id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -32368,10 +32942,12 @@ components:
           enum:
           - invalid
           - 'null'
+          - required
           type: string
           description: |-
             * `invalid` - invalid
             * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
@@ -32586,7 +33162,6 @@ components:
       - $ref: '#/components/schemas/RequestServiceChangesNewValueContainerPathErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueHostPathErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueModeErrorComponent'
-      - $ref: '#/components/schemas/RequestServiceChangesNewValueVolumeIdErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueKeyErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueValueErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueHostErrorComponent'
@@ -32621,6 +33196,8 @@ components:
       - $ref: '#/components/schemas/RequestServiceChangesNewValueCustomInstallCommandErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueCustomBuildCommandErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueCustomStartCommandErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueDeploymentStrategyErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueDeploymentServerIdErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -32640,7 +33217,6 @@ components:
           new_value.container_path: '#/components/schemas/RequestServiceChangesNewValueContainerPathErrorComponent'
           new_value.host_path: '#/components/schemas/RequestServiceChangesNewValueHostPathErrorComponent'
           new_value.mode: '#/components/schemas/RequestServiceChangesNewValueModeErrorComponent'
-          new_value.volume_id: '#/components/schemas/RequestServiceChangesNewValueVolumeIdErrorComponent'
           new_value.key: '#/components/schemas/RequestServiceChangesNewValueKeyErrorComponent'
           new_value.value: '#/components/schemas/RequestServiceChangesNewValueValueErrorComponent'
           new_value.host: '#/components/schemas/RequestServiceChangesNewValueHostErrorComponent'
@@ -32675,6 +33251,8 @@ components:
           new_value.custom_install_command: '#/components/schemas/RequestServiceChangesNewValueCustomInstallCommandErrorComponent'
           new_value.custom_build_command: '#/components/schemas/RequestServiceChangesNewValueCustomBuildCommandErrorComponent'
           new_value.custom_start_command: '#/components/schemas/RequestServiceChangesNewValueCustomStartCommandErrorComponent'
+          new_value.deployment_strategy: '#/components/schemas/RequestServiceChangesNewValueDeploymentStrategyErrorComponent'
+          new_value.deployment_server_id: '#/components/schemas/RequestServiceChangesNewValueDeploymentServerIdErrorComponent'
     RequestServiceChangesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RequestServiceChangesValidationError'
@@ -33140,6 +33718,58 @@ components:
             * `invalid` - invalid
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueDeploymentServerIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.deployment_server_id
+          type: string
+          description: '* `new_value.deployment_server_id` - new_value.deployment_server_id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueDeploymentStrategyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.deployment_strategy
+          type: string
+          description: '* `new_value.deployment_strategy` - new_value.deployment_strategy'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
@@ -33946,38 +34576,6 @@ components:
           - new_value.value
           type: string
           description: '* `new_value.value` - new_value.value'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestServiceChangesNewValueVolumeIdErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.volume_id
-          type: string
-          description: '* `new_value.volume_id` - new_value.volume_id'
         code:
           enum:
           - blank
@@ -34844,6 +35442,21 @@ components:
             $ref: '#/components/schemas/SharedVolume'
           readOnly: true
           default: []
+        deployment_strategy:
+          allOf:
+          - $ref: '#/components/schemas/DeploymentStrategyEnum'
+          readOnly: true
+          default: ANY_DEPLOY_SERVER
+        deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/SimpleSwarmNode'
+          readOnly: true
+          nullable: true
+        default_deployment_server:
+          allOf:
+          - $ref: '#/components/schemas/SimpleSwarmNode'
+          readOnly: true
+          nullable: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -34855,7 +35468,10 @@ components:
       - container_registry_credentials
       - created_at
       - credentials
+      - default_deployment_server
       - deploy_token
+      - deployment_server
+      - deployment_strategy
       - dockerfile_builder_options
       - env_variables
       - environment
@@ -35348,27 +35964,6 @@ components:
       - id
       - volume
       - volume_id
-    SharedVolumeItemChangeFieldEnum:
-      enum:
-      - shared_volumes
-      type: string
-      description: '* `shared_volumes` - shared_volumes'
-    SharedVolumeItemChangeRequest:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ItemChangeTypeEnum'
-        item_id:
-          type: string
-          minLength: 1
-          maxLength: 255
-        new_value:
-          $ref: '#/components/schemas/SharedVolumeRequestRequest'
-        field:
-          $ref: '#/components/schemas/SharedVolumeItemChangeFieldEnum'
-      required:
-      - field
-      - type
     SharedVolumeRequest:
       type: object
       properties:
@@ -35382,20 +35977,6 @@ components:
           maxLength: 2048
       required:
       - container_path
-    SharedVolumeRequestRequest:
-      type: object
-      properties:
-        volume_id:
-          type: string
-          minLength: 1
-          maxLength: 255
-        container_path:
-          type: string
-          minLength: 1
-          maxLength: 2048
-      required:
-      - container_path
-      - volume_id
     SimpleComposeStackService:
       type: object
       properties:
@@ -35477,6 +36058,22 @@ components:
       - created_at
       - id
       - is_preview
+      - name
+    SimpleEnvironmentRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        is_preview:
+          type: boolean
+      required:
       - name
     SimplePreviewMetadata:
       type: object
@@ -35568,6 +36165,20 @@ components:
       required:
       - id
       - slug
+    SimpleProjectRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - slug
     SimpleService:
       type: object
       properties:
@@ -35591,6 +36202,43 @@ components:
       - id
       - project
       - slug
+    SimpleServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 38
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - slug
+    SimpleSwarmNode:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        swarm_node_id:
+          type: string
+          nullable: true
+      required:
+      - id
+      - swarm_node_id
+    SimpleSwarmNodeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        swarm_node_id:
+          type: string
+          nullable: true
+          minLength: 1
     SimpleTemplateService:
       type: object
       properties:
@@ -35734,6 +36382,13 @@ components:
       description: |-
         * `LOCAL` - Local Disk
         * `S3` - S3
+    SwarmDeployServersListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     SwarmNode:
       type: object
       properties:
@@ -35837,10 +36492,15 @@ components:
           nullable: true
         image:
           type: string
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
       required:
       - image
       - message
       - status
+      - updated_at
     SwarmNodeStatusEnum:
       enum:
       - CREATED
@@ -36050,13 +36710,74 @@ components:
       required:
       - errors
       - type
+    SwarmNodesListClusterRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - cluster_role
+          type: string
+          description: '* `cluster_role` - cluster_role'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    SwarmNodesListError:
+      oneOf:
+      - $ref: '#/components/schemas/SwarmNodesListClusterRoleErrorComponent'
+      - $ref: '#/components/schemas/SwarmNodesListHostnameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          cluster_role: '#/components/schemas/SwarmNodesListClusterRoleErrorComponent'
+          hostname: '#/components/schemas/SwarmNodesListHostnameErrorComponent'
     SwarmNodesListErrorResponse400:
       oneOf:
+      - $ref: '#/components/schemas/SwarmNodesListValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
+          validation_error: '#/components/schemas/SwarmNodesListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    SwarmNodesListHostnameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - hostname
+          type: string
+          description: '* `hostname` - hostname'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    SwarmNodesListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/SwarmNodesListError'
+      required:
+      - errors
+      - type
     SwarmNodesRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -36857,15 +37578,39 @@ components:
         * `KILOBYTES` - kilobytes
         * `MEGABYTES` - megabytes
         * `GIGABYTES` - gigabytes
+    UpdateEnvironmentDefaultDeploymentServerIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - default_deployment_server_id
+          type: string
+          description: '* `default_deployment_server_id` - default_deployment_server_id'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     UpdateEnvironmentError:
       oneOf:
       - $ref: '#/components/schemas/UpdateEnvironmentNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/UpdateEnvironmentNameErrorComponent'
+      - $ref: '#/components/schemas/UpdateEnvironmentDefaultDeploymentServerIdErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/UpdateEnvironmentNonFieldErrorsErrorComponent'
           name: '#/components/schemas/UpdateEnvironmentNameErrorComponent'
+          default_deployment_server_id: '#/components/schemas/UpdateEnvironmentDefaultDeploymentServerIdErrorComponent'
     UpdateEnvironmentErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/UpdateEnvironmentValidationError'
@@ -37096,6 +37841,28 @@ components:
       required:
       - errors
       - type
+    UpdateProjectDefaultDeploymentServerIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - default_deployment_server_id
+          type: string
+          description: '* `default_deployment_server_id` - default_deployment_server_id'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     UpdateProjectDescriptionErrorComponent:
       type: object
       properties:
@@ -37107,13 +37874,11 @@ components:
         code:
           enum:
           - invalid
-          - 'null'
           - null_characters_not_allowed
           - surrogate_characters_not_allowed
           type: string
           description: |-
             * `invalid` - invalid
-            * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
@@ -37125,14 +37890,16 @@ components:
     UpdateProjectError:
       oneOf:
       - $ref: '#/components/schemas/UpdateProjectNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/UpdateProjectSlugErrorComponent'
       - $ref: '#/components/schemas/UpdateProjectDescriptionErrorComponent'
+      - $ref: '#/components/schemas/UpdateProjectSlugErrorComponent'
+      - $ref: '#/components/schemas/UpdateProjectDefaultDeploymentServerIdErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/UpdateProjectNonFieldErrorsErrorComponent'
-          slug: '#/components/schemas/UpdateProjectSlugErrorComponent'
           description: '#/components/schemas/UpdateProjectDescriptionErrorComponent'
+          slug: '#/components/schemas/UpdateProjectSlugErrorComponent'
+          default_deployment_server_id: '#/components/schemas/UpdateProjectDefaultDeploymentServerIdErrorComponent'
     UpdateProjectErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/UpdateProjectValidationError'
@@ -37176,7 +37943,9 @@ components:
           - max_length
           - 'null'
           - null_characters_not_allowed
+          - required
           - surrogate_characters_not_allowed
+          - unique
           type: string
           description: |-
             * `blank` - blank
@@ -37184,7 +37953,9 @@ components:
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
         detail:
           type: string
       required:

@@ -1130,6 +1130,8 @@ class AuthAPITestCase(APITestCase):
         builder: Optional[str] = Service.Builder.DOCKERFILE,
         dockerfile: Optional[str] = None,
         git_app_id: Optional[str] = None,
+        other_changes: list[DeploymentChange] | None = None,
+        with_healthcheck: bool = False,
     ):
         await self.aLoginUser()
         response = await self.async_client.post(
@@ -1164,6 +1166,27 @@ class AuthAPITestCase(APITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         service = await Service.objects.aget(slug=slug)
+
+        other_changes = other_changes if other_changes is not None else []
+        if with_healthcheck:
+            other_changes.append(
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "type": "COMMAND",
+                        "value": "valkey-cli validate",
+                        "timeout_seconds": 30,
+                        "interval_seconds": 30,
+                    },
+                    service=service,
+                ),
+            )
+
+        for change in other_changes:
+            change.service = service
+        if len(other_changes) > 0:
+            await DeploymentChange.objects.abulk_create(other_changes)
 
         response = await self.async_client.put(
             reverse(
@@ -1622,6 +1645,7 @@ class FakeDockerClient:
             endpoint: EndpointSpec | None = None,
             resources: Resources | None = None,
             networks: List[NetworkAttachmentConfig] | None = None,
+            constraints: list[str] | None = None,
         ):
             self.name = name
             self.parent = parent
@@ -1634,6 +1658,7 @@ class FakeDockerClient:
             self.resources = resources
             self.id = name
             self.networks = networks or []
+            self.constraints = constraints or []
             self.attrs = {
                 "Spec": {
                     "TaskTemplate": {
@@ -2269,7 +2294,7 @@ class FakeDockerClient:
         **kwargs,
     ):
         image: str = kwargs["image"]
-        mounts: list[str | Mount] = kwargs.get("mounts", [])
+        mounts: list[Mount] = kwargs.get("mounts", [])
         env: list[str] = kwargs.get("env", [])
         endpoint_spec = kwargs.get("endpoint_spec", None)
         resources = kwargs.get("resources", None)
@@ -2277,16 +2302,16 @@ class FakeDockerClient:
             raise docker.errors.NotFound(f"image `{image}` has not been not pulled yet")
         volumes: dict[str, dict[str, str]] = {}
         for mount in mounts:
-            if isinstance(mount, str):
-                volume_name, mount_path, mode = mount.split(":")
-            else:
-                volume_name, mount_path, mode = (
-                    mount["Source"],
-                    mount["Target"],
-                    "ro" if mount["ReadOnly"] else "rw",
-                )
+            volume_name, mount_path, mode, volume_labels = (
+                mount["Source"],
+                mount["Target"],
+                "ro" if mount["ReadOnly"] else "rw",
+                mount.get("VolumeOptions", {}).get("Labels", {}),
+            )
             if not volume_name.startswith("/") and volume_name not in self.volume_map:
-                raise docker.errors.NotFound("Volume not created")
+                self.volume_map[volume_name] = FakeDockerClient.FakeVolume(
+                    parent=self, name=volume_name, labels=volume_labels
+                )
             volumes[volume_name] = {
                 "mount_path": mount_path,
                 "mode": mode,
@@ -2308,6 +2333,7 @@ class FakeDockerClient:
             resources=resources,
             networks=kwargs.get("networks", []),
             configs=kwargs.get("configs", []),
+            constraints=kwargs.get("constraints", []),
         )
         self.container_map[name] = [FakeDockerClient.FakeContainer()]
 

@@ -87,6 +87,8 @@ export function DockerDeploymentCard({
   );
 
   const navigate = useNavigate();
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
 
   React.useEffect(() => {
     if (started_at && !finished_at) {
@@ -121,8 +123,10 @@ export function DockerDeploymentCard({
     "CANCELLING"
   ];
 
-  const isCancellable = cancellableDeploymentsStatuses.includes(status);
+  const isCancellable =
+    isMember && cancellableDeploymentsStatuses.includes(status);
   const isRedeployable =
+    isMember &&
     !is_current_production &&
     (finished_at || !runningDeploymentsStatuses.includes(status));
   const isPending = !finished_at && runningDeploymentsStatuses.includes(status);
@@ -202,9 +206,11 @@ export function DockerDeploymentCard({
             <Link
               prefetch="viewport"
               to={
-                isPending || status === "FAILED" || status === "CANCELLED"
-                  ? `deployments/${hash}/build-logs`
-                  : `deployments/${hash}`
+                !isMember
+                  ? `deployments/${hash}/details`
+                  : isPending || status === "FAILED" || status === "CANCELLED"
+                    ? `deployments/${hash}/build-logs`
+                    : `deployments/${hash}`
               }
               className="whitespace-nowrap after:absolute after:inset-0 overflow-x-hidden text-ellipsis max-w-[300px] sm:max-w-[500px] lg:max-w-[600px] xl:max-w-[800px]"
             >
@@ -261,38 +267,40 @@ export function DockerDeploymentCard({
 
       {/* View logs button & triple dot */}
       <div className="flex items-center gap-2 absolute right-4 z-10 md:relative md:right-auto">
-        <Button
-          asChild
-          variant="ghost"
-          className={cn(
-            "border hover:bg-inherit focus:opacity-100 hidden lg:inline-flex",
-            {
-              "border-blue-600":
-                status === "STARTING" ||
-                status === "RESTARTING" ||
-                status === "BUILDING" ||
-                status === "CANCELLING" ||
-                status === "PREPARING",
-              "border-green-600": status === "HEALTHY",
-              "border-red-600": status === "UNHEALTHY" || status === "FAILED",
-              "border-gray-600 md:opacity-0 group-hover:opacity-100 transition-opacity ease-in duration-150":
-                status === "REMOVED" ||
-                status === "CANCELLED" ||
-                status === "QUEUED",
-              "border-yellow-600": status === "SLEEPING"
-            }
-          )}
-        >
-          <Link
-            to={
-              isPending || status === "FAILED" || status === "CANCELLED"
-                ? `deployments/${hash}/build-logs`
-                : `deployments/${hash}`
-            }
+        {isMember && (
+          <Button
+            asChild
+            variant="ghost"
+            className={cn(
+              "border hover:bg-inherit focus:opacity-100 hidden lg:inline-flex",
+              {
+                "border-blue-600":
+                  status === "STARTING" ||
+                  status === "RESTARTING" ||
+                  status === "BUILDING" ||
+                  status === "CANCELLING" ||
+                  status === "PREPARING",
+                "border-green-600": status === "HEALTHY",
+                "border-red-600": status === "UNHEALTHY" || status === "FAILED",
+                "border-gray-600 md:opacity-0 group-hover:opacity-100 transition-opacity ease-in duration-150":
+                  status === "REMOVED" ||
+                  status === "CANCELLED" ||
+                  status === "QUEUED",
+                "border-yellow-600": status === "SLEEPING"
+              }
+            )}
           >
-            View logs
-          </Link>
-        </Button>
+            <Link
+              to={
+                isPending || status === "FAILED" || status === "CANCELLED"
+                  ? `deployments/${hash}/build-logs`
+                  : `deployments/${hash}`
+              }
+            >
+              View logs
+            </Link>
+          </Button>
+        )}
 
         {isRedeployable && (
           <redeployFetcher.Form
@@ -331,28 +339,34 @@ export function DockerDeploymentCard({
                 text="Details"
                 onClick={() => navigate(`./deployments/${hash}/details`)}
               />
-              <MenubarContentItem
-                icon={TerminalIcon}
-                text="Terminal"
-                onClick={() => navigate(`./deployments/${hash}/terminal`)}
-              />
-              <MenubarContentItem
-                icon={ScrollText}
-                text="View runtime logs"
-                onClick={() => navigate(`./deployments/${hash}`)}
-              />
-              <MenubarContentItem
-                icon={ScanTextIcon}
-                text="View deployment logs"
-                onClick={() => navigate(`./deployments/${hash}/build-logs`)}
-              />
-              {urls?.length > 0 && (
+              {isMember && (
                 <>
                   <MenubarContentItem
-                    icon={GlobeIcon}
-                    text="View http logs"
-                    onClick={() => navigate(`./deployments/${hash}/http-logs`)}
+                    icon={TerminalIcon}
+                    text="Terminal"
+                    onClick={() => navigate(`./deployments/${hash}/terminal`)}
                   />
+                  <MenubarContentItem
+                    icon={ScrollText}
+                    text="View runtime logs"
+                    onClick={() => navigate(`./deployments/${hash}`)}
+                  />
+                  <MenubarContentItem
+                    icon={ScanTextIcon}
+                    text="View deployment logs"
+                    onClick={() => navigate(`./deployments/${hash}/build-logs`)}
+                  />
+                  {urls?.length > 0 && (
+                    <>
+                      <MenubarContentItem
+                        icon={GlobeIcon}
+                        text="View http logs"
+                        onClick={() =>
+                          navigate(`./deployments/${hash}/http-logs`)
+                        }
+                      />
+                    </>
+                  )}
                 </>
               )}
               <MenubarContentItem
@@ -433,6 +447,8 @@ export function GitDeploymentCard({
   );
 
   const navigate = useNavigate();
+  const membership = useCurrentWorkspaceMembership();
+  const isMember = hasMinRole(membership, "Member");
 
   React.useEffect(() => {
     if (started_at && !finished_at) {
@@ -464,8 +480,10 @@ export function GitDeploymentCard({
     "CANCELLING"
   ];
 
-  const isCancellable = cancellableDeploymentsStatuses.includes(status);
+  const isCancellable =
+    isMember && cancellableDeploymentsStatuses.includes(status);
   const isRedeployable =
+    isMember &&
     !is_current_production &&
     (finished_at || !runningDeploymentsStatuses.includes(status));
 
@@ -546,9 +564,11 @@ export function GitDeploymentCard({
             <Link
               prefetch="viewport"
               to={
-                isPending || status === "FAILED" || status === "CANCELLED"
-                  ? `deployments/${hash}/build-logs`
-                  : `deployments/${hash}`
+                !isMember
+                  ? `deployments/${hash}/details`
+                  : isPending || status === "FAILED" || status === "CANCELLED"
+                    ? `deployments/${hash}/build-logs`
+                    : `deployments/${hash}`
               }
               className="whitespace-nowrap after:absolute after:inset-0 overflow-x-hidden text-ellipsis max-w-[300px] sm:max-w-[500px] lg:max-w-[600px] xl:max-w-[800px]"
             >
@@ -628,38 +648,40 @@ export function GitDeploymentCard({
 
       {/* View logs button & triple dot */}
       <div className="flex items-center gap-2 absolute right-4 z-10 md:relative md:right-auto">
-        <Button
-          asChild
-          variant="ghost"
-          className={cn(
-            "border hover:bg-inherit focus:opacity-100 hidden lg:inline-flex",
-            {
-              "border-blue-600":
-                status === "STARTING" ||
-                status === "RESTARTING" ||
-                status === "BUILDING" ||
-                status === "CANCELLING" ||
-                status === "PREPARING",
-              "border-green-600": status === "HEALTHY",
-              "border-red-600": status === "UNHEALTHY" || status === "FAILED",
-              "border-gray-600 md:opacity-0 group-hover:opacity-100 transition-opacity ease-in duration-150":
-                status === "REMOVED" ||
-                status === "CANCELLED" ||
-                status === "QUEUED",
-              "border-yellow-600": status === "SLEEPING"
-            }
-          )}
-        >
-          <Link
-            to={
-              isPending || status === "FAILED" || status === "CANCELLED"
-                ? `deployments/${hash}/build-logs`
-                : `deployments/${hash}`
-            }
+        {isMember && (
+          <Button
+            asChild
+            variant="ghost"
+            className={cn(
+              "border hover:bg-inherit focus:opacity-100 hidden lg:inline-flex",
+              {
+                "border-blue-600":
+                  status === "STARTING" ||
+                  status === "RESTARTING" ||
+                  status === "BUILDING" ||
+                  status === "CANCELLING" ||
+                  status === "PREPARING",
+                "border-green-600": status === "HEALTHY",
+                "border-red-600": status === "UNHEALTHY" || status === "FAILED",
+                "border-gray-600 md:opacity-0 group-hover:opacity-100 transition-opacity ease-in duration-150":
+                  status === "REMOVED" ||
+                  status === "CANCELLED" ||
+                  status === "QUEUED",
+                "border-yellow-600": status === "SLEEPING"
+              }
+            )}
           >
-            View logs
-          </Link>
-        </Button>
+            <Link
+              to={
+                isPending || status === "FAILED" || status === "CANCELLED"
+                  ? `deployments/${hash}/build-logs`
+                  : `deployments/${hash}`
+              }
+            >
+              View logs
+            </Link>
+          </Button>
+        )}
 
         {isRedeployable && (
           <redeployFetcher.Form
@@ -698,28 +720,34 @@ export function GitDeploymentCard({
                 text="Details"
                 onClick={() => navigate(`./deployments/${hash}/details`)}
               />
-              <MenubarContentItem
-                icon={TerminalIcon}
-                text="Terminal"
-                onClick={() => navigate(`./deployments/${hash}/terminal`)}
-              />
-              <MenubarContentItem
-                icon={ScrollText}
-                text="View runtime logs"
-                onClick={() => navigate(`./deployments/${hash}`)}
-              />
-              <MenubarContentItem
-                icon={ScanTextIcon}
-                text="View deployment logs"
-                onClick={() => navigate(`./deployments/${hash}/build-logs`)}
-              />
-              {urls?.length > 0 && (
+              {isMember && (
                 <>
                   <MenubarContentItem
-                    icon={GlobeIcon}
-                    text="View http logs"
-                    onClick={() => navigate(`./deployments/${hash}/http-logs`)}
+                    icon={TerminalIcon}
+                    text="Terminal"
+                    onClick={() => navigate(`./deployments/${hash}/terminal`)}
                   />
+                  <MenubarContentItem
+                    icon={ScrollText}
+                    text="View runtime logs"
+                    onClick={() => navigate(`./deployments/${hash}`)}
+                  />
+                  <MenubarContentItem
+                    icon={ScanTextIcon}
+                    text="View deployment logs"
+                    onClick={() => navigate(`./deployments/${hash}/build-logs`)}
+                  />
+                  {urls?.length > 0 && (
+                    <>
+                      <MenubarContentItem
+                        icon={GlobeIcon}
+                        text="View http logs"
+                        onClick={() =>
+                          navigate(`./deployments/${hash}/http-logs`)
+                        }
+                      />
+                    </>
+                  )}
                 </>
               )}
               <MenubarContentItem

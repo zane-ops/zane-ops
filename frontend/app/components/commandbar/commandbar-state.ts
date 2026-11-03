@@ -186,16 +186,16 @@ export function useCommandBarState() {
   /**
    * The selected in context should only run when the `open` state change
    */
-  const wasOpen = React.useRef(open);
-  React.useEffect(() => {
-    const justOpened = open && !wasOpen.current;
-    wasOpen.current = open;
+  // const wasOpen = React.useRef(open);
+  // React.useEffect(() => {
+  //   const justOpened = open && !wasOpen.current;
+  //   wasOpen.current = open;
 
-    if (justOpened && storedView === "home" && selectedResourceInContext) {
-      setSelectedResource(selectedResourceInContext);
-    }
-    setSelectedResource(selectedResourceInContext);
-  }, [open, storedView, selectedResourceInContext]);
+  //   if (justOpened && storedView === "home" && selectedResourceInContext) {
+  //     setSelectedResource(selectedResourceInContext);
+  //   }
+  //   setSelectedResource(selectedResourceInContext);
+  // }, [open, storedView, selectedResourceInContext]);
 
   return {
     open,

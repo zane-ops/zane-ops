@@ -32,6 +32,8 @@ from search.dtos import RuntimeLogLevel
 from search.serializers import RuntimeLogsContextParamsSerializer
 from rest_framework import pagination
 from zane_api.permissions import has_min_role
+from swarm.models import SwarmNode
+from swarm.serializers import SimpleSwarmNodeSerializer
 
 
 class ComposeStackChangeSerializer(serializers.ModelSerializer):
@@ -76,6 +78,7 @@ class ComposeStackServiceTask(serializers.Serializer):
     slot = serializers.IntegerField()
     name = serializers.CharField()
     container_id = serializers.CharField(required=False, allow_null=True)
+    node_id = serializers.CharField(required=False, allow_null=True)
     image = serializers.CharField()
     message = serializers.CharField()
     created_at = serializers.DateTimeField()
@@ -205,6 +208,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
         read_only=True,
     )
     user_content = serializers.CharField(required=True, allow_blank=False)
+    deployment_server = SimpleSwarmNodeSerializer(allow_null=True, read_only=True)
 
     def validate(self, attrs: dict):
         # set a default `slug`
@@ -336,6 +340,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             "created_at",
             "name",
             "hash_prefix",
+            "deployment_server",
         ]
 
 
@@ -365,6 +370,7 @@ class ComposeStackSnapshotSerializer(ComposeStackSerializer):
             "urls",
             "configs",
             "env_overrides",
+            "deployment_server",
         ]
 
 
@@ -614,6 +620,29 @@ class ComposeContentFieldChangeSerializer(BaseFieldChangeSerializer):
         )
 
         return attrs
+
+
+class ComposeDeployServerRequestSerializer(serializers.Serializer):
+    deployment_server_id = serializers.CharField(allow_null=True)
+
+    def validate_deployment_server_id(self, server_id: str | None):
+        if server_id is not None:
+            if not SwarmNode.objects.filter(
+                id=server_id,
+                cluster_roles__contains=[SwarmNode.ClusterRole.DEPLOY_SERVER],
+                swarm_node_id__isnull=False,
+            ).exists():
+                raise serializers.ValidationError(
+                    f"An active app server with the ID `{server_id}` doesn't exist in the ZaneOps cluster."
+                )
+        return server_id
+
+
+class ComposeDeployServerFieldChangeSerializer(BaseFieldChangeSerializer):
+    field = serializers.ChoiceField(
+        choices=[ComposeStackChange.ChangeField.DEPLOY_SERVER], required=True
+    )
+    new_value = ComposeDeployServerRequestSerializer(required=True)
 
 
 class ComposeEnvOverrideItemChangeSerializer(BaseChangeItemSerializer):

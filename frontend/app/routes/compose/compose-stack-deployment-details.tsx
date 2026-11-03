@@ -14,11 +14,15 @@ import {
   LoaderIcon,
   type LucideIcon,
   MessageCircleCodeIcon,
+  ServerIcon,
   TrendingUpIcon
 } from "lucide-react";
 import * as React from "react";
 import { Link, href } from "react-router";
-import { EnvVariableChangeItem } from "~/components/change-fields";
+import {
+  DeploymentServerChangeField,
+  EnvVariableChangeItem
+} from "~/components/change-fields";
 import { CopyButton } from "~/components/copy-button";
 import {
   Accordion,
@@ -104,7 +108,8 @@ export default function ComposeStackDeploymentDetailsPage({
     LucideIcon
   > = {
     compose_content: FileTextIcon,
-    env_overrides: KeyRoundIcon
+    env_overrides: KeyRoundIcon,
+    deploy_server: ServerIcon
   };
 
   const isMember = hasMinRole(membership, "Member");
@@ -235,7 +240,8 @@ export default function ComposeStackDeploymentDetailsPage({
                 string
               > = {
                 compose_content: "Compose stack file contents",
-                env_overrides: "Environment overrides"
+                env_overrides: "Environment overrides",
+                deploy_server: "Deployment Server"
               };
 
               return (
@@ -261,6 +267,9 @@ export default function ComposeStackDeploymentDetailsPage({
                         modified={changes[0].new_value as string}
                         filename="docker-compose.yml"
                       />
+                    )}
+                    {field === "deploy_server" && (
+                      <DeploymentServerChangeField change={changes[0]} />
                     )}
                   </div>
                 </div>

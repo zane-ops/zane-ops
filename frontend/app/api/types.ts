@@ -67,6 +67,10 @@ export type WorkspaceRoleValue = WorkspaceMember["role"];
 export type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
 
 export type Project = ApiResponse<"get", "/api/projects/{slug}/">;
+export type Environment = ApiResponse<
+  "get",
+  "/api/projects/{slug}/environment-details/{env_slug}/"
+>;
 export type Deployment = ApiResponse<
   "get",
   "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/"
@@ -117,10 +121,7 @@ export type PasswordResetToken = ApiResponse<
   "/api/console/password-tokens/{id}"
 >;
 
-export type SwarmNode = ApiResponse<
-  "get",
-  "/api/swarm/nodes/"
->["results"][number];
+export type SwarmNode = ApiResponse<"get", "/api/swarm/nodes/">[number];
 
 export type FullSwarmNode = ApiResponse<"get", "/api/swarm/nodes/{id}/">;
 

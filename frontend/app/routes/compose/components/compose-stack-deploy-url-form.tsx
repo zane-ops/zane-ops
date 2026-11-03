@@ -23,10 +23,12 @@ import type { clientAction } from "~/routes/compose/compose-stack-settings";
 
 export type ServiceDeployURLFormProps = {
   stack: ComposeStack;
+  className?: string;
 };
 
 export function ComposeStackDeployURLForm({
-  stack
+  stack,
+  className
 }: ServiceDeployURLFormProps) {
   const fetcher = useFetcher<typeof clientAction>();
   const [isDeployURLShown, setIsDeployURLShown] = React.useState(false);
@@ -46,7 +48,7 @@ export function ComposeStackDeployURLForm({
   }
 
   return (
-    <div className="w-full max-w-4xl">
+    <div className={cn("w-full max-w-4xl", className)}>
       <fetcher.Form
         method="post"
         className="flex flex-col md:flex-row gap-2 w-full"

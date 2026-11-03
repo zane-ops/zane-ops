@@ -23,6 +23,7 @@ import {
   useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
 import { ComposeStackDangerZoneForm } from "~/routes/compose/components/compose-stack-danger-zone-form";
+import { ComposeStackDeployServer } from "~/routes/compose/components/compose-stack-deploy-server-form";
 import { ComposeStackDeployURLForm } from "~/routes/compose/components/compose-stack-deploy-url-form";
 import { ComposeStackEnvForm } from "~/routes/compose/components/compose-stack-env-form";
 import { ComposeStackSlugForm } from "~/routes/compose/components/compose-stack-slug-form";
@@ -122,13 +123,14 @@ export default function ComposeStackSettingsPage({
             </div>
             <div
               className={cn(
-                "w-full flex flex-col gap-12 pt-1",
+                "w-full flex flex-col pt-1",
                 isAdmin ? "pb-14" : "pb-8"
               )}
             >
               <h2 className="text-lg text-grey">Deploy</h2>
 
-              <ComposeStackDeployURLForm stack={stack} />
+              <ComposeStackDeployServer stack={stack} className="mt-5" />
+              <ComposeStackDeployURLForm stack={stack} className="mt-12" />
             </div>
           </section>
         )}
@@ -400,6 +402,14 @@ async function requestStackChange({
     case "compose_content": {
       const content = formData.get("user_content")?.toString().trim() ?? "";
       userData = content satisfies BodyOf<typeof field>["new_value"];
+      break;
+    }
+    case "deploy_server": {
+      const deploy_server_id =
+        formData.get("deployment_server_id")?.toString().trim() ?? "";
+      userData = {
+        deployment_server_id: deploy_server_id
+      } satisfies BodyOf<typeof field>["new_value"];
       break;
     }
 

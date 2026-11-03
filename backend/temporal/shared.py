@@ -673,7 +673,7 @@ class SwarmNodeDetails:
     swarm_role: Literal["WORKER", "MANAGER"]
     ssh_key: str
     ssh_port: int
-    cluster_roles: list[Literal["APP_SERVER", "BUILD_SERVER"]]
+    cluster_roles: list[Literal["DEPLOY_SERVER", "BUILD_SERVER"]]
 
     def get_ssh_key_path(self, tmp_dir: str):
         return os.path.join(tmp_dir, f"{self.id}.key")
@@ -691,7 +691,7 @@ class SimpleClusterSwarmNodeDetails:
     is_initial_install_server: bool
     swarm_node_id: str
     swarm_role: Literal["WORKER", "MANAGER"]
-    cluster_roles: list[Literal["APP_SERVER", "BUILD_SERVER"]]
+    cluster_roles: list[Literal["DEPLOY_SERVER", "BUILD_SERVER"]]
 
 
 @dataclass
@@ -840,6 +840,11 @@ class SwarmNodeServiceHealthcheck:
     status: str
     message: str
     image: str
+    updated_at: str
+
+    @property
+    def updated_at_as_datetime(self):
+        return datetime.fromisoformat(self.updated_at)
 
 
 @dataclass
