@@ -5,6 +5,7 @@ from ..views.helpers import (
 )
 from ..dtos import ServiceSnapshot, DeploymentChangeDto
 from ..utils import jprint
+from ..models import Deployment, DeploymentChange, EnvVariable, Service
 
 current = {
     "created_at": "2025-01-31T18:30:04.436667Z",
@@ -221,3 +222,53 @@ class DockerDeploymentChangesTests(AuthAPITestCase):
             and new_snapshot.healthcheck.type == "PATH"
         ):
             self.assertIsNotNone(new_snapshot.healthcheck.associated_port)
+
+
+class ApplyPendingEnvVariableChangesTests(AuthAPITestCase):
+    def _new_deployment(self, service: Service) -> Deployment:
+        return Deployment.objects.create(
+            service=service,
+            slot=Deployment.get_next_deployment_slot(
+                service.latest_production_deployment
+            ),
+        )
+
+    def test_delete_and_add_env_variable_with_same_key(self):
+        # Redeploying an older deployment can produce a DELETE and an ADD
+        # for the same key when the variable was recreated with a new id
+        _, service = self.create_redis_docker_service()
+        env = EnvVariable.objects.create(key="MY_VAR", value="old", service=service)
+        DeploymentChange.objects.create(
+            field=DeploymentChange.ChangeField.ENV_VARIABLES,
+            type=DeploymentChange.ChangeType.ADD,
+            new_value={"key": "MY_VAR", "value": "new"},
+            service=service,
+        )
+        DeploymentChange.objects.create(
+            field=DeploymentChange.ChangeField.ENV_VARIABLES,
+            type=DeploymentChange.ChangeType.DELETE,
+            item_id=env.id,
+            old_value={"key": "MY_VAR", "value": "old"},
+            service=service,
+        )
+
+        service.apply_pending_changes(self._new_deployment(service))
+
+        self.assertEqual(1, service.env_variables.count())
+        self.assertEqual("new", service.env_variables.get(key="MY_VAR").value)
+
+    def test_add_env_variable_that_already_exists(self):
+        # A failed deployment can leave an ADD change for a variable that exists
+        _, service = self.create_redis_docker_service()
+        EnvVariable.objects.create(key="MY_VAR", value="old", service=service)
+        DeploymentChange.objects.create(
+            field=DeploymentChange.ChangeField.ENV_VARIABLES,
+            type=DeploymentChange.ChangeType.ADD,
+            new_value={"key": "MY_VAR", "value": "new"},
+            service=service,
+        )
+
+        service.apply_pending_changes(self._new_deployment(service))
+
+        self.assertEqual(1, service.env_variables.count())
+        self.assertEqual("new", service.env_variables.get(key="MY_VAR").value)
