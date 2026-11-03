@@ -34,7 +34,6 @@ from zane_api.authentication import WorkspaceTokenAuthentication
 from zane_api.models import Environment, Project, TokenScope
 from zane_api.permissions import (
     HasWorkspace,
-    HasRequiredAPITokenScopes,
     IsWorkspaceAdmin,
     IsWorkspaceMember,
     IsWorkspaceViewer,
@@ -741,7 +740,7 @@ class ComposeStackWebhookDeployAPIView(APIView):
     authentication_classes = [WorkspaceTokenAuthentication]
 
     # token permissions
-    permission_classes = [HasWorkspace, HasRequiredAPITokenScopes]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
     api_token_scopes = [TokenScope.DEPLOY_WRITE]
 
     # Rate-limit

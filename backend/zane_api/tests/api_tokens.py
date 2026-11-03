@@ -1,5 +1,6 @@
 import re
 from datetime import timedelta
+from types import SimpleNamespace
 from typing import cast
 
 import responses
@@ -31,6 +32,7 @@ from ..models import (
     WorkspaceMembership,
     WorkspaceRole,
 )
+from ..permissions import HasWorkspace
 from ..utils import generate_random_chars, jprint
 from .base import AuthAPITestCase
 
@@ -1224,3 +1226,50 @@ class TriggerPreviewEnvWebhookTokenTests(DeployWebhookTokenTestsMixin, AuthAPITe
             data={"branch_name": "feat/test-1"},
             **self.bearer(full),
         )
+
+
+class HasWorkspaceTokenScopeEnforcementTests(AuthAPITestCase):
+    """
+    `HasWorkspace` performs the `api_token_scopes` match itself, so token-scope
+    enforcement lives in the one permission class that runs on *every* workspace
+    endpoint — including those that override `permission_classes`. A view that
+    declares any value for `api_token_scopes` can therefore no longer be reached by a token
+    that lacks the scope (follow-up to GHSA-65gh-gxv8-hwvj).
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.owner = cast(User, User.objects.get(username="Fredkiss3"))
+
+    def _has_permission(self, token, *, view_scopes):
+        # `HasWorkspace` only reads `request.user`, `request.auth` and
+        # `view.api_token_scopes` on the token branch, so a stub request/view is
+        # enough to exercise the scope match without wiring a whole endpoint.
+        request = SimpleNamespace(user=self.owner, auth=token)
+        view = SimpleNamespace(api_token_scopes=view_scopes)
+        return HasWorkspace().has_permission(request, view)  # type: ignore[arg-type]
+
+    def test_token_missing_the_required_scope_is_denied(self):
+        token, _ = self.create_api_token(scopes=[TokenScope.SERVICE_READ])
+        self.assertFalse(
+            self._has_permission(token, view_scopes=[TokenScope.DEPLOY_WRITE])
+        )
+
+    def test_token_holding_the_required_scope_is_allowed(self):
+        token, _ = self.create_api_token(scopes=[TokenScope.DEPLOY_WRITE])
+        self.assertTrue(
+            self._has_permission(token, view_scopes=[TokenScope.DEPLOY_WRITE])
+        )
+
+    def test_token_holding_any_one_of_several_required_scopes_is_allowed(self):
+        token, _ = self.create_api_token(scopes=[TokenScope.SERVICE_READ])
+        self.assertTrue(
+            self._has_permission(
+                token,
+                view_scopes=[TokenScope.DEPLOY_WRITE, TokenScope.SERVICE_READ],
+            )
+        )
+
+    def test_view_without_declared_scopes_denies_tokens(self):
+        token, _ = self.create_api_token(scopes=[TokenScope.DEPLOY_WRITE])
+        self.assertFalse(self._has_permission(token, view_scopes=None))

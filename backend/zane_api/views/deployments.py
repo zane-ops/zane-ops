@@ -67,7 +67,6 @@ from ..permissions import (
     IsWorkspaceMember,
     IsWorkspaceViewer,
     request_access,
-    HasRequiredAPITokenScopes,
 )
 
 
@@ -133,7 +132,7 @@ class WebhookDeployDockerServiceAPIView(APIView):
     authentication_classes = [WorkspaceTokenAuthentication]
 
     # deploy webhook permission
-    permission_classes = [HasWorkspace, HasRequiredAPITokenScopes]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
     api_token_scopes = [TokenScope.DEPLOY_WRITE]
 
     # Rate-limits
@@ -246,7 +245,7 @@ class WebhookDeployGitServiceAPIView(APIView):
     authentication_classes = [WorkspaceTokenAuthentication]
 
     # deploy webhook permission
-    permission_classes = [HasWorkspace, HasRequiredAPITokenScopes]
+    permission_classes = [HasWorkspace, IsWorkspaceMember]
     api_token_scopes = [TokenScope.DEPLOY_WRITE]
 
     # Rate-limit

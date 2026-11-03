@@ -188,8 +188,14 @@ class HasWorkspace(BasePermission):
         if token is not None:
             access = build_token_access(token)
             required_scopes = getattr(view, "api_token_scopes", None)
-            # Each endpoint that accept token auth should have a `api_token_scopes `attribute`
+            # Each endpoint that accepts token auth must declare `api_token_scopes`.
+            # forgetting to annotate a view rejects the request
             if access is None or required_scopes is None:
+                return False
+
+            # Checked here because this class runs on every workspace endpoint,
+            # so views can't skip scope checks by just adding any `api_token_scopes`.
+            if not any(access.has_scope(str(scope)) for scope in required_scopes):
                 return False
 
             request.workspace = access.workspace  # type: ignore
@@ -251,32 +257,6 @@ class IsWorkspaceAdmin(MinRolePermission):
 
 class IsWorkspaceOwner(MinRolePermission):
     min_role = WorkspaceRole.OWNER
-
-
-class HasRequiredAPITokenScopes(BasePermission):
-    """
-    Enforces `view.api_token_scopes` for API-token requests (plan §6).
-
-    - a logged-in user (`request.access.scopes is None`) always passes;
-    - a token passes if it holds **any one** of the view's `api_token_scopes`;
-    - a view with no `api_token_scopes` cannot be reached by a token at all —
-      forgetting to annotate a view fails safe (token denied, never opened).
-    """
-
-    def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
-        access: EffectiveAccess | None = getattr(request, "access", None)
-        if access is None:
-            return False
-
-        if access.scopes is None:
-            # Scopes is None => logged in user with session auth
-            return True
-
-        required_scopes = getattr(view, "api_token_scopes", None)
-        if not required_scopes:
-            return False
-
-        return any(access.has_scope(str(scope)) for scope in required_scopes)
 
 
 class HasDeployWebhookAccess(BasePermission):
