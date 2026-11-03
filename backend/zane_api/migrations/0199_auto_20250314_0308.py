@@ -4,14 +4,14 @@ from django.db import migrations
 import docker
 import docker.errors
 
-docker_client = docker.from_env()
-
 
 def get_env_network_resource_name(env_id: str, project_id: str) -> str:
     return f"net-{project_id}-{env_id}"
 
 
 def create_default_production_env_network(apps, schema_editor):
+    docker_client = docker.from_env()
+
     Environment = apps.get_model("zane_api", "Environment")
 
     for env in Environment.objects.filter(name="production"):
@@ -35,6 +35,7 @@ def create_default_production_env_network(apps, schema_editor):
 
 def remove_default_production_network(apps, schema_editor):
     Environment = apps.get_model("zane_api", "Environment")
+    docker_client = docker.from_env()
 
     for env in Environment.objects.filter(name="production"):
         try:
@@ -48,7 +49,6 @@ def remove_default_production_network(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("zane_api", "0198_auto_20250314_0158"),
     ]
