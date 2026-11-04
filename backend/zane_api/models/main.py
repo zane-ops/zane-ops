@@ -1306,7 +1306,16 @@ class Service(BaseService):
     def apply_pending_changes(self, deployment: "Deployment"):
         from container_registry.models import SharedRegistryCredentials
 
-        for change in self.unapplied_changes:
+        # Apply deletions before updates and additions, so that an item removed and
+        # re-added with the same unique key (ex: an env variable) doesn't collide
+        changes = self.unapplied_changes.annotate(
+            apply_order=Case(
+                When(type=DeploymentChange.ChangeType.DELETE, then=Value(0)),
+                When(type=DeploymentChange.ChangeType.UPDATE, then=Value(1)),
+                default=Value(2),
+            )
+        ).order_by("apply_order", "created_at")
+        for change in changes:
             match (change.field, self.type):
                 case DeploymentChange.ChangeField.COMMAND, __:
                     setattr(self, change.field, change.new_value)
@@ -1550,10 +1559,11 @@ class Service(BaseService):
                         config.save()
                 case DeploymentChange.ChangeField.ENV_VARIABLES, __:
                     if change.type == DeploymentChange.ChangeType.ADD:
-                        EnvVariable.objects.create(
+                        # a previous failed deployment may have already created it
+                        EnvVariable.objects.update_or_create(
                             key=change.new_value.get("key"),
-                            value=change.new_value.get("value"),
                             service=self,
+                            defaults={"value": change.new_value.get("value")},
                         )
                     if change.type == DeploymentChange.ChangeType.DELETE:
                         self.env_variables.get(id=change.item_id).delete()
