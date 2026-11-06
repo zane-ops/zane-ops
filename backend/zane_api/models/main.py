@@ -669,10 +669,6 @@ class Service(BaseService):
         # Pinned By Volume will be computed from the service volumes
         # PINNED_BY_VOLUME = "PINNED_BY_VOLUME", _("Pinned By Volume")
 
-    # class DeploymentMode(models.TextChoices):
-    #     GLOBAL = "GLOBAL", _("Global Service")
-    #     REPLICATED = "REPLICATED", _("Replicated Service")
-
     ID_PREFIX = "srv_dkr_"
     id = ShortUUIDField(
         length=11,
@@ -787,11 +783,7 @@ class Service(BaseService):
         default=DeploymentStrategy.ANY_DEPLOY_SERVER,
     )
 
-    # replicas = models.PositiveIntegerField(default=1)
-    # deployment_mode = models.CharField(
-    #     choices=DeploymentMode.choices,
-    #     default=DeploymentMode.REPLICATED,
-    # )
+    replicas = models.PositiveIntegerField(default=1)
 
     def __str__(self):
         return (
@@ -2215,6 +2207,7 @@ class DeploymentChange(BaseDeploymentChange):
         RESOURCE_LIMITS = "resource_limits", _("resource limits")
         CONFIGS = "configs", _("configs")
         DEPLOYMENT_STRATEGY = "deployment_strategy", _("deployment strategy")
+        REPLICAS = "replicas", _("replicas")
 
     field = models.CharField(max_length=255, choices=ChangeField.choices)
     service = models.ForeignKey(
