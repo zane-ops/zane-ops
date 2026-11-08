@@ -1,8 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import hljs from "highlight.js/lib/core";
 import json from "highlight.js/lib/languages/json";
+import "highlight.js/styles/atom-one-dark.css";
 import {
   ActivityIcon,
-  BlocksIcon,
   BookmarkIcon,
   CheckIcon,
   ChevronRightIcon,
@@ -24,6 +25,7 @@ import {
   HourglassIcon,
   InfoIcon,
   KeyRoundIcon,
+  LayersIcon,
   LoaderIcon,
   MessageCircleCode,
   RocketIcon,
@@ -35,16 +37,6 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { Link, href } from "react-router";
-import { StatusBadge } from "~/components/status-badge";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger
-} from "~/components/ui/accordion";
-import type { Route } from "./+types/deployment-details";
-import "highlight.js/styles/atom-one-dark.css";
-import { useQuery } from "@tanstack/react-query";
 import type { Deployment, Service } from "~/api/types";
 import {
   BuilderChangeField,
@@ -62,6 +54,13 @@ import {
   UrlChangeItem,
   VolumeChangeItem
 } from "~/components/change-fields";
+import { StatusBadge } from "~/components/status-badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from "~/components/ui/accordion";
 import { Button } from "~/components/ui/button";
 import {
   Tooltip,
@@ -83,6 +82,7 @@ import {
   useCurrentWorkspace,
   useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
+import type { Route } from "./+types/deployment-details";
 
 const logger = createDevLogger(import.meta.url);
 
@@ -212,7 +212,7 @@ export default function DeploymentDetailsPage({
     healthcheck: ActivityIcon,
     configs: FileSliders,
     deployment_strategy: RouteIcon,
-    replicas: BlocksIcon
+    replicas: LayersIcon
   };
   const [hasCopied, startTransition] = React.useTransition();
 
