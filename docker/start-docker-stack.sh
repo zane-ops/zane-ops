@@ -15,6 +15,8 @@ set -x
 
 # Deploy the stack
 echo "Deploying the stack..."
+docker context use zaneops 2>/dev/null
+
 docker compose down --remove-orphans
 docker stack rm zane
 

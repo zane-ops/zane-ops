@@ -559,6 +559,7 @@ class ServiceSnapshot:
 
     # computed default deployment
     default_deployment_server: DeploymentServerDto | None = None
+    replicas: int = 1
 
     @property
     def http_ports(self) -> List[PortConfigurationDto]:
@@ -712,6 +713,7 @@ class ServiceSnapshot:
             deployment_strategy=data.get("deployment_strategy", "ANY_DEPLOY_SERVER"),
             deployment_server=deployment_server,
             default_deployment_server=default_deployment_server,
+            replicas=data.get("replicas", 1),
         )
 
     def has_duplicate_volumes(self) -> bool:
