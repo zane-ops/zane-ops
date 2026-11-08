@@ -3536,9 +3536,10 @@ export interface components {
      * * `resource_limits` - resource limits
      * * `configs` - configs
      * * `deployment_strategy` - deployment strategy
+     * * `replicas` - replicas
      * @enum {string}
      */
-    DeploymentChangeFieldEnum: "source" | "git_source" | "builder" | "command" | "healthcheck" | "volumes" | "shared_volumes" | "env_variables" | "urls" | "ports" | "resource_limits" | "configs" | "deployment_strategy";
+    DeploymentChangeFieldEnum: "source" | "git_source" | "builder" | "command" | "healthcheck" | "volumes" | "shared_volumes" | "env_variables" | "urls" | "ports" | "resource_limits" | "configs" | "deployment_strategy" | "replicas";
     DeploymentChangeRequest: {
       id?: string;
       type: components["schemas"]["DeploymentChangeTypeEnum"];
@@ -3547,7 +3548,7 @@ export interface components {
       old_value?: unknown;
       item_id?: string | null;
     };
-    DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerSourceFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"] | components["schemas"]["ConfigItemChangeRequest"] | components["schemas"]["GitSourceFieldChangeRequest"] | components["schemas"]["GitBuilderFieldChangeRequest"] | components["schemas"]["DeploymentStrategyFieldChangeRequest"];
+    DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerSourceFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"] | components["schemas"]["ConfigItemChangeRequest"] | components["schemas"]["GitSourceFieldChangeRequest"] | components["schemas"]["GitBuilderFieldChangeRequest"] | components["schemas"]["DeploymentStrategyFieldChangeRequest"] | components["schemas"]["ServiceReplicasFieldChangeRequest"];
     /**
      * @description * `UPDATE` - update
      * * `DELETE` - delete
@@ -3568,6 +3569,7 @@ export interface components {
       slug: string;
       type: components["schemas"]["ServiceTypeEnum"];
       image: string;
+      replicas: number;
       command: string | null;
       builder: components["schemas"]["GitServiceBuilderEnum"] | components["schemas"]["NullEnum"] | null;
       /** Format: uri */
@@ -7363,7 +7365,7 @@ export interface components {
      * @enum {string}
      */
     RequestProtocolEnum: "HTTP/1.0" | "HTTP/1.1" | "HTTP/2.0" | "HTTP/3.0";
-    RequestServiceChangesError: components["schemas"]["RequestServiceChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesTypeErrorComponent"] | components["schemas"]["RequestServiceChangesItemIdErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueAssociatedPortErrorComponent"] | components["schemas"]["RequestServiceChangesFieldErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueNameErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueModeErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueValueErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueHostErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueImageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueContainerRegistryCredentialsIdErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMemoryUnitErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueContentsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMountPathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueLanguageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRepositoryUrlErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBranchNameErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCommitShaErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueGitAppIdErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuilderErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuildContextDirErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueDockerfilePathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuildStageTargetErrorComponent"] | components["schemas"]["RequestServiceChangesNewValuePublishDirectoryErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIsSpaErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueNotFoundPageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIndexPageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIsStaticErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuildDirectoryErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCustomInstallCommandErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCustomBuildCommandErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCustomStartCommandErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueDeploymentStrategyErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueDeploymentServerIdErrorComponent"];
+    RequestServiceChangesError: components["schemas"]["RequestServiceChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesTypeErrorComponent"] | components["schemas"]["RequestServiceChangesItemIdErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueAssociatedPortErrorComponent"] | components["schemas"]["RequestServiceChangesFieldErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueNameErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueModeErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueValueErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueHostErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueImageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueContainerRegistryCredentialsIdErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMemoryUnitErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueContentsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMountPathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueLanguageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRepositoryUrlErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBranchNameErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCommitShaErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueGitAppIdErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuilderErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuildContextDirErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueDockerfilePathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuildStageTargetErrorComponent"] | components["schemas"]["RequestServiceChangesNewValuePublishDirectoryErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIsSpaErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueNotFoundPageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIndexPageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIsStaticErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuildDirectoryErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCustomInstallCommandErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCustomBuildCommandErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCustomStartCommandErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueDeploymentStrategyErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueDeploymentServerIdErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueReplicasErrorComponent"];
     RequestServiceChangesErrorResponse400: components["schemas"]["RequestServiceChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestServiceChangesFieldErrorComponent: {
       /**
@@ -8102,6 +8104,23 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
+    RequestServiceChangesNewValueReplicasErrorComponent: {
+      /**
+       * @description * `new_value.replicas` - new_value.replicas
+       * @enum {string}
+       */
+      attr: "new_value.replicas";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "min_value" | "null" | "required";
+      detail: string;
+    };
     RequestServiceChangesNewValueRepositoryUrlErrorComponent: {
       /**
        * @description * `new_value.repository_url` - new_value.repository_url
@@ -8480,6 +8499,7 @@ export interface components {
       slug: string;
       type: components["schemas"]["ServiceTypeEnum"];
       image: string | null;
+      replicas: number;
       command: string | null;
       builder: components["schemas"]["GitServiceBuilderEnum"] | components["schemas"]["NullEnum"] | null;
       /** Format: uri */
@@ -8574,6 +8594,20 @@ export interface components {
     ServicePortsRequestRequest: {
       host: number;
       forwarded: number;
+    };
+    /**
+     * @description * `replicas` - replicas
+     * @enum {string}
+     */
+    ServiceReplicasFieldChangeFieldEnum: "replicas";
+    ServiceReplicasFieldChangeRequest: {
+      /** @default UPDATE */
+      type?: components["schemas"]["FieldChangeTypeEnum"];
+      new_value: components["schemas"]["ServiceReplicasRequestRequest"];
+      field: components["schemas"]["ServiceReplicasFieldChangeFieldEnum"];
+    };
+    ServiceReplicasRequestRequest: {
+      replicas: number;
     };
     ServiceSearchResponse: {
       id: string;
