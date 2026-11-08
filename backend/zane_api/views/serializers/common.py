@@ -112,6 +112,10 @@ class ServicePortsRequestSerializer(serializers.Serializer):
     forwarded = serializers.IntegerField(required=True, min_value=1)
 
 
+class ServiceReplicasRequestSerializer(serializers.Serializer):
+    replicas = serializers.IntegerField(required=True, min_value=1)
+
+
 class ConfigRequestSerializer(serializers.Serializer):
     contents = serializers.CharField(required=True, allow_blank=True)
     name = serializers.CharField(required=False)

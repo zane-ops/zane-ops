@@ -695,6 +695,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             "slug",
             "type",
             "image",
+            "replicas",
             "command",
             "builder",
             "repository_url",

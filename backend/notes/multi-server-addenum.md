@@ -8,11 +8,15 @@
       Or run the healthcheck in the correct temporal-node worker (on the correct server)
       Remember that for services that aren't pinned to one server, the healthcheck will need to run on 
       all servers... or smth
+      => This needs to be answered properly in the multi replicas workflow:
+            -> how to handle healthcheck (especially on deploy)
+            -> we need to totally change the UI to adapt and show all replicas
+            -> What should happen if some replicas succeed healthcheck and other don't ? should we prevent the udpate ? -> probably
 - [ ] Delete volumes should delete the volumes in the correct nodes (or all nodes ?) since a service can migrate
       accross nodes, volumes may have been created/leftover
 - [ ] How to Handle healthcheck for services with multiple replicas ?
 - [ ] A service deployed with `ANY_DEPLOY_SERVER` will migrate if a node is unhealthy, will need to somehow migrate
-      the healthcheck, or run the healthcheck everywhere ? 
+      the healthcheck, or run the healthcheck everywhere ?
 
 ### Swarm node workflows — safety
 

@@ -24766,6 +24766,7 @@ components:
       - resource_limits
       - configs
       - deployment_strategy
+      - replicas
       type: string
       description: |-
         * `source` - source
@@ -24781,6 +24782,7 @@ components:
         * `resource_limits` - resource limits
         * `configs` - configs
         * `deployment_strategy` - deployment strategy
+        * `replicas` - replicas
     DeploymentChangeRequest:
       type: object
       properties:
@@ -24818,10 +24820,11 @@ components:
       - $ref: '#/components/schemas/GitSourceFieldChangeRequest'
       - $ref: '#/components/schemas/GitBuilderFieldChangeRequest'
       - $ref: '#/components/schemas/DeploymentStrategyFieldChangeRequest'
+      - $ref: '#/components/schemas/ServiceReplicasFieldChangeRequest'
       discriminator:
         propertyName: field
         mapping:
-          null: '#/components/schemas/DeploymentStrategyFieldChangeRequest'
+          null: '#/components/schemas/ServiceReplicasFieldChangeRequest'
     DeploymentChangeTypeEnum:
       enum:
       - UPDATE
@@ -24863,6 +24866,11 @@ components:
           readOnly: true
         image:
           type: string
+          readOnly: true
+        replicas:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
           readOnly: true
         command:
           type: string
@@ -25071,6 +25079,7 @@ components:
       - pr_preview_envs_enabled
       - project_id
       - railpack_builder_options
+      - replicas
       - repository_url
       - resource_limits
       - shared_volumes
@@ -33198,6 +33207,7 @@ components:
       - $ref: '#/components/schemas/RequestServiceChangesNewValueCustomStartCommandErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueDeploymentStrategyErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueDeploymentServerIdErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueReplicasErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -33253,6 +33263,7 @@ components:
           new_value.custom_start_command: '#/components/schemas/RequestServiceChangesNewValueCustomStartCommandErrorComponent'
           new_value.deployment_strategy: '#/components/schemas/RequestServiceChangesNewValueDeploymentStrategyErrorComponent'
           new_value.deployment_server_id: '#/components/schemas/RequestServiceChangesNewValueDeploymentServerIdErrorComponent'
+          new_value.replicas: '#/components/schemas/RequestServiceChangesNewValueReplicasErrorComponent'
     RequestServiceChangesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RequestServiceChangesValidationError'
@@ -34466,6 +34477,34 @@ components:
       - attr
       - code
       - detail
+    RequestServiceChangesNewValueReplicasErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.replicas
+          type: string
+          description: '* `new_value.replicas` - new_value.replicas'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RequestServiceChangesNewValueRepositoryUrlErrorComponent:
       type: object
       properties:
@@ -35282,6 +35321,11 @@ components:
           readOnly: true
           nullable: true
           maxLength: 510
+        replicas:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          readOnly: true
         command:
           type: string
           readOnly: true
@@ -35489,6 +35533,7 @@ components:
       - pr_preview_envs_enabled
       - project_id
       - railpack_builder_options
+      - replicas
       - repository_url
       - resource_limits
       - shared_volumes
@@ -35669,6 +35714,33 @@ components:
       required:
       - forwarded
       - host
+    ServiceReplicasFieldChangeFieldEnum:
+      enum:
+      - replicas
+      type: string
+      description: '* `replicas` - replicas'
+    ServiceReplicasFieldChangeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/FieldChangeTypeEnum'
+          default: UPDATE
+        new_value:
+          $ref: '#/components/schemas/ServiceReplicasRequestRequest'
+        field:
+          $ref: '#/components/schemas/ServiceReplicasFieldChangeFieldEnum'
+      required:
+      - field
+      - new_value
+    ServiceReplicasRequestRequest:
+      type: object
+      properties:
+        replicas:
+          type: integer
+          minimum: 1
+      required:
+      - replicas
     ServiceSearchResponse:
       type: object
       properties:

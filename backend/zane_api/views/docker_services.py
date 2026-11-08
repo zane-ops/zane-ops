@@ -43,6 +43,7 @@ from .serializers import (
     ResourceLimitChangeSerializer,
     # SharedVolumeItemChangeSerializer,
     DeploymentStrategyFieldChangeSerializer,
+    ServiceReplicasFieldChangeSerializer,
 )
 from ..dtos import (
     ConfigDto,
@@ -52,6 +53,7 @@ from ..dtos import (
     StaticDirectoryBuilderOptions,
     NixpacksBuilderOptions,
 )
+
 # from ..utils import pluralize
 from ..models import (
     Project,
@@ -236,6 +238,7 @@ class RequestServiceChangesAPIView(APIView):
                 GitSourceFieldChangeSerializer,
                 GitBuilderFieldChangeSerializer,
                 DeploymentStrategyFieldChangeSerializer,
+                ServiceReplicasFieldChangeSerializer,
             ],
             resource_type_field_name="field",
         ),
@@ -313,6 +316,7 @@ class RequestServiceChangesAPIView(APIView):
             DeploymentChange.ChangeField.CONFIGS: ConfigItemChangeSerializer,
             # DeploymentChange.ChangeField.SHARED_VOLUMES: SharedVolumeItemChangeSerializer,
             DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY: DeploymentStrategyFieldChangeSerializer,
+            DeploymentChange.ChangeField.REPLICAS: ServiceReplicasFieldChangeSerializer,
         }
 
         request_serializer = DockerDeploymentFieldChangeRequestSerializer(
@@ -344,6 +348,8 @@ class RequestServiceChangesAPIView(APIView):
                 match field:
                     case DeploymentChange.ChangeField.COMMAND:
                         old_value = getattr(service, field)
+                    case DeploymentChange.ChangeField.REPLICAS:
+                        old_value = dict(replicas=service.replicas)
                     case DeploymentChange.ChangeField.RESOURCE_LIMITS:
                         if new_value is not None and len(new_value) == 0:
                             new_value = None

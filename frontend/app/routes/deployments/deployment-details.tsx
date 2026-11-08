@@ -1,5 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import hljs from "highlight.js/lib/core";
 import json from "highlight.js/lib/languages/json";
+import "highlight.js/styles/atom-one-dark.css";
 import {
   ActivityIcon,
   BookmarkIcon,
@@ -23,6 +25,7 @@ import {
   HourglassIcon,
   InfoIcon,
   KeyRoundIcon,
+  LayersIcon,
   LoaderIcon,
   MessageCircleCode,
   RocketIcon,
@@ -34,16 +37,6 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { Link, href } from "react-router";
-import { StatusBadge } from "~/components/status-badge";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger
-} from "~/components/ui/accordion";
-import type { Route } from "./+types/deployment-details";
-import "highlight.js/styles/atom-one-dark.css";
-import { useQuery } from "@tanstack/react-query";
 import type { Deployment, Service } from "~/api/types";
 import {
   BuilderChangeField,
@@ -54,12 +47,20 @@ import {
   GitSourceChangeField,
   HealthcheckChangeField,
   PortChangeItem,
+  ReplicasChangeField,
   ResourceLimitChangeField,
   // SharedVolumeChangeItem,
   SourceChangeField,
   UrlChangeItem,
   VolumeChangeItem
 } from "~/components/change-fields";
+import { StatusBadge } from "~/components/status-badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from "~/components/ui/accordion";
 import { Button } from "~/components/ui/button";
 import {
   Tooltip,
@@ -81,6 +82,7 @@ import {
   useCurrentWorkspace,
   useCurrentWorkspaceMembership
 } from "~/lib/workspace-store";
+import type { Route } from "./+types/deployment-details";
 
 const logger = createDevLogger(import.meta.url);
 
@@ -209,7 +211,8 @@ export default function DeploymentDetailsPage({
     resource_limits: HourglassIcon,
     healthcheck: ActivityIcon,
     configs: FileSliders,
-    deployment_strategy: RouteIcon
+    deployment_strategy: RouteIcon,
+    replicas: LayersIcon
   };
   const [hasCopied, startTransition] = React.useTransition();
 
@@ -514,6 +517,13 @@ export default function DeploymentDetailsPage({
                         changes.map((change) => (
                           <React.Fragment key={change.id}>
                             <CommandChangeField change={change} />
+                            <hr className="border border-dashed border-border" />
+                          </React.Fragment>
+                        ))}
+                      {field === "replicas" &&
+                        changes.map((change) => (
+                          <React.Fragment key={change.id}>
+                            <ReplicasChangeField change={change} />
                             <hr className="border border-dashed border-border" />
                           </React.Fragment>
                         ))}

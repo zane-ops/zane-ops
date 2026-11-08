@@ -17,6 +17,7 @@ import {
   GitSourceChangeField,
   HealthcheckChangeField,
   PortChangeItem,
+  ReplicasChangeField,
   ResourceLimitChangeField,
   // SharedVolumeChangeItem,
   SourceChangeField,
@@ -221,6 +222,12 @@ export function ServiceChangesModal({
                         changes.map((change) => (
                           <ChangeForm key={change.id} change_id={change.id}>
                             <CommandChangeField unapplied change={change} />
+                          </ChangeForm>
+                        ))}
+                      {field === "replicas" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <ReplicasChangeField unapplied change={change} />
                           </ChangeForm>
                         ))}
                       {field === "ports" &&

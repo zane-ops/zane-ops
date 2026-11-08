@@ -16,6 +16,7 @@ import { type RequestInput, apiClient } from "~/api/client";
 
 import * as React from "react";
 import { toast } from "sonner";
+import { createLogger } from "vite";
 import type { Service } from "~/api/types";
 import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
@@ -28,6 +29,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { ZANEOPS_INTERNAL_DOMAIN } from "~/lib/constants";
+import { createDevLogger } from "~/lib/logger";
 import {
   ensureAuthedUser,
   environmentQueries,
@@ -56,6 +58,7 @@ import {
 import { ServiceGitSourceForm } from "~/routes/services/components/service-git-source-form";
 import { ServiceHealthcheckForm } from "~/routes/services/components/service-healthcheck-form";
 import { ServicePortsForm } from "~/routes/services/components/service-ports-form";
+import { ServiceReplicasForm } from "~/routes/services/components/service-replicas-form";
 import { ServiceResourceLimits } from "~/routes/services/components/service-resource-limits-form";
 // import { ServiceSharedVolumesForm } from "~/routes/services/components/service-shared-volumes-form";
 import { ServiceSlugForm } from "~/routes/services/components/service-slug-form";
@@ -63,6 +66,8 @@ import { ServiceSourceForm } from "~/routes/services/components/service-source-f
 import { ServiceURLsForm } from "~/routes/services/components/service-urls-form";
 import { ServiceVolumesForm } from "~/routes/services/components/service-volumes-form";
 import type { Route } from "./+types/service-settings";
+
+const logger = createDevLogger(import.meta.url);
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
@@ -221,6 +226,11 @@ export default function ServiceSettingsPage({
           </div>
           <div className="w-full flex flex-col gap-12 pt-1 pb-14">
             <h2 className="text-lg text-grey">Deploy</h2>
+            <ServiceReplicasForm
+              project_slug={project_slug}
+              service_slug={service_slug}
+              env_slug={env_slug}
+            />
             {isMember && (
               <ServiceDeployStrategyForm
                 project_slug={project_slug}
@@ -1002,6 +1012,12 @@ async function requestServiceChange({
     case "command": {
       const cmd = formData.get("command")?.toString().trim() ?? "";
       userData = cmd.length === 0 ? null : cmd;
+      break;
+    }
+    case "replicas": {
+      userData = {
+        replicas: formData.get("replicas")?.toString().trim() ?? 1
+      };
       break;
     }
     case "healthcheck": {

@@ -45,6 +45,7 @@ with workflow.unsafe.imports_passed_through():
         ConfigReference,
         Healthcheck as DockerHealthcheckType,
         Mount,
+        ServiceMode,
     )
     from django.conf import settings
     from django.utils import timezone
@@ -1082,7 +1083,7 @@ class DockerSwarmActivities:
             service_labels: dict = swarm_service.attrs["Spec"].get("Labels", {})
             service_labels["status"] = "sleeping"
             update_attributes = dict(
-                mode={"Replicated": {"Replicas": 0}}, labels=service_labels
+                mode=ServiceMode("replicated", 0), labels=service_labels
             )
 
             # This is to fix a bug with exposed ports conflicting with a new deployment, the
@@ -1173,7 +1174,13 @@ class DockerSwarmActivities:
             service_labels: dict = swarm_service.attrs["Spec"].get("Labels", {})
             service_labels["status"] = "active"
             update_attributes = dict(
-                mode={"Replicated": {"Replicas": 1}}, labels=service_labels
+                mode=ServiceMode(
+                    "replicated",
+                    deployment.service_snapshot.replicas
+                    if deployment.service_snapshot is not None
+                    else 1,
+                ),
+                labels=service_labels,
             )
 
             # If we scaled this deployment by removing the port, we recreate the exposed ports
@@ -1416,6 +1423,7 @@ class DockerSwarmActivities:
                 constraints = [
                     f"node.id=={service.default_deployment_server.swarm_node_id}"
                 ]
+            service_mode = ServiceMode("replicated", service.replicas)
 
             self.docker_client.services.create(
                 image=image_name,
@@ -1427,6 +1435,7 @@ class DockerSwarmActivities:
                 ),
                 constraints=constraints,
                 mounts=mounts,
+                mode=service_mode,
                 endpoint_spec=endpoint_spec,
                 env=envs,
                 labels=get_resource_labels(

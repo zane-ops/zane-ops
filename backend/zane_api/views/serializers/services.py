@@ -43,6 +43,7 @@ from .common import (
     SharedVolumeRequestSerializer,
     URLRequestSerializer,
     VolumeRequestSerializer,
+    ServiceReplicasRequestSerializer,
 )
 
 from git_connectors.models import GitRepository
@@ -990,6 +991,13 @@ class DeploymentStrategyRequestSerializer(serializers.Serializer):
             attrs["deployment_server_id"] = None
 
         return attrs
+
+
+class ServiceReplicasFieldChangeSerializer(BaseFieldChangeSerializer):
+    field = serializers.ChoiceField(
+        choices=[DeploymentChange.ChangeField.REPLICAS], required=True
+    )
+    new_value = ServiceReplicasRequestSerializer(required=True)
 
 
 class DeploymentStrategyFieldChangeSerializer(BaseFieldChangeSerializer):
