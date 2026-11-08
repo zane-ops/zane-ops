@@ -1417,6 +1417,7 @@ class DockerSwarmActivities:
                 constraints = [
                     f"node.id=={service.default_deployment_server.swarm_node_id}"
                 ]
+            service_mode = ServiceMode("replicated", service.replicas)
 
             self.docker_client.services.create(
                 image=image_name,
@@ -1428,7 +1429,7 @@ class DockerSwarmActivities:
                 ),
                 constraints=constraints,
                 mounts=mounts,
-                mode=ServiceMode("replicated", service.replicas),
+                mode=service_mode,
                 endpoint_spec=endpoint_spec,
                 env=envs,
                 labels=get_resource_labels(
