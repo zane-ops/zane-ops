@@ -87,6 +87,10 @@ def apply_changes_to_snapshot(
         match change.field:
             case DeploymentChange.ChangeField.COMMAND:
                 setattr(service_snapshot, change.field, change.new_value)
+            case DeploymentChange.ChangeField.REPLICAS:
+                service_snapshot.replicas = cast(dict[str, int], change.new_value)[
+                    "replicas"
+                ]
             case DeploymentChange.ChangeField.HEALTHCHECK:
                 service_snapshot.healthcheck = (
                     HealthCheckDto.from_dict(
@@ -269,6 +273,16 @@ def diff_service_snapshots(
         current_value = getattr(current_snapshot, service_field.name)
         target_value = getattr(target_snapshot, service_field.name)
         match service_field.name:
+            case "replicas":
+                if current_value != target_value:
+                    changes.append(
+                        DeploymentChange(
+                            type=DeploymentChange.ChangeType.UPDATE,
+                            field=DeploymentChange.ChangeField.REPLICAS,
+                            new_value={"replicas": target_value},
+                            old_value={"replicas": current_value},
+                        )
+                    )
             case "command":
                 if current_value != target_value:
                     changes.append(

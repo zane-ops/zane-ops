@@ -33,6 +33,7 @@ from docker.types import (
     NetworkAttachmentConfig,
     ConfigReference,
     Mount,
+    ServiceMode,
 )
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -1631,7 +1632,8 @@ class FakeDockerClient:
     class FakeService:
         @property
         def replicas(self):
-            return self.attrs["Spec"]["Mode"]["Replicated"]["Replicas"]
+            mode = self.attrs["Spec"]["Mode"]
+            return mode.get("replicated", mode.get("Replicated", {})).get("Replicas", 1)
 
         def __init__(
             self,
@@ -1646,6 +1648,7 @@ class FakeDockerClient:
             resources: Resources | None = None,
             networks: List[NetworkAttachmentConfig] | None = None,
             constraints: list[str] | None = None,
+            mode: ServiceMode | None = None,
         ):
             self.name = name
             self.parent = parent
@@ -1668,7 +1671,7 @@ class FakeDockerClient:
                         },
                     },
                     "Labels": self.labels,
-                    "Mode": {"Replicated": {"Replicas": 1}},
+                    "Mode": mode or ServiceMode("replicated", 1),
                 },
                 "ServiceStatus": {
                     "RunningTasks": 1,
@@ -2327,6 +2330,7 @@ class FakeDockerClient:
             parent=self,
             name=name,
             volumes=volumes,
+            mode=kwargs.get("mode"),
             labels=labels,
             env=envs,
             endpoint=endpoint_spec,

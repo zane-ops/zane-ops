@@ -1360,6 +1360,8 @@ class Service(BaseService):
 
         for change in self.unapplied_changes:
             match (change.field, self.type):
+                case DeploymentChange.ChangeField.REPLICAS, __:
+                    self.replicas = change.new_value["replicas"]
                 case DeploymentChange.ChangeField.COMMAND, __:
                     setattr(self, change.field, change.new_value)
                 case DeploymentChange.ChangeField.DEPLOYMENT_STRATEGY, __:

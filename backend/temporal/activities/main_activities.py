@@ -45,6 +45,7 @@ with workflow.unsafe.imports_passed_through():
         ConfigReference,
         Healthcheck as DockerHealthcheckType,
         Mount,
+        ServiceMode,
     )
     from django.conf import settings
     from django.utils import timezone
@@ -1427,6 +1428,7 @@ class DockerSwarmActivities:
                 ),
                 constraints=constraints,
                 mounts=mounts,
+                mode=ServiceMode("replicated", service.replicas),
                 endpoint_spec=endpoint_spec,
                 env=envs,
                 labels=get_resource_labels(
