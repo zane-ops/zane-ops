@@ -1693,6 +1693,7 @@ class Service(BaseService):
                 | DeploymentChange.ChangeField.COMMAND
                 | DeploymentChange.ChangeField.HEALTHCHECK
                 | DeploymentChange.ChangeField.RESOURCE_LIMITS
+                | DeploymentChange.ChangeField.REPLICAS
             ):
                 change_for_field = self.unapplied_changes.filter(
                     field=change.field
