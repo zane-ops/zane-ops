@@ -2,6 +2,7 @@ import hljs from "highlight.js/lib/core";
 import json from "highlight.js/lib/languages/json";
 import {
   ActivityIcon,
+  BlocksIcon,
   BookmarkIcon,
   CheckIcon,
   ChevronRightIcon,
@@ -54,6 +55,7 @@ import {
   GitSourceChangeField,
   HealthcheckChangeField,
   PortChangeItem,
+  ReplicasChangeField,
   ResourceLimitChangeField,
   // SharedVolumeChangeItem,
   SourceChangeField,
@@ -209,7 +211,8 @@ export default function DeploymentDetailsPage({
     resource_limits: HourglassIcon,
     healthcheck: ActivityIcon,
     configs: FileSliders,
-    deployment_strategy: RouteIcon
+    deployment_strategy: RouteIcon,
+    replicas: BlocksIcon
   };
   const [hasCopied, startTransition] = React.useTransition();
 
@@ -514,6 +517,13 @@ export default function DeploymentDetailsPage({
                         changes.map((change) => (
                           <React.Fragment key={change.id}>
                             <CommandChangeField change={change} />
+                            <hr className="border border-dashed border-border" />
+                          </React.Fragment>
+                        ))}
+                      {field === "replicas" &&
+                        changes.map((change) => (
+                          <React.Fragment key={change.id}>
+                            <ReplicasChangeField change={change} />
                             <hr className="border border-dashed border-border" />
                           </React.Fragment>
                         ))}

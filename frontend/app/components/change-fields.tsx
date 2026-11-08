@@ -2317,6 +2317,46 @@ export function CommandChangeField({
   );
 }
 
+export function ReplicasChangeField({
+  change,
+  unapplied = false
+}: ChangeItemProps) {
+  const new_value = change.new_value as Pick<Service, "replicas">;
+  const old_value = change.old_value as Pick<Service, "replicas">;
+  return (
+    <div className="flex flex-col md:flex-row gap-4 items-center w-full">
+      <span
+        className={cn(
+          "flex items-center text-sm p-3 w-full gap-1",
+          "bg-muted rounded-md"
+        )}
+      >
+        <span>{old_value.replicas}</span>
+        <span className="text-grey">replicas</span>
+      </span>
+
+      <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
+      <div className="relative w-full">
+        <span
+          className={cn(
+            "flex items-center text-sm p-3 pr-2",
+            "bg-secondary/60 dark:bg-secondary-foreground rounded-md"
+          )}
+        >
+          <span className="inline-flex items-center gap-1">
+            <span>{new_value.replicas}</span>
+            <span className="text-grey">replicas</span>
+          </span>
+          &nbsp;
+          <span className="text-blue-500">
+            {unapplied && "will be"} updated
+          </span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function DeploymentStrategyChangeField({
   change,
   unapplied = false
