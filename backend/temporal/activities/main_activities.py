@@ -1083,7 +1083,7 @@ class DockerSwarmActivities:
             service_labels: dict = swarm_service.attrs["Spec"].get("Labels", {})
             service_labels["status"] = "sleeping"
             update_attributes = dict(
-                mode={"Replicated": {"Replicas": 0}}, labels=service_labels
+                mode=ServiceMode("replicated", 0), labels=service_labels
             )
 
             # This is to fix a bug with exposed ports conflicting with a new deployment, the
@@ -1174,7 +1174,13 @@ class DockerSwarmActivities:
             service_labels: dict = swarm_service.attrs["Spec"].get("Labels", {})
             service_labels["status"] = "active"
             update_attributes = dict(
-                mode={"Replicated": {"Replicas": 1}}, labels=service_labels
+                mode=ServiceMode(
+                    "replicated",
+                    deployment.service_snapshot.replicas
+                    if deployment.service_snapshot is not None
+                    else 1,
+                ),
+                labels=service_labels,
             )
 
             # If we scaled this deployment by removing the port, we recreate the exposed ports
