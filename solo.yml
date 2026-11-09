@@ -17,7 +17,7 @@ processes:
     env: {}
   dc logs temporal-main-worker:
     # command: docker compose -f ./docker/docker-compose.yaml logs -f zane-temporal-main-worker
-    command: docker service logs -f zane_zane-temporal-main-worker
+    command: docker logs -f $(docker ps -qf "name=zane-temporal-main-worker")
     working_dir: null
     auto_start: true
     auto_restart: true

@@ -40,7 +40,7 @@ services:
         zane.role: "log-collector"
 
   zane-temporal-main-worker:
-    image: ghcr.io/zane-ops/app:canary
+    image: ghcr.io/zane-ops/app:v2-canary
     command: /bin/bash -l -c "/code/scripts/run_dev_worker.sh"
     volumes:
       - ../backend:/code
@@ -54,7 +54,6 @@ services:
     networks:
       - zane
     deploy:
-      mode: global
       update_config:
         parallelism: 1
         delay: 5s
@@ -69,7 +68,7 @@ services:
           - node.labels.zane.main-server==true
 
   zane-temporal-node-worker:
-    image: ghcr.io/zane-ops/app:canary
+    image: ghcr.io/zane-ops/app:v2-canary
     command: /bin/bash -l -c "/code/scripts/run_dev_worker.sh"
     volumes:
       - ../backend:/code
@@ -94,7 +93,7 @@ services:
     networks:
       - zane
   zane-temporal-build-worker:
-    image: ghcr.io/zane-ops/app:canary
+    image: ghcr.io/zane-ops/app:v2-canary
     command: /bin/bash -l -c "/code/scripts/run_dev_worker.sh"
     volumes:
       - ../backend:/code
