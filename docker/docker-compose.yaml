@@ -125,22 +125,22 @@ services:
           - zane.api.zaneops.internal
           - zane.frontend
           - zane.front.zaneops.internal
-  zane-temporal-main-worker:
-    build:
-      context: ../backend
-      dockerfile: ../backend/Dockerfile
-    container_name: zane-temporal-main-worker
-    command: /bin/bash -l -c "/code/scripts/run_dev_worker.sh"
-    volumes:
-      - ../backend:/code
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - docker-buildx-store:/root/.docker/buildx
-      - docker-data:/root/.docker
-    environment:
-      <<: *env-vars
-      BACKEND_COMPONENT: WORKER
-    networks:
-      - zane
+  # zane-temporal-main-worker:
+  #   build:
+  #     context: ../backend
+  #     dockerfile: ../backend/Dockerfile
+  #   container_name: zane-temporal-main-worker
+  #   command: /bin/bash -l -c "/code/scripts/run_dev_worker.sh"
+  #   volumes:
+  #     - ../backend:/code
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #     - docker-buildx-store:/root/.docker/buildx
+  #     - docker-data:/root/.docker
+  #   environment:
+  #     <<: *env-vars
+  #     BACKEND_COMPONENT: WORKER
+  #   networks:
+  #     - zane
   zane-temporal-schedule-worker:
     build:
       context: ../backend

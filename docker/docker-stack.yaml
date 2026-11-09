@@ -39,6 +39,35 @@ services:
       labels:
         zane.role: "log-collector"
 
+  zane-temporal-main-worker:
+    image: ghcr.io/zane-ops/app:canary
+    command: /bin/bash -l -c "/code/scripts/run_dev_worker.sh"
+    volumes:
+      - ../backend:/code
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - docker-buildx-store:/root/.docker/buildx
+      - docker-data:/root/.docker
+    environment:
+      <<: *env-vars
+      BACKEND_COMPONENT: WORKER
+      TEMPORALIO_WORKER_TASK_QUEUE: main-task-queue
+    networks:
+      - zane
+    deploy:
+      mode: global
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: any
+      labels:
+        zane.role: "main-worker"
+      placement:
+        constraints:
+          - node.labels.zane.main-server==true
+
   zane-temporal-node-worker:
     image: ghcr.io/zane-ops/app:canary
     command: /bin/bash -l -c "/code/scripts/run_dev_worker.sh"
