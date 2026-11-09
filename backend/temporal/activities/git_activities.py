@@ -48,6 +48,7 @@ with workflow.unsafe.imports_passed_through():
     from django.utils import timezone
     from django.db.models import OuterRef, Subquery
     from container_registry.models import BuildRegistry
+    import docker.errors
 
 
 from copy import deepcopy
@@ -99,6 +100,7 @@ class GitActivities:
                 deployment=deployment,
                 registry_username=registry.registry_username,
                 registry_password=registry.registry_password,
+                registry_secure=registry.is_secure,
             )
 
         return details
@@ -110,63 +112,82 @@ class GitActivities:
             message="Logging in the docker client to the default build registry...",
             source=RuntimeLogSource.BUILD,
         )
-
-        cmd_args = [
-            DOCKER_BINARY_PATH,
-            "login",
-            details.registry_url,
-            "--username",
-            details.registry_username,
-            "--password-stdin",
-        ]
-
-        cmd_string = multiline_command(shlex.join(cmd_args))
-        log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
-        for index, msg in enumerate(log_message.splitlines()):
-            await deployment_log(
-                deployment=details.deployment,
-                message=f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg,
-                source=RuntimeLogSource.BUILD,
+        try:
+            scheme = "https" if details.registry_secure else "http"
+            result = self.docker_client.login(
+                username=details.registry_username,
+                password=details.registry_password,
+                registry=f"{scheme}://{details.registry_url}",
+                reauth=True,
             )
-
-        process = await asyncio.create_subprocess_shell(
-            shlex.join(cmd_args),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            stdin=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await process.communicate(
-            input=details.registry_password.encode()
-        )
-        info_lines = stdout.decode().splitlines()
-        error_lines = stderr.decode().splitlines()
-        if len(info_lines) > 0:
-            await deployment_log(
-                deployment=details.deployment,
-                message=info_lines,
-                source=RuntimeLogSource.BUILD,
-            )
-        if len(error_lines) > 0:
-            await deployment_log(
-                deployment=details.deployment,
-                message=error_lines,
-                source=RuntimeLogSource.BUILD,
-                error=True,
-            )
-        if process.returncode != 0:
+        except docker.errors.APIError as e:
             await deployment_log(
                 deployment=details.deployment,
                 message=f"Error logging in to registry {Colors.BLUE}{details.registry_url}{Colors.ENDC}",
                 source=RuntimeLogSource.BUILD,
                 error=True,
             )
-            raise ApplicationError("Error when logging to registry", non_retryable=True)
+            raise ApplicationError(
+                f"Error when logging to registry: {e}", non_retryable=True
+            )
+
+        # cmd_args = [
+        #     DOCKER_BINARY_PATH,
+        #     "login",
+        #     f"{scheme}://{details.registry_url}",
+        #     "--username",
+        #     details.registry_username,
+        #     "--password-stdin",
+        # ]
+
+        # cmd_string = multiline_command(shlex.join(cmd_args))
+        # log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
+        # for index, msg in enumerate(log_message.splitlines()):
+        #     await deployment_log(
+        #         deployment=details.deployment,
+        #         message=f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg,
+        #         source=RuntimeLogSource.BUILD,
+        #     )
+
+        # process = await asyncio.create_subprocess_shell(
+        #     shlex.join(cmd_args),
+        #     stdout=asyncio.subprocess.PIPE,
+        #     stderr=asyncio.subprocess.PIPE,
+        #     stdin=asyncio.subprocess.PIPE,
+        # )
+        # stdout, stderr = await process.communicate(
+        #     input=details.registry_password.encode()
+        # )
+        # info_lines = stdout.decode().splitlines()
+        # error_lines = stderr.decode().splitlines()
+        # if len(info_lines) > 0:
+        #     await deployment_log(
+        #         deployment=details.deployment,
+        #         message=info_lines,
+        #         source=RuntimeLogSource.BUILD,
+        #     )
+        # if len(error_lines) > 0:
+        #     await deployment_log(
+        #         deployment=details.deployment,
+        #         message=error_lines,
+        #         source=RuntimeLogSource.BUILD,
+        #         error=True,
+        #     )
+        # if process.returncode != 0:
+        # await deployment_log(
+        #     deployment=details.deployment,
+        #     message=f"Error logging in to registry {Colors.BLUE}{details.registry_url}{Colors.ENDC}",
+        #     source=RuntimeLogSource.BUILD,
+        #     error=True,
+        # )
+        # raise ApplicationError("Error when logging to registry", non_retryable=True)
 
         await deployment_log(
             deployment=details.deployment,
             message=f"Successfully logged in to registry {Colors.BLUE}{details.registry_url}{Colors.ENDC} ✅",
             source=RuntimeLogSource.BUILD,
         )
+        return result
 
     @activity.defn
     async def upsert_github_pull_request_comment(self, deployment: DeploymentDetails):
@@ -1491,6 +1512,41 @@ class GitActivities:
         )
 
     @activity.defn
+    async def get_all_service_aliases_ips_on_network(
+        self, deployment: DeploymentDetails
+    ) -> dict[str, str]:
+        service = deployment.service
+        current_env = await Environment.objects.aget(pk=service.environment.id)
+
+        current_network_name = get_env_network_resource_name(
+            current_env.id, service.project_id
+        )
+        service_names = []
+        service_names = []
+        deployment_queryset = Deployment.objects.filter(
+            service_id=OuterRef("pk"), is_current_production=True
+        ).order_by("-updated_at")
+        async for service in (
+            current_env.services.filter()
+            .exclude(id=service.id)
+            .annotate(
+                production_deployment_hash=Subquery(
+                    deployment_queryset.values("hash")[:1]
+                )
+            )
+        ):
+            service_name = get_swarm_service_name_for_deployment(
+                service.production_deployment_hash,  # type: ignore
+                service.project_id,
+                service.id,
+            )
+            service_names.append(service_name)
+        service_ip_aliases_map = get_swarm_service_aliases_ips_on_network(
+            service_names, current_network_name
+        )
+        return service_ip_aliases_map
+
+    @activity.defn
     async def build_service_with_railpack_dockerfile(
         self, details: GitBuildDetails
     ) -> Optional[str]:
@@ -1530,34 +1586,34 @@ class GitActivities:
             git_deployment.build_started_at = timezone.now()
             await git_deployment.asave(update_fields=["build_started_at", "updated_at"])
 
-            current_env = await Environment.objects.aget(pk=service.environment.id)
+            # current_env = await Environment.objects.aget(pk=service.environment.id)
 
-            current_network_name = get_env_network_resource_name(
-                current_env.id, service.project_id
-            )
-            service_names = []
-            deployment_queryset = Deployment.objects.filter(
-                service_id=OuterRef("pk"), is_current_production=True
-            ).order_by("-updated_at")
-            async for service in (
-                current_env.services.filter()
-                .exclude(id=service.id)
-                .annotate(
-                    production_deployment_hash=Subquery(
-                        deployment_queryset.values("hash")[:1]
-                    )
-                )
-            ):
-                service_name = get_swarm_service_name_for_deployment(
-                    service.production_deployment_hash,  # type: ignore
-                    service.project_id,
-                    service.id,
-                )
-                service_names.append(service_name)
+            # current_network_name = get_env_network_resource_name(
+            #     current_env.id, service.project_id
+            # )
+            # service_names = []
+            # deployment_queryset = Deployment.objects.filter(
+            #     service_id=OuterRef("pk"), is_current_production=True
+            # ).order_by("-updated_at")
+            # async for service in (
+            #     current_env.services.filter()
+            #     .exclude(id=service.id)
+            #     .annotate(
+            #         production_deployment_hash=Subquery(
+            #             deployment_queryset.values("hash")[:1]
+            #         )
+            #     )
+            # ):
+            #     service_name = get_swarm_service_name_for_deployment(
+            #         service.production_deployment_hash,  # type: ignore
+            #         service.project_id,
+            #         service.id,
+            #     )
+            #     service_names.append(service_name)
 
-            service_ip_aliases_map = get_swarm_service_aliases_ips_on_network(
-                service_names, current_network_name
-            )
+            # service_ip_aliases_map = get_swarm_service_aliases_ips_on_network(
+            #     service_names, current_network_name
+            # )
 
             build_registry = await BuildRegistry.objects.filter(
                 is_default=True
@@ -1571,7 +1627,7 @@ class GitActivities:
                 # to circumvent this error, we replace the network aliases of services by their ips in each env variable
                 # ref: https://github.com/railwayapp/railpack/issues/145
                 for env in build_envs:
-                    for alias in service_ip_aliases_map:
+                    for alias in details.service_ip_aliases:
                         if alias in build_envs[env]:
                             global_alias = f"{alias}.{details.deployment.service.environment.id.replace(Environment.ID_PREFIX, '')}"
                             build_envs[env] = (
@@ -1579,17 +1635,17 @@ class GitActivities:
                                 # also replace their internal FQDN network aliases
                                 .replace(
                                     f"{alias}.zaneops.internal",
-                                    service_ip_aliases_map[alias],
+                                    details.service_ip_aliases[alias],
                                 )
-                                .replace(alias, service_ip_aliases_map[alias])
+                                .replace(alias, details.service_ip_aliases[alias])
                                 # also replace their internal FQDN global network aliases
                                 .replace(
                                     global_alias,
-                                    service_ip_aliases_map[alias],
+                                    details.service_ip_aliases[alias],
                                 )
                                 .replace(
                                     f"{global_alias}.zaneops.internal",
-                                    service_ip_aliases_map[alias],
+                                    details.service_ip_aliases[alias],
                                 )
                             )
 
@@ -1655,9 +1711,20 @@ class GitActivities:
                 if build_registry is not None:
                     image_name = f"{build_registry.registry_domain}/{details.image_tag}"
 
-                docker_build_command.extend(
-                    ["--output", f"type=docker,name={image_name}"]
-                )
+                build_registry = await BuildRegistry.objects.filter(
+                    is_default=True
+                ).afirst()
+                if build_registry:
+                    docker_build_command.extend(
+                        [
+                            "--output",
+                            f"type=image,push=true,name={image_name},registry.insecure={str(not build_registry.is_secure).lower()}",
+                        ]
+                    )
+                else:
+                    docker_build_command.extend(
+                        ["--output", f"type=docker,name={image_name}"]
+                    )
 
                 # Add the tag and dockerfile
                 docker_build_command.extend(["-t", image_name])
@@ -1785,7 +1852,7 @@ class GitActivities:
                 heartbeat_task.cancel()
 
     @activity.defn
-    async def push_image_to_remote_registry(self, deployment: DeploymentDetails):
+    async def push_built_image_to_remote_registry(self, deployment: DeploymentDetails):
         build_registry = await BuildRegistry.objects.filter(is_default=True).afirst()
 
         if build_registry is None:

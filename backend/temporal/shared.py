@@ -25,6 +25,7 @@ from compose.dtos import (
     ComposeStackServiceStatusDto,
     ComposeStackSnapshot,
 )
+from temporalio import activity
 
 from .constants import (
     BUILD_REGISTRY_VOLUME_PATH,
@@ -32,6 +33,12 @@ from .constants import (
     ZANEOPS_RESUME_DEPLOY_MARKER,
     BUILD_REGISTRY_PASSWORD_PATH,
 )
+
+
+@activity.defn(name="select-task-queue")
+async def select_task_queue() -> str:
+    """Just a stub for typedworkflow invocation."""
+    raise NotImplementedError
 
 
 @dataclass
@@ -66,6 +73,7 @@ class GitBuildDetails:
     dockerfile_path: str
     build_context_dir: str
     image_tag: str
+    service_ip_aliases: dict[str, str] = field(default_factory=dict)
     build_stage_target: Optional[str] = None
     default_env_variables: List[EnvVariableDto] | None = None
 
@@ -453,6 +461,7 @@ class BuildRegistryDetails:
     registry_username: str
     registry_password: str
     deployment: DeploymentDetails
+    registry_secure: bool
 
 
 @dataclass

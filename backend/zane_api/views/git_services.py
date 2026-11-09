@@ -27,9 +27,7 @@ from ..dtos import (
 )
 from ..constants import HEAD_COMMIT
 
-from .base import (
-    ResourceConflict,
-)
+from .base import ResourceConflict
 
 from .serializers import (
     GitServiceDeployRequestSerializer,
@@ -73,6 +71,8 @@ from temporal.workflows import (
 )
 from .helpers import diff_service_snapshots  # , apply_changes_to_snapshot
 from temporal.helpers import generate_caddyfile_for_static_website
+from django.conf import settings
+
 # from ..utils import pluralize
 from ..permissions import (
     HasWorkspace,
@@ -417,6 +417,7 @@ class DeployGitServiceAPIView(APIView):
                 workflow=DeployGitServiceWorkflow.run,
                 arg=payload,
                 id=payload.workflow_id,
+                task_queue=settings.TEMPORALIO_DISPATCH_TASK_QUEUE,
             )
 
         transaction.on_commit(commit_callback)
