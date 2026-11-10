@@ -133,11 +133,11 @@ export default function BuildRegistryListPage({
               </TableCell>
               <TableCell className="p-2">
                 <a
-                  href={`${registry.is_secure ? "https" : "http"}://${registry.registry_domain}`}
+                  href={`https://${registry.registry_domain}`}
                   target="_blank"
                   className="underline text-link inline-flex items-center gap-1"
                 >
-                  <span>{`${registry.is_secure ? "https" : "http"}://${registry.registry_domain}`}</span>
+                  <span>{`https://${registry.registry_domain}`}</span>
                   <ExternalLinkIcon size={16} className="flex-none" />
                 </a>
               </TableCell>
@@ -255,11 +255,6 @@ function DeleteConfirmationFormDialog({
           <input type="hidden" name="intent" value="delete" />
           <input type="hidden" name="name" value={registry.name} />
           <input type="hidden" name="domain" value={registry.registry_domain} />
-          <input
-            type="hidden"
-            name="scheme"
-            value={registry.is_secure ? "https" : "http"}
-          />
         </fetcher.Form>
       }
       trigger={
