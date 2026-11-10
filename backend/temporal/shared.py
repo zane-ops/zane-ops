@@ -461,7 +461,6 @@ class BuildRegistryDetails:
     registry_username: str
     registry_password: str
     deployment: DeploymentDetails
-    registry_secure: bool
 
 
 @dataclass
@@ -581,7 +580,6 @@ class RegistrySnaphot:
     version: int
     service_alias: str
     swarm_service_name: str
-    is_secure: bool
     monitor_schedule_id: str
 
 

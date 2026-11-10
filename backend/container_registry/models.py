@@ -87,8 +87,6 @@ class BuildRegistry(TimestampedModel):
     swarm_service_name = models.CharField(null=True)
     service_alias = models.CharField(null=True)
 
-    is_secure = models.BooleanField(default=True)
-
     # S3 Configuration (for registry storage)
     s3_credentials = models.JSONField(null=True)
 

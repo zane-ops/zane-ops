@@ -116,10 +116,9 @@ class BuildRegistryListImagesAPIView(APIView):
 
         per_page = cast(int, data["per_page"])
 
-        scheme = "https" if registry.is_secure else "http"
         try:
             response = requests.get(
-                f"{scheme}://{registry.registry_domain}/v2/_catalog",
+                f"https://{registry.registry_domain}/v2/_catalog",
                 params=dict(
                     n=per_page,
                     last=data.get("cursor"),

@@ -100,7 +100,6 @@ class GitActivities:
                 deployment=deployment,
                 registry_username=registry.registry_username,
                 registry_password=registry.registry_password,
-                registry_secure=registry.is_secure,
             )
 
         return details
@@ -113,11 +112,10 @@ class GitActivities:
             source=RuntimeLogSource.BUILD,
         )
         try:
-            scheme = "https" if details.registry_secure else "http"
             result = self.docker_client.login(
                 username=details.registry_username,
                 password=details.registry_password,
-                registry=f"{scheme}://{details.registry_url}",
+                registry=details.registry_url,
                 reauth=True,
             )
         except docker.errors.APIError as e:
@@ -842,12 +840,19 @@ class GitActivities:
                 if build_registry is not None:
                     image_name = f"{build_registry.registry_domain}/{details.image_tag}"
 
-                docker_build_command.extend(["-t", image_name])
-                docker_build_command.extend(
-                    ["--output", f"type=docker,name={image_name}"]
-                )
+                    docker_build_command.extend(
+                        [
+                            "--output",
+                            f"type=image,push=true,name={image_name}",
+                        ]
+                    )
+                else:
+                    docker_build_command.extend(
+                        ["--output", f"type=docker,name={image_name}"]
+                    )
 
                 # Finally, add the build context directory
+                docker_build_command.extend(["-t", image_name])
                 docker_build_command.append(details.build_context_dir)
 
                 await deployment_log(
@@ -1710,15 +1715,10 @@ class GitActivities:
                 image_name = details.image_tag
                 if build_registry is not None:
                     image_name = f"{build_registry.registry_domain}/{details.image_tag}"
-
-                build_registry = await BuildRegistry.objects.filter(
-                    is_default=True
-                ).afirst()
-                if build_registry:
                     docker_build_command.extend(
                         [
                             "--output",
-                            f"type=image,push=true,name={image_name},registry.insecure={str(not build_registry.is_secure).lower()}",
+                            f"type=image,push=true,name={image_name}",
                         ]
                     )
                 else:

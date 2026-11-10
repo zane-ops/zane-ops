@@ -273,7 +273,6 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                 username=registry.registry_username,
                 password=registry.registry_password,
                 version=registry.version,
-                is_secure=registry.is_secure,
                 monitor_schedule_id=registry.monitor_schedule_id,
             )
 
@@ -294,7 +293,6 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             "name",
             "is_default",
             "service_alias",
-            "is_secure",
             "version",
             # credentials
             "registry_domain",
@@ -402,7 +400,6 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
 
         name = validated_data.get("name", instance.name)
         is_default = validated_data.get("is_default", instance.is_default)
-        is_secure = validated_data.get("is_secure", instance.is_secure)
 
         if is_default:
             BuildRegistry.objects.exclude(id=instance.id).update(is_default=False)
@@ -412,7 +409,6 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             registry_domain=registry_domain,
             name=name,
             is_default=is_default,
-            is_secure=is_secure,
             registry_username=registry_username,
             registry_password=registry_password,
             storage_backend=storage_backend,
@@ -453,7 +449,6 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             username=instance.registry_username,
             password=instance.registry_password,
             version=instance.version,
-            is_secure=instance.is_secure,
             monitor_schedule_id=instance.monitor_schedule_id,
         )
         new_snapshot = RegistrySnaphot(
@@ -471,7 +466,6 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             username=registry_username,
             password=registry_password,
             version=instance.version + 1,
-            is_secure=is_secure,
             monitor_schedule_id=instance.monitor_schedule_id,
         )
 
@@ -506,7 +500,6 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             "registry_username",
             "registry_password",
             "version",
-            "is_secure",
             "storage_backend",
             # S3 credentials
             "s3_credentials",
