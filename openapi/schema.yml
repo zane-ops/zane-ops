@@ -18946,8 +18946,6 @@ components:
           type: string
           readOnly: true
           nullable: true
-        is_secure:
-          type: boolean
         version:
           type: integer
           readOnly: true
@@ -18974,7 +18972,6 @@ components:
       - healthcheck_message
       - id
       - is_default
-      - is_secure
       - name
       - registry_domain
       - registry_username
@@ -18990,8 +18987,6 @@ components:
           minLength: 1
           maxLength: 200
         is_default:
-          type: boolean
-        is_secure:
           type: boolean
         registry_domain:
           type: string
@@ -19054,8 +19049,6 @@ components:
         version:
           type: integer
           readOnly: true
-        is_secure:
-          type: boolean
         storage_backend:
           $ref: '#/components/schemas/StorageBackendEnum'
         s3_credentials:
@@ -19074,7 +19067,6 @@ components:
       - healthcheck_message
       - id
       - is_default
-      - is_secure
       - name
       - registry_domain
       - registry_username
@@ -28523,8 +28515,6 @@ components:
           type: string
           writeOnly: true
           minLength: 1
-        is_secure:
-          type: boolean
         storage_backend:
           $ref: '#/components/schemas/StorageBackendEnum'
         s3_credentials:
@@ -31436,7 +31426,6 @@ components:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateNameErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsDefaultErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsSecureErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryDomainErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent'
@@ -31454,7 +31443,6 @@ components:
           non_field_errors: '#/components/schemas/RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent'
           name: '#/components/schemas/RegistriesBuildRegistriesCreateNameErrorComponent'
           is_default: '#/components/schemas/RegistriesBuildRegistriesCreateIsDefaultErrorComponent'
-          is_secure: '#/components/schemas/RegistriesBuildRegistriesCreateIsSecureErrorComponent'
           registry_domain: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryDomainErrorComponent'
           registry_username: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent'
           registry_password: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent'
@@ -31493,28 +31481,6 @@ components:
             * `invalid` - invalid
             * `null` - null
             * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegistriesBuildRegistriesCreateIsSecureErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - is_secure
-          type: string
-          description: '* `is_secure` - is_secure'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
         detail:
           type: string
       required:
@@ -31885,7 +31851,6 @@ components:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateStorageBackendErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent'
@@ -31903,7 +31868,6 @@ components:
           registry_domain: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent'
           registry_username: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent'
           registry_password: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent'
-          is_secure: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent'
           storage_backend: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateStorageBackendErrorComponent'
           s3_credentials.non_field_errors: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent'
           s3_credentials.region: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent'
@@ -31939,28 +31903,6 @@ components:
             * `invalid` - invalid
             * `null` - null
             * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - is_secure
-          type: string
-          description: '* `is_secure` - is_secure'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
         detail:
           type: string
       required:
