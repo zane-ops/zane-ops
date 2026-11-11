@@ -375,7 +375,7 @@ function EditBuildRegistryForm() {
             >
               <div className="inline-flex gap-2 items-start">
                 <FieldSetCheckbox
-                  defaultChecked={registry.s3_credentials?.secure}
+                  defaultChecked={registry.s3_credentials?.secure ?? true}
                   className="relative top-1"
                 />
 
