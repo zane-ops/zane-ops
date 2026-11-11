@@ -23,8 +23,17 @@ with workflow.unsafe.imports_passed_through():
     from ..helpers import get_docker_client
     from ..proxy import ZaneProxyClient
     from ..semaphore import AsyncSemaphore
-    from ..schedules import MonitorRegistrySwarmServiceWorkflow
+    from ..schedules import (
+        MonitorRegistrySwarmServiceWorkflow,
+        RefreshBuildRegistryLoginInfoWorkflow,
+    )
     from container_registry.models import BuildRegistry
+    from zane_api.utils import (
+        DockerSwarmTask,
+        DockerSwarmTaskState,
+        find_item_in_sequence,
+    )
+    from swarm.models import SwarmNode
 
 from ..client import TemporalClient
 
@@ -44,7 +53,6 @@ from ..constants import (
     BUILD_REGISTRY_DEPLOY_SEMAPHORE_KEY,
 )
 import platform
-from zane_api.utils import DockerSwarmTask, DockerSwarmTaskState, find_item_in_sequence
 
 
 class SimpleRegistryPayloadLike(Protocol):
@@ -86,7 +94,10 @@ async def acquire_registry_deploy_semaphore(registry_id: str):
         limit=1,
         semaphore_timeout=timedelta(minutes=20),
     )
-    await semaphore.acquire()
+    await semaphore.acquire(
+        max_retries=20,
+        retry_delay=5,
+    )
 
 
 @activity.defn
@@ -373,6 +384,7 @@ async def update_build_registry_swarm_service(
                 version=str(service.registry.version),
                 status="active",
             ),
+            constraints=[f"node.labels.{settings.MAIN_SERVER_LABEL}==true"],
             env=[
                 f"__ZANE_VERSION={service.registry.version}",
                 "OTEL_TRACES_EXPORTER=none",
@@ -529,6 +541,7 @@ async def create_build_registry_swarm_service(
                 version=str(service.registry.version),
                 status="active",
             ),
+            constraints=[f"node.labels.{settings.MAIN_SERVER_LABEL}==true"],
             env=[
                 f"__ZANE_VERSION={service.registry.version}",
                 "OTEL_TRACES_EXPORTER=none",
@@ -575,18 +588,25 @@ async def create_build_registry_swarm_service(
 
 
 @activity.defn
-async def create_registry_health_check_schedule(registry: RegistrySnaphot):
-    try:
-        await TemporalClient.acreate_schedule(
-            workflow=MonitorRegistrySwarmServiceWorkflow.run,
-            args=registry,
-            id=registry.monitor_schedule_id,
-            interval=timedelta(seconds=30),
-            task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
-        )
-    except ScheduleAlreadyRunningError:
-        # because the schedule already exists and is running, we can ignore it
-        pass
+async def upsert_registry_schedules(registry: RegistrySnaphot):
+    task_queue = await SwarmNode.aget_main_schedule_task_queue()
+    healthcheck_task = TemporalClient.acreate_or_update_schedule(
+        workflow=MonitorRegistrySwarmServiceWorkflow.run,
+        arg=registry,
+        id=registry.monitor_schedule_id,
+        interval=timedelta(seconds=30),
+        task_queue=task_queue,
+    )
+    login_refresh_task = TemporalClient.acreate_or_update_schedule(
+        workflow=RefreshBuildRegistryLoginInfoWorkflow.run,
+        arg=registry,
+        id=registry.login_refresh_schedule_id,
+        interval=timedelta(seconds=5),
+        task_queue=task_queue,
+    )
+
+    await asyncio.gather(healthcheck_task, login_refresh_task)
+    return [registry.monitor_schedule_id, registry.login_refresh_schedule_id]
 
 
 @activity.defn

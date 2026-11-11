@@ -1,7 +1,9 @@
+import asyncio
 from datetime import timedelta
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
+from temporalio.workflow import ActivityHandle
 
 from .activities import (
     DockerDeploymentMetricsActivities,
@@ -11,6 +13,8 @@ from .activities import (
     MonitorRegistryDeploymentActivites,
     MonitorComposeStackActivites,
     DockerComposeStackMetricsActivities,
+    get_all_swarm_nodes_in_cluster,
+    login_to_build_registry,
 )
 from ..shared import (
     HealthcheckDeploymentDetails,
@@ -240,3 +244,32 @@ class CleanupAppDataWorkflow:
             stack_metrics_deleted_count=stack_metrics_deleted_count,
             http_logs_deleted_count=http_logs_deleted_count,
         )
+
+
+@workflow.defn(name="refresh-build-registry-login")
+class RefreshBuildRegistryLoginInfoWorkflow:
+    def __init__(self):
+        self.retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+
+    @workflow.run
+    async def run(self, payload: RegistrySnaphot):
+        in_cluster_nodes = await workflow.execute_activity(
+            get_all_swarm_nodes_in_cluster,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+        handles: list[ActivityHandle] = []
+        for node in in_cluster_nodes:
+            handle = workflow.start_activity(
+                login_to_build_registry,
+                payload,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+                task_queue=node.task_queue,
+                schedule_to_start_timeout=timedelta(seconds=30),
+            )
+            handles.append(handle)
+        await asyncio.gather(*handles, return_exceptions=True)

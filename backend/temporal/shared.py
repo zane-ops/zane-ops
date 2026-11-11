@@ -581,6 +581,7 @@ class RegistrySnaphot:
     service_alias: str
     swarm_service_name: str
     monitor_schedule_id: str
+    login_refresh_schedule_id: str
 
 
 @dataclass
@@ -590,6 +591,15 @@ class UpdateRegistryPayload:
     id: str
     previous: RegistrySnaphot
     current: RegistrySnaphot
+
+
+@dataclass
+class SimpleInClusterSwarmNodeDetails:
+    id: str
+    private_ip: str
+    hostname: str | None
+    swarm_node_id: str
+    task_queue: str
 
 
 @dataclass

@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 from datetime import timedelta
+import shlex
 from typing import Dict, List, cast
 from rest_framework import status
 from temporalio import workflow, activity
@@ -18,7 +19,9 @@ from ..shared import (
     ComposeStackHealthcheckResult,
     ComposeStackMetricsResult,
     ContainerMetrics,
+    SimpleInClusterSwarmNodeDetails,
 )
+from ..constants import DOCKER_BINARY_PATH
 
 with workflow.unsafe.imports_passed_through():
     import requests
@@ -35,6 +38,7 @@ with workflow.unsafe.imports_passed_through():
         Colors,
         escape_ansi,
         excerpt,
+        multiline_command,
     )
     from search.loki_client import LokiSearchClient
     from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
@@ -47,6 +51,8 @@ with workflow.unsafe.imports_passed_through():
         collect_swarm_service_metrics,
     )
     from console.models import SystemSettings
+    from swarm.models import SwarmNode
+
 
 docker_client: docker.DockerClient | None = None
 
@@ -618,3 +624,67 @@ class MonitorComposeStackActivites:
                 for name, service in healthcheck.services.items()
             }
         )
+
+
+@activity.defn
+async def get_all_swarm_nodes_in_cluster() -> list[SimpleInClusterSwarmNodeDetails]:
+    IN_CLUSTER_STATUSES = [
+        SwarmNode.Status.ACTIVE,
+        SwarmNode.Status.DOWN,
+        SwarmNode.Status.UNHEALTHY,
+        SwarmNode.Status.PAUSED,
+        SwarmNode.Status.DRAINED,
+    ]
+
+    qs = SwarmNode.objects.filter(
+        status__in=IN_CLUSTER_STATUSES,
+        swarm_node_id__isnull=False,
+    )
+
+    return [
+        SimpleInClusterSwarmNodeDetails(
+            id=node.id,
+            private_ip=node.private_ip,
+            hostname=node.hostname,
+            swarm_node_id=cast(str, node.swarm_node_id),
+            task_queue=node.node_task_queue,
+        )
+        async for node in qs.all()
+    ]
+
+
+@activity.defn
+async def login_to_build_registry(payload: RegistrySnaphot) -> str:
+    cmd_args = [
+        DOCKER_BINARY_PATH,
+        "login",
+        payload.domain,
+        "--username",
+        payload.username,
+        "--password-stdin",
+    ]
+
+    cmd_string = multiline_command(shlex.join(cmd_args))
+    log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
+    for index, msg in enumerate(log_message.splitlines()):
+        print(f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg)
+
+    process = await asyncio.create_subprocess_shell(
+        shlex.join(cmd_args),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        stdin=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await process.communicate(input=payload.password.encode())
+    info_lines = stdout.decode().splitlines()
+    error_lines = stderr.decode().splitlines()
+    if len(info_lines) > 0:
+        print(*info_lines)
+    if len(error_lines) > 0:
+        print(*[f"{Colors.RED}{line}{Colors.ENDC}" for line in error_lines])
+    if process.returncode != 0:
+        return (
+            f"Error logging in to registry {Colors.BLUE}{payload.domain}{Colors.ENDC}"
+        )
+    else:
+        return f"Successfully logged in to registry {Colors.BLUE}{payload.domain}{Colors.ENDC} ✅"

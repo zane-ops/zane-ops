@@ -114,6 +114,10 @@ class BuildRegistry(TimestampedModel):
         return f"monitor-{self.id}"
 
     @property
+    def refresh_login_schedule_id(self) -> str:
+        return f"refresh-login-{self.id}"
+
+    @property
     def destroy_workflow_id(self) -> str:
         return f"destroy-{self.id}"
 

@@ -2,7 +2,11 @@ from typing import cast
 from rest_framework import serializers
 
 from ..models import BuildRegistry
-from temporal.workflows import DeployBuildRegistryWorkflow, UpdateBuildRegistryWorkflow
+from temporal.workflows import (
+    DeployBuildRegistryWorkflow,
+    UpdateBuildRegistryWorkflow,
+    RefreshBuildRegistryLoginInfoWorkflow,
+)
 from temporal.client import TemporalClient
 from temporal.shared import RegistryConfig, RegistrySnaphot, UpdateRegistryPayload
 from django.db import transaction
@@ -188,16 +192,6 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
         return domain
 
-    def validate_is_default(self, is_default: bool):
-        if (
-            not is_default
-            and not BuildRegistry.objects.filter(is_default=True).exists()
-        ):
-            raise serializers.ValidationError(
-                "At least one build registry must be set as the default registry."
-            )
-        return is_default
-
     def validate(self, attrs: dict):
         password = attrs.get("registry_password")
         storage_backend = attrs.get("storage_backend")
@@ -274,6 +268,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                 password=registry.registry_password,
                 version=registry.version,
                 monitor_schedule_id=registry.monitor_schedule_id,
+                login_refresh_schedule_id=registry.refresh_login_schedule_id,
             )
 
             TemporalClient.start_workflow(
@@ -348,22 +343,13 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
 
         return domain
 
-    def validate_is_default(self, is_default: bool):
-        self.instance = cast(BuildRegistry, self.instance)
-        if (
-            not is_default
-            and not BuildRegistry.objects.filter(
-                Q(is_default=True) & ~Q(pk=self.instance.id)
-            ).exists()
-        ):
-            raise serializers.ValidationError(
-                "At least one build registry must be set as the default registry."
-            )
-        return is_default
-
     def validate(self, attrs: dict):
-        storage_backend = attrs.get("storage_backend", self.instance.storage_backend)
-        s3_credentials = attrs.get("s3_credentials", self.instance.s3_credentials)
+        storage_backend = attrs.get(
+            "storage_backend", cast(BuildRegistry, self.instance).storage_backend
+        )
+        s3_credentials = attrs.get(
+            "s3_credentials", cast(BuildRegistry, self.instance).s3_credentials
+        )
 
         if storage_backend == BuildRegistry.StorageBackend.LOCAL:
             # remove s3 credentials
@@ -450,6 +436,7 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             password=instance.registry_password,
             version=instance.version,
             monitor_schedule_id=instance.monitor_schedule_id,
+            login_refresh_schedule_id=instance.refresh_login_schedule_id,
         )
         new_snapshot = RegistrySnaphot(
             service_alias=cast(str, instance.service_alias),
@@ -467,6 +454,7 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             password=registry_password,
             version=instance.version + 1,
             monitor_schedule_id=instance.monitor_schedule_id,
+            login_refresh_schedule_id=instance.refresh_login_schedule_id,
         )
 
         def commit_callback():
