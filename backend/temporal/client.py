@@ -177,6 +177,86 @@ class TemporalClient:
         )
 
     @classmethod
+    def create_or_update_schedule[T, P](
+        cls,
+        workflow: Callable[[P, T], Awaitable[Any]],
+        arg: T,
+        id: str,
+        interval: timedelta,
+        task_queue: str,
+        execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+    ):
+        return async_to_sync(cls.acreate_or_update_schedule)(
+            workflow,
+            arg,
+            id,
+            interval,
+            task_queue,
+            execution_timeout,
+        )
+
+    @classmethod
+    async def acreate_or_update_schedule[T, P](
+        cls,
+        workflow: Callable[[P, T], Awaitable[Any]],
+        arg: T,
+        id: str,
+        interval: timedelta,
+        task_queue: str,
+        execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+    ):
+        client = await cls._ensure_client()
+        schedule_id = f"schedule-{id}"
+        schedule = Schedule(
+            action=ScheduleActionStartWorkflow(
+                workflow,
+                id=f"{schedule_id}-workflow",
+                arg=arg,
+                task_queue=task_queue,
+                execution_timeout=execution_timeout,
+            ),
+            spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=interval)]),
+        )
+
+        handle = client.get_schedule_handle(schedule_id)
+
+        def update_schedule_simple(input: ScheduleUpdateInput):
+            schedule = input.description.schedule
+
+            # Update the schedule
+            new_schedule = Schedule(
+                spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=interval)]),
+                action=ScheduleActionStartWorkflow(
+                    workflow,
+                    id=f"{schedule_id}-workflow",
+                    arg=arg,
+                    task_queue=task_queue,
+                    execution_timeout=execution_timeout,
+                ),
+                # Keep other properties the same
+                policy=schedule.policy,
+                state=schedule.state,
+            )
+
+            return ScheduleUpdate(schedule=new_schedule)
+
+        try:
+            await handle.update(
+                update_schedule_simple, rpc_timeout=timedelta(seconds=5)
+            )
+        except RPCError:
+            # probably because the schedule doesn't exist
+            try:
+                await client.create_schedule(
+                    schedule_id,
+                    schedule,
+                    rpc_timeout=timedelta(seconds=5),
+                )
+            except ScheduleAlreadyRunningError:
+                # because the schedule already exists and is running, we can ignore it
+                pass
+
+    @classmethod
     async def acreate_schedule(
         cls,
         workflow: Union[str, Callable[..., Awaitable[Any]]],
@@ -202,7 +282,7 @@ class TemporalClient:
         )
 
     @classmethod
-    async def create_or_update_schedule(
+    async def create_or_update_schedule_with_cron(
         cls,
         schedule_id: str,
         workflow: Callable[..., Awaitable[Any]],
