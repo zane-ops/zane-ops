@@ -4,6 +4,10 @@
 
 ### Build/Deploy routing
 
+- [x] Refresh the login to the build registry on all servers ? 
+      - what if the root ssh key doesn't exist anymore ? -> no need
+- [ ] No need for multiple build registries, one is enough
+- [ ] Fail git builds when there is more than one server if there is no Build registry
 - [ ] Update service healthchecks (http/cmd) to use the container's IP instead of the container's ID
       Or run the healthcheck in the correct temporal-node worker (on the correct server)
       Remember that for services that aren't pinned to one server, the healthcheck will need to run on 
@@ -17,6 +21,7 @@
 - [ ] How to Handle healthcheck for services with multiple replicas ?
 - [ ] A service deployed with `ANY_DEPLOY_SERVER` will migrate if a node is unhealthy, will need to somehow migrate
       the healthcheck, or run the healthcheck everywhere ?
+- [ ] Fix `schedule-task-queue` task queue not existing anymore
 
 ### Swarm node workflows — safety
 
