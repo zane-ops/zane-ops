@@ -111,81 +111,63 @@ class GitActivities:
             message="Logging in the docker client to the default build registry...",
             source=RuntimeLogSource.BUILD,
         )
-        try:
-            result = self.docker_client.login(
-                username=details.registry_username,
-                password=details.registry_password,
-                registry=details.registry_url,
-                reauth=True,
+
+        cmd_args = [
+            DOCKER_BINARY_PATH,
+            "login",
+            details.registry_url,
+            "--username",
+            details.registry_username,
+            "--password-stdin",
+        ]
+
+        cmd_string = multiline_command(shlex.join(cmd_args))
+        log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
+        for index, msg in enumerate(log_message.splitlines()):
+            await deployment_log(
+                deployment=details.deployment,
+                message=f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg,
+                source=RuntimeLogSource.BUILD,
             )
-        except docker.errors.APIError as e:
+
+        process = await asyncio.create_subprocess_shell(
+            shlex.join(cmd_args),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            stdin=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate(
+            input=details.registry_password.encode()
+        )
+        info_lines = stdout.decode().splitlines()
+        error_lines = stderr.decode().splitlines()
+        if len(info_lines) > 0:
+            await deployment_log(
+                deployment=details.deployment,
+                message=info_lines,
+                source=RuntimeLogSource.BUILD,
+            )
+        if len(error_lines) > 0:
+            await deployment_log(
+                deployment=details.deployment,
+                message=error_lines,
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+        if process.returncode != 0:
             await deployment_log(
                 deployment=details.deployment,
                 message=f"Error logging in to registry {Colors.BLUE}{details.registry_url}{Colors.ENDC}",
                 source=RuntimeLogSource.BUILD,
                 error=True,
             )
-            raise ApplicationError(
-                f"Error when logging to registry: {e}", non_retryable=True
-            )
-
-        # cmd_args = [
-        #     DOCKER_BINARY_PATH,
-        #     "login",
-        #     f"{scheme}://{details.registry_url}",
-        #     "--username",
-        #     details.registry_username,
-        #     "--password-stdin",
-        # ]
-
-        # cmd_string = multiline_command(shlex.join(cmd_args))
-        # log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
-        # for index, msg in enumerate(log_message.splitlines()):
-        #     await deployment_log(
-        #         deployment=details.deployment,
-        #         message=f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg,
-        #         source=RuntimeLogSource.BUILD,
-        #     )
-
-        # process = await asyncio.create_subprocess_shell(
-        #     shlex.join(cmd_args),
-        #     stdout=asyncio.subprocess.PIPE,
-        #     stderr=asyncio.subprocess.PIPE,
-        #     stdin=asyncio.subprocess.PIPE,
-        # )
-        # stdout, stderr = await process.communicate(
-        #     input=details.registry_password.encode()
-        # )
-        # info_lines = stdout.decode().splitlines()
-        # error_lines = stderr.decode().splitlines()
-        # if len(info_lines) > 0:
-        #     await deployment_log(
-        #         deployment=details.deployment,
-        #         message=info_lines,
-        #         source=RuntimeLogSource.BUILD,
-        #     )
-        # if len(error_lines) > 0:
-        #     await deployment_log(
-        #         deployment=details.deployment,
-        #         message=error_lines,
-        #         source=RuntimeLogSource.BUILD,
-        #         error=True,
-        #     )
-        # if process.returncode != 0:
-        # await deployment_log(
-        #     deployment=details.deployment,
-        #     message=f"Error logging in to registry {Colors.BLUE}{details.registry_url}{Colors.ENDC}",
-        #     source=RuntimeLogSource.BUILD,
-        #     error=True,
-        # )
-        # raise ApplicationError("Error when logging to registry", non_retryable=True)
+            raise ApplicationError("Error when logging to registry", non_retryable=True)
 
         await deployment_log(
             deployment=details.deployment,
             message=f"Successfully logged in to registry {Colors.BLUE}{details.registry_url}{Colors.ENDC} ✅",
             source=RuntimeLogSource.BUILD,
         )
-        return result
 
     @activity.defn
     async def upsert_github_pull_request_comment(self, deployment: DeploymentDetails):
