@@ -9,6 +9,7 @@ from temporal.workflows.system import DockerSystemPruneWorkflow
 from temporal.workflows.swarm import SwarmHealthcheckWorkflow
 from temporal.client import TemporalClient
 from zane_api.utils import Colors
+from swarm.models import SwarmNode
 
 
 async def setup_jobs():
@@ -31,18 +32,23 @@ async def setup_jobs():
 
     # Create new jobs
     print(
-        f"Creating or updating schedule {Colors.ORANGE}{settings.APP_DATA_CLEANUP_SCHEDULE_ID}{Colors.BLUE}...🔄{Colors.ENDC}"
+        f"Creating or updating schedules: {Colors.ORANGE}{settings.APP_DATA_CLEANUP_SCHEDULE_ID}, {settings.SWARM_HEALTHCHECK_SCHEDULE_ID}{Colors.BLUE}...🔄{Colors.ENDC}"
     )
+
+    schedule_task_queue = await SwarmNode.aget_main_schedule_task_queue()
+
     schedules = [
-        TemporalClient.create_or_update_schedule(
+        TemporalClient.create_or_update_schedule_with_cron(
             schedule_id=settings.APP_DATA_CLEANUP_SCHEDULE_ID,
             workflow=CleanupAppDataWorkflow.run,
             schedule_cron=system.app_data_cleanup_cron_schedule,
+            task_queue=schedule_task_queue,
         ),
-        TemporalClient.create_or_update_schedule(
+        TemporalClient.create_or_update_schedule_with_cron(
             schedule_id=settings.SWARM_HEALTHCHECK_SCHEDULE_ID,
             workflow=SwarmHealthcheckWorkflow.run,
             schedule_cron=settings.SWARM_HEALTHCHECK_SCHEDULE_CRON,
+            task_queue=schedule_task_queue,
         ),
     ]
     if settings.ENVIRONMENT == settings.PRODUCTION_ENV:
@@ -50,10 +56,11 @@ async def setup_jobs():
             f"Creating or updating schedule {Colors.ORANGE}{settings.DOCKER_SYSTEM_PRUNE_SCHEDULE_ID}{Colors.BLUE}...🔄{Colors.ENDC}"
         )
         schedules.append(
-            TemporalClient.create_or_update_schedule(
+            TemporalClient.create_or_update_schedule_with_cron(
                 schedule_id=settings.DOCKER_SYSTEM_PRUNE_SCHEDULE_ID,
                 workflow=DockerSystemPruneWorkflow.run,
                 schedule_cron=system.docker_system_prune_cron_schedule,
+                task_queue=schedule_task_queue,
             )
         )
 
