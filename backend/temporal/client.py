@@ -184,6 +184,7 @@ class TemporalClient:
         id: str,
         interval: timedelta,
         task_queue: str,
+        trigger_immediately: bool = False,
         execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
     ):
         return async_to_sync(cls.acreate_or_update_schedule)(
@@ -193,6 +194,7 @@ class TemporalClient:
             interval,
             task_queue,
             execution_timeout,
+            trigger_immediately,
         )
 
     @classmethod
@@ -203,6 +205,7 @@ class TemporalClient:
         id: str,
         interval: timedelta,
         task_queue: str,
+        trigger_immediately: bool = False,
         execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
     ):
         client = await cls._ensure_client()
@@ -244,12 +247,15 @@ class TemporalClient:
             await handle.update(
                 update_schedule_simple, rpc_timeout=timedelta(seconds=5)
             )
+            if trigger_immediately:
+                await handle.trigger()
         except RPCError:
             # probably because the schedule doesn't exist
             try:
                 await client.create_schedule(
                     schedule_id,
                     schedule,
+                    trigger_immediately=trigger_immediately,
                     rpc_timeout=timedelta(seconds=5),
                 )
             except ScheduleAlreadyRunningError:

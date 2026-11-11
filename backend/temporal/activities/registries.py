@@ -603,6 +603,7 @@ async def upsert_registry_schedules(registry: RegistrySnaphot):
         id=registry.login_refresh_schedule_id,
         interval=timedelta(seconds=5),
         task_queue=task_queue,
+        trigger_immediately=True,
     )
 
     await asyncio.gather(healthcheck_task, login_refresh_task)
