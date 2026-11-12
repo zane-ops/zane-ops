@@ -3734,12 +3734,12 @@ export interface components {
     DockerServiceCard: {
       /** Format: date-time */
       updated_at: string;
-      volume_number: number;
       slug: string;
       /** Format: uri */
       url: string | null;
       status: components["schemas"]["ServiceStatusEnum"];
       id: string;
+      replicas: number;
       /** @default docker */
       type: components["schemas"]["DockerServiceCardTypeEnum"];
       image: string;
@@ -4208,12 +4208,12 @@ export interface components {
     GitServiceCard: {
       /** Format: date-time */
       updated_at: string;
-      volume_number: number;
       slug: string;
       /** Format: uri */
       url: string | null;
       status: components["schemas"]["ServiceStatusEnum"];
       id: string;
+      replicas: number;
       /** @default git */
       type: components["schemas"]["GitServiceCardTypeEnum"];
       repository: string;

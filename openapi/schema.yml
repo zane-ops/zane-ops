@@ -25337,8 +25337,6 @@ components:
         updated_at:
           type: string
           format: date-time
-        volume_number:
-          type: integer
         slug:
           type: string
         url:
@@ -25349,6 +25347,8 @@ components:
           $ref: '#/components/schemas/ServiceStatusEnum'
         id:
           type: string
+        replicas:
+          type: integer
         type:
           allOf:
           - $ref: '#/components/schemas/DockerServiceCardTypeEnum'
@@ -25360,13 +25360,13 @@ components:
       required:
       - id
       - image
+      - replicas
       - slug
       - status
       - tag
       - type
       - updated_at
       - url
-      - volume_number
     DockerServiceCardTypeEnum:
       enum:
       - docker
@@ -26503,8 +26503,6 @@ components:
         updated_at:
           type: string
           format: date-time
-        volume_number:
-          type: integer
         slug:
           type: string
         url:
@@ -26515,6 +26513,8 @@ components:
           $ref: '#/components/schemas/ServiceStatusEnum'
         id:
           type: string
+        replicas:
+          type: integer
         type:
           allOf:
           - $ref: '#/components/schemas/GitServiceCardTypeEnum'
@@ -26535,13 +26535,13 @@ components:
       - git_provider
       - id
       - last_commit_message
+      - replicas
       - repository
       - slug
       - status
       - type
       - updated_at
       - url
-      - volume_number
     GitServiceCardGitProviderEnum:
       enum:
       - gitlab
