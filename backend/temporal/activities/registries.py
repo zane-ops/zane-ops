@@ -601,7 +601,7 @@ async def upsert_registry_schedules(registry: RegistrySnaphot):
         workflow=RefreshBuildRegistryLoginInfoWorkflow.run,
         arg=registry,
         id=registry.login_refresh_schedule_id,
-        interval=timedelta(seconds=5),
+        interval=timedelta(minutes=5),
         task_queue=task_queue,
         trigger_immediately=True,
     )
