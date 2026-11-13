@@ -133,6 +133,23 @@ class TaskSpec:
 
 
 @dataclass
+class NetworkSpec:
+    Name: str
+
+
+@dataclass
+class NetworkData:
+    ID: str
+    Spec: NetworkSpec
+
+
+@dataclass
+class NetworkAttachment:
+    Network: NetworkData
+    Addresses: list[str]
+
+
+@dataclass
 class DockerSwarmTask:
     ID: str
     NodeID: str | None
@@ -143,6 +160,7 @@ class DockerSwarmTask:
     Status: Status
     DesiredState: DockerSwarmTaskState
     Spec: TaskSpec
+    NetworksAttachments: list[NetworkAttachment] = field(default_factory=list)
 
     @property
     def container_id(self):
@@ -191,6 +209,18 @@ class DockerSwarmTask:
             ContainerStatus=container_status,
             Err=status_data.get("Err"),
         )
+
+        attachments = [
+            NetworkAttachment(
+                Network=NetworkData(
+                    ID=attachment["ID"],
+                    Spec=NetworkSpec(Name=attachment["Spec"]["Name"]),
+                ),
+                Addresses=attachment.get("Addresses", []),
+            )
+            for attachment in data.get("NetworksAttachments", [])
+        ]
+
         return DockerSwarmTask(
             ID=data["ID"],
             NodeID=data.get("NodeID", None),
@@ -206,6 +236,7 @@ class DockerSwarmTask:
                     Env=data["Spec"]["ContainerSpec"].get("Env") or [],
                 )
             ),
+            NetworksAttachments=attachments,
         )
 
 
