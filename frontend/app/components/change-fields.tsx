@@ -2612,7 +2612,7 @@ export function DeploymentServerChangeField({
                 </span>
               </span>
             ) : (
-              <span className="absolute inset-y-0 left-3 flex items-center gap-2 pr-2 text-sm text-grey">
+              <span className="absolute inset-y-0 left-3 flex items-center gap-2 pr-2 text-sm ">
                 <ShuffleIcon className="flex-none size-4" />
                 Any Deploy Server
               </span>
@@ -2666,7 +2666,7 @@ export function DeploymentServerChangeField({
                 </span>
               </span>
             ) : (
-              <span className="absolute inset-y-0 left-3 flex items-center gap-2 pr-2 text-sm text-grey">
+              <span className="absolute inset-y-0 left-3 flex items-center gap-2 pr-2 text-sm ">
                 <ShuffleIcon className="flex-none size-4" />
                 Any Deploy Server
               </span>
