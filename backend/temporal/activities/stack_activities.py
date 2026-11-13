@@ -44,6 +44,7 @@ with workflow.unsafe.imports_passed_through():
     )
     from ..semaphore import AsyncSemaphore
     from search.loki_client import LokiSearchClient
+    from swarm.models import SwarmNode
 
 
 from ..constants import DOCKER_BINARY_PATH, STACK_DEPLOY_SEMAPHORE_KEY
@@ -407,33 +408,25 @@ class ComposeStackActivities:
     async def create_stack_healthcheck_schedule(
         self, deployment: ComposeStackDeploymentDetails
     ):
-        try:
-            await TemporalClient.acreate_schedule(
-                workflow=MonitorComposeStackWorkflow.run,
-                args=deployment.stack,
-                id=deployment.stack.monitor_schedule_id,
-                interval=timedelta(seconds=15),
-                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
-            )
-        except ScheduleAlreadyRunningError:
-            # because the schedule already exists and is running, we can ignore it
-            pass
+        await TemporalClient.acreate_or_update_schedule(
+            workflow=MonitorComposeStackWorkflow.run,
+            arg=deployment.stack,
+            id=deployment.stack.monitor_schedule_id,
+            interval=timedelta(seconds=15),
+            task_queue=await SwarmNode.aget_main_schedule_task_queue(),
+        )
 
     @activity.defn
     async def create_stack_metrics_schedule(
         self, deployment: ComposeStackDeploymentDetails
     ):
-        try:
-            await TemporalClient.acreate_schedule(
-                workflow=CollectComposeStacksMetricsWorkflow.run,
-                args=deployment.stack,
-                id=deployment.stack.metrics_schedule_id,
-                interval=timedelta(seconds=30),
-                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
-            )
-        except ScheduleAlreadyRunningError:
-            # because the schedule already exists and is running, we can ignore it
-            pass
+        await TemporalClient.acreate_or_update_schedule(
+            workflow=CollectComposeStacksMetricsWorkflow.run,
+            arg=deployment.stack,
+            id=deployment.stack.metrics_schedule_id,
+            interval=timedelta(seconds=30),
+            task_queue=await SwarmNode.aget_main_schedule_task_queue(),
+        )
 
     @activity.defn
     async def finalize_stack_deployment(self, result: ComposeStackMonitorPayload):

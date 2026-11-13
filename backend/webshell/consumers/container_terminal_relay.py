@@ -22,8 +22,10 @@ from zane_api.permissions import EffectiveAccess
 import websockets
 from django.conf import settings
 from websockets import ClientConnection
+from ..exceptions import log_consumer_exceptions
 
 
+@log_consumer_exceptions
 class BaseContainerTerminalRelay(AuthenticatedTerminalConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -55,7 +57,12 @@ class BaseContainerTerminalRelay(AuthenticatedTerminalConsumer):
             filters={"node": node_id, "desired-state": "running"}
         )
         if len(worker_tasks) == 0:
-            return await self.send("", close=True)
+            return await self.send(
+                f"{Colors.RED}Cannot open terminal: no running node worker on node `{node_id}`.{Colors.ENDC}\n\r"
+                f"The container runs on this node, but the `node-worker` service has no running task there.\n\r"
+                f"Check with: docker service ps {temporal_node_service.name} --filter node={node_id}\n\r",
+                close=True,
+            )
         worker_task = DockerSwarmTask.from_dict(worker_tasks[0])
 
         def find_zane_network(network: NetworkAttachment):
@@ -65,7 +72,8 @@ class BaseContainerTerminalRelay(AuthenticatedTerminalConsumer):
             find_zane_network, worker_task.NetworksAttachments
         )
         if network_data is not None and len(network_data.Addresses) > 0:
-            return network_data.Addresses[0]
+            ip = network_data.Addresses[0].split("/")[0]
+            return ip
         else:
             await self.send(
                 f"{Colors.RED}Cannot open terminal: the ZaneOps node worker has no address on the `zane` network.{Colors.ENDC}\n\r"
@@ -79,13 +87,15 @@ class BaseContainerTerminalRelay(AuthenticatedTerminalConsumer):
         worker_ip = await self.get_node_worker_ip(node_id)
         # querystring = urlencode()
         auth_headers = {"Authorization": f"Internal {settings.SECRET_KEY}"}
-        uri = f"ws://{worker_ip}:{settings.TEMPORALIO_WORKER_WEBSOCKET_PORT}/container-terminal/{container_id}"
+        uri = f"ws://{worker_ip}:{settings.TEMPORALIO_WORKER_WEBSOCKET_PORT}/ws/container-terminal/{container_id}"
 
         # Parse the query string
         query_string = self.scope["query_string"].decode()  # Raw bytes -> string
+        full_url = uri + "?" + query_string
         try:
+            print(f"Connecting to {Colors.BLUE}{full_url}{Colors.ENDC}")
             self.websocket = await websockets.connect(
-                uri + "?" + query_string,
+                full_url,
                 additional_headers=auth_headers,
             )
 
@@ -94,7 +104,7 @@ class BaseContainerTerminalRelay(AuthenticatedTerminalConsumer):
             )
         except Exception as e:
             return await self.send(
-                f"{Colors.RED}Connection Error: {e}{Colors.ENDC}\n",
+                f"{Colors.RED}Connection Error: {e}{Colors.ENDC}\n\r",
                 close=True,
             )
 
@@ -104,10 +114,7 @@ class BaseContainerTerminalRelay(AuthenticatedTerminalConsumer):
                 data = await websocket.recv(decode=True)
                 await self.send(data)
             except websockets.exceptions.ConnectionClosed:
-                return await self.send(
-                    f"{Colors.GREY}Connection closed.{Colors.ENDC}\n",
-                    close=True,
-                )
+                return await self.close()
 
     async def receive(
         self, text_data: str | None = None, bytes_data: bytes | None = None
@@ -119,10 +126,7 @@ class BaseContainerTerminalRelay(AuthenticatedTerminalConsumer):
             try:
                 await self.websocket.send(message=data)
             except websockets.exceptions.ConnectionClosed:
-                await self.send(
-                    f"{Colors.GREY}Connection closed.{Colors.ENDC}\n",
-                    close=True,
-                )
+                await self.close()
 
     async def disconnect(self, code):
         if self.websocket is not None:
@@ -222,7 +226,12 @@ class DeploymentContainerTerminalRelay(BaseContainerTerminalRelay):
             )
 
         if found_task.NodeID is None:
-            return await self.send("", close=True)
+            return await self.send(
+                f"{Colors.RED}Cannot open terminal: replica `{container_id}` has not been assigned to a node yet.{Colors.ENDC}\n\r"
+                f"It may still be pending or waiting for resources. Wait a moment and try again, "
+                f"or check the service status for scheduling errors.\n\r",
+                close=True,
+            )
 
         return await self.start_relay(found_task.NodeID, container_id)
 
@@ -331,6 +340,11 @@ class ComposeStackTerminalRelay(BaseContainerTerminalRelay):
             )
 
         if found_task.NodeID is None:
-            return await self.send("", close=True)
+            return await self.send(
+                f"{Colors.RED}Cannot open terminal: replica `{container_id}` has not been assigned to a node yet.{Colors.ENDC}\n\r"
+                f"It may still be pending or waiting for resources. Wait a moment and try again, "
+                f"or check the service status for scheduling errors.\n\r",
+                close=True,
+            )
 
         return await self.start_relay(found_task.NodeID, container_id)

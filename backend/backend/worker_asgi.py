@@ -9,7 +9,6 @@ https://docs.djangoproject.com/en/5.0/howto/deployment/asgi/
 
 import os
 
-from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
 from channels.security.websocket import AllowedHostsOriginValidator
@@ -20,10 +19,6 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings_worker")
 # (this also runs `configure_opentelemetry()` via ZaneApiConfig.ready())
 asgi_application = get_asgi_application()
 
-from backend.otel import instrument_asgi_app  # noqa: E402
-
-# wrap with OTel ASGI middleware so inbound HTTP requests produce server spans
-asgi_application = instrument_asgi_app(asgi_application)
 
 from webshell.routing import worker_urlpatterns  # noqa: E402
 

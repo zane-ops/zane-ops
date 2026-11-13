@@ -213,8 +213,8 @@ class DockerSwarmTask:
         attachments = [
             NetworkAttachment(
                 Network=NetworkData(
-                    ID=attachment["ID"],
-                    Spec=NetworkSpec(Name=attachment["Spec"]["Name"]),
+                    ID=attachment["Network"]["ID"],
+                    Spec=NetworkSpec(Name=attachment["Network"]["Spec"]["Name"]),
                 ),
                 Addresses=attachment.get("Addresses", []),
             )
