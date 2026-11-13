@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router";
+import { Link } from "react-router";
 
 import {
   BrainIcon,
@@ -13,7 +13,6 @@ import {
   type LucideIcon,
   MemoryStickIcon,
   PauseIcon,
-  PenLineIcon,
   PencilLineIcon,
   PickaxeIcon,
   PlusIcon,
@@ -27,7 +26,6 @@ import {
 import type { SwarmNode } from "~/api/types";
 import { Code } from "~/components/code";
 import { DockerHubLogo } from "~/components/docker-hub-logo";
-import { Pagination } from "~/components/pagination";
 import type { StatusBadgeColor } from "~/components/status-badge";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -39,7 +37,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { swarmNodeListFilters, swarmQueries } from "~/lib/queries";
+import { swarmQueries } from "~/lib/queries";
 import { getQueryClient } from "~/lib/query-client";
 import {
   capitalizeText,
