@@ -6,6 +6,12 @@
 
 - [x] Refresh the login to the build registry on all servers ? 
       - what if the root ssh key doesn't exist anymore ? -> no need
+- [x] How to handle terminals to containers/replicas on other nodes: 
+    -> Start a small websocket server on each `node-` worker
+    -> When the user connects to `/ws/{container}` -> relay the websocket connection to the worker wich will run the terminal via `docker exec` 
+      -> need to handle disconnect there as well
+      -> Need to handle security (via the same permission class/mechanism for `InternalZaneAppPermission`)
+- [ ] Update deployment to return tasks with containers from the healthcheck
 - [ ] No need for multiple build registries, one is enough
 - [ ] Fail git builds when there is more than one server if there is no Build registry
 - [ ] Update service healthchecks (http/cmd) to use the container's IP instead of the container's ID
@@ -21,12 +27,7 @@
       accross nodes, volumes may have been created/leftover
 - [ ] How to Handle healthcheck for services with multiple replicas ?
 - [ ] Fix `schedule-task-queue` task queue not existing anymore
-- [ ] How to handle terminals to containers/replicas on other nodes: 
-    -> Start a small websocket server on each `node-` worker
-    -> When the user connects to `/ws/{container}` -> relay the websocket connection to the worker wich will run the terminal via `docker exec` 
-      -> need to handle disconnect there as well
-      -> Need to handle security (via the same permission class/mechanism for `InternalZaneAppPermission`)
-    
+
 
 ### Swarm node workflows — safety
 
