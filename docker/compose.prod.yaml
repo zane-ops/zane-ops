@@ -29,6 +29,8 @@ x-backend-vars: &env-vars
   # a fixed path in the container and tell django about it.
   # When unset, `/dev/null` is mounted instead and django disables GeoIP,
   MAXMIND_DB_PATH: /app/GeoLite2-Country.mmdb
+  WEBSOCKET_WORKER_PORT: 8080
+
 
 x-internal-envs: &internal-envs
   API_HOST: zane.api.zaneops.internal:80
@@ -154,7 +156,11 @@ services:
 
   zane-temporal-node-worker:
     image: ghcr.io/zane-ops/app:${IMAGE_VERSION:?IMAGE_VERSION is required}
-    command: /bin/bash -l -c "/app/scripts/run_worker.sh"
+    # command: /bin/bash -l -c "/app/scripts/run_worker.sh"
+    command: 
+      - /usr/bin/supervisord
+      - -c
+      - /etc/supervisor/conf.d/supervisord_node_worker.conf
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - docker-data:/root/.docker

@@ -17,6 +17,7 @@ x-backend-vars: &env-vars
   # a fixed path in the container and tell django about it.
   MAXMIND_DB_PATH: /code/GeoLite2-Country.mmdb
   ZANE_HTTP_MODE: ${MODE:-http}
+  WEBSOCKET_WORKER_PORT: 8080
 
 services:
   zane-vector:
@@ -69,7 +70,11 @@ services:
 
   zane-temporal-node-worker:
     image: ghcr.io/zane-ops/app:v2-canary
-    command: /bin/bash -l -c "/code/scripts/run_dev_worker.sh"
+    # command: /bin/bash -l -c "/code/scripts/run_dev_worker.sh"
+    command: 
+      - /usr/bin/supervisord
+      - -c
+      - /code/scripts/supervisord_node_worker_dev.conf
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro
