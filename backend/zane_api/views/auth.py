@@ -154,10 +154,6 @@ class LoginView(APIView):
                 request.session[WORKSPACE_SESSION_KEY] = associated_workspace.id
 
             response = LoginSuccessResponseSerializer({"success": True})
-            query_params = request.query_params.dict()
-            redirect_uri = query_params.get("redirect_to")
-            if redirect_uri is not None:
-                return redirect(iri_to_uri(redirect_uri))  # type: ignore
             return Response(response.data, status=status.HTTP_201_CREATED)
 
         raise exceptions.AuthenticationFailed(detail="Invalid username or password")

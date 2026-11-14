@@ -22,24 +22,6 @@ class AuthLoginViewTests(AuthAPITestCase):
             response.cookies.get("sessionid"),
         )
 
-    def test_login_redirect_to_if_provided(self):
-        params = QueryDict(mutable=True)
-        redirect_path = "https://example-service-dpl_xyz.zaneops.local/"
-        params["redirect_to"] = redirect_path
-
-        response = self.client.post(
-            f"{reverse('zane_api:auth.login')}?{params.urlencode()}",
-            data={"username": "Fredkiss3", "password": "password"},
-        )
-        self.assertEqual(status.HTTP_302_FOUND, response.status_code)
-        self.assertIsNotNone(
-            response.cookies.get("sessionid"),
-        )
-        self.assertEqual(
-            redirect_path,
-            response.headers.get("Location"),
-        )
-
     def test_unsuccessful_login(self):
         response = self.client.post(
             reverse("zane_api:auth.login"),
