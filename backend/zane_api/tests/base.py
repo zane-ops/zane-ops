@@ -1824,7 +1824,12 @@ class FakeDockerClient:
                         },
                         "DesiredState": "running",
                         "NetworksAttachments": [
-                            {"Network": {"Spec": {"Name": "zane"}}}
+                            {
+                                "Network": {
+                                    "ID": generate_random_chars(25),
+                                    "Spec": {"Name": "zane"},
+                                }
+                            }
                         ],
                     }
                 )
