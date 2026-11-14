@@ -1353,8 +1353,6 @@ class FakeProcess:
         self.stderr = asyncio.StreamReader()
         self.docker_client = docker_client
 
-        if "docker image push" in self.command:
-            self._push_image_to_registry()
         if "docker buildx build" in self.command:
             self._build_with_docker()
         if "nixpacks plan" in self.command:
@@ -1425,9 +1423,7 @@ class FakeProcess:
             )
             self.stdout.feed_data(message.encode())
 
-    def _push_image_to_registry(self):
-        all_args = self.command.split(" ")
-        image = all_args[-1]
+    def _push_image_to_registry(self, image: str):
         self.docker_client.image_registry.add(image)
 
     def _create_repo_folder(self):
@@ -1483,6 +1479,7 @@ class FakeProcess:
         dockerfile_regex = r"-f\s+(\S+)"
         build_arg_regex = r"--build-arg\s+(\S+)"
         labels_regex = r"--label\s+(\S+)"
+
         matched_tag = re.search(tag_regex, self.command)
         matched_dockerfile = re.search(dockerfile_regex, self.command)
         build_arg_matches: List[str] = re.findall(build_arg_regex, self.command)
@@ -1501,6 +1498,10 @@ class FakeProcess:
             labels[key] = value
 
         tag = matched_tag.group(1)
+
+        if "--output type=image,push=true" in self.command:
+            self._push_image_to_registry(tag)
+
         dockerfile = matched_dockerfile.group(1)
         build_output = self.docker_client.image_build(
             tag=tag, dockerfile=dockerfile, buildargs=buildargs, labels=labels
