@@ -75,7 +75,7 @@ from temporal.workflows import (
     GitDeploymentStep,
 )
 from ..serializers import ServiceSerializer
-
+from temporalio import activity
 from compose.dtos import ComposeStackSpec
 from swarm.models import SwarmNode, SSHKey
 from temporal.activities import (
@@ -529,18 +529,30 @@ class AuthAPITestCase(APITestCase):
     async def workflowEnvironment(
         self, task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE, skip_time=True
     ):
+        @activity.defn(name="select-task-queue")
+        async def select_task_queue() -> str:
+            return task_queue
+
         env = await (
             WorkflowEnvironment.start_time_skipping()
             if skip_time
             else WorkflowEnvironment.start_local()
         )
         await env.__aenter__()
+        all_workflows_and_activities = get_workflows_and_activities()
         worker = Worker(
             env.client,
             task_queue=task_queue,
-            **get_workflows_and_activities(),  # type: ignore
+            **all_workflows_and_activities,  # type: ignore
+        )
+        worker2 = Worker(
+            env.client,
+            task_queue=settings.TEMPORALIO_DISPATCH_TASK_QUEUE,
+            workflows=all_workflows_and_activities["workflows"],
+            activities=[select_task_queue],
         )
         await worker.__aenter__()
+        await worker2.__aenter__()
 
         def collect_commit_callback(func: Callable):
             self.commit_callback = func
@@ -584,6 +596,11 @@ class AuthAPITestCase(APITestCase):
 
         patch_temporal_create_schedule = patch(
             "temporal.activities.TemporalClient.acreate_schedule",
+            side_effect=acreate_schedule,
+        )
+
+        patch_temporal_create_schedule = patch(
+            "temporal.activities.TemporalClient.acreate_or_update_schedule",
             side_effect=acreate_schedule,
         )
 
@@ -641,6 +658,7 @@ class AuthAPITestCase(APITestCase):
             patch_temporal_delete_schedule.stop()
             patch_temporal_client_underlying_client.stop()
             await worker.__aexit__(None, None, None)
+            await worker2.__aexit__(None, None, None)
             await env.__aexit__(None, None, None)
 
     @asynccontextmanager
