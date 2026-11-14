@@ -1958,9 +1958,9 @@ class DockerSwarmActivities:
                 project_id=deployment.service.project_id,
             )
             try:
-                await TemporalClient.acreate_schedule(
+                await TemporalClient.acreate_or_update_schedule(
                     workflow=GetDockerDeploymentStatsWorkflow.run,
-                    args=details,
+                    arg=details,
                     id=docker_deployment.metrics_schedule_id,
                     interval=timedelta(seconds=30),
                     task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
@@ -2020,9 +2020,9 @@ class DockerSwarmActivities:
                 else settings.DEFAULT_HEALTHCHECK_INTERVAL
             )
             try:
-                await TemporalClient.acreate_schedule(
+                await TemporalClient.acreate_or_update_schedule(
                     workflow=MonitorDockerDeploymentWorkflow.run,
-                    args=healthcheck_details,
+                    arg=healthcheck_details,
                     id=docker_deployment.monitor_schedule_id,
                     interval=timedelta(seconds=interval_seconds),
                     task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
