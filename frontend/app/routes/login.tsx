@@ -31,6 +31,17 @@ export const meta: Route.MetaFunction = () => [metaTitle("Login")];
 
 const logger = createDevLogger(import.meta.url);
 
+function sanitizeRedirectURL(redirect_to: string): string | null {
+  if (!URL.canParse(redirect_to, window.location.href)) {
+    return null;
+  }
+  const url = new URL(redirect_to, window.location.href);
+  if (url.origin !== window.location.origin) {
+    return null;
+  }
+  return url.pathname + url.search + url.hash;
+}
+
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const queryClient = getQueryClient();
   const [user, userExistQuery] = await Promise.all([
@@ -47,10 +58,8 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
   if (user) {
     const redirect_to = searchParams.get("redirect_to");
-    let redirectTo = href("/");
-    if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
-      redirectTo = redirect_to;
-    }
+    const redirectTo =
+      (redirect_to && sanitizeRedirectURL(redirect_to)) || href("/");
 
     logger.info(`redirect to \`/${redirectTo}\``);
     throw redirect(redirectTo);
@@ -86,11 +95,8 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 
     const redirect_to = searchParams.get("redirect_to");
 
-    let redirectTo = href("/");
-
-    if (redirect_to && URL.canParse(redirect_to, window.location.href)) {
-      redirectTo = redirect_to;
-    }
+    const redirectTo =
+      (redirect_to && sanitizeRedirectURL(redirect_to)) || href("/");
 
     throw redirect(redirectTo);
   }
@@ -108,8 +114,7 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
 
   const hasBeenInvited =
     redirectParam &&
-    URL.canParse(redirectParam, window.location.href) &&
-    redirectParam.startsWith("/invite");
+    sanitizeRedirectURL(redirectParam)?.startsWith("/invite");
 
   return (
     <>
