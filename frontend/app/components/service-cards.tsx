@@ -3,14 +3,14 @@ import {
   GitBranchIcon,
   GithubIcon,
   GitlabIcon,
-  HardDrive,
+  LayersIcon,
   LinkIcon,
   Tag
 } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router";
 import { Checkbox } from "~/components/ui/checkbox";
-import { cn, getDockerImageIconURL } from "~/lib/utils";
+import { cn, getDockerImageIconURL, pluralize } from "~/lib/utils";
 import {
   Card,
   CardContent,
@@ -36,7 +36,7 @@ type CommonServiceCardProps = {
     | "DEPLOYING"
     | "FAILED"
     | "CANCELLED";
-  volumeNumber?: number;
+  replicas: number;
   url?: string | null;
   updatedAt: string;
   id: string;
@@ -55,10 +55,10 @@ export function DockerServiceCard({
   url,
   tag,
   updatedAt,
-  volumeNumber = 0,
   status,
   id,
   selected,
+  replicas,
   onToggleSelect
 }: DockerServiceCardProps) {
   const [imageNotFound, setImageNotFound] = React.useState(false);
@@ -179,15 +179,8 @@ export function DockerServiceCard({
 
       <Separator />
       <CardFooter className="p-0 text-gray-400 px-6 py-4 text-sm flex gap-2">
-        <HardDrive size={20} />
-        {volumeNumber > 0 ? (
-          <span>
-            {volumeNumber}
-            {volumeNumber > 1 ? " Volumes" : " Volume"}
-          </span>
-        ) : (
-          <>No Volume attached</>
-        )}
+        <LayersIcon className="flex-none size-5" />
+        {replicas} {pluralize("replica", replicas)}
       </CardFooter>
       <label
         htmlFor={`select-${slug}`}
@@ -217,11 +210,11 @@ export function GitServiceCard({
   url,
   updatedAt,
   lastCommitMessage,
-  volumeNumber = 0,
   branchName,
   status,
   id,
   selected,
+  replicas,
   onToggleSelect,
   git_provider
 }: GitServiceCardProps) {
@@ -337,15 +330,8 @@ export function GitServiceCard({
       </CardContent>
       <Separator />
       <CardFooter className="p-0 text-gray-400 px-6 py-4 text-sm flex gap-2">
-        <HardDrive size={20} />
-        {volumeNumber > 0 ? (
-          <span>
-            {volumeNumber}
-            {volumeNumber > 1 ? " Volumes" : " Volume"}
-          </span>
-        ) : (
-          <>No Volume attached</>
-        )}
+        <LayersIcon className="flex-none size-5" />
+        {replicas} {pluralize("replica", replicas)}
       </CardFooter>
       <label
         htmlFor={`select-${slug}`}

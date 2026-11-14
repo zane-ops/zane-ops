@@ -30,7 +30,7 @@ with workflow.unsafe.imports_passed_through():
         wait_for_registry_service_to_be_updated,
         acquire_registry_deploy_semaphore,
         release_registry_deploy_semaphore,
-        create_registry_health_check_schedule,
+        upsert_registry_schedules,
         delete_registry_health_check_schedule,
         ComposeStackActivities,
         SwarmNodeActivities,
@@ -79,6 +79,9 @@ with workflow.unsafe.imports_passed_through():
         close_faulty_db_connections,
         MonitorComposeStackActivites,
         MonitorComposeStackWorkflow,
+        RefreshBuildRegistryLoginInfoWorkflow,
+        get_all_swarm_nodes_in_cluster,
+        login_to_build_registry,
     )
 
 
@@ -98,6 +101,7 @@ def get_workflows_and_activities():
     return dict(
         workflows=[
             *get_extra_workflows(),
+            RefreshBuildRegistryLoginInfoWorkflow,
             ArchiveDockerServiceWorkflow,
             CreateProjectResourcesWorkflow,
             RemoveProjectResourcesWorkflow,
@@ -131,7 +135,8 @@ def get_workflows_and_activities():
             *get_extra_activities(),
             git_activities.get_default_build_registry,
             git_activities.login_to_global_build_registry,
-            git_activities.push_image_to_remote_registry,
+            git_activities.get_all_service_aliases_ips_on_network,
+            git_activities.push_built_image_to_remote_registry,
             git_activities.create_temporary_directory_for_build,
             git_activities.upsert_github_pull_request_comment,
             git_activities.upsert_gitlab_pull_request_comment,
@@ -274,7 +279,9 @@ def get_workflows_and_activities():
             acquire_registry_deploy_semaphore,
             release_registry_deploy_semaphore,
             close_faulty_db_connections,
-            create_registry_health_check_schedule,
+            upsert_registry_schedules,
             delete_registry_health_check_schedule,
+            get_all_swarm_nodes_in_cluster,
+            login_to_build_registry,
         ],
     )

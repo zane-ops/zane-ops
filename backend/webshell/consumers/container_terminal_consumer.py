@@ -1,3 +1,14 @@
+from typing import cast
+
+import docker
+import docker.errors
+from zane_api.utils import Colors
+import urllib.parse
+
+from ..serializers import ContainerTerminalQuerySerializer
+from ..exceptions import log_consumer_exceptions
+from .auth_terminal_consumer import AuthenticatedTerminalConsumer
+
 import asyncio
 import json
 import os
@@ -6,7 +17,6 @@ import signal
 import traceback
 from typing import Optional, cast
 
-from channels.generic.websocket import AsyncWebsocketConsumer
 import docker
 from zane_api.utils import Colors
 import pty
@@ -18,12 +28,10 @@ from ..serializers import (
     DeploymentTerminalResizeSerializer,
 )
 from rest_framework.utils.serializer_helpers import ReturnDict
-from zane_api.constants import WORKSPACE_SESSION_KEY
-from django.contrib.auth.models import AbstractUser
-from zane_api.models import WorkspaceMembership
 
 
-class GenericContainerTerminalConsumer(AsyncWebsocketConsumer):
+@log_consumer_exceptions
+class ContainerTerminalConsumer(AuthenticatedTerminalConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.docker_client = docker.from_env()
@@ -31,32 +39,49 @@ class GenericContainerTerminalConsumer(AsyncWebsocketConsumer):
         self.master_file_descriptor: Optional[int] = None
         self.process: Optional[asyncio.subprocess.Process] = None
 
-    async def check_for_workspace_roles(self, role: int):
-        self.user: AbstractUser = self.scope["user"]  # type: ignore
-        self.session = self.scope["session"]  # type: ignore
-        workspace_id = self.session.get(WORKSPACE_SESSION_KEY)
+    async def connect(self):
+        await self.accept()
 
-        qs = WorkspaceMembership.objects.filter(
-            user=self.user,
-            role__gte=role,
-        ).select_related("workspace")
+        if not await self.check_for_internal_app():
+            return
 
-        if workspace_id:
-            qs = qs.filter(workspace_id=workspace_id)
+        kwargs = self.scope["url_route"]["kwargs"]  # type: ignore
+        container_id = kwargs["container_id"]
 
-        membership = await qs.afirst()
-
-        if not membership:
-            await self.send(
-                f"{Colors.RED}You do not have permission to access this resource{Colors.ENDC}\n\r",
+        try:
+            self.container = self.docker_client.containers.get(container_id)
+        except docker.errors.NotFound:
+            return await self.send(
+                f"{Colors.RED}Cannot open terminal: container `{container_id}` was not found or is not running.{Colors.ENDC}\n\r"
+                f"It may have been removed or restarted since you last checked.\n\r"
+                f"Refresh the service status to see the current replicas, or redeploy the service if none are running.\n\r",
                 close=True,
             )
 
-        # return membership is not None and membership.role >= WorkspaceRole.MEMBER
-        return membership
+        # Parse the query string
+        query_string = self.scope["query_string"].decode()  # Raw bytes -> string
+        query_string = urllib.parse.unquote_plus(query_string)
+        print(f"Received `{query_string=}`")
+        params = urllib.parse.parse_qs(query_string)
+        serializer = ContainerTerminalQuerySerializer(data=params)
+        if not serializer.is_valid():
+            cmd = params.get("cmd")
+            if cmd is not None:
+                cmd = cmd[0]
+            return await self.send(
+                f"{Colors.RED}Invalid shell command `{cmd}`.{Colors.ENDC}\n\r",
+                close=True,
+            )
 
-    async def connect(self):
-        raise NotImplementedError("This class needs to be subclassed")
+        data = cast(dict, serializer.data)
+        shell_cmd = data["cmd"][0]
+        user_args = data.get("user")
+        user = None
+        if user_args:
+            user = user_args[0]
+
+        print(f"Running with `{shell_cmd=}`")
+        await self._run_cmd(shell_cmd, user)
 
     async def _run_cmd(
         self,

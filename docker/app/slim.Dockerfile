@@ -155,7 +155,7 @@ ENV COMMIT_SHA=$COMMIT_SHA \
 EXPOSE 80
 
 
-COPY ./docker/app/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY ./docker/app/supervisord*.conf /etc/supervisor/conf.d/
 COPY ./docker/app/Caddyfile /etc/caddy/Caddyfile
 
 # Start Supervisor

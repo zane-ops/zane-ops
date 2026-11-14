@@ -2,7 +2,11 @@ from typing import cast
 from rest_framework import serializers
 
 from ..models import BuildRegistry
-from temporal.workflows import DeployBuildRegistryWorkflow, UpdateBuildRegistryWorkflow
+from temporal.workflows import (
+    DeployBuildRegistryWorkflow,
+    UpdateBuildRegistryWorkflow,
+    RefreshBuildRegistryLoginInfoWorkflow,
+)
 from temporal.client import TemporalClient
 from temporal.shared import RegistryConfig, RegistrySnaphot, UpdateRegistryPayload
 from django.db import transaction
@@ -145,8 +149,6 @@ class S3CredentialsSerializer(serializers.Serializer):
 
 
 class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
-    is_default = serializers.BooleanField(required=True)
-
     registry_domain = serializers.CharField(validators=[validate_url_domain])
     registry_username = serializers.CharField(default="zane")
     registry_password = serializers.CharField(
@@ -188,16 +190,6 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
         return domain
 
-    def validate_is_default(self, is_default: bool):
-        if (
-            not is_default
-            and not BuildRegistry.objects.filter(is_default=True).exists()
-        ):
-            raise serializers.ValidationError(
-                "At least one build registry must be set as the default registry."
-            )
-        return is_default
-
     def validate(self, attrs: dict):
         password = attrs.get("registry_password")
         storage_backend = attrs.get("storage_backend")
@@ -225,11 +217,6 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
     @transaction.atomic()
     def create(self, validated_data: dict):
-        is_default = validated_data.get("is_default")
-
-        if is_default:
-            BuildRegistry.objects.update(is_default=False)
-
         registry = BuildRegistry.objects.create(**validated_data)
 
         registry.service_alias = BuildRegistry.generate_default_service_alias(registry)
@@ -273,8 +260,8 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                 username=registry.registry_username,
                 password=registry.registry_password,
                 version=registry.version,
-                is_secure=registry.is_secure,
                 monitor_schedule_id=registry.monitor_schedule_id,
+                login_refresh_schedule_id=registry.refresh_login_schedule_id,
             )
 
             TemporalClient.start_workflow(
@@ -292,9 +279,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
-            "is_default",
             "service_alias",
-            "is_secure",
             "version",
             # credentials
             "registry_domain",
@@ -316,8 +301,6 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
 
 class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
-    is_default = serializers.BooleanField(required=True)
-
     s3_credentials = S3CredentialsSerializer(required=False, allow_null=True)
 
     def __init__(self, *args, **kwargs):
@@ -350,22 +333,13 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
 
         return domain
 
-    def validate_is_default(self, is_default: bool):
-        self.instance = cast(BuildRegistry, self.instance)
-        if (
-            not is_default
-            and not BuildRegistry.objects.filter(
-                Q(is_default=True) & ~Q(pk=self.instance.id)
-            ).exists()
-        ):
-            raise serializers.ValidationError(
-                "At least one build registry must be set as the default registry."
-            )
-        return is_default
-
     def validate(self, attrs: dict):
-        storage_backend = attrs.get("storage_backend", self.instance.storage_backend)
-        s3_credentials = attrs.get("s3_credentials", self.instance.s3_credentials)
+        storage_backend = attrs.get(
+            "storage_backend", cast(BuildRegistry, self.instance).storage_backend
+        )
+        s3_credentials = attrs.get(
+            "s3_credentials", cast(BuildRegistry, self.instance).s3_credentials
+        )
 
         if storage_backend == BuildRegistry.StorageBackend.LOCAL:
             # remove s3 credentials
@@ -401,18 +375,11 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
         s3_credentials = validated_data.get("s3_credentials", instance.s3_credentials)
 
         name = validated_data.get("name", instance.name)
-        is_default = validated_data.get("is_default", instance.is_default)
-        is_secure = validated_data.get("is_secure", instance.is_secure)
-
-        if is_default:
-            BuildRegistry.objects.exclude(id=instance.id).update(is_default=False)
 
         BuildRegistry.objects.filter(pk=instance.id).update(
             version=F("version") + Value(1),
             registry_domain=registry_domain,
             name=name,
-            is_default=is_default,
-            is_secure=is_secure,
             registry_username=registry_username,
             registry_password=registry_password,
             storage_backend=storage_backend,
@@ -453,8 +420,8 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             username=instance.registry_username,
             password=instance.registry_password,
             version=instance.version,
-            is_secure=instance.is_secure,
             monitor_schedule_id=instance.monitor_schedule_id,
+            login_refresh_schedule_id=instance.refresh_login_schedule_id,
         )
         new_snapshot = RegistrySnaphot(
             service_alias=cast(str, instance.service_alias),
@@ -471,8 +438,8 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             username=registry_username,
             password=registry_password,
             version=instance.version + 1,
-            is_secure=is_secure,
             monitor_schedule_id=instance.monitor_schedule_id,
+            login_refresh_schedule_id=instance.refresh_login_schedule_id,
         )
 
         def commit_callback():
@@ -500,13 +467,11 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
-            "is_default",
             "registry_domain",
             "service_alias",
             "registry_username",
             "registry_password",
             "version",
-            "is_secure",
             "storage_backend",
             # S3 credentials
             "s3_credentials",

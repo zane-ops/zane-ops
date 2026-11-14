@@ -422,22 +422,20 @@ class ZaneProxyClient:
 
     @classmethod
     def _get_request_for_build_registry(
-        cls, registry_id: str, registry_alias: str, domain: str, is_secure: bool
+        cls, registry_id: str, registry_alias: str, domain: str
     ):
         reverse_proxy_handler = {
             "flush_interval": -1,
             "handler": "reverse_proxy",
             "upstreams": [{"dial": f"{registry_alias}:5000"}],
-        }
-
-        if is_secure:
-            reverse_proxy_handler["headers"] = {
+            "headers": {
                 "request": {
                     "set": {
                         "X-Forwarded-Proto": ["https"],
                     }
                 }
-            }
+            },
+        }
 
         proxy_handlers = [
             {
@@ -484,7 +482,7 @@ class ZaneProxyClient:
 
     @classmethod
     def upsert_registry_url(
-        cls, registry_id: str, registry_alias: str, domain: str, is_secure: bool
+        cls, registry_id: str, registry_alias: str, domain: str
     ) -> bool:
         existing_response = requests.get(
             cls.get_uri_for_build_registry(registry_alias), timeout=5
@@ -499,7 +497,7 @@ class ZaneProxyClient:
             attempts += 1
 
             new_url = cls._get_request_for_build_registry(
-                registry_id, registry_alias, domain, is_secure
+                registry_id, registry_alias, domain
             )
             # now we create or modify the config for the URL
             if existing:
@@ -859,7 +857,6 @@ class ZaneProxyClient:
                     registry_id=registry.id,
                     registry_alias=str(registry.service_alias),
                     domain=registry.registry_domain,
-                    is_secure=registry.is_secure,
                 )
             )
 

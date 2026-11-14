@@ -176,29 +176,6 @@ function EditBuildRegistryForm() {
         </div>
       </FieldSet>
 
-      <FieldSet
-        name="is_secure"
-        errors={errors.is_secure}
-        className="flex-1 inline-flex gap-2 flex-col"
-      >
-        <div className="inline-flex gap-2 items-start">
-          <FieldSetCheckbox
-            defaultChecked={registry.is_secure}
-            className="relative top-1"
-          />
-
-          <div className="flex flex-col gap-0.5">
-            <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
-              Use HTTPS
-            </FieldSetLabel>
-
-            <small className="text-grey text-sm">
-              Connect to this registry using HTTPS (recommended)
-            </small>
-          </div>
-        </div>
-      </FieldSet>
-
       <Separator />
 
       <div className="flex flex-col gap-4 w-full">
@@ -398,7 +375,7 @@ function EditBuildRegistryForm() {
             >
               <div className="inline-flex gap-2 items-start">
                 <FieldSetCheckbox
-                  defaultChecked={registry.s3_credentials?.secure}
+                  defaultChecked={registry.s3_credentials?.secure ?? true}
                   className="relative top-1"
                 />
 
@@ -454,8 +431,7 @@ async function deleteRegistry(id: string, formData: FormData) {
   const queryClient = getQueryClient();
   const userData = {
     name: formData.get("name")?.toString() ?? "",
-    domain: formData.get("domain")?.toString() ?? "",
-    scheme: formData.get("scheme")?.toString() ?? ""
+    domain: formData.get("domain")?.toString() ?? ""
   };
 
   const { error } = await apiClient.DELETE(
@@ -482,9 +458,7 @@ async function deleteRegistry(id: string, formData: FormData) {
       <span>
         Successfully deleted registry&nbsp;
         <strong>{userData.name}</strong>&nbsp;@&nbsp;
-        <span className="text-link">
-          {userData.scheme}://{userData.domain}
-        </span>
+        <span className="text-link">https://{userData.domain}</span>
       </span>
     ),
     closeButton: true
@@ -515,7 +489,6 @@ export async function updateRegistry(id: string, formData: FormData) {
     registry_username: formData.get("registry_username")?.toString() ?? "",
     registry_password: password ? password : undefined,
     storage_backend: storage_backend,
-    is_secure: formData.get("is_secure") === "on",
     is_default: formData.get("is_default") === "on"
   };
 

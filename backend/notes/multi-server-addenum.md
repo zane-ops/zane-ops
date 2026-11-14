@@ -4,6 +4,16 @@
 
 ### Build/Deploy routing
 
+- [x] Refresh the login to the build registry on all servers ? 
+      - what if the root ssh key doesn't exist anymore ? -> no need
+- [x] How to handle terminals to containers/replicas on other nodes: 
+    -> Start a small websocket server on each `node-` worker
+    -> When the user connects to `/ws/{container}` -> relay the websocket connection to the worker wich will run the terminal via `docker exec` 
+      -> need to handle disconnect there as well
+      -> Need to handle security (via the same permission class/mechanism for `InternalZaneAppPermission`)
+- [ ] No need for multiple build registries, one is enough
+- [ ] Fail git builds when there is more than one server if there is no Build registry
+- [ ] Update deployment to return tasks with containers from the healthcheck
 - [ ] Update service healthchecks (http/cmd) to use the container's IP instead of the container's ID
       Or run the healthcheck in the correct temporal-node worker (on the correct server)
       Remember that for services that aren't pinned to one server, the healthcheck will need to run on 
@@ -12,11 +22,12 @@
             -> how to handle healthcheck (especially on deploy)
             -> we need to totally change the UI to adapt and show all replicas
             -> What should happen if some replicas succeed healthcheck and other don't ? should we prevent the udpate ? -> probably
+      => A service deployed with `ANY_DEPLOY_SERVER` will migrate if a node is unhealthy, will need to somehow migrate the healthcheck, or run the healthcheck everywhere ?
 - [ ] Delete volumes should delete the volumes in the correct nodes (or all nodes ?) since a service can migrate
       accross nodes, volumes may have been created/leftover
 - [ ] How to Handle healthcheck for services with multiple replicas ?
-- [ ] A service deployed with `ANY_DEPLOY_SERVER` will migrate if a node is unhealthy, will need to somehow migrate
-      the healthcheck, or run the healthcheck everywhere ?
+- [ ] Fix `schedule-task-queue` task queue not existing anymore
+
 
 ### Swarm node workflows — safety
 

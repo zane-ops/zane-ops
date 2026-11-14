@@ -9,6 +9,7 @@ from shortuuid.django_fields import ShortUUIDField
 from zane_api.models.base import TimestampedModel
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.postgres.fields import ArrayField
+from django.conf import settings
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -131,6 +132,24 @@ class SwarmNode(TimestampedModel):
         Every node runs a worker on its own queue, always.
         """
         return f"node-{self.swarm_node_id}"
+
+    @classmethod
+    async def aget_main_schedule_task_queue(cls):
+        main_node = await cls.objects.filter(is_initial_install_server=True).afirst()
+        return (
+            main_node.node_task_queue
+            if main_node is not None
+            else settings.TEMPORALIO_MAIN_TASK_QUEUE
+        )
+
+    @classmethod
+    def get_main_schedule_task_queue(cls):
+        main_node = cls.objects.filter(is_initial_install_server=True).first()
+        return (
+            main_node.node_task_queue
+            if main_node is not None
+            else settings.TEMPORALIO_MAIN_TASK_QUEUE
+        )
 
     class Meta:  # type: ignore
         constraints = [

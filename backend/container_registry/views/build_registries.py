@@ -66,9 +66,6 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
     )
     def delete(self, request: Request, *args, **kwargs):
         registry = self.get_object()
-        if registry.is_default:
-            raise ResourceConflict("Cannot delete the default registry.")
-
         url = registry.registry_domain
         swarm_name = cast(str, registry.swarm_service_name)
         service_alias = cast(str, registry.service_alias)
@@ -116,10 +113,9 @@ class BuildRegistryListImagesAPIView(APIView):
 
         per_page = cast(int, data["per_page"])
 
-        scheme = "https" if registry.is_secure else "http"
         try:
             response = requests.get(
-                f"{scheme}://{registry.registry_domain}/v2/_catalog",
+                f"https://{registry.registry_domain}/v2/_catalog",
                 params=dict(
                     n=per_page,
                     last=data.get("cursor"),

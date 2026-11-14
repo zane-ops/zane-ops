@@ -1396,9 +1396,7 @@ class DockerSwarmActivities:
 
             image_name = service.image
             if service.type != "DOCKER_REGISTRY":
-                build_registry = await BuildRegistry.objects.filter(
-                    is_default=True
-                ).afirst()
+                build_registry = await BuildRegistry.aget()
                 image_name = deployment.image_tag
                 if build_registry is not None:
                     image_name = (
