@@ -66,9 +66,6 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
     )
     def delete(self, request: Request, *args, **kwargs):
         registry = self.get_object()
-        if registry.is_default:
-            raise ResourceConflict("Cannot delete the default registry.")
-
         url = registry.registry_domain
         swarm_name = cast(str, registry.swarm_service_name)
         service_alias = cast(str, registry.service_alias)

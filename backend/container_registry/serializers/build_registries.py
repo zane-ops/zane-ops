@@ -149,8 +149,6 @@ class S3CredentialsSerializer(serializers.Serializer):
 
 
 class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
-    is_default = serializers.BooleanField(required=True)
-
     registry_domain = serializers.CharField(validators=[validate_url_domain])
     registry_username = serializers.CharField(default="zane")
     registry_password = serializers.CharField(
@@ -219,11 +217,6 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
     @transaction.atomic()
     def create(self, validated_data: dict):
-        is_default = validated_data.get("is_default")
-
-        if is_default:
-            BuildRegistry.objects.update(is_default=False)
-
         registry = BuildRegistry.objects.create(**validated_data)
 
         registry.service_alias = BuildRegistry.generate_default_service_alias(registry)
@@ -286,7 +279,6 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
-            "is_default",
             "service_alias",
             "version",
             # credentials
@@ -309,8 +301,6 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
 
 class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
-    is_default = serializers.BooleanField(required=True)
-
     s3_credentials = S3CredentialsSerializer(required=False, allow_null=True)
 
     def __init__(self, *args, **kwargs):
@@ -385,16 +375,11 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
         s3_credentials = validated_data.get("s3_credentials", instance.s3_credentials)
 
         name = validated_data.get("name", instance.name)
-        is_default = validated_data.get("is_default", instance.is_default)
-
-        if is_default:
-            BuildRegistry.objects.exclude(id=instance.id).update(is_default=False)
 
         BuildRegistry.objects.filter(pk=instance.id).update(
             version=F("version") + Value(1),
             registry_domain=registry_domain,
             name=name,
-            is_default=is_default,
             registry_username=registry_username,
             registry_password=registry_password,
             storage_backend=storage_backend,
@@ -482,7 +467,6 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
-            "is_default",
             "registry_domain",
             "service_alias",
             "registry_username",

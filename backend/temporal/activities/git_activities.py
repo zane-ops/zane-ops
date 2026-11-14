@@ -92,7 +92,7 @@ class GitActivities:
     async def get_default_build_registry(
         self, deployment: DeploymentDetails
     ) -> Optional[BuildRegistryDetails]:
-        registry = await BuildRegistry.objects.filter(is_default=True).afirst()
+        registry = await BuildRegistry.aget()
         details: Optional[BuildRegistryDetails] = None
         if registry is not None:
             details = BuildRegistryDetails(
@@ -761,9 +761,7 @@ class GitActivities:
             git_deployment.build_started_at = timezone.now()
             await git_deployment.asave(update_fields=["build_started_at", "updated_at"])
 
-            build_registry = await BuildRegistry.objects.filter(
-                is_default=True
-            ).afirst()
+            build_registry = await BuildRegistry.aget()
 
             try:
                 # Get build env variables
@@ -1602,9 +1600,7 @@ class GitActivities:
             #     service_names, current_network_name
             # )
 
-            build_registry = await BuildRegistry.objects.filter(
-                is_default=True
-            ).afirst()
+            build_registry = await BuildRegistry.aget()
 
             try:
                 # Get build env variables
@@ -1835,7 +1831,7 @@ class GitActivities:
 
     @activity.defn
     async def push_built_image_to_remote_registry(self, deployment: DeploymentDetails):
-        build_registry = await BuildRegistry.objects.filter(is_default=True).afirst()
+        build_registry = await BuildRegistry.aget()
 
         if build_registry is None:
             await deployment_log(

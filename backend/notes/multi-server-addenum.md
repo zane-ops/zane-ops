@@ -11,9 +11,9 @@
     -> When the user connects to `/ws/{container}` -> relay the websocket connection to the worker wich will run the terminal via `docker exec` 
       -> need to handle disconnect there as well
       -> Need to handle security (via the same permission class/mechanism for `InternalZaneAppPermission`)
-- [ ] Update deployment to return tasks with containers from the healthcheck
 - [ ] No need for multiple build registries, one is enough
 - [ ] Fail git builds when there is more than one server if there is no Build registry
+- [ ] Update deployment to return tasks with containers from the healthcheck
 - [ ] Update service healthchecks (http/cmd) to use the container's IP instead of the container's ID
       Or run the healthcheck in the correct temporal-node worker (on the correct server)
       Remember that for services that aren't pinned to one server, the healthcheck will need to run on 

@@ -1,6 +1,5 @@
 from typing import cast
 
-import requests
 from zane_api.tests.base import AuthAPITestCase, FakeDockerClient, FakeS3Client
 
 import responses
@@ -17,58 +16,10 @@ from temporal.activities.registries import get_config_name_for_registry
 
 
 class BuildRegistryViewTests(AuthAPITestCase):
-    def test_update_default_registry_to_prevent_duplicates(self):
-        self.loginUser()
-
-        BuildRegistry.objects.create(
-            name="My registry",
-            registry_domain="registry.example.com",
-            registry_username="hello",
-            registry_password="world",
-        )
-
-        body = {
-            "name": "My New registry",
-            "is_default": True,
-            "registry_domain": "registry.example.com",
-        }
-        response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
-        )
-
-        jprint(response.json())
-
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        registry_one = BuildRegistry.objects.get(name="My registry")
-        registry_two = BuildRegistry.objects.get(name="My New registry")
-        self.assertFalse(registry_one.is_default)
-        self.assertTrue(registry_two.is_default)
-
-    def test_create_default_registry_at_least_one_default_is_required(self):
-        self.loginUser()
-
-        body = {
-            "name": "My registry",
-            "is_default": False,
-            "registry_domain": "registry.example.com",
-        }
-        response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
-        )
-
-        jprint(response.json())
-
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(self.get_error_from_response(response, field="is_default"))
-
-    @responses.activate()
     async def test_create_and_deploy_build_registry(self):
         await self.aLoginUser()
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
-        responses.add_passthru(settings.LOKI_HOST)
         body = {
             "name": "My registry",
-            "is_default": True,
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
             "registry_username": "fredkisss",
         }
@@ -106,57 +57,6 @@ class BuildRegistryViewTests(AuthAPITestCase):
         )
         self.assertIsNotNone(config)
 
-    def test_create_new_registry_with_default_unset_the_current_default_registry(self):
-        self.loginUser()
-
-        old_registry = BuildRegistry.objects.create(
-            name="default",
-            registry_domain="registry.example.com",
-            registry_username="zane",
-            registry_password="password",
-        )
-
-        body = {
-            "name": "New default",
-            "is_default": True,
-            "registry_domain": "registry.example.com",
-        }
-        response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
-        )
-
-        jprint(response.json())
-
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        new_registry = cast(
-            BuildRegistry, BuildRegistry.objects.filter(name="New default").first()
-        )
-        self.assertIsNotNone(new_registry)
-
-        old_registry.refresh_from_db()
-        self.assertTrue(new_registry.is_default)
-        self.assertFalse(old_registry.is_default)
-
-    def test_delete_registry_cannot_delete_default_registry(self):
-        self.loginUser()
-
-        registry = BuildRegistry.objects.create(
-            name="default",
-            registry_domain="registry.example.com",
-            registry_username="zane",
-            registry_password="password",
-        )
-
-        # Delete registry
-        response = self.client.delete(
-            reverse(
-                "container_registry:build_registries.details",
-                kwargs={"id": registry.id},
-            ),
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
-
     def test_update_service_cannot_reuse_registry_url(self):
         self.loginUser()
         BuildRegistry.objects.create(
@@ -192,7 +92,6 @@ class BuildRegistryViewTests(AuthAPITestCase):
 
         body = {
             "name": "My registry",
-            "is_default": True,
             "registry_domain": "registry.example.com",
         }
         response = self.client.post(
@@ -209,7 +108,6 @@ class BuildRegistryViewTests(AuthAPITestCase):
 
         body = {
             "name": "My registry",
-            "is_default": True,
             "registry_domain": "*.registry.example.com",
         }
         response = self.client.post(
@@ -226,7 +124,6 @@ class BuildRegistryViewTests(AuthAPITestCase):
 
         body = {
             "name": "My registry",
-            "is_default": True,
             "registry_domain": settings.ZANE_APP_DOMAIN,
         }
         response = self.client.post(
@@ -238,15 +135,11 @@ class BuildRegistryViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertIsNotNone(self.get_error_from_response(response, "registry_domain"))
 
-    @responses.activate()
     async def test_delete_build_registry_and_associated_service(self):
         await self.aLoginUser()
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
-        responses.add_passthru(settings.LOKI_HOST)
 
         body = {
             "name": "My registry",
-            "is_default": True,
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
         }
         response = await self.async_client.post(
@@ -262,10 +155,6 @@ class BuildRegistryViewTests(AuthAPITestCase):
             await BuildRegistry.objects.afirst(),
         )
         self.assertIsNotNone(registry)
-
-        # remove default status to prevent conflict error
-        registry.is_default = False
-        await registry.asave()
 
         # Delete registry
         response = await self.async_client.delete(
@@ -291,11 +180,8 @@ class BuildRegistryViewTests(AuthAPITestCase):
         )
         self.assertIsNone(config)
 
-    @responses.activate()
     async def test_build_git_service_push_to_default_registry(self):
         await self.aLoginUser()
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
-        responses.add_passthru(settings.LOKI_HOST)
 
         fake_credentials = self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS
         registry = await BuildRegistry.objects.acreate(
@@ -330,54 +216,11 @@ class BuildRegistryViewTests(AuthAPITestCase):
         # image pushed to registry
         self.assertTrue(image_name in self.fake_docker_client.image_registry)
 
-    def test_update_registry_set_default_override_all_default(self):
-        self.loginUser()
-
-        first_registry, second_registry = BuildRegistry.objects.bulk_create(
-            [
-                BuildRegistry(
-                    name="My registry",
-                    registry_domain="registry.127.0.0.0.1.sslip.io",
-                    registry_username="hello",
-                    registry_password="world",
-                ),
-                BuildRegistry(
-                    name="My registry 2",
-                    is_default=False,
-                    registry_domain="registry.127.0.0.0.1.sslip.io",
-                    registry_username="hello",
-                    registry_password="world",
-                ),
-            ]
-        )
-
-        # Update registry
-        body = {"is_default": True}
-        response = self.client.patch(
-            reverse(
-                "container_registry:build_registries.details",
-                kwargs=dict(id=second_registry.id),
-            ),
-            data=body,
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        second_registry.refresh_from_db()
-        first_registry.refresh_from_db()
-
-        # version should be incremented on each update
-        self.assertTrue(second_registry.is_default)
-        self.assertFalse(first_registry.is_default)
-
-    @responses.activate()
     async def test_update_and_redeploy_registry_sucessfully(self):
         await self.aLoginUser()
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
-        responses.add_passthru(settings.LOKI_HOST)
 
         body = {
             "name": "My registry",
-            "is_default": True,
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
         }
         response = await self.async_client.post(
@@ -490,7 +333,6 @@ class BuildRegistryViewTests(AuthAPITestCase):
         self.loginUser()
         body = {
             "name": "My registry",
-            "is_default": True,
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
             "registry_username": "fredkisss",
             "storage_backend": BuildRegistry.StorageBackend.LOCAL,
@@ -524,7 +366,6 @@ class BuildRegistryViewTests(AuthAPITestCase):
         self.loginUser()
         body = {
             "name": "My registry",
-            "is_default": True,
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
             "registry_username": "fredkisss",
             "storage_backend": BuildRegistry.StorageBackend.S3,
@@ -551,7 +392,6 @@ class BuildRegistryViewTests(AuthAPITestCase):
         self.loginUser()
         body = {
             "name": "My registry",
-            "is_default": True,
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
             "registry_username": "fredkisss",
             "storage_backend": BuildRegistry.StorageBackend.S3,
@@ -579,7 +419,6 @@ class BuildRegistryViewTests(AuthAPITestCase):
         self.loginUser()
         body = {
             "name": "My registry",
-            "is_default": True,
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
             "storage_backend": BuildRegistry.StorageBackend.S3,
             "registry_username": "fredkisss",
@@ -708,11 +547,8 @@ class BuildRegistryViewTests(AuthAPITestCase):
     @responses.activate()
     async def test_create_and_deploy_registry_with_s3_credentials(self):
         await self.aLoginUser()
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
-        responses.add_passthru(settings.LOKI_HOST)
         body = {
             "name": "My registry",
-            "is_default": True,
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
             "storage_backend": BuildRegistry.StorageBackend.S3,
             "s3_credentials": {
@@ -760,12 +596,9 @@ class BuildRegistryViewTests(AuthAPITestCase):
     @responses.activate()
     async def test_update_and_redeploy_registry_with_s3_credentials(self):
         await self.aLoginUser()
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
-        responses.add_passthru(settings.LOKI_HOST)
 
         body = {
             "name": "My registry",
-            "is_default": True,
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
         }
         response = await self.async_client.post(
@@ -832,7 +665,6 @@ class BuildRegistryProxyTests(AuthAPITestCase):
         self.loginUser()
         body = {
             "name": "My registry",
-            "is_default": True,
             "registry_domain": "registry.zaneops.io",
             "registry_username": "fredkisss",
         }
