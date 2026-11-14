@@ -82,7 +82,7 @@ from temporal.activities import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
 )
-from ..utils import Colors, find_item_in_sequence, random_word
+from ..utils import Colors, find_item_in_sequence, random_word, generate_random_chars
 from git import GitCommandError
 from ..constants import WORKSPACE_SESSION_KEY
 
@@ -1722,7 +1722,14 @@ class FakeDockerClient:
                         },
                     },
                     "DesiredState": "running",
-                    "NetworksAttachments": [{"Network": {"Spec": {"Name": "zane"}}}],
+                    "NetworksAttachments": [
+                        {
+                            "Network": {
+                                "ID": generate_random_chars(25),
+                                "Spec": {"Name": "zane"},
+                            }
+                        }
+                    ],
                 }
             ]
 

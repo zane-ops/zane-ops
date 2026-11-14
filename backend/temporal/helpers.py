@@ -464,7 +464,7 @@ def get_swarm_service_aliases_ips_on_network(
     :param network_name: Name of the Docker network to query.
     :return: A dict mapping each network alias (str) to its IP address (str).
     """
-    client = docker.from_env()
+    client = get_docker_client()
     # get target network ID
     network = client.networks.get(network_name)
     network_id = network.id
