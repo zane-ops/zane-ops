@@ -7,7 +7,7 @@ from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIV
 
 from ..serializers import (
     BuildRegistryListCreateSerializer,
-    BuildRegistryUpdateDetailsSerializer,
+    BuildRegistrySerializer,
     BuildRegistryListPagination,
     BuildRegistryResponseSerializer,
     BuildRegistryQuerySerializer,
@@ -44,19 +44,137 @@ class BuildRegistryListCreateAPIView(ListCreateAPIView):
         return super().get(request, *args, **kwargs)
 
 
-class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
-    serializer_class = BuildRegistryUpdateDetailsSerializer
-    http_method_names = [
-        "get",
-        "patch",
-        "delete",
-    ]
-    lookup_url_kwarg = "id"
-    queryset = BuildRegistry.objects.all()
+class BuildRegistryDetailsAPIView(APIView):
+    serializer_class = BuildRegistrySerializer
     permission_classes = [IsInstanceOwner]
 
-    def get_object(self) -> BuildRegistry:  # type: ignore
-        return super().get_object()
+    def get_object(self) -> BuildRegistry:
+        registry = BuildRegistry.get()
+        if registry is None:
+            raise exceptions.NotFound(f"This instance does not have a build registry.")
+        return registry
+
+    @transaction.atomic()
+    @extend_schema(
+        operation_id="getBuildRegistry",
+        summary="get instance build registry",
+    )
+    def get(self, request: Request):
+        registry = self.get_object()
+        serializer = BuildRegistrySerializer(registry)
+        return Response(serializer.data)
+
+    @transaction.atomic()
+    @extend_schema(
+        responses={200: BuildRegistrySerializer, 409: ErrorResponse409Serializer},
+        operation_id="updateBuildRegistry",
+        summary="Update the instance build registry",
+    )
+    def patch(self, request: Request, *args, **kwargs):
+        registry = self.get_object()
+
+        serializer = BuildRegistrySerializer()
+
+        registry_domain = validated_data.get(
+            "registry_domain", registry.registry_domain
+        )
+        registry_username = validated_data.get(
+            "registry_username", registry.registry_username
+        )
+        registry_password = validated_data.get(
+            "registry_password", registry.registry_password
+        )
+        storage_backend = validated_data.get(
+            "storage_backend", registry.storage_backend
+        )
+        s3_credentials = validated_data.get("s3_credentials", registry.s3_credentials)
+
+        name = validated_data.get("name", registry.name)
+
+        BuildRegistry.objects.filter(pk=registry.id).update(
+            version=F("version") + Value(1),
+            registry_domain=registry_domain,
+            name=name,
+            registry_username=registry_username,
+            registry_password=registry_password,
+            storage_backend=storage_backend,
+            s3_credentials=s3_credentials,
+        )
+
+        def get_storage_config(storage_backend: str, s3_credentials: dict | None):
+            fs_config = None
+            if storage_backend == BuildRegistry.StorageBackend.LOCAL:
+                fs_config = RegistryConfig.StorageConfig.Filesystem()
+
+            s3_config = None
+            if (
+                storage_backend == BuildRegistry.StorageBackend.S3
+                and s3_credentials is not None
+            ):
+                s3_config = RegistryConfig.StorageConfig.S3(
+                    bucket=s3_credentials["bucket"],
+                    accesskey=s3_credentials["access_key"],
+                    secretkey=s3_credentials["secret_key"],
+                    region=s3_credentials["region"],
+                    regionendpoint=s3_credentials["endpoint"],
+                )
+            return RegistryConfig.StorageConfig(filesystem=fs_config, s3=s3_config)
+
+        previous_snapshot = RegistrySnaphot(
+            service_alias=cast(str, registry.service_alias),
+            swarm_service_name=cast(str, registry.swarm_service_name),
+            id=registry.id,
+            config=RegistryConfig(
+                storage=get_storage_config(
+                    registry.storage_backend,
+                    registry.s3_credentials,
+                )
+            ),
+            name=registry.name,
+            domain=registry.registry_domain,
+            username=registry.registry_username,
+            password=registry.registry_password,
+            version=registry.version,
+            monitor_schedule_id=registry.monitor_schedule_id,
+            login_refresh_schedule_id=registry.refresh_login_schedule_id,
+        )
+        new_snapshot = RegistrySnaphot(
+            service_alias=cast(str, registry.service_alias),
+            swarm_service_name=cast(str, registry.swarm_service_name),
+            id=registry.id,
+            config=RegistryConfig(
+                storage=get_storage_config(
+                    storage_backend,
+                    s3_credentials,
+                )
+            ),
+            name=name,
+            domain=registry_domain,
+            username=registry_username,
+            password=registry_password,
+            version=registry.version + 1,
+            monitor_schedule_id=registry.monitor_schedule_id,
+            login_refresh_schedule_id=registry.refresh_login_schedule_id,
+        )
+
+        def commit_callback():
+            payload = UpdateRegistryPayload(
+                service_alias=cast(str, registry.service_alias),
+                swarm_service_name=cast(str, registry.swarm_service_name),
+                id=registry.id,
+                previous=previous_snapshot,
+                current=new_snapshot,
+            )
+
+            TemporalClient.start_workflow(
+                workflow=UpdateBuildRegistryWorkflow.run,
+                arg=payload,
+                id=registry.workflow_id,
+            )
+
+        transaction.on_commit(commit_callback)
+        registry.refresh_from_db()
+        return Response(data={})
 
     @transaction.atomic()
     @extend_schema(
@@ -98,13 +216,10 @@ class BuildRegistryListImagesAPIView(APIView):
         operation_id="listRegistryImages",
         summary="List images in registry",
     )
-    def get(self, request: Request, id: str):
-        try:
-            registry = BuildRegistry.objects.filter().get(pk=id)
-        except BuildRegistry.DoesNotExist:
-            raise exceptions.NotFound(
-                f"A build registry with the id `{id}` does not exist."
-            )
+    def get(self, request: Request):
+        registry = BuildRegistry.get()
+        if registry is None:
+            raise exceptions.NotFound(f"This instance does not have a build registry.")
 
         form = BuildRegistryQuerySerializer(data=request.query_params)
         form.is_valid(raise_exception=True)

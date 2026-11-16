@@ -300,7 +300,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         }
 
 
-class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
+class BuildRegistrySerializer(serializers.ModelSerializer):
     s3_credentials = S3CredentialsSerializer(required=False, allow_null=True)
 
     def __init__(self, *args, **kwargs):
