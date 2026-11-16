@@ -11,6 +11,7 @@ from temporalio.exceptions import ApplicationError
 from ..shared import (
     HealthcheckDeploymentDetails,
     DeploymentResult,
+    RegistryLoginRefreshResult,
     ServiceMetricsResult,
     SimpleDeploymentDetails,
     RegistrySnaphot,
@@ -654,7 +655,9 @@ async def get_all_swarm_nodes_in_cluster() -> list[SimpleInClusterSwarmNodeDetai
 
 
 @activity.defn
-async def login_to_build_registry(payload: RegistrySnaphot) -> str:
+async def login_to_build_registry(
+    payload: RegistrySnaphot,
+) -> RegistryLoginRefreshResult:
     cmd_args = [
         DOCKER_BINARY_PATH,
         "login",
@@ -683,8 +686,12 @@ async def login_to_build_registry(payload: RegistrySnaphot) -> str:
     if len(error_lines) > 0:
         print(*[f"{Colors.RED}{line}{Colors.ENDC}" for line in error_lines])
     if process.returncode != 0:
-        return (
-            f"Error logging in to registry {Colors.BLUE}{payload.domain}{Colors.ENDC}"
+        return RegistryLoginRefreshResult(
+            success=False,
+            message=f"Error logging in to registry {Colors.BLUE}{payload.domain}{Colors.ENDC}",
         )
     else:
-        return f"Successfully logged in to registry {Colors.BLUE}{payload.domain}{Colors.ENDC} ✅"
+        return RegistryLoginRefreshResult(
+            success=True,
+            message=f"Successfully logged in to registry {Colors.BLUE}{payload.domain}{Colors.ENDC} ✅",
+        )

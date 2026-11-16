@@ -20,6 +20,7 @@ from ..shared import (
     HealthcheckDeploymentDetails,
     DeploymentResult,
     AppCleanupWorkflowResult,
+    RegistryLoginRefreshResult,
     SimpleDeploymentDetails,
     RegistrySnaphot,
     ComposeStackSnapshot,
@@ -254,14 +255,14 @@ class RefreshBuildRegistryLoginInfoWorkflow:
         )
 
     @workflow.run
-    async def run(self, payload: RegistrySnaphot):
+    async def run(self, payload: RegistrySnaphot) -> list[RegistryLoginRefreshResult]:
         in_cluster_nodes = await workflow.execute_activity(
             get_all_swarm_nodes_in_cluster,
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )
 
-        handles: list[ActivityHandle] = []
+        handles: list[ActivityHandle[RegistryLoginRefreshResult]] = []
         for node in in_cluster_nodes:
             handle = workflow.start_activity(
                 login_to_build_registry,
@@ -272,4 +273,4 @@ class RefreshBuildRegistryLoginInfoWorkflow:
                 schedule_to_start_timeout=timedelta(seconds=30),
             )
             handles.append(handle)
-        await asyncio.gather(*handles, return_exceptions=True)
+        return await asyncio.gather(*handles)

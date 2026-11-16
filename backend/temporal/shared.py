@@ -570,6 +570,12 @@ class RegistryConfig:
 
 
 @dataclass
+class RegistryLoginRefreshResult:
+    message: str
+    success: bool
+
+
+@dataclass
 class RegistrySnaphot:
     id: str
     name: str
