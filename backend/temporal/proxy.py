@@ -851,7 +851,9 @@ class ZaneProxyClient:
                         )
                     )
 
-        for registry in BuildRegistry.objects.filter(service_alias__isnull=False):
+        # Only one registry per instance, no need for more
+        registry = BuildRegistry.get()
+        if registry is not None and registry.service_alias is not None:
             routes.append(
                 cls._get_request_for_build_registry(
                     registry_id=registry.id,

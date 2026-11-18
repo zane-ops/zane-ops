@@ -16,6 +16,19 @@ from temporal.activities.registries import get_config_name_for_registry
 
 
 class BuildRegistryViewTests(AuthAPITestCase):
+    def test_create_registry_cannot_create_more_than_one_registry(self):
+        self.loginUser()
+        body = {
+            "name": "My registry",
+            "registry_domain": "registry.127.0.0.0.1.sslip.io",
+            "registry_username": "fredkisss",
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+        jprint(response.json())
+        self.fail()
+
     async def test_create_and_deploy_build_registry(self):
         await self.aLoginUser()
         body = {
