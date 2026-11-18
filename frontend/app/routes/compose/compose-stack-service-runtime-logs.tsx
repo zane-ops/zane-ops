@@ -607,7 +607,7 @@ const HeaderSection = React.memo(function HeaderSection({
               setSearchParams(searchParams);
             }}
           >
-            <SelectTrigger className="w-54 [&_[data-label]]:inline placeholder-shown:text-grey">
+            <SelectTrigger className="w-54 [&_[data-label]]:inline [&_[data-server]]:hidden placeholder-shown:text-grey">
               <SelectValue placeholder="select replica" className="text-grey" />
             </SelectTrigger>
             <SelectContent className="border border-border text-sm">
@@ -622,6 +622,7 @@ const HeaderSection = React.memo(function HeaderSection({
                       <TaskWithContainerSelectItem
                         container_id={task.container_id}
                         status={task.status}
+                        node_id={task.node_id}
                         key={task.id}
                       />
                     ))}
@@ -642,6 +643,7 @@ const HeaderSection = React.memo(function HeaderSection({
                       <TaskWithContainerSelectItem
                         container_id={task.container_id}
                         status={task.status}
+                        node_id={task.node_id}
                         key={task.id}
                       />
                     ))}

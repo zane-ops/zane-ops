@@ -146,6 +146,7 @@ ENV COMMIT_SHA=$COMMIT_SHA \
     IMAGE_VERSION=$IMAGE_VERSION \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \ 
+    ENVIRONMENT=PRODUCTION \ 
     VIRTUAL_ENV=/app/.venv \
     DJANGO_SETTINGS_MODULE=backend.settings \
     NIXPACKS_VERSION=1.39.0 \
@@ -155,7 +156,7 @@ ENV COMMIT_SHA=$COMMIT_SHA \
 EXPOSE 80
 
 
-COPY ./docker/app/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY ./docker/app/supervisord*.conf /etc/supervisor/conf.d/
 COPY ./docker/app/Caddyfile /etc/caddy/Caddyfile
 
 # Start Supervisor

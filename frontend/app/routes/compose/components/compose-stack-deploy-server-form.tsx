@@ -6,6 +6,7 @@ import {
   LoaderIcon,
   PencilLineIcon,
   ServerIcon,
+  ShuffleIcon,
   Undo2Icon,
   XIcon
 } from "lucide-react";
@@ -124,7 +125,9 @@ export function ComposeStackDeployServer({
           Deployment Server
         </FieldSetLabel>
         <p className="text-gray-400 mt-2">
-          Choose the server the services on this stack will be deployed on.
+          Choose the server the services on this stack will be deployed on. If
+          none is selected, ZaneOps uses the default server of the environment
+          or project, or any available deploy server if no default is set.
         </p>
 
         <FieldSetSelect
@@ -154,9 +157,14 @@ export function ComposeStackDeployServer({
               value="<none>"
               className="items-start [&_[data-indicator]]:relative [&_[data-indicator]]:top-0.5"
             >
-              <div data-item className="inline-flex items-center gap-2">
-                <BanIcon className="relative flex-none size-4" />
-                None
+              <div data-item className="inline-flex items-start gap-2">
+                <ShuffleIcon className="relative flex-none size-4 top-1" />
+                <div className="flex flex-col items-start gap-0">
+                  <span>Any Deploy Server</span>
+                  <span className="text-grey">
+                    Use the default server, or any available deploy server
+                  </span>
+                </div>
               </div>
             </SelectItem>
             {servers.map((server) => {

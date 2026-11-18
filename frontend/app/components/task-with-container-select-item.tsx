@@ -1,5 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
+import { ServerIcon } from "lucide-react";
 import type { ComposeStackTask } from "~/api/types";
 import { SelectItem } from "~/components/ui/select";
+import { swarmQueries } from "~/lib/queries";
 import { cn, stringToColor } from "~/lib/utils";
 import { TASK_STATUS_COLOR_MAP } from "~/routes/compose/components/compose-stack-service-replica-card";
 
@@ -8,14 +11,19 @@ export type TaskWithContainerSelectItemProps = Pick<
   "status"
 > & {
   container_id: string;
+  node_id?: string | null;
 };
 
 export function TaskWithContainerSelectItem({
   container_id,
+  node_id,
   status
 }: TaskWithContainerSelectItemProps) {
   const color = TASK_STATUS_COLOR_MAP[status];
   const containerColor = stringToColor(container_id);
+
+  const { data: servers = [] } = useQuery(swarmQueries.nodeList());
+  const server = servers.find((node) => node_id === node.swarm_node_id);
 
   let newStatus: string = status;
   if (status === "remove") {
@@ -35,9 +43,19 @@ export function TaskWithContainerSelectItem({
       >
         <span
           data-label
-          className="text-[var(--container-color-light)] dark:text-[var(--container-color-dark)]"
+          className="text-[var(--container-color-light)] dark:text-[var(--container-color-dark)] order-last"
         >
-          {container_id.substring(0, 12)}
+          {container_id.substring(0, 12)}{" "}
+          {server && (
+            <span
+              data-server
+              className="text-card-foreground inline-flex gap-0.5 items-center"
+            >
+              <span>on</span>
+              <span className="text-grey">{server.hostname}</span>
+              <ServerIcon className="size-3 flex-none text-grey relative top-0.5" />
+            </span>
+          )}
         </span>
         <div
           className={cn(

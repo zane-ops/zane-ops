@@ -25,6 +25,7 @@ from compose.dtos import (
     ComposeStackServiceStatusDto,
     ComposeStackSnapshot,
 )
+from temporalio import activity
 
 from .constants import (
     BUILD_REGISTRY_VOLUME_PATH,
@@ -32,6 +33,12 @@ from .constants import (
     ZANEOPS_RESUME_DEPLOY_MARKER,
     BUILD_REGISTRY_PASSWORD_PATH,
 )
+
+
+@activity.defn(name="select-task-queue")
+async def select_task_queue() -> str:
+    """Just a stub for typedworkflow invocation."""
+    raise NotImplementedError
 
 
 @dataclass
@@ -66,6 +73,7 @@ class GitBuildDetails:
     dockerfile_path: str
     build_context_dir: str
     image_tag: str
+    service_ip_aliases: dict[str, str] = field(default_factory=dict)
     build_stage_target: Optional[str] = None
     default_env_variables: List[EnvVariableDto] | None = None
 
@@ -562,6 +570,12 @@ class RegistryConfig:
 
 
 @dataclass
+class RegistryLoginRefreshResult:
+    message: str
+    success: bool
+
+
+@dataclass
 class RegistrySnaphot:
     id: str
     name: str
@@ -572,8 +586,8 @@ class RegistrySnaphot:
     version: int
     service_alias: str
     swarm_service_name: str
-    is_secure: bool
     monitor_schedule_id: str
+    login_refresh_schedule_id: str
 
 
 @dataclass
@@ -583,6 +597,15 @@ class UpdateRegistryPayload:
     id: str
     previous: RegistrySnaphot
     current: RegistrySnaphot
+
+
+@dataclass
+class SimpleInClusterSwarmNodeDetails:
+    id: str
+    private_ip: str
+    hostname: str | None
+    swarm_node_id: str
+    task_queue: str
 
 
 @dataclass

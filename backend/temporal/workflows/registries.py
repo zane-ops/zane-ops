@@ -17,7 +17,7 @@ with workflow.unsafe.imports_passed_through():
         wait_for_registry_service_to_be_updated,
         acquire_registry_deploy_semaphore,
         release_registry_deploy_semaphore,
-        create_registry_health_check_schedule,
+        upsert_registry_schedules,
         delete_registry_health_check_schedule,
     )
     from ..schedules import MonitorRegistryDeploymentActivites
@@ -112,7 +112,7 @@ class DeployBuildRegistryWorkflow:
             )
 
             await workflow.execute_activity(
-                create_registry_health_check_schedule,
+                upsert_registry_schedules,
                 payload,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
@@ -192,7 +192,7 @@ class UpdateBuildRegistryWorkflow:
             )
 
             await workflow.execute_activity(
-                create_registry_health_check_schedule,
+                upsert_registry_schedules,
                 payload.current,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,

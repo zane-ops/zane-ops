@@ -10,7 +10,6 @@ import { href, useFetcher, useNavigate } from "react-router";
 import type { ComposeStack } from "~/api/types";
 import {
   DeploymentServerChangeField,
-  DeploymentStrategyChangeField,
   EnvVariableChangeItem
 } from "~/components/change-fields";
 import {
@@ -29,18 +28,9 @@ import {
   DialogTitle,
   DialogTrigger
 } from "~/components/ui/dialog";
-import {
-  FieldSet,
-  FieldSetCheckbox,
-  FieldSetLabel
-} from "~/components/ui/fieldset";
+import { FieldSet, FieldSetLabel } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
-import {
-  capitalizeText,
-  cn,
-  getFormErrorsFromResponseData,
-  pluralize
-} from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData, pluralize } from "~/lib/utils";
 import type { clientAction } from "~/routes/compose/deploy-compose-stack";
 
 export type ComposeStackChangesModalProps = {

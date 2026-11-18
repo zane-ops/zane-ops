@@ -365,8 +365,8 @@ export default function EnvironmentServiceListPage({
                 image={service.image}
                 key={service.id}
                 tag={service.tag}
-                volumeNumber={service.volume_number}
                 status={service.status}
+                replicas={service.replicas}
                 selected={selectedServiceIds.includes(service.id)}
                 updatedAt={relativeTimeFormatter(service.updated_at)}
                 url={service.url}
@@ -399,6 +399,7 @@ export default function EnvironmentServiceListPage({
               lastCommitMessage={service.last_commit_message}
               url={service.url}
               git_provider={service.git_provider}
+              replicas={service.replicas}
               onToggleSelect={(id) => {
                 setSelectedServiceIds((selectedServiceIds) => {
                   if (selectedServiceIds.includes(id)) {

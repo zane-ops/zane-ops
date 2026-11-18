@@ -17,6 +17,7 @@ x-backend-vars: &env-vars
   # a fixed path in the container and tell django about it.
   MAXMIND_DB_PATH: /code/GeoLite2-Country.mmdb
   ZANE_HTTP_MODE: ${MODE:-http}
+  WEBSOCKET_WORKER_PORT: 8080
 
 services:
   zane-vector:
@@ -39,9 +40,41 @@ services:
       labels:
         zane.role: "log-collector"
 
-  zane-temporal-node-worker:
-    image: ghcr.io/zane-ops/app:canary
+  zane-temporal-main-worker:
+    image: ghcr.io/zane-ops/app:v2-canary
     command: /bin/bash -l -c "/code/scripts/run_dev_worker.sh"
+    volumes:
+      - ../backend:/code
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - docker-buildx-store:/root/.docker/buildx
+      - docker-data:/root/.docker
+    environment:
+      <<: *env-vars
+      BACKEND_COMPONENT: WORKER
+      TEMPORALIO_WORKER_TASK_QUEUE: main-task-queue
+    networks:
+      - zane
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: any
+      labels:
+        zane.role: "main-worker"
+      placement:
+        constraints:
+          - node.labels.zane.main-server==true
+
+  zane-temporal-node-worker:
+    image: ghcr.io/zane-ops/app:v2-canary
+    # command: /bin/bash -l -c "/code/scripts/run_dev_worker.sh"
+    command: 
+      - /usr/bin/supervisord
+      - -c
+      - /code/scripts/supervisord_node_worker_dev.conf
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -65,7 +98,7 @@ services:
     networks:
       - zane
   zane-temporal-build-worker:
-    image: ghcr.io/zane-ops/app:canary
+    image: ghcr.io/zane-ops/app:v2-canary
     command: /bin/bash -l -c "/code/scripts/run_dev_worker.sh"
     volumes:
       - ../backend:/code

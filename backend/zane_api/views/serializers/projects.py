@@ -88,7 +88,6 @@ class ServiceListParamSerializer(serializers.Serializer):
 
 class BaseServiceCardSerializer(serializers.Serializer):
     updated_at = serializers.DateTimeField(required=True)
-    volume_number = serializers.IntegerField(required=True)
     slug = serializers.CharField(required=True)
     url = serializers.URLField(allow_null=True)
     STATUS_CHOICES = (
@@ -101,6 +100,7 @@ class BaseServiceCardSerializer(serializers.Serializer):
     )
     status = serializers.ChoiceField(choices=STATUS_CHOICES)
     id = serializers.CharField(required=True)
+    replicas = serializers.IntegerField()
 
 
 class DockerServiceCardSerializer(BaseServiceCardSerializer):

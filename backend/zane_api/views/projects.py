@@ -1,5 +1,4 @@
 import time
-from typing import cast
 
 from django.db import IntegrityError, transaction
 from django.db.models import (
@@ -10,7 +9,6 @@ from django.db.models import (
     Sum,
     Case,
     Prefetch,
-    Count,
     OuterRef,
     Subquery,
     Value,
@@ -431,7 +429,6 @@ class ProjectServiceListAPIView(APIView):
                 ),
             )
             .annotate(
-                volume_number=Count("volumes"),
                 latest_deployment_status=Subquery(
                     deployment_queryset.values("status")[:1]
                 ),
@@ -493,11 +490,11 @@ class ProjectServiceListAPIView(APIView):
                             id=service.id,
                             image=image,
                             tag=tag,
+                            replicas=service.replicas,
                             updated_at=service.last_updated  # type: ignore
                             if service.last_updated is not None  # type: ignore
                             else service.created_at,  # type: ignore
                             slug=service.slug,
-                            volume_number=service.volume_number,  # type: ignore
                             url=str(url) if url is not None else None,
                             status=(
                                 status_map[service.latest_deployment_status]  # type: ignore
@@ -532,6 +529,7 @@ class ProjectServiceListAPIView(APIView):
                             repository=service_repo,
                             last_commit_message=service.latest_commit_message,  # type: ignore
                             branch=branch_name,
+                            replicas=service.replicas,
                             updated_at=(
                                 service.last_updated  # type: ignore
                                 if service.last_updated is not None  # type: ignore
@@ -539,7 +537,6 @@ class ProjectServiceListAPIView(APIView):
                             ),  # type: ignore
                             slug=service.slug,
                             git_provider=service.git_provider or source_git_provider,  # type: ignore
-                            volume_number=service.volume_number,  # type: ignore
                             url=str(url) if url is not None else None,
                             status=(
                                 status_map[service.latest_deployment_status]  # type: ignore

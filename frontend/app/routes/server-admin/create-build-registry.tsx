@@ -133,26 +133,6 @@ function CreateBuildRegistryForm() {
         </div>
       </FieldSet>
 
-      <FieldSet
-        name="is_secure"
-        errors={errors.is_secure}
-        className="flex-1 inline-flex gap-2 flex-col"
-      >
-        <div className="inline-flex gap-2 items-start">
-          <FieldSetCheckbox defaultChecked className="relative top-1" />
-
-          <div className="flex flex-col gap-0.5">
-            <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
-              Use HTTPS
-            </FieldSetLabel>
-
-            <small className="text-grey text-sm">
-              Connect to this registry using HTTPS (recommended)
-            </small>
-          </div>
-        </div>
-      </FieldSet>
-
       <Separator />
 
       <div className="flex flex-col gap-4 w-full">
@@ -380,7 +360,6 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     registry_username: formData.get("registry_username")?.toString() ?? "",
     registry_password: formData.get("registry_password")?.toString() ?? "",
     storage_backend: storage_backend,
-    is_secure: formData.get("is_secure") === "on",
     is_default: formData.get("is_default") === "on"
   };
 

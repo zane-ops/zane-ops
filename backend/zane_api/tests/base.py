@@ -75,14 +75,14 @@ from temporal.workflows import (
     GitDeploymentStep,
 )
 from ..serializers import ServiceSerializer
-
+from temporalio import activity
 from compose.dtos import ComposeStackSpec
 from swarm.models import SwarmNode, SSHKey
 from temporal.activities import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
 )
-from ..utils import Colors, find_item_in_sequence, random_word
+from ..utils import Colors, find_item_in_sequence, random_word, generate_random_chars
 from git import GitCommandError
 from ..constants import WORKSPACE_SESSION_KEY
 
@@ -529,18 +529,30 @@ class AuthAPITestCase(APITestCase):
     async def workflowEnvironment(
         self, task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE, skip_time=True
     ):
+        @activity.defn(name="select-task-queue")
+        async def select_task_queue() -> str:
+            return task_queue
+
         env = await (
             WorkflowEnvironment.start_time_skipping()
             if skip_time
             else WorkflowEnvironment.start_local()
         )
         await env.__aenter__()
+        all_workflows_and_activities = get_workflows_and_activities()
         worker = Worker(
             env.client,
             task_queue=task_queue,
-            **get_workflows_and_activities(),  # type: ignore
+            **all_workflows_and_activities,  # type: ignore
+        )
+        worker2 = Worker(
+            env.client,
+            task_queue=settings.TEMPORALIO_DISPATCH_TASK_QUEUE,
+            workflows=all_workflows_and_activities["workflows"],
+            activities=[select_task_queue],
         )
         await worker.__aenter__()
+        await worker2.__aenter__()
 
         def collect_commit_callback(func: Callable):
             self.commit_callback = func
@@ -584,6 +596,11 @@ class AuthAPITestCase(APITestCase):
 
         patch_temporal_create_schedule = patch(
             "temporal.activities.TemporalClient.acreate_schedule",
+            side_effect=acreate_schedule,
+        )
+
+        patch_temporal_create_schedule = patch(
+            "temporal.activities.TemporalClient.acreate_or_update_schedule",
             side_effect=acreate_schedule,
         )
 
@@ -641,6 +658,7 @@ class AuthAPITestCase(APITestCase):
             patch_temporal_delete_schedule.stop()
             patch_temporal_client_underlying_client.stop()
             await worker.__aexit__(None, None, None)
+            await worker2.__aexit__(None, None, None)
             await env.__aexit__(None, None, None)
 
     @asynccontextmanager
@@ -1335,8 +1353,6 @@ class FakeProcess:
         self.stderr = asyncio.StreamReader()
         self.docker_client = docker_client
 
-        if "docker image push" in self.command:
-            self._push_image_to_registry()
         if "docker buildx build" in self.command:
             self._build_with_docker()
         if "nixpacks plan" in self.command:
@@ -1407,9 +1423,7 @@ class FakeProcess:
             )
             self.stdout.feed_data(message.encode())
 
-    def _push_image_to_registry(self):
-        all_args = self.command.split(" ")
-        image = all_args[-1]
+    def _push_image_to_registry(self, image: str):
         self.docker_client.image_registry.add(image)
 
     def _create_repo_folder(self):
@@ -1465,6 +1479,7 @@ class FakeProcess:
         dockerfile_regex = r"-f\s+(\S+)"
         build_arg_regex = r"--build-arg\s+(\S+)"
         labels_regex = r"--label\s+(\S+)"
+
         matched_tag = re.search(tag_regex, self.command)
         matched_dockerfile = re.search(dockerfile_regex, self.command)
         build_arg_matches: List[str] = re.findall(build_arg_regex, self.command)
@@ -1483,6 +1498,10 @@ class FakeProcess:
             labels[key] = value
 
         tag = matched_tag.group(1)
+
+        if "--output type=image,push=true" in self.command:
+            self._push_image_to_registry(tag)
+
         dockerfile = matched_dockerfile.group(1)
         build_output = self.docker_client.image_build(
             tag=tag, dockerfile=dockerfile, buildargs=buildargs, labels=labels
@@ -1704,7 +1723,14 @@ class FakeDockerClient:
                         },
                     },
                     "DesiredState": "running",
-                    "NetworksAttachments": [{"Network": {"Spec": {"Name": "zane"}}}],
+                    "NetworksAttachments": [
+                        {
+                            "Network": {
+                                "ID": generate_random_chars(25),
+                                "Spec": {"Name": "zane"},
+                            }
+                        }
+                    ],
                 }
             ]
 
@@ -1798,7 +1824,12 @@ class FakeDockerClient:
                         },
                         "DesiredState": "running",
                         "NetworksAttachments": [
-                            {"Network": {"Spec": {"Name": "zane"}}}
+                            {
+                                "Network": {
+                                    "ID": generate_random_chars(25),
+                                    "Spec": {"Name": "zane"},
+                                }
+                            }
                         ],
                     }
                 )
