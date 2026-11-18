@@ -2,7 +2,7 @@ import re
 from typing import cast
 from urllib.parse import unquote
 import requests
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.generics import ListCreateAPIView
 
 
 from ..serializers import (
@@ -17,31 +17,26 @@ from drf_spectacular.utils import extend_schema
 from django.db import transaction
 from rest_framework.request import Request
 from rest_framework.response import Response
-from zane_api.views import ErrorResponse409Serializer, ResourceConflict
-from temporal.workflows import DestroyBuildRegistryWorkflow
-from temporal.shared import DeleteSwarmRegistryServiceDetails
+
+from temporal.workflows import (
+    DestroyBuildRegistryWorkflow,
+    UpdateBuildRegistryWorkflow,
+    DeployBuildRegistryWorkflow,
+)
+from temporal.shared import (
+    DeleteSwarmRegistryServiceDetails,
+    RegistryConfig,
+    RegistrySnaphot,
+    UpdateRegistryPayload,
+)
 from temporal.client import TemporalClient
 from rest_framework.views import APIView
 from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import exceptions, status
 from zane_api.views.base import BadRequest
+from django.db.models import F, Value
 
 from zane_api.permissions import IsInstanceOwner
-
-
-class BuildRegistryListCreateAPIView(ListCreateAPIView):
-    serializer_class = BuildRegistryListCreateSerializer
-    queryset = BuildRegistry.objects.all()
-    pagination_class = BuildRegistryListPagination
-
-    permission_classes = [IsInstanceOwner]
-
-    @extend_schema(
-        operation_id="getBuildRegistries",
-        summary="List all build registries",
-    )
-    def get(self, request: Request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
 
 
 class BuildRegistryDetailsAPIView(APIView):
@@ -56,6 +51,76 @@ class BuildRegistryDetailsAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
+        request=BuildRegistryListCreateSerializer,
+        operation_id="createBuildRegistry",
+        summary="get instance build registry",
+    )
+    def post(self, request: Request):
+        form = BuildRegistryListCreateSerializer(data=request.data)
+
+        form.is_valid(raise_exception=True)
+
+        validated_data = cast(dict, form.validated_data)
+
+        registry = BuildRegistry.objects.create(**validated_data)
+
+        registry.service_alias = BuildRegistry.generate_default_service_alias(registry)
+        registry.swarm_service_name = BuildRegistry.generate_default_swarm_service_name(
+            registry
+        )
+        registry.save()
+
+        def commit_callback():
+            fs_config = None
+            if registry.storage_backend == BuildRegistry.StorageBackend.LOCAL:
+                fs_config = RegistryConfig.StorageConfig.Filesystem()
+
+            s3_config = None
+            if (
+                registry.storage_backend == BuildRegistry.StorageBackend.S3
+                and registry.s3_credentials is not None
+            ):
+                credentials = cast(dict, registry.s3_credentials)
+                s3_config = RegistryConfig.StorageConfig.S3(
+                    bucket=credentials["bucket"],
+                    accesskey=credentials["access_key"],
+                    secretkey=credentials["secret_key"],
+                    region=credentials["region"],
+                    regionendpoint=credentials["endpoint"],
+                )
+
+            config = RegistryConfig(
+                storage=RegistryConfig.StorageConfig(
+                    filesystem=fs_config,
+                    s3=s3_config,
+                )
+            )
+            payload = RegistrySnaphot(
+                service_alias=cast(str, registry.service_alias),
+                config=config,
+                swarm_service_name=cast(str, registry.swarm_service_name),
+                name=registry.name,
+                id=registry.id,
+                domain=registry.registry_domain,
+                username=registry.registry_username,
+                password=registry.registry_password,
+                version=registry.version,
+                monitor_schedule_id=registry.monitor_schedule_id,
+                login_refresh_schedule_id=registry.refresh_login_schedule_id,
+            )
+
+            TemporalClient.start_workflow(
+                workflow=DeployBuildRegistryWorkflow.run,
+                arg=payload,
+                id=registry.workflow_id,
+            )
+
+        transaction.on_commit(commit_callback)
+
+        serializer = BuildRegistrySerializer(registry)
+        return Response(data=serializer.data)
+
+    @extend_schema(
         operation_id="getBuildRegistry",
         summary="get instance build registry",
     )
@@ -66,14 +131,17 @@ class BuildRegistryDetailsAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
-        responses={200: BuildRegistrySerializer, 409: ErrorResponse409Serializer},
         operation_id="updateBuildRegistry",
         summary="Update the instance build registry",
     )
-    def patch(self, request: Request, *args, **kwargs):
+    def patch(self, request: Request):
         registry = self.get_object()
 
-        serializer = BuildRegistrySerializer()
+        form = BuildRegistrySerializer(data=request.data, instance=registry)
+
+        form.is_valid(raise_exception=True)
+
+        validated_data = cast(dict, form.validated_data)
 
         registry_domain = validated_data.get(
             "registry_domain", registry.registry_domain
@@ -120,6 +188,7 @@ class BuildRegistryDetailsAPIView(APIView):
                 )
             return RegistryConfig.StorageConfig(filesystem=fs_config, s3=s3_config)
 
+        registry.refresh_from_db()
         previous_snapshot = RegistrySnaphot(
             service_alias=cast(str, registry.service_alias),
             swarm_service_name=cast(str, registry.swarm_service_name),
@@ -173,12 +242,13 @@ class BuildRegistryDetailsAPIView(APIView):
             )
 
         transaction.on_commit(commit_callback)
-        registry.refresh_from_db()
-        return Response(data={})
+
+        serializer = BuildRegistrySerializer(registry)
+        return Response(data=serializer.data)
 
     @transaction.atomic()
     @extend_schema(
-        responses={204: None, 409: ErrorResponse409Serializer},
+        responses={204: None},
         operation_id="deleteBuildRegistry",
         summary="Delete build registry",
     )
@@ -204,7 +274,8 @@ class BuildRegistryDetailsAPIView(APIView):
 
         transaction.on_commit(commit_callback)
 
-        return super().delete(request, *args, **kwargs)
+        registry.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class BuildRegistryListImagesAPIView(APIView):
