@@ -95,8 +95,8 @@ function SettingsLayout({ children }: SettingsLayoutProps) {
       icon: Building2Icon
     },
     {
-      title: "Build Registries",
-      href: href("/admin/build-registries"),
+      title: "Build Registry",
+      href: href("/admin/build-registry"),
       icon: ContainerIcon
     },
     {
