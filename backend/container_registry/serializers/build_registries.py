@@ -2,16 +2,9 @@ from typing import cast
 from rest_framework import serializers
 
 from ..models import BuildRegistry
-from temporal.workflows import (
-    DeployBuildRegistryWorkflow,
-    UpdateBuildRegistryWorkflow,
-    RefreshBuildRegistryLoginInfoWorkflow,
-)
-from temporal.client import TemporalClient
-from temporal.shared import RegistryConfig, RegistrySnaphot, UpdateRegistryPayload
-from django.db import transaction
+
 import secrets
-from django.db.models import Q, F, Value
+from django.db.models import Q
 from zane_api.validators import validate_url_domain
 from rest_framework import pagination
 import boto3
@@ -148,7 +141,7 @@ class S3CredentialsSerializer(serializers.Serializer):
         return attrs
 
 
-class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
+class BuildRegistryCreateSerializer(serializers.ModelSerializer):
     registry_domain = serializers.CharField(validators=[validate_url_domain])
     registry_username = serializers.CharField(default="zane")
     registry_password = serializers.CharField(
@@ -322,15 +315,21 @@ class BuildRegistrySerializer(serializers.ModelSerializer):
             "registry_password": {"write_only": True},
             "health_status": {"read_only": True},
             "healthcheck_message": {"read_only": True},
+            # Without doing this, the patch would still require these
+            "name": {"required": False},
+            "registry_domain": {"required": False},
+            "service_alias": {"required": False},
+            "registry_username": {"required": False},
+            "registry_password": {"required": False},
         }
 
 
-class BuildRegistryQuerySerializer(serializers.Serializer):
+class BuildRegistryListImagesQuerySerializer(serializers.Serializer):
     cursor = serializers.CharField(required=False)
     per_page = serializers.IntegerField(default=25)
 
 
-class BuildRegistryResponseSerializer(serializers.Serializer):
+class BuildRegistryListImagesResponseSerializer(serializers.Serializer):
     cursor = serializers.CharField(allow_null=True)
     per_page = serializers.IntegerField(allow_null=True)
     results = serializers.ListField(child=serializers.CharField())

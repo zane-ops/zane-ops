@@ -6,11 +6,11 @@ from rest_framework.generics import ListCreateAPIView
 
 
 from ..serializers import (
-    BuildRegistryListCreateSerializer,
+    BuildRegistryCreateSerializer,
     BuildRegistrySerializer,
     BuildRegistryListPagination,
-    BuildRegistryResponseSerializer,
-    BuildRegistryQuerySerializer,
+    BuildRegistryListImagesResponseSerializer,
+    BuildRegistryListImagesQuerySerializer,
 )
 from ..models import BuildRegistry
 from drf_spectacular.utils import extend_schema
@@ -33,8 +33,9 @@ from temporal.client import TemporalClient
 from rest_framework.views import APIView
 from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import exceptions, status
-from zane_api.views.base import BadRequest
+from zane_api.views.base import BadRequest, ResourceConflict
 from django.db.models import F, Value
+from zane_api.views import ErrorResponse409Serializer
 
 from zane_api.permissions import IsInstanceOwner
 
@@ -51,16 +52,23 @@ class BuildRegistryDetailsAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
-        request=BuildRegistryListCreateSerializer,
+        responses={
+            201: BuildRegistrySerializer,
+            409: ErrorResponse409Serializer,
+        },
+        request=BuildRegistryCreateSerializer,
         operation_id="createBuildRegistry",
         summary="get instance build registry",
     )
     def post(self, request: Request):
-        form = BuildRegistryListCreateSerializer(data=request.data)
+        form = BuildRegistryCreateSerializer(data=request.data)
 
         form.is_valid(raise_exception=True)
 
         validated_data = cast(dict, form.validated_data)
+
+        if BuildRegistry.objects.exists():
+            raise ResourceConflict("This instance already has a build registry")
 
         registry = BuildRegistry.objects.create(**validated_data)
 
@@ -118,7 +126,7 @@ class BuildRegistryDetailsAPIView(APIView):
         transaction.on_commit(commit_callback)
 
         serializer = BuildRegistrySerializer(registry)
-        return Response(data=serializer.data)
+        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         operation_id="getBuildRegistry",
@@ -188,7 +196,6 @@ class BuildRegistryDetailsAPIView(APIView):
                 )
             return RegistryConfig.StorageConfig(filesystem=fs_config, s3=s3_config)
 
-        registry.refresh_from_db()
         previous_snapshot = RegistrySnaphot(
             service_alias=cast(str, registry.service_alias),
             swarm_service_name=cast(str, registry.swarm_service_name),
@@ -207,6 +214,8 @@ class BuildRegistryDetailsAPIView(APIView):
             monitor_schedule_id=registry.monitor_schedule_id,
             login_refresh_schedule_id=registry.refresh_login_schedule_id,
         )
+
+        registry.refresh_from_db()
         new_snapshot = RegistrySnaphot(
             service_alias=cast(str, registry.service_alias),
             swarm_service_name=cast(str, registry.swarm_service_name),
@@ -221,7 +230,7 @@ class BuildRegistryDetailsAPIView(APIView):
             domain=registry_domain,
             username=registry_username,
             password=registry_password,
-            version=registry.version + 1,
+            version=registry.version,
             monitor_schedule_id=registry.monitor_schedule_id,
             login_refresh_schedule_id=registry.refresh_login_schedule_id,
         )
@@ -282,8 +291,8 @@ class BuildRegistryListImagesAPIView(APIView):
     permission_classes = [IsInstanceOwner]
 
     @extend_schema(
-        parameters=[BuildRegistryQuerySerializer],
-        responses={200: BuildRegistryResponseSerializer},
+        parameters=[BuildRegistryListImagesQuerySerializer],
+        responses={200: BuildRegistryListImagesResponseSerializer},
         operation_id="listRegistryImages",
         summary="List images in registry",
     )
@@ -292,7 +301,7 @@ class BuildRegistryListImagesAPIView(APIView):
         if registry is None:
             raise exceptions.NotFound(f"This instance does not have a build registry.")
 
-        form = BuildRegistryQuerySerializer(data=request.query_params)
+        form = BuildRegistryListImagesQuerySerializer(data=request.query_params)
         form.is_valid(raise_exception=True)
 
         data = cast(ReturnDict, form.data)
@@ -330,7 +339,7 @@ class BuildRegistryListImagesAPIView(APIView):
                 cursor = values[0]
 
         json = response.json()
-        serializer = BuildRegistryResponseSerializer(
+        serializer = BuildRegistryListImagesResponseSerializer(
             dict(
                 results=json["repositories"],
                 cursor=cursor,

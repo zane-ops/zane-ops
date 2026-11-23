@@ -24,10 +24,17 @@ class BuildRegistryViewTests(AuthAPITestCase):
             "registry_username": "fredkisss",
         }
         response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
+            reverse("container_registry:build_registry.details"), data=body
         )
         jprint(response.json())
-        self.fail()
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        response = self.client.post(
+            reverse("container_registry:build_registry.details"), data=body
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        self.assertEqual(1, BuildRegistry.objects.count())
 
     async def test_create_and_deploy_build_registry(self):
         await self.aLoginUser()
@@ -37,7 +44,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
             "registry_username": "fredkisss",
         }
         response = await self.async_client.post(
-            reverse("container_registry:build_registries.list"), data=body
+            reverse("container_registry:build_registry.details"), data=body
         )
 
         jprint(response.json())
@@ -108,7 +115,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
             "registry_domain": "registry.example.com",
         }
         response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
+            reverse("container_registry:build_registry.details"), data=body
         )
 
         jprint(response.json())
@@ -124,7 +131,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
             "registry_domain": "*.registry.example.com",
         }
         response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
+            reverse("container_registry:build_registry.details"), data=body
         )
 
         jprint(response.json())
@@ -140,7 +147,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
             "registry_domain": settings.ZANE_APP_DOMAIN,
         }
         response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
+            reverse("container_registry:build_registry.details"), data=body
         )
 
         jprint(response.json())
@@ -156,7 +163,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
         }
         response = await self.async_client.post(
-            reverse("container_registry:build_registries.list"), data=body
+            reverse("container_registry:build_registry.details"), data=body
         )
 
         jprint(response.json())
@@ -171,10 +178,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
 
         # Delete registry
         response = await self.async_client.delete(
-            reverse(
-                "container_registry:build_registries.details",
-                kwargs={"id": registry.id},
-            ),
+            reverse("container_registry:build_registry.details"),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         self.assertIsNone(await BuildRegistry.objects.afirst())
@@ -237,7 +241,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
         }
         response = await self.async_client.post(
-            reverse("container_registry:build_registries.list"), data=body
+            reverse("container_registry:build_registry.details"), data=body
         )
 
         jprint(response.json())
@@ -265,10 +269,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
             "registry_domain": "registry.example.com",
         }
         response = await self.async_client.patch(
-            reverse(
-                "container_registry:build_registries.details",
-                kwargs=dict(id=old_registry.id),
-            ),
+            reverse("container_registry:build_registry.details"),
             data=body,
         )
         jprint(response.json())
@@ -358,7 +359,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
             },
         }
         response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
+            reverse("container_registry:build_registry.details"), data=body
         )
 
         jprint(response.json())
@@ -384,7 +385,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
             "storage_backend": BuildRegistry.StorageBackend.S3,
         }
         response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
+            reverse("container_registry:build_registry.details"), data=body
         )
 
         jprint(response.json())
@@ -417,7 +418,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
             },
         }
         response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
+            reverse("container_registry:build_registry.details"), data=body
         )
 
         jprint(response.json())
@@ -444,7 +445,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
             },
         }
         response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
+            reverse("container_registry:build_registry.details"), data=body
         )
 
         jprint(response.json())
@@ -494,8 +495,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
         }
         response = self.client.patch(
             reverse(
-                "container_registry:build_registries.details",
-                kwargs={"id": registry.id},
+                "container_registry:build_registry.details",
             ),
             data=body,
         )
@@ -532,8 +532,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
         }
         response = self.client.patch(
             reverse(
-                "container_registry:build_registries.details",
-                kwargs={"id": registry.id},
+                "container_registry:build_registry.details",
             ),
             data=body,
         )
@@ -573,7 +572,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
             },
         }
         response = await self.async_client.post(
-            reverse("container_registry:build_registries.list"), data=body
+            reverse("container_registry:build_registry.details"), data=body
         )
 
         jprint(response.json())
@@ -615,7 +614,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
         }
         response = await self.async_client.post(
-            reverse("container_registry:build_registries.list"), data=body
+            reverse("container_registry:build_registry.details"), data=body
         )
 
         jprint(response.json())
@@ -640,8 +639,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
         }
         response = await self.async_client.patch(
             reverse(
-                "container_registry:build_registries.details",
-                kwargs={"id": registry.id},
+                "container_registry:build_registry.details",
             ),
             data=body,
         )
@@ -682,7 +680,7 @@ class BuildRegistryProxyTests(AuthAPITestCase):
             "registry_username": "fredkisss",
         }
         response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
+            reverse("container_registry:build_registry.details"), data=body
         )
 
         jprint(response.json())

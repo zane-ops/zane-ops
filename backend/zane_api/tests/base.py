@@ -377,6 +377,10 @@ class APITestCase(TestCase):
             "temporal.activities.service_auto_update.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
+        patch(
+            "temporal.activities.swarm_activities.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
 
         patch(
             "zane_api.git_client.Git",

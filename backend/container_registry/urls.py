@@ -23,7 +23,7 @@ urlpatterns = [
     re_path(
         r"^build-registry/?$",
         views.BuildRegistryDetailsAPIView.as_view(),
-        name="build_registries.details",
+        name="build_registry.details",
     ),
     re_path(
         r"^build-registry/list-images/?$",
