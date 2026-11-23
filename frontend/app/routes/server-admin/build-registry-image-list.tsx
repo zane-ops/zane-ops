@@ -79,11 +79,11 @@ export default function BuildRegistryImageListPage({
       <h3 className="text-grey">
         List of docker images pushed to{" "}
         <a
-          href={`${loaderData.registry.is_secure ? "https" : "http"}://${loaderData.registry.registry_domain}`}
+          href={`https://${loaderData.registry.registry_domain}`}
           target="_blank"
           className="underline text-link inline-flex items-center gap-1"
         >
-          <span>{`${loaderData.registry.is_secure ? "https" : "http"}://${loaderData.registry.registry_domain}`}</span>
+          <span>{`https://${loaderData.registry.registry_domain}`}</span>
           <ExternalLinkIcon size={16} className="flex-none" />
         </a>
       </h3>

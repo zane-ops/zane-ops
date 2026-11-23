@@ -11,3 +11,5 @@ _docs/
 .nixpacks/
 *.mmdb
 # core.*
+*.crt
+*.key

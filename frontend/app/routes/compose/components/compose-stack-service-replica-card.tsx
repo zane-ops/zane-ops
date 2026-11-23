@@ -1,4 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
 import {
+  ArrowUpRightIcon,
   ChevronRightIcon,
   ClockArrowUpIcon,
   ClockPlusIcon,
@@ -14,7 +16,7 @@ import {
   TerminalIcon
 } from "lucide-react";
 import React from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, href, useNavigate } from "react-router";
 import type { ComposeStackTask } from "~/api/types";
 import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
@@ -35,9 +37,18 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
+import { swarmQueries, userQueries } from "~/lib/queries";
+import {
   cn,
+  formatStorageValue,
   formattedTime,
   getDockerImageIconURL,
+  hasMinRole,
   mergeTimeAgoFormatterAndFormattedDate
 } from "~/lib/utils";
 
@@ -69,6 +80,8 @@ export function ComposeStackServiceReplicaCard({
 }: ComposeStackServiceReplicaCardProps) {
   const color = TASK_STATUS_COLOR_MAP[task.status];
 
+  const { data: nodes = [] } = useQuery(swarmQueries.nodeList());
+
   const [iconNotFound, setIconNotFound] = React.useState(false);
   const [accordionValue, setAccordionValue] = React.useState(
     color === "red" && !isPrevious ? `task-${task.id}` : ""
@@ -87,6 +100,17 @@ export function ComposeStackServiceReplicaCard({
 
   const [prefix, slot, taskId] = task.name.split(".");
 
+  const server = nodes.find((node) => task.node_id === node.swarm_node_id);
+  const memory =
+    server && server.memory_bytes !== null
+      ? formatStorageValue(server.memory_bytes)
+      : null;
+
+  const { data: user } = useQuery({
+    ...userQueries.authedUser
+  });
+
+  const isServerAdmin = !!user && hasMinRole(user, "ServerAdmin");
   return (
     <Card
       className={cn(
@@ -402,12 +426,62 @@ export function ComposeStackServiceReplicaCard({
                   {task.node_id === null ? (
                     <pre className="font-mono">{`<empty>`}</pre>
                   ) : (
-                    <CopyButton
-                      className="text-grey p-0 inline-flex w-fit bg-inherit hover:bg-inherit"
-                      label={task.node_id}
-                      value={task.node_id}
-                      showLabel
-                    />
+                    <span className="inline-flex items-center gap-1">
+                      <TooltipProvider>
+                        <Tooltip delayDuration={0}>
+                          <TooltipTrigger asChild>
+                            <CopyButton
+                              className={cn(
+                                "text-grey p-0 inline-flex w-fit bg-inherit hover:bg-inherit",
+                                "underline cursor-help decoration-dotted"
+                              )}
+                              label={task.node_id}
+                              value={task.node_id}
+                              showLabel
+                            />
+                          </TooltipTrigger>
+                          {server && (
+                            <TooltipContent align="start">
+                              <div
+                                data-item
+                                className="inline-flex items-start gap-2"
+                              >
+                                <ServerIcon className="relative flex-none size-4 top-1" />
+                                <div className="flex flex-col items-start gap-0">
+                                  <span className="inline-flex items-baseline">
+                                    {isServerAdmin ? (
+                                      <>
+                                        <Link
+                                          to={href("/admin/servers/:serverId", {
+                                            serverId: server.id
+                                          })}
+                                          className="underline text-link"
+                                        >
+                                          {server.hostname}
+                                        </Link>
+                                        <ArrowUpRightIcon className="relative flex-none size-4 text-link top-1" />
+                                      </>
+                                    ) : (
+                                      <span>{server.hostname}</span>
+                                    )}
+                                  </span>
+                                  <span className="text-grey">
+                                    {memory && (
+                                      <span>
+                                        {memory.value} {memory.unit}&nbsp;
+                                      </span>
+                                    )}
+                                    {server.cpus && (
+                                      <span>&middot; {server.cpus} CPUs</span>
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
+                    </span>
                   )}
                 </div>
               </div>

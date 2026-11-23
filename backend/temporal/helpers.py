@@ -456,7 +456,7 @@ def get_build_environment_variables_for_deployment(
 
 def get_swarm_service_aliases_ips_on_network(
     services: List[str], network_name: str
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     Retrieve the IP addresses for a list of service aliases on a given Docker network.
 
@@ -464,7 +464,7 @@ def get_swarm_service_aliases_ips_on_network(
     :param network_name: Name of the Docker network to query.
     :return: A dict mapping each network alias (str) to its IP address (str).
     """
-    client = docker.from_env()
+    client = get_docker_client()
     # get target network ID
     network = client.networks.get(network_name)
     network_id = network.id

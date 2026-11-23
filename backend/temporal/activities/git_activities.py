@@ -48,6 +48,7 @@ with workflow.unsafe.imports_passed_through():
     from django.utils import timezone
     from django.db.models import OuterRef, Subquery
     from container_registry.models import BuildRegistry
+    import docker.errors
 
 
 from copy import deepcopy
@@ -91,7 +92,7 @@ class GitActivities:
     async def get_default_build_registry(
         self, deployment: DeploymentDetails
     ) -> Optional[BuildRegistryDetails]:
-        registry = await BuildRegistry.objects.filter(is_default=True).afirst()
+        registry = await BuildRegistry.aget()
         details: Optional[BuildRegistryDetails] = None
         if registry is not None:
             details = BuildRegistryDetails(
@@ -760,9 +761,7 @@ class GitActivities:
             git_deployment.build_started_at = timezone.now()
             await git_deployment.asave(update_fields=["build_started_at", "updated_at"])
 
-            build_registry = await BuildRegistry.objects.filter(
-                is_default=True
-            ).afirst()
+            build_registry = await BuildRegistry.aget()
 
             try:
                 # Get build env variables
@@ -821,12 +820,19 @@ class GitActivities:
                 if build_registry is not None:
                     image_name = f"{build_registry.registry_domain}/{details.image_tag}"
 
-                docker_build_command.extend(["-t", image_name])
-                docker_build_command.extend(
-                    ["--output", f"type=docker,name={image_name}"]
-                )
+                    docker_build_command.extend(
+                        [
+                            "--output",
+                            f"type=image,push=true,name={image_name}",
+                        ]
+                    )
+                else:
+                    docker_build_command.extend(
+                        ["--output", f"type=docker,name={image_name}"]
+                    )
 
                 # Finally, add the build context directory
+                docker_build_command.extend(["-t", image_name])
                 docker_build_command.append(details.build_context_dir)
 
                 await deployment_log(
@@ -1491,6 +1497,41 @@ class GitActivities:
         )
 
     @activity.defn
+    async def get_all_service_aliases_ips_on_network(
+        self, deployment: DeploymentDetails
+    ) -> dict[str, str]:
+        service = deployment.service
+        current_env = await Environment.objects.aget(pk=service.environment.id)
+
+        current_network_name = get_env_network_resource_name(
+            current_env.id, service.project_id
+        )
+        service_names = []
+        service_names = []
+        deployment_queryset = Deployment.objects.filter(
+            service_id=OuterRef("pk"), is_current_production=True
+        ).order_by("-updated_at")
+        async for service in (
+            current_env.services.filter()
+            .exclude(id=service.id)
+            .annotate(
+                production_deployment_hash=Subquery(
+                    deployment_queryset.values("hash")[:1]
+                )
+            )
+        ):
+            service_name = get_swarm_service_name_for_deployment(
+                service.production_deployment_hash,  # type: ignore
+                service.project_id,
+                service.id,
+            )
+            service_names.append(service_name)
+        service_ip_aliases_map = get_swarm_service_aliases_ips_on_network(
+            service_names, current_network_name
+        )
+        return service_ip_aliases_map
+
+    @activity.defn
     async def build_service_with_railpack_dockerfile(
         self, details: GitBuildDetails
     ) -> Optional[str]:
@@ -1530,38 +1571,36 @@ class GitActivities:
             git_deployment.build_started_at = timezone.now()
             await git_deployment.asave(update_fields=["build_started_at", "updated_at"])
 
-            current_env = await Environment.objects.aget(pk=service.environment.id)
+            # current_env = await Environment.objects.aget(pk=service.environment.id)
 
-            current_network_name = get_env_network_resource_name(
-                current_env.id, service.project_id
-            )
-            service_names = []
-            deployment_queryset = Deployment.objects.filter(
-                service_id=OuterRef("pk"), is_current_production=True
-            ).order_by("-updated_at")
-            async for service in (
-                current_env.services.filter()
-                .exclude(id=service.id)
-                .annotate(
-                    production_deployment_hash=Subquery(
-                        deployment_queryset.values("hash")[:1]
-                    )
-                )
-            ):
-                service_name = get_swarm_service_name_for_deployment(
-                    service.production_deployment_hash,  # type: ignore
-                    service.project_id,
-                    service.id,
-                )
-                service_names.append(service_name)
+            # current_network_name = get_env_network_resource_name(
+            #     current_env.id, service.project_id
+            # )
+            # service_names = []
+            # deployment_queryset = Deployment.objects.filter(
+            #     service_id=OuterRef("pk"), is_current_production=True
+            # ).order_by("-updated_at")
+            # async for service in (
+            #     current_env.services.filter()
+            #     .exclude(id=service.id)
+            #     .annotate(
+            #         production_deployment_hash=Subquery(
+            #             deployment_queryset.values("hash")[:1]
+            #         )
+            #     )
+            # ):
+            #     service_name = get_swarm_service_name_for_deployment(
+            #         service.production_deployment_hash,  # type: ignore
+            #         service.project_id,
+            #         service.id,
+            #     )
+            #     service_names.append(service_name)
 
-            service_ip_aliases_map = get_swarm_service_aliases_ips_on_network(
-                service_names, current_network_name
-            )
+            # service_ip_aliases_map = get_swarm_service_aliases_ips_on_network(
+            #     service_names, current_network_name
+            # )
 
-            build_registry = await BuildRegistry.objects.filter(
-                is_default=True
-            ).afirst()
+            build_registry = await BuildRegistry.aget()
 
             try:
                 # Get build env variables
@@ -1571,7 +1610,7 @@ class GitActivities:
                 # to circumvent this error, we replace the network aliases of services by their ips in each env variable
                 # ref: https://github.com/railwayapp/railpack/issues/145
                 for env in build_envs:
-                    for alias in service_ip_aliases_map:
+                    for alias in details.service_ip_aliases:
                         if alias in build_envs[env]:
                             global_alias = f"{alias}.{details.deployment.service.environment.id.replace(Environment.ID_PREFIX, '')}"
                             build_envs[env] = (
@@ -1579,17 +1618,17 @@ class GitActivities:
                                 # also replace their internal FQDN network aliases
                                 .replace(
                                     f"{alias}.zaneops.internal",
-                                    service_ip_aliases_map[alias],
+                                    details.service_ip_aliases[alias],
                                 )
-                                .replace(alias, service_ip_aliases_map[alias])
+                                .replace(alias, details.service_ip_aliases[alias])
                                 # also replace their internal FQDN global network aliases
                                 .replace(
                                     global_alias,
-                                    service_ip_aliases_map[alias],
+                                    details.service_ip_aliases[alias],
                                 )
                                 .replace(
                                     f"{global_alias}.zaneops.internal",
-                                    service_ip_aliases_map[alias],
+                                    details.service_ip_aliases[alias],
                                 )
                             )
 
@@ -1654,10 +1693,16 @@ class GitActivities:
                 image_name = details.image_tag
                 if build_registry is not None:
                     image_name = f"{build_registry.registry_domain}/{details.image_tag}"
-
-                docker_build_command.extend(
-                    ["--output", f"type=docker,name={image_name}"]
-                )
+                    docker_build_command.extend(
+                        [
+                            "--output",
+                            f"type=image,push=true,name={image_name}",
+                        ]
+                    )
+                else:
+                    docker_build_command.extend(
+                        ["--output", f"type=docker,name={image_name}"]
+                    )
 
                 # Add the tag and dockerfile
                 docker_build_command.extend(["-t", image_name])
@@ -1785,8 +1830,8 @@ class GitActivities:
                 heartbeat_task.cancel()
 
     @activity.defn
-    async def push_image_to_remote_registry(self, deployment: DeploymentDetails):
-        build_registry = await BuildRegistry.objects.filter(is_default=True).afirst()
+    async def push_built_image_to_remote_registry(self, deployment: DeploymentDetails):
+        build_registry = await BuildRegistry.aget()
 
         if build_registry is None:
             await deployment_log(

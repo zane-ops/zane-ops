@@ -21,18 +21,13 @@ urlpatterns = [
         name="credentials.test",
     ),
     re_path(
-        r"^build-registries/?$",
-        views.BuildRegistryListCreateAPIView.as_view(),
-        name="build_registries.list",
+        r"^build-registry/?$",
+        views.BuildRegistryDetailsAPIView.as_view(),
+        name="build_registry.details",
     ),
     re_path(
-        rf"^build-registries/(?P<id>{BuildRegistry.ID_PREFIX}[a-zA-Z0-9]+)/list-images/?$",
+        r"^build-registry/list-images/?$",
         views.BuildRegistryListImagesAPIView.as_view(),
         name="build_registries.list_images",
-    ),
-    re_path(
-        rf"^build-registries/(?P<id>{BuildRegistry.ID_PREFIX}[a-zA-Z0-9]+)/?$",
-        views.BuildRegistryDetailsAPIView.as_view(),
-        name="build_registries.details",
     ),
 ]

@@ -182,7 +182,7 @@ export default function ComposeStackServiceTerminalPage({
             setSearchParams(searchParams);
           }}
         >
-          <SelectTrigger className="w-54  [&_[data-empty]]:!text-grey placeholder-shown:text-grey">
+          <SelectTrigger className="w-54  [&_[data-empty]]:!text-grey [&_[data-server]]:hidden placeholder-shown:text-grey">
             <SelectValue placeholder="select replica" className="text-grey" />
           </SelectTrigger>
           <SelectContent className="border border-border text-sm">
@@ -199,6 +199,7 @@ export default function ComposeStackServiceTerminalPage({
                     <TaskWithContainerSelectItem
                       container_id={task.container_id}
                       status={task.status}
+                      node_id={task.node_id}
                       key={task.id}
                     />
                   ))}
@@ -214,6 +215,7 @@ export default function ComposeStackServiceTerminalPage({
                     <TaskWithContainerSelectItem
                       container_id={task.container_id}
                       status={task.status}
+                      node_id={task.node_id}
                       key={task.id}
                     />
                   ))}

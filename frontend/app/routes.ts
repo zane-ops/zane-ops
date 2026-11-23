@@ -96,19 +96,19 @@ export default [
         ]),
 
         route(
-          "build-registries",
+          "build-registry",
           "./routes/server-admin/build-registry-list.tsx"
         ),
         route(
-          "build-registries/new",
+          "build-registry/create",
           "./routes/server-admin/create-build-registry.tsx"
         ),
         route(
-          "build-registries/:id/list-images",
+          "build-registry/list-images",
           "./routes/server-admin/build-registry-image-list.tsx"
         ),
         route(
-          "build-registries/:id",
+          "build-registry",
           "./routes/server-admin/build-registry-details.tsx"
         ),
         route("http-logs", "./routes/server-admin/global-http-logs.tsx"),

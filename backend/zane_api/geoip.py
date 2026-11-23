@@ -30,7 +30,7 @@ def lookup_country_code(ip: str):
                 response = reader.country(ip)
             except Exception:
                 # Any exception in reading the country should never make the ingest fail
-                traceback.print_exc()
+                pass
             else:
                 iso_code = response.country.iso_code
 

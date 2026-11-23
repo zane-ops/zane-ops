@@ -20,7 +20,7 @@ from ..shared import (
     ArchivedDockerServiceDetails,
     ArchivedGitServiceDetails,
     DeployServiceWorkflowResult,
-    DeploymentCreateVolumesResult,
+    # DeploymentCreateVolumesResult,
     CancelDeploymentSignalInput,
     StaticBuilderDetails,
     NixpacksBuilderDetails,
@@ -31,6 +31,7 @@ from ..shared import (
     ScaleBackServiceDetails,
     ScaleDownServiceDetails,
     DeploymentDetails,
+    select_task_queue,
 )
 from zane_api.dtos import (
     ConfigDto,
@@ -65,6 +66,9 @@ class BaseDeploymentWorklow:
         self.retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
+        self.schedule_to_start_timeout = timedelta(seconds=30)
+        self.worker_task_queue: Optional[str] = None
+        self.main_task_queue: str = settings.TEMPORALIO_MAIN_TASK_QUEUE
 
     @workflow.signal
     def cancel_deployment(self, input: CancelDeploymentSignalInput):
@@ -545,10 +549,19 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
 
     @workflow.run
     async def run(self, deployment: DeploymentDetails) -> DeployServiceWorkflowResult:
+        print("Searching for available worker...")
+        self.worker_task_queue = await workflow.execute_activity(
+            activity=select_task_queue,
+            start_to_close_timeout=timedelta(seconds=10),
+        )
+        print(f"Matching workflow to worker {self.worker_task_queue}")
+
         await workflow.execute_activity(
             acquire_service_deploy_semaphore,
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=self.retry_policy,
+            schedule_to_start_timeout=self.schedule_to_start_timeout,
+            task_queue=self.main_task_queue,
         )
 
         print("Running DeployGitServiceWorkflow with payload: ")
@@ -565,6 +578,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 deployment,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.worker_task_queue,
             )
 
             # we update after checkout because this means the deployment has started
@@ -575,6 +590,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 deployment,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.worker_task_queue,
             )
 
             if await self.check_for_cancellation(
@@ -592,6 +609,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 deployment,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.worker_task_queue,
             )
 
             if build_registry is not None:
@@ -600,6 +619,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     build_registry,
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
+                    schedule_to_start_timeout=self.schedule_to_start_timeout,
+                    task_queue=self.worker_task_queue,
                 )
 
             self.tmp_dir = await workflow.execute_activity_method(
@@ -607,6 +628,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 deployment,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.worker_task_queue,
             )
             clone_repository_activity_handle = workflow.start_activity_method(
                 GitActivities.clone_repository_and_checkout_to_commit,
@@ -617,6 +640,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 start_to_close_timeout=timedelta(minutes=2, seconds=30),
                 retry_policy=self.retry_policy,
                 heartbeat_timeout=timedelta(seconds=3),
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.worker_task_queue,
             )
 
             monitor_task = asyncio.create_task(
@@ -672,6 +697,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 ),
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.worker_task_queue,
             )
             build_stage_target = None
             dockerfile_path = None
@@ -693,6 +720,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                         ),
                         start_to_close_timeout=timedelta(seconds=15),
                         retry_policy=self.retry_policy,
+                        schedule_to_start_timeout=self.schedule_to_start_timeout,
+                        task_queue=self.worker_task_queue,
                     )
                     build_stage_target = builder_options.build_stage_target
                     dockerfile_path = result.dockerfile_path
@@ -712,6 +741,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                         ),
                         start_to_close_timeout=timedelta(seconds=15),
                         retry_policy=self.retry_policy,
+                        schedule_to_start_timeout=self.schedule_to_start_timeout,
+                        task_queue=self.worker_task_queue,
                     )
                     dockerfile_path = result.dockerfile_path
                     build_context_dir = result.build_context_dir
@@ -730,6 +761,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                         ),
                         start_to_close_timeout=timedelta(seconds=15),
                         retry_policy=self.retry_policy,
+                        schedule_to_start_timeout=self.schedule_to_start_timeout,
+                        task_queue=self.worker_task_queue,
                     )
                     if result is not None:
                         dockerfile_path = result.dockerfile_path
@@ -749,6 +782,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                         ),
                         start_to_close_timeout=timedelta(seconds=30),
                         retry_policy=self.retry_policy,
+                        schedule_to_start_timeout=self.schedule_to_start_timeout,
+                        task_queue=self.worker_task_queue,
                     )
                     if result is not None:
                         dockerfile_path = result.railpack_plan_path
@@ -771,6 +806,17 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 deployment,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.worker_task_queue,
+            )
+
+            service_ips = await workflow.execute_activity_method(
+                GitActivities.get_all_service_aliases_ips_on_network,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.main_task_queue,
             )
 
             if deployment.service.builder != Service.Builder.RAILPACK:
@@ -790,6 +836,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     retry_policy=RetryPolicy(
                         maximum_attempts=1
                     ),  # We do not want to retry the build multiple times
+                    schedule_to_start_timeout=self.schedule_to_start_timeout,
+                    task_queue=self.worker_task_queue,
                 )
             else:
                 build_image_activity_task = workflow.start_activity_method(
@@ -802,12 +850,15 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                         build_stage_target=build_stage_target,
                         image_tag=cast(str, deployment.image_tag),
                         default_env_variables=env_variables,
+                        service_ip_aliases=service_ips,
                     ),
                     start_to_close_timeout=timedelta(minutes=20),
                     heartbeat_timeout=timedelta(seconds=5),
                     retry_policy=RetryPolicy(
                         maximum_attempts=1
                     ),  # We do not want to retry the build multiple times
+                    schedule_to_start_timeout=self.schedule_to_start_timeout,
+                    task_queue=self.worker_task_queue,
                 )
 
             monitor_task = asyncio.create_task(
@@ -858,52 +909,54 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     previous_production_deployment=previous_production_deployment,
                 )
 
-            push_image_activity_task = workflow.start_activity_method(
-                GitActivities.push_image_to_remote_registry,
-                deployment,
-                start_to_close_timeout=timedelta(minutes=5),
-                heartbeat_timeout=timedelta(seconds=3),
-                retry_policy=RetryPolicy(
-                    maximum_attempts=1
-                ),  # We do not want to retry the push
-            )
-            monitor_task = asyncio.create_task(
-                self.monitor_cancellation(
-                    push_image_activity_task,
-                    deployment=deployment,
-                    pause_at_step=pause_at_step,
-                    step_to_pause=GitDeploymentStep.BUILDING_IMAGE,
-                    timeout=timedelta(minutes=2),
-                )
-            )
+            # push_image_activity_task = workflow.start_activity_method(
+            #     GitActivities.push_built_image_to_remote_registry,
+            #     deployment,
+            #     start_to_close_timeout=timedelta(minutes=5),
+            #     heartbeat_timeout=timedelta(seconds=3),
+            #     retry_policy=RetryPolicy(
+            #         maximum_attempts=1
+            #     ),  # We do not want to retry the push
+            #     schedule_to_start_timeout=self.schedule_to_start_timeout,
+            #     task_queue=self.worker_task_queue,
+            # )
+            # monitor_task = asyncio.create_task(
+            #     self.monitor_cancellation(
+            #         push_image_activity_task,
+            #         deployment=deployment,
+            #         pause_at_step=pause_at_step,
+            #         step_to_pause=GitDeploymentStep.BUILDING_IMAGE,
+            #         timeout=timedelta(minutes=2),
+            #     )
+            # )
 
-            try:
-                exit_code = await push_image_activity_task
-                monitor_task.cancel()
-            except ActivityError as e:
-                print(f"ActivityError {e=}")
+            # try:
+            #     exit_code = await push_image_activity_task
+            #     monitor_task.cancel()
+            # except ActivityError as e:
+            #     print(f"ActivityError {e=}")
 
-                # Cancel both tasks
-                push_image_activity_task.cancel()
-                monitor_task.cancel()
+            #     # Cancel both tasks
+            #     push_image_activity_task.cancel()
+            #     monitor_task.cancel()
 
-                if (
-                    is_cancelled_exception(e)
-                    and deployment.hash in self.cancellation_requested
-                ):
-                    return await self.handle_cancellation(
-                        deployment,
-                        last_completed_step=GitDeploymentStep.PUSHING_IMAGE,
-                    )
-                raise  # reraise the same exception
-            else:
-                if exit_code != 0:
-                    return await self.finish_deployment(
-                        deployment=deployment,
-                        reason="Failed to push the image to the registry",
-                        status=Deployment.DeploymentStatus.FAILED,
-                        previous_production_deployment=previous_production_deployment,
-                    )
+            #     if (
+            #         is_cancelled_exception(e)
+            #         and deployment.hash in self.cancellation_requested
+            #     ):
+            #         return await self.handle_cancellation(
+            #             deployment,
+            #             last_completed_step=GitDeploymentStep.PUSHING_IMAGE,
+            #         )
+            #     raise  # reraise the same exception
+            # else:
+            #     if exit_code != 0:
+            #         return await self.finish_deployment(
+            #             deployment=deployment,
+            #             reason="Failed to push the image to the registry",
+            #             status=Deployment.DeploymentStatus.FAILED,
+            #             previous_production_deployment=previous_production_deployment,
+            #         )
 
             if await self.check_for_cancellation(
                 GitDeploymentStep.IMAGE_PUSHED,
@@ -939,6 +992,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     deployment,
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
+                    schedule_to_start_timeout=self.schedule_to_start_timeout,
+                    task_queue=self.main_task_queue,
                 )
 
             if await self.check_for_cancellation(
@@ -963,6 +1018,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     ),
                     start_to_close_timeout=timedelta(seconds=60),
                     retry_policy=self.retry_policy,
+                    schedule_to_start_timeout=self.schedule_to_start_timeout,
+                    task_queue=self.main_task_queue,
                 )
 
             if await self.check_for_cancellation(
@@ -980,6 +1037,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 deployment,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.main_task_queue,
             )
 
             if await self.check_for_cancellation(
@@ -1001,6 +1060,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 deployment,
                 retry_policy=self.retry_policy,
                 start_to_close_timeout=timedelta(seconds=healthcheck_timeout + 5),
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.main_task_queue,
             )
             deployment_status, deployment_status_reason = result
 
@@ -1041,6 +1102,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 healthcheck_result,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.worker_task_queue,
             )
 
             # we also update the comment if it failed
@@ -1054,7 +1117,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 deployment_status_reason=healthcheck_result.reason,
             )
         finally:
-            if self.tmp_dir is not None:
+            if self.worker_task_queue is not None and self.tmp_dir is not None:
                 await workflow.execute_activity_method(
                     GitActivities.cleanup_temporary_directory_for_build,
                     GitCloneDetails(
@@ -1063,11 +1126,15 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     ),
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
+                    schedule_to_start_timeout=self.schedule_to_start_timeout,
+                    task_queue=self.worker_task_queue,
                 )
             await workflow.execute_activity(
                 release_service_deploy_semaphore,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.main_task_queue,
             )
 
     @staticmethod
@@ -1128,6 +1195,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 deployment,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.main_task_queue,
             )
 
             await workflow.execute_activity_method(
@@ -1135,6 +1204,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 deployment,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.main_task_queue,
             )
         else:
             current_deployment = SimpleDeploymentDetails(
@@ -1147,6 +1218,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 current_deployment,
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=self.retry_policy,
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.main_task_queue,
             )
             if (
                 previous_production_deployment is not None
@@ -1160,6 +1233,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     ),
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
+                    schedule_to_start_timeout=self.schedule_to_start_timeout,
+                    task_queue=self.main_task_queue,
                 )
 
         final_deployment_status, reason = await workflow.execute_activity_method(
@@ -1167,6 +1242,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             result,
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=self.retry_policy,
+            schedule_to_start_timeout=self.schedule_to_start_timeout,
+            task_queue=self.worker_task_queue,
         )
 
         await workflow.execute_activity_method(
@@ -1174,6 +1251,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             deployment,
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
+            schedule_to_start_timeout=self.schedule_to_start_timeout,
+            task_queue=self.main_task_queue,
         )
 
         # we update the comment at the end
@@ -1198,6 +1277,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     deployment,
                     start_to_close_timeout=timedelta(seconds=5),
                     retry_policy=self.retry_policy,
+                    schedule_to_start_timeout=self.schedule_to_start_timeout,
+                    task_queue=self.worker_task_queue,
                 )
             case "gitlab":
                 await workflow.execute_activity_method(
@@ -1205,6 +1286,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     deployment,
                     start_to_close_timeout=timedelta(seconds=5),
                     retry_policy=self.retry_policy,
+                    schedule_to_start_timeout=self.schedule_to_start_timeout,
+                    task_queue=self.worker_task_queue,
                 )
 
     async def handle_cancellation(
@@ -1218,6 +1301,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             deployment,
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=self.retry_policy,
+            schedule_to_start_timeout=self.schedule_to_start_timeout,
+            task_queue=self.worker_task_queue,
         )
 
         if last_completed_step >= GitDeploymentStep.FINISHED:
@@ -1230,6 +1315,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             deployment,
             start_to_close_timeout=timedelta(seconds=10),
             retry_policy=self.retry_policy,
+            schedule_to_start_timeout=self.schedule_to_start_timeout,
+            task_queue=self.worker_task_queue,
         )
 
         if last_completed_step >= GitDeploymentStep.SWARM_SERVICE_CREATED:
@@ -1242,6 +1329,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 ),
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=self.retry_policy,
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.main_task_queue,
             )
         if last_completed_step >= GitDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN:
             if previous_production_deployment is not None:
@@ -1252,6 +1341,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     ),
                     start_to_close_timeout=timedelta(seconds=60),
                     retry_policy=self.retry_policy,
+                    schedule_to_start_timeout=self.schedule_to_start_timeout,
+                    task_queue=self.main_task_queue,
                 )
         if (
             last_completed_step >= GitDeploymentStep.CONFIGS_CREATED
@@ -1266,6 +1357,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 ),
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
+                schedule_to_start_timeout=self.schedule_to_start_timeout,
+                task_queue=self.main_task_queue,
             )
 
         # if (
@@ -1288,6 +1381,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             deployment,
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=self.retry_policy,
+            schedule_to_start_timeout=self.schedule_to_start_timeout,
+            task_queue=self.worker_task_queue,
         )
 
         # we update the comment if gets cancelled
@@ -1309,6 +1404,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             deployment,
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=self.retry_policy,
+            schedule_to_start_timeout=self.schedule_to_start_timeout,
+            task_queue=self.worker_task_queue,
         )
         if next_queued_deployment is not None:
             workflow.continue_as_new(next_queued_deployment)
@@ -1324,6 +1421,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             previous_deployment,
             start_to_close_timeout=timedelta(seconds=60),
             retry_policy=self.retry_policy,
+            schedule_to_start_timeout=self.schedule_to_start_timeout,
+            task_queue=self.main_task_queue,
         )
 
         await workflow.execute_activity_method(
@@ -1331,6 +1430,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             previous_deployment,
             start_to_close_timeout=timedelta(seconds=60),
             retry_policy=self.retry_policy,
+            schedule_to_start_timeout=self.schedule_to_start_timeout,
+            task_queue=self.main_task_queue,
         )
 
         await workflow.execute_activity_method(
@@ -1338,6 +1439,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             current_deployment,
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
+            schedule_to_start_timeout=self.schedule_to_start_timeout,
+            task_queue=self.main_task_queue,
         )
 
         # await workflow.execute_activity_method(
@@ -1352,6 +1455,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             previous_deployment,
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=self.retry_policy,
+            schedule_to_start_timeout=self.schedule_to_start_timeout,
+            task_queue=self.worker_task_queue,
         )
 
 

@@ -24,13 +24,13 @@ class SystemSettingsAPIView(RetrieveUpdateAPIView):
         instance = self.get_object()
 
         async def on_commit():
-            await TemporalClient.create_or_update_schedule(
+            await TemporalClient.create_or_update_schedule_with_cron(
                 schedule_id=settings.APP_DATA_CLEANUP_SCHEDULE_ID,
                 workflow=CleanupAppDataWorkflow.run,
                 schedule_cron=instance.app_data_cleanup_cron_schedule,
             )
             if settings.ENVIRONMENT == settings.PRODUCTION_ENV:
-                await TemporalClient.create_or_update_schedule(
+                await TemporalClient.create_or_update_schedule_with_cron(
                     schedule_id=settings.DOCKER_SYSTEM_PRUNE_SCHEDULE_ID,
                     workflow=DockerSystemPruneWorkflow.run,
                     schedule_cron=instance.docker_system_prune_cron_schedule,

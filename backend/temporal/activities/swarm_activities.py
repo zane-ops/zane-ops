@@ -21,7 +21,12 @@ with workflow.unsafe.imports_passed_through():
         escape_ansi,
         DockerSwarmTaskState,
     )
-    from temporal.helpers import empty_folder, exec_cmd_in_server, provision_log
+    from temporal.helpers import (
+        empty_folder,
+        exec_cmd_in_server,
+        provision_log,
+        get_docker_client,
+    )
     from temporal.semaphore import AsyncSemaphore
 
     import docker
@@ -77,7 +82,7 @@ from temporal.shared import (
 
 class SwarmNodeActivities:
     def __init__(self):
-        self.docker_client = docker.from_env()
+        self.docker_client = get_docker_client()
 
     @staticmethod
     def get_swarm_node_semaphore(node_id: str):

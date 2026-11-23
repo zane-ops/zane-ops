@@ -64,7 +64,6 @@ class BuildRegistry(TimestampedModel):
     ID_PREFIX = "build_reg_"
     id = ShortUUIDField(primary_key=True, prefix=ID_PREFIX, length=20)  # type: ignore[arg-type]
     name = models.CharField(max_length=200)
-    is_default = models.BooleanField(default=True)
 
     registry_domain = models.CharField(
         max_length=2048, validators=[validate_url_domain]
@@ -87,8 +86,6 @@ class BuildRegistry(TimestampedModel):
     swarm_service_name = models.CharField(null=True)
     service_alias = models.CharField(null=True)
 
-    is_secure = models.BooleanField(default=True)
-
     # S3 Configuration (for registry storage)
     s3_credentials = models.JSONField(null=True)
 
@@ -107,6 +104,14 @@ class BuildRegistry(TimestampedModel):
 
     healthcheck_message = models.TextField(default="preparing")
 
+    @classmethod
+    def get(cls):
+        return BuildRegistry.objects.first()
+
+    @classmethod
+    async def aget(cls):
+        return await BuildRegistry.objects.afirst()
+
     @property
     def workflow_id(self) -> str:
         return f"deploy-{self.id}-v{self.version}"
@@ -114,6 +119,10 @@ class BuildRegistry(TimestampedModel):
     @property
     def monitor_schedule_id(self) -> str:
         return f"monitor-{self.id}"
+
+    @property
+    def refresh_login_schedule_id(self) -> str:
+        return f"refresh-login-{self.id}"
 
     @property
     def destroy_workflow_id(self) -> str:
@@ -132,12 +141,5 @@ class BuildRegistry(TimestampedModel):
         return f"srv-{prefix}-{suffix}"
 
     class Meta:  # type: ignore
-        constraints = [
-            models.UniqueConstraint(
-                fields=["is_default"],
-                condition=models.Q(is_default=True),
-                name="unique_global_registry_per_instance",
-            ),
-        ]
         indexes = [models.Index(fields=["registry_domain"])]
         ordering = ["created_at"]
